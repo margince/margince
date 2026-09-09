@@ -70,9 +70,9 @@ export const BoundedSources: Story = {
   ),
 };
 
-// The refusals, with no disclosure drawn at all — the panel is two sentences
-// and there is nothing to expand. A reader is being shown less than the product
-// knows, and that has to be legible without a click.
+// The refusals, with no disclosure drawn at all — one notice, its heading over
+// the sources it names, and nothing to expand. A reader is being shown less
+// than the product knows, and that has to be legible without a click.
 export const UnavailableSources: Story = {
   render: () => (
     <StoryProviders>

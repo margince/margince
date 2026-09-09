@@ -57,12 +57,19 @@ export function EmbedReindexBanner() {
     return null;
   }
   return (
-    <Callout
-      className="appbanner"
-      live="status"
-      actions={<a href="#/settings/maintenance">{t("reindexbanner.link")}</a>}
-    >
-      {t("reindexbanner.needed")}
-    </Callout>
+    // `warn` and not `info`: this banner is drawn only for the one state a
+    // human must act on, and a notice with no urgency is the wrong claim about
+    // a rebuild nobody has confirmed. `.appbanner` is the SHELL's hook — the
+    // content column reserves the top bar's height only when no banner is
+    // mounted (`.main:not(:has(> .appbanner))`, app/shell.css) — so it sits on
+    // a wrapper this component owns.
+    <div className="appbanner">
+      <Callout
+        tone="warn"
+        kind="standing"
+        title={t("reindexbanner.needed")}
+        actions={<a href="#/settings/maintenance">{t("reindexbanner.link")}</a>}
+      />
+    </div>
   );
 }

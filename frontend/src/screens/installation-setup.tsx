@@ -26,8 +26,9 @@ import {
 } from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-keys";
 import { ModelRatePlate } from "./ai-rates";
-import { problemMessageOf, throwProblem, useMe } from "./common";
+import { throwProblem, useMe } from "./common";
 import { ImapMailboxForm } from "./imap-connect-form";
+import { AiBindRefused, AppSaveRefused } from "./installation-setup.notices";
 import {
   RedirectUris,
   useOAuthApp,
@@ -395,7 +396,6 @@ function AiStep({
     .map(([, label]) => label);
   const ready = missing.length === 0;
   const [attempted, setAttempted] = useState(false);
-  const failure = saveKey.error ?? bind.error;
 
   // The KEY first, then the binding. A binding whose vendor has no key is an
   // installation that reads as configured and fails on its first real call; a
@@ -460,9 +460,7 @@ function AiStep({
       </StageActions>
       <Panel>
         <PanelBody>
-          {failure && (
-            <Callout tone="danger">{problemMessageOf(failure, t)}</Callout>
-          )}
+          <AiBindRefused keyError={saveKey.error} bindError={bind.error} />
           <Field label={t("firstRun.ai.provider")}>
             {(control) => (
               <Select
@@ -629,7 +627,7 @@ function AppRedirectUris({
   const t = useT();
   return (
     <>
-      <Callout tone="info" title={t("firstRun.platform.redirectTitle")}>
+      <Callout kind="standing" title={t("firstRun.platform.redirectTitle")}>
         <p>{t("firstRun.platform.redirectHint")}</p>
       </Callout>
       <RedirectUris uris={uris} sub={t(vendorCopy[vendor].redirectSub)} />
@@ -727,9 +725,7 @@ function VendorAppFields({
           </p>
         </>
       )}
-      {save.error && (
-        <Callout tone="danger">{problemMessageOf(save.error, t)}</Callout>
-      )}
+      <AppSaveRefused error={save.error} />
       <Field
         label={t("oauthApp.clientId")}
         error={needed(clientId.trim() === "")}

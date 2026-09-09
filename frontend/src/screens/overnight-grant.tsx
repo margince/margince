@@ -3,7 +3,6 @@
 
 import type { components } from "@composition/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { TriangleAlert } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import { Checkbox } from "../design-system/atoms";
@@ -129,17 +128,25 @@ export function morningBriefGrant(
 }
 
 /**
- * What stops working without this answer, in red.
+ * What stops working without this answer.
  *
  * It is the SAME words on both surfaces, because the cost is the same in both
  * places and a rep who reads one and then the other must not be told two
- * different things. `live="alert"` so it is announced when it appears rather
- * than only seen.
+ * different things.
+ *
+ * `warn` and `standing`, not a danger alert: a cleared box is the rep's own
+ * answer and their authority to give, so nothing has gone wrong here — what the
+ * notice reports is the cost of the answer, and announcing it on every mount
+ * while the box stays clear reads their decision back to them as a fault.
  */
-export function OvernightGrantDanger() {
+function GrantCostNotice() {
   const t = useT();
   return (
-    <Callout tone="danger" live="alert" icon={TriangleAlert}>
+    <Callout
+      kind="standing"
+      tone="warn"
+      title={t("overnightGrant.dangerTitle")}
+    >
       {t("overnightGrant.danger")}
     </Callout>
   );
@@ -181,9 +188,13 @@ export function OvernightGrantChoice({
         data-testid="overnight-grant-choice"
       />
       <p className="overnight-grant-help t-sub">{t("overnightGrant.help")}</p>
-      {!checked && <OvernightGrantDanger />}
+      {!checked && <GrantCostNotice />}
       {failed && (
-        <Callout tone="warn" live="alert">
+        <Callout
+          kind="outcome"
+          tone="danger"
+          title={t("overnightGrant.saveFailedTitle")}
+        >
           {t("overnightGrant.saveFailed")}
         </Callout>
       )}
@@ -292,19 +303,31 @@ function GrantNotices({
   }
   return (
     <div className="settings-panel-commit">
-      {showDanger && <OvernightGrantDanger />}
+      {showDanger && <GrantCostNotice />}
       {showRenewal && (
-        <Callout tone="warn" live="status">
+        <Callout
+          kind="event"
+          tone="warn"
+          title={t("overnightGrant.renewTitle")}
+        >
           {t("overnightGrant.renew")}
         </Callout>
       )}
       {showScopeRenewal && (
-        <Callout tone="warn" live="status">
+        <Callout
+          kind="event"
+          tone="warn"
+          title={t("overnightGrant.renewScopeTitle")}
+        >
           {t("overnightGrant.renewScope")}
         </Callout>
       )}
       {error !== undefined && (
-        <Callout tone="danger" live="alert">
+        <Callout
+          kind="outcome"
+          tone="danger"
+          title={t("overnightGrant.writeFailedTitle")}
+        >
           {error}
         </Callout>
       )}

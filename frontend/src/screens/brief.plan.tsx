@@ -308,15 +308,15 @@ function PlanFoot({
   saving: boolean;
   onSave: () => void;
 }>) {
+  const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  if (staged === 0 && unsaved === 0) {
-    return null;
-  }
+  if (staged === 0 && unsaved === 0) return null;
   return (
     <>
+      {/* `danger`: the write was refused, not merely at risk. */}
       {unsaved > 0 && (
-        <Callout tone="warn" live="alert">
+        <Callout tone="danger" kind="outcome" title={t("plan.refusedTitle")}>
           {plural("plan.saveRefused", unsaved, {
             count: formatNumber(unsaved, locale),
           })}

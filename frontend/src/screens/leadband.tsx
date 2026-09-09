@@ -36,7 +36,7 @@ function LeadWriteRefusal({ writer }: Readonly<{ writer: LeadWriter }>) {
     return null;
   }
   return (
-    <Callout tone="danger" live="alert">
+    <Callout tone="danger" kind="outcome" title={t("lead.writeRefused")}>
       {problemMessageOf(error, t)}
     </Callout>
   );

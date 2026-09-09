@@ -91,10 +91,26 @@ export function StageExitCriteria({
     <div className="form-stack">
       <p className="settings-panel-sub">{t("stage.criteria.sub")}</p>
       {criteria.some((c) => BUYER_KINDS.includes(c.kind)) && (
-        <Callout tone="info">{t("stage.criteria.buyerCallout")}</Callout>
+        <Callout
+          tone="info"
+          kind="standing"
+          title={t("stage.criteria.buyerCalloutTitle")}
+        >
+          {t("stage.criteria.buyerCallout")}
+        </Callout>
       )}
       {query.isError && (
-        <Callout tone="danger">{t("stage.criteria.unreadable")}</Callout>
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("stage.criteria.unreadableTitle")}
+        >
+          {/* The server's own account of the failure, the way every sibling
+              read on this card reports one — a fixed sentence here would throw
+              away the one detail that says whether reloading can help. */}
+          <p>{problemMessageOf(query.error, t)}</p>
+          <p>{t("stage.criteria.unreadable")}</p>
+        </Callout>
       )}
       {/* "Nothing yet" is a claim about the stage, so it is only honest once
           the read has actually answered. A failed read says so above instead:

@@ -195,9 +195,8 @@ const UNCATEGORISED = "";
 // a total spanning currencies is a number with no unit.
 //
 // pipeline-current does not, because the server converted each deal before
-// summing. One stage is one row, denominated in the installation's base
-// currency — which is the whole point of that report and why it exists beside
-// deals-by-stage rather than replacing it.
+// summing: one stage is one row in the installation's base currency, which is
+// why that report exists beside deals-by-stage rather than replacing it.
 const REPORT_GROUP_BY: Record<ReportKey, string[]> = {
   "pipeline-current": ["stage_id"],
   forecast: ["forecast_category"],
@@ -438,10 +437,6 @@ function forecastTileDetail(
   return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
-// Five money figures read across as one comparison, so they are ONE plate of
-// ruled slots rather than five free-standing cards. The banner above them is
-// what the surface says about itself — how to read the second figure in every
-// slot — which is a Callout, not a paragraph tinted by hand.
 // The wire allows a deal to carry no forecast category, and the five named ones
 // match none of it — so a slot set built from the enum alone drops those deals
 // off the screen entirely: the money is not moved to another slot, it leaves. On
@@ -468,17 +463,19 @@ function ForecastStrip({
   const t = useT();
   return (
     <>
-      <Callout tone="info">{t("analytics.forecastBanner")}</Callout>
-      {/* ONE strip, because there is now one denomination.
-          
-          This drew one strip PER CURRENCY until the server learned to convert.
-          A slot carries a single figure and adding euros to dong is the
-          unit-less total data-semantics §1 r4 forbids, so banding was the only
-          honest way to show native sums — and it defeated the thing a strip is
-          for. A plate of ruled slots claims its figures are ONE comparison;
-          split across bands, a manager compared commit against best case
-          inside each currency and never across the business, which is the
-          question they actually have.
+      <Callout
+        tone="info"
+        kind="standing"
+        title={t("analytics.forecastBannerTitle")}
+      >
+        {t("analytics.forecastBanner")}
+      </Callout>
+      {/* ONE strip, because there is now one denomination. A plate of ruled
+          slots claims its figures are ONE comparison, and a strip per currency
+          — the only honest way to show native sums, since adding euros to dong
+          is the unit-less total data-semantics §1 r4 forbids — had a manager
+          comparing commit against best case inside each currency and never
+          across the business, which is the question they actually have.
 
           The slots stay slots rather than becoming a bar list: every category
           carries TWO figures, the raw total and the probability-weighted one
@@ -521,15 +518,13 @@ function ForecastStrip({
  * Every money report groups by currency as well as by its own dimension, so a
  * company trading in two currencies is two rows with two counts. `/deals` reads
  * no `currency` dial — the parameter does not exist on the endpoint — so a link
- * beside such a row can narrow to the company but not to the row, and it opens
- * the union of both. The figure promises one set and the door opens a larger
- * one, which is the defect a figure-as-door has to avoid to be worth drawing.
+ * beside such a row narrows to the company but not to the row and opens the
+ * union of both: the figure promises one set and the door opens a larger one.
  *
  * So the door survives exactly where it is exact. A key with a single currency
- * row has no sibling row to be confused with, and `organization_id` alone
- * addresses precisely the deals that row counted. A key with two or more gets
- * the plain number — the same answer this table already gives a row whose
- * company is "none".
+ * row has no sibling to be confused with, and `organization_id` alone addresses
+ * precisely the deals that row counted; a key with two or more gets the plain
+ * number, the answer a row whose company is "none" already gets.
  *
  * Sound because a report result is complete: `ReportResult` carries no cursor
  * and no truncation flag, so the rows in hand are all the rows there are. Were
@@ -703,15 +698,13 @@ function StageTable({
         {
           key: "count",
           header: t("analytics.count"),
-          // Every row addresses its deals now. The old table linked only the
-          // stages trading in ONE currency, because a stage split across two
-          // rows had no single set to open; converted, one stage is one row
-          // and one set again.
+          // Every row addresses its deals: converted, one stage is one row and
+          // one set again, where a stage split across two currency rows had no
+          // single set to open.
           //
-          // The link asks for OPEN deals, which is what this report counts —
-          // deals-by-stage could not, because a won deal keeps the stage it
-          // closed in and narrowing there would have handed back a shorter
-          // list than the figure above it.
+          // The link asks for OPEN deals, which is what this report counts: a
+          // won deal keeps the stage it closed in, so narrowing on the stage
+          // would hand back a shorter list than the figure above it.
           render: (row: StageAgg) => (
             <CountLink
               count={row.count}
@@ -782,11 +775,10 @@ function derivationHeader(col: string, t: (key: MessageKey) => string): string {
 // The server names the row and the reader reads the name, so the raw id
 // becomes noise beside it — but only once EVERY row has a name.
 //
-// Labelling is per row: the seam withholds a name for a record this reader
-// may not read, and the label column appears as soon as one row was named.
-// Dropping the id on that alone would leave the withheld rows showing a blank
-// where their only identifier used to be, so the rows a reader can least
-// account for become the ones they cannot identify at all.
+// Labelling is per row: the seam withholds a name for a record this reader may
+// not read, and the column appears as soon as one row was named. Dropping the
+// id on that alone would blank the withheld rows' only identifier, so the rows
+// a reader can least account for become the ones they cannot identify at all.
 export function derivationColumns(derivation: Derivation): string[] {
   const rows = derivation.rows ?? [];
   const everyRowNamed =
@@ -798,12 +790,10 @@ export function derivationColumns(derivation: Derivation): string[] {
 
 // Which money a row's minor-unit figure is written in.
 //
-// The two are not the same column. A `_base_minor` measure was converted by
-// the server, so it is in the installation's base currency. A plain `_minor`
-// measure is the deal's OWN amount, and the forecast's rows carry the
-// currency it was written in beside it — reading the base currency there
-// would put a euro sign on a dollar deal, which is the exact misreading this
-// renderer exists to prevent.
+// The two are not the same column. A `_base_minor` measure was converted by the
+// server, so it is in the installation's base currency; a plain `_minor` is the
+// deal's OWN amount, and the forecast's rows carry that currency beside it —
+// reading the base currency there would put a euro sign on a dollar deal.
 export function derivationCellCurrency(
   col: string,
   row: Record<string, unknown>,
@@ -1336,8 +1326,18 @@ function MyOutcomesView({
 
   if (self == null) {
     // A hand-typed address under a manager lens: the numbers this view could
-    // fetch would measure the default population, not the person.
-    return <Callout tone="info">{t("analytics.outcomesOwnLensOnly")}</Callout>;
+    // fetch would measure the default population, not the person. `withheld`
+    // and not `empty`, which would claim they have no outcomes.
+    return (
+      <SurfaceState
+        state="withheld"
+        emptyLabel={t("common.empty")}
+        loadingLabel={t("analytics.sectionOutcomes")}
+        detail={{ withheldReason: t("analytics.outcomesOwnLensOnly") }}
+      >
+        {null}
+      </SurfaceState>
+    );
   }
 
   const pipelineRow = pipelineQuery.data?.rows[0];

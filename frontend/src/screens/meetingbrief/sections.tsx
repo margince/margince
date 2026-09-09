@@ -3,7 +3,7 @@
 // The server sends them in ADR-0097 D5's reading order and this file does not
 // re-sort that order for its own sake — it gives three of them a shape their
 // job earns and leaves the rest as panels. The goal leads because burying the
-// ask is the canonical prep failure. The risks are a callout because a
+// ask is the canonical prep failure. The risks take the warn tint because a
 // watch-out a reader scrolls past is a watch-out they walk in without. The
 // company background collapses because it is the one section that is context
 // rather than preparation.
@@ -12,10 +12,8 @@
 // section had nothing to say, and a heading over an empty space tells a reader
 // to look for something that is not there.
 
-import { AlertTriangle } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Badge, Disclosure } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
@@ -120,10 +118,22 @@ export function GoalPanel({
   );
 }
 
-// The watch-outs. A callout rather than a panel because this is the one
-// section whose cost of being missed is a sentence said in the room that
-// cannot be taken back.
-export function RiskCallout({
+// The watch-outs: a body panel like the rest, tinted because this is the one
+// section whose FINDING is the bad news and whose cost of being missed is a
+// sentence said in the room that cannot be taken back.
+//
+// The tint follows the WRITER first, exactly as the lead's does. Indigo means
+// "Margince wrote this" everywhere in the product, and it is claimed for every
+// panel of a model-written brief rather than for one of them, so a warn tint
+// here would be the one section of that brief not saying who wrote it. A
+// composition has no such claim to make, and there the tint is free to carry
+// the finding.
+//
+// It was a `Callout`, which is what a surface says ABOUT itself and never where
+// its content lives — the brief's risks are a named part of the document a
+// reader navigates to, so the heading had to be bolted on outside the notice
+// and the outline was two things pretending to be one.
+export function RisksPanel({
   brief,
   onOpenRecord,
   onOpenEmail,
@@ -137,21 +147,20 @@ export function RiskCallout({
   if (!risks) {
     return null;
   }
-  // The heading is the SECTION's, not the callout's: a Callout titles itself
-  // with a paragraph because it is an inline alert, and the risks are a named
-  // part of the brief a reader navigates to. Putting the h3 outside keeps the
-  // outline honest and still lets the callout draw the warning ground.
   return (
-    <section className="mb-risks">
-      <h3 className="mb-section-title">{t("person.meeting.risks")}</h3>
-      <Callout tone="warn" icon={AlertTriangle}>
+    <Panel
+      title={t("person.meeting.risks")}
+      titleLevel={3}
+      tone={brief.generated_by === "model" ? "ai" : "warn"}
+    >
+      <PanelBody>
         <SentenceList
           sentences={risks.sentences}
           onOpenRecord={onOpenRecord}
           onOpenEmail={onOpenEmail}
         />
-      </Callout>
-    </section>
+      </PanelBody>
+    </Panel>
   );
 }
 

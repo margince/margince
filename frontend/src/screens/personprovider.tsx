@@ -8,7 +8,6 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -20,6 +19,7 @@ import { formatDateAbbrev, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { usePerson360 } from "./person360";
+import { LookupRefused, LookupRunning } from "./personprovider.notices";
 import { categoryNames, categoryNamesTogether } from "./provider-categories";
 import {
   canEnrichNow,
@@ -215,26 +215,10 @@ function ProviderPanel({
     >
       <PanelBody>
         {enrich.error != null && (
-          // The refusal a POST answered with. A run the PLATFORM declined —
-          // no credits, daily cap, a standing objection — never arrives here:
-          // it is a skipped run, and the state badge above says which.
-          <Callout tone="danger" live="alert">
-            {problemMessageOf(enrich.error, t)}
-          </Callout>
+          <LookupRefused message={problemMessageOf(enrich.error, t)} />
         )}
-        {/* A lookup takes about half a minute, and for that half-minute the
-            panel used to be identical to one where nothing had happened: no
-            line, no change, the same buttons. A reader who pressed and saw
-            nothing move concluded the button was broken, which was the only
-            conclusion available to them. Above the values, because it is a
-            caveat about what is under it. */}
-        {running && (
-          <Callout tone="info" live="status">
-            {asking
-              ? t("provider.profile.working", { provider: name })
-              : t("provider.profile.landing")}
-          </Callout>
-        )}
+        {/* Above the values, because it is a caveat about what is under it. */}
+        {running && <LookupRunning asking={asking} provider={name} />}
         {firstRun ? (
           <EmptyState
             title={t("provider.profile.emptyTitle")}

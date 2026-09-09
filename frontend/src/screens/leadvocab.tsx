@@ -280,7 +280,11 @@ function AddSourceDialog({
           {t("leadSources.newLabel")}
         </h2>
         {create.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            kind="outcome"
+            tone="danger"
+            title={t("leadSources.notAdded")}
+          >
             {problemMessageOf(create.error, t)}
           </Callout>
         )}
@@ -335,6 +339,33 @@ function AddSourceDialog({
         </div>
       </form>
     </Modal>
+  );
+}
+
+/**
+ * The card's own band under the rows, not one more row: the posture is said once
+ * for the whole card rather than on each of a dozen refused controls, and a
+ * refused write belongs to the card the row it failed on sits in. One component
+ * because all three cards here carry it, and three copies had already drifted
+ * into two primitives for one band.
+ */
+function VocabNotices({
+  readOnly = false,
+  error,
+}: Readonly<{ readOnly?: boolean; error: unknown }>) {
+  const t = useT();
+  if (!readOnly && error === undefined) return null;
+  return (
+    <div className="lead-vocab-notices">
+      {readOnly && (
+        <Callout kind="standing" title={t("leadSources.readOnlyTitle")} />
+      )}
+      {error !== undefined && (
+        <Callout kind="outcome" tone="danger" title={t("leadSources.notSaved")}>
+          {problemMessageOf(error, t)}
+        </Callout>
+      )}
+    </div>
   );
 }
 
@@ -463,22 +494,7 @@ export function LeadSourcesCard() {
             />
           )}
         </SettingList>
-        {/* The card's own band under the rows, not one more row: the posture is
-            said once for the whole card rather than on each of a dozen refused
-            controls — the boundary is the same for every row in the list — and a
-            refused write belongs to the card the row it failed on sits in. */}
-        {(!canEdit || failure) && (
-          <div className="lead-vocab-notices">
-            {!canEdit && (
-              <p className="t-caption">{t("leadSources.readOnly")}</p>
-            )}
-            {failure && (
-              <Callout tone="danger" live="alert">
-                {problemMessageOf(failure.error, t)}
-              </Callout>
-            )}
-          </div>
-        )}
+        <VocabNotices readOnly={!canEdit} error={failure?.error} />
         {/* Closing clears the refusal with the form that carried it: the
             dialog's own Callout and the card's read the same sentence, and
             leaving it behind would report a failed add over a card the reader
@@ -715,18 +731,7 @@ export function LeadDisqualifyReasonsCard() {
             />
           )}
         </SettingList>
-        {(!canEdit || failure) && (
-          <div className="lead-vocab-notices">
-            {!canEdit && (
-              <p className="t-caption">{t("leadSources.readOnly")}</p>
-            )}
-            {failure && (
-              <Callout tone="danger" live="alert">
-                {problemMessageOf(failure.error, t)}
-              </Callout>
-            )}
-          </div>
-        )}
+        <VocabNotices readOnly={!canEdit} error={failure?.error} />
         <ConfirmModal
           open={removing !== null}
           onClose={() => {
@@ -890,16 +895,9 @@ export function LeadHandlingCard() {
             );
           }}
         </QueryGate>
-        {/* Under the rows it belongs to, in the card's own band — the same place
-            the two vocabulary cards above report a refused write, so all three
-            say it in one place. */}
-        {update.isError && (
-          <div className="lead-vocab-notices">
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(update.error, t)}
-            </Callout>
-          </div>
-        )}
+        {/* The same component the two cards above report a refused write with.
+            This card's rows are switches every seat may flip, so no posture. */}
+        <VocabNotices error={update.isError ? update.error : undefined} />
       </PanelBody>
     </Panel>
   );

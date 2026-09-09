@@ -309,7 +309,11 @@ export function ImapMailboxForm({
       </p>
       {errorMessage && (
         <div className="imap-mailbox-span">
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("connectors.imapConnectFailed")}
+          >
             {errorMessage}
           </Callout>
         </div>

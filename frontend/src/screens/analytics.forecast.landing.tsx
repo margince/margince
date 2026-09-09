@@ -1,5 +1,5 @@
 import type { components } from "../api/schema";
-import { StatCard } from "../design-system/atoms";
+import { EmptyState, StatCard } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { formatMoneyOrAbsent, formatNumber } from "../format/format";
 import { type Locale, useT } from "../i18n";
@@ -48,8 +48,15 @@ export function LandingCard({
         detail={detail}
         numeric
       />
+      {/* Its OWN heading, not the card's: the caveat sat under a repeat of
+          `forecast.landing` and read as a second copy of the figure's label
+          rather than as a remark about it. */}
       {landing.caveat && (
-        <Callout tone="warn" title={t("forecast.landing")}>
+        <Callout
+          tone="warn"
+          kind="standing"
+          title={t("forecast.landingCaveat")}
+        >
           {t(`forecast.landing.caveat.${landing.caveat}`)}
         </Callout>
       )}
@@ -70,9 +77,11 @@ export function SufficiencyCard({
   const t = useT();
   if (sufficiency.absent) {
     return (
-      <Callout tone="info" title={t("forecast.pipelineAbsentTitle")}>
+      // It stands WHERE a stat card would, so it is the shaped instructional
+      // empty state rather than a notice about a card that is not there.
+      <EmptyState title={t("forecast.pipelineAbsentTitle")}>
         {t(`forecast.pipelineAbsent.${sufficiency.absent}`)}
-      </Callout>
+      </EmptyState>
     );
   }
 

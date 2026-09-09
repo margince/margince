@@ -324,7 +324,10 @@ describe("the openchannel screen", () => {
 
     const shown = await screen.findByTestId("openchannel-signing-secret");
     expect(shown.textContent).toBe("b1946ac92492d2347c6235b4d2611184");
-    expect(screen.getByText(/only time this secret is shown/)).toBeTruthy();
+    // The caution's heading makes the claim; its body says what to do about
+    // it, and a reader who sees only one half has been told half of it.
+    expect(screen.getByText(/only time it is shown/)).toBeTruthy();
+    expect(screen.getByText(/copy it into the sender now/)).toBeTruthy();
     const mint = calls.find(
       (call) => call.path === "/ext/openchannel/endpoint/secret",
     );

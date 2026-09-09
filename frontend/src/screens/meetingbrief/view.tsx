@@ -27,7 +27,7 @@ import {
   BodyPanels,
   GlanceLine,
   GoalPanel,
-  RiskCallout,
+  RisksPanel,
 } from "./sections";
 import "./meetingbrief.css";
 
@@ -178,10 +178,10 @@ export function MeetingBriefView({
                 />
                 {/* The sections' risk list, unless the plan carried the one
                     risk that matters with what to do about it — two warn
-                    callouts on one surface is no warning at all, and the
-                    plan's is the one a reader can act on. */}
+                    panels on one surface is no warning at all, and the plan's
+                    is the one a reader can act on. */}
                 {!brief.plan?.top_risk && (
-                  <RiskCallout
+                  <RisksPanel
                     brief={brief}
                     onOpenRecord={onOpenRecord}
                     onOpenEmail={onOpenEmail}

@@ -197,9 +197,10 @@ export const NotCovered: Story = {
 };
 
 // The refusal about the SET: it is still being read, and nothing is wrong with
-// the question. Drawn as an info callout with the passage counts rather than as
-// the not-covered plate, because a reader told "not covered" goes looking for a
-// document to file when the truth is that the one they need is already there.
+// the question. Its own plate with its own heading and the passage counts under
+// it — the same shape the not-covered refusal draws, so all three refusals read
+// alike — and its own WORDS, because a reader told "not covered" goes looking
+// for a document to file when the one they need is already there.
 export const NotReady: Story = {
   render: askCard("how long are captured messages kept", () =>
     jsonResponse(NOT_READY),

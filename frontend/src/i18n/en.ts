@@ -209,6 +209,7 @@ export const en = {
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
   "shell.signOutAria": "Sign out",
+  "shell.signOutErr": "Sign-out failed",
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",
@@ -305,8 +306,8 @@ export const en = {
   "palette.typeRecord": "Record",
   "palette.seeAll": "See all results for “{query}”",
   "palette.searching": "Searching records…",
-  "palette.searchFailed":
-    "Records could not be searched just now. The commands above still work.",
+  "palette.searchFailedTitle": "Records could not be searched",
+  "palette.searchFailed": "The commands above still work.",
   "action.newDeal": "New deal",
   "action.readCompany": "Read a company",
   "action.booking": "Booking page",
@@ -717,6 +718,7 @@ export const en = {
     "No incumbent is connected. Connect HubSpot to read records from its mirror.",
   "overlay.adminOnly":
     "You do not have permission to change the HubSpot connection.",
+  "overlay.loadFailedTitle": "The connection could not be read",
   "overlay.region": "Region",
   "overlay.regionEu1": "EU",
   "overlay.connectionLabel": "Connection",
@@ -737,6 +739,7 @@ export const en = {
   "overlay.connectedAt": "Connected {at}",
   "overlay.syncTitle": "Mirror sync",
   "overlay.syncLoadFailed": "Couldn't load sync status.",
+  "overlay.syncLoadFailedTitle": "Sync status could not be read",
   "overlay.syncEmpty": "Nothing has synced yet.",
   "overlay.syncStateFresh": "Fresh",
   "overlay.syncStatePending": "Pending sync",
@@ -747,9 +750,11 @@ export const en = {
   "overlay.neverSynced": "Never synced",
   "overlay.budgetTitle": "API budget",
   "overlay.budgetLoadFailed": "Couldn't load the budget window.",
+  "overlay.budgetLoadFailedTitle": "The budget window could not be read",
   "overlay.budgetHeadroom": "Headroom: {headroom}",
   "overlay.budgetUnmeasured":
-    "The call budget cannot be measured right now, so live calls are paused as a precaution. This is not HubSpot quota pressure — the meter itself is not reporting.",
+    "Live calls are paused as a precaution. This is not HubSpot quota pressure — the meter itself is not reporting.",
+  "overlay.budgetUnmeasuredTitle": "The call budget cannot be measured",
   "overlay.budgetEmpty":
     "The incumbent reported no budget window for this period.",
   "overlay.budgetSources":
@@ -761,6 +766,7 @@ export const en = {
   "overlay.reconcile": "Sync now",
   "overlay.reconcileQueued":
     "Sweep queued — the worker picks it up on its next poll (about every 2 minutes).",
+  "overlay.reconcileFailedTitle": "The sweep was not queued",
   "overlay.disconnect": "Disconnect",
   "overlay.disconnectTitle": "Disconnect HubSpot?",
   "overlay.disconnectBody":
@@ -771,8 +777,10 @@ export const en = {
     "Who each user in this organization is as a {principal} user. This mapping is the whole of their mirror visibility.",
   "overlay.userMap.cost":
     "A user with no mapping sees no mirrored records at all — their lists come back empty.",
+  "overlay.userMap.costTitle": "An unmapped user sees nothing",
   "overlay.userMap.loading": "Loading the user mapping…",
   "overlay.userMap.loadFailed": "Couldn't load the user mapping.",
+  "overlay.userMap.loadFailedTitle": "The user mapping could not be read",
   "overlay.userMap.adminOnly":
     "You do not have permission to review who is mapped.",
   "overlay.userMap.notOverlay":
@@ -798,6 +806,8 @@ export const en = {
     "The {principal} directory is longer than this list — someone you can't find here may be past the cut-off.",
   "overlay.userMap.directoryFailed":
     "Couldn't read the {principal} directory, so nobody can be picked right now.",
+  "overlay.userMap.directoryFailedTitle": "The directory could not be read",
+  "overlay.userMap.saveFailedTitle": "That mapping was not saved",
   "overlay.userMap.notMapped": "Not mapped",
   "overlay.userMap.chip.noEmailMatch": "No email match",
   "overlay.userMap.chip.ambiguousEmail": "Ambiguous email",
@@ -1191,6 +1201,8 @@ export const en = {
   "access.issued.mailed": "Sent to {email}. You can also copy it below.",
   "access.issued.notMailed":
     "The link was not mailed. Copy it and send it yourself.",
+  "access.issued.mailedTitle": "The invitation is on its way",
+  "access.issued.notMailedTitle": "Nothing was mailed",
   "access.issued.linkLabel": "Their link",
   "access.issued.copy": "Copy link",
   "access.issued.copied": "Copied",
@@ -1327,6 +1339,7 @@ export const en = {
   "contracts.renew.dealNone": "No deal",
   "contracts.renew.dealWithheldCompany":
     "You cannot open this agreement's company, so its deals cannot be listed. The renewal keeps the same counterparty and records no deal.",
+  "contracts.renew.dealWithheldTitle": "No deal can be chosen here",
   "contracts.renew.submit": "Renew",
   "contracts.deal": "Deal",
   "contracts.statusChange.title": "Change status",
@@ -1636,6 +1649,9 @@ export const en = {
   "linkedinImport.profileLabel": "Your LinkedIn profile URL",
   "linkedinImport.profilePlaceholder": "https://www.linkedin.com/in/…",
   "linkedinImport.saveProfile": "Save profile",
+  "linkedinImport.saveFailed": "That profile URL was not saved",
+  "linkedinImport.profileReadFailed": "Your profile URL could not be read",
+  "linkedinImport.importFailed": "That export was not imported",
   "linkedinImport.editProfile": "Edit",
   "linkedinImport.editProfileTitle": "Your LinkedIn profile",
   "linkedinImport.profileNotSet": "Not recorded yet",
@@ -1658,6 +1674,7 @@ export const en = {
   "linkedinReach.title": "Where your network reaches",
   "linkedinReach.sub":
     "Accounts on file where you already know somebody, most connections first.",
+  "linkedinReach.readFailed": "That reading could not be made",
   "linkedinReach.empty":
     "None of your connections work at an account on file yet.",
   "linkedinReach.allUnresolved":
@@ -2051,14 +2068,16 @@ export const en = {
   "tagAdmin.restore": "Restore",
   "tagAdmin.usage": "{count} records",
   "tagAdmin.usagePending": "Counting…",
+  "tagAdmin.nearMatchTitle": "Close to a word you already have",
   "tagAdmin.nearMatch":
-    "Close to a word this organization already has: {names}. Apply that one instead unless this is a different thing.",
+    "{names} — apply that one instead unless this is a different thing.",
   "tagAdmin.mergeTitle": "Merge {name} into another tag",
   "tagAdmin.mergeIntoLabel": "Keep this tag",
   "tagAdmin.mergeIntoNone": "Choose a tag",
   "tagAdmin.mergeConfirm": "Merge",
+  "tagAdmin.mergeWarningTitle": "This cannot be undone",
   "tagAdmin.mergeWarning":
-    "This cannot be undone. Records carrying {name} will carry the other tag instead, and the name is released for anyone to use again.",
+    "Records carrying {name} will carry the other tag instead, and the name is released for anyone to use again.",
   "tagAdmin.mergedTitle": "Merged",
   "tagAdmin.mergedBody":
     "{moved} records moved to the surviving tag. {collapsed} already carried both, so their duplicate was dropped.",
@@ -2067,9 +2086,11 @@ export const en = {
     "This tag was read without a version, so it cannot be saved. Reopen the page and try again.",
   "tagAdmin.withheld":
     "You do not have access to this organization's tag vocabulary.",
+  "tagAdmin.truncatedTitle": "This list is shortened",
   "tagAdmin.truncated":
-    "This list is shortened. Words past the limit are not shown here and cannot be edited or merged into.",
+    "Words past the limit are not shown here and cannot be edited or merged into.",
   "tagAdmin.usageFailed": "Count unavailable",
+  "tagAdmin.changeFailed": "That tag was not changed",
   "tagAdmin.done": "Done",
   "tags.archived": "archived",
   "tags.columnHeader": "Tags",
@@ -2095,8 +2116,9 @@ export const en = {
     "Add durable context such as an event, a relationship, or a cohort.",
   "tags.pickerLabel": "Find a tag",
   "tags.alreadyAdded": "Already added",
+  "tags.catalogTruncatedTitle": "This list is shortened",
   "tags.catalogTruncated":
-    "This list is shortened, so a word may be missing. Search for it by name before asking for a new one.",
+    "A word may be missing. Search for it by name before asking for a new one.",
   "tags.noMatch":
     "No tag by that name. An admin or ops seat can add one to the vocabulary.",
   "tagResult.gone":
@@ -2145,6 +2167,9 @@ export const en = {
   "leadSources.sub":
     "Where leads come from. Used in the New lead form, as a filter, and by the score.",
   "leadSources.readOnly": "Only an admin or ops seat changes this list.",
+  "leadSources.readOnlyTitle": "Only an admin or ops seat changes this list",
+  "leadSources.notSaved": "That change was not saved",
+  "leadSources.notAdded": "That source was not added",
   "leadSources.labelFor": "Label of source {key}",
   "leadSources.intentFor": "Intent of {label}",
   "leadSources.intent": "Intent",
@@ -2269,6 +2294,7 @@ export const en = {
   "lead.demoteReasonRequired": "Say why first.",
   "lead.demoteConfirm": "Reverse",
   "lead.reopen": "Reopen",
+  "lead.writeRefused": "That change did not save",
   "lead.reopenDialog": "Reopen this lead?",
   "lead.reopenExplain":
     "The lead goes back on the open ladder at the status it had when it was disqualified, and the reason is cleared. Its history and its score are kept.",
@@ -2380,9 +2406,9 @@ export const en = {
   "lead.trigger.meetingHeld": "Meeting held",
   "lead.trigger.humanQualify": "Human qualified",
   "lead.evidenceNote": "Evidence note (optional)",
-  "lead.segregation":
-    "Leads are kept apart from Contacts. A lead becomes a contact only when you qualify it.",
-  "lead.segregationDismiss": "Got it",
+  "lead.segregationTitle": "Leads are kept apart from Contacts",
+  "lead.segregation": "A lead becomes a contact only when you qualify it.",
+  "lead.segregationDismiss": "Dismiss this notice",
   "list.emptyMine": "You own no {unit}.",
   "list.showAll": "Show all",
   "lead.assignedAway": "{names} assigned to {owner} — no longer in Mine.",
@@ -2747,7 +2773,7 @@ export const en = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "A quiet week — nothing closed and nothing moved.",
 
-  "brief.changed.lead": "Changed since the brief:",
+  "brief.changed.lead": "Changed since the brief",
   "brief.changed.more": "+{count} more",
   "brief.changed.open": "Open the worklist",
   "brief.feed.title": "Today",
@@ -2811,8 +2837,8 @@ export const en = {
     "{count} to take to Monday, starting with {first}.",
   "teamweekly.agenda.copy": "Copy agenda",
   "teamweekly.agenda.copied": "Copied",
-  "teamweekly.agenda.copyFailed":
-    "This browser would not hand over the clipboard. Select the list and copy it.",
+  "teamweekly.agenda.copyFailedTitle": "This browser refused the clipboard",
+  "teamweekly.agenda.copyFailed": "Select the list and copy it by hand.",
   "teamweekly.focus.help_requested": "Asked for help",
   "teamweekly.focus.leads_breached": "Leads went unanswered",
   "teamweekly.focus.commitments_missed": "Plan commitments missed",
@@ -2829,6 +2855,7 @@ export const en = {
   "plan.readOnly":
     "Read-only view \u2014 planning a week and settling a commitment are not yours to do here.",
   "plan.add": "Add commitment",
+  "plan.refusedTitle": "Not everything saved",
   "plan.saveRefused_one":
     "One commitment could not be saved. It is still ticked — try again.",
   "plan.saveRefused_other":
@@ -2972,6 +2999,7 @@ export const en = {
   "brief.promises.untracked":
     "Promises made in conversation are not tracked yet — only tasks are listed here.",
   "brief.panel.watch": "Gone quiet",
+  "brief.overnight.connectorsUnhealthy": "Connections need attention",
   "brief.overnight.fixConnector": "Fix the connection",
   "brief.watch.clear": "Nothing has gone quiet.",
   "brief.readings.label": "Your morning, in five readings",
@@ -3109,8 +3137,9 @@ export const en = {
     "Status unavailable for {count} suggestions",
   "transcriptread.nothingStated":
     "Read in full. This conversation states no next steps.",
-  "transcriptread.failedFallback":
-    "This transcript could not be read. Nothing was staged.",
+  "transcriptread.failedTitle": "This transcript could not be read",
+  "transcriptread.failedFallback": "Nothing was staged.",
+  "transcriptread.effectFailedTitle": "Accepted, but the task never appeared",
 
   "create.cancel": "Cancel",
   "create.multiselect.required": "Required — select at least one.",
@@ -3129,6 +3158,7 @@ export const en = {
   "vcardImport.working": "Reading the cards…",
   "vcardImport.done": "Close",
   "vcardImport.noCards": "That file held no cards.",
+  "vcardImport.failed": "Those cards were not imported",
   "vcardImport.outcome.created": "Added",
   "vcardImport.outcome.updated": "Filled in the gaps",
   "vcardImport.outcome.needsReview": "Looks like someone you already have",
@@ -3446,6 +3476,7 @@ export const en = {
   "compose.voiceVersion": "Built from your corpus · v{n}",
   "compose.voiceDegraded":
     "Your voice profile couldn't be loaded, so this draft is not written in your voice. Draft again, or edit before sending.",
+  "compose.voiceDegradedTitle": "This draft is not in your voice",
   "compose.provisional": "Provisional voice",
   "compose.provisionalHint":
     "Your Voice DNA is still being built. It already shapes this draft exactly as a finished one would — nothing is held back.",
@@ -3494,6 +3525,9 @@ export const en = {
   "compose.colleagueMailbox_other":
     "This message was delivered to the mailboxes of {names}. Your reply goes out from your own mailbox, under your name.",
   "compose.colleagueUnnamed": "a colleague",
+  "compose.threadGoneTitle": "That thread cannot be answered",
+  "compose.colleagueMailboxTitle": "This is a colleague's mail",
+  "compose.deadRecipientsTitle": "Mail to these addresses bounces",
   "compose.attach": "Attach",
   "compose.filesOnRecord": "On this record",
   "compose.filesLoading": "Reading the record's files…",
@@ -3551,10 +3585,10 @@ export const en = {
   "compose.why.contract": "About their contract",
   "compose.why.account": "About their account",
   "compose.why.marketing": "Marketing",
-  "sendPermission.refused": "You cannot send this message.",
+  "sendPermission.refused": "You cannot send this message",
   "sendPermission.sayWhy": "Say why you may write",
   "sendPermission.unproven":
-    "Margince has no record of why you may write to them.",
+    "Margince has no record of why you may write to them",
   "sendPermission.unprovenHint":
     "If you know why — they asked you to, you met, they are a customer — say so and it is recorded against your name.",
   "sendPermission.unprovenRefuses":
@@ -3742,8 +3776,8 @@ export const en = {
     "Leaving without copying discards the link. You would have to create another.",
   "analytics.share.copy": "Copy link",
   "analytics.share.copied": "Copied",
-  "analytics.share.copyFailed":
-    "The link could not be copied. Select it above and copy it by hand.",
+  "analytics.share.copyFailedTitle": "The link could not be copied",
+  "analytics.share.copyFailed": "Select it above and copy it by hand.",
   "analytics.share.done": "Done",
   "analytics.frame": "As of {asOf} · {zone}",
   "review.title": "What should be checked before the call?",
@@ -3829,6 +3863,7 @@ export const en = {
   "forecast.fxMissing": "Exchange rate missing",
   "analytics.reportForecast": "Forecast categories",
   "analytics.reportOpenByCompany": "Open deals per company",
+  "analytics.forecastBannerTitle": "How to read these tiles",
   "analytics.forecastBanner":
     "Each tile shows the raw total and, beneath it, the probability-weighted total — rounded per deal, so it always reconciles to Explain This Number.",
   "analytics.company": "Company",
@@ -3875,6 +3910,7 @@ export const en = {
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
+  "brief.coverage.unavailable": "Not every source answered",
   "brief.coverage.summary": "Which sources had more",
   "brief.coverage.bounded": "{shown} shown of at least {considered} read",
   "delivery.morningLabel": "Your morning brief",
@@ -4202,6 +4238,13 @@ export const en = {
   "import.failed":
     "The import stopped after {checkpoint} rows. Resuming continues from there rather than starting again.",
   "import.resume": "Resume the import",
+  "import.uploadFailed": "The file was not read",
+  "import.resumedRunTitle": "A run from an earlier visit",
+  "import.failedTitle": "The import stopped partway",
+  "import.commitFailed": "The import did not run",
+  "import.undoInterruptedTitle": "The undo stopped partway",
+  "import.undoFailed": "The undo did not run",
+  "import.validateFailed": "The check did not run",
   "import.another": "Import another file",
   "import.undo_one": "Undo this import (1 row)",
   "import.undo_other": "Undo this import ({rows} rows)",
@@ -4348,8 +4391,9 @@ export const en = {
     "This permanently erases the contact across the whole system — record, captured activity, and derived values. It cannot be undone. The erasure is itself audited.",
   "privacy.typeErase": "Type ERASE to confirm",
   "privacy.erasureConfirm": "Erase + suppress",
+  "privacy.legalHoldTitle": "Blocked — legal hold",
   "privacy.legalHold":
-    "Blocked — legal hold. This contact is inside a statutory retention window, so erasure does not win here (Art. 17(3)(b)). The block applies to every role, including admin — there is no override. The attempt was audited.",
+    "This contact is inside a statutory retention window, so erasure does not win here (Art. 17(3)(b)). The block applies to every role, including admin — there is no override. The attempt was audited.",
 
   "restricted.title": "Restricted records",
   "restricted.sub":
@@ -4471,10 +4515,12 @@ export const en = {
     "“{name}” leaves the pipeline and the stages after it move up. Past stage changes stay readable. Deals still sitting on it have to move first.",
   "stage.criteria.title": "Exit criteria",
   "stage.criteria.sub": "What must be true before a deal leaves this stage.",
+  "stage.criteria.buyerCalloutTitle": "Evidence has to come from the buyer",
   "stage.criteria.buyerCallout":
-    "Evidence has to come from the buyer. A message your team wrote never satisfies a criterion about what the buyer did.",
+    "A message your team wrote never satisfies a criterion about what the buyer did.",
+  "stage.criteria.unreadableTitle": "I could not read these criteria",
   "stage.criteria.unreadable":
-    "I could not read this stage's criteria just now. Reload before you change them — what you see may be incomplete.",
+    "Reload before you change them — what you see may be incomplete.",
   "stage.criteria.none": "This stage asks for nothing yet.",
   "stage.criteria.terminal":
     "A won or lost stage is where a deal stops, so it requires nothing to leave it.",
@@ -4901,14 +4947,19 @@ export const en = {
   "overnightGrant.label": "Let Margince prepare my morning brief overnight",
   "overnightGrant.help":
     "It reads your deals and mail to rank what needs you today, and writes notes back. It cannot send: the permission you give here covers reading and writing only, never sending.",
+  "overnightGrant.dangerTitle": "The overnight agent will not run",
   "overnightGrant.danger":
-    "Without this permission, the overnight agent cannot read or annotate your brief. Your records, worklist and scheduled weekly review remain available.",
+    "It cannot read or annotate your brief. Your records, worklist and scheduled weekly review remain available.",
+  "overnightGrant.saveFailedTitle": "Your answer was not saved",
   "overnightGrant.saveFailed":
-    "Your answer to the overnight question could not be saved. Everything else is connected — set it under Settings → Connections when you are in.",
+    "Everything else is connected — set it under Settings → Connections when you are in.",
+  "overnightGrant.renewTitle": "The overnight authority has expired",
   "overnightGrant.renew":
-    "You said yes, but the authority Margince was working under has expired. Turn this off and on again to renew it — until then your brief is not being prepared.",
+    "Turn this off and on again to renew it. Until then your brief is not being prepared.",
+  "overnightGrant.renewScopeTitle": "That authority no longer covers the work",
+  "overnightGrant.writeFailedTitle": "That change was not saved",
   "overnightGrant.renewScope":
-    "You said yes, but Margince has learned to do more since, and the authority you gave does not cover the new work. Turn this off and on again to widen it — until then your brief is not being prepared.",
+    "Margince has learned to do more since you said yes. Turn this off and on again to widen it — until then your brief is not being prepared.",
   "aiHealth.title": "Model lanes",
   "aiHealth.sub":
     "Whether each model tier is answering. A lane that stopped and one that is merely cautious look the same everywhere else — captured mail stays held either way.",
@@ -4941,6 +4992,9 @@ export const en = {
     "{count} thread(s) have been asked about repeatedly with no answer. Mail stays withheld while this lasts — nothing is lost, and it clears on its own once the classifier answers again.",
   "heldThreads.heldByOthers":
     "Still held: {count} other mailbox imported this message and has not shared it. A thread opens only when everyone who received it agrees.",
+  "heldThreads.releaseFailed": "The thread was not shared",
+  "heldThreads.stillHeldTitle": "Waiting on other mailboxes",
+  "heldThreads.backlogStalledTitle": "The classifier has stopped answering",
   "heldThreads.kind.legal": "Legal",
   "heldThreads.kind.financialCorporate": "Company finances",
   "heldThreads.kind.personnel": "Personnel",
@@ -4986,7 +5040,7 @@ export const en = {
   "mailSharing.help":
     "Individual messages can be limited afterwards, and addresses or domains excluded up front.",
   "mailSharing.danger":
-    "DANGER: Switching off email sharing will make usage of the CRM difficult. New mail will be visible only to the people on each message.",
+    "Switching off email sharing will make usage of the CRM difficult. New mail will be visible only to the people on each message.",
   "mailSharing.posture.shared":
     "Newly captured mail is readable by colleagues who can see the contact.",
   "mailSharing.posture.private":
@@ -4997,6 +5051,9 @@ export const en = {
     "Lets a colleague put their own mailbox in the shared posture, where a captured message is readable by the team the moment it lands, before anything has judged it. Off by default.",
   "mailSharing.sharedPosture.warning":
     "Reading an employee's mailbox into a shared CRM is what a works-council agreement covers in Germany and Austria. Turning this on says your organization holds one. Margince does not check.",
+  "mailSharing.dangerTitle": "Email sharing is off",
+  "mailSharing.sharedPosture.warningTitle": "This asserts a legal basis",
+  "mailSharing.saveFailed": "That setting was not saved",
   "mailSharing.save": "Save",
   "connectors.originLabel": "Address used in emailed links",
   "connectors.originReachable": "Answering",
@@ -5058,6 +5115,7 @@ export const en = {
     "Mail with anyone at {domain}, including subdomains, stays with the people who were on it. It is still captured and still yours to read — colleagues do not see it.",
   "hold.confirmHistoryNote":
     "This covers mail from here on. Mail already captured keeps the visibility it has.",
+  "captureNotice.title": "What connecting a mailbox means",
   "captureNotice.whatHappens":
     "Margince reads this mailbox and files what it finds: the messages, who was on them, and the contacts and companies behind the addresses. Attachments are stored with their message.",
   "captureNotice.whoReads":
@@ -5120,6 +5178,10 @@ export const en = {
   "connectors.oauthBadClient":
     "The provider refused this installation's app credentials. An administrator should check the client ID and secret under Settings → General; re-connecting will not clear it on its own.",
   "connectors.dismissOutcome": "Dismiss",
+  "connectors.oauthConnected": "Connection made",
+  "connectors.oauthNotConnected": "Nothing was connected",
+  "connectors.connectFailed": "Could not connect",
+  "connectors.imapConnectFailed": "Mailbox not connected",
 
   // The "Add a connection" affordance (Task 1): one verb in the card's header
   // opens a dialog listing the providers still addable, each with the sentence
@@ -5191,6 +5253,7 @@ export const en = {
   "connectors.telegramSubmitCta": "Connect",
   "connectors.telegramReplaceCta": "Replace token",
   "connectors.telegramConnectedAs": "Connected as @{username}.",
+  "connectors.telegramConnectFailed": "That did not connect",
 
   // The workspace's own consumer-mail list (CAP-PARAM-5): what the shipped
   // baseline missed, and what it got wrong. Admin-curated and shared, because
@@ -5220,6 +5283,8 @@ export const en = {
   "consumerMail.baselineSearchLabel": "Search the shipped list",
   "consumerMail.baselinePlaceholder": "gmail.com",
   "consumerMail.baselineNone": "No shipped domain matches.",
+  "consumerMail.removeFailed": "Domain not removed",
+  "consumerMail.addFailed": "Domain not added",
   "consumerMail.baselineMore":
     "Showing the first {shown} of {matched} matches.",
 
@@ -5239,7 +5304,8 @@ export const en = {
     "One sentence somebody reviewing this later can act on.",
   "blockedDomains.reasonPlaceholder": "a tool we use, not a customer",
   "blockedDomains.save": "Save decision",
-  "blockedDomains.stored": "Stored: {domain} — {admission}.",
+  "blockedDomains.stored": "Stored: {domain} — {admission}",
+  "blockedDomains.saveFailed": "That decision could not be saved",
   "blockedDomains.adminOnly":
     "Only an admin or ops seat may change a domain decision. The list itself is yours to read.",
   "blockedDomains.none":
@@ -5563,6 +5629,7 @@ export const en = {
     "Your review just picked up newer information. Have a look, then press Continue again.",
   "ob.conv.review.confirmVersionSkewStuck":
     "Nothing has changed yet, so Continue would fail again. Have another look, or try in a moment.",
+  "ob.conv.review.refusalTitle": "Continue did not finish",
   "ob.conv.review.confirmNotReady":
     "This read has no draft to confirm yet. Check again when it finishes, or start a fresh read.",
   "ob.conv.review.confirmCheckFailed":
@@ -5913,11 +5980,13 @@ export const en = {
   "password.open": "Change password",
   "password.cancel": "Cancel",
   "password.submit": "Save new password",
-  "password.done": "Password changed. Every other device has been signed out.",
+  "password.doneTitle": "Password changed",
+  "password.done": "Every other device has been signed out.",
+  "password.changeFailedTitle": "The password was not changed",
   // Deliberately says nothing about WHICH field: this is the fallback for a
   // refusal the server did not explain, and naming the current password would
   // send someone hunting a mistake that may not be theirs.
-  "password.errorGeneric": "The password couldn't be changed. Try again.",
+  "password.errorGeneric": "No cause was reported. Try again.",
   "setup.pageTitle": "Set up Margince",
   "setup.title": "Claim this installation",
   "setup.body":
@@ -6050,8 +6119,14 @@ export const en = {
   "prefs.unsub.lockedBody":
     "They're needed for something you asked for \u2014 a password reset, or a confirmation you requested.",
   "prefs.unsub.retry": "Try again",
+  "prefs.unsub.unknownPurposeTitle": "That link names nothing we send",
   "prefs.unsub.unknownPurpose":
-    "This link doesn't name a kind of email we send. Open your preferences to see everything.",
+    "Open your preferences to see every kind of email we send.",
+  "prefs.unsub.deadLinkTitle": "This link is no longer valid",
+  "prefs.unsub.deadLinkBody":
+    "Preference links expire and can be withdrawn. Ask for a fresh one from any recent email.",
+  "prefs.unsub.errorTitle": "We could not open your preferences",
+  "prefs.unsub.failedTitle": "We could not stop these emails",
   "prefs.purpose.business_correspondence": "Direct correspondence",
   "prefs.purpose.marketing_email": "Product news",
   "prefs.purpose.transactional": "Security & service messages",
@@ -6070,6 +6145,7 @@ export const en = {
   "buyer.emailLabel": "Your email address",
   "buyer.emailHint": "The address the invitation was sent to.",
   "buyer.requestLink": "Send me a new link",
+  "buyer.linkRequestedTitle": "Check your inbox",
   "buyer.linkRequested":
     "If that address was invited, a new link is on its way.",
   "buyer.pausedTitle": "Access is paused",
@@ -6081,8 +6157,9 @@ export const en = {
   "buyer.eyebrow": "Deal Room",
   "buyer.contact": "Your contact: {steward}.",
   "buyer.closed": "This room is closed; what it shared is a record now.",
+  "buyer.previewBannerTitle": "You are previewing this room",
   "buyer.previewBanner":
-    "You are previewing this room as a buyer would see it. You can read everything and change nothing.",
+    "This is what a buyer would see. You can read everything and change nothing.",
   "buyer.previewReadOnly":
     "A preview cannot write. Close this tab to return to the Deal Room page.",
   "buyer.closedNote": "This room is now read-only.",
@@ -6489,8 +6566,10 @@ export const en = {
   "settings.scopeAria": "Who this page affects: {scope}",
   "settings.scopeAriaMixed":
     "This page holds settings that affect different people \u2014 each one says which.",
-  "settings.readOnlyPage":
-    "You can see these settings but not change them \u2014 changing them is not part of your role.",
+  "settings.readOnlyPageTitle": "These settings are not yours to change",
+  "settings.readOnlyPage": "Changing them is not part of your role.",
+  "settings.saveFailed": "That did not save",
+  "settings.mintFailed": "That passport was not created",
   "settings.search.label": "Search settings",
   "settings.search.placeholder": "Search settings",
   "settings.search.none": "No settings page matches that.",
@@ -6548,6 +6627,10 @@ export const en = {
     "Nothing was searched: this installation has no search index configured, so the documents could not be looked at. That is a setup matter rather than anything about your question.",
   "corpusAsk.unreviewed":
     "The search found these passages nearest to your question. Nothing has read them, so nothing has judged whether they answer it.",
+  "corpusAsk.failed": "That question was not answered",
+  "corpusAsk.unreviewedTitle": "Nobody has read these passages",
+  "corpusAsk.notReadyTitle": "This set is still being read",
+  "corpusAsk.retrievalUnavailableTitle": "No search index is configured",
   "corpusAsk.notCovered.title": "Not covered by this set",
   "corpusAsk.notCovered.body":
     "{name} was searched in full and holds nothing close enough to answer this. It covers:",
@@ -6557,17 +6640,20 @@ export const en = {
   "knowledge.withheld": "Which document sets exist is not yours to see.",
   "knowledge.coverage":
     "{documents} documents · {embedded} of {total} passages searchable",
+  "knowledge.reindexingTitle": "This set is being re-read",
   "knowledge.reindexing":
-    "This set is being re-read after a change to how text is indexed. Asking it will say it is not ready until that finishes; nothing has been lost.",
+    "A change to how text is indexed started it. Asking it will say it is not ready until that finishes; nothing has been lost.",
   "knowledge.showDocuments": "Show documents",
   "knowledge.hideDocuments": "Hide documents",
   "knowledge.documents": "Documents",
   "knowledge.noDocuments": "Nothing filed here yet.",
   "knowledge.archive": "Archive set",
+  "knowledge.archiveFailed": "That set was not archived",
   "knowledge.archiveConfirm.title": "Archive this document set?",
   "knowledge.archiveConfirm.body":
     "The set and everything filed in it stop being searchable. Nothing is destroyed.",
   "knowledge.deleteDocument": "Delete",
+  "knowledge.deleteFailed": "That document was not deleted",
   "knowledge.deleteConfirm.title": "Delete this document?",
   "knowledge.deleteConfirm.body":
     "The file, the text taken from it and the search index built on it are destroyed. This cannot be undone.",
@@ -6575,12 +6661,15 @@ export const en = {
   "knowledge.ingest.running": "Being read",
   "knowledge.ingest.done": "Searchable",
   "knowledge.ingest.failed": "Could not be read",
+  "knowledge.ingestDetailTitle": "Why this file could not be read",
   "knowledge.upload.label": "Add a document",
   "knowledge.upload.hint":
     "Plain text, Markdown, CSV or JSON. There is no reader for PDFs or Word files here, and one would be refused rather than filed empty.",
   "knowledge.upload.empty": "Drop a text file here, or choose one",
   "knowledge.upload.submit_other": "Add {count} documents",
-  "knowledge.upload.refused": "{filename} was not added: {message}",
+  "knowledge.upload.refusedTitle_one": "One file was not added",
+  "knowledge.upload.refusedTitle_other": "{count} files were not added",
+  "knowledge.upload.refused": "{filename}: {message}",
   "knowledge.upload.submit_one": "Add document",
   "knowledge.new.title": "New document set",
   "knowledge.new.name": "Name",
@@ -6588,6 +6677,7 @@ export const en = {
   "knowledge.new.topicHint":
     "Write a sentence, not a label. It is quoted back to whoever asks a question this set does not cover, so it is read at their least patient moment.",
   "knowledge.new.submit": "Create set",
+  "knowledge.new.failed": "That set was not created",
   "settings.tab.privacy": "Privacy & retention",
   "settings.tab.capture-activity": "Capture activity",
   "verdictPass.subject.senders": "Senders",
@@ -6796,6 +6886,7 @@ export const en = {
   "settings.rates.modelAdd": "Add model rate",
   "settings.rates.modelEmpty": "No model rates yet.",
   "settings.rates.modelModalTitle": "Set a model price",
+  "settings.rates.notSaved": "That rate was not saved",
   "settings.rates.setRate": "Save",
   "settings.rates.refresh": "Refresh from sources",
   "settings.rates.refreshEnqueued":
@@ -7001,6 +7092,9 @@ export const en = {
   "extAccess.versionSkew":
     "Someone else changed this role while you were looking at it, so your change was not applied. The grants above are now the current ones — make the change again if you still want it.",
   "extAccess.systemRole": "Built-in role",
+  "extAccess.readOnlyTitle": "Read-only for your seat",
+  "extAccess.nobodyReadsTitle": "Nobody can read this extension",
+  "extAccess.grantFailed": "The grant was not changed",
   "extAccess.nobodyReads":
     "No role holds read on {object}, so every member sees an empty screen where this extension should be. Grant read to at least one role below.",
   "users.empty": "No users yet.",
@@ -7027,6 +7121,10 @@ export const en = {
   "users.teamNameLabel": "Team name",
   "users.newTeamPlaceholder": "e.g. DACH Sales",
   "users.createTeam": "Create team",
+  "users.notArchived": "That team was not archived",
+  "users.notSaved": "That change did not save",
+  "users.notCreated": "That team was not created",
+  "users.inviteFailed": "That invitation was not sent",
   "users.access.title": "What this user sees",
   "users.access.identity":
     "Reads every contact, company, lead and deal in the organization.",
@@ -7090,11 +7188,12 @@ export const en = {
   "users.link.urlLabel": "Set-password link",
   "users.link.copy": "Copy link",
   "users.link.copied": "Copied",
-  "users.link.copyFailed":
-    "Could not copy automatically. Select the link and copy it.",
+  "users.link.copyFailedTitle": "The link could not be copied",
+  "users.link.copyFailed": "Select it in the field and copy it by hand.",
   "users.link.expires": "Expires {when}.",
+  "users.link.failedTitle": "The link could not be created",
   "users.link.failed":
-    "The member was created, but the link could not be. They cannot sign in until you send them one.",
+    "The member exists, but cannot sign in until you send them a link.",
   "users.link.offline":
     "Could not reach the server. Check your connection and try again.",
   "users.link.retry": "Try again",
@@ -7123,6 +7222,8 @@ export const en = {
   "settings.companyMarkAdd": "Add",
   "settings.companyMarkReplace": "Replace",
   "settings.companyMarkRemove": "Remove",
+  "settings.companyMarkUploadFailed": "Logo not uploaded",
+  "settings.companyMarkRemoveFailed": "Logo not removed",
   "settings.companyMarkAddWide": "Add a wide logo",
   "settings.companyMarkReplaceWide": "Replace the wide logo",
   "settings.companyMarkRemoveWide": "Remove the wide logo",
@@ -7151,6 +7252,10 @@ export const en = {
   "settings.companyIdentity": "Identity and legal details",
   "settings.companySave": "Save company context",
   "settings.companySaved": "Saved",
+  "settings.companySaveFailed": "Company context not saved",
+  "settings.companyRefreshFailed": "The website read did not finish",
+  "settings.companyApplyFailed": "Changes not applied",
+  "settings.companyRefreshWarnings": "Warnings from this read",
   "settings.companyRefreshUnreadable":
     "We lost track of this website read. Start the refresh again.",
   "settings.companyRefreshStale":
@@ -7253,9 +7358,9 @@ export const en = {
   "aiusage.prevMonth": "Previous month",
   "aiusage.nextMonth": "Next month",
 
-  "aibanner.degraded": "AI running in economy mode.",
-  "aibanner.queued": "AI budget reached — background AI is queued.",
-  "aibanner.unknown": "AI budget status is not recognized.",
+  "aibanner.degraded": "AI running in economy mode",
+  "aibanner.queued": "AI budget reached — background AI is queued",
+  "aibanner.unknown": "AI budget status is not recognized",
   "aibanner.link": "View usage",
   "aibanner.dismiss": "Dismiss",
 
@@ -7301,7 +7406,8 @@ export const en = {
   "aiexport.copy": "Copy YAML",
   "aiexport.copied": "Copied",
   "aiexport.download": "Download .yaml",
-  "aiexport.copyFailed": "Copy failed — use the preview or download instead.",
+  "aiexport.copyFailedTitle": "Copy failed",
+  "aiexport.copyFailed": "Use the preview or download instead.",
   "aiexport.close": "Close",
   "aiexport.previewLabel": "Scenario preview",
   "aiexport.responseLabel": "Model response",
@@ -7339,6 +7445,7 @@ export const en = {
   "forecast.landingFrom": "{won} already won plus {remaining} still to come.",
   "forecast.landingFromCall":
     "The call for this period, which replaces the projection rather than adding to the {won} already won.",
+  "forecast.landingCaveat": "This landing comes with a caveat",
   "forecast.landing.caveat.call_absent":
     "Nobody has called this period, so this is commit evidence instead.",
   "forecast.landing.caveat.call_below_actual":
@@ -7364,12 +7471,14 @@ export const en = {
   "installationSettings.baseLanguage": "Base language",
   "installationSettings.baseLanguageHint":
     "The language AI writes in when the whole team reads what it wrote. Your own display language is separate, and replies to customers still follow the language of the conversation.",
+  "installationSettings.saveFailed": "Nothing was saved",
   "installationSettings.readOnly":
     "Only an admin or ops can change these settings.",
   "installationSettings.edit": "Edit",
   "installationSettings.editField": "Edit {field}",
   "installationSettings.save": "Save",
   "signInMethods.title": "Sign-in methods",
+  "signInMethods.saveFailed": "That change did not save",
   "signInMethods.sub":
     "Which ways people may sign in here. The list is what this deployment holds credentials for, so an admin can turn one off but cannot add one.",
   "signInMethods.password": "Email and password",
@@ -7413,6 +7522,7 @@ export const en = {
     "Entering a new pair replaces the stored one. Connections already made keep working until they are reconnected.",
   "oauthApp.store": "Store app",
   "oauthApp.replace": "Replace app",
+  "oauthApp.writeFailed": "That change was not saved",
   "oauthApp.remove": "Remove app",
   "oauthApp.redirectCopied": "Copied",
   "oauthApp.redirectCopy": "Copy {purpose} URI",
@@ -7426,6 +7536,7 @@ export const en = {
   "oauthApp.tenantHint":
     "Optional. Pins the app to one Entra directory: only its members may connect a mailbox, and Microsoft sign-in runs on it. Leave it empty to let any organization connect; sign-in then waits for the server to name your directories.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
+  "oauthApp.saveFailed": "The app was not saved",
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":
@@ -7437,6 +7548,8 @@ export const en = {
   "firstRun.ai.modelHint":
     "A starting point. Any model your provider serves will do.",
   "firstRun.ai.embedModel": "Embedding model",
+  "firstRun.ai.keyFailed": "The key was not sealed",
+  "firstRun.ai.bindFailed": "The provider was not bound",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
   "aiSettings.withheld": "Not yours to see",
@@ -7478,6 +7591,7 @@ export const en = {
   "aiProviderKeys.save": "Save key",
   "aiProviderKeys.adminOnly":
     "Only an admin or ops can change a provider credential.",
+  "aiProviderKeys.saveFailed": "This provider could not be updated",
   "aiProviderKeys.configured": "configured",
   "aiProviderKeys.absent": "not set",
   "aiProviderKeys.configuredHint":
@@ -7503,6 +7617,7 @@ export const en = {
     "Model lists come from the price sheet, which is not yours to read. Any id your provider serves works — type it.",
   "aiRouting.sub":
     "Which model serves each tier. Changes take effect without a restart, and every process picks them up within a minute.",
+  "aiRouting.unboundTitle": "No models are bound yet",
   "aiRouting.unboundUnkeyed":
     "This installation has no models bound, so its AI features are off. Add a model provider key below, then bind the tiers here. A deployment can also declare its first binding under seeds.ai_routing in margince.yaml, which is read once when the organization is created.",
   "aiRouting.unboundKeyed":
@@ -7537,22 +7652,26 @@ export const en = {
     "The models listed are the ones this installation can price, per million tokens in → out. Any other id your provider serves works too — type it.",
   "aiRouting.save": "Save routing",
   "aiRouting.saving": "Saving the binding…",
-  "aiRouting.saved": "Routing saved. Every process is now serving it.",
+  "aiRouting.savedTitle": "Routing saved",
+  "aiRouting.saved": "Every process is now serving it.",
+  "aiRouting.saveFailed": "Routing could not be saved",
   "aiRouting.adminOnly": "Only an admin or ops can change model routing.",
   "workingHours.title": "When you are bookable",
   "workingHours.sub":
     "Yours alone. Nobody sets these for you, and you set them for nobody else.",
+  "workingHours.unsetTitle": "You have not chosen yet",
   "workingHours.unset":
-    "You have not chosen yet, so customers are offered 09:00–17:00, Monday to Friday, on the installation's clock.",
+    "Customers are offered 09:00–17:00, Monday to Friday, on the installation's clock.",
   "workingHours.start": "Day starts",
   "workingHours.end": "Day ends",
   "workingHours.days": "Days you work",
   "workingHours.timezone": "Your timezone",
   "workingHours.timezoneHelp":
     "The clock those two times are read on. Pre-filled from this browser.",
+  "workingHours.narrowedTitle": "You are bookable for less of the week",
   "workingHours.narrowed":
-    "You are bookable for less of the week than before, so fewer customers will find a time. That is the change, not a fault.",
-  "workingHours.saveFailed": "Those hours were not saved.",
+    "Fewer customers will find a time. That is the change, not a fault.",
+  "workingHours.saveFailed": "Those hours were not saved",
   "workingHours.save": "Save working hours",
   "workingHours.day.1": "Monday",
   "workingHours.day.2": "Tuesday",
@@ -7564,6 +7683,8 @@ export const en = {
   "autonomy.title": "What answers itself",
   "autonomy.sub":
     "Small corrections you have been confirming by hand. Switch one on and it applies as soon as it comes up, with the change and an Undo waiting on your day.",
+  "autonomy.noneDecidedYetTitle": "Nothing decided yet",
+  "autonomy.updateFailed": "That switch could not be saved",
   "autonomy.noneDecidedYet":
     "You have not decided any of these yet. What reaches this list depends on the records you own and the work your team routes to you, so a seat with neither stays empty. The switches still decide what happens when something appears.",
   "autonomy.noRecord": "You have not decided one of these yet.",
@@ -7587,7 +7708,10 @@ export const en = {
   "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
     "When on, Margince reads what a person states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
+  "captureSettings.removeFailed": "That exclusion could not be removed",
+  "captureSettings.addFailed": "That exclusion could not be added",
   "captureSettings.adminOnly": "Only an admin or ops can change this.",
+  "captureSettings.updateFailed": "Setting not changed",
 
   "ownDomains.companyTitle": "Company domains",
   "captureExclusions.title": "Keep out of capture",
@@ -7620,6 +7744,8 @@ export const en = {
   "ownerIdentities.kind.domain": "A whole domain",
   "ownerIdentities.valueLabel": "Address or domain",
   "ownerIdentities.addressPlaceholder": "you@example.com",
+  "ownerIdentities.removeFailed": "Address not withdrawn",
+  "ownerIdentities.addFailed": "Address not added",
   "ownerIdentities.domainPlaceholder": "example.com",
   "captureExclusions.scope.user": "Only me",
   "captureExclusions.scope.workspace": "Whole organization",
@@ -7650,6 +7776,8 @@ export const en = {
   "ownDomains.addOpen": "Add a domain",
   "ownDomains.addLabel": "Add an own domain",
   "ownDomains.placeholder": "example.com",
+  "ownDomains.removeFailed": "That domain was not removed",
+  "ownDomains.addFailed": "That domain was not added",
   "ownDomains.remove": "Remove {domain}",
 
   "webhooks.title": "Webhooks",
@@ -7681,8 +7809,8 @@ export const en = {
     "This secret is shown once and can't be retrieved again. Store it now — deliveries are signed with it.",
   "webhooks.secret.copy": "Copy",
   "webhooks.secret.copied": "Copied",
-  "webhooks.secret.copyFailed":
-    "Couldn't copy automatically — select and copy the secret manually.",
+  "webhooks.secret.copyFailedTitle": "The secret could not be copied",
+  "webhooks.secret.copyFailed": "Select it above and copy it by hand.",
   "webhooks.secret.done": "Done",
   "webhooks.secret.leaveWarning":
     "Leaving destroys the only copy of this secret. Copy it first.",
@@ -7738,6 +7866,7 @@ export const en = {
   "embedreindex.confirmCta": "Start reindex",
   "embedreindex.rebuildConfirmCta": "Rebuild now",
   "embedreindex.previewLoading": "Estimating scope…",
+  "embedreindex.previewFailed": "The estimate could not be read",
   "embedreindex.estimateEntities": "Entities to (re)embed:",
   "embedreindex.estimateTokens": "Estimated AI tokens:",
   "embedreindex.estimateCost": "Estimated cost:",
@@ -8369,6 +8498,9 @@ export const en = {
   "provider.automaticLookupJurisdiction":
     "Switch this off if the contacts in your CRM fall under a law that forbids trading personal data, Vietnam's among them. The button on each contact still works, which keeps the decision with the person making it.",
   "provider.buyable": "Allow buying {category}",
+  "provider.buyableWriteFailed": "This category was not changed",
+  "provider.postureReadFailed": "The current setting is unknown",
+  "provider.postureWriteFailed": "Automatic lookup was not changed",
   "provider.buyableHint_one":
     "Switching this on buys nothing. It puts a button on each contact, priced at {credits} credit, so somebody can buy this detail for one contact at a time.",
   "provider.buyableHint_other":
@@ -8414,8 +8546,11 @@ export const en = {
   "provider.profile.neverRun": "Nobody has looked this contact up yet.",
   "provider.profile.queued": "Queued",
   "provider.profile.inProgress": "Looking them up…",
-  "provider.profile.working": "Asking {provider}. This takes up to a minute.",
-  "provider.profile.landing": "Answer received. Putting it on the record.",
+  "provider.profile.workingTitle": "Asking {provider}",
+  "provider.profile.working": "This takes up to a minute.",
+  "provider.profile.landingTitle": "Answer received",
+  "provider.profile.landing": "Putting it on the record.",
+  "provider.profile.lookupRefused": "That lookup did not run",
   "provider.profile.completed": "Found",
   "provider.profile.noMatch": "The provider had nothing for this contact.",
   "provider.profile.stale":
@@ -8616,8 +8751,10 @@ export const en = {
   "sched.withdrawBody":
     "“{subject}” will not be sent, and nothing will reach the timeline. Writing it again means composing it from scratch.",
   "sched.withdrawConfirm": "Withdraw it",
+  "sched.skewTitle": "This list is out of date",
   "sched.skew":
-    "This list is out of date: the message you acted on had already gone, been withdrawn, or been moved somewhere else. Read the list again.",
+    "The message you acted on had already gone, been withdrawn, or been moved somewhere else. Read the list again.",
+  "sched.writeFailed": "That change did not go through",
   "sched.reload": "Read it again",
   // Projects — the body of work a deal is about. It starts during the deal,
   // in the initiative phase, and outlives close-won; this namespace is every
@@ -8760,6 +8897,7 @@ export const en = {
   "deal.projectUnnamed": "Project",
   "deal.startDeliveryTitle": "Start delivery",
   "deal.startDelivery": "Start delivery",
+  "deal.startDeliveryFailed": "Delivery did not start",
   "deal.startDeliveryAttached":
     "This deal is attached to {project}, but the project is not in delivery yet. Move it now?",
   "deal.startDeliveryBody":
@@ -8789,7 +8927,8 @@ export const en = {
     "No tasks are due today or overdue. Later work is on each record's own Tasks tab.",
   "worklist.clearOfWhatWasRead":
     "Nothing is waiting among the sources that answered.",
-  "worklist.partial": "{sources}, so this is not the whole day.",
+  "worklist.partialTitle": "This is not the whole day",
+  "worklist.partial": "{sources}.",
   "worklist.overdue": "Overdue",
   "worklist.pair.ask": "Which record should survive?",
   "worklist.pair.keep": "Keep {name}",
@@ -8888,6 +9027,7 @@ export const en = {
     "{gone} of these have been dealt with since you started.",
   "worklist.walk.both":
     "{arrived} more since you started, and {gone} already dealt with.",
+  "worklist.walk.title": "This list has moved",
   "worklist.walk.refresh": "Refresh",
   "worklist.handled.empty": "Nothing was done on your behalf today.",
   "worklist.handled.loading": "Reading what was done",
@@ -9420,6 +9560,7 @@ export const en = {
   "stageAutomation.empty":
     "Margince has not proposed a stage move on this pipeline yet.",
   "stageAutomation.noPipelines": "There is no pipeline to report on yet.",
+  "stageAutomation.unreadable": "This report did not load",
   "stageAutomation.readOnly":
     "You can see what each transition has earned. Changing what one may do needs permission to edit pipelines.",
   "stageAutomation.rules": "What each transition may do",
@@ -9437,6 +9578,8 @@ export const en = {
   "stageAutomation.noRules":
     "No transition on this pipeline has been decided about yet, so every move is proposed for a person to answer.",
   "stageAutomation.undoWindow": "Undo for {hours} h",
+  "stageAutomation.rulesLoading": "Loading what each transition may do…",
+  "stageAutomation.saveFailed": "That change did not save",
   "stageAutomation.nothingReviewed":
     "Proposed, but nobody has answered one yet.",
 } as const;

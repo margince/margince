@@ -9,7 +9,7 @@ import { useToast } from "../design-system/toast";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // When this reader is bookable, and on whose clock.
 //
@@ -160,7 +160,11 @@ function WorkingHoursForm({
 
   return (
     <>
-      {!chosen && <Callout tone="info">{t("workingHours.unset")}</Callout>}
+      {!chosen && (
+        <Callout kind="standing" title={t("workingHours.unsetTitle")}>
+          {t("workingHours.unset")}
+        </Callout>
+      )}
       <div className="form-row">
         <Field label={t("workingHours.start")}>
           {(control) => (
@@ -216,16 +220,24 @@ function WorkingHoursForm({
         {t("workingHours.save")}
       </Button>
       {/* After the save, never before: the reader has made the change, and the
-          sentence is about what it will do rather than a warning against
-          making it. */}
+          sentence is about what it will do rather than a warning against making
+          it — which is why the tone is `info` and not `warn`. The save
+          SUCCEEDED, and the copy says as much in words: that is the change, not
+          a fault. */}
       {narrowed && save.isSuccess && (
-        <Callout tone="warn" live="status">
+        <Callout kind="outcome" title={t("workingHours.narrowedTitle")}>
           {t("workingHours.narrowed")}
         </Callout>
       )}
       {save.isError && (
-        <Callout tone="danger" live="alert">
-          {t("workingHours.saveFailed")}
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("workingHours.saveFailed")}
+        >
+          {/* The server's own account of it: a fixed sentence here threw away
+              the one detail that says whether a retry can help. */}
+          {problemMessageOf(save.error, t)}
         </Callout>
       )}
     </>

@@ -1,13 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
-import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { calendarDay } from "../format/calendarday";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
-import { bandTone } from "../screens/aiusage";
 import { throwProblem } from "../screens/common";
 import { useCan } from "./capability";
 
@@ -68,30 +65,27 @@ export function EconomyBanner() {
   return (
     // The band decides the tone: a queued workspace is being refused work
     // right now, where a degraded one is still serving and only warning.
-    <Callout
-      className="appbanner"
-      tone={band === "queued" ? "danger" : "warn"}
-      live="status"
-      actions={
-        <>
-          <a href="#/settings/ai">{t("aibanner.link")}</a>
-          <Button
-            small
-            aria-label={t("aibanner.dismiss")}
-            onClick={() => setDismissedOccurrence(occurrenceKey)}
-          >
-            <X aria-hidden size={14} />
-          </Button>
-        </>
-      }
-    >
-      <Badge tone={bandTone(band)}>
-        {band === "queued"
-          ? t("aibanner.queued")
-          : band === "degraded"
-            ? t("aibanner.degraded")
-            : t("aibanner.unknown")}
-      </Badge>
-    </Callout>
+    // `.appbanner` is the SHELL's hook, not the notice's: the content column
+    // reserves the top bar's height only when no banner is mounted above it
+    // (`.main:not(:has(> .appbanner))`, app/shell.css), so the class stays on a
+    // wrapper the screen owns rather than on a primitive with no layout seam.
+    <div className="appbanner">
+      <Callout
+        tone={band === "queued" ? "danger" : "warn"}
+        kind="standing"
+        title={
+          band === "queued"
+            ? t("aibanner.queued")
+            : band === "degraded"
+              ? t("aibanner.degraded")
+              : t("aibanner.unknown")
+        }
+        actions={<a href="#/settings/ai">{t("aibanner.link")}</a>}
+        dismiss={{
+          label: t("aibanner.dismiss"),
+          onDismiss: () => setDismissedOccurrence(occurrenceKey),
+        }}
+      />
+    </div>
   );
 }

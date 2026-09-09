@@ -152,6 +152,16 @@
   border-top: 0;
 }
 
+/* The lead caption over the buy switches. A `.settingrow` is the only child of
+   the list that pays for its own interval, so a plain block owes its own — and
+   the two sentences read as separate paragraphs rather than one run-on. */
+.settinglist > .provider-free-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+}
+
 /* The two sentences under the lookup switch. A description is one <p>, and the
    jurisdiction half has to read as its own paragraph rather than as a clause
    glued to the end of the pricing one — an operator scanning for the reason to

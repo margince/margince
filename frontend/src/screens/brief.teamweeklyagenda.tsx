@@ -140,7 +140,11 @@ function CopyAgenda({ rows }: Readonly<{ rows: readonly TeamWeeklyRep[] }>) {
         {copied ? t("teamweekly.agenda.copied") : t("teamweekly.agenda.copy")}
       </Button>
       {failed && (
-        <Callout tone="danger" live="alert">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("teamweekly.agenda.copyFailedTitle")}
+        >
           {t("teamweekly.agenda.copyFailed")}
         </Callout>
       )}

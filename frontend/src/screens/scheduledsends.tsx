@@ -13,7 +13,6 @@ import {
   SectionHeader,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { SurfaceState } from "../design-system/surfacestate";
 import { localDateTimeValue } from "../format/calendarday";
@@ -33,6 +32,7 @@ import {
   throwProblem,
 } from "./common";
 import { scheduleFields } from "./compose";
+import { QueueSkewNotice, QueueWriteRefused } from "./scheduledsends.notices";
 import { SendPermission } from "./sendpermission";
 import { useSendPermission } from "./usesendpermission";
 
@@ -460,19 +460,9 @@ export function ScheduledSendsScreen() {
     // titles.
     <div className="wrap">
       {skew && (
-        <Callout
-          tone="warn"
-          live="status"
-          actions={
-            <Button small onClick={() => void query.refetch()}>
-              {t("sched.reload")}
-            </Button>
-          }
-        >
-          {skew}
-        </Callout>
+        <QueueSkewNotice message={skew} onReload={() => void query.refetch()} />
       )}
-      {writeError && <Callout tone="danger">{writeError}</Callout>}
+      {writeError && <QueueWriteRefused message={writeError} />}
       <QueryStates query={query} pendingLabel={t("nav.scheduled")}>
         {query.data && query.data.length === 0 ? (
           // One sentence for the whole page, not one per group: a rep who has

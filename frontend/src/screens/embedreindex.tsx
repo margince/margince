@@ -431,12 +431,16 @@ export function EmbedReindexCard() {
                   {/* A failed estimate is what this dialog says about ITSELF,
                       and it is the reason Confirm is refused — so it is a
                       `Callout`, not a tinted paragraph: red text alone carries
-                      the meaning in colour only. `alert` because it appears in
-                      answer to the reader opening this dialog and it names the
-                      thing standing between them and the act. */}
+                      the meaning in colour only. An `outcome` of opening this
+                      dialog, so it is spoken: it names the thing standing
+                      between the reader and the act. */}
                   {preview.isError && (
-                    <Callout tone="danger" live="alert">
-                      <p>{problemMessageOf(preview.error, t)}</p>
+                    <Callout
+                      tone="danger"
+                      kind="outcome"
+                      title={t("embedreindex.previewFailed")}
+                    >
+                      {problemMessageOf(preview.error, t)}
                     </Callout>
                   )}
                   <EstimateBody preview={preview.data} locale={locale} t={t} />

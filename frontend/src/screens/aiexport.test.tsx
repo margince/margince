@@ -85,9 +85,6 @@ it("surfaces clipboard rejection", async () => {
   );
   await userEvent.click(screen.getByRole("checkbox"));
   await userEvent.click(screen.getByRole("button", { name: "Copy YAML" }));
-  expect(
-    await screen.findByText(
-      "Copy failed — use the preview or download instead.",
-    ),
-  ).toBeTruthy();
+  expect(await screen.findByText("Copy failed")).toBeTruthy();
+  expect(screen.getByText("Use the preview or download instead.")).toBeTruthy();
 });

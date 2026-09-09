@@ -194,7 +194,11 @@ function ShareLinkReveal({
         {url}
       </pre>
       {copyFailed && (
-        <Callout tone="danger" live="alert">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("analytics.share.copyFailedTitle")}
+        >
           {t("analytics.share.copyFailed")}
         </Callout>
       )}

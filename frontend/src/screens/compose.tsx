@@ -61,6 +61,7 @@ import {
   useViewerId,
 } from "./common";
 import { recordNamesIn, useOrganization360 } from "./company360";
+import { StaleThreadNotice, VoiceDegradedNotice } from "./compose.notices";
 import {
   asksWhy,
   type CommunicationContext,
@@ -1593,13 +1594,7 @@ function DraftBand({
           zone={zone}
           onClose={() => setOpenEmail(null)}
         />
-        {provenance.voice_degraded && (
-          // The one loss a sender cannot see in the text: their own voice is
-          // the register nobody proofreads for.
-          <Callout tone="warn" live="status">
-            {t("compose.voiceDegraded")}
-          </Callout>
-        )}
+        <VoiceDegradedNotice degraded={provenance.voice_degraded} />
         {provenance.voice_profile_version != null && (
           <>
             <p className="t-caption">
@@ -3323,21 +3318,17 @@ export function ComposeModal({
               selected={transport}
               onChange={changeTransport}
             />
-            {/* The conversation the caller named cannot be answered any more.
-            Said rather than silently fallen back from: the reader asked to
-            answer one thread, and the composer is open on another. */}
-            {staleThread && (
-              <Callout tone="warn" live="status">
-                {t("compose.threadGone")}
-              </Callout>
-            )}
+            <StaleThreadNotice stale={staleThread} />
             {/* Whose conversation this is. Not a warning and not a refusal —
             covering for a colleague is ordinary work — so it states the fact
             and lets the reader decide. Info rather than warn for that reason,
             and no live region: it renders with the drawer rather than in
             answer to anything the reader just did. */}
             {answeringColleaguesMail && (
-              <Callout tone="info">
+              <Callout
+                kind="standing"
+                title={t("compose.colleagueMailboxTitle")}
+              >
                 {plural("compose.colleagueMailbox", colleagueMailboxes.length, {
                   names: new Intl.ListFormat(INTL_LOCALE[locale], {
                     style: "long",

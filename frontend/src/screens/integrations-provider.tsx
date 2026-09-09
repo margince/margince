@@ -18,7 +18,6 @@ import {
   TableScroll,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
@@ -29,6 +28,10 @@ import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import {
+  BuyableRefused,
+  PostureRefused,
+} from "./integrations-provider.notices";
 import { categoryName } from "./provider-categories";
 import {
   connectionLabel,
@@ -420,21 +423,7 @@ function PolicyRow({
       />
       <LookupBacklogRow connection={connection} />
       <PricedCategoryRows connection={connection} canEdit={canEdit} />
-      {/* Under the row whose flip failed, at the row's full width, rather than
-          squeezed into the control column beside the switch: the reason names
-          what the reader just tried to change, and a sentence sharing a
-          nowrap flex line with a switch is a sentence nobody reads. */}
-      {/* The READ's failure as well as the write's. A posture we could not ask
-          for renders the switch off, and "off" is a claim about the
-          installation — so a failed GET has to say so rather than let the
-          control answer a question nobody could reach. */}
-      {(patch.error || posture.error) && (
-        <div className="provider-row-note">
-          <Callout tone="danger" live="alert">
-            {problemMessageOf(patch.error ?? posture.error, t)}
-          </Callout>
-        </div>
-      )}
+      <PostureRefused writeError={patch.error} readError={posture.error} />
     </>
   );
 }
@@ -560,13 +549,7 @@ function PricedCategoryRows({
           />
         );
       })}
-      {patch.error && (
-        <div className="provider-row-note">
-          <Callout tone="danger" live="alert">
-            {problemMessageOf(patch.error, t)}
-          </Callout>
-        </div>
-      )}
+      <BuyableRefused error={patch.error} />
     </>
   );
 }
@@ -957,9 +940,14 @@ function FreeTierNote({
     return null;
   }
   return (
-    <Callout tone="info">
-      <p>{t("provider.freeTier.hint")}</p>
-      {priced.length > 0 && <p>{t("provider.pricedTier.hint")}</p>}
-    </Callout>
+    // Instructional prose, not a notice: it is true on every visit and says
+    // nothing about the surface, so it reads as the list's own lead caption. A
+    // band that never changes teaches a reader to skip it.
+    <div className="provider-free-note">
+      <p className="t-caption">{t("provider.freeTier.hint")}</p>
+      {priced.length > 0 && (
+        <p className="t-caption">{t("provider.pricedTier.hint")}</p>
+      )}
+    </div>
   );
 }

@@ -134,7 +134,11 @@ export function OwnerIdentitiesCard() {
           />
         </SettingList>
         {remove.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("ownerIdentities.removeFailed")}
+          >
             {problemMessageOf(remove.error, t)}
           </Callout>
         )}
@@ -268,7 +272,11 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
           }
         />
         {add.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("ownerIdentities.addFailed")}
+          >
             {problemMessageOf(add.error, t)}
           </Callout>
         )}

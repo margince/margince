@@ -7,7 +7,7 @@ import type { components } from "../api/schema";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { currentParams, useUrlParams } from "../app/urlstate";
-import { Badge, Button, SegmentedControl } from "../design-system/atoms";
+import { Badge, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CellStrip } from "../design-system/listtable";
 import { useToast } from "../design-system/toast";
@@ -308,18 +308,18 @@ function LeadsWorkbench({
     // and the `.lt` whose full height depends on being its direct child.
     <>
       {!noteDismissed && (
-        <Callout tone="info">
-          {t("lead.segregation")}{" "}
-          <Button
-            small
-            data-testid="lead-segregation-dismiss"
-            onClick={() => {
+        <Callout
+          kind="standing"
+          title={t("lead.segregationTitle")}
+          dismiss={{
+            label: t("lead.segregationDismiss"),
+            onDismiss: () => {
               window.localStorage.setItem(SEGREGATION_NOTE_KEY, "1");
               setNoteDismissed(true);
-            }}
-          >
-            {t("lead.segregationDismiss")}
-          </Button>
+            },
+          }}
+        >
+          {t("lead.segregation")}
         </Callout>
       )}
       <ListTable
