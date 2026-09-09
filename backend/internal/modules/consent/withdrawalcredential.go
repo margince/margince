@@ -78,6 +78,11 @@ const (
 	WithdrawalRevokedSuperseded        = "superseded"
 )
 
+// fieldKeyPurpose names the contract field a refusal points at. Three refusals
+// in this package share it, so a change to the contract's field name is a
+// change here rather than a hunt through string literals.
+const fieldKeyPurpose = "purpose"
+
 // withdrawalTokenPrefix is how ResolvePublicToken tells the two families apart
 // without a database read. A prefix rather than a length or a probe, so a
 // caller reading a log can see which authority a link carried.
@@ -294,7 +299,7 @@ func legacyPreferenceTokenAsWithdrawal(ctx context.Context, tx pgx.Tx, token str
 	return ref, nil
 }
 
-// RevokeSubjectCredentials kills every live withdrawal credential a subject
+// RevokeSubjectCredentialsTx kills every live withdrawal credential a subject
 // holds, for a stated reason.
 //
 // Reached from erasure (the subject is gone), from a merge (the predecessor no

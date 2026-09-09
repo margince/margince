@@ -119,7 +119,7 @@ func (h Handlers) oneClickSubject(
 		}
 		if params.Purpose != nil && !strings.EqualFold(strings.TrimSpace(*params.Purpose), named) {
 			return ids.PersonID{}, params, &ValidationError{
-				Field: "purpose",
+				Field: fieldKeyPurpose,
 				Reason: "this unsubscribe link stops one named subscription, and the request names " +
 					"a different one",
 			}
