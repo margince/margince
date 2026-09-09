@@ -3,7 +3,7 @@
 
 package people
 
-// Corroborated signature company-name promotion (PO-F-2a, ADR-0072/A118).
+// Corroborated signature company-name promotion (PO-F-2a, ADR-0072).
 //
 // A captured company starts out named from its mail domain ("Gitex" for
 // gitex.com) and stamped name_source='domain' — readable, but the company's own

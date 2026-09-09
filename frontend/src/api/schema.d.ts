@@ -54,10 +54,10 @@ export interface paths {
         };
         /**
          * Which authentication methods are operational (drives the login UI).
-         * @description Anonymous, minimal capability probe (A107/ADR-0061). The login UI renders exactly
+         * @description Anonymous, minimal capability probe (ADR-0061). The login UI renders exactly
          *     the methods reported here — a disabled provider button or a dead "Forgot password?"
          *     link is a misleading affordance. `password_reset` is true only when the operator's
-         *     system-email channel (A74/ADR-0056) is configured and healthy. An OIDC provider is
+         *     system-email channel (ADR-0056) is configured and healthy. An OIDC provider is
          *     listed only when its end-to-end flow is wired and healthy. Discloses nothing beyond
          *     what the login UI needs — no secrets, endpoints, allowlists, or bootstrap state.
          *
@@ -86,7 +86,7 @@ export interface paths {
          * Authenticate with email + password and open a session.
          * @description Baseline interactive sign-in (ADR-0043). On success mints an opaque server-side session
          *     and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`). Accepts
-         *     email + password only — no tenant selector (A107/ADR-0061). Failures are neutral (no
+         *     email + password only — no tenant selector (ADR-0061). Failures are neutral (no
          *     account enumeration), rate-limited, and verified at full cost either way. The MFA and
          *     SSO-enforced challenge states return with their complete flows (ADR-0043 Amendment 2).
          *     Every attempt (success/failure/lockout) is audited (`features/04 §7`).
@@ -2325,7 +2325,7 @@ export interface paths {
         put?: never;
         /**
          * Draft an email to this account, grounded in its records.
-         * @description The drafting half of the account-started email pair (ADR-0087/A132). `POST /emails`
+         * @description The drafting half of the account-started email pair (ADR-0087). `POST /emails`
          *     sends a new conversation from a company with no anchor activity; this writes the
          *     first draft of one. `POST /activities/{id}/draft-email` is its reply-side twin and
          *     needs an activity to answer — an account-started message has none, and the product
@@ -2410,9 +2410,9 @@ export interface paths {
         get: operations["getPartner"];
         /**
          * Create/update the partner extension on a company (adds `partner` to its relationship types).
-         * @description Promotes a company to a first-class partner (A41/ADR-0032) by upserting its `partner` row and
+         * @description Promotes a company to a first-class partner (ADR-0032) by upserting its `partner` row and
          *     adding `partner` to its `relationship_types`. (`classification` is retired and no longer
-         *     set here — ADR-0079/A124 replaced it, because what a company IS to us is multi-valued.)
+         *     set here — ADR-0079 replaced it, because what a company IS to us is multi-valued.)
          *     Company identity is never duplicated. Admin write, and a HUMAN one.
          *
          *     Human-only for the same reason `decideCommissionEntry` is: `margin_tier` is the rate the
@@ -2694,7 +2694,7 @@ export interface paths {
         };
         /**
          * Does this customer actually pay us, and on time?
-         * @description The finance card's whole read (FIN-WIRE-1, ADR-0083/A128): what we have
+         * @description The finance card's whole read (FIN-WIRE-1, ADR-0083): what we have
          *     invoiced, what is still open, and how they pay — plus the handful of recent
          *     invoices the card shows.
          *
@@ -3616,7 +3616,7 @@ export interface paths {
         };
         /**
          * Which messaging transports THIS installation has registered.
-         * @description The resolver for `ProviderRef` (ADR-0107/A158). Because a provider vocabulary is a
+         * @description The resolver for `ProviderRef` (ADR-0107). Because a provider vocabulary is a
          *     deployment fact rather than an installation-independent one, the contract cannot
          *     enumerate it; this operation moves that typing from build time to a runtime
          *     capability document. A client renders `label` wherever it would otherwise print a
@@ -4259,7 +4259,7 @@ export interface paths {
          *     made the agent surface weaker than the person behind it rather than safer. An
          *     installation that wants sends confirmed sets a tier floor on `send_email`, which
          *     stages the call for a human exactly as it always did.
-         *     Consent gate is **default-deny per purpose** (A22/ADR-0011, data-model §3.4): the send is
+         *     Consent gate is **default-deny per purpose** (ADR-0011, data-model §3.4): the send is
          *     suppressed (409, `code: consent_not_granted`) unless an active, proven `granted`
          *     `person_consent` row exists for the *purpose* this send falls under (passed as
          *     `consent_purpose` in the request). A grant for a different purpose does not authorize the
@@ -4283,7 +4283,7 @@ export interface paths {
         put?: never;
         /**
          * Start a new email conversation from a record — runs directly, consent-gated.
-         * @description The account-started twin of `send_email` (ADR-0087/A132). "Write email" from a company,
+         * @description The account-started twin of `send_email` (ADR-0087). "Write email" from a company,
          *     a person or a deal is a NEW conversation: there is no prior message to anchor to, and
          *     the product refuses to fabricate a placeholder activity to obtain one — that would put a
          *     timeline entry on the record for a message nobody has sent yet.
@@ -4329,7 +4329,7 @@ export interface paths {
         };
         /**
          * The caller's own messages waiting to be sent.
-         * @description Scheduled mail is the SENDER's own (ADR-0104/A155). An unsent message's body and its
+         * @description Scheduled mail is the SENDER's own (ADR-0104). An unsent message's body and its
          *     blind-copy list are not workspace-readable the way a sent activity is, so this lists
          *     only what the caller scheduled.
          */
@@ -4414,13 +4414,13 @@ export interface paths {
          *     replies confirmed sets a tier floor on `send_message`.
          *
          *     The `{id}` activity is the conversation being answered, and its `channel_provider` names
-         *     the transport the reply transmits through — NOT its `kind`, which since ADR-0107/A158 says
+         *     the transport the reply transmits through — NOT its `kind`, which since ADR-0107 says
          *     only that the interaction was a message. The RECIPIENT is not named by the caller: it is
          *     the channel identity of the person that conversation is with, so a reply can only reach
          *     the human who opened it. A person with no live channel identity, or one who blocked the
          *     workspace's bot, is refused with 422 before anything is staged.
          *
-         *     Consent gate is **default-deny per purpose** (A22/ADR-0011, data-model §3.4), exactly as
+         *     Consent gate is **default-deny per purpose** (ADR-0011, data-model §3.4), exactly as
          *     for mail: the send is suppressed (409, `code: consent_not_granted`) unless an active,
          *     proven `granted` `person_consent` row exists for the *purpose* this send falls under
          *     (passed as `consent_purpose`). A grant for a different purpose does not authorize the
@@ -4931,7 +4931,7 @@ export interface paths {
         put?: never;
         /**
          * Dry-run an automation's blast radius (🟢 read; no writes, no sends).
-         * @description Powers the designer's live dry-run (A72/ADR-0035 Am.1). Evaluates the recipe's trigger + filter and
+         * @description Powers the designer's live dry-run (ADR-0035 Am.1). Evaluates the recipe's trigger + filter and
          *     returns how many records match **now** and an estimate of how many times it *would have* fired over a
          *     trailing window — **without** performing any action. This is a **🟢 read**, executed under the caller's
          *     Passport: it never mutates a record, never sends, and never stages an approval. Accepts either the stored
@@ -4957,11 +4957,11 @@ export interface paths {
         };
         /**
          * Read-only run history for one automation — successes AND errored/blocked/skipped runs.
-         * @description The designer's run history (A72/ADR-0035 Am.1 — **promoted into V1**, previously fast-follow). Each
+         * @description The designer's run history (ADR-0035 Am.1 — **promoted into V1**, previously fast-follow). Each
          *     `AutomationRun` is reconstructed from `audit_log`/`automation_run` (data-model §12.5) and stamped with
          *     the tier that fired and whether approval was needed. Runs of every outcome are first-class (mapping to
          *     `automation_run.status`) — including `failed` (a provider/action error), `blocked` (a 🟡 step whose
-         *     approval expired or was rejected — **added to the status set by A72/ADR-0035 Am.1**), and `skipped`
+         *     approval expired or was rejected — **added to the status set by ADR-0035 Am.1**), and `skipped`
          *     (e.g. the Passport no longer permits the action) — never only `fired` successes. Read-only: runs are
          *     produced by the engine, not created via the API. 🟡 actions still queue to `/approvals` at run time.
          */
@@ -5184,7 +5184,7 @@ export interface paths {
          * What promoting this lead would do — merge into an existing person, or create one.
          * @description Runs the same dedupe ladder POST /leads/{id}/promote would run, WITHOUT writing
          *     anything, so the confirm step can name the outcome instead of surprising the rep
-         *     with it (ADR-0119/A170: which happened is the difference between "my prospect is
+         *     with it (ADR-0119: which happened is the difference between "my prospect is
          *     now a contact" and "my prospect was already someone we knew").
          *
          *     **This returns a record, so it is a read and carries the row-scope gate.** When the
@@ -6427,7 +6427,7 @@ export interface paths {
          *     and it is what onboarding gates on. Distinct from GET /companies/{id}, which reads the
          *     customer records.
          */
-        get: operations["getCompany"];
+        get: operations["getAnchorCompany"];
         /**
          * Save the installation's own company — the human's confirm-first write.
          * @description Creates the anchor company on first save (marking it `is_anchor`) and updates it on every
@@ -6440,7 +6440,7 @@ export interface paths {
          *     own anchor, so a company saved from pasted text or typed by hand works exactly like one read from
          *     a website. Fields omitted from the body are left untouched; fields sent empty are cleared.
          */
-        put: operations["putCompany"];
+        put: operations["putAnchorCompany"];
         post?: never;
         delete?: never;
         options?: never;
@@ -6468,7 +6468,7 @@ export interface paths {
          *     resolving a different mark leaves it alone. `DELETE` gives the field back — the
          *     record returns to its monogram and the next read may resolve a mark again.
          */
-        post: operations["uploadCompanyLogo"];
+        post: operations["uploadAnchorCompanyLogo"];
         /**
          * Take the installation's own company logo off the record.
          * @description The record goes back to its deterministic monogram and the stored object is
@@ -6478,7 +6478,7 @@ export interface paths {
          *     Removing a mark the installation never had is not an error — the outcome the
          *     caller asked for is the outcome they get.
          */
-        delete: operations["deleteCompanyLogo"];
+        delete: operations["deleteAnchorCompanyLogo"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6511,7 +6511,7 @@ export interface paths {
          *     installation did before this endpoint existed. An icon a person uploads outranks
          *     the one a website read resolves, exactly as the wide mark does.
          */
-        post: operations["uploadCompanyLogoIcon"];
+        post: operations["uploadAnchorCompanyLogoIcon"];
         /**
          * Take the installation's own square logo icon off the record.
          * @description The stored object is collected and the collapsed rail falls back to the wide mark,
@@ -6521,7 +6521,7 @@ export interface paths {
          *     Removing an icon the installation never had is not an error — the outcome the
          *     caller asked for is the outcome they get.
          */
-        delete: operations["deleteCompanyLogoIcon"];
+        delete: operations["deleteAnchorCompanyLogoIcon"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6538,7 +6538,7 @@ export interface paths {
          * Get the effective server-side company-context rollout capability.
          * @description The UI follows this authenticated response instead of inferring deployment configuration.
          */
-        get: operations["getCompanyContextCapabilities"];
+        get: operations["getAnchorCompanyContextCapabilities"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6562,7 +6562,7 @@ export interface paths {
          *     deterministic so downstream model calls can bind cache entries and traces to the exact
          *     company knowledge they used.
          */
-        get: operations["getCompanyContext"];
+        get: operations["getAnchorCompanyContext"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6586,7 +6586,7 @@ export interface paths {
          *     same transaction. No company, profile field, fact, lead, or domain row is created.
          *     Repeating the same URL while its read is active joins the existing dossier.
          */
-        post: operations["startCompanySiteRead"];
+        post: operations["startAnchorCompanySiteRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6603,7 +6603,7 @@ export interface paths {
             cookie?: never;
         };
         /** Read the latest progressive onboarding dossier and its grounded draft findings. */
-        get: operations["getCompanySiteRead"];
+        get: operations["getAnchorCompanySiteRead"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6632,7 +6632,7 @@ export interface paths {
          *     and never third-party markup. 404 when the read resolved no mark or does not exist;
          *     501 when the deployment has no object store configured.
          */
-        get: operations["getCompanySiteReadLogo"];
+        get: operations["getAnchorCompanySiteReadLogo"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6660,7 +6660,7 @@ export interface paths {
          *     present in the dossier. The response carries the cumulative, price-on-read AI runtime for
          *     this read so model identity and estimated provider spend stay visible in context.
          */
-        post: operations["messageCompanySiteRead"];
+        post: operations["messageAnchorCompanySiteRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6688,7 +6688,7 @@ export interface paths {
          *     and published people remain separate site-lead proposals rather than becoming contacts or
          *     company-context rows.
          */
-        post: operations["confirmCompanySiteRead"];
+        post: operations["confirmAnchorCompanySiteRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6728,7 +6728,7 @@ export interface paths {
          * The workspace's own email domains.
          * @description The domains this installation treats as its own (capture.md CAP-DDL-1). A message whose
          *     participants are ALL on one of these — subdomains included — produces zero rows
-         *     (ADR-0082/A127, formulas §20).
+         *     (ADR-0082, formulas §20).
          *
          *     Every human role may read the list; only admin/ops may change it.
          *
@@ -8026,7 +8026,7 @@ export interface paths {
         };
         /**
          * The installation's own settings.
-         * @description Reads the installation's identity and reporting basis (ADR-0090/A135): its name, the
+         * @description Reads the installation's identity and reporting basis (ADR-0090): its name, the
          *     IANA timezone every reporting period is computed in, and the ISO-4217 base currency
          *     every money roll-up converts to. Every role may read them — a rep reading amounts
          *     benefits from knowing which currency they are in — and only admin/ops may change them
@@ -8187,7 +8187,7 @@ export interface paths {
          *     client that renders a missing value as `0` would tell an admin their license permits
          *     nobody. `seats_used` counts every full seat the installation has not withdrawn —
          *     neither deactivated nor suspended; read seats are unlimited and never metered
-         *     (A62/ADR-0047).
+         *     (ADR-0047).
          *
          *     `over_limit` is the server's own verdict on the pair, so a client cannot arrive at a
          *     different answer than the one the installation acts on. Nobody is ever demoted or
@@ -8234,7 +8234,7 @@ export interface paths {
          *     held to.
          *
          *     `seats_used` counts every full seat the installation has not withdrawn — neither
-         *     deactivated nor suspended. Read seats are unlimited and never metered (A62/ADR-0047),
+         *     deactivated nor suspended. Read seats are unlimited and never metered (ADR-0047),
          *     and agent seats count, because a first-party runner acts on the estate as a human does.
          *
          *     No seat cap is reported here. A cap is entitlement, which is what the other surface is
@@ -8328,7 +8328,7 @@ export interface paths {
         };
         /**
          * The workspace's capture settings.
-         * @description Reads the workspace-shared capture posture (ADR-0072/A118, CAP-PARAM-7). Every role
+         * @description Reads the workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Every role
          *     may read it — a rep needs to see whether captured-company auto-enrichment is on;
          *     only admin/ops may change it (PATCH). Governed by the `capture_settings` RBAC object.
          */
@@ -8340,7 +8340,7 @@ export interface paths {
         head?: never;
         /**
          * Update the workspace's capture settings (admin/ops).
-         * @description Admin/ops-only. Toggles the captured-company auto-enrich posture (ADR-0072/A118):
+         * @description Admin/ops-only. Toggles the captured-company auto-enrich posture (ADR-0072):
          *     when ON, every company with a primary domain and no dossier gets a governed deep-read
          *     under a daily spend cap — however it was named, since a person creating one is usually
          *     the moment they want it. The installation's own company (the anchor) is excluded: cold
@@ -10100,7 +10100,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List manual per-record grants, filtered by record or by subject (A52/ADR-0039).
+         * List manual per-record grants, filtered by record or by subject (ADR-0039).
          * @description Returns active `record_grant` rows. Filter by a record (`record_type`+`record_id`) to answer
          *     "who has been granted access to this record?", or by a subject (`subject_type`+`subject_id`) to
          *     answer "what has this user/team been granted?". Read-only; tiered base scope (own/team/all) is
@@ -14933,7 +14933,7 @@ export interface components {
             page: components["schemas"]["PageInfo"];
         };
         /**
-         * @description The installation's identity and reporting basis (ADR-0090/A135). Read by every role,
+         * @description The installation's identity and reporting basis (ADR-0090). Read by every role,
          *     changed only by admin/ops.
          */
         InstallationSettings: {
@@ -15161,7 +15161,7 @@ export interface components {
             /**
              * @description Full seats in use: every one the installation has not withdrawn — neither
              *     deactivated nor suspended — agent seats included. Read seats are unlimited and
-             *     never counted (A62/ADR-0047). This is the same number the entitlement surface
+             *     never counted (ADR-0047). This is the same number the entitlement surface
              *     reports and the same one a seat creation is refused against; there is one meter.
              */
             seats_used: number;
@@ -15185,7 +15185,7 @@ export interface components {
             /**
              * @description Full seats in use: every one the installation has not withdrawn — neither
              *     deactivated nor suspended — agent seats included. Read seats are unlimited and
-             *     never counted (A62/ADR-0047). This is the number a seat creation is refused
+             *     never counted (ADR-0047). This is the number a seat creation is refused
              *     against, so the meter and the ceiling can never disagree.
              */
             seats_used: number;
@@ -15302,7 +15302,7 @@ export interface components {
             subject?: string | null;
         };
         /**
-         * @description The workspace-shared capture posture (ADR-0072/A118, CAP-PARAM-7). Read by every role,
+         * @description The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
          *     changed only by admin/ops.
          */
         CaptureSettings: {
@@ -16403,7 +16403,7 @@ export interface components {
         };
         BackfillPreviewRequest: {
             /**
-             * @description The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106/A157 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+             * @description The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
              * @enum {string}
              */
             window: "none" | "3m" | "6m" | "12m" | "24m" | "60m";
@@ -16604,7 +16604,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
-             * @description A pair is always same-type (ADR-0118/A169 §2): a lead is proposed as a duplicate of a lead or of nothing.
+             * @description A pair is always same-type (ADR-0118 §2): a lead is proposed as a duplicate of a lead or of nothing.
              * @enum {string}
              */
             entity_type: "person" | "company" | "lead";
@@ -17994,7 +17994,7 @@ export interface components {
              */
             readonly reachability?: components["schemas"]["PersonReachability"][];
             /**
-             * @description Per-purpose consent summary (A22/ADR-0011). Read-only derived view of the `person_consent`
+             * @description Per-purpose consent summary (ADR-0011). Read-only derived view of the `person_consent`
              *     rows; one entry per purpose the workspace tracks. The single flat `consent_state` flag was
              *     REMOVED — consent is per-purpose and demonstrable (data-model.md §3.4). Mutate via
              *     `POST /people/{id}/consent`; read the full proof log via `GET /people/{id}/consent`.
@@ -18275,7 +18275,7 @@ export interface components {
             id: string;
             display_name: string;
             /**
-             * @description True only for this installation's OWN company (ADR-0065/A111, amended by ADR-0082/A127).
+             * @description True only for this installation's OWN company (ADR-0065, amended by ADR-0082).
              *     It is one ordinary company, reachable by id everywhere, but the surfaces that answer
              *     *which companies are we selling to* exclude it unless `include_anchor` is set, and it
              *     cannot be archived or merged. A caller that offers company actions should tell it apart.
@@ -18312,15 +18312,15 @@ export interface components {
             readonly computed_fields?: components["schemas"]["ComputedField"][];
             domains?: components["schemas"]["CompanyDomain"][];
             /**
-             * @description WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079/A124). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+             * @description WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
              * @enum {string}
              */
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
-            /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079/A124). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
+            /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             /**
              * @deprecated
-             * @description RETIRED (ADR-0079/A124) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
+             * @description RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
              * @enum {string|null}
              */
             classification?: null | "prospect" | "customer" | "agency" | "reseller" | "tech_vendor" | "platform" | "partner" | "competitor" | "other";
@@ -18406,7 +18406,7 @@ export interface components {
             /** @description Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. */
             domains?: components["schemas"]["CompanyDomainInput"][];
             /**
-             * @description Where the account stands with us (ADR-0079/A124). Absent = untouched.
+             * @description Where the account stands with us (ADR-0079). Absent = untouched.
              * @enum {string}
              */
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
@@ -18701,7 +18701,7 @@ export interface components {
              */
             next_step?: string | null;
             /**
-             * @description The band, taken apart (DOSS-AC-17..20, ADR-0095/A146). Four named dimensions over the
+             * @description The band, taken apart (DOSS-AC-17..20, ADR-0095). Four named dimensions over the
              *     same evidence the band is assessed from, each with a 0-100 score and the reason for
              *     it, so a reader who disagrees with the verdict can see which input carried it.
              *
@@ -18908,7 +18908,7 @@ export interface components {
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
         };
         /**
-         * @description What the accounting mirror knows about one customer (ADR-0083/A128).
+         * @description What the accounting mirror knows about one customer (ADR-0083).
          *
          *     Every figure is nullable and ABSENT when it cannot be computed, never zero
          *     (FIN-AC-2). "€0 open" says the customer is square with us; "no figure" says
@@ -19165,7 +19165,7 @@ export interface components {
             routes?: components["schemas"]["Company360ContactRoutes"];
         };
         /**
-         * @description Who on our side can actually reach this contact, strongest first (ADR-0089/A134).
+         * @description Who on our side can actually reach this contact, strongest first (ADR-0089).
          *
          *     The company page answers this per CONTACT rather than as a contact x
          *     every-colleague matrix: a forty-person sales team makes the matrix unreadable, and
@@ -19938,7 +19938,7 @@ export interface components {
             channel: "email" | "meeting" | "call" | "note" | "message";
             /**
              * @description Which transport carried the thread — non-null exactly when `channel=message`
-             *     (ADR-0107/A158). A renderer that printed `channel` alone used to get the provider
+             *     (ADR-0107). A renderer that printed `channel` alone used to get the provider
              *     name for free; it must now read both, or a Telegram thread and a Dispact thread
              *     become indistinguishable.
              */
@@ -21588,7 +21588,7 @@ export interface components {
          *     holds the two rules this surface cannot: write authority over the project ROW, and the
          *     refusal that keeps a project's last company on it), `project_stakeholder`
          *     (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
-         *     (A41/ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
+         *     (ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
          *     company), `referred_by` (company referred by a partner company), `co_sell_with` (company co-sold with a partner company).
          *     `works_with` is the one person↔person kind (person_id ↔ counterparty_person_id): two external
          *     contacts a rep asserts work together. Undirected in fact — the two columns carry no order,
@@ -21712,7 +21712,7 @@ export interface components {
             company_id?: string | null;
             /**
              * Format: uuid
-             * @description Deal registration/attribution to a partner company (A38/A41/ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
+             * @description Deal registration/attribution to a partner company (ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
              */
             partner_company_id?: string | null;
             /**
@@ -23052,7 +23052,7 @@ export interface components {
          *     disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
          *     what the DB CHECK would reject, rather than 500-ing at write time).
          *     `channel_provider` is the same kind of constraint in both directions: non-null exactly
-         *     when `kind=message` (ADR-0107/A158).
+         *     when `kind=message` (ADR-0107).
          */
         Activity: {
             /** Format: uuid */
@@ -23162,14 +23162,14 @@ export interface components {
         };
         /**
          * @description A reference to a messaging transport registered in THIS installation
-         *     (ADR-0107/A158). Deliberately a pattern-constrained string rather than an enum:
+         *     (ADR-0107). Deliberately a pattern-constrained string rather than an enum:
          *     which providers exist is a deployment fact — what this binary composed, including
          *     any extension unit present under `extensions/` — so an enum here would assert that
          *     the legal set is identical in every installation, which is false. The contract
          *     states the invariant; `GET /v1/channel-providers` resolves the live set.
          */
         ProviderRef: string;
-        /** @description Every messaging transport this installation has registered (ADR-0107/A158). */
+        /** @description Every messaging transport this installation has registered (ADR-0107). */
         ChannelProviderDirectory: {
             data: components["schemas"]["ChannelProviderEntry"][];
             /**
@@ -23715,7 +23715,7 @@ export interface components {
         };
         /**
          * @description A draft written from an account's records, and what it was written from
-         *     (ADR-0087/A132). Never sent by drafting; send via `POST /emails`.
+         *     (ADR-0087). Never sent by drafting; send via `POST /emails`.
          *
          *     It is `EmailDraft` plus the two things an account-started draft owes that a reply
          *     does not: `reasoning`, because a rep who did not choose the message it answers
@@ -23829,7 +23829,7 @@ export interface components {
             html_body?: string | null;
             /**
              * @description Files already in the record library to send with this message, named by id
-             *     — never uploaded here. Each is snapshotted at staging (ADR-0086/A131 §4) so
+             *     — never uploaded here. Each is snapshotted at staging (ADR-0086 §4) so
              *     archiving or superseding one later cannot rewrite what the timeline says a
              *     sent message carried.
              *
@@ -23924,7 +23924,7 @@ export interface components {
             consent_purpose?: string;
             /**
              * Format: date-time
-             * @description Send this message at this instant instead of now (ADR-0104/A155). Absolute
+             * @description Send this message at this instant instead of now (ADR-0104). Absolute
              *     and unambiguous; `scheduled_tz` records the zone the human picked it in.
              *
              *     A scheduled message writes NO activity and NO delivery row until it fires —
@@ -23978,7 +23978,7 @@ export interface components {
             also_links?: components["schemas"]["ActivityLinkInput"][];
         };
         /**
-         * @description One message waiting for its moment (ADR-0104/A155). It is not an activity and not a
+         * @description One message waiting for its moment (ADR-0104). It is not an activity and not a
          *     delivery: nothing is on the timeline and nothing has been handed to a provider.
          */
         ScheduledSend: {
@@ -24247,7 +24247,7 @@ export interface components {
             html_body?: string | null;
             /**
              * @description Files already in the record library to send with this message, named by id
-             *     — never uploaded here. Each is snapshotted at staging (ADR-0086/A131 §4) so
+             *     — never uploaded here. Each is snapshotted at staging (ADR-0086 §4) so
              *     archiving or superseding one later cannot rewrite what the timeline says a
              *     sent message carried.
              *
@@ -24343,7 +24343,7 @@ export interface components {
             consent_purpose?: string;
             /**
              * Format: date-time
-             * @description Send this message at this instant instead of now (ADR-0104/A155). Absolute
+             * @description Send this message at this instant instead of now (ADR-0104). Absolute
              *     and unambiguous; `scheduled_tz` records the zone the human picked it in.
              *
              *     A scheduled message writes NO activity and NO delivery row until it fires —
@@ -24438,7 +24438,7 @@ export interface components {
             consent_purpose?: string;
             /**
              * @description Files already in the record library to send with this message, named by id
-             *     — never uploaded here. Each is snapshotted at staging (ADR-0086/A131 §4) so
+             *     — never uploaded here. Each is snapshotted at staging (ADR-0086 §4) so
              *     archiving or superseding one later cannot rewrite what the timeline says a
              *     sent message carried.
              *
@@ -24533,16 +24533,16 @@ export interface components {
              */
             readonly sla_deadline_at?: string | null;
             /**
-             * @description Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119/A170).
+             * @description Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119).
              * @enum {string|null}
              */
             readonly sla_state?: "within_target" | "at_risk" | "breached" | null;
             /**
              * Format: date-time
-             * @description Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118/A169). Derived from activity_link, not stored on the lead.
+             * @description Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
              */
             readonly last_activity_at?: string | null;
-            /** @description Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118/A169). */
+            /** @description Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118). */
             readonly open_task_count?: number | null;
             /** @description Subject of the earliest open task linked to this lead. */
             readonly next_task_subject?: string | null;
@@ -24723,7 +24723,7 @@ export interface components {
              */
             deal_id?: string | null;
         };
-        /** @description What POST /leads/{id}/promote would do, computed without writing (ADR-0119/A170). */
+        /** @description What POST /leads/{id}/promote would do, computed without writing (ADR-0119). */
         PromoteLeadPreview: {
             /**
              * @description merge = an existing live person matches this lead's email and promotion would fold into it; create = promotion would make a new person.
@@ -26638,7 +26638,7 @@ export interface components {
         };
         /**
          * @description What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
-         *     Two independent axes, both of which must permit an action: the licensing seat ceiling (A62/ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
+         *     Two independent axes, both of which must permit an action: the licensing seat ceiling (ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
          *     This is a snapshot, not an authority. A role change does not revoke live sessions, so a client refetches on window focus and after any 403, and treats the server's answer as the only one that counts. It does not express the human-principal gate, nor the few routes that still key on the literal admin role independently of any grant — a permitted grant here is necessary, never sufficient.
          */
         Authorization: {
@@ -28515,7 +28515,7 @@ export interface components {
             source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | "contract" | null;
             /** Format: uuid */
             source_id?: string | null;
-            /** @description 1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today, per ADR-0058: line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed. */
+            /** @description 1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today, (ADR-0058): line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed. */
             source_lines?: number[];
         };
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
@@ -28757,7 +28757,7 @@ export interface components {
         /**
          * @description First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
          *     has a `partner` row + classification='partner'). Company identity is never duplicated.
-         *     A68/ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
+         *     ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
          *     partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
          *     forward-compatible.
          */
@@ -28768,7 +28768,7 @@ export interface components {
              */
             company_id: string;
             /**
-             * @description Functional role (A44/ADR-0034); implementation + dev are Margince's turf.
+             * @description Functional role (ADR-0034); implementation + dev are Margince's turf.
              * @enum {string}
              */
             partner_role?: "hosting" | "consulting" | "strategic";
@@ -28942,7 +28942,7 @@ export interface components {
                 id: string;
                 name: string;
             }[];
-            /** @description Which fields the erasure emptied on this record (A167/ADR-0116). A redacted field and an empty one are otherwise the same absence, and only the first is something the controller must be able to state. Names columns, never values. */
+            /** @description Which fields the erasure emptied on this record (ADR-0116). A redacted field and an empty one are otherwise the same absence, and only the first is something the controller must be able to state. Names columns, never values. */
             redacted_fields?: string[];
         };
         /** @description The installation's retention posture (GCS-PARAM-6). */
@@ -29022,7 +29022,7 @@ export interface components {
             owner_id: string;
             version: components["schemas"]["RowVersion"];
         };
-        /** @description A manual per-record share (A52/ADR-0039) — widens own/team/all base scope for one record. */
+        /** @description A manual per-record share (ADR-0039) — widens own/team/all base scope for one record. */
         RecordGrant: {
             /** Format: uuid */
             id: string;
@@ -29295,7 +29295,7 @@ export interface components {
         /**
          * @description Optional body for POST /automations/{id}/preview. Omit to preview the stored automation as-is; supply
          *     an inline draft recipe (key + params) to preview a not-yet-created or edited automation from the
-         *     designer before saving (A72/ADR-0035 Am.1). Never causes a write or send — preview is a 🟢 read.
+         *     designer before saving (ADR-0035 Am.1). Never causes a write or send — preview is a 🟢 read.
          */
         AutomationPreviewRequest: {
             /** @description Catalog type for a draft preview (defaults to the stored instance's key). */
@@ -29323,7 +29323,7 @@ export interface components {
         /**
          * @description One firing of an automation, reconstructed from audit_log/automation_run (data-model §12.5). Runs of
          *     EVERY outcome are first-class — including errored/blocked/skipped — so the designer's run history is
-         *     honest, not success-only (A72/ADR-0035 Am.1). Read-only: produced by the engine, never created via API.
+         *     honest, not success-only (ADR-0035 Am.1). Read-only: produced by the engine, never created via API.
          */
         AutomationRun: {
             /** Format: uuid */
@@ -29336,7 +29336,7 @@ export interface components {
              */
             occurred_at: string;
             /**
-             * @description Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by A72/ADR-0035 Am.1.
+             * @description Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
              * @enum {string}
              */
             outcome: "fired" | "failed" | "blocked" | "skipped" | "queued_for_approval";
@@ -33703,7 +33703,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description Seat ceiling — a `read` seat (or an agent acting for one) attempted a mutate/send/approve or a write `record_grant`/over-ceiling Passport bind (`code: seat_tier_insufficient`, ErrSeatTierInsufficient; A62/ADR-0047). */
+        /** @description Seat ceiling — a `read` seat (or an agent acting for one) attempted a mutate/send/approve or a write `record_grant`/over-ceiling Passport bind (`code: seat_tier_insufficient`, ErrSeatTierInsufficient; ADR-0047). */
         SeatTierInsufficient: {
             headers: {
                 [name: string]: unknown;
@@ -33712,7 +33712,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description Forced rotation — the account is still using a password an OPERATOR chose (a configured bootstrap per A107/ADR-0061 §2, or a §9.1 operator reset) and reaches nothing but `POST /auth/change-password` until it is replaced (`code: password_change_required`). Reads are refused too. Unlike its 403 siblings this is a property of the ACCOUNT rather than of the operation, so any authenticated operation can answer it, and no grant of role, seat or scope lifts it. */
+        /** @description Forced rotation — the account is still using a password an OPERATOR chose (a configured bootstrap (ADR-0061), or a §9.1 operator reset) and reaches nothing but `POST /auth/change-password` until it is replaced (`code: password_change_required`). Reads are refused too. Unlike its 403 siblings this is a property of the ACCOUNT rather than of the operation, so any authenticated operation can answer it, and no grant of role, seat or scope lifts it. */
         PasswordChangeRequired: {
             headers: {
                 [name: string]: unknown;
@@ -33874,7 +33874,7 @@ export interface components {
          *     (`human:<uuid>` | `agent:<id>` | `connector:<name>` | `system:<id>`).
          *
          *     `captured_by_kind=agent` is the **review list for records an AI created**
-         *     (ADR-0075/A121). Every record already carries its creator — the field is
+         *     (ADR-0075). Every record already carries its creator — the field is
          *     server-stamped from the authenticated principal and read-only on every
          *     response — but until this parameter there was no way to *ask* for them,
          *     so "which of these did a model decide existed?" had no answer short of
@@ -33895,7 +33895,7 @@ export interface components {
          * @description `true` returns only records an AI **wrote into**; `false` only records it
          *     did not touch. Omit for both.
          *
-         *     This is the review list for AI-generated content (ADR-0075/A121 §3a),
+         *     This is the review list for AI-generated content (ADR-0075 §3a),
          *     and it is deliberately a different question from `captured_by_kind`.
          *     `captured_by` names who CREATED the row and is never restamped. In the
          *     connector path the AI does not create the record — Gmail capture mints
@@ -34543,7 +34543,7 @@ export interface operations {
                  *     (`human:<uuid>` | `agent:<id>` | `connector:<name>` | `system:<id>`).
                  *
                  *     `captured_by_kind=agent` is the **review list for records an AI created**
-                 *     (ADR-0075/A121). Every record already carries its creator — the field is
+                 *     (ADR-0075). Every record already carries its creator — the field is
                  *     server-stamped from the authenticated principal and read-only on every
                  *     response — but until this parameter there was no way to *ask* for them,
                  *     so "which of these did a model decide existed?" had no answer short of
@@ -34564,7 +34564,7 @@ export interface operations {
                  * @description `true` returns only records an AI **wrote into**; `false` only records it
                  *     did not touch. Omit for both.
                  *
-                 *     This is the review list for AI-generated content (ADR-0075/A121 §3a),
+                 *     This is the review list for AI-generated content (ADR-0075 §3a),
                  *     and it is deliberately a different question from `captured_by_kind`.
                  *     `captured_by` names who CREATED the row and is never restamped. In the
                  *     connector path the AI does not create the record — Gmail capture mints
@@ -36042,7 +36042,7 @@ export interface operations {
                 /**
                  * @description Include this installation's own company. It is excluded by default because this list
                  *     answers "which companies are we selling to", and the company running the CRM is not one
-                 *     of them (ADR-0082/A127). Modeled on `include_archived` (API-LIST-4): a class of rows
+                 *     of them (ADR-0082). Modeled on `include_archived` (API-LIST-4): a class of rows
                  *     almost never wanted, never silently unreachable. Surfaces whose subject IS the workspace
                  *     — recording that a person works here, own-company project work — set it.
                  */
@@ -36052,7 +36052,7 @@ export interface operations {
                  *     (`human:<uuid>` | `agent:<id>` | `connector:<name>` | `system:<id>`).
                  *
                  *     `captured_by_kind=agent` is the **review list for records an AI created**
-                 *     (ADR-0075/A121). Every record already carries its creator — the field is
+                 *     (ADR-0075). Every record already carries its creator — the field is
                  *     server-stamped from the authenticated principal and read-only on every
                  *     response — but until this parameter there was no way to *ask* for them,
                  *     so "which of these did a model decide existed?" had no answer short of
@@ -36073,7 +36073,7 @@ export interface operations {
                  * @description `true` returns only records an AI **wrote into**; `false` only records it
                  *     did not touch. Omit for both.
                  *
-                 *     This is the review list for AI-generated content (ADR-0075/A121 §3a),
+                 *     This is the review list for AI-generated content (ADR-0075 §3a),
                  *     and it is deliberately a different question from `captured_by_kind`.
                  *     `captured_by` names who CREATED the row and is never restamped. In the
                  *     connector path the AI does not create the record — Gmail capture mints
@@ -36106,7 +36106,7 @@ export interface operations {
                 owner_id?: string;
                 /** @description Lookup by normalized domain (the employer-inference index). */
                 domain?: string;
-                /** @description Where the account stands with us (DM-VOCAB-2, ADR-0079/A124). */
+                /** @description Where the account stands with us (DM-VOCAB-2, ADR-0079). */
                 lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
@@ -39646,7 +39646,7 @@ export interface operations {
                 /**
                  * @description Filter to messages carried by one transport. Since `kind=message` no longer names
                  *     the transport, this is the only way to ask the question `kind=telegram` used to
-                 *     answer (ADR-0107/A158).
+                 *     answer (ADR-0107).
                  */
                 channel_provider?: components["schemas"]["ProviderRef"];
                 /** @description Filter to activities linked to an entity type (with entity_id). */
@@ -40539,7 +40539,7 @@ export interface operations {
         };
         responses: {
             /**
-             * @description Scheduled, not sent (ADR-0104/A155). No activity and no delivery row exist yet;
+             * @description Scheduled, not sent (ADR-0104). No activity and no delivery row exist yet;
              *     the timeline stays silent until it fires.
              */
             201: {
@@ -41900,7 +41900,7 @@ export interface operations {
                  *     (`human:<uuid>` | `agent:<id>` | `connector:<name>` | `system:<id>`).
                  *
                  *     `captured_by_kind=agent` is the **review list for records an AI created**
-                 *     (ADR-0075/A121). Every record already carries its creator — the field is
+                 *     (ADR-0075). Every record already carries its creator — the field is
                  *     server-stamped from the authenticated principal and read-only on every
                  *     response — but until this parameter there was no way to *ask* for them,
                  *     so "which of these did a model decide existed?" had no answer short of
@@ -41921,7 +41921,7 @@ export interface operations {
                  * @description `true` returns only records an AI **wrote into**; `false` only records it
                  *     did not touch. Omit for both.
                  *
-                 *     This is the review list for AI-generated content (ADR-0075/A121 §3a),
+                 *     This is the review list for AI-generated content (ADR-0075 §3a),
                  *     and it is deliberately a different question from `captured_by_kind`.
                  *     `captured_by` names who CREATED the row and is never restamped. In the
                  *     connector path the AI does not create the record — Gmail capture mints
@@ -44410,7 +44410,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getCompany: {
+    getAnchorCompany: {
         parameters: {
             query?: never;
             header?: never;
@@ -44440,7 +44440,7 @@ export interface operations {
             };
         };
     };
-    putCompany: {
+    putAnchorCompany: {
         parameters: {
             query?: never;
             header?: never;
@@ -44467,7 +44467,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    uploadCompanyLogo: {
+    uploadAnchorCompanyLogo: {
         parameters: {
             query?: never;
             header?: never;
@@ -44525,7 +44525,7 @@ export interface operations {
             };
         };
     };
-    deleteCompanyLogo: {
+    deleteAnchorCompanyLogo: {
         parameters: {
             query?: never;
             header?: never;
@@ -44556,7 +44556,7 @@ export interface operations {
             };
         };
     };
-    uploadCompanyLogoIcon: {
+    uploadAnchorCompanyLogoIcon: {
         parameters: {
             query?: never;
             header?: never;
@@ -44614,7 +44614,7 @@ export interface operations {
             };
         };
     };
-    deleteCompanyLogoIcon: {
+    deleteAnchorCompanyLogoIcon: {
         parameters: {
             query?: never;
             header?: never;
@@ -44645,7 +44645,7 @@ export interface operations {
             };
         };
     };
-    getCompanyContextCapabilities: {
+    getAnchorCompanyContextCapabilities: {
         parameters: {
             query?: never;
             header?: never;
@@ -44666,7 +44666,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
-    getCompanyContext: {
+    getAnchorCompanyContext: {
         parameters: {
             query?: {
                 /** @description Comma-separated context scopes. Omit for the bounded default set. */
@@ -44693,7 +44693,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    startCompanySiteRead: {
+    startAnchorCompanySiteRead: {
         parameters: {
             query?: never;
             header?: {
@@ -44739,7 +44739,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getCompanySiteRead: {
+    getAnchorCompanySiteRead: {
         parameters: {
             query?: never;
             header?: never;
@@ -44764,7 +44764,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    getCompanySiteReadLogo: {
+    getAnchorCompanySiteReadLogo: {
         parameters: {
             query?: never;
             header?: never;
@@ -44798,7 +44798,7 @@ export interface operations {
             };
         };
     };
-    messageCompanySiteRead: {
+    messageAnchorCompanySiteRead: {
         parameters: {
             query?: never;
             header?: never;
@@ -44837,7 +44837,7 @@ export interface operations {
             };
         };
     };
-    confirmCompanySiteRead: {
+    confirmAnchorCompanySiteRead: {
         parameters: {
             query?: never;
             header?: {

@@ -3,7 +3,7 @@
 
 package identity
 
-// One installation serves one company (A107/ADR-0061). The workspace
+// One installation serves one company (ADR-0061). The workspace
 // row remains the internal singleton boundary: this file owns its
 // boot-time creation from deployment configuration and its resolution for
 // every request. The invariant is enforced here, at boot and at lookup —
@@ -356,7 +356,7 @@ type installationIdentity struct {
 }
 
 // seedInstallationIdentity writes the settings rows that ARE the
-// installation's identity (ADR-0090/A135). Seed, not Set: this runs inside
+// installation's identity (ADR-0090). Seed, not Set: this runs inside
 // bootstrap's own transaction, before any principal exists to gate a settings
 // write, and it is creating the values rather than changing them.
 //

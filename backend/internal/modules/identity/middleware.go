@@ -4,7 +4,7 @@
 package identity
 
 // The HTTP admission middleware fronting /v1: singleton-company
-// binding (installation → GUC, A107/ADR-0061) and session authentication
+// binding (installation → GUC, ADR-0061) and session authentication
 // (cookie → Principal), with the public-path and session-less
 // connector-callback exemptions. Split out of handlers.go so each file
 // stays one concept (and under the 500-LOC cap); the per-principal
@@ -104,7 +104,7 @@ func isConnectorOAuthCallback(path string) bool {
 
 // Middleware chains company binding and session authentication: the
 // installation's singleton workspace → GUC context; cookie → Principal.
-// One installation serves one company (A107/ADR-0061), so no request
+// One installation serves one company (ADR-0061), so no request
 // selects a tenant — the server resolves it. Public paths still get the
 // workspace bound (login needs it), just no session requirement.
 func (h Handlers) Middleware(next http.Handler) http.Handler {

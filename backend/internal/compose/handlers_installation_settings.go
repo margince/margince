@@ -3,7 +3,7 @@
 
 package compose
 
-// The installation-settings surface (ADR-0090/A135): read the company's
+// The installation-settings surface (ADR-0090): read the company's
 // name, reporting zone and base currency (every role), change them (admin/ops,
 // human-only). Thin transport — the identity store owns the RBAC gate, the
 // per-setting validation, the base-currency freeze and the audit-only write.

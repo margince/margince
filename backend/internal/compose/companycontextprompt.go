@@ -159,7 +159,7 @@ type promptCompanyContext struct {
 	// CompanyID names the installation's own company. An agent cannot ask
 	// for it any other way — the company operation is human-only — and without
 	// it an agent asked to work on the workspace itself either cannot find the
-	// company or picks a customer that resembles it (ADR-0082/A127). It is
+	// company or picks a customer that resembles it (ADR-0082). It is
 	// an id, not a fact about the company, so it sits outside the scopes and is
 	// never truncated away.
 	CompanyID string                 `json:"company_id,omitempty"`

@@ -380,7 +380,7 @@ func TestARetiredCustomColumnIsStillCompilableAndNoLongerOffered(t *testing.T) {
 
 // The same gap in the core half, which has no catalogue row behind it at all.
 //
-// company.classification was retired by ADR-0079/A124 and has no
+// company.classification was retired by ADR-0079 and has no
 // `custom_field` row, so no client-side join could ever discover that it is
 // retired — the exclusion has to happen here or not at all.
 func TestARetiredCoreFieldIsStillCompilableAndNoLongerOffered(t *testing.T) {

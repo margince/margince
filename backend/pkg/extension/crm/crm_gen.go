@@ -357,7 +357,7 @@ func (e EmailSummaryMove) Valid() bool {
 // disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
 // what the DB CHECK would reject, rather than 500-ing at write time).
 // `channel_provider` is the same kind of constraint in both directions: non-null exactly
-// when `kind=message` (ADR-0107/A158).
+// when `kind=message` (ADR-0107).
 type Activity struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -596,7 +596,7 @@ type EmailSummaryDirection string
 type EmailSummaryMove string
 
 // ProviderRef A reference to a messaging transport registered in THIS installation
-// (ADR-0107/A158). Deliberately a pattern-constrained string rather than an enum:
+// (ADR-0107). Deliberately a pattern-constrained string rather than an enum:
 // which providers exist is a deployment fact — what this binary composed, including
 // any extension unit present under `extensions/` — so an enum here would assert that
 // the legal set is identical in every installation, which is false. The contract

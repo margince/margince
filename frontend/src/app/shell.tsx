@@ -125,7 +125,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
       {narrow ? narrowVersion() : displayVersion()}
     </span>
   );
-  // The installation's own company (A107/ADR-0061: one installation, one
+  // The installation's own company (ADR-0061: one installation, one
   // company), OBSERVED on the entry the onboarding gate already filled.
   // A disabled observer: it never fetches, so it cannot re-trigger the gate's
   // read and walk the app back through its splash, but it does re-render when

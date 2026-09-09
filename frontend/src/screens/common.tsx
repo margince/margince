@@ -81,7 +81,7 @@ export function consumeAuthExitNotice(): "signed-out" | null {
 // The session principal (GET /v1/me): identity + effective role keys. One
 // spelling, one ["me"] cache entry — the App auth gate, the settings identity
 // card, and role-aware affordances all read the same probe. The server binds
-// the installation's singleton company itself (A107/ADR-0061) — the
+// the installation's singleton company itself (ADR-0061) — the
 // probe needs nothing but the session cookie.
 export function useMe() {
   return useQuery({
@@ -782,7 +782,7 @@ export function isAlreadyDecided(problem: unknown): boolean {
 
 // A 409 whose code names the consent suppression gate: the send's recipients
 // have no active `granted` person_consent for the purpose it falls under
-// (default-deny per purpose, A22/ADR-0011). Distinguished from RBAC (403) and
+// (default-deny per purpose, ADR-0011). Distinguished from RBAC (403) and
 // validation (422) so the composer can point the user at the consent surface
 // rather than showing a raw server detail.
 export function isConsentNotGranted(problem: unknown): boolean {

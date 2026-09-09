@@ -31,7 +31,7 @@ import { isTooShort, MIN_PASSWORD } from "./passwordrule";
 import "./auth.css";
 
 // The default unauthenticated screen is LOGIN, not setup or signup
-// (A107/ADR-0061): one installation serves one company, provisioned at
+// (ADR-0061): one installation serves one company, provisioned at
 // API boot from the deployment file — the browser never creates a tenant and
 // never selects one. The Margince Core introduces the AI beside a real <form>
 // (Enter submits), and only the authentication methods the capabilities probe

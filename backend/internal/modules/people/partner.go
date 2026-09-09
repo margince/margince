@@ -3,7 +3,7 @@
 
 package people
 
-// The partner extension (A41/ADR-0032): a company promoted to a
+// The partner extension (ADR-0032): a company promoted to a
 // first-class partner. Identity is never duplicated — partner is a
 // one-to-one extension row, and upserting it flips the company's
 // classification; the company's own .updated event carries the change.
@@ -43,7 +43,7 @@ type partnerRow struct {
 	NextStep          *string
 	NextStepDueAt     *time.Time
 	ServedSegments    []string
-	// The A68/ADR-0053 Commercial Judgement pair (formulas §17): a non-nil
+	// The ADR-0053 Commercial Judgement pair (formulas §17): a non-nil
 	// FitOverrideReason marks FitScore human-set; the machine value is then
 	// retained in FitScoreComputed instead of overwriting FitScore.
 	FitScore           *int16
@@ -90,7 +90,7 @@ type UpsertPartnerInput struct {
 
 // PartnerFitOverrideReasonRequiredError rejects a human partner-fit score
 // with no written reason — the Commercial Judgement rule (formulas §17,
-// A68/ADR-0053): an override is auditable or it does not happen.
+// ADR-0053): an override is auditable or it does not happen.
 type PartnerFitOverrideReasonRequiredError struct{}
 
 func (e *PartnerFitOverrideReasonRequiredError) Error() string {

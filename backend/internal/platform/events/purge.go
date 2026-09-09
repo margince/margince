@@ -22,7 +22,7 @@ const scanBatch = 500
 // nothing).
 //
 // The cut is installation-wide rather than per-workspace, which is exact under
-// A107/ADR-0061 — one installation serves one company, so every entry in
+// ADR-0061 — one installation serves one company, so every entry in
 // these streams belongs to the workspace being reset — and O(1) instead of
 // scanning up to 131072 entries per stream.
 //

@@ -3,7 +3,7 @@
 
 package compose
 
-// The captured-company auto-enrich sweep (CAP-PARAM-7, ADR-0072/A118):
+// The captured-company auto-enrich sweep (CAP-PARAM-7, ADR-0072):
 // a leader-elected periodic pass (run-on-start + daily) that gives every
 // company with a primary domain and no dossier a governed web one — however it
 // was named, since a person creating one is usually the moment they want it.

@@ -16950,7 +16950,7 @@ type AccountDraftReason struct {
 type AccountDraftReasonKind string
 
 // AccountEmailDraft A draft written from an account's records, and what it was written from
-// (ADR-0087/A132). Never sent by drafting; send via `POST /emails`.
+// (ADR-0087). Never sent by drafting; send via `POST /emails`.
 //
 // It is `EmailDraft` plus the two things an account-started draft owes that a reply
 // does not: `reasoning`, because a rep who did not choose the message it answers
@@ -17012,7 +17012,7 @@ type AccountEmailDraft struct {
 // disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
 // what the DB CHECK would reject, rather than 500-ing at write time).
 // `channel_provider` is the same kind of constraint in both directions: non-null exactly
-// when `kind=message` (ADR-0107/A158).
+// when `kind=message` (ADR-0107).
 type Activity struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -18139,7 +18139,7 @@ type ApprovalEvidence struct {
 	EvidenceSnippet string              `json:"evidence_snippet"`
 	SourceId        *openapi_types.UUID `json:"source_id,omitempty"`
 
-	// SourceLines 1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today, per ADR-0058: line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed.
+	// SourceLines 1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today, (ADR-0058): line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed.
 	SourceLines *[]int                      `json:"source_lines,omitempty"`
 	SourceType  *ApprovalEvidenceSourceType `json:"source_type,omitempty"`
 }
@@ -19306,7 +19306,7 @@ type AuthenticationPolicy struct {
 }
 
 // Authorization What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
-// Two independent axes, both of which must permit an action: the licensing seat ceiling (A62/ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
+// Two independent axes, both of which must permit an action: the licensing seat ceiling (ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
 // This is a snapshot, not an authority. A role change does not revoke live sessions, so a client refetches on window focus and after any 403, and treats the server's answer as the only one that counts. It does not express the human-principal gate, nor the few routes that still key on the literal admin role independently of any grant — a permitted grant here is necessary, never sufficient.
 type Authorization struct {
 	// Objects Effective grants keyed by RbacObject. An absent key denies — the server resolves an unknown object to the zero grant, and a client must do the same rather than treat a missing entry as unrestricted.
@@ -19391,7 +19391,7 @@ type AutomationPreview struct {
 
 // AutomationPreviewRequest Optional body for POST /automations/{id}/preview. Omit to preview the stored automation as-is; supply
 // an inline draft recipe (key + params) to preview a not-yet-created or edited automation from the
-// designer before saving (A72/ADR-0035 Am.1). Never causes a write or send — preview is a 🟢 read.
+// designer before saving (ADR-0035 Am.1). Never causes a write or send — preview is a 🟢 read.
 type AutomationPreviewRequest struct {
 	// Key Catalog type for a draft preview (defaults to the stored instance's key).
 	Key *string `json:"key,omitempty"`
@@ -19428,7 +19428,7 @@ type AutomationRetryResultRefusal string
 
 // AutomationRun One firing of an automation, reconstructed from audit_log/automation_run (data-model §12.5). Runs of
 // EVERY outcome are first-class — including errored/blocked/skipped — so the designer's run history is
-// honest, not success-only (A72/ADR-0035 Am.1). Read-only: produced by the engine, never created via API.
+// honest, not success-only (ADR-0035 Am.1). Read-only: produced by the engine, never created via API.
 type AutomationRun struct {
 	// ActionResult What happened (e.g. "created task", "queued to approval inbox").
 	ActionResult     *string `json:"action_result,omitempty"`
@@ -19442,7 +19442,7 @@ type AutomationRun struct {
 	// OccurredAt Maps to automation_run.ran_at.
 	OccurredAt time.Time `json:"occurred_at"`
 
-	// Outcome Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by A72/ADR-0035 Am.1.
+	// Outcome Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
 	Outcome AutomationRunOutcome `json:"outcome"`
 
 	// Reason For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.
@@ -19458,7 +19458,7 @@ type AutomationRun struct {
 	TriggerEvidence *string `json:"trigger_evidence,omitempty"`
 }
 
-// AutomationRunOutcome Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by A72/ADR-0035 Am.1.
+// AutomationRunOutcome Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
 type AutomationRunOutcome string
 
 // AutomationRunTier The tier that fired for this run.
@@ -19546,11 +19546,11 @@ type BackfillPreviewWindow string
 
 // BackfillPreviewRequest defines model for BackfillPreviewRequest.
 type BackfillPreviewRequest struct {
-	// Window The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106/A157 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+	// Window The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
 	Window BackfillPreviewRequestWindow `json:"window"`
 }
 
-// BackfillPreviewRequestWindow The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106/A157 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+// BackfillPreviewRequestWindow The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
 type BackfillPreviewRequestWindow string
 
 // BackfillStatus The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1).
@@ -20187,7 +20187,7 @@ type CaptureSenderListResponse struct {
 	Data []CaptureSenderDecision `json:"data"`
 }
 
-// CaptureSettings The workspace-shared capture posture (ADR-0072/A118, CAP-PARAM-7). Read by every role,
+// CaptureSettings The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
 // changed only by admin/ops.
 type CaptureSettings struct {
 	// AutoEnrich When true, every company with a primary domain and no dossier gets a governed
@@ -20357,7 +20357,7 @@ type ChannelConnectionListResponse struct {
 	Data []ChannelConnection `json:"data"`
 }
 
-// ChannelProviderDirectory Every messaging transport this installation has registered (ADR-0107/A158).
+// ChannelProviderDirectory Every messaging transport this installation has registered (ADR-0107).
 type ChannelProviderDirectory struct {
 	// CaptureSources The provenance ids the composed EXTENSION UNITS land records under, and what to call
 	// them: `ext:<unit>:<system>`, which a unit's ingress stamps on every record it lands
@@ -20432,7 +20432,7 @@ type ChannelProviderEntry struct {
 	Label string `json:"label"`
 
 	// Provider A reference to a messaging transport registered in THIS installation
-	// (ADR-0107/A158). Deliberately a pattern-constrained string rather than an enum:
+	// (ADR-0107). Deliberately a pattern-constrained string rather than an enum:
 	// which providers exist is a deployment fact — what this binary composed, including
 	// any extension unit present under `extensions/` — so an enum here would assert that
 	// the legal set is identical in every installation, which is false. The contract
@@ -20730,7 +20730,7 @@ type Company struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// Classification RETIRED (ADR-0079/A124) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
+	// Classification RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Classification *CompanyClassification `json:"classification,omitempty"`
 
@@ -20750,7 +20750,7 @@ type Company struct {
 	Id          openapi_types.UUID `json:"id"`
 	Industry    *string            `json:"industry,omitempty"`
 
-	// IsAnchor True only for this installation's OWN company (ADR-0065/A111, amended by ADR-0082/A127).
+	// IsAnchor True only for this installation's OWN company (ADR-0065, amended by ADR-0082).
 	// It is one ordinary company, reachable by id everywhere, but the surfaces that answer
 	// *which companies are we selling to* exclude it unless `include_anchor` is set, and it
 	// cannot be archived or merged. A caller that offers company actions should tell it apart.
@@ -20761,7 +20761,7 @@ type Company struct {
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 	LegalName      *string    `json:"legal_name,omitempty"`
 
-	// Lifecycle WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079/A124). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+	// Lifecycle WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
 	Lifecycle *CompanyLifecycle `json:"lifecycle,omitempty"`
 
 	// LinkedinUrl Canonical LinkedIn company URL (PO-DDL-N-2, ADR-0085). A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
@@ -20787,13 +20787,13 @@ type Company struct {
 
 	// Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
 	// has a `partner` row + classification='partner'). Company identity is never duplicated.
-	// A68/ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
+	// ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 	// forward-compatible.
 	Partner *Partner                `json:"partner,omitempty"`
 	Raw     *map[string]interface{} `json:"raw,omitempty"`
 
-	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079/A124). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
+	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
 	RelationshipTypes *[]CompanyRelationshipTypes `json:"relationship_types,omitempty"`
 	SizeBand          *CompanySizeBand            `json:"size_band,omitempty"`
 	Source            string                      `json:"source"`
@@ -20821,10 +20821,10 @@ type Company struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// CompanyClassification RETIRED (ADR-0079/A124) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
+// CompanyClassification RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
 type CompanyClassification string
 
-// CompanyLifecycle WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079/A124). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+// CompanyLifecycle WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
 type CompanyLifecycle string
 
 // CompanyRelationshipTypes defines model for Company.RelationshipTypes.
@@ -20981,7 +20981,7 @@ type Company360Contact struct {
 	// ProviderTitle A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed.
 	ProviderTitle *string `json:"provider_title,omitempty"`
 
-	// Routes Who on our side can actually reach this contact, strongest first (ADR-0089/A134).
+	// Routes Who on our side can actually reach this contact, strongest first (ADR-0089).
 	//
 	// The company page answers this per CONTACT rather than as a contact x
 	// every-colleague matrix: a forty-person sales team makes the matrix unreadable, and
@@ -21011,7 +21011,7 @@ type Company360ContactConsent string
 // Company360ContactTitleSource Which title the roster is showing — the installation's own record, or the provider fallback. Null when there is no title at all.
 type Company360ContactTitleSource string
 
-// Company360ContactRoutes Who on our side can actually reach this contact, strongest first (ADR-0089/A134).
+// Company360ContactRoutes Who on our side can actually reach this contact, strongest first (ADR-0089).
 //
 // The company page answers this per CONTACT rather than as a contact x
 // every-colleague matrix: a forty-person sales team makes the matrix unreadable, and
@@ -21894,7 +21894,7 @@ type CompanyCoverageSeat struct {
 	RelationshipVersion *int64 `json:"relationship_version,omitempty"`
 	Role                string `json:"role"`
 
-	// Routes Who on our side can actually reach this contact, strongest first (ADR-0089/A134).
+	// Routes Who on our side can actually reach this contact, strongest first (ADR-0089).
 	//
 	// The company page answers this per CONTACT rather than as a contact x
 	// every-colleague matrix: a forty-person sales team makes the matrix unreadable, and
@@ -22049,7 +22049,7 @@ type CompanyFactListResponse struct {
 	Data []CompanyFact `json:"data"`
 }
 
-// CompanyFinanceSummary What the accounting mirror knows about one customer (ADR-0083/A128).
+// CompanyFinanceSummary What the accounting mirror knows about one customer (ADR-0083).
 //
 // Every figure is nullable and ABSENT when it cannot be computed, never zero
 // (FIN-AC-2). "€0 open" says the customer is square with us; "no figure" says
@@ -22386,7 +22386,7 @@ type CompanyGrowthFit struct {
 	// RecommendedAngle The single suggested approach. A recommendation, and labelled as one.
 	RecommendedAngle *CompanyBriefSentence `json:"recommended_angle,omitempty"`
 
-	// SubScores The band, taken apart (DOSS-AC-17..20, ADR-0095/A146). Four named dimensions over the
+	// SubScores The band, taken apart (DOSS-AC-17..20, ADR-0095). Four named dimensions over the
 	// same evidence the band is assessed from, each with a 0-100 score and the reason for
 	// it, so a reader who disagrees with the verdict can see which input carried it.
 	//
@@ -23619,7 +23619,7 @@ type ConversationMemoryEntry struct {
 	Channel       ConversationMemoryEntryChannel `json:"channel"`
 
 	// ChannelProvider Which transport carried the thread — non-null exactly when `channel=message`
-	// (ADR-0107/A158). A renderer that printed `channel` alone used to get the provider
+	// (ADR-0107). A renderer that printed `channel` alone used to get the provider
 	// name for free; it must now read both, or a Telegram thread and a Dispact thread
 	// become indistinguishable.
 	ChannelProvider *ProviderRef `json:"channel_provider,omitempty"`
@@ -24490,7 +24490,7 @@ type Deal struct {
 	// PartnerAttribution What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
 	PartnerAttribution *DealPartnerAttribution `json:"partner_attribution,omitempty"`
 
-	// PartnerCompanyId Deal registration/attribution to a partner company (A38/A41/ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
+	// PartnerCompanyId Deal registration/attribution to a partner company (ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
 	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 
 	// PipelineId Native mode: always a non-null pipeline FK. Overlay mode: NULL — an overlay-mirror deal has no native Margince pipeline row; the incumbent's own pipeline id rides `raw` and the code-declared stage→semantic mapping drives tier resolution (overlay-augmentation OVA-MAP-6). A zero/placeholder UUID here is forbidden (dangling FK).
@@ -25156,7 +25156,7 @@ type DedupeCandidate struct {
 	DisposedAt *time.Time          `json:"disposed_at,omitempty"`
 	DisposedBy *openapi_types.UUID `json:"disposed_by,omitempty"`
 
-	// EntityType A pair is always same-type (ADR-0118/A169 §2): a lead is proposed as a duplicate of a lead or of nothing.
+	// EntityType A pair is always same-type (ADR-0118 §2): a lead is proposed as a duplicate of a lead or of nothing.
 	EntityType DedupeCandidateEntityType `json:"entity_type"`
 
 	// Evidence Per-field agree/collide snapshot captured at detection — what the queue renders (AC-dedupe-2/3); never re-derived against since-edited rows.
@@ -25180,7 +25180,7 @@ type DedupeCandidate struct {
 	Status  DedupeCandidateStatus `json:"status"`
 }
 
-// DedupeCandidateEntityType A pair is always same-type (ADR-0118/A169 §2): a lead is proposed as a duplicate of a lead or of nothing.
+// DedupeCandidateEntityType A pair is always same-type (ADR-0118 §2): a lead is proposed as a duplicate of a lead or of nothing.
 type DedupeCandidateEntityType string
 
 // DedupeCandidateStatus defines model for DedupeCandidate.Status.
@@ -26815,7 +26815,7 @@ type InputCheckStatus string
 // InputCheckSubjectKind defines model for InputCheck.SubjectKind.
 type InputCheckSubjectKind string
 
-// InstallationSettings The installation's identity and reporting basis (ADR-0090/A135). Read by every role,
+// InstallationSettings The installation's identity and reporting basis (ADR-0090). Read by every role,
 // changed only by admin/ops.
 type InstallationSettings struct {
 	// BaseCurrency ISO-4217 code every money roll-up converts to.
@@ -27457,7 +27457,7 @@ type Lead struct {
 	FullName        *string            `json:"full_name,omitempty"`
 	Id              openapi_types.UUID `json:"id"`
 
-	// LastActivityAt Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118/A169). Derived from activity_link, not stored on the lead.
+	// LastActivityAt Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LinkedinUrl Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key.
@@ -27469,7 +27469,7 @@ type Lead struct {
 	// NextTaskSubject Subject of the earliest open task linked to this lead.
 	NextTaskSubject *string `json:"next_task_subject,omitempty"`
 
-	// OpenTaskCount Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118/A169).
+	// OpenTaskCount Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118).
 	OpenTaskCount *int                `json:"open_task_count,omitempty"`
 	OwnerId       *openapi_types.UUID `json:"owner_id,omitempty"`
 
@@ -27508,7 +27508,7 @@ type Lead struct {
 	// SlaDeadlineAt Derived, not stored: COALESCE(routed_at, created_at) + first_response_target_minutes (formulas §18.1). Null on a terminal lead, which owes no first response.
 	SlaDeadlineAt *time.Time `json:"sla_deadline_at,omitempty"`
 
-	// SlaState Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119/A170).
+	// SlaState Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119).
 	SlaState *LeadSlaState `json:"sla_state,omitempty"`
 
 	// Source The stored source key. For a human-created lead this is a lead_source key; connectors and imports write their own values (`connector:<name>:<id>`).
@@ -27539,7 +27539,7 @@ type Lead struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// LeadSlaState Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119/A170).
+// LeadSlaState Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119).
 type LeadSlaState string
 
 // LeadStatus The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.
@@ -27788,7 +27788,7 @@ type LicenseEntitlement struct {
 
 	// SeatsUsed Full seats in use: every one the installation has not withdrawn — neither
 	// deactivated nor suspended — agent seats included. Read seats are unlimited and
-	// never counted (A62/ADR-0047). This is the number a seat creation is refused
+	// never counted (ADR-0047). This is the number a seat creation is refused
 	// against, so the meter and the ceiling can never disagree.
 	SeatsUsed int `json:"seats_used"`
 
@@ -28096,7 +28096,7 @@ type MeResponse struct {
 	AdminPasswordLink bool `json:"admin_password_link"`
 
 	// Authorization What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
-	// Two independent axes, both of which must permit an action: the licensing seat ceiling (A62/ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
+	// Two independent axes, both of which must permit an action: the licensing seat ceiling (ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
 	// This is a snapshot, not an authority. A role change does not revoke live sessions, so a client refetches on window focus and after any 403, and treats the server's answer as the only one that counts. It does not express the human-principal gate, nor the few routes that still key on the literal admin role independently of any grant — a permitted grant here is necessary, never sufficient.
 	Authorization *Authorization `json:"authorization,omitempty"`
 
@@ -29497,7 +29497,7 @@ type PageInfo struct {
 
 // Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
 // has a `partner` row + classification='partner'). Company identity is never duplicated.
-// A68/ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
+// ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 // partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 // forward-compatible.
 type Partner struct {
@@ -29526,7 +29526,7 @@ type Partner struct {
 	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
 	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty"`
 
-	// PartnerRole Functional role (A44/ADR-0034); implementation + dev are Margince's turf.
+	// PartnerRole Functional role (ADR-0034); implementation + dev are Margince's turf.
 	PartnerRole *PartnerPartnerRole `json:"partner_role,omitempty"`
 
 	// RelationshipHealth Decimal-as-string 0..1 derived by formulas §16; basis for 30/60/90 partner dormancy flags.
@@ -29549,7 +29549,7 @@ type PartnerCertStatus string
 // PartnerMarginTier Scenario-C margin tier (business/14-partner-program.md; data-model §4.3 CHECK).
 type PartnerMarginTier string
 
-// PartnerPartnerRole Functional role (A44/ADR-0034); implementation + dev are Margince's turf.
+// PartnerPartnerRole Functional role (ADR-0034); implementation + dev are Margince's turf.
 type PartnerPartnerRole string
 
 // PartnerRelationshipStage defines model for Partner.RelationshipStage.
@@ -29612,7 +29612,7 @@ type Person struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// Consent Per-purpose consent summary (A22/ADR-0011). Read-only derived view of the `person_consent`
+	// Consent Per-purpose consent summary (ADR-0011). Read-only derived view of the `person_consent`
 	// rows; one entry per purpose the workspace tracks. The single flat `consent_state` flag was
 	// REMOVED — consent is per-purpose and demonstrable (data-model.md §3.4). Mutate via
 	// `POST /people/{id}/consent`; read the full proof log via `GET /people/{id}/consent`.
@@ -30507,7 +30507,7 @@ type PersonProviderProfileState string
 // `person_channel_identity` row (`archived_at IS NULL`) with `blocked_at IS NULL`.
 type PersonReachability struct {
 	// Provider A reference to a messaging transport registered in THIS installation
-	// (ADR-0107/A158). Deliberately a pattern-constrained string rather than an enum:
+	// (ADR-0107). Deliberately a pattern-constrained string rather than an enum:
 	// which providers exist is a deployment fact — what this binary composed, including
 	// any extension unit present under `extensions/` — so an enum here would assert that
 	// the legal set is identical in every installation, which is false. The contract
@@ -31110,7 +31110,7 @@ type ProjectScope struct {
 	Total     *int               `json:"total,omitempty"`
 }
 
-// PromoteLeadPreview What POST /leads/{id}/promote would do, computed without writing (ADR-0119/A170).
+// PromoteLeadPreview What POST /leads/{id}/promote would do, computed without writing (ADR-0119).
 type PromoteLeadPreview struct {
 	// Outcome merge = an existing live person matches this lead's email and promotion would fold into it; create = promotion would make a new person.
 	Outcome PromoteLeadPreviewOutcome `json:"outcome"`
@@ -31357,7 +31357,7 @@ type ProviderPoolBudget struct {
 type ProviderPreset = string
 
 // ProviderRef A reference to a messaging transport registered in THIS installation
-// (ADR-0107/A158). Deliberately a pattern-constrained string rather than an enum:
+// (ADR-0107). Deliberately a pattern-constrained string rather than an enum:
 // which providers exist is a deployment fact — what this binary composed, including
 // any extension unit present under `extensions/` — so an enum here would assert that
 // the legal set is identical in every installation, which is false. The contract
@@ -31696,7 +31696,7 @@ type RecordConversationClaimRequest struct {
 	SourceQuote string `json:"source_quote"`
 }
 
-// RecordGrant A manual per-record share (A52/ADR-0039) — widens own/team/all base scope for one record.
+// RecordGrant A manual per-record share (ADR-0039) — widens own/team/all base scope for one record.
 type RecordGrant struct {
 	// Access 'write' also satisfies 'read'.
 	Access    RecordGrantAccess `json:"access"`
@@ -31838,7 +31838,7 @@ type RejectVoiceDraftRequest struct {
 // holds the two rules this surface cannot: write authority over the project ROW, and the
 // refusal that keeps a project's last company on it), `project_stakeholder`
 // (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
-// (A41/ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
+// (ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
 // company), `referred_by` (company referred by a partner company), `co_sell_with` (company co-sold with a partner company).
 // `works_with` is the one person↔person kind (person_id ↔ counterparty_person_id): two external
 // contacts a rep asserts work together. Undirected in fact — the two columns carry no order,
@@ -32304,7 +32304,7 @@ type RestrictedRecord struct {
 	// Reason The retention class that holds it (e.g. commercial_correspondence), plus the statutory basis. Never free text from a user.
 	Reason string `json:"reason"`
 
-	// RedactedFields Which fields the erasure emptied on this record (A167/ADR-0116). A redacted field and an empty one are otherwise the same absence, and only the first is something the controller must be able to state. Names columns, never values.
+	// RedactedFields Which fields the erasure emptied on this record (ADR-0116). A redacted field and an empty one are otherwise the same absence, and only the first is something the controller must be able to state. Names columns, never values.
 	RedactedFields *[]string `json:"redacted_fields,omitempty"`
 
 	// RestrictedAt When the erasure request was suspended and the record restricted.
@@ -32546,7 +32546,7 @@ type SavedViewResource string
 // and this enum moves with it.
 type ScheduledAgentName string
 
-// ScheduledSend One message waiting for its moment (ADR-0104/A155). It is not an activity and not a
+// ScheduledSend One message waiting for its moment (ADR-0104). It is not an activity and not a
 // delivery: nothing is on the timeline and nothing has been handed to a provider.
 type ScheduledSend struct {
 	// ActivityId The timeline activity this produced, once released.
@@ -32676,7 +32676,7 @@ type SearchResultType string
 type SeatUsage struct {
 	// SeatsUsed Full seats in use: every one the installation has not withdrawn — neither
 	// deactivated nor suspended — agent seats included. Read seats are unlimited and
-	// never counted (A62/ADR-0047). This is the same number the entitlement surface
+	// never counted (ADR-0047). This is the same number the entitlement surface
 	// reports and the same one a seat creation is refused against; there is one meter.
 	SeatsUsed int `json:"seats_used"`
 }
@@ -32685,7 +32685,7 @@ type SeatUsage struct {
 // otherwise have supplied — the records this new conversation belongs to.
 type SendAccountEmailRequest struct {
 	// AttachmentIds Files already in the record library to send with this message, named by id
-	// — never uploaded here. Each is snapshotted at staging (ADR-0086/A131 §4) so
+	// — never uploaded here. Each is snapshotted at staging (ADR-0086 §4) so
 	// archiving or superseding one later cannot rewrite what the timeline says a
 	// sent message carried.
 	//
@@ -32786,7 +32786,7 @@ type SendAccountEmailRequest struct {
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
-	// ScheduledAt Send this message at this instant instead of now (ADR-0104/A155). Absolute
+	// ScheduledAt Send this message at this instant instead of now (ADR-0104). Absolute
 	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
 	//
 	// A scheduled message writes NO activity and NO delivery row until it fires —
@@ -32954,7 +32954,7 @@ type SendEmailRequest struct {
 	AlsoLinks *[]ActivityLinkInput `json:"also_links,omitempty"`
 
 	// AttachmentIds Files already in the record library to send with this message, named by id
-	// — never uploaded here. Each is snapshotted at staging (ADR-0086/A131 §4) so
+	// — never uploaded here. Each is snapshotted at staging (ADR-0086 §4) so
 	// archiving or superseding one later cannot rewrite what the timeline says a
 	// sent message carried.
 	//
@@ -33050,7 +33050,7 @@ type SendEmailRequest struct {
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
-	// ScheduledAt Send this message at this instant instead of now (ADR-0104/A155). Absolute
+	// ScheduledAt Send this message at this instant instead of now (ADR-0104). Absolute
 	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
 	//
 	// A scheduled message writes NO activity and NO delivery row until it fires —
@@ -33099,7 +33099,7 @@ type SendEmailRequestCommunicationContext string
 // operation), never named by the caller.
 type SendMessageRequest struct {
 	// AttachmentIds Files already in the record library to send with this message, named by id
-	// — never uploaded here. Each is snapshotted at staging (ADR-0086/A131 §4) so
+	// — never uploaded here. Each is snapshotted at staging (ADR-0086 §4) so
 	// archiving or superseding one later cannot rewrite what the timeline says a
 	// sent message carried.
 	//
@@ -34690,7 +34690,7 @@ type UpdateCompanyRequest struct {
 	Industry  *string               `json:"industry,omitempty"`
 	LegalName *string               `json:"legal_name,omitempty"`
 
-	// Lifecycle Where the account stands with us (ADR-0079/A124). Absent = untouched.
+	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched.
 	Lifecycle *UpdateCompanyRequestLifecycle `json:"lifecycle,omitempty"`
 
 	// LinkedinUrl Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here.
@@ -34704,7 +34704,7 @@ type UpdateCompanyRequest struct {
 	AdditionalProperties map[string]interface{}                   `json:"-"`
 }
 
-// UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079/A124). Absent = untouched.
+// UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched.
 type UpdateCompanyRequestLifecycle string
 
 // UpdateCompanyRequestRelationshipTypes defines model for UpdateCompanyRequest.RelationshipTypes.
@@ -37634,7 +37634,7 @@ type ListActivitiesParams struct {
 
 	// ChannelProvider Filter to messages carried by one transport. Since `kind=message` no longer names
 	// the transport, this is the only way to ask the question `kind=telegram` used to
-	// answer (ADR-0107/A158).
+	// answer (ADR-0107).
 	ChannelProvider *ProviderRef `form:"channel_provider,omitempty" json:"channel_provider,omitempty"`
 
 	// EntityType Filter to activities linked to an entity type (with entity_id).
@@ -38339,7 +38339,7 @@ type ListCompaniesParams struct {
 
 	// IncludeAnchor Include this installation's own company. It is excluded by default because this list
 	// answers "which companies are we selling to", and the company running the CRM is not one
-	// of them (ADR-0082/A127). Modeled on `include_archived` (API-LIST-4): a class of rows
+	// of them (ADR-0082). Modeled on `include_archived` (API-LIST-4): a class of rows
 	// almost never wanted, never silently unreachable. Surfaces whose subject IS the workspace
 	// — recording that a person works here, own-company project work — set it.
 	IncludeAnchor *bool `form:"include_anchor,omitempty" json:"include_anchor,omitempty"`
@@ -38348,7 +38348,7 @@ type ListCompaniesParams struct {
 	// (`human:<uuid>` | `agent:<id>` | `connector:<name>` | `system:<id>`).
 	//
 	// `captured_by_kind=agent` is the **review list for records an AI created**
-	// (ADR-0075/A121). Every record already carries its creator — the field is
+	// (ADR-0075). Every record already carries its creator — the field is
 	// server-stamped from the authenticated principal and read-only on every
 	// response — but until this parameter there was no way to *ask* for them,
 	// so "which of these did a model decide existed?" had no answer short of
@@ -38368,7 +38368,7 @@ type ListCompaniesParams struct {
 	// AiWritten `true` returns only records an AI **wrote into**; `false` only records it
 	// did not touch. Omit for both.
 	//
-	// This is the review list for AI-generated content (ADR-0075/A121 §3a),
+	// This is the review list for AI-generated content (ADR-0075 §3a),
 	// and it is deliberately a different question from `captured_by_kind`.
 	// `captured_by` names who CREATED the row and is never restamped. In the
 	// connector path the AI does not create the record — Gmail capture mints
@@ -38402,7 +38402,7 @@ type ListCompaniesParams struct {
 	// Domain Lookup by normalized domain (the employer-inference index).
 	Domain *string `form:"domain,omitempty" json:"domain,omitempty"`
 
-	// Lifecycle Where the account stands with us (DM-VOCAB-2, ADR-0079/A124).
+	// Lifecycle Where the account stands with us (DM-VOCAB-2, ADR-0079).
 	Lifecycle *ListCompaniesParamsLifecycle `form:"lifecycle,omitempty" json:"lifecycle,omitempty"`
 
 	// RelationshipType Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both.
@@ -40017,7 +40017,7 @@ type ListLeadsParams struct {
 	// (`human:<uuid>` | `agent:<id>` | `connector:<name>` | `system:<id>`).
 	//
 	// `captured_by_kind=agent` is the **review list for records an AI created**
-	// (ADR-0075/A121). Every record already carries its creator — the field is
+	// (ADR-0075). Every record already carries its creator — the field is
 	// server-stamped from the authenticated principal and read-only on every
 	// response — but until this parameter there was no way to *ask* for them,
 	// so "which of these did a model decide existed?" had no answer short of
@@ -40037,7 +40037,7 @@ type ListLeadsParams struct {
 	// AiWritten `true` returns only records an AI **wrote into**; `false` only records it
 	// did not touch. Omit for both.
 	//
-	// This is the review list for AI-generated content (ADR-0075/A121 §3a),
+	// This is the review list for AI-generated content (ADR-0075 §3a),
 	// and it is deliberately a different question from `captured_by_kind`.
 	// `captured_by` names who CREATED the row and is never restamped. In the
 	// connector path the AI does not create the record — Gmail capture mints
@@ -40566,7 +40566,7 @@ type ListPeopleParams struct {
 	// (`human:<uuid>` | `agent:<id>` | `connector:<name>` | `system:<id>`).
 	//
 	// `captured_by_kind=agent` is the **review list for records an AI created**
-	// (ADR-0075/A121). Every record already carries its creator — the field is
+	// (ADR-0075). Every record already carries its creator — the field is
 	// server-stamped from the authenticated principal and read-only on every
 	// response — but until this parameter there was no way to *ask* for them,
 	// so "which of these did a model decide existed?" had no answer short of
@@ -40586,7 +40586,7 @@ type ListPeopleParams struct {
 	// AiWritten `true` returns only records an AI **wrote into**; `false` only records it
 	// did not touch. Omit for both.
 	//
-	// This is the review list for AI-generated content (ADR-0075/A121 §3a),
+	// This is the review list for AI-generated content (ADR-0075 §3a),
 	// and it is deliberately a different question from `captured_by_kind`.
 	// `captured_by` names who CREATED the row and is never restamped. In the
 	// connector path the AI does not create the record — Gmail capture mints
@@ -52511,7 +52511,7 @@ type ServerInterface interface {
 	// Reply in a thread as the buyer.
 	// (POST /public/rooms/threads/{threadId}/comments)
 	ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, threadId openapi_types.UUID)
-	// List manual per-record grants, filtered by record or by subject (A52/ADR-0039).
+	// List manual per-record grants, filtered by record or by subject (ADR-0039).
 	// (GET /record-grants)
 	ListRecordGrants(w http.ResponseWriter, r *http.Request, params ListRecordGrantsParams)
 	// Share one record with a user or team (human-only).
@@ -55856,7 +55856,7 @@ func (_ Unimplemented) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List manual per-record grants, filtered by record or by subject (A52/ADR-0039).
+// List manual per-record grants, filtered by record or by subject (ADR-0039).
 // (GET /record-grants)
 func (_ Unimplemented) ListRecordGrants(w http.ResponseWriter, r *http.Request, params ListRecordGrantsParams) {
 	w.WriteHeader(http.StatusNotImplemented)

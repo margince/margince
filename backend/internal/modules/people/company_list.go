@@ -36,7 +36,7 @@ type ListCompaniesInput struct {
 	// The predicate is storekit's, shared with the person and deal lists.
 	TagIDs  []ids.UUID
 	TagMode storekit.TagMode
-	// IncludeAnchor admits the installation's own company (ADR-0082/A127).
+	// IncludeAnchor admits the installation's own company (ADR-0082).
 	IncludeAnchor bool
 	Cursor        *string
 	Limit         *int
@@ -47,7 +47,7 @@ type ListCompaniesInput struct {
 	// listFilters.ownershipClause, which also refuses two of them at once.
 	OwnerTeamID *ids.TeamID
 	Unassigned  *bool
-	// Classification is RETIRED with the column (ADR-0079/A124) and reaches no
+	// Classification is RETIRED with the column (ADR-0079) and reaches no
 	// wire parameter; Lifecycle and RelationshipType replace it.
 	Classification   *string
 	Lifecycle        *string
@@ -60,7 +60,7 @@ type ListCompaniesInput struct {
 	// company_domain rows the page attaches.
 	Domain          *string
 	IncludeArchived bool
-	// CapturedByKind filters on the captured_by prefix (ADR-0075/A121 §3a).
+	// CapturedByKind filters on the captured_by prefix (ADR-0075 §3a).
 	CapturedByKind *string
 	// AiWritten filters on whether an AI wrote into the record (§3a).
 	AiWritten *bool
@@ -172,7 +172,7 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 			}
 			// The installation's own company is not one of the accounts this
 			// list answers about, so it is excluded unless asked for
-			// (ADR-0082/A127). Appended here beside the other company-only
+			// (ADR-0082). Appended here beside the other company-only
 			// filters rather than in the shared set: the anchor is a fact about
 			// companies, and no person or deal has one.
 			if !in.IncludeAnchor {

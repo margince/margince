@@ -123,7 +123,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (138)
+## Census (139)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -273,6 +273,7 @@ The eight shapes, what each is for, and how each one silently passes:
 |---|---|---|
 | `attestationproducer_test.go` | H2 | Attestation-minting fitness function (ADR-0072 §1). |
 | `commsreconciler_test.go` | H2 | The wiring invariant under the outbound-send reconcile, as a fitness function rather than a habit: no role this repository assembles builds a delivery store without the seam that re-keys a sent message's timeline row. |
+| `companyrenamerecheck_test.go` | H2 | A company's NAME is the axis on which two records of one company converge, so every rename has to ask whether it just created a duplicate. |
 | `composerowscope_test.go` | H2 | Review-loop rule 3 as a fitness function over the compose tier: anything that returns a record is a read, so a query that hands back a REFERENCE to a row-scoped record applies that record's row scope. |
 | `consentproof_test.go` | H2 | The Art. 7(1) demonstrability invariant as a fitness function: every write that sets a person\_consent STATE appends a consent\_event proof row in the same function (data-model §3.4 — the current state is always backed by an append-only event saying when, how, and by whom). |
 | `dedupespine_test.go` | H2 | The identity-spine fitness functions. |
@@ -280,7 +281,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `liveprobelock_test.go` | H2 | A live-probed write of a HELD row locks its subject. |
 | `messagingpackreach_test.go` | H2 | Every messaging rule set a shipped unit declares is one the boot registers. |
 | `moduleaudits_test.go` | H2 | A module that owns tables writes their history. |
-| `companyrenamerecheck_test.go` | H2 | A company's NAME is the axis on which two records of one company converge, so every rename has to ask whether it just created a duplicate. |
 | `personscrub_test.go` | H2 | Erasing a person and anonymizing one are the same act with one difference: the erased subject goes on a suppression list, and the anonymized subject may lawfully return. |
 | `rbacgate_test.go` | H2 | The store-entry-point admission rule as a fitness function: every exported method on a module's \*Store or \*Service — the seam both the HTTP handlers and the MCP tool surface call through — references the platform auth gate (object RBAC and/or the row-scope spellings), directly or through a same-package helper. |
 | `relaywiring_test.go` | H2 | Every option that wires the mail relay is wired by a role binary. |
@@ -321,7 +321,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (53)
+## Prohibition (54)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -331,6 +331,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `backfillledgerlock_test.go` | H2 | A transaction that writes the backfill creation ledger locks the run row first. |
 | `capabilitypathlog_test.go` | H2 | A request path reaches a log line through capabilitypath.Redact, never raw. |
 | `commentnamedtests_test.go` | H1 | A test named in a comment exists. |
+| `companyvocabulary_test.go` | H1 | The record type is called company, and this is what stops the other word coming back. |
 | `connectoractor_test.go` | H1 | A connector's actor id is DERIVED from the work, never written down. |
 | `constraintnameleak_test.go` | H2 | A constraint's name goes in the operator's log, never in the caller's refusal. |
 | `contentionprobe_test.go` | H2 | A contention probe that cannot see the backend it is waiting for. |
