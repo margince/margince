@@ -96,6 +96,24 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
+	// ONLY EVIDENCE THIS CALLER WAS SHOWN TO HOLD travels any further.
+	//
+	// refuseUnreadableEvidence runs inside validate, and validate runs only for
+	// arm 3 of resolution — the thread and live-deal arms answer before it. So
+	// a message allowed by one of those two carries evidence ids nobody has
+	// checked this caller may see, and writing them to the decision row would
+	// hand them to the transmit phase. That phase runs under the system
+	// principal, for which auth.Require returns nil, so an unchecked id there
+	// becomes an authorization the sender could never have obtained: name any
+	// invoice in the installation, get allowed by an open deal at staging, and
+	// have the invoice arm allow it at transmit.
+	//
+	// EvidenceChecked is the resolution's own record of having passed that
+	// check, so what reaches the row is the intersection of "named" and
+	// "readable by the person who named it".
+	if res.EvidenceChecked {
+		d.Evidence = req.Evidence
+	}
 	if res.Supported {
 		// The record bears the category out — and the subject may still have
 		// said stop. The evidence arms never read person_consent, so this is
@@ -188,6 +206,30 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purpos
 	}
 	switch verdict.State {
 	case VerdictAllowed:
+		// THE TRANSACTIONAL CLASS DOES NOT CARRY ITSELF ON THE SEND PATH.
+		//
+		// VerdictForPerson allows ClassTransactional unconditionally, because
+		// Art 6(1)(b) really does mean the contract is the basis and the guard
+		// endpoint has to say so about a person who has an invoice coming. But
+		// that answer is about a PERSON, and this function is about a MESSAGE:
+		// we are only here because resolveCategory found nothing supporting
+		// this one — no thread, no live deal, no accepted claim — and
+		// resolutionForClass already said so with legacy_transactional_unevidenced.
+		//
+		// Taking the allow anyway is what let any message calling itself
+		// operational become one, on nothing but the purpose key. The lead arm
+		// closed this hole already (TestALeadTakesNoAuthorityFromATransactionalPurpose);
+		// this is the same hole for persons, and the reason code is the one the
+		// resolution had picked before the legacy gate overrode it.
+		//
+		// The guard endpoint and the legacy gate keep VerdictForPerson's answer
+		// untouched: an invoice with real evidence resolves as supported and
+		// returns from decideResolved's supported arm, never reaching here.
+		if purpose.Class == ClassTransactional {
+			d.Verdict = commsauthz.VerdictReview
+			d.ReasonCode = commsauthz.ReasonLegacyTransactionalUnevidenced
+			break
+		}
 		// A basis this call DERIVED is written down before the send relies on
 		// it (Art. 5(2)). The engine is the only authority now, so it is the
 		// only thing left that can make that record: grantedForRecipient used

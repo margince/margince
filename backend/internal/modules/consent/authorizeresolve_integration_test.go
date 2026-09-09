@@ -471,6 +471,42 @@ func TestTheLegacyTransactionalPurposeNoLongerCarriesItself(t *testing.T) {
 	}
 }
 
+// AND THE VERDICT AGREES WITH THE RESOLUTION.
+//
+// The resolution above has said "not supported, and here is why" since the
+// escape hatch was closed, but the DECISION went on allowing: decideResolved
+// handed an unsupported transactional claim to legacyVerdictFor, which asked
+// VerdictForPerson, whose ClassTransactional arm allows unconditionally. So the
+// engine recorded its objection and sent the mail anyway, on nothing but the
+// purpose key — which is the hole the resolution change was supposed to close.
+//
+// The person here has an address, a seeded transactional purpose, and NO
+// invoice, contract, thread or deal. The only thing saying this message is
+// operational is the caller's own purpose key.
+//
+// The lead arm closed this already (TestALeadTakesNoAuthorityFromATransactionalPurpose
+// in leadconsent_integration_test.go); persons were the remaining half.
+func TestTheLegacyTransactionalPurposeDoesNotAllowTheSend(t *testing.T) {
+	e := setupResolve(t)
+	e.seedPurpose(t, "transactional", "transactional")
+
+	got := e.decide(t, commsauthz.Request{LegacyPurposeKey: "transactional"})
+
+	if got.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("verdict = allow (%s): the transactional key authorized a send on its own, "+
+			"with no invoice, contract, thread or deal behind it", got.ReasonCode)
+	}
+	if got.ReasonCode != commsauthz.ReasonLegacyTransactionalUnevidenced {
+		t.Errorf("reason = %q, want legacy_transactional_unevidenced — the refusal should name "+
+			"the missing evidence, not a generic denial", got.ReasonCode)
+	}
+	// Resolved still names what the engine worked out, so the row reads as an
+	// account notice that could not be evidenced rather than as a mystery.
+	if got.Resolved != commsauthz.CategoryAccountNotice {
+		t.Errorf("resolved %q, want account_notice", got.Resolved)
+	}
+}
+
 // A recipient the engine can say nothing about resolves to marketing and is
 // unsupported — the strictest reading, because an unknown purpose is not a
 // reason to assume an operational one.
