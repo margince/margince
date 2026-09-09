@@ -26,7 +26,7 @@ import { useProject360 } from "./project360";
 
 // FE-PARAM-5's cadence, mirrored here so a case can advance past exactly one
 // of them rather than a bare number that could mean anything.
-const LIVE_RECORD_MS = 20_000;
+const LIVE_RECORD_MS = 60_000;
 
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {

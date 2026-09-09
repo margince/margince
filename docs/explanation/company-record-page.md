@@ -280,7 +280,7 @@ disagreeing with itself, each held where it sees what the other cannot:
   own read. The row goes only where the list holds something, and what it holds
   *is* the answer.
 
-The 360 is also a **live read** (FE-PARAM-5): every 20 seconds while the tab
+The 360 is also a **live read** (FE-PARAM-5): every 60 seconds while the tab
 has focus, because a page read once on arrival goes stale silently — a stale
 "what needs you" looks like a current one. A cadence, not a stream; the
 contract serves no push. A read is live for the key it reads under

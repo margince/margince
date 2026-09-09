@@ -28,13 +28,24 @@ const STALE_TIME_MS = 30_000;
 // failure is silent, because a stale "what needs you" looks exactly like a
 // current one.
 //
-// Twenty seconds is the cadence, not a stream: the contract serves no push, so
-// this is the honest approximation — new work reaches the reader within one
-// cadence rather than the moment it lands. It is short enough that a task
-// filed elsewhere reaches the open page while the reader is still on it, and
-// long enough that an idle tab costs one composite read every twenty seconds
-// and nothing else.
-const LIVE_RECORD_MS = 20_000;
+// A MINUTE, and the number is a cost decision rather than a feel one. The
+// cadence buys exactly one case: a reader sitting on a record while it changes
+// under them. Every other way a record goes stale — coming back to the tab, a
+// write this app made — is already answered, the first by the focus refetch
+// below and the second by the mutation cache's invalidations, and neither
+// costs a request while nothing is happening.
+//
+// What a tick costs is a whole composite assembly: the 360 endpoints carry no
+// ETag, so a poll that finds nothing new is priced the same as one that finds
+// work, and the assembly runs to a query budget the composite is designed
+// around. Against that, the difference between hearing about a colleague's
+// task in twenty seconds and in sixty is not worth three times the reads.
+//
+// It is a cadence and not a stream: the contract serves no push, so the reader
+// sees new work within one cadence rather than the moment it lands. A shorter
+// one is worth revisiting when a 304 makes an unchanged read cheap, or against
+// a measured p95 for the assembly — neither of which exists today.
+const LIVE_RECORD_MS = 60_000;
 
 // FE-PARAM-5, applied: a read is live because of WHAT IT IS, not because the
 // screen that mounts it remembered to ask.
