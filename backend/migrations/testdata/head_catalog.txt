@@ -5610,6 +5610,8 @@ public.technical_lookup_cache.technical_lookup_cache_pkey PRIMARY KEY (query, re
 public.technical_lookup_cache_pkey CREATE UNIQUE INDEX technical_lookup_cache_pkey ON public.technical_lookup_cache USING btree (query, record_kind)
 public.transcript_read acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.transcript_read.activity_id uuid NOT NULL gen=- def=-
+public.transcript_read.attempt integer NOT NULL gen=- def=1
+public.transcript_read.attempt_at timestamp with time zone NOT NULL gen=- def=now()
 public.transcript_read.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.transcript_read.finished_at timestamp with time zone gen=- def=-
 public.transcript_read.id uuid NOT NULL gen=- def=-
@@ -5620,6 +5622,7 @@ public.transcript_read.started_at timestamp with time zone gen=- def=-
 public.transcript_read.status text NOT NULL gen=- def='queued'::text
 public.transcript_read.status_detail text gen=- def=-
 public.transcript_read.transcript_read_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.transcript_read.transcript_read_attempt_positive CHECK ((attempt >= 1))
 public.transcript_read.transcript_read_pkey PRIMARY KEY (id)
 public.transcript_read.transcript_read_started_shape CHECK ((((status = 'queued'::text) AND (started_at IS NULL)) OR ((status <> 'queued'::text) AND (started_at IS NOT NULL))))
 public.transcript_read.transcript_read_status CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text])))

@@ -84,6 +84,15 @@ type TranscriptRead struct {
 	StartedAt   *time.Time
 	FinishedAt  *time.Time
 	CreatedAt   time.Time
+	// Attempt counts the times this reading has been handed to a worker. The
+	// AI-activity projection guards on it: a re-arm that announced the same
+	// attempt as the failure it recovers from would lose to that failure, and
+	// the rail would show a dead reading while a live one runs.
+	Attempt int
+	// AttemptAt is when THIS attempt was enqueued, not the reading's first. The
+	// projection ages a live row from it, so a reading re-armed an hour after
+	// it was created would otherwise be past its lease before a worker saw it.
+	AttemptAt time.Time
 }
 
 // Live reports whether the reading is still expected to move on its own — the
@@ -93,12 +102,13 @@ func (r TranscriptRead) Live() bool {
 }
 
 const transcriptReadColumns = `id, activity_id, status, status_detail, line_count,
-	proposal_ids, requested_by, started_at, finished_at, created_at`
+	proposal_ids, requested_by, started_at, finished_at, created_at, attempt, attempt_at`
 
 func scanTranscriptRead(r pgx.Row) (TranscriptRead, error) {
 	var read TranscriptRead
 	err := r.Scan(&read.ID, &read.ActivityID, &read.Status, &read.StatusDetail, &read.LineCount,
-		&read.ProposalIDs, &read.RequestedBy, &read.StartedAt, &read.FinishedAt, &read.CreatedAt)
+		&read.ProposalIDs, &read.RequestedBy, &read.StartedAt, &read.FinishedAt, &read.CreatedAt,
+		&read.Attempt, &read.AttemptAt)
 	return read, err
 }
 
@@ -190,7 +200,11 @@ func startTranscriptReadInTx(
 			}); err != nil {
 				return fmt.Errorf("audit transcript read start: %w", err)
 			}
-			return nil
+			// The rail's first sight of the reading. A JOIN does not announce:
+			// the occurrence already exists and the joiner changed nothing
+			// about it, so re-announcing would restate a state at the same
+			// attempt for the sake of a second button press.
+			return logTranscriptActivity(ctx, tx, out)
 		}
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("start transcript read: %w", err)
@@ -337,7 +351,7 @@ func (s *Store) BeginTranscriptRead(ctx context.Context, readID ids.UUID, reclai
 		if err != nil {
 			return fmt.Errorf("claim transcript read: %w", err)
 		}
-		return nil
+		return logTranscriptActivity(ctx, tx, out)
 	})
 	return out, err
 }
