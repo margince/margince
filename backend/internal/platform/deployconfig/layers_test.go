@@ -31,7 +31,7 @@ func layered(t *testing.T, env runtimeenv.Environment, base, overlay string) (Co
 
 func TestTheOverlayForThisPostureWinsKeyByKey(t *testing.T) {
 	cfg, err := layered(t, runtimeenv.Development,
-		"version: 1\norganization:\n  name: Acme\n  timezone: Europe/Berlin\nmcp:\n  connector_enabled: false\n",
+		"version: 1\nworkspace:\n  name: Acme\n  timezone: Europe/Berlin\nmcp:\n  connector_enabled: false\n",
 		"mcp:\n  connector_enabled: true\n")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
@@ -41,8 +41,8 @@ func TestTheOverlayForThisPostureWinsKeyByKey(t *testing.T) {
 	}
 	// The keys the overlay is silent about are the reason for having a base at
 	// all: an overlay states a difference, not a whole configuration.
-	if cfg.Organization.Name != "Acme" || cfg.Organization.Timezone != "Europe/Berlin" {
-		t.Errorf("the base's organization did not survive the overlay: %+v", cfg.Organization)
+	if cfg.Workspace.Name != "Acme" || cfg.Workspace.Timezone != "Europe/Berlin" {
+		t.Errorf("the base's workspace did not survive the overlay: %+v", cfg.Workspace)
 	}
 }
 
@@ -103,13 +103,13 @@ func TestAMappingMergesAndAListReplaces(t *testing.T) {
 // still commented out — is a file a boot must read and shrug at.
 func TestACommentOnlyOverlayIsNotAFailure(t *testing.T) {
 	cfg, err := layered(t, runtimeenv.Development,
-		"version: 1\norganization:\n  name: Acme\n",
+		"version: 1\nworkspace:\n  name: Acme\n",
 		"# nothing to change for dev yet\n")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.Organization.Name != "Acme" {
-		t.Errorf("organization.name = %q, want Acme", cfg.Organization.Name)
+	if cfg.Workspace.Name != "Acme" {
+		t.Errorf("workspace.name = %q, want Acme", cfg.Workspace.Name)
 	}
 }
 
@@ -133,7 +133,7 @@ func TestATypoInTheOverlayFailsTheBootAndNamesTheFile(t *testing.T) {
 // its own admin, and validating the base alone would refuse it.
 func TestValidationRunsOverTheMergedResult(t *testing.T) {
 	cfg, err := layered(t, runtimeenv.Test,
-		"version: 1\norganization:\n  name: Acme\nbootstrap_admin:\n  email: admin@acme.test\n  display_name: Admin\n  password_file: /run/secrets/base-admin\n",
+		"version: 1\nworkspace:\n  name: Acme\nbootstrap_admin:\n  email: admin@acme.test\n  display_name: Admin\n  password_file: /run/secrets/base-admin\n",
 		"bootstrap_admin:\n  password_file: /run/secrets/test-admin\n")
 	if err != nil {
 		t.Fatalf("Load: %v", err)

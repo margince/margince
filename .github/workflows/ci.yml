@@ -994,7 +994,7 @@ jobs:
           chmod 600 "$RUNNER_TEMP/admin-password"
           cat > "$RUNNER_TEMP/margince.yaml" <<EOF
           version: 1
-          organization:
+          workspace:
             name: Demo Workspace
             base_currency: EUR
             timezone: Europe/Berlin

@@ -235,7 +235,7 @@ func (l layout) ensureConfig() (string, error) {
 # Restart Margince after changing anything here.
 version: 1
 
-organization:
+workspace:
   name: Margince
   base_currency: USD
   timezone: %s

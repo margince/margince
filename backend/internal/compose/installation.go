@@ -48,7 +48,7 @@ import (
 func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, cfg deployconfig.Config) error {
 	var create func() (identity.InstallationBootstrap, error)
 	if b := cfg.BootstrapAdmin; b != nil {
-		if cfg.Organization.Name == "" {
+		if cfg.Workspace.Name == "" {
 			return errors.New("compose: bootstrap_admin is configured but organization.name is missing — both are required to bootstrap an empty database")
 		}
 		// The password secret is read inside this closure, which bootstrap
@@ -62,10 +62,10 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 				return identity.InstallationBootstrap{}, err
 			}
 			return identity.InstallationBootstrap{
-				OrganizationName: cfg.Organization.Name,
-				BaseCurrency:     cfg.Organization.BaseCurrency,
-				BaseLanguage:     cfg.Organization.BaseLanguage,
-				Timezone:         cfg.Organization.Timezone,
+				OrganizationName: cfg.Workspace.Name,
+				BaseCurrency:     cfg.Workspace.BaseCurrency,
+				BaseLanguage:     cfg.Workspace.BaseLanguage,
+				Timezone:         cfg.Workspace.Timezone,
 				AdminEmail:       b.Email,
 				AdminName:        b.DisplayName,
 				AdminPassword:    pw,
@@ -91,7 +91,7 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 		return err
 	}
 	if created {
-		log.Info("installation bootstrapped", "workspace_id", wsID.String(), "organization", cfg.Organization.Name)
+		log.Info("installation bootstrapped", "workspace_id", wsID.String(), "workspace", cfg.Workspace.Name)
 	} else {
 		log.Info("installation bound to existing organization", "workspace_id", wsID.String())
 	}

@@ -25,7 +25,7 @@ version: 1
 # But base_currency stops being changeable once anything has converted against
 # it (a closed deal, a sent offer, a mirrored invoice, a loaded rate sheet), so
 # it is the one worth checking twice.
-organization:
+workspace:
   name: Demo Workspace
   base_currency: EUR
   # The language AI writes in for the whole team — en, de or vi. Not a person's

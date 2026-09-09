@@ -28,7 +28,7 @@ import (
 // additionally requires `organization` and `bootstrap_admin`.
 type Config struct {
 	Version        int             `yaml:"version"`
-	Organization   Organization    `yaml:"organization"`
+	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
 	Auth           Auth            `yaml:"auth"`
@@ -125,10 +125,16 @@ func (c CompanyContext) OnboardingEnabled() bool {
 	return c.EffectiveRollout() == CompanyContextOnboarding
 }
 
-// Organization names the installation's singleton organization. Consumed
-// only when the organization is created; it never reconciles into an
-// existing installation (§6.3 of the ratified concept).
-type Organization struct {
+// Workspace names the installation's singleton workspace — the tenant every
+// row is filed under, and what the schema has always called it. Consumed only
+// when the workspace is created; it never reconciles into an existing
+// installation (§6.3 of the ratified concept).
+//
+// It was spelled `organization` until the schema and the config disagreed
+// loudly enough to notice: `workspace` is the table, `workspace_id` is the
+// column on every tenant row, and an operator reading both had to know that
+// the two words meant one thing. Nothing here is the CRM's company record.
+type Workspace struct {
 	Name         string `yaml:"name"`
 	BaseCurrency string `yaml:"base_currency"`
 	BaseLanguage string `yaml:"base_language"`
@@ -137,7 +143,7 @@ type Organization struct {
 
 // BootstrapAdmin identifies the first administrator. The password is a
 // reference so the secret can be deleted after first boot — once the
-// organization exists this whole section may be removed.
+// workspace exists this whole section may be removed.
 type BootstrapAdmin struct {
 	Email       string `yaml:"email"`
 	DisplayName string `yaml:"display_name"`
@@ -341,15 +347,15 @@ func (c Config) validate() error {
 	if c.Version != 1 {
 		return fmt.Errorf("deployconfig: unsupported version %d (this build supports version 1)", c.Version)
 	}
-	if c.Organization.Timezone != "" {
-		if _, err := values.ParseTimezone(c.Organization.Timezone); err != nil {
+	if c.Workspace.Timezone != "" {
+		if _, err := values.ParseTimezone(c.Workspace.Timezone); err != nil {
 			return fmt.Errorf("deployconfig: organization.timezone: %w", err)
 		}
 	}
-	if cur := c.Organization.BaseCurrency; cur != "" && !values.ValidCurrency(cur) {
+	if cur := c.Workspace.BaseCurrency; cur != "" && !values.ValidCurrency(cur) {
 		return fmt.Errorf("deployconfig: organization.base_currency %q is not a 3-letter ISO 4217 code", cur)
 	}
-	if lang := c.Organization.BaseLanguage; lang != "" && !textlang.Known(lang) {
+	if lang := c.Workspace.BaseLanguage; lang != "" && !textlang.Known(lang) {
 		return fmt.Errorf("deployconfig: organization.base_language %q is not a language this build speaks (en, de, vi)", lang)
 	}
 	if err := c.Rates.validate(); err != nil {
