@@ -196,4 +196,47 @@ if [[ "$failures" -ne 0 ]]; then
 	echo "FAIL: $failures case(s)" >&2
 	exit 1
 fi
+# The workflow around the report, not the report itself.
+#
+# The job must SUCCEED on a finding. A red check of any kind leaves a pull
+# request blocked with administrator override as the only way past, so a job
+# that failed here would be a gate — and, because a rebase rewrites the commit
+# ids a review names, one that ordinary work cannot clear. The name says
+# "reports, never blocks" and this is what keeps that true.
+workflow="$root/.github/workflows/review-coverage.yml"
+# Any spelling of it, not one. `exit "$status"`, `exit $status` and
+# `exit "${status}"` are the same instruction, and an assertion that names only
+# the first is satisfied by writing the second — which is how a check comes back
+# without anybody meaning to restore it.
+if grep -qE '(^|[^#[:alnum:]_])exit[[:space:]]+"?\$\{?status\}?"?' "$workflow"; then
+	echo "FAIL: the workflow exits with the report's status, so a finding fails the job."
+	echo "      That makes it a gate no matter what the check is named, and a rebase alone"
+	echo "      is enough to leave a pull request unclearable without an administrator."
+	exit 1
+fi
+echo "ok: a finding is reported without failing the job"
+
+# And it has somewhere to be seen. A green job whose finding lives only in a
+# step summary is the report nobody reads, which is the failure the previous
+# shape was avoiding — so dropping the comment is not a free simplification.
+#
+# The MARKER alone proves nothing: it survives in a comment or an unused
+# variable while the calls that carry it are gone. So the calls are what this
+# asks for — one to create the comment and one to update the one already there,
+# because a run that could only create would stack a finding per push and a run
+# that could only update would never leave the first.
+for call in 'POST[^\n]*issues/[^\n]*comments' 'PATCH[^\n]*issues/comments'; do
+	if ! grep -qE "$call" "$workflow"; then
+		echo "FAIL: the workflow has no $call — a finding on a green job then has nowhere"
+		echo "      a reader would find it, or no way to withdraw itself once the coverage closes."
+		exit 1
+	fi
+done
+if ! grep -q 'review-coverage-report' "$workflow"; then
+	echo "FAIL: the workflow names no marker, so it cannot find the comment it left last"
+	echo "      time and every push stacks another finding."
+	exit 1
+fi
+echo "ok: the finding is published where the reader already is, and withdraws itself"
+
 echo "OK: test-review-coverage — every arm of the report, including the quiet ones"
