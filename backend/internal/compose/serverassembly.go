@@ -63,7 +63,11 @@ func newPeopleHandlers(pool *pgxpool.Pool) peopleHandlers {
 		WithVCardReviewStager(vcardCreateStager(pool)).
 		WithSettings(NewSettingsStore(pool)).
 		WithSeatReadsLeads(seatReadsLeads(pool)).
-		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())})
+		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
+		// A merge carries the retiring subject's stops, or it refuses. consent
+		// owns communication_suppression; people owns the merge; neither
+		// imports the other, so the edge is injected here.
+		WithStopCarrier(consent.NewStore(InstallationDB(pool)))
 }
 
 // newActivitiesHandlers builds the timeline transport over the sibling

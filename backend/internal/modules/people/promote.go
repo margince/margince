@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -140,6 +141,15 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 		}
 		if err := carryLeadConsent(ctx, tx, id, personID, by); err != nil {
 			return fmt.Errorf("carry lead consent: %w", err)
+		}
+		// And the lead's STOPS, which live in consent's table rather than ours
+		// — see stopcarry.go. A lead who asked us to stop and was then promoted
+		// would otherwise arrive as a person carrying no stop at all, which is
+		// the same silent resumption the person merge produced.
+		if err := s.carryStopsTx(ctx, tx,
+			commsauthz.LeadStopSubject(id),
+			commsauthz.PersonStopSubject(personID)); err != nil {
+			return fmt.Errorf("carry the lead's stops: %w", err)
 		}
 		carried, err := carryLeadActivities(ctx, tx, id, personID)
 		if err != nil {

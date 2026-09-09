@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -153,6 +154,15 @@ func (s *Store) mergePersonTx(ctx context.Context, tx pgx.Tx, sourceID, targetID
 	counts, err := relinkPersonReferences(ctx, tx, sourceID, targetID)
 	if err != nil {
 		return crmcontracts.Person{}, err
+	}
+	// The STOPS come across too, and they are not a relink — see stopcarry.go.
+	// relinkPersonReferences moved the grants; without this the objections
+	// stayed on a record no send evaluates any more, and marketing resumed
+	// against somebody who had explicitly refused it.
+	if err := s.carryStopsTx(ctx, tx,
+		commsauthz.PersonStopSubject(sourceID),
+		commsauthz.PersonStopSubject(targetID)); err != nil {
+		return crmcontracts.Person{}, fmt.Errorf("carry the merged-away person's stops: %w", err)
 	}
 	p := buildSurvivorshipPatch(tgt, src)
 	if !p.Empty() {
