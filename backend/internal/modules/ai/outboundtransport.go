@@ -4,7 +4,11 @@
 package ai
 
 import (
+	"fmt"
+	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -96,20 +100,106 @@ const (
 	idleConnTimeout = 60 * time.Second
 )
 
+// dialTimeout bounds establishing one connection. Cloned transports inherit
+// DefaultTransport's dialer settings; replacing the dialer to carry the egress
+// guard means restating them, and this is the value net/http itself uses.
+const dialTimeout = 30 * time.Second
+
 // newOutboundClient is the HTTP client EVERY provider adapter calls a vendor
 // with: one transport shape for all seven, so hardening the outbound path is a
 // change here rather than seven changes that drift.
 //
+// The binding names where the call goes, and a binding is operator-supplied, so
+// the client is built FROM the provider rather than shared across providers:
+// its dialer carries that lane's egress guard (outboundegress.go), refusing the
+// resolved address post-DNS so a name cannot smuggle one past it.
+//
 // One client per adapter rather than one shared package-level client, because
 // the pool is per-transport and a shared pool would let one vendor's stalled
 // connections crowd out another's.
-func newOutboundClient() *http.Client {
+func newOutboundClient(provider string) *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone() //nolint:forcetypeassert // net/http's own DefaultTransport is a *http.Transport by construction
+	transport.DialContext = (&net.Dialer{
+		Timeout:   dialTimeout,
+		KeepAlive: dialTimeout,
+		Control:   dialGuard(egressFor(provider)),
+	}).DialContext
+	// NO PROXY, and this line is what decides whether the hook above means
+	// anything. The clone inherits ProxyFromEnvironment, and a proxy turns the
+	// check inside out: the dial goes to the PROXY's address — public, so
+	// admitted — and the proxy is then asked to CONNECT to the binding's host,
+	// which this side never sees. Every address dialGuard refuses is reachable
+	// that way on any deployment carrying HTTPS_PROXY.
+	//
+	// The third writer of this rule in the tree rather than a shared helper: the
+	// other two live in backend/pkg/extension (the extension surface, which a
+	// module may not import) and in the hubspot overlay's own gate. What holds
+	// them together is that each is a transport nobody else builds, and this one
+	// is held by TestTheOutboundClientCannotBeRoutedThroughAProxy.
+	transport.Proxy = nil
 	transport.IdleConnTimeout = idleConnTimeout
 	transport.ForceAttemptHTTP2 = true
 	transport.HTTP2 = &http.HTTP2Config{
 		SendPingTimeout: http2PingAfterIdle,
 		PingTimeout:     http2PingTimeout,
 	}
-	return &http.Client{Timeout: CallCeiling, Transport: transport}
+	return &http.Client{Timeout: CallCeiling, Transport: transport, CheckRedirect: refuseOffHostRedirect}
+}
+
+// refuseOffHostRedirect stops a redirect that would carry the installation's
+// model key somewhere the binding did not name.
+//
+// Go strips the headers IT knows to be sensitive across a host change —
+// Authorization, Cookie, WWW-Authenticate — and it has never heard of
+// `x-api-key` or `x-goog-api-key`. Anthropic and Gemini authenticate with
+// exactly those, so a vendor answering 302 to another host would be handed the
+// customer's own credential by a client that believed it was being careful.
+// Nor does it strip anything when only the SCHEME changes, so an https endpoint
+// redirecting to http sends the same key in clear.
+//
+// Scoped to the hop that leaks rather than refused outright, which is where this
+// differs from modellist.go's noRedirect. That one covers a list endpoint where
+// a 3xx never happens in normal operation, and its comment declines to make the
+// wider change here because this client also carries streaming completions,
+// where a redirect a vendor genuinely uses would become an outage. A same-host
+// redirect that keeps its scheme carries the key nowhere new, so it is followed;
+// the two hops that move a credential are the two that are refused.
+func refuseOffHostRedirect(req *http.Request, via []*http.Request) error {
+	previous := via[len(via)-1]
+	if !strings.EqualFold(req.URL.Hostname(), previous.URL.Hostname()) {
+		return fmt.Errorf("ai: refusing a redirect from %s to %s: the model key travels with the request, and the binding named the first host",
+			previous.URL.Hostname(), req.URL.Hostname())
+	}
+	// The PORT as well as the host, because a hostname is not an endpoint: one
+	// machine serves many, and :8443 on the vendor's own host is a different
+	// service from :443 — quite possibly somebody else's, on shared hosting.
+	// The dial guard cannot help here either; it judges the address, and the
+	// address has not changed.
+	if effectivePort(previous.URL) != effectivePort(req.URL) {
+		return fmt.Errorf("ai: refusing a redirect from %s to port %s on the same host: another port is another service, and it is not the one the binding named",
+			previous.URL.Host, effectivePort(req.URL))
+	}
+	if strings.EqualFold(previous.URL.Scheme, "https") && !strings.EqualFold(req.URL.Scheme, "https") {
+		return fmt.Errorf("ai: refusing a redirect from https to %s on %s: the model key would leave in clear",
+			req.URL.Scheme, req.URL.Hostname())
+	}
+	return nil
+}
+
+// effectivePort is the port a url actually dials: the one it names, or its
+// scheme's default when it names none.
+//
+// Read rather than compared as text, because `https://vendor.example` and
+// `https://vendor.example:443` are one endpoint under two spellings, and a
+// redirect between them moves the request nowhere. A rule that compared
+// `URL.Host` would refuse that hop and call a vendor's own normalisation an
+// attack.
+func effectivePort(u *url.URL) string {
+	if port := u.Port(); port != "" {
+		return port
+	}
+	if strings.EqualFold(u.Scheme, "https") {
+		return "443"
+	}
+	return "80"
 }

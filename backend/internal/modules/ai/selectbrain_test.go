@@ -4,10 +4,12 @@
 package ai
 
 import (
+	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // noCloudKeys is the fail-closed lookup: every provider's BYOK key is unset.
@@ -18,6 +20,19 @@ import (
 // about the test said so. A lookup this test constructs cannot be influenced by
 // the shell it runs in.
 func noCloudKeys() config.Lookup { return config.Static(nil) }
+
+// selectLocalBrain binds an adapter to a server this test started, which listens
+// on 127.0.0.1 — an address the production egress guard refuses on the vendor
+// lanes, and rightly: a stored base_url pointing a BYOK binding at the API
+// host's own loopback is the SSRF this build refuses. The transport is the seam
+// (webread and webhooks take the same one), so what these cases exercise is the
+// adapter's wire behaviour and nothing about egress.
+//
+// The guard is proved where it belongs: outboundegress_test.go tests the rule,
+// and TestSelectBrainWiresTheEgressGuard tests that SelectBrain applies it.
+func selectLocalBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
+	return selectBrainOn(cfg, keys, &http.Client{Timeout: CallCeiling})
+}
 
 // cloudKeyFor supplies one provider's key and nothing else, so a case that
 // binds anthropic proves anthropic resolved its own variable rather than
