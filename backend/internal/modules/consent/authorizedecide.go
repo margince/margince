@@ -96,6 +96,24 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
+	// ONLY EVIDENCE THIS CALLER WAS SHOWN TO HOLD travels any further.
+	//
+	// refuseUnreadableEvidence runs inside validate, and validate runs only for
+	// arm 3 of resolution — the thread and live-deal arms answer before it. So
+	// a message allowed by one of those two carries evidence ids nobody has
+	// checked this caller may see, and writing them to the decision row would
+	// hand them to the transmit phase. That phase runs under the system
+	// principal, for which auth.Require returns nil, so an unchecked id there
+	// becomes an authorization the sender could never have obtained: name any
+	// invoice in the installation, get allowed by an open deal at staging, and
+	// have the invoice arm allow it at transmit.
+	//
+	// EvidenceChecked is the resolution's own record of having passed that
+	// check, so what reaches the row is the intersection of "named" and
+	// "readable by the person who named it".
+	if res.EvidenceChecked {
+		d.Evidence = req.Evidence
+	}
 	if res.Supported {
 		// The record bears the category out — and the subject may still have
 		// said stop. The evidence arms never read person_consent, so this is

@@ -43,6 +43,18 @@ type resolution struct {
 	Supported bool
 	// Reason is the code an unsupported resolution carries.
 	Reason string
+	// EvidenceChecked reports that this resolution went through validate, and
+	// therefore through refuseUnreadableEvidence — the caller was shown to hold
+	// the grants for every record they named.
+	//
+	// It gates what may be written to the decision row for the transmit phase
+	// to re-read. The thread and live-deal arms answer BEFORE validate runs, so
+	// a message allowed by one of them has evidence ids nobody has checked the
+	// caller may see. Carrying those forward would hand them to the transmit
+	// phase, which runs under the system principal — auth.Require returns nil
+	// for it — and so would turn an unchecked id into an authorization the
+	// sender could not have obtained themselves.
+	EvidenceChecked bool
 }
 
 // resolveCategory works out what this message is for one recipient.

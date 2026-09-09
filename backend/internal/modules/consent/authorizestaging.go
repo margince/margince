@@ -89,14 +89,20 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 	if err != nil {
 		return err
 	}
-	// The ids this message was staged on, so the transmit phase can put the
-	// same questions to the same records. See authorizeevidencecarry.go: what
-	// the row carries is the pointer, never the verdict.
-	evidence, err := evidenceJSON(req.Evidence)
-	if err != nil {
-		return err
-	}
 	for _, d := range set.Decisions {
+		// The ids THIS RECIPIENT'S decision was taken on, so the transmit phase
+		// can put the same questions to the same records.
+		//
+		// From the decision and not from the request: decideOne copies the
+		// request's evidence onto the decision only when the resolution passed
+		// refuseUnreadableEvidence, so an id the caller was never shown to hold
+		// is absent here rather than being handed to a phase that runs as the
+		// system principal. See authorizeevidencecarry.go, and decideOne's own
+		// note on why the two differ.
+		evidence, err := evidenceJSON(d.Evidence)
+		if err != nil {
+			return err
+		}
 		subjectKind := nullableText(d.SubjectKind)
 		var subjectID *ids.UUID
 		if d.SubjectKind != "" {
@@ -113,7 +119,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 		// A denial under observe or warn DOES commit, and those rows are real.
 		// They are read from the table, not from a counter that would mean one
 		// thing in one posture and another in the next.
-		_, err := tx.Exec(ctx, `
+		_, err = tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
