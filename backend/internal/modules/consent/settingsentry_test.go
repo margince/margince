@@ -12,38 +12,55 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// Absent means observe, which is what lets the stored map be a set of
-// EXCEPTIONS rather than a table that must list every category to be correct.
-// A map that had to be complete would put a category added tomorrow into
-// whatever position the last author happened to type.
-func TestACategoryTheMapDoesNotNameObserves(t *testing.T) {
-	modes := map[string]string{string(commsauthz.CategoryReplyToInbound): "enforce"}
-	if got := ModeFor(modes, commsauthz.CategoryMarketing); got != commsauthz.ModeObserve {
-		t.Errorf("an unnamed category resolved to %q, want observe", got)
+// Absent means ENFORCE, and the validator refuses a partial map, so the two
+// together mean no category reaches the engine without a decision about it.
+// Absent used to mean observe: a category nobody remembered to name then
+// shipped recorded-but-not-binding, with nothing saying so.
+func TestACategoryTheMapDoesNotNameEnforces(t *testing.T) {
+	modes := map[string]string{string(commsauthz.CategoryReplyToInbound): "observe"}
+	if got := ModeFor(modes, commsauthz.CategoryMarketing); got != commsauthz.ModeEnforce {
+		t.Errorf("an unnamed category resolved to %q, want enforce", got)
 	}
-	if got := ModeFor(modes, commsauthz.CategoryReplyToInbound); got != commsauthz.ModeEnforce {
-		t.Errorf("a named category resolved to %q, want enforce", got)
+	if got := ModeFor(modes, commsauthz.CategoryReplyToInbound); got != commsauthz.ModeObserve {
+		t.Errorf("a named category resolved to %q, want observe", got)
 	}
 }
 
-// Every category in the vocabulary observes under the shipped default. This is
-// derived from the vocabulary rather than listed, so a category added without a
-// thought about its rollout position still arrives in the safest one.
-func TestTheDefaultObservesEveryCategory(t *testing.T) {
+// Every category in the vocabulary enforces under the shipped default. Derived
+// from the vocabulary rather than listed, so a category added without a thought
+// about its rollout position arrives bound by the engine's own answer rather
+// than deferring to the legacy gate.
+func TestTheDefaultEnforcesEveryCategory(t *testing.T) {
 	def := map[string]string{}
 	for _, c := range commsauthz.Categories() {
-		if got := ModeFor(def, c); got != commsauthz.ModeObserve {
-			t.Errorf("%s defaults to %q, want observe", c, got)
+		if got := ModeFor(def, c); got != commsauthz.ModeEnforce {
+			t.Errorf("%s defaults to %q, want enforce", c, got)
 		}
 	}
 }
 
-// A value that is not a mode resolves to observe rather than to itself. A
-// stored map can predate a validator, and a garbled value must fail safe.
-func TestAnUnreadableModeObserves(t *testing.T) {
+// A value that is not a mode resolves to enforce rather than to itself. A
+// stored map can predate a validator, and failing safe now means binding the
+// engine's own answer rather than handing the message back to the old gate.
+func TestAnUnreadableModeEnforces(t *testing.T) {
 	modes := map[string]string{string(commsauthz.CategoryMarketing): "enforced"}
-	if got := ModeFor(modes, commsauthz.CategoryMarketing); got != commsauthz.ModeObserve {
-		t.Errorf("a garbled mode resolved to %q, want observe", got)
+	if got := ModeFor(modes, commsauthz.CategoryMarketing); got != commsauthz.ModeEnforce {
+		t.Errorf("a garbled mode resolved to %q, want enforce", got)
+	}
+}
+
+// A map naming some categories and not others is refused, naming the ones with
+// no mode. This is the other half of absent-means-enforce: the default is safe,
+// and a half-written map is a question that gets asked rather than answered.
+func TestAPartialMapIsRefused(t *testing.T) {
+	err := validateAuthorizationModes(map[string]string{
+		string(commsauthz.CategoryMarketing): "enforce",
+	})
+	if err == nil {
+		t.Fatal("a map naming one category of fourteen was accepted")
+	}
+	if !strings.Contains(err.Error(), string(commsauthz.CategoryReplyToInbound)) {
+		t.Errorf("the refusal does not name a category that has no mode: %v", err)
 	}
 }
 
@@ -91,6 +108,11 @@ func TestEveryCategoryAndModeIsAccepted(t *testing.T) {
 
 // An empty map is the shipped default and must validate, or no installation
 // could save any other setting on the same surface.
+//
+// This is the one case TestAPartialMapIsRefused deliberately does not cover.
+// Empty means unconfigured and resolves to enforce through ModeFor; a map
+// naming SOME categories means somebody made per-category decisions, and the
+// omissions there are the ones they did not think about.
 func TestTheEmptyMapValidates(t *testing.T) {
 	if err := validateAuthorizationModes(map[string]string{}); err != nil {
 		t.Errorf("the default posture was refused: %v", err)

@@ -188,6 +188,30 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purpos
 	}
 	switch verdict.State {
 	case VerdictAllowed:
+		// THE TRANSACTIONAL CLASS DOES NOT CARRY ITSELF ON THE SEND PATH.
+		//
+		// VerdictForPerson allows ClassTransactional unconditionally, because
+		// Art 6(1)(b) really does mean the contract is the basis and the guard
+		// endpoint has to say so about a person who has an invoice coming. But
+		// that answer is about a PERSON, and this function is about a MESSAGE:
+		// we are only here because resolveCategory found nothing supporting
+		// this one — no thread, no live deal, no accepted claim — and
+		// resolutionForClass already said so with legacy_transactional_unevidenced.
+		//
+		// Taking the allow anyway is what let any message calling itself
+		// operational become one, on nothing but the purpose key. The lead arm
+		// closed this hole already (TestALeadTakesNoAuthorityFromATransactionalPurpose);
+		// this is the same hole for persons, and the reason code is the one the
+		// resolution had picked before the legacy gate overrode it.
+		//
+		// The guard endpoint and the legacy gate keep VerdictForPerson's answer
+		// untouched: an invoice with real evidence resolves as supported and
+		// returns from decideResolved's supported arm, never reaching here.
+		if purpose.Class == ClassTransactional {
+			d.Verdict = commsauthz.VerdictReview
+			d.ReasonCode = commsauthz.ReasonLegacyTransactionalUnevidenced
+			break
+		}
 		// A basis this call DERIVED is written down before the send relies on
 		// it (Art. 5(2)). The engine is the only authority now, so it is the
 		// only thing left that can make that record: grantedForRecipient used

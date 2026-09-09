@@ -40,10 +40,13 @@ const authorizationModesObject = "installation_settings"
 // AuthorizationModes maps a communication category to the authority the
 // engine's answer carries for it.
 //
-// A category absent from the map is `observe`, so a category added to the
-// vocabulary tomorrow arrives in the position where it is recorded and not yet
-// binding, whatever the stored map says. That default is what makes the map a
-// set of EXCEPTIONS rather than a table that must be complete to be correct.
+// A category absent from the map is `enforce`, and a stored map that omits one
+// is REFUSED at the door. Absent used to mean observe, on the reasoning that a
+// category added tomorrow should arrive recorded and not yet binding. That
+// reasoning had the failure backwards: a category nobody remembered to add
+// shipped not binding and nothing said so, which is a silent hole in the exact
+// shape of the category somebody forgot. Refusing the incomplete map moves the
+// discovery to the save, where a person is present to read it.
 //
 // The shipped default names every category that exists today, at `enforce`.
 // Observe was the rollout, not the destination: it ran so the disagreement
@@ -98,31 +101,60 @@ func validateAuthorizationModes(in map[string]string) error {
 			unknownModes = append(unknownModes, mode)
 		}
 	}
+	// A PARTIAL map is refused; an EMPTY one is not.
+	//
+	// Empty means unconfigured, and it has to keep validating: it is what an
+	// installation that never touched this posture stores, and refusing it
+	// would block saving any other setting on the same surface. Unconfigured
+	// resolves to enforce through ModeFor, which is where the safe answer
+	// belongs.
+	//
+	// A map naming SOME categories is different — somebody sat down and made
+	// per-category decisions, and the ones they left out are the ones they did
+	// not think about. Completing those silently answers a question they did
+	// not answer while reading back as if their map had been taken as written.
+	var missing []string
+	if len(in) > 0 {
+		for _, c := range commsauthz.Categories() {
+			if _, named := in[string(c)]; !named {
+				missing = append(missing, string(c))
+			}
+		}
+	}
 	sort.Strings(unknownCategories)
 	sort.Strings(unknownModes)
+	sort.Strings(missing)
 	if len(unknownCategories) > 0 {
 		return fmt.Errorf("not a communication category: %s", strings.Join(unknownCategories, ", "))
 	}
 	if len(unknownModes) > 0 {
 		return fmt.Errorf("a mode is observe, warn or enforce, not: %s", strings.Join(unknownModes, ", "))
 	}
+	if len(missing) > 0 {
+		return fmt.Errorf("every category needs a mode; these have none: %s", strings.Join(missing, ", "))
+	}
 	return nil
 }
 
 // ModeFor answers the authority the engine carries for one category.
 //
-// Absent means observe, which is what makes the stored map a set of
-// EXCEPTIONS to the safe default rather than a table that must list every
-// category to be correct. A map that had to be complete would put a new
-// category into whatever position the last author typed.
+// Absent means ENFORCE. validateAuthorizationModes refuses a stored map that
+// omits a category, so absence here is not a configuration an operator chose —
+// it is a category that reached this code without one, and the only two ways
+// that happens are a map written before the category existed and a bug. Both
+// are cases where the engine's own answer should bind.
+//
+// The old default was observe, which turned exactly those two cases into mail
+// going out on the legacy gate's word with nothing recording that the engine
+// had been overruled.
 func ModeFor(modes map[string]string, category commsauthz.Category) commsauthz.Mode {
 	switch commsauthz.Mode(modes[string(category)]) {
-	case commsauthz.ModeEnforce:
-		return commsauthz.ModeEnforce
+	case commsauthz.ModeObserve:
+		return commsauthz.ModeObserve
 	case commsauthz.ModeWarn:
 		return commsauthz.ModeWarn
 	default:
-		return commsauthz.ModeObserve
+		return commsauthz.ModeEnforce
 	}
 }
 
