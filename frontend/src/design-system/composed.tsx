@@ -1070,8 +1070,8 @@ export function RecordView({
   // IS), children the middle (what is happening), aside the right (the
   // business around it). With neither rail nor aside the layout collapses
   // to the single column every existing caller already renders.
-  // Full-width content between the identity and the columns: the account's
-  // readings and its tab bar. Absent on a record that has neither.
+  // Full-width content between the tab strip and the columns: what describes
+  // the WHOLE record — its readings, its stepper, the refusal of an edit.
   band?: ReactNode;
   rail?: ReactNode;
   // What the rail column IS, on the same rule as asideLabel below: it defaults
@@ -1136,10 +1136,10 @@ export function RecordView({
   const actionsAt = actionsPlacement(actions, actionsInline, controls);
   return (
     /* The record's own blocks arrive in order — head, then actions, then the
-       band, then the zones — rather than the whole record fading in as one
-       plate. It is an `.arrive-stack` and therefore not itself an arriving
-       block (design-system/enter.css), which is what keeps the two fades from
-       multiplying. */
+       strip, then the band, then the zones — rather than the whole record
+       fading in as one plate. It is an `.arrive-stack` and therefore not
+       itself an arriving block (design-system/enter.css), which is what keeps
+       the two fades from multiplying. */
     <div className="arrive-stack">
       <RecordHead
         name={name}
@@ -1155,13 +1155,13 @@ export function RecordView({
         markShape={markShape}
       />
       {actionsAt === "below" && <div className="record-actions">{actions}</div>}
-      {/* The band runs the full width of the record, between the identity and
-          the columns. What describes the WHOLE account — its readings, the bar
-          that chooses which part of it to read — belongs here rather than in
-          the work column, where it would sit beside the rail as though it were
-          one more thing to read rather than the frame around all of them. */}
-      {band && <div className="record-band">{band}</div>}
+      {/* The strip sits directly under the identity on EVERY record, band or
+          not: a record with readings would otherwise open the choice of what
+          to read a block lower than the record beside it. */}
       {tabs && <div className="record-tabs">{tabs}</div>}
+      {/* What describes the WHOLE record frames the columns from between the
+          strip and them at full width, not from the work column beside the rail. */}
+      {band && <div className="record-band">{band}</div>}
       <PageZones
         shape={shape}
         className={zonesClassName(shape)}

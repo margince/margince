@@ -14,7 +14,14 @@ import { mockApi } from "./seed";
  *    ellipsis on every record header was 32×40. The unit gate asserted the class
  *    was present, which jsdom can see, and a rectangle is exactly what it
  *    cannot.
- * 2. The details pane stands BESIDE the work column under the tab row, or
+ * 2. ONE interval opens every record. The head, the tab strip, the band and
+ *    the columns are four blocks on one scale, and the interval between them
+ *    was a value each screen could reach: a stylesheet keyed the head's on
+ *    whether the identity drew a meta row, so the strip sat a hair under the
+ *    name on a lead and a full step under it on a company. A gap is a
+ *    difference between two boxes and no unit test in jsdom, which lays out
+ *    nothing, can subtract them.
+ * 3. The details pane stands BESIDE the work column under the tab row, or
  *    UNDER the work column, never both-and-neither. Below the fold it is a
  *    pane at the foot of the record; on a phone the sidebar leaves the grid
  *    entirely, and a rule written for the tablet was still claiming a 252px
@@ -36,6 +43,13 @@ async function openRecord(page: Page, route: string) {
   await mockApi(page);
   await page.goto(route);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+}
+
+// The switch at the end of the tab row: the one control there that SETS rather
+// than does, so `aria-pressed` is what names it structurally — the word on it
+// is copy this suite does not pin.
+function detailsSwitch(page: Page) {
+  return page.locator(".recordtabs-trailing button[aria-pressed]");
 }
 
 type Box = { name: string; width: number; height: number };
@@ -80,6 +94,134 @@ test.describe("a record's icon-only buttons", () => {
   }
 });
 
+type Edge = { top: number; bottom: number };
+
+/** A block's top and bottom in page coordinates, or null where it draws none —
+ *  the band is absent on a record with nothing to say about itself as a whole. */
+async function edge(page: Page, selector: string): Promise<Edge | null> {
+  const found = page.locator(selector);
+  if ((await found.count()) === 0) {
+    return null;
+  }
+  const box = await found.boundingBox();
+  if (!box) {
+    throw new Error(`${selector} is in the record but has no box`);
+  }
+  return { top: box.y, bottom: box.y + box.height };
+}
+
+async function present(page: Page, selector: string): Promise<Edge> {
+  const found = await edge(page, selector);
+  if (!found) {
+    throw new Error(`no ${selector} on this record`);
+  }
+  return found;
+}
+
+test.describe("the record's rhythm", () => {
+  // Wide enough for the pane, and measured with it open: the open pane is the
+  // shape the record spends its time in and the one that puts a second column
+  // beside the blocks these gaps run between.
+  const WIDE = 1440;
+
+  /** The step the record opens on, read from the page's own scale rather than
+   *  restated here: a suite that hard-codes 20px passes a tree that has moved
+   *  the whole scale and fails one that has renamed nothing. */
+  async function recordStep(page: Page): Promise<number> {
+    const step = await page.evaluate(() =>
+      Number.parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue(
+          "--space-5",
+        ),
+      ),
+    );
+    if (!Number.isFinite(step) || step <= 0) {
+      throw new Error("the page publishes no --space-5 to measure against");
+    }
+    return step;
+  }
+
+  /** A pixel of tolerance, because a gap between two laid-out boxes is
+   *  fractional and an interval that is one step is not a claim about the
+   *  fourth decimal. */
+  function isOneStep(gap: number, step: number, what: string) {
+    expect(
+      Math.abs(gap - step),
+      `${what}: ${gap.toFixed(1)}px where the record's step is ${step}px`,
+    ).toBeLessThanOrEqual(1);
+  }
+
+  for (const record of RECORDS) {
+    test(`opens on one interval on a ${record.name}, band or no band`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: WIDE, height: 900 });
+      // The arrival is a 10px translate (design-system/enter.css) and
+      // `getBoundingClientRect` reads transforms, so a block measured in
+      // flight is up to half a step from where the layout put it — a gap this
+      // suite would then report as a spacing defect that no stylesheet holds.
+      // Reduced motion IS the end state by construction, so every box is at
+      // rest from the first frame.
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await openRecord(page, record.route);
+      await detailsSwitch(page).click();
+      await expect(
+        page.locator(".record-aside"),
+        "the switch did not open the pane",
+      ).toBeVisible();
+
+      const step = await recordStep(page);
+      const head = await present(page, ".record-head");
+      const tabs = await present(page, ".record-tabs");
+      const band = await edge(page, ".record-band");
+      // The work column rather than the grid around it: a record with neither
+      // rail nor aside draws no `.page-zones` at all, and this column is the
+      // one block every shape puts at the columns' top edge.
+      const columns = await present(page, ".page-zones-main");
+
+      isOneStep(
+        tabs.top - head.bottom,
+        step,
+        "the strip does not sit one interval under the identity",
+      );
+      // What follows the strip is the band on a record that carries one and
+      // the columns on a record that does not, and the reader meets the same
+      // interval either way — which is the whole invariant.
+      const next = band ?? columns;
+      isOneStep(
+        next.top - tabs.bottom,
+        step,
+        "the block under the strip does not sit one interval below it",
+      );
+      if (band) {
+        isOneStep(
+          columns.top - band.bottom,
+          step,
+          "the columns do not sit one interval under the band",
+        );
+      }
+    });
+  }
+
+  // The band's two intervals are measured only where a band is drawn, so a
+  // sweep over records that all happen to draw none would report PASS having
+  // measured half of what it names. This is the assertion that notices.
+  test("at least one record in the sweep draws a band", async ({ page }) => {
+    await page.setViewportSize({ width: WIDE, height: 900 });
+    const withBand: string[] = [];
+    for (const record of RECORDS) {
+      await openRecord(page, record.route);
+      if ((await page.locator(".record-band").count()) > 0) {
+        withBand.push(record.name);
+      }
+    }
+    expect(
+      withBand,
+      "no record page draws a band, so the band's intervals went unmeasured",
+    ).not.toEqual([]);
+  });
+});
+
 test.describe("the record's details pane", () => {
   // Beside the record above the fold, and under it below. 900px and 390px are
   // both here because the rule that broke the phone was written for the
@@ -87,13 +229,6 @@ test.describe("the record's details pane", () => {
   // at the other one.
   const BESIDE = 1440;
   const STACKED = [900, 390];
-
-  // The switch at the end of the tab row: the one control there that SETS
-  // rather than does, so `aria-pressed` is what names it structurally — the
-  // word on it is copy this suite does not pin.
-  function detailsSwitch(page: Page) {
-    return page.locator(".recordtabs-trailing button[aria-pressed]");
-  }
 
   for (const record of RECORDS) {
     test(`opens beside the work column, under the tab row, on a ${record.name} at ${BESIDE}px`, async ({
