@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/riverqueue/river"
@@ -28,32 +29,79 @@ func TestVCardIngestDeclaresABoundedRetryLadder(t *testing.T) {
 	}
 }
 
-// TestAFailedStageDoesNotCostItsSiblingsTheirOwnReview — margince#3410's
-// remaining half: a mailed message carrying two near-matches used to lose
-// the second card's review to the first one's staging fault, and the whole
-// job with it. Both cards must get their own attempt regardless of order.
+// TestAFailedStageDoesNotCostItsSiblingsTheirOwnReview: a mailed message
+// carrying two near-matches used to lose the second card's review to the
+// first one's staging fault, and the whole job with it. Both cards must get
+// their own attempt regardless of which one fails.
 func TestAFailedStageDoesNotCostItsSiblingsTheirOwnReview(t *testing.T) {
 	entries := []people.VCardEntry{{FullName: "Broken Card"}, {FullName: "Fine Card"}}
 	results := []people.VCardResult{
 		{Index: 0, Outcome: people.VCardNeedsReview},
 		{Index: 1, Outcome: people.VCardNeedsReview},
 	}
-	var staged []int
+	var attempts int
 	failing := errors.New("a staging conflict a test forced")
 	stage := func(_ context.Context, entry people.VCardEntry, _ *ids.PersonID) error {
-		staged = append(staged, len(staged))
+		attempts++
 		if entry.FullName == "Broken Card" {
 			return failing
 		}
 		return nil
 	}
 
-	err := stageReviewsWith(context.Background(), quietTestLogger(), stage, entries, results)
+	err := stageReviewsWith(context.Background(), quietTestLogger(), ids.UUID{}, stage, entries, results)
 	if err == nil {
 		t.Fatal("a batch with one failed card returned no error — nothing would tell River to retry it")
 	}
-	if len(staged) != 2 {
-		t.Fatalf("stage was called %d times, want 2 — the second card must get its own attempt regardless of the first's outcome", len(staged))
+	if !errors.Is(err, failing) {
+		t.Fatalf("aggregate error does not wrap the card's own error: %v — Work classifies retryability by errors.Is", err)
+	}
+	if attempts != 2 {
+		t.Fatalf("stage was called %d times, want 2 — the second card must get its own attempt regardless of the first's outcome", attempts)
+	}
+}
+
+// TestAFailedStageDoesNotCostItsSiblingsTheirOwnReview's mirror: the failure
+// lands on the SECOND card, so a bug that only kept going after a successful
+// attempt (rather than after any attempt) would still pass the first test.
+func TestALaterCardsFailureDoesNotSkipAnEarlierCardsAttempt(t *testing.T) {
+	entries := []people.VCardEntry{{FullName: "Fine Card"}, {FullName: "Broken Card"}}
+	results := []people.VCardResult{
+		{Index: 0, Outcome: people.VCardNeedsReview},
+		{Index: 1, Outcome: people.VCardNeedsReview},
+	}
+	var attempts int
+	stage := func(_ context.Context, entry people.VCardEntry, _ *ids.PersonID) error {
+		attempts++
+		if entry.FullName == "Broken Card" {
+			return errors.New("a staging conflict a test forced")
+		}
+		return nil
+	}
+
+	if err := stageReviewsWith(context.Background(), quietTestLogger(), ids.UUID{}, stage, entries, results); err == nil {
+		t.Fatal("a batch with one failed card returned no error — nothing would tell River to retry it")
+	}
+	if attempts != 2 {
+		t.Fatalf("stage was called %d times, want 2", attempts)
+	}
+}
+
+// TestEveryCardFailingNamesTheFullCount — the aggregate error's count must
+// track every failure, not just whether at least one occurred.
+func TestEveryCardFailingNamesTheFullCount(t *testing.T) {
+	entries := []people.VCardEntry{{FullName: "First"}, {FullName: "Second"}}
+	results := []people.VCardResult{
+		{Index: 0, Outcome: people.VCardNeedsReview},
+		{Index: 1, Outcome: people.VCardNeedsReview},
+	}
+	stage := func(context.Context, people.VCardEntry, *ids.PersonID) error {
+		return errors.New("a staging conflict a test forced")
+	}
+
+	err := stageReviewsWith(context.Background(), quietTestLogger(), ids.UUID{}, stage, entries, results)
+	if err == nil || !strings.Contains(err.Error(), "staging 2 of 2") {
+		t.Fatalf("got %v, want an error naming both cards failed", err)
 	}
 }
 
@@ -65,7 +113,7 @@ func TestStageReviewsSucceedsWhenEveryCardStages(t *testing.T) {
 	results := []people.VCardResult{{Index: 0, Outcome: people.VCardNeedsReview}}
 	stage := func(context.Context, people.VCardEntry, *ids.PersonID) error { return nil }
 
-	if err := stageReviewsWith(context.Background(), quietTestLogger(), stage, entries, results); err != nil {
+	if err := stageReviewsWith(context.Background(), quietTestLogger(), ids.UUID{}, stage, entries, results); err != nil {
 		t.Fatalf("every card staged cleanly, want no error, got: %v", err)
 	}
 }
@@ -82,7 +130,7 @@ func TestStageReviewsSkipsCardsThatDoNotNeedReview(t *testing.T) {
 		return nil
 	}
 
-	if err := stageReviewsWith(context.Background(), quietTestLogger(), stage, entries, results); err != nil {
+	if err := stageReviewsWith(context.Background(), quietTestLogger(), ids.UUID{}, stage, entries, results); err != nil {
 		t.Fatalf("no eligible card, want no error, got: %v", err)
 	}
 	if called {
