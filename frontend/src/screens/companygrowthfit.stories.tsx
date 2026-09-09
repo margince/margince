@@ -237,8 +237,6 @@ export const Loading: Story = {
 // half-shaped assembly), so one story stands in for both.
 export const Unavailable: Story = {
   render: () => (
-    <Panel
-      route={() => jsonResponse({ company_id: "o-1", band: "strong" })}
-    />
+    <Panel route={() => jsonResponse({ company_id: "o-1", band: "strong" })} />
   ),
 };

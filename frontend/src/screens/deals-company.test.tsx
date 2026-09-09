@@ -34,7 +34,11 @@ import {
 
 type Stage = components["schemas"]["Stage"];
 type Deal = components["schemas"]["Deal"];
-type CompanyRow = { id: string; display_name: string; logo_url?: string | null };
+type CompanyRow = {
+  id: string;
+  display_name: string;
+  logo_url?: string | null;
+};
 
 const MASK = "Masked value";
 
@@ -350,9 +354,7 @@ describe("the board past the picker's first page", () => {
     vi.stubGlobal(
       "fetch",
       stubBackend({
-        deals: [
-          deal({ company_id: null, masked_fields: ["company_id"] }),
-        ],
+        deals: [deal({ company_id: null, masked_fields: ["company_id"] })],
         page: [{ id: "o1", display_name: "Acme Corp" }],
       }),
     );
@@ -446,9 +448,7 @@ describe("the deals table's company columns", () => {
     vi.stubGlobal(
       "fetch",
       stubBackend({
-        deals: [
-          deal({ company_id: null, masked_fields: ["company_id"] }),
-        ],
+        deals: [deal({ company_id: null, masked_fields: ["company_id"] })],
       }),
     );
     await toTable();
@@ -499,7 +499,10 @@ describe("the deals table's company columns", () => {
       "fetch",
       stubBackend({
         deals: [
-          deal({ partner_company_id: null, masked_fields: ["partner_company_id"] }),
+          deal({
+            partner_company_id: null,
+            masked_fields: ["partner_company_id"],
+          }),
         ],
       }),
     );
@@ -536,10 +539,9 @@ describe("a deal's edit form over a withheld reference", () => {
   };
 
   it("offers the company field as withheld rather than as an empty picker", async () => {
-    await openEdit(
-      deal({ company_id: null, masked_fields: ["company_id"] }),
-      [{ id: "o1", display_name: "Acme Corp" }],
-    );
+    await openEdit(deal({ company_id: null, masked_fields: ["company_id"] }), [
+      { id: "o1", display_name: "Acme Corp" },
+    ]);
 
     expect(
       screen.getByRole("combobox", { name: "Company" }).textContent,

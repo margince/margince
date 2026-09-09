@@ -141,7 +141,13 @@ describe("a human's verdict on a machine's claim", () => {
 
   it("addresses a single-value fact by its bare-colon key", async () => {
     const calls = recordCalls();
-    wrap(<EvidenceVerdict companyId={COMPANY} claim={factClaim(COMPANY, fact)} canEdit />);
+    wrap(
+      <EvidenceVerdict
+        companyId={COMPANY}
+        claim={factClaim(COMPANY, fact)}
+        canEdit
+      />,
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
 

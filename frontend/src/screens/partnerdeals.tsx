@@ -51,9 +51,7 @@ async function fetchPartnerDeals(companyId: string): Promise<Deal[]> {
   return deals;
 }
 
-export function PartnerDeals({
-  companyId,
-}: Readonly<{ companyId: string }>) {
+export function PartnerDeals({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const query = useQuery({

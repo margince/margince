@@ -821,7 +821,8 @@ export const vi = {
   "company.rejectReasonLabel": "Vì sao đây không phải công ty?",
   "company.rejectReasonHint":
     "Một câu đủ rõ để rà soát lại trong danh sách tên miền bị chặn. Quyết định từ chối tồn tại lâu hơn bản ghi.",
-  "company.rejectDone": "Đã lưu trữ “{name}”, và {domain} sẽ không tạo công ty nữa",
+  "company.rejectDone":
+    "Đã lưu trữ “{name}”, và {domain} sẽ không tạo công ty nữa",
   "company.name": "Công ty",
   "company.description": "Họ làm gì",
   "company.website": "Trang web",
@@ -3293,8 +3294,7 @@ export const vi = {
   "personAccess.title": "Ai xem được liên hệ này",
   "personAccess.privateToYou":
     "Riêng của bạn. Hộp thư của bạn đã tạo liên hệ này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
-  "personAccess.company":
-    "Mọi người trong tổ chức đều xem được liên hệ này.",
+  "personAccess.company": "Mọi người trong tổ chức đều xem được liên hệ này.",
   "personAccess.share": "Chia sẻ với tổ chức",
   "personAccess.published": "Tổ chức đã xem được liên hệ này.",
   "personAccess.makePrivate": "Đặt ở chế độ riêng tư",

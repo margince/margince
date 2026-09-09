@@ -535,7 +535,10 @@ async function searchCompanyCandidates(
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((company) => ({ id: company.id, name: company.display_name }));
+  return data.data.map((company) => ({
+    id: company.id,
+    name: company.display_name,
+  }));
 }
 
 // Person360Employment is the 360's own projection of an employment edge — it
@@ -992,7 +995,9 @@ function AddEmploymentModal({
             disabled={create.isPending}
           />
           {!company && allConnected && (
-            <p className="t-caption">{t("person.rail.allCompaniesConnected")}</p>
+            <p className="t-caption">
+              {t("person.rail.allCompaniesConnected")}
+            </p>
           )}
         </div>
         <Field label={t("rel.role")}>

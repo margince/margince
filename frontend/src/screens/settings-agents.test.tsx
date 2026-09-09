@@ -162,8 +162,7 @@ describe("AgentToolsCard (IT-1)", () => {
       searchRow && within(searchRow).getByText("Search records"),
     ).toBeTruthy();
     expect(
-      searchRow &&
-        within(searchRow).getByText(/Find people, companies, deals/),
+      searchRow && within(searchRow).getByText(/Find people, companies, deals/),
     ).toBeTruthy();
     // Governance travels with it, because the server appends it to the same
     // string — the console must not show a shortened reading of what an agent

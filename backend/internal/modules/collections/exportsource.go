@@ -35,7 +35,7 @@ var viewResourceToEngine = map[string]string{
 	"people":    typePerson,
 	"companies": typeCompany,
 	"deals":     typeDeal,
-	"leads":     "lead",
+	"leads":     typeLead,
 	"projects":  "project",
 }
 

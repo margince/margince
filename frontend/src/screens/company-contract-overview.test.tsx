@@ -11,8 +11,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { companyBackstop, company360, stubFetch } from "./company.fixtures";
 import { CompanyScreen } from "./companies";
+import { company360, companyBackstop, stubFetch } from "./company.fixtures";
 
 // What an account is under contract for belongs on the reading a rep opens
 // first, not two clicks away on the Deals tab. These cases are about the

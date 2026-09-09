@@ -661,14 +661,9 @@ function silenceNote(
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-function byStrengthThenId(
-  a: Company360Contact,
-  b: Company360Contact,
-): number {
+function byStrengthThenId(a: Company360Contact, b: Company360Contact): number {
   const delta = (b.strength?.score ?? 0) - (a.strength?.score ?? 0);
   return delta !== 0 ? delta : stable(a.person_id, b.person_id);
 }
 
-type Company360Contact = NonNullable<
-  Company360["people"]
->["data"][number];
+type Company360Contact = NonNullable<Company360["people"]>["data"][number];

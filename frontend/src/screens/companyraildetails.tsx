@@ -61,8 +61,7 @@ type AddressPart =
   | "region"
   | "postal_code"
   | "country";
-type UpdateCompanyRequest =
-  components["schemas"]["UpdateCompanyRequest"];
+type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 
 // The column's own CHECK bound (core 0203) — stops the reader at the limit
 // rather than letting the server refuse the save. Same figure companyheader.tsx
@@ -126,9 +125,7 @@ const DESCRIPTION_MAX_LENGTH = 500;
  * then every empty row here reads as absent, which is the only fact this
  * grid can currently tell.
  */
-export function DetailsGrid({
-  company,
-}: Readonly<{ company?: Company }>) {
+export function DetailsGrid({ company }: Readonly<{ company?: Company }>) {
   if (!company) {
     return null;
   }
@@ -179,14 +176,16 @@ function LegalNameRow({
 // second InlineChoice wired to the same field — see the docblock above.
 // `hideLabel` leaves the visible label to FieldGrid's own label column, the
 // same way SizeBandRow below suppresses InlineChoice's own prefix.
-function LifecycleRow({
-  company,
-}: Readonly<{ company: Company }>) {
+function LifecycleRow({ company }: Readonly<{ company: Company }>) {
   const t = useT();
   return (
     // The badge is a box, not a line of text, so it centres against its label
     // rather than sharing the row's top edge with it.
-    <FieldRow label={t("company.lifecycle")} icon={<CircleDot />} align="middle">
+    <FieldRow
+      label={t("company.lifecycle")}
+      icon={<CircleDot />}
+      align="middle"
+    >
       <CompanyLifecycleControl company={company} />
     </FieldRow>
   );
@@ -587,15 +586,17 @@ export function SidecarFieldRow({
           number exists: a mark on an empty field would say the register had
           declined to recognise something nobody has stated. */}
       {field === "register_vat" && current?.value && (
-        <VatMark companyId={companyId} stated={current.value} canAsk={canEdit} />
+        <VatMark
+          companyId={companyId}
+          stated={current.value}
+          canAsk={canEdit}
+        />
       )}
     </FieldRow>
   );
 }
 
-function DetailsGridBody({
-  company,
-}: Readonly<{ company: Company }>) {
+function DetailsGridBody({ company }: Readonly<{ company: Company }>) {
   const t = useT();
   // useCanWriteRecord, not useCan: the grant alone offers a control whose save
   // the seat middleware refuses before RBAC is even consulted, and offers it on

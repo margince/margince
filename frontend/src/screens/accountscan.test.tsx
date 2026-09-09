@@ -115,12 +115,8 @@ describe("useAccountScan", () => {
       }),
     );
     mount(true);
-    await waitFor(() =>
-      expect(calls).toContain("POST /v1/companies/o-1/scan"),
-    );
-    await waitFor(() =>
-      expect(calls).toContain("GET /v1/companies/o-1/scan"),
-    );
+    await waitFor(() => expect(calls).toContain("POST /v1/companies/o-1/scan"));
+    await waitFor(() => expect(calls).toContain("GET /v1/companies/o-1/scan"));
     await act(async () => {});
     expect(screen.getByRole("status").textContent).toBe("none");
   });

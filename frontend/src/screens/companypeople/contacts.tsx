@@ -207,9 +207,7 @@ export function CompanyPeopleList({
           {
             key: "last_interaction",
             header: t("co.people.lastInteraction"),
-            cell: (contact: CompanyContact) => (
-              <LastTouch contact={contact} />
-            ),
+            cell: (contact: CompanyContact) => <LastTouch contact={contact} />,
             sort: "last_interaction",
             numeric: true,
           },

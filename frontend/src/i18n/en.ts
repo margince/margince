@@ -721,8 +721,7 @@ export const en = {
   "overlay.connect": "Connect HubSpot",
   "overlay.reconnect": "Reconnect",
   "overlay.connectConfirmTitle": "Connect HubSpot for the whole company?",
-  "overlay.reconnectConfirmTitle":
-    "Reconnect HubSpot for the whole company?",
+  "overlay.reconnectConfirmTitle": "Reconnect HubSpot for the whole company?",
   "overlay.connectConfirmBody":
     "This switches every seat's reads to HubSpot's mirror immediately, and records become read-only wherever the mirror can't serve a write. This affects the whole installation, not just your own session.",
   "overlay.statusActive": "Connected",
@@ -3417,8 +3416,7 @@ export const en = {
   "personAccess.title": "Who can see this contact",
   "personAccess.privateToYou":
     "Private to its owner. Nobody else in the company can see this contact — not the team, and not an admin.",
-  "personAccess.company":
-    "Everyone in the company can see this contact.",
+  "personAccess.company": "Everyone in the company can see this contact.",
   "personAccess.share": "Share with the company",
   "personAccess.published": "The company can see this contact now.",
   "personAccess.makePrivate": "Make private",
@@ -3609,8 +3607,7 @@ export const en = {
   "compose.multiRecipientWarning":
     "This purpose carries an unsubscribe link, so a send to more than one addressee will be refused. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
-  "compose.relinkTarget":
-    "Search a contact, company, deal, lead, or project",
+  "compose.relinkTarget": "Search a contact, company, deal, lead, or project",
   "compose.relinkNoVersion":
     "This activity was read without a version, so a relink cannot say what it is changing. Reopen it and try again.",
   "compose.relinkReplace": "Move instead of also-link",
@@ -4212,8 +4209,7 @@ export const en = {
   "jobs.empty":
     "Nothing in the background queue — no work waiting, running, retrying or dead.",
   "jobs.workspaceKinds": "This company",
-  "jobs.workspaceEmpty":
-    "No background work of any kind for this company.",
+  "jobs.workspaceEmpty": "No background work of any kind for this company.",
   "jobs.dispatcherKinds": "Fleet dispatchers",
   "jobs.dispatcherSub":
     "Rows that carry no company: a dispatcher fans work out to every company and does none of its own. Their counts belong to the installation, not to you.",

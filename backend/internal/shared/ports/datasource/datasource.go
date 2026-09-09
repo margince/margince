@@ -21,6 +21,8 @@ import (
 // EntityType names the domain entities the provider serves.
 type EntityType string
 
+// The record types a provider can be asked about. One word per thing: the
+// engine, the wire and the database all use these.
 const (
 	EntityPerson   EntityType = "person"
 	EntityCompany  EntityType = "company"

@@ -548,9 +548,7 @@ describe("the deal page", () => {
     const unread = dealProjectFields(t, [partnerProject]);
     const client = unread.find((field) => field.key === "project_id");
     expect(
-      client
-        ?.optionsFor?.({ company_id: "o-partner" })
-        .map((o) => o.label),
+      client?.optionsFor?.({ company_id: "o-partner" }).map((o) => o.label),
     ).not.toContain("Joint rollout");
   });
 

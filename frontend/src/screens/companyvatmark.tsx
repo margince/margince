@@ -139,7 +139,11 @@ export function VatMark({
   companyId,
   stated,
   canAsk,
-}: Readonly<{ companyId: string; stated: string; canAsk: boolean }>): ReactNode {
+}: Readonly<{
+  companyId: string;
+  stated: string;
+  canAsk: boolean;
+}>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
@@ -350,10 +354,9 @@ function useAskTheRegister(companyId: string, answeredAt: string | null) {
     // same hazard: closed over, a stale `answeredAt` makes the effect above see
     // a mismatch immediately and clear a wait that had not started.
     mutationFn: async (asked: { companyId: string; since: string | null }) => {
-      const { error, response } = await api.POST(
-        "/companies/{id}/vat-check",
-        { params: { path: { id: asked.companyId } } },
-      );
+      const { error, response } = await api.POST("/companies/{id}/vat-check", {
+        params: { path: { id: asked.companyId } },
+      });
       // `response.ok` as well as `error`, and the second is what catches a
       // failure here: this endpoint answers 202 with NO BODY, so a bodiless
       // non-2xx leaves openapi-fetch nothing to parse and `error` comes back

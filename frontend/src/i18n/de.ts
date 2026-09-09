@@ -643,12 +643,14 @@ export const de = {
     "Beim Lesen aus HubSpot nicht verfügbar — der Spiegel kann diesen Schreibvorgang nicht ausführen.",
   "overlay.filterUnsupported":
     "Dieser Filter oder diese Sortierung ist beim Lesen aus HubSpot nicht verfügbar — bitte entfernen und erneut versuchen.",
-  "overlay.emptyOwnerHint": "Eine leere Liste bedeutet hier meist, dass die HubSpot-E-Mail des Owners keinem Benutzer dieser Firma entspricht — nicht, dass das HubSpot-Portal leer ist.",
+  "overlay.emptyOwnerHint":
+    "Eine leere Liste bedeutet hier meist, dass die HubSpot-E-Mail des Owners keinem Benutzer dieser Firma entspricht — nicht, dass das HubSpot-Portal leer ist.",
   "overlay.partialWriteBack":
     "Nur die Felder, die HubSpot akzeptiert, werden zurückgeschrieben — alles andere hier, einschließlich Custom Fields und Owner, wird überhaupt nicht angewendet; der aktuelle Wert in HubSpot bleibt bestehen.",
 
   "overlay.title": "HubSpot-Spiegel",
-  "overlay.sub": "Verbindet das führende CRM der Firma, damit Datensätze aus dessen Spiegel statt aus nativen Tabellen gelesen werden.",
+  "overlay.sub":
+    "Verbindet das führende CRM der Firma, damit Datensätze aus dessen Spiegel statt aus nativen Tabellen gelesen werden.",
   "overlay.loading": "Lade die Anbieter-Verbindung…",
   "overlay.notConfigured":
     "Overlay-Modus ist in diesem Deployment nicht konfiguriert.",
@@ -667,7 +669,8 @@ export const de = {
   "overlay.connect": "HubSpot verbinden",
   "overlay.reconnect": "Erneut verbinden",
   "overlay.connectConfirmTitle": "HubSpot für die ganze Firma verbinden?",
-  "overlay.reconnectConfirmTitle": "HubSpot für die ganze Firma erneut verbinden?",
+  "overlay.reconnectConfirmTitle":
+    "HubSpot für die ganze Firma erneut verbinden?",
   "overlay.connectConfirmBody":
     "Dies schaltet die Lesezugriffe aller Sitze sofort auf den HubSpot-Spiegel um, und Datensätze werden schreibgeschützt, wo immer der Spiegel kein Schreiben unterstützt. Dies betrifft die gesamte Installation, nicht nur die eigene Sitzung.",
   "overlay.statusActive": "Verbunden",
@@ -702,9 +705,11 @@ export const de = {
     "Abgleich eingereiht — der Worker holt ihn beim nächsten Poll ab (etwa alle 2 Minuten).",
   "overlay.disconnect": "Trennen",
   "overlay.disconnectTitle": "HubSpot trennen?",
-  "overlay.disconnectBody": "Dies löscht die gespiegelten Daten und schaltet die Firma zurück auf native Datensätze. Das Audit-Protokoll bleibt erhalten.",
+  "overlay.disconnectBody":
+    "Dies löscht die gespiegelten Daten und schaltet die Firma zurück auf native Datensätze. Das Audit-Protokoll bleibt erhalten.",
   "overlay.userMap.title": "Nutzerzuordnung des Spiegels",
-  "overlay.userMap.sub": "Wer jede Person in dieser Firma als {principal}-Nutzer ist. Diese Zuordnung entscheidet allein darüber, was sie im Spiegel sieht.",
+  "overlay.userMap.sub":
+    "Wer jede Person in dieser Firma als {principal}-Nutzer ist. Diese Zuordnung entscheidet allein darüber, was sie im Spiegel sieht.",
   "overlay.userMap.cost":
     "Wer nicht zugeordnet ist, sieht überhaupt keine gespiegelten Datensätze — alle Listen bleiben leer.",
   "overlay.userMap.loading": "Lade die Nutzerzuordnung…",
@@ -712,7 +717,8 @@ export const de = {
     "Die Nutzerzuordnung konnte nicht geladen werden.",
   "overlay.userMap.adminOnly":
     "Du hast keine Berechtigung, die Zuordnung zu prüfen.",
-  "overlay.userMap.notOverlay": "Diese Firma liest aus nativen Tabellen, es gibt also nichts zuzuordnen.",
+  "overlay.userMap.notOverlay":
+    "Diese Firma liest aus nativen Tabellen, es gibt also nichts zuzuordnen.",
   "overlay.userMap.notConfigured":
     "Overlay-Modus ist in diesem Deployment nicht konfiguriert.",
   "overlay.userMap.empty": "Diese Firma hat keine Nutzer zum Zuordnen.",
@@ -1553,7 +1559,8 @@ export const de = {
     "LinkedIn stellt dir Connections.csv unter Einstellungen → Datenschutz → Kopie deiner Daten bereit; das Archiv enthält ein Dutzend weitere, gesucht ist diese eine. Was du hochlädst, wird niemals zu Kontakten: die Verbindungen erscheinen weder in der Suche noch in Listen oder auf Kontaktseiten, und niemand kann ihnen schreiben oder mailen.",
   "linkedinImport.choose": "Connections.csv ausw\u00e4hlen",
   "linkedinImport.importLabel": "Kontakt-Export",
-  "linkedinImport.noMatchesYet": "Noch keine Treffer, und das ist in einer neuen Firma normal: Deine Verbindungen werden mit den Kontakten abgeglichen, die das CRM kennt, und die entstehen erst beim Lesen deiner E-Mails. Der Abgleich läuft stündlich erneut, Treffer erscheinen also nach und nach.",
+  "linkedinImport.noMatchesYet":
+    "Noch keine Treffer, und das ist in einer neuen Firma normal: Deine Verbindungen werden mit den Kontakten abgeglichen, die das CRM kennt, und die entstehen erst beim Lesen deiner E-Mails. Der Abgleich läuft stündlich erneut, Treffer erscheinen also nach und nach.",
   "linkedinImport.working": "Export wird gelesen…",
   "linkedinImport.imported": "Kontakte importiert",
   "linkedinImport.confirmed": "Einem Kontakt zugeordnet",
@@ -1919,7 +1926,8 @@ export const de = {
   "co.recent.re": "zu einem Deal",
   "co.recent.reNamed": "zu {name}",
   "tagAdmin.title": "Tags",
-  "tagAdmin.sub": "Die Wörter, unter denen diese Firma Datensätze ablegt. Anwenden darf jeder; anlegen, umbenennen und stilllegen nur Admin- und Ops-Plätze.",
+  "tagAdmin.sub":
+    "Die Wörter, unter denen diese Firma Datensätze ablegt. Anwenden darf jeder; anlegen, umbenennen und stilllegen nur Admin- und Ops-Plätze.",
   "tagAdmin.listLabel": "Vokabular",
   "tagAdmin.empty": "Noch keine Tags. Legen Sie das erste Wort an.",
   "import.contextTag": "Diesen Stapel unter einem Tag ablegen",
@@ -1966,7 +1974,8 @@ export const de = {
   "tagAdmin.countUsage": "Datensätze zählen",
   "tagAdmin.noVersion":
     "Dieses Tag wurde ohne Version gelesen und kann nicht gespeichert werden. Seite neu laden und erneut versuchen.",
-  "tagAdmin.withheld": "Sie haben keinen Zugriff auf das Tag-Vokabular dieser Firma.",
+  "tagAdmin.withheld":
+    "Sie haben keinen Zugriff auf das Tag-Vokabular dieser Firma.",
   "tagAdmin.truncated":
     "Diese Liste ist gekürzt. Wörter jenseits der Grenze erscheinen hier nicht und lassen sich nicht bearbeiten.",
   "tagAdmin.usageFailed": "Zählung nicht verfügbar",
@@ -3725,7 +3734,8 @@ export const de = {
   "ai.tierConfirmationRequiredDetail":
     "Neue benutzerdefinierte Felder, Webhook-Abonnements und kostenpflichtige Anreicherung landen zuerst im Eingang. Die meisten Datensatzänderungen und Sendungen laufen sofort, innerhalb der von dir erteilten Berechtigungen.",
   "ai.connect": "Agent verbinden",
-  "ai.connectDetail": "Verbinde einen MCP-fähigen Agenten mit deiner Firma und bestätige den Zugriff, um den er bittet. Es gibt nichts vorab einzurichten.",
+  "ai.connectDetail":
+    "Verbinde einen MCP-fähigen Agenten mit deiner Firma und bestätige den Zugriff, um den er bittet. Es gibt nichts vorab einzurichten.",
   "ai.paletteHint": "Frag von überall mit",
 
   "settings.accountCard": "Ihr Konto",
@@ -4071,12 +4081,14 @@ export const de = {
   "settings.dangerZone": "Gefahrenzone",
   "settings.dangerZoneSub":
     "Nur nicht-produktiv — auf dieser Installation nicht rückgängig zu machen.",
-  "settings.resetDataDesc": "Setzt diese Installation auf den Zustand nach der Ersteinrichtung zurück. Fach- und Konfigurationsdaten werden gelöscht; die Firma und ihre Nutzer bleiben erhalten und angemeldet.",
+  "settings.resetDataDesc":
+    "Setzt diese Installation auf den Zustand nach der Ersteinrichtung zurück. Fach- und Konfigurationsdaten werden gelöscht; die Firma und ihre Nutzer bleiben erhalten und angemeldet.",
   "settings.resetDataButton": "Daten zurücksetzen",
   "settings.resetDataLabel": "Alle Daten zurücksetzen",
   "settings.resetDataConfirmButton": "Alles zurücksetzen",
   "settings.resetDataConfirmTitle": "Alle Daten zurücksetzen?",
-  "settings.resetDataConfirmBody": "Gib zur Bestätigung den Namen deiner Firma ein. Dies kann nicht rückgängig gemacht werden.",
+  "settings.resetDataConfirmBody":
+    "Gib zur Bestätigung den Namen deiner Firma ein. Dies kann nicht rückgängig gemacht werden.",
   "settings.resetDataConfirmName": "Gib diesen Firmennamen ein:",
   "settings.resetDataConfirmLabel": "Firmenname bestätigen",
   "settings.resetDataResult":
@@ -4092,9 +4104,11 @@ export const de = {
   "jobs.empty":
     "Nichts in der Hintergrund-Warteschlange — nichts wartet, läuft, wiederholt sich oder ist tot.",
   "jobs.workspaceKinds": "Diese Firma",
-  "jobs.workspaceEmpty": "Keine Hintergrundarbeit irgendeiner Art in dieser Firma.",
+  "jobs.workspaceEmpty":
+    "Keine Hintergrundarbeit irgendeiner Art in dieser Firma.",
   "jobs.dispatcherKinds": "Flotten-Dispatcher",
-  "jobs.dispatcherSub": "Einträge ohne Firma: ein Dispatcher verteilt Arbeit an jede Firma und erledigt selbst keine. Diese Zahlen gehören der Installation, nicht dir.",
+  "jobs.dispatcherSub":
+    "Einträge ohne Firma: ein Dispatcher verteilt Arbeit an jede Firma und erledigt selbst keine. Diese Zahlen gehören der Installation, nicht dir.",
   "jobs.dispatcherEmpty":
     "Keine Dispatcher-Einträge. Die periodischen Ticks legen sie neu an — eine leere Liste heißt also, dass gerade keiner geplant ist.",
   "jobs.count.waiting": "{count} warten",
@@ -4190,7 +4204,8 @@ export const de = {
   "privacy.subjectRef": "Betroffenen-Referenz",
   "privacy.dueAt": "Frist",
   "privacy.openRequest": "Antrag anlegen",
-  "privacy.erasureNeedsContact": "Ein Löschantrag muss einen Kontakt in dieser Firma benennen — bei Erfüllung wird genau dieser Datensatz gelöscht. Eine Freitext-Referenz kann nicht gelöscht werden.",
+  "privacy.erasureNeedsContact":
+    "Ein Löschantrag muss einen Kontakt in dieser Firma benennen — bei Erfüllung wird genau dieser Datensatz gelöscht. Eine Freitext-Referenz kann nicht gelöscht werden.",
   "privacy.accessManual":
     "Ein Auskunftsantrag wird von Hand erfüllt: Halte im Ergebnis fest, was du versendet hast. Dieses System stellt die Daten nicht automatisch zusammen und exportiert sie nicht für dich.",
   "privacy.fulfilErasureTitle": "Löschantrag erfüllen",
@@ -4493,7 +4508,8 @@ export const de = {
   "ob.s1.requiredMissing": "Diese Felder fehlen noch: {fields}",
   "ob.s1.saving": "Wird gespeichert…",
   "ob.s1.saveFailed": "Deine Firma konnte nicht gespeichert werden",
-  "ob.s1.savedNote": "In deiner Firma gespeichert. Ändere hier etwas und geh weiter — dann wird erneut gespeichert.",
+  "ob.s1.savedNote":
+    "In deiner Firma gespeichert. Ändere hier etwas und geh weiter — dann wird erneut gespeichert.",
   "ob.readGo": "Meine Website einlesen",
   "ob.urlWillRead": "Ich lese {host}",
   "ob.readFromSite": "von der Website gelesen",
@@ -4842,7 +4858,8 @@ export const de = {
   "mailSharing.sharedPosture.label": "Postfächern erlauben, sofort zu teilen",
   "mailSharing.sharedPosture.help":
     "Erlaubt Kolleginnen und Kollegen, das eigene Postfach auf „geteilt“ zu stellen — eine erfasste Nachricht ist dann für das Team lesbar, sobald sie ankommt, bevor sie eingestuft wurde. Standardmäßig aus.",
-  "mailSharing.sharedPosture.warning": "Das Postfach von Beschäftigten in ein gemeinsames CRM einzulesen, ist in Deutschland und Österreich Gegenstand einer Betriebsvereinbarung. Wer dies einschaltet, erklärt, dass Ihre Firma eine solche hat. Margince prüft das nicht.",
+  "mailSharing.sharedPosture.warning":
+    "Das Postfach von Beschäftigten in ein gemeinsames CRM einzulesen, ist in Deutschland und Österreich Gegenstand einer Betriebsvereinbarung. Wer dies einschaltet, erklärt, dass Ihre Firma eine solche hat. Margince prüft das nicht.",
   "mailSharing.save": "Speichern",
   "connectors.originLabel": "Adresse in versendeten Links",
   "connectors.originReachable": "Antwortet",
@@ -4884,8 +4901,10 @@ export const de = {
     "Ein vorhandenes Tag. Jeder Kontakt, den dieser Connector ab jetzt anlegt, wird darunter abgelegt — so kannst du fragen, was aus dieser Quelle kam. Kontakte, die schon da sind, behalten ihre Tags.",
   "connectors.contextTag.archived":
     "{name} ist archiviert, also wird nichts mehr darunter abgelegt. Wähl ein anderes Tag oder keins.",
-  "connectors.signatureEnrich.followingDefault": "Folgt der Einstellung Ihrer Firma. Wird sie hier geändert, behält dieses Postfach seine eigene Antwort.",
-  "connectors.signatureEnrich.ownAnswer": "Eigene Antwort dieses Postfachs — bleibt bestehen, was auch immer Ihre Firma einstellt.",
+  "connectors.signatureEnrich.followingDefault":
+    "Folgt der Einstellung Ihrer Firma. Wird sie hier geändert, behält dieses Postfach seine eigene Antwort.",
+  "connectors.signatureEnrich.ownAnswer":
+    "Eigene Antwort dieses Postfachs — bleibt bestehen, was auch immer Ihre Firma einstellt.",
   "hold.sectionTitle": "Private Korrespondenz",
   "hold.notHeld":
     "E-Mails mit diesem Kontakt folgen der Einstellung Ihres Postfachs.",
@@ -4915,7 +4934,8 @@ export const de = {
   "connectors.mailPosture.classified": "Zurückgehalten bis eingestuft",
   "connectors.mailPosture.held": "Immer zurückgehalten",
   "connectors.mailPosture.shared": "Mit dem Team geteilt",
-  "connectors.mailPosture.sharedNeedsAdmin": "„Mit dem Team geteilt“ muss eine Administratorin für diese Firma erlauben.",
+  "connectors.mailPosture.sharedNeedsAdmin":
+    "„Mit dem Team geteilt“ muss eine Administratorin für diese Firma erlauben.",
   "connectors.mailPosture.help.classified":
     "Eine neue Nachricht bleibt auf die Beteiligten beschränkt, bis eine Einstufung den Verlauf als gewöhnlich beurteilt. Kolleginnen und Kollegen sehen vorher nichts.",
   "connectors.mailPosture.help.held":
@@ -5015,7 +5035,8 @@ export const de = {
   // ein Trennen.
   "connectors.provTelegram": "Telegram",
   "connectors.telegramTitle": "Telegram-Bot",
-  "connectors.telegramSub": "Ein Bot empfängt und sendet Nachrichten für die gesamte Firma.",
+  "connectors.telegramSub":
+    "Ein Bot empfängt und sendet Nachrichten für die gesamte Firma.",
   "connectors.telegramNotConfigured":
     "Messaging-Kanäle sind in dieser Installation nicht konfiguriert.",
   "connectors.telegramConnectCta": "Telegram-Bot verbinden",
@@ -5313,8 +5334,10 @@ export const de = {
   "ob.conv.connect.guaranteesToggle": "Was Verbinden tatsächlich bedeutet",
   "ob.conv.connect.dialogHeadlineAccess": "Zugriff auf {name} nötig",
   "ob.conv.connect.dialogHeadlineImap": "Verbinde deinen Mail-Host",
-  "ob.conv.connect.appMissingCard": "Deine Firma hat ihre {name}-App noch nicht registriert.",
-  "ob.conv.connect.appUnusableCard": "Die {name}-App deiner Firma lässt sich gerade nicht öffnen. Sie braucht einen Admin, keine neue App.",
+  "ob.conv.connect.appMissingCard":
+    "Deine Firma hat ihre {name}-App noch nicht registriert.",
+  "ob.conv.connect.appUnusableCard":
+    "Die {name}-App deiner Firma lässt sich gerade nicht öffnen. Sie braucht einen Admin, keine neue App.",
   "ob.conv.connect.unsupportedCard":
     "Diese Installation bietet {name} nicht an.",
   "ob.conv.connect.appSetupLink": "In den Einstellungen einrichten",
@@ -5715,7 +5738,8 @@ export const de = {
     "Das Passwort konnte nicht geändert werden. Versuche es erneut.",
   "setup.pageTitle": "Margince einrichten",
   "setup.title": "Diese Installation übernehmen",
-  "setup.body": "Diese Margince-Installation hat noch keine Firma. Dein Betreiber hat ein einmaliges Einrichtungs-Token aus der Token-Datei, die der Server beim ersten Start geschrieben hat.",
+  "setup.body":
+    "Diese Margince-Installation hat noch keine Firma. Dein Betreiber hat ein einmaliges Einrichtungs-Token aus der Token-Datei, die der Server beim ersten Start geschrieben hat.",
   "setup.token": "Einrichtungs-Token",
   "setup.tokenHint":
     "Aus der Token-Datei, die der Server beim ersten Start geschrieben hat — das Serverprotokoll nennt ihren Pfad und enthält das Token selbst, falls die Datei nicht geschrieben werden konnte.",
@@ -5742,7 +5766,8 @@ export const de = {
   "setup.claiming": "Wird angelegt…",
   "setup.errorToken":
     "Dieses Einrichtungs-Token gilt nicht für diese Installation. Prüfe die Token-Datei, die das Serverprotokoll beim ersten Start nennt.",
-  "setup.errorAlready": "Diese Installation hat bereits eine Firma. Melde dich an oder bitte deinen Betreiber um ein Zurücksetzen.",
+  "setup.errorAlready":
+    "Diese Installation hat bereits eine Firma. Melde dich an oder bitte deinen Betreiber um ein Zurücksetzen.",
   "setup.errorFields":
     "Im Formular stimmt etwas nicht. Prüfe die Felder und versuche es erneut.",
   "setup.errorServer":
@@ -6334,7 +6359,8 @@ export const de = {
   "settings.tab.ai": "KI",
   "settings.tab.knowledge": "Wissen",
   "corpusAsk.title": "Ihre Dokumente fragen",
-  "corpusAsk.sub": "Eine Frage in eigenen Worten, beantwortet ausschließlich aus einer Dokumentensammlung dieser Firma. Was die Sammlung nicht abdeckt, wird abgelehnt statt geraten, und jeder Satz nennt die Textstelle, auf der er beruht.",
+  "corpusAsk.sub":
+    "Eine Frage in eigenen Worten, beantwortet ausschließlich aus einer Dokumentensammlung dieser Firma. Was die Sammlung nicht abdeckt, wird abgelehnt statt geraten, und jeder Satz nennt die Textstelle, auf der er beruht.",
   "corpusAsk.whichSet": "Welche Sammlung",
   "corpusAsk.question": "Ihre Frage",
   "corpusAsk.submit": "Fragen",
@@ -6352,7 +6378,8 @@ export const de = {
   "corpusAsk.notCovered.body":
     "{name} wurde vollständig durchsucht und enthält nichts, was nah genug daran wäre. Die Sammlung deckt ab:",
   "knowledge.title": "Dokumentensammlungen",
-  "knowledge.sub": "Textbestände, zu denen diese Firma befragt werden kann. Eine Antwort stammt ausschließlich aus dem, was hier abgelegt ist; eine Frage, die sie nicht abdecken, wird abgelehnt statt geraten.",
+  "knowledge.sub":
+    "Textbestände, zu denen diese Firma befragt werden kann. Eine Antwort stammt ausschließlich aus dem, was hier abgelegt ist; eine Frage, die sie nicht abdecken, wird abgelehnt statt geraten.",
   "knowledge.withheld":
     "Welche Dokumentensammlungen es gibt, dürfen Sie nicht sehen.",
   "knowledge.coverage":
@@ -6847,7 +6874,8 @@ export const de = {
   "users.newTeamPlaceholder": "z. B. DACH Sales",
   "users.createTeam": "Team anlegen",
   "users.access.title": "Das sieht dieser Benutzer",
-  "users.access.identity": "Liest alle Kontakte, Firmen, Leads und Deals der Firma.",
+  "users.access.identity":
+    "Liest alle Kontakte, Firmen, Leads und Deals der Firma.",
   "users.access.writesAll": "Bearbeitet alle Datensätze.",
   "users.access.writesTeam":
     "Bearbeitet eigene Datensätze und die der Teams {teams}.",
@@ -6883,7 +6911,8 @@ export const de = {
   "users.deactivateConfirmTitle": "{name} deaktivieren?",
   "users.deactivateConfirmBody":
     "Die Person wird überall abgemeldet und ihre Agent-Pässe werden sofort widerrufen. Du kannst sie später reaktivieren, aber sie muss sich dann neu anmelden.",
-  "users.deactivateAgentConfirmBody": "Das ist die Agent-Identität dieser Firma. Sie meldet sich nirgends an, und kein Mensch verliert Zugriff. Geplante Erweiterungs-Jobs laufen weiter: Jeder handelt als der Job, der er ist, und erfasst unter der Berechtigung des Mitglieds, dessen Verbindung den Datensatz erzeugt hat.",
+  "users.deactivateAgentConfirmBody":
+    "Das ist die Agent-Identität dieser Firma. Sie meldet sich nirgends an, und kein Mensch verliert Zugriff. Geplante Erweiterungs-Jobs laufen weiter: Jeder handelt als der Job, der er ist, und erfasst unter der Berechtigung des Mitglieds, dessen Verbindung den Datensatz erzeugt hat.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Handelt mit einem Pass, nicht mit einer Rolle",
   "users.roleLabel": "Rolle für den neuen Benutzer",
@@ -6916,7 +6945,8 @@ export const de = {
     "Server nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
   "users.link.retry": "Erneut versuchen",
   "users.link.done": "Fertig",
-  "settings.companyReadOnly": "Nur-Lese-Ansicht — das Unternehmensprofil zu ändern braucht Schreibrechte auf die Firma.",
+  "settings.companyReadOnly":
+    "Nur-Lese-Ansicht — das Unternehmensprofil zu ändern braucht Schreibrechte auf die Firma.",
   "settings.companyTitle": "Was Margince über dein Unternehmen weiß",
   "settings.companySub":
     "Halte den gemeinsamen Geschäftskontext für Entwürfe, Angebote, Suche und gesteuerte Agenten aktuell. Jede Aussage bleibt mit Quelle und Urheber verbunden.",
@@ -7139,9 +7169,11 @@ export const de = {
   "installationSettings.currencySub":
     "Die eine Währung, in die jede Auswertung alle Beträge umrechnet.",
   "installationSettings.name": "Name der Firma",
-  "installationSettings.nameHint": "Wird überall dort angezeigt, wo das Produkt Ihre Firma benennt.",
+  "installationSettings.nameHint":
+    "Wird überall dort angezeigt, wo das Produkt Ihre Firma benennt.",
   "installationSettings.timezone": "Zeitzone für Auswertungen",
-  "installationSettings.timezoneHint": "IANA-Zonenname (zum Beispiel Europe/Berlin). Die Uhr Ihrer Firma: Periodengrenzen aller Auswertungen werden darin berechnet, und jedes Datum eines Datensatzes — Abschlusstermine, Rechnungstage, Verlaufsüberschriften — wird darin angezeigt, damit ein Datum für das ganze Team gleich lautet. Unabhängig von Ihrer eigenen Anzeigezeitzone.",
+  "installationSettings.timezoneHint":
+    "IANA-Zonenname (zum Beispiel Europe/Berlin). Die Uhr Ihrer Firma: Periodengrenzen aller Auswertungen werden darin berechnet, und jedes Datum eines Datensatzes — Abschlusstermine, Rechnungstage, Verlaufsüberschriften — wird darin angezeigt, damit ein Datum für das ganze Team gleich lautet. Unabhängig von Ihrer eigenen Anzeigezeitzone.",
   "installationSettings.fiscalYearStart": "Geschäftsjahr beginnt",
   "installationSettings.fiscalYearStartHint":
     "Der Monat, in dem Ihr Geschäftsjahr beginnt. Auswertungen gruppieren nach diesem Jahr und Quartal — ein Jahr, das nicht im Januar beginnt, wird mit beiden Kalenderjahren benannt, die es umfasst, etwa FY2026/27. Eine Änderung benennt alle Auswertungen sofort neu, und eine gespeicherte Ansicht mit Periodenfilter fragt danach andere Monate ab.",
@@ -7203,7 +7235,8 @@ export const de = {
   "signInMethods.noneConfigured":
     "Für diese Installation ist kein externer Anbieter konfiguriert, daher steht außer dem Passwort nichts zur Auswahl.",
   "oauthApp.google.title": "Google-App",
-  "oauthApp.google.sub": "Postfächer werden über eine eigene Google-OAuth-App verbunden, und die Anmeldung mit Google läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Firma verwendet und nicht unsere.",
+  "oauthApp.google.sub":
+    "Postfächer werden über eine eigene Google-OAuth-App verbunden, und die Anmeldung mit Google läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Firma verwendet und nicht unsere.",
   "oauthApp.google.absent":
     "Aus keiner Quelle ist eine App verfügbar. Gmail und Kalender lassen sich nicht verbinden, und die Anmeldung mit Google kann nicht angeboten werden.",
   "oauthApp.google.redirectSub":
@@ -7214,7 +7247,8 @@ export const de = {
   "oauthApp.google.removeConfirmBody":
     "Das Client-Secret lässt sich nicht wieder auslesen. Nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Gmail- und Kalender-Verbindungen laufen über diese App. Microsoft- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt wieder danach.",
   "oauthApp.microsoft.title": "Microsoft-App",
-  "oauthApp.microsoft.sub": "Outlook-Postfächer und -Kalender werden über eine eigene Entra-App-Registrierung verbunden, und die Anmeldung mit Microsoft läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Firma verwendet und nicht unsere.",
+  "oauthApp.microsoft.sub":
+    "Outlook-Postfächer und -Kalender werden über eine eigene Entra-App-Registrierung verbunden, und die Anmeldung mit Microsoft läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Firma verwendet und nicht unsere.",
   "oauthApp.microsoft.absent":
     "Aus keiner Quelle ist eine App verfügbar. Outlook-Mail und -Kalender lassen sich nicht verbinden, und die Anmeldung mit Microsoft kann nicht angeboten werden.",
   "oauthApp.microsoft.redirectSub":
@@ -7242,7 +7276,8 @@ export const de = {
   "oauthApp.clientId": "Client-ID",
   "oauthApp.clientSecret": "Client-Secret",
   "oauthApp.tenant": "Verzeichnis-ID (Mandant)",
-  "oauthApp.tenantHint": "Optional. Bindet die App an ein einzelnes Entra-Verzeichnis: Nur dessen Mitglieder können ein Postfach verbinden, und die Microsoft-Anmeldung läuft darüber. Leer lassen, damit jede Firma verbinden kann; die Anmeldung wartet dann darauf, dass der Server Ihre Verzeichnisse benennt.",
+  "oauthApp.tenantHint":
+    "Optional. Bindet die App an ein einzelnes Entra-Verzeichnis: Nur dessen Mitglieder können ein Postfach verbinden, und die Microsoft-Anmeldung läuft darüber. Leer lassen, damit jede Firma verbinden kann; die Anmeldung wartet dann darauf, dass der Server Ihre Verzeichnisse benennt.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
@@ -7322,7 +7357,8 @@ export const de = {
     "Die Modelllisten stammen aus der Preisliste, die Sie nicht einsehen dürfen. Jede ID, die Ihr Anbieter bedient, funktioniert — einfach eintippen.",
   "aiRouting.sub":
     "Welches Modell welche Stufe bedient. Änderungen wirken ohne Neustart; jeder Prozess übernimmt sie innerhalb einer Minute.",
-  "aiRouting.unboundUnkeyed": "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Hinterlegen Sie unten einen Modellanbieter-Schlüssel und binden Sie die Stufen anschließend hier. Eine Bereitstellung kann die erste Bindung auch unter seeds.ai_routing in margince.yaml deklarieren; diese wird einmalig beim Anlegen der Firma gelesen.",
+  "aiRouting.unboundUnkeyed":
+    "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Hinterlegen Sie unten einen Modellanbieter-Schlüssel und binden Sie die Stufen anschließend hier. Eine Bereitstellung kann die erste Bindung auch unter seeds.ai_routing in margince.yaml deklarieren; diese wird einmalig beim Anlegen der Firma gelesen.",
   "aiRouting.unboundKeyed":
     "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Beginnen Sie mit den Vorgaben eines hinterlegten Anbieters, passen Sie sie an und speichern Sie.",
   "aiRouting.unboundStart": "Mit {provider} beginnen",
@@ -7404,13 +7440,15 @@ export const de = {
   "captureSettings.autoEnrich.help":
     "Wenn aktiviert, erhält jedes aus erfassten E-Mails erstellte Unternehmen automatisch ein Web-Dossier — seine Website wird gelesen und sein Profil ausgefüllt. Läuft unter einem Tageslimit.",
   "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails auswerten",
-  "captureSettings.signatureEnrich.help": "Wenn aktiv, übernimmt Margince, was eine Person in E-Mails an Sie unter ihrem eigenen Namen angibt — in der Signatur und auf einer angehängten Visitenkarte. Position, Telefonnummer, Adresse, Firma. Das geschieht innerhalb von Minuten nach Eingang der E-Mail. Nichts wird erschlossen: Was die E-Mail nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Firma; ein Postfach mit eigener Einstellung behält sie.",
+  "captureSettings.signatureEnrich.help":
+    "Wenn aktiv, übernimmt Margince, was eine Person in E-Mails an Sie unter ihrem eigenen Namen angibt — in der Signatur und auf einer angehängten Visitenkarte. Position, Telefonnummer, Adresse, Firma. Das geschieht innerhalb von Minuten nach Eingang der E-Mail. Nichts wird erschlossen: Was die E-Mail nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Firma; ein Postfach mit eigener Einstellung behält sie.",
   "captureSettings.adminOnly":
     "Nur ein Administrator oder Ops kann dies ändern.",
 
   "ownDomains.companyTitle": "Unternehmens-Domains",
   "captureExclusions.title": "Nicht erfassen",
-  "captureExclusions.sub": "Adressen und Domains, deren Nachrichten gar nicht erst ins CRM gelangen. Eigene Regeln gelten nur für die Postfächer, die Sie selbst verbunden haben; Regeln der Firma gelten für alle.",
+  "captureExclusions.sub":
+    "Adressen und Domains, deren Nachrichten gar nicht erst ins CRM gelangen. Eigene Regeln gelten nur für die Postfächer, die Sie selbst verbunden haben; Regeln der Firma gelten für alle.",
   "captureExclusions.notRetroactive":
     "Wirkt ab der nächsten Nachricht. Bereits erfasste Nachrichten bleiben.",
   "captureExclusions.current": "Geltende Regeln",
@@ -8746,7 +8784,8 @@ export const de = {
   "worklist.hidden.colleagues.detail":
     "Kolleginnen und Kollegen, keine Kundschaft. Eine falsch eingetragene Domain verbirgt echte Post.",
   "worklist.hidden.notSales": "Als vertriebsfremd eingestuft",
-  "worklist.hidden.notSales.detail": "Für die gesamte Firma verborgen, und es hebt sich nicht auf.",
+  "worklist.hidden.notSales.detail":
+    "Für die gesamte Firma verborgen, und es hebt sich nicht auf.",
   "worklist.hidden.setAside": "Von dir zurückgestellt",
   "worklist.hidden.setAside.detail":
     "Zurückgestellt oder als nicht deine markiert. Eine Zurückstellung kommt von selbst zurück.",
@@ -9118,7 +9157,8 @@ export const de = {
     "Was Sie hier antworten, lässt sich später unter Einstellungen → Admin ändern.",
   "firstRun.microsoft.note":
     "Registrieren Sie in Microsoft Entra eine App mit den Weiterleitungs-URIs oben und fügen Sie hier Client-ID und Secret ein. Binden Sie sie an Ihr Verzeichnis: Dessen Postfächer verbinden sich darüber, und dessen Mitglieder melden sich damit an.",
-  "firstRun.microsoft.helpSignIn": "Das Verzeichnis ist es, was Microsoft auf die Anmeldeseite bringt — deshalb wird hier danach gefragt, statt es dem Zufall zu überlassen. Eine App ohne Verzeichnis — jede Firma darf ein Postfach verbinden, und niemand meldet sich mit Microsoft an — richtest du stattdessen in den Einstellungen ein.",
+  "firstRun.microsoft.helpSignIn":
+    "Das Verzeichnis ist es, was Microsoft auf die Anmeldeseite bringt — deshalb wird hier danach gefragt, statt es dem Zufall zu überlassen. Eine App ohne Verzeichnis — jede Firma darf ein Postfach verbinden, und niemand meldet sich mit Microsoft an — richtest du stattdessen in den Einstellungen ein.",
   "firstRun.microsoft.tenantHint":
     "Das Entra-Verzeichnis, in dem eure Leute sind. Postfächer verbinden sich darüber, und darauf läuft die Microsoft-Anmeldung.",
   "firstRun.ai.eyebrow": "Hier kann noch nichts denken",

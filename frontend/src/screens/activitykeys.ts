@@ -113,9 +113,7 @@ export function taskWriteKeys(
 // only), so there is no person page to reach from here. Derived beside the
 // timeline keys so the 360 keys keep one spelling.
 export function dealWinKeys(
-  deal:
-    | { project_id?: string | null; company_id?: string | null }
-    | undefined,
+  deal: { project_id?: string | null; company_id?: string | null } | undefined,
 ): QueryKey[] {
   const keys: QueryKey[] = [["projects"]];
   if (deal?.project_id) {

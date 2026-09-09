@@ -337,9 +337,7 @@ function useProjectHitLines(projectIds: string[]): Map<string, string> {
     }
     const line =
       project.key ??
-      (project.company_id
-        ? companyName.get(project.company_id)
-        : null);
+      (project.company_id ? companyName.get(project.company_id) : null);
     if (line) {
       lines.set(projectIds[index], line);
     }

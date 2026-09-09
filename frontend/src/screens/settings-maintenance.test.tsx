@@ -220,8 +220,7 @@ describe("ResetDataCard (danger zone)", () => {
         dataResetAvailable: true,
         resetStatus: 422,
         resetBody: {
-          detail:
-            "The typed confirmation does not match the company name.",
+          detail: "The typed confirmation does not match the company name.",
         },
       }),
     );

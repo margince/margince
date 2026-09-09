@@ -28,10 +28,8 @@ import type { CreateField, FormRows } from "./create";
 import { splitMultiselectValue } from "./create";
 
 type Company = components["schemas"]["Company"];
-type CreateCompanyRequest =
-  components["schemas"]["CreateCompanyRequest"];
-type UpdateCompanyRequest =
-  components["schemas"]["UpdateCompanyRequest"];
+type CreateCompanyRequest = components["schemas"]["CreateCompanyRequest"];
+type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 
 function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";

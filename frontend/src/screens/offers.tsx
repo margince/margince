@@ -54,7 +54,10 @@ async function searchCompanyCandidates(
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((company) => ({ id: company.id, name: company.display_name }));
+  return data.data.map((company) => ({
+    id: company.id,
+    name: company.display_name,
+  }));
 }
 
 function useOfferTemplates() {
@@ -235,7 +238,10 @@ function EditOfferHeaderModal({
             selected={buyerCompany}
             onPick={(candidate) => {
               setBuyerCompanyOverride(candidate);
-              setValues((prev) => ({ ...prev, buyer_company_id: candidate.id }));
+              setValues((prev) => ({
+                ...prev,
+                buyer_company_id: candidate.id,
+              }));
             }}
           />
           {buyerCompany && (

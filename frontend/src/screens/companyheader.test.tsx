@@ -502,6 +502,8 @@ describe("an account whose lifecycle and relationship agree", () => {
     // An account can be worked as a prospect and be a customer of something
     // else already — dropping the badge because the two words differ would hide
     // a true reading rather than a repeated one.
-    expect(await screen.findByText(en["company.relType.customer"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["company.relType.customer"]),
+    ).toBeTruthy();
   });
 });

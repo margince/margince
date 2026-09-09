@@ -237,9 +237,7 @@ describe("an id clause names a record, not a uuid", () => {
     stubCompanies();
     const user = userEvent.setup();
     render(
-      <Harness
-        start={newGroup("and", [newLeaf("company_id", "eq", "")])}
-      />,
+      <Harness start={newGroup("and", [newLeaf("company_id", "eq", "")])} />,
     );
 
     // An account list grows with the business, so it is not a dropdown. It is
@@ -274,9 +272,7 @@ describe("an id clause names a record, not a uuid", () => {
     stubCompanies();
     const user = userEvent.setup();
     render(
-      <Harness
-        start={newGroup("and", [newLeaf("company_id", "eq", "")])}
-      />,
+      <Harness start={newGroup("and", [newLeaf("company_id", "eq", "")])} />,
     );
 
     // A list with no rows and no line above it reads as a confident "this
@@ -331,9 +327,7 @@ describe("an id clause names a record, not a uuid", () => {
     stubCompanies();
     const user = userEvent.setup();
     render(
-      <Harness
-        start={newGroup("and", [newLeaf("company_id", "in", [])])}
-      />,
+      <Harness start={newGroup("and", [newLeaf("company_id", "in", [])])} />,
     );
 
     // The unbounded target takes the same rule through its own control: the

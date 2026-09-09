@@ -157,9 +157,7 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     await waitFor(() => expect(screen.getByText("Brandt AG")).toBeTruthy());
     // The name rides on the person row, so the column costs no second read:
     // one company per contact would otherwise be one fetch per row.
-    expect(urls.filter((url) => url.includes("/companies"))).toHaveLength(
-      0,
-    );
+    expect(urls.filter((url) => url.includes("/companies"))).toHaveLength(0);
     // A contact whose employer the wire withheld — no edge grant, no grant on
     // that account, or nobody has recorded one — states nothing. A dash would
     // read as "works nowhere", which is the one thing an absent field does

@@ -25,6 +25,7 @@ import {
   useSorMode,
   useViewerId,
 } from "./common";
+import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companies";
 import { DecisionsChip } from "./companyapprovals";
 import {
   addressFrom,
@@ -46,7 +47,6 @@ import {
 } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { MergeAction } from "./merge";
-import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companies";
 import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
 
@@ -68,8 +68,7 @@ import { ShareAction } from "./share";
 type Company = components["schemas"]["Company"];
 type Company360View = components["schemas"]["Company360"];
 type Lifecycle = NonNullable<Company["lifecycle"]>;
-type UpdateCompanyRequest =
-  components["schemas"]["UpdateCompanyRequest"];
+type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 
 // The verbs a rep reaches for on an account, in the header where they can see
 // them. They were one button — "Log activity" — and setting what happens NEXT
@@ -229,7 +228,10 @@ async function patchCompanyField(
   body: UpdateCompanyRequest,
 ): Promise<void> {
   const { error } = await api.PATCH("/companies/{id}", {
-    params: { path: { id: company.id }, ...ifMatch(requireVersion(company.version)) },
+    params: {
+      path: { id: company.id },
+      ...ifMatch(requireVersion(company.version)),
+    },
     body,
   });
   if (error) {
@@ -295,9 +297,7 @@ type CompanyFieldPress = Readonly<{
 // Details grid gates its own edit affordances on `writable`, and the reason
 // an archived or overlay-mirrored account is read-only is a fact about the
 // RECORD, not about which component happens to be drawing it.
-export function useCompanyReadOnlyReason(
-  company: Company,
-): string | undefined {
+export function useCompanyReadOnlyReason(company: Company): string | undefined {
   const t = useT();
   const overlay = useSorMode() === "overlay";
   // The per-ROW question only. The object grant and the seat ceiling are the
@@ -365,9 +365,7 @@ export function CompanyLifecycleControl({
       )}
       onSave={(next) =>
         patch({
-          lifecycle: next as NonNullable<
-            UpdateCompanyRequest["lifecycle"]
-          >,
+          lifecycle: next as NonNullable<UpdateCompanyRequest["lifecycle"]>,
         })
       }
     />
@@ -429,7 +427,10 @@ export function CompanyOwnerControl({
   // control honest about who owns it today even when it cannot resolve them;
   // which sentence is honest is `unresolvedOwnerLabel`'s question, not this
   // one's.
-  if (company.owner_id && !owners.some((user) => user.value === company.owner_id)) {
+  if (
+    company.owner_id &&
+    !owners.some((user) => user.value === company.owner_id)
+  ) {
     owners.unshift({
       value: company.owner_id,
       label: unresolvedOwnerLabel(roster, rosterPartial, t),
@@ -473,7 +474,9 @@ export function CompanyOwnerControl({
       // leaves open to every seat — while naming a colleague stays a patch,
       // which an unbounded seat may make and a bounded one may not.
       onSave={(next) =>
-        !company.owner_id && next === viewerId ? claim() : patch({ owner_id: next })
+        !company.owner_id && next === viewerId
+          ? claim()
+          : patch({ owner_id: next })
       }
     />
   );
@@ -535,7 +538,10 @@ function CompanyEditAction({
   // set, saving anything else would then force a reassignment nobody asked for.
   // The form names them exactly as the header does, off the same four readings:
   // the same roster read cannot be a departure here and a refusal there.
-  if (company.owner_id && !owners.some((user) => user.id === company.owner_id)) {
+  if (
+    company.owner_id &&
+    !owners.some((user) => user.id === company.owner_id)
+  ) {
     owners.push({
       id: company.owner_id,
       display_name: unresolvedOwnerLabel(roster, rosterPartial, t),
@@ -568,7 +574,9 @@ function CompanyEditAction({
         // string, which mapCompanyUpdate reads as the honest empty set, so saving
         // an unrelated field would clear every type the account has.
         lifecycle: company.lifecycle ?? "",
-        relationship_types: joinMultiselectValue(company.relationship_types ?? []),
+        relationship_types: joinMultiselectValue(
+          company.relationship_types ?? [],
+        ),
         linkedin_url: company.linkedin_url ?? "",
         ...addressFrom(company.address),
         // The repeatable domains field prefills from the company's live set;
@@ -728,16 +736,13 @@ export function CompanyActionBadges({
             sourceName={company.display_name}
             searchTargets={searchCompanyTargets}
             merge={async (targetId) => {
-              const { data, error } = await api.POST(
-                "/companies/{id}/merge",
-                {
-                  params: {
-                    path: { id: company.id },
-                    ...ifMatch(requireVersion(company.version)),
-                  },
-                  body: { target_id: targetId },
+              const { data, error } = await api.POST("/companies/{id}/merge", {
+                params: {
+                  path: { id: company.id },
+                  ...ifMatch(requireVersion(company.version)),
                 },
-              );
+                body: { target_id: targetId },
+              });
               if (error) {
                 throwProblem(error, t);
               }
@@ -755,11 +760,12 @@ export function CompanyActionBadges({
             The tab only shows once there IS one, so without this the first
             partner row would be unreachable — this is the same form, asked
             for rather than offered. */}
-        {!overlay && !(company.relationship_types ?? []).includes("partner") && (
-          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
-            {t("company.partnerSetUp")}
-          </Button>
-        )}
+        {!overlay &&
+          !(company.relationship_types ?? []).includes("partner") && (
+            <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
+              {t("company.partnerSetUp")}
+            </Button>
+          )}
         {/* A record grant probes the native row via auth.EnsureLinkTarget,
             which a mirrored record has no row for — sharing stays hidden
             in overlay regardless of record type (see deals.tsx's
@@ -799,7 +805,10 @@ export function CompanyActionBadges({
             when either says no. Hidden in overlay with the rest of the native
             verbs; the server refuses it there too. */}
         {!overlay && (
-          <CompanyRejectAction company={company} disabledReasonId={refusedByState} />
+          <CompanyRejectAction
+            company={company}
+            disabledReasonId={refusedByState}
+          />
         )}
         {/* Last, and set apart by the panel's own seam (atoms.css). This is
             the one verb here a reader cannot walk back from the header, so it
@@ -809,7 +818,9 @@ export function CompanyActionBadges({
           disabledReasonId={refusedByState}
           label={t("record.archive")}
           confirmText={t("record.archiveConfirm")}
-          archivedMessage={t("record.archiveDone", { name: company.display_name })}
+          archivedMessage={t("record.archiveDone", {
+            name: company.display_name,
+          })}
           archive={async () => {
             const { data, error } = await api.DELETE("/companies/{id}", {
               params: { path: { id: company.id } },
@@ -856,9 +867,12 @@ export function displayHost(url: string): string {
 // the company's web presence, so the fallback lives in one place rather than
 // being re-derived per caller.
 function companyWebsite(company: Company): string | undefined {
-  const primaryDomain = (company.domains ?? []).find((d) => d.is_primary)?.domain;
+  const primaryDomain = (company.domains ?? []).find(
+    (d) => d.is_primary,
+  )?.domain;
   return (
-    company.website_url ?? (primaryDomain ? `https://${primaryDomain}` : undefined)
+    company.website_url ??
+    (primaryDomain ? `https://${primaryDomain}` : undefined)
   );
 }
 
@@ -904,7 +918,9 @@ export function CompanyIdentityLine({
   }
   if (company.size_band) {
     facts.push(
-      <span key="size">{t("co.pulse.sizeBand", { band: company.size_band })}</span>,
+      <span key="size">
+        {t("co.pulse.sizeBand", { band: company.size_band })}
+      </span>,
     );
   }
   // An owner named only once the roster can name them: "Unassigned" while the

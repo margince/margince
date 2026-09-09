@@ -394,9 +394,7 @@ describe("useCanWriteRecord", () => {
     // the OBJECT and still may not edit a colleague's company.
     stubMe(meFixture(granted));
 
-    expect(await canWriteRecord("company", { writable: false })).toBe(
-      false,
-    );
+    expect(await canWriteRecord("company", { writable: false })).toBe(false);
   });
 
   it("refuses a record carrying no writable flag at all", async () => {
@@ -419,9 +417,7 @@ describe("useCanWriteRecord", () => {
     // company.update writes no company, however the row is marked.
     stubMe(meFixture({ allow: { company: ["read"] } } as const));
 
-    expect(await canWriteRecord("company", { writable: true })).toBe(
-      false,
-    );
+    expect(await canWriteRecord("company", { writable: true })).toBe(false);
   });
 });
 

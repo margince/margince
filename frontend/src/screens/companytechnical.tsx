@@ -161,9 +161,7 @@ function TechnicalSections({
 }
 
 /** One technical value, with the public record that proved it. */
-function TechnicalRow({
-  fact,
-}: Readonly<{ fact: CompanyFact }>): ReactNode {
+function TechnicalRow({ fact }: Readonly<{ fact: CompanyFact }>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();

@@ -320,18 +320,15 @@ function RemoveFactConfirm({
     // click belongs to the committed render, so what it passes cannot be older
     // than the row that carried it.
     mutationFn: async (doomed: CompanyFact) => {
-      const { error } = await api.DELETE(
-        "/companies/{id}/facts/{factKey}",
-        {
-          params: {
-            path: {
-              id: companyId,
-              factKey: `${doomed.field}:${doomed.value_key}`,
-            },
-            ...ifMatch(requireVersion(doomed.version)),
+      const { error } = await api.DELETE("/companies/{id}/facts/{factKey}", {
+        params: {
+          path: {
+            id: companyId,
+            factKey: `${doomed.field}:${doomed.value_key}`,
           },
+          ...ifMatch(requireVersion(doomed.version)),
         },
-      );
+      });
       if (error) {
         throwProblem(error);
       }

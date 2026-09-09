@@ -131,10 +131,9 @@ function asRelationshipStage(value: string): RelationshipStage | undefined {
 }
 
 async function fetchPartner(companyId: string): Promise<Partner | null> {
-  const { data, error, response } = await api.GET(
-    "/companies/{id}/partner",
-    { params: { path: { id: companyId } } },
-  );
+  const { data, error, response } = await api.GET("/companies/{id}/partner", {
+    params: { path: { id: companyId } },
+  });
   if (response.status === 404) {
     return null;
   }
@@ -465,9 +464,7 @@ function PartnerDetail({
   );
 }
 
-export function PartnerTab({
-  companyId,
-}: Readonly<{ companyId: string }>) {
+export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const query = useQuery({
@@ -591,11 +588,7 @@ export function PartnersScreen() {
             // this company, and a control inside that link would be invalid
             // markup offering the same destination twice.
             cell: (partner: Partner) => (
-              <EntityRef
-                kind="company"
-                id={partner.company_id}
-                asText
-              />
+              <EntityRef kind="company" id={partner.company_id} asText />
             ),
             fixed: true,
           },

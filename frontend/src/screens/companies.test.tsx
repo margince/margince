@@ -17,18 +17,18 @@ import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { AssistantPanel } from "./assistant";
+import { CompaniesScreen, CompanyScreen } from "./companies";
 import {
+  company,
+  company360,
   companyBackstop,
   emptyPage,
   jsonResponse,
-  company,
-  company360,
   stubFetch,
 } from "./company.fixtures";
 import { SuggestionsSection } from "./company360";
 import { companyEditFields, mapCompanyUpdate } from "./companyform";
 import { listFetchLimit } from "./listquery";
-import { CompaniesScreen, CompanyScreen } from "./companies";
 import { WriteToHost } from "./writeto";
 
 // The same P-14/15/16/1 shared-block wiring as contacts
@@ -157,8 +157,7 @@ async function startDeepRead(calls: string[]) {
     expect(
       calls.some(
         (call) =>
-          call.startsWith("POST") &&
-          call.endsWith("/companies/o-1/deep-read"),
+          call.startsWith("POST") && call.endsWith("/companies/o-1/deep-read"),
       ),
     ).toBe(true),
   );
@@ -168,9 +167,8 @@ describe("company-360 deep read", () => {
   it("POSTs deep-read on click and polls the read report every 3s while running", async () => {
     const { calls } = stubDeepRead({});
     const reportCalls = () =>
-      calls.filter((call) =>
-        call.endsWith("/companies/o-1/site-reads/rd-1"),
-      ).length;
+      calls.filter((call) => call.endsWith("/companies/o-1/site-reads/rd-1"))
+        .length;
     // The whole flow runs on fake timers so react-query's 3s poll interval is
     // scheduled on the fake clock (a poll timer armed on the real clock could
     // not be advanced). Each advance flushes due timers plus the microtask
@@ -1203,10 +1201,7 @@ const employmentRel = {
 describe("CompanyScreen — Relationships tab (P-5)", () => {
   it("shows an Overview/Relationships tab bar and lists relationships by company_id", async () => {
     stubFetch(async (url) => {
-      if (
-        url.includes("/relationships") &&
-        url.includes("company_id=o-1")
-      ) {
+      if (url.includes("/relationships") && url.includes("company_id=o-1")) {
         return jsonResponse({
           data: [employmentRel],
           page: { next_cursor: null, has_more: false },
@@ -1232,10 +1227,7 @@ describe("CompanyScreen — Relationships tab (P-5)", () => {
         posted = JSON.parse(await request.text());
         return jsonResponse({ ...employmentRel, id: "rel-new" }, 201);
       }
-      if (
-        url.includes("/relationships") &&
-        url.includes("company_id=o-1")
-      ) {
+      if (url.includes("/relationships") && url.includes("company_id=o-1")) {
         return emptyPage();
       }
       if (url.includes("/people?") && url.includes("q=anna")) {
@@ -1457,10 +1449,7 @@ describe("CompanyScreen — relationship kinds by scope (P-5)", () => {
         posted = JSON.parse(await request.text());
         return jsonResponse({ ...employmentRel, id: "rel-new" }, 201);
       }
-      if (
-        url.includes("/relationships") &&
-        url.includes("company_id=o-1")
-      ) {
+      if (url.includes("/relationships") && url.includes("company_id=o-1")) {
         return emptyPage();
       }
       if (url.includes("/companies?") && url.includes("q=acme")) {

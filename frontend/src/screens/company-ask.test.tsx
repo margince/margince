@@ -10,8 +10,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { companyBackstop, jsonResponse, stubFetch } from "./company.fixtures";
 import { CompanyScreen } from "./companies";
+import { companyBackstop, jsonResponse, stubFetch } from "./company.fixtures";
 
 // "Ask about this account" spent months reachable only from a test file: the
 // panel existed, its round-trip worked, and no route rendered it. So the claim

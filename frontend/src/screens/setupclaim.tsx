@@ -248,9 +248,7 @@ export function SetupClaimScreen({
                 {...control}
                 name="company"
                 value={fields.companyName}
-                onChange={(event) =>
-                  set("companyName")(event.target.value)
-                }
+                onChange={(event) => set("companyName")(event.target.value)}
               />
             )}
           </Field>

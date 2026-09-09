@@ -83,10 +83,9 @@ export function useCompany360(id: string, enabled = true) {
     queryKey: ["company360", id],
     enabled: enabled && id !== "",
     queryFn: async () => {
-      const { data, error, response } = await api.GET(
-        "/companies/{id}/360",
-        { params: { path: { id } } },
-      );
+      const { data, error, response } = await api.GET("/companies/{id}/360", {
+        params: { path: { id } },
+      });
       if (error) {
         if (response.status === 422 && isOverlayRefusal(error)) {
           return { state: "overlay" };
@@ -1786,10 +1785,10 @@ export function useSuggestionsBody({
   const client = useQueryClient();
   const dismiss = useMutation({
     mutationFn: async (fingerprint: string) => {
-      const { error } = await api.POST(
-        "/companies/{id}/suggestions/dismiss",
-        { params: { path: { id: companyId } }, body: { fingerprint } },
-      );
+      const { error } = await api.POST("/companies/{id}/suggestions/dismiss", {
+        params: { path: { id: companyId } },
+        body: { fingerprint },
+      });
       if (error) {
         throwProblem(error);
       }

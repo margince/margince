@@ -270,9 +270,7 @@ describe("the legal identity a person can state", () => {
           return held;
         }
         if (url.pathname.endsWith("/me")) {
-          return json(
-            meFixture({ allow: { company: ["read", "update"] } }),
-          );
+          return json(meFixture({ allow: { company: ["read", "update"] } }));
         }
         if (url.pathname.endsWith("/vat-check")) {
           return new Response(null, { status: 404 });

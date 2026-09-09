@@ -47,9 +47,7 @@ type ContractStrip = NonNullable<
  * with no offer to name is not a section, and an empty block under the deal
  * rows would read as a missing feature rather than as "there is none".
  */
-export function CompanyLastOffer({
-  view,
-}: Readonly<{ view?: Company360 }>) {
+export function CompanyLastOffer({ view }: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();

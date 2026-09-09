@@ -166,8 +166,7 @@ describe("names the chrome is showing", () => {
     const client = createQueryClient();
     await nameQuery(client, "o-1");
     expect(
-      client.getQueryState(["company", ENTITY_NAME_KEY, "o-1"])
-        ?.isInvalidated,
+      client.getQueryState(["company", ENTITY_NAME_KEY, "o-1"])?.isInvalidated,
     ).toBe(false);
 
     await new MutationObserver(client, {
@@ -175,8 +174,7 @@ describe("names the chrome is showing", () => {
     }).mutate();
 
     expect(
-      client.getQueryState(["company", ENTITY_NAME_KEY, "o-1"])
-        ?.isInvalidated,
+      client.getQueryState(["company", ENTITY_NAME_KEY, "o-1"])?.isInvalidated,
     ).toBe(true);
   });
 
@@ -194,9 +192,9 @@ describe("names the chrome is showing", () => {
       mutationFn: () => Promise.resolve("written"),
     }).mutate();
 
-    expect(
-      client.getQueryState(["company360", "o-1"])?.isInvalidated,
-    ).toBe(false);
+    expect(client.getQueryState(["company360", "o-1"])?.isInvalidated).toBe(
+      false,
+    );
   });
 });
 

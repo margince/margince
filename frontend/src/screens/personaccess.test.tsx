@@ -86,9 +86,7 @@ describe("PersonAccess", () => {
   it("says a promoted contact is the company's", async () => {
     stub();
     draw({ ...base, visibility: "workspace", writable: true });
-    expect(
-      await screen.findByText(/everyone in the company/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/everyone in the company/i)).toBeTruthy();
   });
 
   it("publishes a private contact through the ordinary person patch", async () => {
@@ -153,9 +151,7 @@ describe("PersonAccess", () => {
   it("offers no verb on any contact to a reader who cannot write it", async () => {
     stub();
     draw({ ...base, visibility: "workspace", writable: false, owner_id: "u1" });
-    expect(
-      await screen.findByText(/everyone in the company/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/everyone in the company/i)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /make private/i })).toBeNull();
   });
 

@@ -4,12 +4,7 @@ import type { Route } from "./router";
 // EntityRef, and LogActivity all speak this vocabulary; before this registry
 // each kept its own person|company|deal union (all missing lead).
 // `activity` is intentionally absent: it is the timeline, not a 360 record.
-export type EntityKind =
-  | "person"
-  | "company"
-  | "deal"
-  | "lead"
-  | "project";
+export type EntityKind = "person" | "company" | "deal" | "lead" | "project";
 
 export const ENTITY_KINDS = [
   "person",

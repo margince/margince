@@ -49,10 +49,7 @@ async function fill(canvasElement: HTMLElement) {
     canvas.getByLabelText(/setup token/i),
     "9f2c-not-a-real-token",
   );
-  await user.type(
-    canvas.getByLabelText(/company name/i),
-    "Brandt Automotive",
-  );
+  await user.type(canvas.getByLabelText(/company name/i), "Brandt Automotive");
   await user.type(canvas.getByLabelText(/your name/i), "Ilse Brandt");
   await user.type(canvas.getByLabelText(/your email/i), "ilse@brandt.example");
   await user.type(
@@ -68,9 +65,7 @@ async function submitAgainst(canvasElement: HTMLElement, status: number) {
     "POST /setup/claim": () => jsonResponse({}, status),
   });
   const { canvas, user } = await fill(canvasElement);
-  await user.click(
-    canvas.getByRole("button", { name: /create the company/i }),
-  );
+  await user.click(canvas.getByRole("button", { name: /create the company/i }));
 }
 
 /** The screen an operator's first visit lands on. */

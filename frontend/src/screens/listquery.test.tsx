@@ -1101,7 +1101,9 @@ describe("two chips on one list", () => {
             key: "lifecycle",
             label: "company.lifecycle",
             allLabel: "company.filterLifecycleAll",
-            options: [{ value: "customer", label: "company.lifecycle.customer" }],
+            options: [
+              { value: "customer", label: "company.lifecycle.customer" },
+            ],
           },
         ]}
         dataChips={[

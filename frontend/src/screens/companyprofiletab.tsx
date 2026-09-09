@@ -9,11 +9,11 @@ import { Callout } from "../design-system/callout";
 import { FieldGrid } from "../design-system/fieldgrid";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
+import { profileFieldLabel } from "./companies";
 import { CompanyFactsPanel } from "./companyfactspanel";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { DetailsGrid, SidecarFieldRow } from "./companyraildetails";
 import { useCompanyProfileFields } from "./evidenceverdict";
-import { profileFieldLabel } from "./companies";
 
 type Company = components["schemas"]["Company"];
 type ProfileFieldKey = components["parameters"]["ProfileFieldKey"];

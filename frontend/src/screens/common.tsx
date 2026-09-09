@@ -881,10 +881,9 @@ export function useFinanceSummary(companyId: string) {
   return useQuery<components["schemas"]["CompanyFinanceSummary"]>({
     queryKey: ["finance-summary", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/companies/{id}/finance-summary",
-        { params: { path: { id: companyId } } },
-      );
+      const { data, error } = await api.GET("/companies/{id}/finance-summary", {
+        params: { path: { id: companyId } },
+      });
       if (error) {
         throwProblem(error);
       }

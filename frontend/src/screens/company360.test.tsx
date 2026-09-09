@@ -15,6 +15,7 @@ import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
+import { CompanyScreen } from "./companies";
 import {
   CommercialPanel,
   NextSteps,
@@ -22,7 +23,6 @@ import {
   SuggestionsSection,
 } from "./company360";
 import { CompanyWorkCard } from "./companywork";
-import { CompanyScreen } from "./companies";
 import { SentenceList } from "./record360";
 import { TaskQuickActions, useTaskUpdate } from "./taskactions";
 
@@ -287,9 +287,7 @@ function renderNextSteps(
 // rather than owning. Mounting the two together is what pins the pairing the
 // suite is about: a row offers Done always and Snooze only when there is a
 // date to move.
-function NextStepsWithVerbs({
-  three60,
-}: Readonly<{ three60: Company360 }>) {
+function NextStepsWithVerbs({ three60 }: Readonly<{ three60: Company360 }>) {
   const update = useTaskUpdate(taskWriteKeys("company", "o-1"));
   return (
     <NextSteps

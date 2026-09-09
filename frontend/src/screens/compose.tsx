@@ -2636,9 +2636,7 @@ export function ComposeModal({
   // read is already in cache there, so this costs the composer nothing on the
   // page it opens over.
   const roster = useRoster("user", open);
-  const namesCompany = useCompany360(
-    entityType === "company" ? entityId : "",
-  );
+  const namesCompany = useCompany360(entityType === "company" ? entityId : "");
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>
       "display_name" in entry ? [[entry.id, entry.display_name] as const] : [],
@@ -2717,8 +2715,7 @@ export function ComposeModal({
   // has a message to answer, and answering it is what a reader opening the
   // composer there means — the account path asked them to name a recipient the
   // thread already knows, in front of a To field the draft would have filled.
-  const groundable =
-    !answering && entityType === "company" && !isChannelReply;
+  const groundable = !answering && entityType === "company" && !isChannelReply;
   // What SHAPE the composer takes, split from what it GROUNDS. One flag used to
   // answer both, so a reply inherited the account path's box — and an account
   // that had mail lost the drawer that path was given. The shape is every

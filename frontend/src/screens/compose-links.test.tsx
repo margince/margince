@@ -121,7 +121,8 @@ function stubRoutes(
       if (override) return override();
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse({ data: [] });
-      if (key === "GET /companies/company-1/360") return jsonResponse(COMPANY_VIEW);
+      if (key === "GET /companies/company-1/360")
+        return jsonResponse(COMPANY_VIEW);
       if (isPreviewDoor(url.pathname)) {
         return jsonResponse(allowedPreview(previewedAddresses(body)));
       }

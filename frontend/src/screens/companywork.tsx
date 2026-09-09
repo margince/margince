@@ -194,9 +194,7 @@ function SinceLastVisit({ view }: Readonly<{ view?: Company360 }>) {
 // `<SinceLastVisit/>` on an account with nothing to report costs the record a
 // blank row. Both mounts call this; passing the component straight into a
 // footer is the defect it exists to make unavailable.
-export function sinceLastVisitFooter(
-  view?: Company360,
-): ReactNode | undefined {
+export function sinceLastVisitFooter(view?: Company360): ReactNode | undefined {
   return speaksSinceLastVisit(view) ? (
     <SinceLastVisit view={view} />
   ) : undefined;

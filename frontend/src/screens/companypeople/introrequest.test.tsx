@@ -62,7 +62,9 @@ const WRITTEN = {
 
 test("names who is being asked, and about whom, before anything is written", async () => {
   stub(WRITTEN);
-  render(<IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />);
+  render(
+    <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
+  );
   expect(
     await screen.findByText(
       /Asking Sofia Meier to introduce you to Philipp Königs/,
@@ -101,7 +103,9 @@ test("sends the deal when there is one, and both required ids", async () => {
 test("the message becomes the reader's once they edit it", async () => {
   stub(WRITTEN);
   const user = userEvent.setup();
-  render(<IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />);
+  render(
+    <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
+  );
   await user.click(
     await screen.findByRole("button", { name: /Write the message/i }),
   );
@@ -120,7 +124,9 @@ test("the message becomes the reader's once they edit it", async () => {
 test("a typo fix does not claim the message as the reader's", async () => {
   stub(WRITTEN);
   const user = userEvent.setup();
-  render(<IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />);
+  render(
+    <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
+  );
   await user.click(
     await screen.findByRole("button", { name: /Write the message/i }),
   );
@@ -134,7 +140,9 @@ test("a typo fix does not claim the message as the reader's", async () => {
 test("says so when the browser will not let the page copy", async () => {
   stub(WRITTEN);
   const user = userEvent.setup();
-  render(<IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />);
+  render(
+    <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
+  );
   await user.click(
     await screen.findByRole("button", { name: /Write the message/i }),
   );
@@ -159,7 +167,9 @@ test("says so when the browser will not let the page copy", async () => {
 test("says when the message came from a template rather than a model", async () => {
   stub({ ...WRITTEN, generated_by: "deterministic", ai_generated: false });
   const user = userEvent.setup();
-  render(<IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />);
+  render(
+    <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
+  );
   await user.click(
     await screen.findByRole("button", { name: /Write the message/i }),
   );
@@ -171,7 +181,9 @@ test("says when the message came from a template rather than a model", async () 
 test("shows the refusal rather than an empty form", async () => {
   stub({ code: "not_found", detail: "no such route" }, 404);
   const user = userEvent.setup();
-  render(<IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />);
+  render(
+    <IntroRequestModal companyId="o-1" target={TARGET} onClose={() => {}} />,
+  );
   await user.click(
     await screen.findByRole("button", { name: /Write the message/i }),
   );

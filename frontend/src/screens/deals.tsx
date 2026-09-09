@@ -373,7 +373,8 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
   if (f.pipelineId) out.pipeline_id = f.pipelineId;
   if (filters.owner_id) out.owner_id = filters.owner_id;
   if (filters.company_id) out.company_id = filters.company_id;
-  if (filters.partner_company_id) out.partner_company_id = filters.partner_company_id;
+  if (filters.partner_company_id)
+    out.partner_company_id = filters.partner_company_id;
   if (filters.stalled === "true") out.stalled = true;
   if (filters.partner_sourced === "true") out.partner_sourced = true;
   return out;
@@ -580,7 +581,11 @@ function dealCompany(
   naming: CompanyNaming,
 ): Pick<
   BoardDeal,
-  "company" | "companyHref" | "companyLogoUrl" | "companyWithheld" | "companyUnreadable"
+  | "company"
+  | "companyHref"
+  | "companyLogoUrl"
+  | "companyWithheld"
+  | "companyUnreadable"
 > {
   if (deal.masked_fields?.includes("company_id")) {
     return { company: "", companyWithheld: true };
@@ -588,9 +593,7 @@ function dealCompany(
   if (deal.company_id && naming.unreadable.has(deal.company_id)) {
     return { company: "", companyUnreadable: true };
   }
-  const mark = deal.company_id
-    ? naming.marks.get(deal.company_id)
-    : undefined;
+  const mark = deal.company_id ? naming.marks.get(deal.company_id) : undefined;
   return {
     company: mark?.name ?? "",
     // The company's address, built HERE because this is the tier that holds
@@ -791,11 +794,7 @@ export function mapDealUpdate(
     patch.amount_minor = amount ? toMinorUnits(Number(amount), currency) : null;
   }
   onMove("currency", "currency", () => currency || undefined);
-  onMove(
-    "company_id",
-    "company_id",
-    () => str(values.company_id) || null,
-  );
+  onMove("company_id", "company_id", () => str(values.company_id) || null);
   onMove("owner_id", "owner_id", () => str(values.owner_id) || null);
   onMove(
     "partner_company_id",
@@ -1075,7 +1074,9 @@ function attributedPartner(
   if (!deal.partner_company_id) {
     return undefined;
   }
-  const named = companies.find((company) => company.id === deal.partner_company_id);
+  const named = companies.find(
+    (company) => company.id === deal.partner_company_id,
+  );
   return {
     id: deal.partner_company_id,
     label: named?.display_name ?? deal.partner_company_id,
@@ -1756,7 +1757,10 @@ async function searchCompanies(
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((company) => ({ value: company.id, label: company.display_name }));
+  return data.data.map((company) => ({
+    value: company.id,
+    label: company.display_name,
+  }));
 }
 
 // Whether the reader has narrowed this list themselves.
@@ -1923,7 +1927,11 @@ function DealBoardBody({
   // Only the board asks: the table names its companies through the same
   // per-record reference every other cross-record cell uses, and handing it
   // this map as well would read each company twice.
-  const companyMarks = useCompanyMarks(loadedDeals, companies, companiesSettled);
+  const companyMarks = useCompanyMarks(
+    loadedDeals,
+    companies,
+    companiesSettled,
+  );
   return (
     <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
       {() =>
@@ -3335,7 +3343,9 @@ function DealActions({
   // page reached it. The page answers first; only a company it does not carry
   // is read by id, through the SAME cache entry the subtitle's own reference
   // already fills, so the common case costs nothing.
-  const companyOnPage = companies.find((company) => company.id === deal.company_id);
+  const companyOnPage = companies.find(
+    (company) => company.id === deal.company_id,
+  );
   const companyById = useEntityName(
     "company",
     companyOnPage ? null : deal.company_id,
@@ -3346,9 +3356,7 @@ function DealActions({
         // The raw id is the floor rather than the aim: ugly, and still better
         // than a blank picker whose save clears the company nobody touched.
         label:
-          companyOnPage?.display_name ??
-          companyById.name ??
-          deal.company_id,
+          companyOnPage?.display_name ?? companyById.name ?? deal.company_id,
       }
     : undefined;
   // The seam serves update and archive for a mirrored deal (write-back

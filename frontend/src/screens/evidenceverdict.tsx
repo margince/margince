@@ -59,10 +59,9 @@ export function useCompanyProfileFields(companyId: string) {
   return useQuery({
     queryKey: profileFieldsKey(companyId),
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/companies/{id}/profile-fields",
-        { params: { path: { id: companyId } } },
-      );
+      const { data, error } = await api.GET("/companies/{id}/profile-fields", {
+        params: { path: { id: companyId } },
+      });
       if (error) {
         throwProblem(error);
       }
@@ -122,10 +121,7 @@ export function profileFieldClaim(
   };
 }
 
-export function factClaim(
-  companyId: string,
-  fact: CompanyFact,
-): EvidenceClaim {
+export function factClaim(companyId: string, fact: CompanyFact): EvidenceClaim {
   // The contract addresses a fact as `<field>:<value_key>`. A single-value fact
   // carries an empty value_key and so ends in a bare colon — which is the
   // spelling, not a missing half.

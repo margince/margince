@@ -47,7 +47,10 @@ export async function searchCompanies(
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((company) => ({ value: company.id, label: company.display_name }));
+  return data.data.map((company) => ({
+    value: company.id,
+    label: company.display_name,
+  }));
 }
 
 /**

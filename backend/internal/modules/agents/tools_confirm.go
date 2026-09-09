@@ -283,7 +283,7 @@ type mergeArgs struct {
 
 // mergeableTypes: only person and company have a merge verb (deals and
 // leads leave through their own lifecycle).
-var mergeableTypes = map[string]bool{"person": true, importObjectCompany: true}
+var mergeableTypes = map[string]bool{importObjectPerson: true, importObjectCompany: true}
 
 // mergeableTypeNames renders the vocabulary above for a refusal, sorted so the
 // message is byte-stable across processes rather than following map order.

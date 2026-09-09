@@ -139,9 +139,7 @@ export const AddressAbsent: Story = {
 // (Editable above is the same state with all six filled.)
 export const AddressPartlyFilled: Story = {
   render: () => (
-    <Details
-      company={{ ...org, address: { city: "Munich", country: "DE" } }}
-    />
+    <Details company={{ ...org, address: { city: "Munich", country: "DE" } }} />
   ),
 };
 

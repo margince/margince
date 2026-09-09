@@ -112,9 +112,7 @@ export function ThinState({
         <p style={{ margin: "8px 0 0", lineHeight: 1.55 }}>
           {t("person.thin.known", {
             name: view.person.full_name,
-            what: [email, employer?.company_name]
-              .filter(Boolean)
-              .join(" · "),
+            what: [email, employer?.company_name].filter(Boolean).join(" · "),
           })}
         </p>
         <p style={{ margin: "10px 0 0", lineHeight: 1.55 }}>{remediation}</p>

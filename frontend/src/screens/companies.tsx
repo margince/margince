@@ -53,9 +53,9 @@ import {
 } from "./common";
 import { MoneyPane, PeopleChips, ThreadFold } from "./company/glance";
 import {
+  type Company360Result,
   DealsCard,
   NextSteps,
-  type Company360Result,
   ProposedNextSteps,
   recordNamesIn,
   StateStrip,
@@ -741,13 +741,14 @@ function DeepReadCard({ companyId }: Readonly<{ companyId: string }>) {
           {problemMessageOf(start.error, t)}
         </p>
       )}
-      {shownReadId && <SiteReadPanel companyId={companyId} readId={shownReadId} />}
+      {shownReadId && (
+        <SiteReadPanel companyId={companyId} readId={shownReadId} />
+      )}
     </Card>
   );
 }
 
-type CompanyHierarchyRollup =
-  components["schemas"]["CompanyHierarchyRollup"];
+type CompanyHierarchyRollup = components["schemas"]["CompanyHierarchyRollup"];
 
 // A missing stored FX rate fails the whole rollup read with 422
 // fx_rate_unavailable (never a rate-of-1 substitute, never zeros) — this
@@ -758,12 +759,9 @@ class FxUnavailableError extends Error {}
 async function fetchHierarchyRollup(
   companyId: string,
 ): Promise<CompanyHierarchyRollup> {
-  const { data, error } = await api.GET(
-    "/companies/{id}/hierarchy-rollup",
-    {
-      params: { path: { id: companyId }, query: { scope: "tree" } },
-    },
-  );
+  const { data, error } = await api.GET("/companies/{id}/hierarchy-rollup", {
+    params: { path: { id: companyId }, query: { scope: "tree" } },
+  });
   if (error) {
     if (error.code === "fx_rate_unavailable") {
       throw new FxUnavailableError();
@@ -1073,7 +1071,13 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
     <div className="wrap">
       <QueryGate query={companyQuery} pendingLabel={t("nav.companies")}>
         {(company) => (
-          <CompanyRecord company={company} view={view} tab={tab} onTab={setTab} t={t} />
+          <CompanyRecord
+            company={company}
+            view={view}
+            tab={tab}
+            onTab={setTab}
+            t={t}
+          />
         )}
       </QueryGate>
     </div>
@@ -1600,7 +1604,9 @@ function CompanyPage({
       // reader cannot act on, it is unbounded in length, and on an enriched
       // account it repeats the industry two lines above it. It reads in the
       // details grid, where the rest of the account's filed fields are.
-      pulse={<CompanyIdentityLine company={company} view={view} loading={loading} />}
+      pulse={
+        <CompanyIdentityLine company={company} view={view} loading={loading} />
+      }
       // The composer opens from a button rather than standing open above the
       // page: a whole form in the header's action strip pushed the account's
       // own story below the fold before a word of it was read.
@@ -1915,7 +1921,10 @@ function CompanyRecordBody({
           which is the one thing the tab strip above cannot say, because a tab
           label names a place and does not qualify it. */}
       {!overlay && tab === "finance" && (
-        <CompanyFinanceCard companyId={company.id} lifecycle={company.lifecycle} />
+        <CompanyFinanceCard
+          companyId={company.id}
+          lifecycle={company.lifecycle}
+        />
       )}
       {!overlay && tab === "documents" && (
         // The same stacked column the overview uses, so the two panels are
@@ -2024,7 +2033,10 @@ function workVerbs({
   }
   return {
     deal: !view?.sections_omitted?.includes("deals") ? (
-      <NewDealAction companyId={company.id} companyName={company.display_name} />
+      <NewDealAction
+        companyId={company.id}
+        companyName={company.display_name}
+      />
     ) : undefined,
   };
 }
@@ -2122,7 +2134,9 @@ function CompanyOverviewStack({
           column on such an account, and stands down the moment there is
           anything to read: on a live account the lead is the 360 below, and
           two leads is none. */}
-      {!overlay && nothingOnFile(view) && <DeepReadCard companyId={company.id} />}
+      {!overlay && nothingOnFile(view) && (
+        <DeepReadCard companyId={company.id} />
+      )}
       {/* The 360 as the first pane, at the full measure (DESIGN.md §7): the
           word, the sentence it rests on, the three dimensions, the spine, and
           the thread folded under it. What moved since this reader was last
@@ -2359,7 +2373,10 @@ function CompanyDealsTab({
       view={view}
       actions={
         readOnly ? undefined : (
-          <NewDealAction companyId={company.id} companyName={company.display_name} />
+          <NewDealAction
+            companyId={company.id}
+            companyName={company.display_name}
+          />
         )
       }
       extra={<CompanyLastOffer view={view} />}

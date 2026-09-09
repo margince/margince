@@ -80,7 +80,8 @@ export function DossierPanel({
       }
       return data;
     },
-    onSuccess: (data) => queryClient.setQueryData(["company-dossier", companyId], data),
+    onSuccess: (data) =>
+      queryClient.setQueryData(["company-dossier", companyId], data),
   });
 
   // A workspace reading from an incumbent mirror holds none of the facts this

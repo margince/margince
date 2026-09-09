@@ -69,9 +69,7 @@ describe("the vocabulary read", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(seen.some((url) => url.includes("resource=company"))).toBe(
-      true,
-    );
+    expect(seen.some((url) => url.includes("resource=company"))).toBe(true);
   });
 
   it("serves a second reader of the same resource from cache", async () => {

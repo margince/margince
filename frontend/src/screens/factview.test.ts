@@ -252,9 +252,7 @@ describe("groupFacts", () => {
     // reaches a German reader as English snake_case. A hand-written list would
     // have proved neither: its annotation rejects invalid names without
     // requiring the valid ones.
-    const fields = Object.keys(
-      FACT_FIELD_LABELS,
-    ) as CompanyFact["field"][];
+    const fields = Object.keys(FACT_FIELD_LABELS) as CompanyFact["field"][];
     expect(fields.length).toBeGreaterThan(0);
     for (const field of fields) {
       expect(factFieldLabelKey(field)).toBe(`co.factField.${field}`);

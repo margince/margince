@@ -34,7 +34,10 @@ describe("contractBody", () => {
     expect(unpriced).not.toHaveProperty("value_minor");
     expect(unpriced).not.toHaveProperty("currency");
 
-    const priced = contractBody("company-1", { ...DRAFT, valueMinor: 12_000_000 });
+    const priced = contractBody("company-1", {
+      ...DRAFT,
+      valueMinor: 12_000_000,
+    });
     expect(priced.value_minor).toBe(12_000_000);
     expect(priced.currency).toBe("EUR");
   });

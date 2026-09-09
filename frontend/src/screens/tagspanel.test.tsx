@@ -226,12 +226,7 @@ describe("the company mount's add-tag verb", () => {
   // The seat axis. A read seat is refused by the licensing middleware before
   // RBAC is consulted, so a verb offered to one cannot lead to a saved tag.
   it("offers no verb on a company to a read seat", async () => {
-    mountCompany(
-      false,
-      { company: ["update"] },
-      { writable: true },
-      "read",
-    );
+    mountCompany(false, { company: ["update"] }, { writable: true }, "read");
     expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
   });

@@ -32,6 +32,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
+// candidateCompanyKey is the lead column holding the employer a lead names
+// before any company record exists for it.
+const candidateCompanyKey = "candidate_company_key"
+
 // RoutingRule assigns leads whose field matches a literal value to one
 // named owner — territory/segment/source routing in its V1 shape.
 type RoutingRule struct {
@@ -60,7 +64,7 @@ type RoutingConfig struct {
 // supports. The mirror is TestRoutableLeadFieldVocabularyIsSingleSourced,
 // in compose — the only place both modules are visible.
 // Held by: TestEveryRoutableLeadFieldResolvesToItsOwnFact (backend/internal/modules/people/leadroutingvocab_test.go)
-var RoutableLeadFields = []string{"source", "company_name", "candidate_company_key"}
+var RoutableLeadFields = []string{"source", "company_name", candidateCompanyKey}
 
 // ParseRoutingConfig decodes automation params into a RoutingConfig.
 // Params were validated against the catalog schema at write time; this
@@ -102,7 +106,7 @@ func (f leadRoutingFacts) field(name string) string {
 		return f.Source
 	case "company_name":
 		return f.CompanyName
-	case "candidate_company_key":
+	case candidateCompanyKey:
 		return f.CandidateCompanyKey
 	}
 	return ""

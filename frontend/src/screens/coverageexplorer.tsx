@@ -53,7 +53,9 @@ const BAND_LABELS: Record<StrengthBucket, MessageKey> = {
   none: "co.routeIn.band.unknown",
 };
 
-export function CoverageExplorer({ companyId }: Readonly<{ companyId: string }>) {
+export function CoverageExplorer({
+  companyId,
+}: Readonly<{ companyId: string }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const titleId = useId();

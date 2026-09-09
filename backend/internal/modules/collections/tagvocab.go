@@ -58,6 +58,7 @@ const (
 	typePerson  = "person"
 	typeCompany = "company"
 	typeDeal    = "deal"
+	typeLead    = "lead"
 )
 
 // GetTag reads one tag and how much of the workspace carries it.

@@ -146,9 +146,7 @@ describe("drafting to a person", () => {
     expect(
       sent.some((call) => call.key === "POST /people/c-1/draft-email"),
     ).toBe(true);
-    expect(sent.some((call) => call.key.includes("/companies/"))).toBe(
-      false,
-    );
+    expect(sent.some((call) => call.key.includes("/companies/"))).toBe(false);
   });
 
   it("carries the reader's own steering and nothing else", async () => {

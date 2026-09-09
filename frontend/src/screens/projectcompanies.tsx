@@ -94,8 +94,7 @@ export function ProjectCompanies({
     // vocabulary, so a company attached here and one attached there mean the
     // same thing.
     roles: COMPANY_ROLES.map((value) => ({ value, label: t(roleKey(value)) })),
-    attach: (companyId, role) =>
-      attach.mutateAsync({ companyId, role }),
+    attach: (companyId, role) => attach.mutateAsync({ companyId, role }),
     detach: (companyId) => detach.mutateAsync(companyId),
   };
 

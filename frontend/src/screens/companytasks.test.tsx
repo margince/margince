@@ -15,16 +15,16 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { CompanyScreen } from "./companies";
 import {
+  company,
+  company360,
   companyBackstop,
   emptyPage,
   emptySection,
   jsonResponse,
-  company,
-  company360,
   stubFetch,
 } from "./company.fixtures";
-import { CompanyScreen } from "./companies";
 
 // The company record's Tasks tab: tick-to-complete without leaving the
 // account, a withheld section that says so, an archived account that offers no

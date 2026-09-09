@@ -12,9 +12,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { CompanyScreen } from "./companies";
 import { AskSection } from "./company360";
 import { PersonMeetingBrief } from "./meetingbrief";
-import { CompanyScreen } from "./companies";
 
 // Every AI surface can be told which project it is about, through the one
 // picker, and every scoped output says so in one line the server's counts

@@ -601,7 +601,10 @@ function SeatCard({
  * to be: the question the mark asks is "did a person answer this", and an edit
  * IS that answer.
  */
-function useCommitteeWrites(companyId: string, dealId: string | null | undefined) {
+function useCommitteeWrites(
+  companyId: string,
+  dealId: string | null | undefined,
+) {
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();

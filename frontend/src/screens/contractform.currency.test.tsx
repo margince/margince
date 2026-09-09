@@ -191,7 +191,12 @@ describe("correcting an agreement's value", () => {
     // currency carries no amount either: it is being priced here for the first
     // time, which is the same act as pricing a new one.
     show(
-      <ContractForm companyId="o-1" contract={CONTRACT} open onClose={() => {}} />,
+      <ContractForm
+        companyId="o-1"
+        contract={CONTRACT}
+        open
+        onClose={() => {}}
+      />,
     );
     await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeTruthy());
 

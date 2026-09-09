@@ -419,7 +419,10 @@ describe("a field that depends on another", () => {
   });
 
   it("appears once that field is answered", () => {
-    const shown = visibleFields(fields, { name: "x", partner_company_id: "p-1" });
+    const shown = visibleFields(fields, {
+      name: "x",
+      partner_company_id: "p-1",
+    });
     expect(shown.map((f) => f.key)).toContain("partner_attribution");
   });
 

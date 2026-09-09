@@ -140,9 +140,13 @@ export function ContractForm({
       return id;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["companyContracts", companyId] });
+      queryClient.invalidateQueries({
+        queryKey: ["companyContracts", companyId],
+      });
       queryClient.invalidateQueries({ queryKey: ["company360", companyId] });
-      queryClient.invalidateQueries({ queryKey: ["companyDocuments", companyId] });
+      queryClient.invalidateQueries({
+        queryKey: ["companyDocuments", companyId],
+      });
       // The paper list this form and the contract row BOTH read. Without it an
       // upload lands on the server and neither surface shows it: the row keeps
       // the pre-upload list, and reopening the form serves the same stale cache

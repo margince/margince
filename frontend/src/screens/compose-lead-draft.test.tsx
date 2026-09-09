@@ -140,9 +140,7 @@ describe("drafting to a lead", () => {
     expect(
       sent.some((call) => call.key === "POST /leads/l-1/draft-email"),
     ).toBe(true);
-    expect(sent.some((call) => call.key.includes("/companies/"))).toBe(
-      false,
-    );
+    expect(sent.some((call) => call.key.includes("/companies/"))).toBe(false);
   });
 
   it("carries the reader's own steering and nothing else", async () => {

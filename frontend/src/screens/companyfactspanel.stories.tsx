@@ -121,7 +121,11 @@ function frame(
           Your seat may read this account and not correct it.
         </p>
       )}
-      <CompanyFactsPanel companyId={COMPANY} canEdit={canEdit} reasonId={reasonId} />
+      <CompanyFactsPanel
+        companyId={COMPANY}
+        canEdit={canEdit}
+        reasonId={reasonId}
+      />
     </StoryProviders>
   );
 }

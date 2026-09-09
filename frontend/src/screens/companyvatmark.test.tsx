@@ -254,9 +254,7 @@ describe("the VAT mark beside the number", () => {
     const user = userEvent.setup();
     stubFetch(async (request) =>
       new URL(request.url).pathname.endsWith("/me")
-        ? jsonResponse(
-            meFixture({ allow: { company: ["read", "update"] } }),
-          )
+        ? jsonResponse(meFixture({ allow: { company: ["read", "update"] } }))
         : jsonResponse(CHECKED),
     );
     render(mark(NUMBER, false));

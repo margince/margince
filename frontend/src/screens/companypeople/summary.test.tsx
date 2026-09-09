@@ -100,7 +100,11 @@ test("names the person worth writing to", async () => {
     },
   });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   expect(await screen.findByText("Dietmar Rietsch")).not.toBeNull();
@@ -121,7 +125,11 @@ test("says nobody has answered rather than naming a fallback", async () => {
     },
   });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   expect(await screen.findByText("Nobody has answered")).not.toBeNull();
@@ -143,7 +151,11 @@ test("names the missing critical role", async () => {
     },
   });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   expect(await screen.findByText("No champion")).not.toBeNull();
@@ -157,7 +169,11 @@ test("names the missing critical role", async () => {
 test("tells an unreadable committee apart from an empty one", async () => {
   stub({ completeness: { committee_read: false } });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   expect(await screen.findByText("Hidden from you")).not.toBeNull();
@@ -171,7 +187,11 @@ test("does not name a gap when seats are hidden", async () => {
     committee: { seats: [], gaps: [], unlisted_seats: 2 },
   });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   expect(await screen.findByText("2 more you cannot see")).not.toBeNull();
@@ -205,7 +225,11 @@ test("each door narrows the list to what it describes", async () => {
 test("renders the German words under a German locale", async () => {
   stub({});
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
     "de",
   );
 
@@ -218,7 +242,11 @@ test("renders the German words under a German locale", async () => {
 test("tells no-open-deal apart from withheld", async () => {
   stub({ deals: [], completeness: { committee_read: true } });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   expect(await screen.findByText("No open deal")).not.toBeNull();
@@ -231,7 +259,11 @@ test("tells no-open-deal apart from withheld", async () => {
 test("does not claim a complete committee when seats are hidden", async () => {
   stub({ committee: { seats: [], gaps: [], unlisted_seats: 2 } });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   expect(await screen.findByText("Cannot be judged")).not.toBeNull();
@@ -250,7 +282,11 @@ test("labels the way-in door by what it actually does", async () => {
     },
   });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   expect(
@@ -280,7 +316,11 @@ test("draws a seat whose role has no column of its own", async () => {
     },
   });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   expect(await screen.findByText("Sam Consultant")).not.toBeNull();
@@ -293,7 +333,11 @@ test("says the reading failed rather than vanishing", async () => {
     Promise.resolve(new Response("{}", { status: 500 })),
   );
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   expect(await screen.findByText("Could not be read")).not.toBeNull();
@@ -328,7 +372,11 @@ test("offers the board and the map, and switches between them", async () => {
     },
   });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   await screen.findByRole("button", { name: "Map" });
@@ -370,7 +418,11 @@ test("marks a seat the product read, and only that one", async () => {
     },
   });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   await screen.findByText("Dietmar Rietsch");
@@ -424,7 +476,11 @@ test("reads the roles from the deal, and refreshes the board after", async () =>
   stub(suggestedCoverage(), writes);
   const user = userEvent.setup();
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   await user.click(
@@ -452,7 +508,11 @@ test("tells nothing-proposed apart from everything-refused", async () => {
   });
   const user = userEvent.setup();
   const first = render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),
@@ -465,7 +525,11 @@ test("tells nothing-proposed apart from everything-refused", async () => {
     proposals: { written: [], skipped: 3, generated_by: "model" },
   });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),
@@ -478,7 +542,11 @@ test("tells nothing-proposed apart from everything-refused", async () => {
 test("says why it cannot read roles when the account has no open deal", async () => {
   stub({ committee: { seats: [], gaps: ["champion"], unlisted_seats: 0 } });
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
   const button = await screen.findByRole("button", { name: /Suggest roles/i });
   expect((button as HTMLButtonElement).disabled).toBe(true);
@@ -493,7 +561,11 @@ test("confirming patches the seat's own row with the role unchanged", async () =
   stub(suggestedCoverage(), writes);
   const user = userEvent.setup();
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
 
   await user.click(await screen.findByRole("button", { name: /^Confirm$/ }));
@@ -527,7 +599,11 @@ test("offers no verbs on a seat a person typed", async () => {
     },
   } as Partial<Coverage>);
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
   await screen.findByText("Jan Roth");
   expect(screen.queryByRole("button", { name: /^Confirm$/ })).toBeNull();
@@ -558,7 +634,11 @@ test("offers no verbs when the seat carries no version to pin the write", async 
     },
   } as Partial<Coverage>);
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
   await screen.findByText("Ute Sommer");
   expect(screen.queryByRole("button", { name: /^Confirm$/ })).toBeNull();
@@ -596,7 +676,11 @@ test("says a concurrent edit happened rather than printing the sentinel", async 
   });
   const user = userEvent.setup();
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
   await user.click(await screen.findByRole("button", { name: /^Confirm$/ }));
   await screen.findByText(/changed since you opened it/);
@@ -617,7 +701,11 @@ test("says the reading needs a model rather than naming a handler", async () => 
   });
   const user = userEvent.setup();
   render(
-    <CoverageBand companyId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
   );
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),

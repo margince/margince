@@ -89,7 +89,9 @@ function contractsState(
   return "ready";
 }
 
-export function CompanyContractsCard({ companyId }: Readonly<{ companyId: string }>) {
+export function CompanyContractsCard({
+  companyId,
+}: Readonly<{ companyId: string }>) {
   const t = useT();
   // `useCan` for the READ — the grant alone decides what may be shown. The
   // three below gate MUTATING controls, so they take the seat as well: the
@@ -282,7 +284,9 @@ function ContractRow({
     },
     onSuccess: () => {
       setAsking(false);
-      queryClient.invalidateQueries({ queryKey: ["companyContracts", companyId] });
+      queryClient.invalidateQueries({
+        queryKey: ["companyContracts", companyId],
+      });
       queryClient.invalidateQueries({ queryKey: ["company360", companyId] });
     },
   });

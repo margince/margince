@@ -168,9 +168,7 @@ describe("BuildScene", () => {
       name: "Assembling your company",
     });
     expect(scene).toBeInTheDocument();
-    expect(
-      screen.getByText("Assembling your company"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Assembling your company")).toBeInTheDocument();
 
     // The word is readable through the real wordmark's accessible name...
     expect(screen.getByRole("img", { name: "Margince" })).toBeInTheDocument();

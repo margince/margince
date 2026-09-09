@@ -172,9 +172,7 @@ export function counterpartyRef(
     if (rel.deal_id) {
       return { kind: "deal", id: rel.deal_id };
     }
-    return rel.company_id
-      ? { kind: "company", id: rel.company_id }
-      : null;
+    return rel.company_id ? { kind: "company", id: rel.company_id } : null;
   }
   if (rel.person_id) {
     return { kind: "person", id: rel.person_id };
@@ -203,7 +201,10 @@ async function searchCompanyCandidates(q: string): Promise<Candidate[]> {
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((company) => ({ id: company.id, name: company.display_name }));
+  return data.data.map((company) => ({
+    id: company.id,
+    name: company.display_name,
+  }));
 }
 
 async function searchPersonCandidates(q: string): Promise<Candidate[]> {

@@ -643,7 +643,11 @@ describe("mapDealUpdate", () => {
   // unchanged, which is the only honest patch for a field nobody was shown.
   it("does not clear a partner it was never allowed to see", () => {
     const body = mapDealUpdate(
-      { name: "Fleet retrofit", partner_company_id: "", partner_attribution: "" },
+      {
+        name: "Fleet retrofit",
+        partner_company_id: "",
+        partner_attribution: "",
+      },
       {
         name: "Fleet retrofit",
         partner_company_id: "p-1",
@@ -660,7 +664,11 @@ describe("mapDealUpdate", () => {
   it("still clears a partner the reader could see and chose to remove", () => {
     const body = mapDealUpdate(
       { ...untouched, partner_company_id: "" },
-      { ...untouched, partner_company_id: "p-1", partner_attribution: "sourced" },
+      {
+        ...untouched,
+        partner_company_id: "p-1",
+        partner_attribution: "sourced",
+      },
     );
     expect(body.partner_company_id).toBeNull();
     // The claim goes with the partner, server-side, as one fact. Naming its own
@@ -699,7 +707,11 @@ describe("mapDealUpdate", () => {
         partner_company_id: "p-1",
         partner_attribution: "influenced",
       },
-      { ...untouched, partner_company_id: "p-1", partner_attribution: "sourced" },
+      {
+        ...untouched,
+        partner_company_id: "p-1",
+        partner_attribution: "sourced",
+      },
     );
     expect(Object.keys(body)).toEqual(["partner_attribution"]);
     expect(body.partner_attribution).toBe("influenced");
