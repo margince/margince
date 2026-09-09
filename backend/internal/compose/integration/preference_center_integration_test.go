@@ -283,7 +283,6 @@ func assertWithdrawalProvenanceAndWriteShape(t *testing.T, c *consentEnv, token,
 func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
 	c := setupConsent(t)
 
-	// A live deal's transactional lane stays open throughout.
 	grantPurpose(t, c, c.purposes["transactional"])
 
 	newsletterID := createNewsletterPurpose(t, c)
@@ -324,11 +323,16 @@ func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
 		t.Fatalf("newsletter still %q after one-click, want withdrawn", s)
 	}
 
-	// The gate honors the opt-out on the very next send; transactional
-	// (the live deal's lane) still transmits.
+	// The gate honors the opt-out on the very next send.
 	if s, code := c.send(t, "newsletter"); s != http.StatusConflict || code != "consent_not_granted" {
 		t.Fatalf("marketing send after opt-out → %d %q, want 409 consent_not_granted", s, code)
 	}
+	// Transactional still transmits — on a live deal, real evidence staked
+	// only now: resolveCategory's live-deal arm answers for ANY claimed
+	// purpose once one exists, marketing included, so staking it before the
+	// opt-out check above would have hidden that opt-out behind evidence the
+	// marketing purpose itself never had.
+	c.stakeADeal(t)
 	if s, code := c.send(t, "transactional"); s != http.StatusAccepted {
 		t.Fatalf("transactional send after marketing opt-out → %d %q, want 202", s, code)
 	}

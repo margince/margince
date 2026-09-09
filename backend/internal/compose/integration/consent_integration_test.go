@@ -25,6 +25,7 @@ type consentEnv struct {
 	*apptest.AppEnv
 	personID   string
 	activityID string
+	dealID     string
 	purposes   map[string]string // key -> id
 }
 
@@ -73,6 +74,25 @@ func setupConsent(t *testing.T) *consentEnv {
 		t.Fatalf("bootstrap did not seed the purpose catalog: %+v", purposeList.Data)
 	}
 	return &consentEnv{AppEnv: e, personID: person.ID, activityID: activity.ID, purposes: purposes}
+}
+
+// stakeADeal gives the fixture's subject real transactional evidence: an
+// open deal with them staked on it, relinked onto c.activityID (a reply
+// inherits its links from the anchor). Opt in for the same reason
+// preflightEnv.stakeADeal is: resolveCategory's live-deal arm runs before
+// any purpose is asked about, so baking this into setupConsent would
+// silently change the basis every OTHER test in this file — most of which
+// are specifically about a purpose with no evidence behind it — is denied
+// on.
+func (c *consentEnv) stakeADeal(t *testing.T) {
+	t.Helper()
+	stages := apptest.DiscoverSeededPipeline(t, c.AppEnv)
+	c.dealID = apptest.StakeOnOpenDeal(t, c.AppEnv, "Consent E2E opportunity", stages, c.personID)
+	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/relink", AnyMap{
+		"entity_type": "deal", "entity_id": c.dealID,
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("relink the anchor onto the deal → %d", status)
+	}
 }
 
 func (c *consentEnv) send(t *testing.T, purpose string) (int, string) {
@@ -145,14 +165,18 @@ func TestConsentDefaultDenySuppressesSends(t *testing.T) {
 // the contract itself, needs neither.
 func TestCorrespondenceAndTransactionalAreNotConsentGated(t *testing.T) {
 	c := setupConsent(t)
+	// A live deal — real evidence, now that a bare purpose claim no longer
+	// carries itself. setupConsent's own anchor is hand-logged rather than
+	// captured, so it carries no thread_key for the reply arm to answer
+	// through (only real capture threads a conversation); the deal is what
+	// stands in for "they have a live reason to hear from us" here.
+	c.stakeADeal(t)
 
-	// The fixture's person wrote to us: setupConsent captures an INBOUND
-	// activity from them, which is the qualifying event correspondence needs.
 	if status, code := c.send(t, "transactional"); status != http.StatusAccepted {
 		t.Fatalf("transactional send → %d %q, want 202 — the contract is the basis, not consent", status, code)
 	}
 	if status, code := c.send(t, "business_correspondence"); status != http.StatusAccepted {
-		t.Fatalf("correspondence send → %d %q, want 202 — they wrote to us first", status, code)
+		t.Fatalf("correspondence send → %d %q, want 202 — the live deal is the basis, not consent", status, code)
 	}
 }
 
