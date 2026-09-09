@@ -415,5 +415,15 @@ const (
 	// the credential's narrowness: the ref carries an address and a scope, so a
 	// holder cannot read a consent state, cannot grant, and cannot reach
 	// business correspondence.
-	modulesTierUnscopedCeiling = 103
+	//
+	// THE SIXTH RISE, +1, and it is the same public edge again.
+	// consent.bindWithdrawalSubject reads person_email and lead to attach the
+	// record holding the address a withdrawal link is being minted for. It runs
+	// on the SEND path, under the system principal that composes outbound mail,
+	// which holds no seat to narrow to — the same posture every send-path read
+	// of a recipient has. What bounds it is the address: the caller does not
+	// choose an id, it hands over the address the message is already going to,
+	// and a match on two records resolves to no subject at all rather than
+	// picking one.
+	modulesTierUnscopedCeiling = 104
 )

@@ -230,3 +230,69 @@ func TestAnUnknownWithdrawalTokenIsIndistinguishableFromARevokedOne(t *testing.T
 		t.Errorf("a revoked credential answers %v, want ErrNotFound", revokedErr)
 	}
 }
+
+// THE SEND PATH mints the credential the mail's List-Unsubscribe header
+// carries, and it reaches a lead — which the preference token cannot.
+func TestTheSendPathMintsAWorkingLinkForALeadOnlyAddress(t *testing.T) {
+	e := setupChannelConsent(t)
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO lead (full_name, email, source, captured_by)
+		 VALUES ('Header Lead', $1, 'test', 'human:x')`,
+		"header-lead@example.test"); err != nil {
+		t.Fatalf("seeding the lead: %v", err)
+	}
+
+	token, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, "header-lead@example.test", "")
+	if err != nil {
+		t.Fatalf("minting for the send path: %v", err)
+	}
+	if !ok || token == "" {
+		t.Fatal("a lead-only recipient got no unsubscribe token, so their marketing mail " +
+			"goes out with no List-Unsubscribe header at all")
+	}
+	ref, err := e.store.ResolveWithdrawalToken(e.ctx, token)
+	if err != nil {
+		t.Fatalf("the header's link does not resolve: %v", err)
+	}
+	if ref.LeadID.IsZero() {
+		t.Error("the credential names no lead, so nothing connects the press to the record")
+	}
+}
+
+// A PERSON WINS OVER A LEAD holding the same address, because a promoted lead's
+// mail is the person's. Both records can legitimately carry one address —
+// uq_person_email_dedupe bounds person_email alone — so this is reachable in a
+// way two live PERSONS are not.
+func TestAPersonWinsOverALeadHoldingTheSameAddress(t *testing.T) {
+	e := setupChannelConsent(t)
+	shared := "both-records@example.test"
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+		 VALUES ($1, $2, true, 'test', 'human:x')`, e.person, shared); err != nil {
+		t.Fatalf("seeding the person's address: %v", err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO lead (full_name, email, source, captured_by)
+		 VALUES ('Same Address Lead', $1, 'test', 'human:x')`, shared); err != nil {
+		t.Fatalf("seeding the lead: %v", err)
+	}
+
+	token, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, shared, "")
+	if err != nil {
+		t.Fatalf("minting: %v", err)
+	}
+	if !ok {
+		t.Fatal("no link was minted for an address two records hold")
+	}
+	ref, err := e.store.ResolveWithdrawalToken(e.ctx, token)
+	if err != nil {
+		t.Fatalf("resolving: %v", err)
+	}
+	if ref.PersonID != e.person {
+		t.Errorf("the credential names %v, want the person %v — a promoted lead's mail is "+
+			"the person's, so the person is who the opt-out acts for", ref.PersonID, e.person)
+	}
+	if !ref.LeadID.IsZero() {
+		t.Error("the credential names a lead as well as a person, so two records claim one link")
+	}
+}
