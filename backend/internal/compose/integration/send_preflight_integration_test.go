@@ -47,6 +47,7 @@ type preflightEnv struct {
 	*apptest.AppEnv
 	activityID string
 	personID   string
+	dealID     string
 	ws, user   string
 }
 
@@ -111,12 +112,43 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
+	// A deal with the recipient staked on it — real evidence for whatever a
+	// caller of this fixture claims as "transactional", now that #5103 closed
+	// the escape hatch that let the purpose key alone authorize a send. It
+	// rides the anchor's own links, inherited (inheritedLinks) by every reply
+	// sendExpectingAcceptance and friends stage off p.activityID, so no caller
+	// has to name it itself — resolveCategory's live-deal arm
+	// (authorizeevidence.go/liveDealInLinks) is what reads it.
+	//
+	// A caller testing what happens with NO evidence (a withdrawal that
+	// should hold the message, say) must close this deal first — see
+	// closeDealAsLost — since an open deal is an independent basis a
+	// purpose-scoped consent withdrawal does not reach.
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	var deal struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
+		"name": "Preflight opportunity", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
+		"source": "manual",
+	}, nil, &deal); status != http.StatusCreated {
+		t.Fatalf("create deal → %d", status)
+	}
+	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
+		"kind": "deal_stakeholder", "deal_id": deal.ID, "person_id": person.ID, "source": "manual",
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("stake the recipient on the deal → %d", status)
+	}
+
 	var activity struct {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "subject": "Inbound question", "direction": "inbound",
-		"links": []AnyMap{{"entity_type": "person", "entity_id": person.ID}},
+		"links": []AnyMap{
+			{"entity_type": "person", "entity_id": person.ID},
+			{"entity_type": "deal", "entity_id": deal.ID},
+		},
 	}, nil, &activity); status != http.StatusCreated {
 		t.Fatalf("log anchor activity → %d", status)
 	}
@@ -155,7 +187,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	}); err != nil {
 		t.Fatalf("resolving the acting human: %v", err)
 	}
-	return &preflightEnv{AppEnv: e, activityID: activity.ID, personID: person.ID, ws: ws, user: user}
+	return &preflightEnv{AppEnv: e, activityID: activity.ID, personID: person.ID, dealID: deal.ID, ws: ws, user: user}
 }
 
 // send issues the authenticated send and returns the status plus the

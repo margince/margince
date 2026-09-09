@@ -713,7 +713,7 @@ func TestARecipientWithNoStagedClaimInheritsNothing(t *testing.T) {
 	}
 
 	req := stagedRequestFor(commsauthz.TransmitRequest{PurposeKey: "newsletter"},
-		connector.Recipient{Email: "nobody@corp.test"}, claims, "")
+		connector.Recipient{Email: "nobody@corp.test"}, claims, "", nil)
 	if req.Context != "" {
 		t.Fatalf("an unstaged recipient inherited the claim %q", req.Context)
 	}

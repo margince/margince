@@ -227,9 +227,28 @@ func (p *preflightEnv) setDueAt(t *testing.T, id ids.UUID, at time.Time) {
 
 // withdrawConsent revokes the recipient's grant for the purpose the scheduled
 // message was written under, through the real consent surface.
+//
+// The fixture's own deal is closed first. An open deal is a legitimate-interest
+// basis independent of the purpose consent below (resolveCategory's live-deal
+// arm runs before any purpose is asked about), and a withdrawal scoped to one
+// purpose does not reach a DIFFERENT basis — so every caller of this helper
+// wants the same thing: no basis should survive but the one just withdrawn.
 func (p *preflightEnv) withdrawConsent(t *testing.T) {
 	t.Helper()
+	p.closeDealAsLost(t)
 	p.setTransactionalConsent(t, "withdrawn")
+}
+
+// closeDealAsLost closes the fixture's deal so the live-deal evidence arm can
+// no longer fire — liveDealInLinks requires status = 'open'.
+func (p *preflightEnv) closeDealAsLost(t *testing.T) {
+	t.Helper()
+	stages := apptest.DiscoverSeededPipeline(t, p.AppEnv)
+	if status := p.Call(t, "POST", "/v1/deals/"+p.dealID+"/advance", AnyMap{
+		"to_stage_id": stages.Lost, "lost_reason": "test: closing the fixture's evidence",
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("close the fixture's deal → %d", status)
+	}
 }
 
 // setTransactionalConsent moves the recipient's transactional grant either way,

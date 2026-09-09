@@ -176,6 +176,13 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
+	// The records this delivery's activity is filed under — the live-deal
+	// arm's own evidence, absent from TransmitRequest for deliveryThreadKey's
+	// reason.
+	links, err := deliveryLinks(ctx, tx, req.DeliveryID)
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 	// Every address's cap lock, sorted, before the first recipient is counted.
 	// Taking them inside the loop would order them by the caller's To list, and
 	// two messages naming the same pair in opposite orders would deadlock.
@@ -183,7 +190,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 		return commsauthz.DecisionSet{}, err
 	}
 	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims, threadKey), commsauthz.PhaseTransmit)
+		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims, threadKey, links), commsauthz.PhaseTransmit)
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
@@ -257,8 +264,10 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		d.Suppression = kind
 		return d, nil
 	}
+	address, channelProvider, channelUserID := recipientSubjectAddress(r)
 	d, err = g.decideResolved(ctx, tx, req, subjectRef{
-		Kind: entityPerson, ID: personID, Address: r.Email,
+		Kind: entityPerson, ID: personID, Address: address,
+		ChannelProvider: channelProvider, ChannelUserID: channelUserID,
 	}, d, phase, len(kinds) > 0)
 	if err != nil {
 		return commsauthz.Decision{}, err
