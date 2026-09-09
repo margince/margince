@@ -1033,12 +1033,13 @@
 .mw-proposal {
   margin-top: var(--space-3);
 }
-/* What is left here is the MEASURE — this card is NESTED, inside a bubble whose
-   own padding is one step tighter, and a box that out-pads its host reads as
-   the host's edge drawn wrong. Two classes, so that measure wins wherever the
-   two sheets land in the bundle. */
+/* What is left here is the MEASURE — this card is NESTED, and the staged card's
+   own asymmetric inset is wider than the whole inset of the bubble hosting it,
+   which reads as the bubble's edge drawn wrong. A card's inset by its role
+   instead, which lines up with the bubble's. Two classes, so that measure wins
+   wherever the two sheets land in the bundle. */
 .mw-proposal.staging-card {
-  padding: var(--space-3);
+  padding: var(--padCard);
 }
 /* The heading names the machine that wrote the list, so it takes the family's
    ink — `--aiText` rather than `--ai`, which fails AA on this ground. */

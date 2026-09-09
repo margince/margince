@@ -112,6 +112,8 @@
    taller and rounder than every line it sits between. Two classes, so that
    measure wins wherever the two sheets land in the bundle. */
 .pdigest-open.staging-card {
+  /* ds:ignore a line in the document's rhythm, matching .pdigest-line's own
+     inset, not a card's reading inset */
   padding: var(--space-2) var(--space-3);
   border-radius: var(--r-sm);
 }
