@@ -61,10 +61,10 @@ if [ -n "${MARGINCE_ADMIN_PASSWORD:-}" ] || [ -e "$admin_password_file" ]; then
     # directly: inside an `if` condition a command substitution is exempt from
     # `set -e`, so a failed probe would read as empty, miss the "true" branch,
     # and write the credential onto a provisioned installation — the one
-    # outcome this block exists to prevent. `company-exists` prints its answer
+    # outcome this block exists to prevent. `workspace-exists` prints its answer
     # precisely so a caller can tell "no" from "could not ask"; this is the
     # shape ensure_template in scripts/lib-testdb.sh already uses.
-    if ! provisioned="$(margince-migrate company-exists)"; then
+    if ! provisioned="$(margince-migrate workspace-exists)"; then
         echo "FAIL: could not determine whether this installation already has a company — fix the error above; a failed probe is not 'unprovisioned', and treating it as one would write a plaintext credential onto a live installation" >&2
         exit 1
     fi

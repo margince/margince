@@ -97,6 +97,10 @@ var exempt = gatekit.Waive(map[string]string{
 	"sbom-schemas": "a vendored SPDX schema, not ours to rename",
 	".github/workflows/release.yml": "a GitHub organisation — the account a repository belongs " +
 		"to, not this record type",
+	"sonar-project.properties": "`sonar.organization` is the scanner's own mandatory property, " +
+		"naming the SonarCloud organisation this project is filed under. Renaming it does not " +
+		"fail the scan's quality gate — it stops the scan running at all, which is a different " +
+		"colour of red and took a CI round to read",
 
 	// Microsoft's authority alias: `companies` is a literal path segment at
 	// login.microsoftonline.com beside `common` and `consumers`, and renaming

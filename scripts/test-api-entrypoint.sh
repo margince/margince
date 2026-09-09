@@ -27,7 +27,7 @@ failures=0
 
 # run PROBE [--password VALUE] [--existing VALUE]
 #
-# PROBE is what the stubbed `margince-migrate company-exists` reports: "true",
+# PROBE is what the stubbed `margince-migrate workspace-exists` reports: "true",
 # "false", or "fail" to exit non-zero without answering.
 #
 # The two values are FLAGS rather than positions so that "the operator set no
@@ -55,7 +55,7 @@ run() {
 
     cat >"$work/bin/margince-migrate" <<STUB
 #!/bin/sh
-[ "\$1" = "company-exists" ] || exit 0
+[ "\$1" = "workspace-exists" ] || exit 0
 [ "$probe" = "fail" ] && { echo "stub: probe failed" >&2; exit 1; }
 echo "$probe"
 STUB

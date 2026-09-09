@@ -50,7 +50,7 @@ func main() {
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|company-exists> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>]")
+		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|workspace-exists> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>]")
 	}
 	direction := args[0]
 
@@ -108,12 +108,12 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		return dropDB(ctx, conn, *name, stdout)
 	case "db-exists":
 		return dbExists(ctx, conn, *name, stdout)
-	case "company-exists":
-		return companyExists(ctx, conn, stdout)
+	case "workspace-exists":
+		return workspaceExists(ctx, conn, stdout)
 	case "setup-token":
 		return rotateSetupToken(ctx, resolved, stdout)
 	default:
-		return fmt.Errorf("migrate: unknown direction %q (want up, down, reset-password, setup-token, recreate-db, drop-db, db-exists or company-exists)", direction)
+		return fmt.Errorf("migrate: unknown direction %q (want up, down, reset-password, setup-token, recreate-db, drop-db, db-exists or workspace-exists)", direction)
 	}
 }
 
