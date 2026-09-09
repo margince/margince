@@ -6,6 +6,7 @@ package overlay_test
 import (
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/overlay"
@@ -50,7 +51,7 @@ func baseMapping() overlay.ObjectMapping {
 // mapping edit leaves already-mirrored rows claiming to be current when the
 // projection they hold is one this code would never produce again.
 func TestFingerprintChangesWithEveryDeclarationDetail(t *testing.T) {
-	base := overlay.Fingerprint(baseMapping())
+	base := fingerprint(t, baseMapping())
 	for _, tc := range []struct {
 		name   string
 		mutate func(*overlay.ObjectMapping)
@@ -81,7 +82,7 @@ func TestFingerprintChangesWithEveryDeclarationDetail(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			m := baseMapping()
 			tc.mutate(&m)
-			if got := overlay.Fingerprint(m); got == base {
+			if got := fingerprint(t, m); got == base {
 				t.Errorf("changing the %s left the fingerprint at %s, so rows projected by the old "+
 					"declaration would read as current. Include it in Fingerprint.", tc.name, got)
 			}
@@ -185,10 +186,10 @@ func TestFingerprintSeparatesDeclarationsThatFlattenAlike(t *testing.T) {
 			left, right := baseMapping(), baseMapping()
 			tc.left(&left)
 			tc.right(&right)
-			if overlay.Fingerprint(left) == overlay.Fingerprint(right) {
+			if fingerprint(t, left) == fingerprint(t, right) {
 				t.Errorf("both declarations fingerprint to %s, so switching between them would leave every "+
 					"mirrored row reading as current — but %s. Feed the difference into Fingerprint.",
-					overlay.Fingerprint(left), tc.because)
+					fingerprint(t, left), tc.because)
 			}
 		})
 	}
@@ -202,7 +203,7 @@ func TestFingerprintTreatsAnAbsentAndAnEmptyFromAlike(t *testing.T) {
 	nilFrom.Fields[0].From = nil
 	emptyFrom.Fields[0].From = []string{}
 
-	got, want := overlay.Fingerprint(nilFrom), overlay.Fingerprint(emptyFrom)
+	got, want := fingerprint(t, nilFrom), fingerprint(t, emptyFrom)
 	if got != want {
 		t.Errorf("a nil From fingerprints to %s and an empty one to %s, but neither gathers a raw property, "+
 			"so the two project identically; re-projecting the estate to move between them buys nothing. "+
@@ -215,13 +216,88 @@ func TestFingerprintTreatsAnAbsentAndAnEmptyFromAlike(t *testing.T) {
 // and a digest that took that order in would mark every row stale forever and
 // block the flip permanently.
 func TestFingerprintDoesNotVaryWithMapIterationOrder(t *testing.T) {
-	first := overlay.Fingerprint(baseMapping())
+	first := fingerprint(t, baseMapping())
 	for i := 0; i < 50; i++ {
-		if got := overlay.Fingerprint(baseMapping()); got != first {
+		if got := fingerprint(t, baseMapping()); got != first {
 			t.Fatalf("run %d produced %s, want %s — an unstable fingerprint marks every row stale forever", i, got, first)
 		}
 	}
 	if first == "" {
 		t.Fatal("Fingerprint answered the empty string; a row stamped with it could never be compared")
+	}
+}
+
+// fingerprint digests a declaration and fails the test if it cannot.
+//
+// Every case in this file is about which declarations SHARE a digest and which
+// do not, so an error is never the answer under test — it means the fixture
+// carries a value the encoding cannot represent, which is a broken fixture
+// rather than a finding about fingerprinting.
+func fingerprint(t *testing.T, m overlay.ObjectMapping) string {
+	t.Helper()
+	digest, err := overlay.Fingerprint(m)
+	if err != nil {
+		t.Fatalf("fingerprinting the declaration: %v", err)
+	}
+	return digest
+}
+
+// A declaration carrying a value JSON cannot encode has NO fingerprint, and
+// says so.
+//
+// This is what the error return buys, and it is the difference between an
+// encoding and a rendering: %#v answers for anything, including values the
+// projected payload could never hold, so a declaration that could not be
+// projected still got a confident digest. A channel is the cheapest such value
+// to write down; the real ones would be a func or a cyclic structure reaching a
+// declaration through decoded JSON that was not decoded from JSON.
+//
+// Refusing matters because the digest's whole job is to say which declaration
+// produced a row. Answering for a declaration this code cannot project would
+// stamp rows with a fingerprint no projection can ever match, and every one of
+// them would read as stale forever.
+func TestADeclarationJSONCannotEncodeHasNoFingerprint(t *testing.T) {
+	m := baseMapping()
+	m.Const = map[string]any{"unencodable": make(chan int)}
+
+	digest, err := overlay.Fingerprint(m)
+
+	if err == nil {
+		t.Fatalf("a declaration carrying a value JSON cannot encode answered the digest %q — it names a "+
+			"projection this code cannot produce, and every row stamped with it reads as stale forever", digest)
+	}
+	if digest != "" {
+		t.Errorf("the refusal still answered %q; a caller taking the value before the error would stamp it", digest)
+	}
+	// The message names the declaration and the key, because the reader is
+	// whoever just edited a mapping and needs to know which one.
+	if !strings.Contains(err.Error(), m.Source) || !strings.Contains(err.Error(), "unencodable") {
+		t.Errorf("the refusal reads %q; it names neither the declaration nor the key that could not be "+
+			"encoded, which are the two things the reader needs", err)
+	}
+}
+
+// An int and the same number as a float share a fingerprint, because they
+// project the same record.
+//
+// The inverse of the cases above, and it guards the encoding from the other
+// side: `1` and `1.0` both reach the mirrored payload as `1`, so a declaration
+// edit between them changes nothing a reader can see. A digest that separated
+// them would mark every row of that declaration stale and re-project the estate
+// for no observable change — which is the cost this whole issue is about,
+// arriving by a different route.
+//
+// It is asserted rather than left implicit because the encoding this replaced
+// carried the value's Go type alongside it, and keeping that habit under JSON
+// would have bought exactly this over-separation.
+func TestFingerprintSharesADigestForNumbersThatProjectAlike(t *testing.T) {
+	asInt, asFloat := baseMapping(), baseMapping()
+	asInt.Const = map[string]any{"weight": 1}
+	asFloat.Const = map[string]any{"weight": 1.0}
+
+	if got, want := fingerprint(t, asInt), fingerprint(t, asFloat); got != want {
+		t.Errorf("an int const and the same number as a float fingerprint differently (%s vs %s) — they "+
+			"project the identical payload, so this marks an estate stale for an edit nobody can observe",
+			got, want)
 	}
 }

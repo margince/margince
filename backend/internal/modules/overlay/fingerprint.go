@@ -16,6 +16,7 @@ package overlay
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"hash"
 	"sort"
@@ -25,14 +26,21 @@ import (
 // Fingerprint digests one object mapping's declaration. Two mappings that
 // would project the same raw record identically share a fingerprint; any
 // difference that could change a projected payload changes it.
-func Fingerprint(m ObjectMapping) string {
+//
+// It returns an error because the declaration values are ENCODED rather than
+// rendered — see writeSortedMap. A declaration carrying a value JSON cannot
+// represent has no fingerprint, and answering one anyway would be answering
+// about a mapping this code cannot project.
+func Fingerprint(m ObjectMapping) (string, error) {
 	h := sha256.New()
 	writeField(h, "source", m.Source)
 	writeField(h, "target", m.Target)
 	writeField(h, "external_key", m.ExternalKey)
 	writeField(h, "baseline", m.Baseline)
 	writeField(h, "unmapped_policy", m.UnmappedPolicy)
-	writeSortedMap(h, "const", m.Const)
+	if err := writeSortedMap(h, "const", m.Const); err != nil {
+		return "", fmt.Errorf("overlay: fingerprinting %s's const declaration: %w", m.Source, err)
+	}
 	for i, f := range m.Fields {
 		// The index is hashed conservatively, not because a reorder is known to
 		// matter: order-independence rests on guards declared elsewhere —
@@ -59,10 +67,12 @@ func Fingerprint(m ObjectMapping) string {
 		writeField(h, fmt.Sprintf("field.%d.always_emit", i), strconv.FormatBool(f.AlwaysEmit))
 		if f.Child != nil {
 			writeField(h, fmt.Sprintf("field.%d.child.position", i), strconv.Itoa(f.Child.Position))
-			writeSortedMap(h, fmt.Sprintf("field.%d.child.attrs", i), f.Child.Attrs)
+			if err := writeSortedMap(h, fmt.Sprintf("field.%d.child.attrs", i), f.Child.Attrs); err != nil {
+				return "", fmt.Errorf("overlay: fingerprinting %s's field %d child attributes: %w", m.Source, i, err)
+			}
 		}
 	}
-	return hex.EncodeToString(h.Sum(nil))
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // writeField feeds one named value into the digest length-prefixed, so no
@@ -78,23 +88,51 @@ func writeField(h hash.Hash, name, value string) {
 // iteration order varies per run and a fingerprint that varied would mark
 // every mirrored row stale forever.
 //
-// Values carry their dynamic type and their Go-syntax form, because Const and
-// Attrs are copied verbatim into the projected payload and a plain rendering is
-// type-blind: the bool true and the string "true" both render as "true", and
-// so do 1, 1.0 and "1" — a declaration edit that flips one for the other
-// changes the mirrored JSON. The Go-syntax form quotes strings and delimits
-// container members, so the same separation holds a level down into the nested
-// values a decoded-JSON declaration can carry. fmt sorts map keys, so a nested
-// map is as stable across runs as the ordering above.
+// Values are ENCODED as JSON, and the distinction from rendering them is the
+// whole point. Const and Attrs are copied verbatim into the projected payload,
+// so the digest has to separate values the payload separates: the bool true
+// from the string "true", and 1 from 1.0 from "1" — a declaration edit that
+// flips one for the other changes the mirrored JSON.
+//
+// %#v did that too, and was chosen for it. What it is not is a FORMAT. It is a
+// documented rendering of Go syntax, and a toolchain upgrade that changed it
+// would move every fingerprint in the estate at once — every mirrored row
+// reading as stale and re-projecting, spending a full estate's worth of metered
+// incumbent API budget for a declaration nobody edited. Not incorrect, since a
+// fingerprint change is exactly the event the sweep converges, but paid for
+// nothing. json.Marshal is a specified format with a stability guarantee the
+// rendering does not carry.
+//
+// The value's Go TYPE is deliberately not written alongside it, and that is a
+// change from the rendering this replaced. %#v needed the type because it is
+// type-blind where the payload is not — it renders the bool true and the string
+// "true" identically. JSON is not: `true` and `"true"` are different bytes, as
+// are `1` and `"1"`. The encoding already draws every distinction the payload
+// draws.
+//
+// Writing the type as well would draw one the payload does NOT: an int 1 and a
+// float64 1.0 both reach the mirror as `1`, so they project the same record and
+// belong under the same fingerprint. Separating them would mark an estate stale
+// for a declaration edit that changed nothing a reader can see — the same
+// pointless re-projection this issue is about, arriving by a different route.
+//
+// encoding/json sorts object keys, so a map one level down is as ordered as the
+// loop below makes the top level — and it draws the same distinctions there,
+// which a type prefix could not have done at depth anyway.
 //
 //craft:ignore naked-any the declaration maps hold decoded JSON values; the any is the declared type, not a missed one
-func writeSortedMap(h hash.Hash, name string, values map[string]any) {
+func writeSortedMap(h hash.Hash, name string, values map[string]any) error {
 	keys := make([]string, 0, len(values))
 	for k := range values {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		writeField(h, name+"."+k, fmt.Sprintf("%T=%#v", values[k], values[k]))
+		encoded, err := json.Marshal(values[k])
+		if err != nil {
+			return fmt.Errorf("encoding %s.%s: %w", name, k, err)
+		}
+		writeField(h, name+"."+k, string(encoded))
 	}
+	return nil
 }
