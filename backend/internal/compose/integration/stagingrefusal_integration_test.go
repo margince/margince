@@ -159,6 +159,7 @@ type stagedDecision struct {
 func TestAnAllowedSendRecordsItsStagingDecision(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	sent := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
 	deliveryID, _ := p.deliveryFor(t, sent)

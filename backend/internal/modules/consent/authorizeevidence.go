@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // subjectRef names who a decision is about: a person or a lead, never both.
@@ -34,6 +35,31 @@ type subjectRef struct {
 	// recorded by person OR by bare address, so an address that never resolved
 	// to a record can still be shown to have been on the thread.
 	Address string
+	// ChannelProvider and ChannelUserID are Address's channel twin: a channel
+	// counterparty's participant row is keyed by account
+	// (activity_participant.channel_user_id, read against the joined
+	// activity's own channel_provider column) rather than by address, because
+	// a chat names people by the provider's own account id and carries no
+	// address at all (1788759372). Both empty means an ordinary mail
+	// recipient. recipientSubjectAddress fills all three from a
+	// connector.Recipient.
+	ChannelProvider string
+	ChannelUserID   string
+}
+
+// recipientSubjectAddress derives how a subjectRef names the recipient a
+// caller gave, shared by decideTransmit's person arm and
+// decideLeadOnItsRecord's lead arm — both build a subjectRef from a
+// connector.Recipient, and both need the same bare-identity fallback
+// authorIsTheSubject reads. A channel recipient carries no Email
+// (connector.Counterparty's doc explains why), so its subjectRef.Address
+// would otherwise always be empty and repliesToTheSubject's address arm could
+// never match, whatever activity_participant held.
+func recipientSubjectAddress(r connector.Recipient) (address, channelProvider, channelUserID string) {
+	if r.Channel != nil {
+		return "", r.Channel.Provider, r.Channel.ChannelUserID
+	}
+	return r.Email, "", ""
 }
 
 // repliesToTheSubject reports whether this recipient took part in the thread
@@ -52,7 +78,7 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 	var found bool
 	err := tx.QueryRow(ctx, `
 		WITH anchor AS (
-			SELECT thread_key FROM activity WHERE id = $4 AND archived_at IS NULL
+			SELECT thread_key FROM activity WHERE id = $6 AND archived_at IS NULL
 		)
 		SELECT EXISTS (
 			SELECT 1
@@ -66,7 +92,7 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 			   -- this thread, and a recipient who was merely copied has
 			   -- initiated nothing.
 			   AND `+authorIsTheSubject+`
-		)`, subject.Kind, subject.ID, subject.Address, anchor).Scan(&found)
+		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, anchor).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read the thread this message answers: %w", err)
 	}
@@ -108,9 +134,9 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.direction = 'inbound'
 			   AND a.archived_at IS NULL
-			   AND a.thread_key = $4
+			   AND a.thread_key = $6
 			   AND `+authorIsTheSubject+`
-		)`, subject.Kind, subject.ID, subject.Address, threadKey).Scan(&found)
+		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, threadKey).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read the thread this message answers: %w", err)
 	}
@@ -141,9 +167,9 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.direction = 'inbound'
 			   AND a.archived_at IS NULL
-			   AND a.occurred_at >= $4
+			   AND a.occurred_at >= $6
 			   AND `+authorIsTheSubject+`
-		)`, subject.Kind, subject.ID, subject.Address, since).Scan(&found)
+		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, since).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read what this person sent us: %w", err)
 	}
@@ -156,16 +182,29 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 // Held by: TestBeingCopiedOnAThreadIsNotWritingIntoIt (authorizeresolve_integration_test.go)
 // and TestAFiledActivityIsNotSomethingThePersonWrote (authorizevalidators_integration_test.go)
 // — the first fails if the thread arm stops requiring authorship, the second if
-// the window arm goes back to reading a filing link.
+// the window arm goes back to reading a filing link. The channel account arm is
+// held the same way by TestAChannelParticipantAnswersTheThreadArm and
+// TestADifferentChannelAccountOnTheSameProviderIsNotTheSubject
+// (authorizeresolve_integration_test.go).
 //
-// $1 subject kind, $2 subject id, $3 address. The placeholders are fixed so
-// both callers bind the same three in the same order; a caller adding its own
-// must number above them.
+// $1 subject kind, $2 subject id, $3 address, $4 channel provider, $5 channel
+// user id. The placeholders are fixed so every caller binds the same five in
+// the same order; a caller adding its own must number above them.
+//
+// The channel arm reads p.channel_user_id against the JOINED activity's own
+// channel_provider (a.channel_provider) rather than a column on
+// activity_participant — 1788759372 keeps the transport off that row on
+// purpose, since an account id is only unique within its provider and a
+// second copy of the provider would just be one more place for it to drift
+// from activity's. A channel counterparty carries no address at all
+// (connector.Counterparty's doc), so without this arm a customer's own
+// inbound message could never be evidence that a rep's reply answers it.
 const authorIsTheSubject = `(
 			         p.role = 'from'
 			         AND (
 			               ($1 = 'person' AND p.person_id = $2::uuid)
 			            OR ($3 <> '' AND p.person_id IS NULL AND lower(p.address) = lower($3))
+			            OR ($5 <> '' AND p.person_id IS NULL AND p.channel_user_id = $5 AND a.channel_provider = $4)
 			             )
 			       )`
 

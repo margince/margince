@@ -122,3 +122,30 @@ func CreateOpenDeal(t *testing.T, e *AppEnv, stages SeededStages) string {
 	}
 	return dealID
 }
+
+// StakeOnOpenDeal creates a bare deal (no organization) in the pipeline's
+// open stage and stakes personID on it as a deal_stakeholder, through the
+// real endpoints, and returns the deal id.
+//
+// Gives a consent fixture real transactional evidence, since a bare purpose
+// claim no longer supplies it on its own — resolveCategory's live-deal arm
+// reads exactly this shape: an open deal, this person staked on it.
+func StakeOnOpenDeal(t *testing.T, e *AppEnv, name string, stages SeededStages, personID string) string {
+	t.Helper()
+	var deal map[string]any
+	if status := e.Call(t, "POST", "/v1/deals", map[string]any{
+		"name": name, "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "source": "manual",
+	}, nil, &deal); status != http.StatusCreated {
+		t.Fatalf("create deal → %d %v", status, deal)
+	}
+	dealID, ok := deal["id"].(string)
+	if !ok {
+		t.Fatalf("the created deal carries no string id: %v", deal)
+	}
+	if status := e.Call(t, "POST", "/v1/relationships", map[string]any{
+		"kind": "deal_stakeholder", "deal_id": dealID, "person_id": personID, "source": "manual",
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("stake the recipient on the deal → %d", status)
+	}
+	return dealID
+}

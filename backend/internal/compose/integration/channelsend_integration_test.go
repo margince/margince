@@ -126,12 +126,36 @@ func (c *channelSendEnv) seedInboundMessage(t *testing.T) {
 			RETURNING id`, channelSendThreadKey).Scan(&c.activityID); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `
+		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, c.activityID, c.personID)
+			VALUES ($1, 'person', $2)`, c.activityID, c.personID); err != nil {
+			return err
+		}
+		// The customer's own authorship, real capture's job everywhere but
+		// here: the send path's evidence check (authorIsTheSubject) reads
+		// this row, by account since a channel counterparty carries no
+		// address, to tell a reply from an unprompted first contact.
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, channel_user_id, role)
+			VALUES ($1, $2, 'from')`, c.activityID, channelSendAccountID)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the inbound conversation: %v", err)
+	}
+}
+
+// stripInboundAuthorship removes the customer's own "from" participant row
+// seedInboundMessage plants, for a test that wants a purpose asked about with
+// no reply evidence behind it — resolveCategory's thread arm would otherwise
+// answer the question this test is about before any purpose is ever reached.
+func (c *channelSendEnv) stripInboundAuthorship(t *testing.T) {
+	t.Helper()
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`DELETE FROM activity_participant WHERE activity_id = $1 AND role = 'from'`, c.activityID)
+		return err
+	}); err != nil {
+		t.Fatalf("stripping the inbound authorship: %v", err)
 	}
 }
 
@@ -427,6 +451,12 @@ func TestSendMessageRefusesAnEmptyBody(t *testing.T) {
 // rep's drafted text on screen.
 func TestSendMessageRefusesWithoutConsentForThePurpose(t *testing.T) {
 	c := setupChannelSend(t)
+	// Without the customer's own authorship the thread arm cannot answer for
+	// this claim (resolveCategory runs it unconditionally, before any purpose
+	// is asked about, and a reply is a reply whatever anyone claimed) — this
+	// test is about a purpose with no consent behind it, so it must not also
+	// double as a reply the customer never sent.
+	c.stripInboundAuthorship(t)
 
 	status, code, _ := c.sendReply(t, "marketing_email", "Yes — shipping Monday.", nil)
 
