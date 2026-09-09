@@ -275,7 +275,14 @@ func (r *advanceProjectPhaseResolver) Guards(ctx context.Context, cmd AdvancePro
 // costs a human's yes.
 func requireProjectPhase(toPhase string, reason *string) error {
 	if !projectPhases[toPhase] {
-		return &BadArgsError{Cause: fmt.Errorf("to_phase %q is not a project phase", toPhase)}
+		// The ladder rides in Guidance, which is ours, and the caller's word in
+		// Cause, which is bounded. Naming no phase at all left an agent guessing
+		// at a closed set of four.
+		return &BadArgsError{
+			Cause:    fmt.Errorf("to_phase %q is not a project phase", toPhase),
+			Field:    "to_phase",
+			Guidance: "the phases are: " + strings.Join(projectPhaseNames(), ", "),
+		}
 	}
 	if toPhase == projectPhaseClosed && (reason == nil || strings.TrimSpace(*reason) == "") {
 		return &BadArgsError{Cause: errors.New("reason is required when to_phase is closed")}
