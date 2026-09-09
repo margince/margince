@@ -31,13 +31,13 @@ overrides:
   # source, so `<<: *arr` over N empty mappings K times is O(N*K) work under the
   # limit), fixed in 4.3.2. Reached only through openapi-typescript ->
   # @redocly/openapi-core, which depends on an EXACT js-yaml version — 4.3.1
-  # today, 4.3.0 when this override was written — so no update can lift it and
-  # an override is the only route. The exposure here is small — the tool parses
-  # our own backend/api/*.yaml at build time, never anything a user supplies —
-  # but the fix is a patch bump, and a high advisory sitting open on a public
-  # repository costs more than it saves. Drop this once @redocly/openapi-core
-  # depends on a RANGE rather than a pin; lifting its pin, as it did once
-  # already, only moves the floor this line has to hold.
+  # today — so no update can lift it and an override is the only route. The
+  # exposure here is small — the tool parses our own backend/api/*.yaml at build
+  # time, never anything a user supplies — but the fix is a patch bump, and a
+  # high advisory sitting open on a public repository costs more than it saves.
+  # Drop this once @redocly/openapi-core depends on a RANGE rather than a pin:
+  # a lifted pin only moves the floor this line has to hold, so which version
+  # it names is never the test for retiring the override.
   #
   # Pinned to the 4.x line on purpose: an open `>=4.3.2` resolves to 5.x, whose
   # API the consumer was never written against, and swapping a DoS advisory for
