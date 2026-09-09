@@ -20,9 +20,12 @@ import (
 // surface downstream carry the set whole: the caller-influenced share of the
 // message is a known quantity rather than whatever was sent.
 //
-// Sized for a real identifier and nothing more. Every name in every closed
-// vocabulary this refuses against is comfortably inside it, so a token that
-// needs truncating is not a name anybody has.
+// Sized for a real identifier and nothing more, so a token that needs
+// truncating is not a name anybody has. That every member of every closed
+// vocabulary is inside it is not an assumption: compose's closed-set census
+// asserts it, because a member longer than this would be truncated when a caller
+// named it back and the refusal would quote a name matching nothing in the set
+// beside it.
 //
 // BYTES, like MaxFaultText beside it. A rune bound would let a multi-byte
 // token spend three times the budget for the same count, and what the figure
@@ -40,6 +43,15 @@ const MaxCallerToken = 80
 // prompts the same model reads, and where the name being quoted was written by
 // that model. A refusal is not the place to discover that a caller chose a
 // control character.
+//
+// TWO PLACES DECIDE WHAT IS SAFE TO ECHO, and the second is named here because
+// spellings that drifted would mean the protection depended on which door the
+// text came through. agents.echoSafe re-escapes whatever reaches the tool
+// surface, by the same test (unicode.IsPrint) `%q` applies here — so a token
+// quoted here passes through it unchanged, and one arriving by another route is
+// still escaped. Bounding is the half that must happen HERE: echoSafe bounds the
+// whole message, and by then a caller's token has already spent the budget the
+// vocabulary needs.
 //
 // The bound is applied AFTER quoting, not before, because quoting is what
 // decides the length: eighty bytes of newlines escape to a hundred and sixty,

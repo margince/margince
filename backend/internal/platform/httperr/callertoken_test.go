@@ -5,10 +5,9 @@ package httperr
 
 // The rendered token is bounded and escaped, whatever a caller sends.
 //
-// Both halves were reported: the bound was applied before quoting, so escaping
-// pushed the answer past it, and the doc claimed no escaping happened at all
-// while `%q` was doing it. A caller who can choose the size of a refusal can
-// choose how much of a transcript it fills.
+// The bound applies to the RENDERED form, because quoting is what decides the
+// length: a caller who can choose the size of a refusal can choose how much of a
+// transcript it fills.
 
 import (
 	"strings"

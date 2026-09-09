@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -125,7 +126,7 @@ func (e *reportEngine) Run(ctx context.Context, report string, req reportRequest
 	if uuidShape.MatchString(report) {
 		// Saved reports are a later slice; an unknown id is absent, not
 		// half-supported.
-		return reportOutcome{}, fmt.Errorf("saved report %s: %w", report, apperrors.ErrNotFound)
+		return reportOutcome{}, fmt.Errorf("saved report %s: %w", httperr.QuoteCaller(report), apperrors.ErrNotFound)
 	}
 	spec, ok := prebuiltReports[report]
 	if !ok {
@@ -154,7 +155,12 @@ func unservedPlanArguments(planArgs json.RawMessage) []string {
 	var unserved []string
 	for key := range keys {
 		if !servedPlanArguments[key] {
-			unserved = append(unserved, "`"+key+"`")
+			// The key is the CALLER's, quoted and bounded where it enters. It
+			// reaches an agent spliced into a refusal that goes on to name the
+			// arguments this tool DOES take, and a raw one arrived able to both
+			// push that list out and carry a character the transcript reads as
+			// a line ending.
+			unserved = append(unserved, httperr.QuoteCaller(key))
 		}
 	}
 	slices.Sort(unserved)
