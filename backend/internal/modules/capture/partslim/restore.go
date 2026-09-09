@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package mailmap
+package partslim
 
 // Putting a stored part's encoded body back where the stanza says it came from.
 //
@@ -69,7 +69,7 @@ func RestoreStoredParts(raw []byte, fetch func(PartRef) ([]byte, error)) ([]byte
 	for _, stanza := range stanzas {
 		body, err := fetch(stanza.ref)
 		if err != nil {
-			return nil, fmt.Errorf("mailmap: fetching %s: %w",
+			return nil, fmt.Errorf("partslim: fetching %s: %w",
 				PartIdentity(stanza.ref.Ordinal), err)
 		}
 		encoded, err := reencode(stanza, body)
@@ -90,21 +90,21 @@ func RestoreStoredParts(raw []byte, fetch func(PartRef) ([]byte, error)) ([]byte
 func reencode(stanza storedStanza, body []byte) ([]byte, error) {
 	name := PartIdentity(stanza.ref.Ordinal)
 	if int64(len(body)) != stanza.ref.Bytes {
-		return nil, fmt.Errorf("mailmap: %s is %d bytes, the stanza says %d",
+		return nil, fmt.Errorf("partslim: %s is %d bytes, the stanza says %d",
 			name, len(body), stanza.ref.Bytes)
 	}
 	if got := sha256Hex(body); got != stanza.ref.Sha256 {
-		return nil, fmt.Errorf("mailmap: %s hashes to %s, the stanza says %s",
+		return nil, fmt.Errorf("partslim: %s hashes to %s, the stanza says %s",
 			name, got, stanza.ref.Sha256)
 	}
 	encoded := wrapBase64WithEOL(
 		[]byte(base64.StdEncoding.EncodeToString(body)), stanza.wrap, []byte("\r\n"))
 	if len(encoded) != stanza.encodedBytes {
-		return nil, fmt.Errorf("mailmap: %s re-encodes to %d bytes, the stanza says %d",
+		return nil, fmt.Errorf("partslim: %s re-encodes to %d bytes, the stanza says %d",
 			name, len(encoded), stanza.encodedBytes)
 	}
 	if got := sha256Hex(encoded); got != stanza.encodedSha256 {
-		return nil, fmt.Errorf("mailmap: %s re-encodes to digest %s, the stanza says %s",
+		return nil, fmt.Errorf("partslim: %s re-encodes to digest %s, the stanza says %s",
 			name, got, stanza.encodedSha256)
 	}
 	return encoded, nil
@@ -143,7 +143,7 @@ func readStanza(raw []byte, markerAt int) (storedStanza, error) {
 		}
 		name, value, ok := splitField(string(line))
 		if !ok {
-			return storedStanza{}, fmt.Errorf("mailmap: unreadable stanza field %q", line)
+			return storedStanza{}, fmt.Errorf("partslim: unreadable stanza field %q", line)
 		}
 		fields[name] = value
 		fieldsEnd = next
@@ -160,7 +160,7 @@ func readStanza(raw []byte, markerAt int) (storedStanza, error) {
 	stanza.bodyStart = bodyStart
 	stanza.bodyEnd = bodyStart + stanza.substituteLen()
 	if stanza.bodyEnd > len(raw) {
-		return storedStanza{}, fmt.Errorf("mailmap: the substitute body of %s runs past the message",
+		return storedStanza{}, fmt.Errorf("partslim: the substitute body of %s runs past the message",
 			PartIdentity(stanza.ref.Ordinal))
 	}
 	return stanza, nil
@@ -178,18 +178,18 @@ func stanzaFromFields(fields map[string]string) (storedStanza, error) {
 	var s storedStanza
 	ordinal, err := strconv.Atoi(strings.TrimPrefix(fields[PartStoredHeader], "part:"))
 	if err != nil {
-		return s, fmt.Errorf("mailmap: the stanza's ordinal %q is unreadable: %w",
+		return s, fmt.Errorf("partslim: the stanza's ordinal %q is unreadable: %w",
 			fields[PartStoredHeader], err)
 	}
 	size, err := strconv.ParseInt(fields[PartBytesHeader], 10, 64)
 	if err != nil {
-		return s, fmt.Errorf("mailmap: the stanza's byte count is unreadable: %w", err)
+		return s, fmt.Errorf("partslim: the stanza's byte count is unreadable: %w", err)
 	}
 	if s.encodedBytes, err = strconv.Atoi(fields[PartEncodedBytesHeader]); err != nil {
-		return s, fmt.Errorf("mailmap: the stanza's encoded byte count is unreadable: %w", err)
+		return s, fmt.Errorf("partslim: the stanza's encoded byte count is unreadable: %w", err)
 	}
 	if s.wrap, err = strconv.Atoi(fields[PartWrapHeader]); err != nil {
-		return s, fmt.Errorf("mailmap: the stanza's wrap width is unreadable: %w", err)
+		return s, fmt.Errorf("partslim: the stanza's wrap width is unreadable: %w", err)
 	}
 	s.encodedSha256 = fields[PartEncodedSha256Header]
 	s.ref = PartRef{
@@ -199,7 +199,7 @@ func stanzaFromFields(fields map[string]string) (storedStanza, error) {
 		StorageKey: fields[PartStorageKeyHeader],
 	}
 	if s.ref.Sha256 == "" || s.ref.StorageKey == "" || s.encodedSha256 == "" {
-		return s, fmt.Errorf("mailmap: the stanza for part:%d is missing a field it needs", ordinal)
+		return s, fmt.Errorf("partslim: the stanza for part:%d is missing a field it needs", ordinal)
 	}
 	return s, nil
 }
@@ -236,7 +236,7 @@ func blankLineEnd(raw []byte, at int) (int, error) {
 	if bytes.HasPrefix(raw[at:], []byte("\n")) {
 		return at + 1, nil
 	}
-	return 0, fmt.Errorf("mailmap: a stanza is not followed by the header's blank line")
+	return 0, fmt.Errorf("partslim: a stanza is not followed by the header's blank line")
 }
 
 // splitField splits "Name: value" without trimming the value's own spacing

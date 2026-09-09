@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package mailmap_test
+package partslim_test
 
 // The strip removes only the octets it located, and the restore puts back
 // exactly what was removed.
@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/modules/capture/partslim"
 )
 
 // attachmentBody is an attachment large enough to be worth removing. Real ones
@@ -64,9 +64,9 @@ func messageWith(pdf []byte) []byte {
 		"--b1--\r\n")
 }
 
-func storedPart(ordinal int, body []byte) mailmap.StoredPart {
-	return mailmap.StoredPart{
-		Ordinal: ordinal, Sha256: mailmap.Sha256HexForTest(body),
+func storedPart(ordinal int, body []byte) partslim.StoredPart {
+	return partslim.StoredPart{
+		Ordinal: ordinal, Sha256: partslim.Sha256HexForTest(body),
 		Bytes: int64(len(body)), StorageKey: "ws/attachment/aaa", Body: body,
 	}
 }
@@ -74,14 +74,14 @@ func storedPart(ordinal int, body []byte) mailmap.StoredPart {
 func TestStripStoredPartsRemovesOnlyTheLocatedOctets(t *testing.T) {
 	pdf := attachmentBody(1)
 	raw := messageWith(pdf)
-	out, stripped, err := mailmap.StripStoredParts(raw, []mailmap.StoredPart{storedPart(1, pdf)})
+	out, stripped, err := partslim.StripStoredParts(raw, []partslim.StoredPart{storedPart(1, pdf)})
 	if err != nil {
 		t.Fatalf("stripping: %v", err)
 	}
 	if stripped != 1 {
 		t.Fatalf("stripped %d parts, want 1", stripped)
 	}
-	if !bytes.Contains(out, []byte(mailmap.PartStoredHeader+": part:1")) {
+	if !bytes.Contains(out, []byte(partslim.PartStoredHeader+": part:1")) {
 		t.Errorf("the stanza does not name the part")
 	}
 	if bytes.Contains(out, []byte(wrap76(pdf))) {
@@ -94,7 +94,7 @@ func TestStripStoredPartsRemovesOnlyTheLocatedOctets(t *testing.T) {
 	if !bytes.Contains(out, []byte("Content-Type: application/pdf\r\n"+
 		"Content-Disposition: attachment; filename=\"figures.pdf\"\r\n"+
 		"Content-Transfer-Encoding: base64\r\n"+
-		mailmap.PartStoredHeader+": part:1\r\n")) {
+		partslim.PartStoredHeader+": part:1\r\n")) {
 		t.Errorf("the provider's header fields were reordered or rewritten:\n%s", firstKB(out))
 	}
 	if len(out) >= len(raw) {
@@ -105,11 +105,11 @@ func TestStripStoredPartsRemovesOnlyTheLocatedOctets(t *testing.T) {
 func TestRestoreStoredPartsIsByteExact(t *testing.T) {
 	pdf := attachmentBody(2)
 	raw := messageWith(pdf)
-	stripped, n, err := mailmap.StripStoredParts(raw, []mailmap.StoredPart{storedPart(1, pdf)})
+	stripped, n, err := partslim.StripStoredParts(raw, []partslim.StoredPart{storedPart(1, pdf)})
 	if err != nil || n != 1 {
 		t.Fatalf("stripping: n=%d err=%v", n, err)
 	}
-	restored, err := mailmap.RestoreStoredParts(stripped, func(ref mailmap.PartRef) ([]byte, error) {
+	restored, err := partslim.RestoreStoredParts(stripped, func(ref partslim.PartRef) ([]byte, error) {
 		if ref.StorageKey != "ws/attachment/aaa" || ref.Ordinal != 1 {
 			t.Errorf("fetch asked for %+v", ref)
 		}
@@ -125,14 +125,14 @@ func TestRestoreStoredPartsIsByteExact(t *testing.T) {
 
 func TestRestoreStoredPartsRefusesAChangedObject(t *testing.T) {
 	pdf := attachmentBody(3)
-	stripped, _, err := mailmap.StripStoredParts(messageWith(pdf),
-		[]mailmap.StoredPart{storedPart(1, pdf)})
+	stripped, _, err := partslim.StripStoredParts(messageWith(pdf),
+		[]partslim.StoredPart{storedPart(1, pdf)})
 	if err != nil {
 		t.Fatalf("stripping: %v", err)
 	}
 	tampered := append([]byte(nil), pdf...)
 	tampered[0] = 'X'
-	if _, err := mailmap.RestoreStoredParts(stripped, func(mailmap.PartRef) ([]byte, error) {
+	if _, err := partslim.RestoreStoredParts(stripped, func(partslim.PartRef) ([]byte, error) {
 		return tampered, nil
 	}); err == nil {
 		t.Fatal("restore accepted an object whose digest did not match")
@@ -141,12 +141,12 @@ func TestRestoreStoredPartsRefusesAChangedObject(t *testing.T) {
 
 func TestRestoreStoredPartsRefusesAResizedObject(t *testing.T) {
 	pdf := attachmentBody(4)
-	stripped, _, err := mailmap.StripStoredParts(messageWith(pdf),
-		[]mailmap.StoredPart{storedPart(1, pdf)})
+	stripped, _, err := partslim.StripStoredParts(messageWith(pdf),
+		[]partslim.StoredPart{storedPart(1, pdf)})
 	if err != nil {
 		t.Fatalf("stripping: %v", err)
 	}
-	if _, err := mailmap.RestoreStoredParts(stripped, func(mailmap.PartRef) ([]byte, error) {
+	if _, err := partslim.RestoreStoredParts(stripped, func(partslim.PartRef) ([]byte, error) {
 		return pdf[:len(pdf)-1], nil
 	}); err == nil {
 		t.Fatal("restore accepted an object of the wrong length")
@@ -160,7 +160,7 @@ func TestStripStoredPartsSkipsAPartItCannotLocate(t *testing.T) {
 	pdf := attachmentBody(5)
 	raw := messageWith(pdf)
 	elsewhere := attachmentBody(6)
-	out, stripped, err := mailmap.StripStoredParts(raw, []mailmap.StoredPart{storedPart(1, elsewhere)})
+	out, stripped, err := partslim.StripStoredParts(raw, []partslim.StoredPart{storedPart(1, elsewhere)})
 	if err != nil {
 		t.Fatalf("stripping: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestStripStoredPartsSkipsAnAttachmentSentTwice(t *testing.T) {
 	pdf := attachmentBody(7)
 	one := messageWith(pdf)
 	twice := append(append([]byte(nil), one...), one...)
-	out, stripped, err := mailmap.StripStoredParts(twice, []mailmap.StoredPart{storedPart(1, pdf)})
+	out, stripped, err := partslim.StripStoredParts(twice, []partslim.StoredPart{storedPart(1, pdf)})
 	if err != nil {
 		t.Fatalf("stripping: %v", err)
 	}
@@ -193,8 +193,8 @@ func TestStripStoredPartsSkipsAnAttachmentSentTwice(t *testing.T) {
 func TestStripStoredPartsRefusesBytesThatDoNotMatchTheirDigest(t *testing.T) {
 	pdf := attachmentBody(8)
 	part := storedPart(1, pdf)
-	part.Sha256 = mailmap.Sha256HexForTest([]byte("something else"))
-	if _, _, err := mailmap.StripStoredParts(messageWith(pdf), []mailmap.StoredPart{part}); err == nil {
+	part.Sha256 = partslim.Sha256HexForTest([]byte("something else"))
+	if _, _, err := partslim.StripStoredParts(messageWith(pdf), []partslim.StoredPart{part}); err == nil {
 		t.Fatal("strip accepted octets whose digest did not match the part it was told they were")
 	}
 }
@@ -219,7 +219,7 @@ func TestStripStoredPartsLeavesANonUTF8BodyIntact(t *testing.T) {
 		"\r\n" +
 		wrap76(pdf) + "\r\n" +
 		"--b1--\r\n")
-	out, stripped, err := mailmap.StripStoredParts(raw, []mailmap.StoredPart{storedPart(1, pdf)})
+	out, stripped, err := partslim.StripStoredParts(raw, []partslim.StoredPart{storedPart(1, pdf)})
 	if err != nil {
 		t.Fatalf("stripping a windows-1252 message: %v", err)
 	}
@@ -234,14 +234,14 @@ func TestStripStoredPartsLeavesANonUTF8BodyIntact(t *testing.T) {
 func TestIsSlimmedRecognisesOnlyASlimmedOriginal(t *testing.T) {
 	pdf := attachmentBody(10)
 	raw := messageWith(pdf)
-	if mailmap.IsSlimmed(raw) {
+	if partslim.IsSlimmed(raw) {
 		t.Error("an untouched original reads as slimmed")
 	}
-	stripped, _, err := mailmap.StripStoredParts(raw, []mailmap.StoredPart{storedPart(1, pdf)})
+	stripped, _, err := partslim.StripStoredParts(raw, []partslim.StoredPart{storedPart(1, pdf)})
 	if err != nil {
 		t.Fatalf("stripping: %v", err)
 	}
-	if !mailmap.IsSlimmed(stripped) {
+	if !partslim.IsSlimmed(stripped) {
 		t.Error("a slimmed original does not read as slimmed")
 	}
 }

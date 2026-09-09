@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package mailmap
+package partslim
 
 // Replacing a stored part's encoded body with a reference to it.
 //
@@ -89,7 +89,7 @@ var candidateWraps = []int{base64WrapWidth, 72, 64, 998, 0}
 // nothing was removed. Not a fault: a provider that wrapped its base64 at a
 // width this does not try, or a message carrying the same attachment twice,
 // both land here and both are correctly left alone.
-var ErrPartNotLocated = errors.New("mailmap: the part's encoded body was not located exactly once")
+var ErrPartNotLocated = errors.New("partslim: the part's encoded body was not located exactly once")
 
 // StoredPart is one part whose bytes are proved durable, with those bytes.
 type StoredPart struct {
@@ -144,7 +144,7 @@ func StripStoredParts(raw []byte, parts []StoredPart) ([]byte, int, error) {
 		if splices[i].start < splices[i-1].end {
 			// Two parts resolving to overlapping regions means one of them was
 			// located wrongly, and splicing both would corrupt the message.
-			return nil, 0, fmt.Errorf("mailmap: two stored parts overlap in the original")
+			return nil, 0, fmt.Errorf("partslim: two stored parts overlap in the original")
 		}
 	}
 	return applySplices(raw, splices), len(splices), nil
@@ -153,7 +153,7 @@ func StripStoredParts(raw []byte, parts []StoredPart) ([]byte, int, error) {
 // spliceFor locates one part and describes the replacement for it.
 func spliceFor(raw []byte, part StoredPart) (splice, error) {
 	if got := sha256Hex(part.Body); got != part.Sha256 {
-		return splice{}, fmt.Errorf("mailmap: part:%d hashes to %s, its row says %s",
+		return splice{}, fmt.Errorf("partslim: part:%d hashes to %s, its row says %s",
 			part.Ordinal, got, part.Sha256)
 	}
 	encoded, width, err := locateEncoded(raw, part.Body)
@@ -211,7 +211,7 @@ func headerBlockBefore(raw []byte, bodyAt int) (headerSpan, error) {
 		return headerSpan{fieldsEnd: bodyAt - 1}, nil
 	}
 	return headerSpan{}, fmt.Errorf(
-		"mailmap: the located body at %d does not follow a header's blank line", bodyAt)
+		"partslim: the located body at %d does not follow a header's blank line", bodyAt)
 }
 
 // stanzaFields renders the fields appended to the part's header block. Each
