@@ -69,6 +69,16 @@ function liveInterval(query: { queryKey: QueryKey }): number | false {
   return isRecordRead(query.queryKey) && LIVE_RECORD_MS;
 }
 
+// "always" and not `true`, which is the same word meaning something weaker:
+// `true` refetches on return only if the read is already STALE, so inside
+// FE-PARAM-1's thirty seconds a reader who tabs away and back is served the
+// cache and waits out the interval. That is the case the minute-long cadence
+// above is priced against — the return is what covers the reader who leaves —
+// so the return has to actually read.
+function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
+  return isRecordRead(query.queryKey) && "always";
+}
+
 // FE-PARAM-2. Two retries, and only for a failure the server reported as its
 // own fault.
 const MAX_RETRIES = 2;
@@ -203,9 +213,9 @@ export function createQueryClient(): QueryClient {
         refetchIntervalInBackground: false,
         // FE-PARAM-3. Returning to the tab refetches nothing by default; a
         // query whose freshness matters opts in for itself. A record does:
-        // coming back to one after an hour away is exactly when the cached
-        // answer is wrong, and exactly when the reader acts on it.
-        refetchOnWindowFocus: (query) => isRecordRead(query.queryKey),
+        // coming back to one is exactly when the cached answer is wrong, and
+        // exactly when the reader acts on it.
+        refetchOnWindowFocus: liveOnReturn,
       },
     },
     queryCache: new QueryCache({ onError: reportQueryError }),

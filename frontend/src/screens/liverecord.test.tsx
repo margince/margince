@@ -39,6 +39,10 @@ function jsonResponse(body: unknown): Response {
 // read, so a bare QueryClient built here would prove a policy nothing ships.
 let client: ReturnType<typeof createQueryClient>;
 
+// What the tab reports, read by the library's focus manager through the
+// `visibilitychange` event — which is what v5 listens on, not `focus`.
+let visibility: DocumentVisibilityState = "visible";
+
 function wrapper({ children }: Readonly<{ children: ReactNode }>) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
@@ -66,6 +70,11 @@ async function advance(ms: number): Promise<void> {
 
 beforeEach(() => {
   client = createQueryClient();
+  visibility = "visible";
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    get: () => visibility,
+  });
   vi.useFakeTimers();
 });
 
@@ -73,7 +82,29 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  Reflect.deleteProperty(document, "visibilityState");
 });
+
+/**
+ * Leaves the tab and comes back, `away` apart.
+ *
+ * Dispatched on WINDOW: v5's focus manager listens there, and the real
+ * `visibilitychange` reaches it by bubbling up from the document. A synthetic
+ * one dispatched on the document does not bubble, so it arrives nowhere — and
+ * a case built on it reads exactly like a refetch that did not happen.
+ */
+async function leaveAndReturn(away: number): Promise<void> {
+  visibility = "hidden";
+  await act(async () => {
+    window.dispatchEvent(new Event("visibilitychange"));
+  });
+  await advance(away);
+  visibility = "visible";
+  await act(async () => {
+    window.dispatchEvent(new Event("visibilitychange"));
+  });
+  await advance(0);
+}
 
 describe("a record the reader has open", () => {
   // One case per composite read, and each names the record kind rather than
@@ -113,6 +144,19 @@ describe("a record the reader has open", () => {
 
     await advance(LIVE_RECORD_MS * 3);
     expect(paths).toEqual(["/v1/deals/d-1/status"]);
+  });
+
+  // The return is what the minute-long cadence is priced against, so it has
+  // to actually read. `refetchOnWindowFocus: true` would not: it refetches on
+  // return only when the read is already stale, so a reader back inside
+  // FE-PARAM-1's thirty seconds is served the cache and waits out the
+  // interval — the one case the cadence was made slower on the strength of.
+  it("re-reads on the way back in, inside the stale window", async () => {
+    const { paths } = mount(() => usePerson360("p-1"));
+    await advance(0);
+
+    await leaveAndReturn(5_000);
+    expect(paths).toHaveLength(2);
   });
 
   it("stops re-reading once the reader has closed it", async () => {
