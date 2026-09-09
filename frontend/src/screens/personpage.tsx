@@ -1,27 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  CalendarDays,
-  CheckSquare,
-  FileText,
-  Link as LinkIcon,
-  Mail,
-  MapPin,
-  Phone,
-  Search,
-} from "lucide-react";
+import { Link as LinkIcon, Mail, MapPin, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite, useRecordWriteRefusal } from "../app/capability";
+import { useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
-import { Button, OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import { ContactLink } from "../design-system/contactlink";
-import { IconAction } from "../design-system/iconaction";
 import {
   IdentityFact,
   IdentityLine,
@@ -35,13 +24,15 @@ import { primaryEmail } from "../format/primaryemail";
 import { linkedinUrl } from "../format/weburl";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem, useMe, useSorMode } from "./common";
+import { throwProblem, useSorMode } from "./common";
 import { ComposeModal } from "./compose";
 import { ConsentSection } from "./consent";
+import { useObjectCustomFields } from "./customfields.form";
 import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { PersonMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
+import { PersonActions } from "./personactions";
 import {
   hasCommercial,
   hasMatters,
@@ -52,6 +43,7 @@ import {
 } from "./personcards";
 import { EnrichedFields } from "./personcorrections";
 import { PersonResearchDrawer } from "./persondrawers";
+import { PersonEditMergeArchive } from "./personeditmergearchive";
 import { PersonFilesTab } from "./personfiles";
 import { PersonMemory } from "./personmemory";
 import { PersonNetworkTab } from "./personnetwork";
@@ -66,15 +58,9 @@ import {
   PersonTimelineTab,
 } from "./persontabs";
 import { PersonToday } from "./persontoday";
-import type { Transport } from "./persontransports";
-import {
-  primaryTransportAction,
-  transportForActivity,
-  useTransports,
-} from "./persontransports";
+import { transportForActivity, useTransports } from "./persontransports";
 import { RecordReading, RecordReadingPair } from "./record360";
-import { EmailVerb, RecordEmailAside } from "./recordemail";
-import { ShareAction } from "./share";
+import { RecordEmailAside } from "./recordemail";
 import {
   useMailboxConnected,
   useWriteTo,
@@ -297,6 +283,10 @@ export function PersonPageV2({
   const t = useT();
   const recordZone = useRecordZone();
   const details = usePageAside();
+  // Read at screen level and handed down, so the schema request runs BESIDE
+  // the person's rather than after it — an edit opened before this landed
+  // would otherwise offer a form with no custom fields on it.
+  const cf = useObjectCustomFields("person");
   const view = useQuery({
     queryKey: ["person360", id],
     queryFn: async () => {
@@ -445,6 +435,21 @@ export function PersonPageV2({
           avatarSrc={null}
           subtitle={<PersonSubtitle view={view.data} />}
           pulse={<PersonIdentityLine view={view.data} />}
+          // Edit, merge, archive — the record's core write verbs. Before
+          // this, the form to correct an email, a phone or a misspelled
+          // name reached nothing on this page, and API-only was the only
+          // way left to do it. refusedReasonId is the SAME sentence the
+          // band below states and PersonActions' Share already points at —
+          // one write-gate for the whole header, not a narrower one for
+          // the verbs that live here.
+          badges={
+            <PersonEditMergeArchive
+              person={person}
+              cf={cf}
+              disabledReasonId={refusedReasonId}
+              overlay={overlay}
+            />
+          }
           actions={
             <PersonActions
               view={view.data}
@@ -880,36 +885,6 @@ function PersonIdentityLine({
   );
 }
 
-// Why the lead verb may not be pressed, in the reader's words, or undefined
-// when it may.
-//
-// TWO facts refuse it and they are never merged into one sentence: consent says
-// we may not write to this person, reachability says there is nowhere to write
-// to. A rep who is told the wrong one goes looking in the wrong record.
-//
-// Reachability is asked first because it is the unconditional half — with no
-// transport the composer has nothing to send on whatever consent says, and a
-// consent sentence there would describe a decision that is not what stops them.
-// A guard that has not answered yet refuses nothing: the button is disabled
-// without a reason until the verdict is in, because claiming a refusal the
-// server has not made is worse than a control that is briefly quiet.
-function writeRefusal(
-  state: Readonly<{
-    transports: readonly Transport[];
-    consentAllows: boolean;
-    consentKnown: boolean;
-  }>,
-  t: ReturnType<typeof useT>,
-): string | undefined {
-  if (state.transports.length === 0) {
-    return t("person.action.noTransport");
-  }
-  if (state.consentAllows || !state.consentKnown) {
-    return undefined;
-  }
-  return t("person.action.consentRefused");
-}
-
 // The rail's email box, and when the page may not draw it: not in overlay — a
 // mirrored workspace has no thread data, and the server refuses the
 // waiting-reply read there outright — and not on an archived contact, whose
@@ -1026,159 +1001,5 @@ function PersonActivityDrawer({
       openOnMount
       onClose={onClose}
     />
-  );
-}
-
-// The header's verbs, in the order every record page carries them: writing
-// first, then the record's other doors. None of them is filled — the move
-// worth doing is the one the call names, and that one carries the colour.
-function PersonActions({
-  view,
-  consentAllows,
-  consentKnown,
-  personId,
-  overlay,
-  onWrite,
-  onResearch,
-  onLogActivity,
-  onAddTask,
-  refusedReasonId,
-}: Readonly<{
-  view: Person360;
-  consentAllows: boolean;
-  consentKnown: boolean;
-  personId: string;
-  // LogActivityAction itself renders nothing in overlay — a mirrored
-  // workspace has no activity write of its own, the same fact
-  // PersonEmailPanel already states for the record's email box — so a
-  // trigger drawn here would set drawer state a mount elsewhere refuses.
-  overlay: boolean;
-  onWrite: () => void;
-  onResearch: () => void;
-  onLogActivity: () => void;
-  onAddTask: () => void;
-  // The page's one sentence about why this contact takes no changes, while
-  // it does not. Only Share writes the RECORD here — a grant is asserted
-  // through the person's own write gate — so it is the one verb refused by
-  // it; logging and mail are activity writes with gates of their own.
-  refusedReasonId?: string;
-}>): ReactNode {
-  const t = useT();
-  // useCanWrite, not useCan: both this verb and Add task below issue the same
-  // POST, and a read seat is refused before RBAC is consulted. The buttons
-  // stay on the page and say why they will not press, so a reader can tell
-  // "not mine to do" from "this build has no such button".
-  const me = useMe();
-  const canLog = useCanWrite("activity", "create");
-  // Named once and pointed at by both buttons — Button's own contract for a
-  // surface where several controls are refused by ONE fact: printing the
-  // sentence beside each button says it as many times as there are buttons.
-  const logRefusedId = useId();
-  // A guard that has not answered yet refuses nothing: claiming a refusal
-  // `/me` has not decided is worse than a control that is briefly quiet —
-  // the same rule writeRefusal states for the identical shape, above.
-  const logGrantKnown = me.data?.authorization !== undefined;
-  const logRefused = logGrantKnown && !canLog ? logRefusedId : undefined;
-  const logPending = !logGrantKnown;
-  // The transports the composer would offer, read here so the button NAMES
-  // what pressing it does. The same reachability the drawer resolves: a label
-  // computed from anything else is a promise the composer then breaks.
-  const transports = useTransports(view);
-  const write = primaryTransportAction(transports, t);
-  const WriteIcon = write.icon;
-  const refusal = writeRefusal({ transports, consentAllows, consentKnown }, t);
-  return (
-    <>
-      {/* The shared Email verb, wearing the transport it will open when there
-          is exactly one, neutral when the composer will ask, and explaining
-          itself rather than merely dimming when it may not be pressed. */}
-      <EmailVerb
-        label={write.label}
-        icon={<WriteIcon size={15} aria-hidden="true" />}
-        disabled={!consentKnown}
-        reason={refusal}
-        onClick={onWrite}
-      />
-      {/* Square, because a phone and a calendar are verbs a reader already
-          knows from the glyph — and five labelled buttons in a row is a header
-          that reads as a toolbar, with the one action the page is FOR no more
-          prominent than the rest of them. `IconAction` owes each one its name
-          on hover as well as to a screen reader. */}
-      <IconAction
-        label={t("person.action.call")}
-        icon={<Phone size={15} aria-hidden="true" />}
-        onClick={() => navigate(personTabRoute(personId, "timeline"))}
-      />
-      <IconAction
-        label={t("person.action.meetings")}
-        icon={<CalendarDays size={15} aria-hidden="true" />}
-        onClick={() =>
-          navigate({ screen: "contacts", id: personId, id2: "meetings" })
-        }
-      />
-      {/* Neither verb is drawn in overlay: LogActivityAction, the form both
-          open, renders nothing there — a mirrored workspace has no activity
-          write of its own — so a trigger here would set drawer state a mount
-          elsewhere refuses to act on. */}
-      {!overlay && (
-        <>
-          {logRefused && (
-            <p className="t-caption" id={logRefusedId}>
-              {t("record.logActivityRefused")}
-            </p>
-          )}
-          {/* A CRM a rep cannot write a meeting into is a CRM that only
-              reads. This is the standing way in; the moment card offers the
-              same form when its rung decides logging is the thing to do
-              next. */}
-          <Button
-            disabled={logPending}
-            reasonId={logRefused}
-            onClick={onLogActivity}
-          >
-            <FileText size={15} aria-hidden="true" /> {t("log.title")}
-          </Button>
-          {/* Keeps its words. A tick box is the glyph for COMPLETING a task,
-              so squaring this one would name the opposite of what it does.
-              Files the task against THIS record — the same form Log activity
-              opens, started on its task kind, rather than a navigation to the
-              Worklist, which has no way to add one. */}
-          <Button
-            disabled={logPending}
-            reasonId={logRefused}
-            onClick={onAddTask}
-          >
-            <CheckSquare size={15} aria-hidden="true" />{" "}
-            {t("person.action.addTask")}
-          </Button>
-        </>
-      )}
-      {/* A real menu. This was a button labelled "More actions" that navigated
-          to the timeline tab — the same place the Call button went — so the one
-          control on the header promising there was more behind it delivered a
-          tab instead, and the promise was the only thing it did. Research moves
-          in here because a magnifier reads as "search" and this verb is not
-          search, and the timeline gets the honest name the product already uses
-          for it everywhere else. */}
-      <OverflowMenu label={t("record.moreActions")}>
-        <Button small onClick={onResearch}>
-          <Search size={15} aria-hidden="true" /> {t("person.action.research")}
-        </Button>
-        <Button
-          small
-          onClick={() => navigate(personTabRoute(personId, "timeline"))}
-        >
-          {t("record.fullHistory")}
-        </Button>
-        {/* Companies, deals, leads and projects all carry this. A contact did
-            not, so the one record type most likely to be private to one seat
-            was the one with no way to hand it to a colleague. */}
-        <ShareAction
-          recordType="person"
-          recordId={personId}
-          disabledReasonId={refusedReasonId}
-        />
-      </OverflowMenu>
-    </>
   );
 }
