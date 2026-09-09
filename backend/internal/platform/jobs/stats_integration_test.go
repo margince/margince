@@ -578,11 +578,22 @@ func TestSweepIgnoresAWorkspacesSupersededFailure(t *testing.T) {
 // TestSweepOmitsADispatchersOwnRow — a dispatcher carries no workspace, so
 // it is not one workspace's share of anything. Counting it would add a
 // phantom tenant to every sweep it tagged.
+//
+// gmail_sync is seeded alongside the made-up kind deliberately: a fixture
+// kind can never appear in the standalone-fleet-kind set regardless of
+// whether that set is derived correctly, so it alone would keep passing
+// even if the new predicate started routing every dispatcher's own row into
+// the per-kind arm. gmail_sync is a REAL declared dispatcher (FanOutTo:
+// "capture_sync") and is the case that would actually catch that mistake.
 func TestSweepOmitsADispatchersOwnRow(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	seedJob(ctx, t, pool, seed{
 		Kind: "the_dispatcher", State: "completed",
+		Tags: []string{jobs.SweepTag},
+	})
+	seedJob(ctx, t, pool, seed{
+		Kind: "gmail_sync", State: "completed",
 		Tags: []string{jobs.SweepTag},
 	})
 
@@ -592,6 +603,113 @@ func TestSweepOmitsADispatchersOwnRow(t *testing.T) {
 	}
 	if _, ok := sweepFor(snap, "the_dispatcher"); ok {
 		t.Error("an untenanted row was counted as a workspace's share of a fleet pass")
+	}
+	if _, ok := sweepFor(snap, "gmail_sync"); ok {
+		t.Error("a real dispatcher's own row was counted — its children (capture_sync) carry the per-workspace signal, not its own row")
+	}
+}
+
+// TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace — a Fleet kind
+// that fans out to nothing (embed_drift_sweep, ADR-0103's collapsed shape)
+// never carries a workspace_id, so a query keyed only on workspace_id
+// excludes every one of its rows forever — the gauge would then read
+// greenest exactly when such a pass was failing on every tick.
+// embed_drift_sweep is used rather than a made-up kind for the same reason
+// TestTheUnitPairSeesAFailedConnectionTheWorkspacePairMasks uses
+// telegram_poll: the standalone-kind arm is derived from the contract, so a
+// fixture kind would prove a query that never runs.
+func TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	ctx := t.Context()
+
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "discarded",
+		Tags: []string{jobs.SweepTag},
+	})
+
+	snap, err := jobs.Stats(ctx, pool)
+	if err != nil {
+		t.Fatalf("Stats: %v", err)
+	}
+	pass, ok := sweepFor(snap, "embed_drift_sweep")
+	if !ok {
+		t.Fatal("a tagged row of a standalone Fleet kind is missing from the sweep read entirely")
+	}
+	if pass.Workspaces != 1 {
+		t.Errorf("Workspaces = %d, want 1: there is no workspace grain for this kind, and the pass ran once", pass.Workspaces)
+	}
+	if pass.Failed != 1 {
+		t.Errorf("Failed = %d, want 1: the only tick discarded", pass.Failed)
+	}
+}
+
+// TestSweepReadsOnlyTheLatestTickOfAStandaloneFleetPass proves the
+// "latest outcome, never a batch" rule statsBySweep's own doc states also
+// holds for the per-kind arm: an earlier failing tick a later successful
+// one supersedes must not still read as failed.
+func TestSweepReadsOnlyTheLatestTickOfAStandaloneFleetPass(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	ctx := t.Context()
+	earlier, later := time.Now().Add(-2*time.Hour), time.Now().Add(-time.Hour)
+
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "discarded",
+		Tags: []string{jobs.SweepTag}, CreatedAt: earlier,
+	})
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "completed",
+		Tags: []string{jobs.SweepTag}, CreatedAt: later,
+	})
+
+	snap, err := jobs.Stats(ctx, pool)
+	if err != nil {
+		t.Fatalf("Stats: %v", err)
+	}
+	pass, ok := sweepFor(snap, "embed_drift_sweep")
+	if !ok {
+		t.Fatal("no sweep reported for a tagged standalone Fleet kind")
+	}
+	if pass.Workspaces != 1 {
+		t.Errorf("Workspaces = %d, want 1", pass.Workspaces)
+	}
+	if pass.Failed != 0 {
+		t.Errorf("Failed = %d, want 0: the LATEST tick succeeded", pass.Failed)
+	}
+}
+
+// TestSweepDoesNotDoubleCountAStandaloneKindsRowThatCarriesAWorkspaceID —
+// nothing in the tree writes a workspace_id onto an embed_drift_sweep row
+// today, so the per-workspace arm's exclusion of the standalone-kind set is
+// defensive rather than load-bearing. This is what proves it actually holds:
+// without it, a row shaped like the second one below would be read by BOTH
+// arms and summed into one inflated count by the outer GROUP BY.
+func TestSweepDoesNotDoubleCountAStandaloneKindsRowThatCarriesAWorkspaceID(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	ctx := t.Context()
+
+	// The ordinary shape: no workspace_id at all.
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "completed",
+		Tags: []string{jobs.SweepTag},
+	})
+	// A row of the SAME kind that also carries a workspace_id — a shape
+	// nothing here produces, exercising the defensive exclusion rather than
+	// data the fleet actually writes.
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "completed",
+		Tags: []string{jobs.SweepTag}, Workspace: ids.NewV7(),
+	})
+
+	snap, err := jobs.Stats(ctx, pool)
+	if err != nil {
+		t.Fatalf("Stats: %v", err)
+	}
+	pass, ok := sweepFor(snap, "embed_drift_sweep")
+	if !ok {
+		t.Fatal("no sweep reported for the standalone kind")
+	}
+	if pass.Workspaces != 1 {
+		t.Errorf("Workspaces = %d, want 1: a row that slipped past the per-workspace arm's exclusion must not also be summed on top of the per-kind arm's own reading", pass.Workspaces)
 	}
 }
 
