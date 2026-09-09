@@ -1,0 +1,18 @@
+{
+  "scenario": "case22_can_i_trust_the_numbers",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "usage": {
+    "input_tokens": 18,
+    "output_tokens": 3340,
+    "cache_creation_input_tokens": 18799,
+    "cache_read_input_tokens": 452551,
+    "runs_measured": 3,
+    "cost_usd": 0.4979
+  }
+}

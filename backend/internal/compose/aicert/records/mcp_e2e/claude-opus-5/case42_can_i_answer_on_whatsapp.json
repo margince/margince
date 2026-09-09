@@ -1,0 +1,18 @@
+{
+  "scenario": "case42_can_i_answer_on_whatsapp",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "usage": {
+    "input_tokens": 32,
+    "output_tokens": 5089,
+    "cache_creation_input_tokens": 33422,
+    "cache_read_input_tokens": 825327,
+    "runs_measured": 3,
+    "cost_usd": 0.8743
+  }
+}

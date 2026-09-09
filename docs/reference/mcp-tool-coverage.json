@@ -13,15 +13,60 @@
   },
   "models": [
     {
-      "model": "claude-opus-5",
-      "cases_with_a_committed_run": 7,
-      "cases_that_reached_their_bar": 6,
-      "cases_below_their_bar": 1,
-      "runs": 21,
-      "passed": 17,
-      "reliability": 0.8095238095238095,
+      "model": "claude-haiku-4-5-20251001",
+      "cases_with_a_committed_run": 21,
+      "cases_that_reached_their_bar": 11,
+      "cases_below_their_bar": 10,
+      "runs": 63,
+      "passed": 30,
+      "reliability": 0.47619047619047616,
       "cases_below_their_bar_named": [
+        "case10_finish_the_import",
+        "case20_put_it_in_the_board_pack",
+        "case23_find_us_a_slot",
+        "case31_wrong_word_on_the_record",
+        "case32_two_words_for_one_thing",
+        "case33_two_cards_for_one_company",
+        "case41_close_the_project",
+        "case4_use_the_moment",
+        "case5_before_the_meeting",
         "case6_ask_the_company"
+      ]
+    },
+    {
+      "model": "claude-opus-5",
+      "cases_with_a_committed_run": 21,
+      "cases_that_reached_their_bar": 16,
+      "cases_below_their_bar": 5,
+      "runs": 63,
+      "passed": 48,
+      "reliability": 0.7619047619047619,
+      "cases_below_their_bar_named": [
+        "case20_put_it_in_the_board_pack",
+        "case2_business_card",
+        "case3_spreadsheet",
+        "case40_sort_the_queue",
+        "case6_ask_the_company"
+      ]
+    },
+    {
+      "model": "claude-sonnet-5",
+      "cases_with_a_committed_run": 21,
+      "cases_that_reached_their_bar": 12,
+      "cases_below_their_bar": 9,
+      "runs": 63,
+      "passed": 36,
+      "reliability": 0.5714285714285714,
+      "cases_below_their_bar_named": [
+        "case20_put_it_in_the_board_pack",
+        "case2_business_card",
+        "case32_two_words_for_one_thing",
+        "case40_sort_the_queue",
+        "case41_close_the_project",
+        "case4_use_the_moment",
+        "case5_before_the_meeting",
+        "case6_ask_the_company",
+        "case9_filed_in_the_wrong_place"
       ]
     }
   ],
@@ -87,7 +132,21 @@
       ],
       "by_model": [
         {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true
+        },
+        {
           "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
           "runs": 3,
           "passed": 3,
           "pass_at": 2,
@@ -107,7 +166,29 @@
         "preview_import",
         "read_import_report"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 1,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case2_business_card",
@@ -120,11 +201,25 @@
       ],
       "by_model": [
         {
-          "model": "claude-opus-5",
+          "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 2,
+          "passed": 3,
           "pass_at": 2,
           "held": true
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 1,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
         }
       ]
     },
@@ -139,7 +234,29 @@
         "compose_analytics_report",
         "run_analytics_query"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        }
+      ]
     },
     {
       "name": "case21_what_are_we_closing",
@@ -151,7 +268,29 @@
       "requires": [
         "forecast_readings"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case22_can_i_trust_the_numbers",
@@ -163,7 +302,29 @@
       "requires": [
         "data_coverage"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case23_find_us_a_slot",
@@ -175,7 +336,29 @@
       "requires": [
         "check_availability"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 1,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case3_spreadsheet",
@@ -189,7 +372,21 @@
       ],
       "by_model": [
         {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true
+        },
+        {
           "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 1,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-sonnet-5",
           "runs": 3,
           "passed": 3,
           "pass_at": 2,
@@ -209,7 +406,29 @@
         "create_tag",
         "list_tags"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case31_wrong_word_on_the_record",
@@ -222,7 +441,29 @@
         "get_record_tags",
         "remove_tag"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case32_two_words_for_one_thing",
@@ -238,7 +479,29 @@
         "merge_tags",
         "update_tag"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        }
+      ]
     },
     {
       "name": "case33_two_cards_for_one_company",
@@ -253,7 +516,29 @@
         "list_colleagues",
         "merge_records"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case4_use_the_moment",
@@ -267,11 +552,25 @@
       ],
       "by_model": [
         {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        },
+        {
           "model": "claude-opus-5",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
         }
       ]
     },
@@ -288,7 +587,29 @@
         "promote_lead",
         "qualify_lead"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 1,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        }
+      ]
     },
     {
       "name": "case41_close_the_project",
@@ -301,7 +622,29 @@
         "advance_project_phase",
         "read_project_360"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        }
+      ]
     },
     {
       "name": "case42_can_i_answer_on_whatsapp",
@@ -314,7 +657,29 @@
         "list_channel_providers",
         "log_activity"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case5_before_the_meeting",
@@ -329,11 +694,25 @@
       ],
       "by_model": [
         {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 1,
+          "pass_at": 2,
+          "held": false
+        },
+        {
           "model": "claude-opus-5",
           "runs": 3,
           "passed": 3,
           "pass_at": 2,
           "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 1,
+          "pass_at": 2,
+          "held": false
         }
       ]
     },
@@ -350,7 +729,21 @@
       ],
       "by_model": [
         {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        },
+        {
           "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-sonnet-5",
           "runs": 3,
           "passed": 0,
           "pass_at": 2,
@@ -370,7 +763,21 @@
       ],
       "by_model": [
         {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
           "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
           "runs": 3,
           "passed": 3,
           "pass_at": 2,
@@ -391,7 +798,29 @@
         "list_approvals",
         "read_approval"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        }
+      ]
     },
     {
       "name": "case9_filed_in_the_wrong_place",
@@ -405,7 +834,29 @@
         "relink_activities",
         "relink_activity"
       ],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-opus-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        }
+      ]
     }
   ],
   "criteria": [
@@ -1252,7 +1703,19 @@
         "agent_loop"
       ],
       "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
         "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
           "runs": 3,
           "passed": 3,
           "reliability": 1,
@@ -1276,9 +1739,21 @@
         "agent_loop"
       ],
       "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 6,
+          "passed": 4,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
         "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
+          "runs": 6,
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -1296,9 +1771,25 @@
       "driven": true,
       "graded_by_certification_tasks": null,
       "measured_by_model": {
-        "claude-opus-5": {
-          "runs": 3,
+        "claude-haiku-4-5-20251001": {
+          "runs": 6,
           "passed": 3,
+          "reliability": 0.5,
+          "cases_below_their_bar": [
+            "case10_finish_the_import"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 6,
+          "passed": 4,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": [
+            "case3_spreadsheet"
+          ]
+        },
+        "claude-sonnet-5": {
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -1338,11 +1829,27 @@
         "agent_loop"
       ],
       "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case4_use_the_moment"
+          ]
+        },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case4_use_the_moment"
+          ]
         }
       }
     },
@@ -1358,7 +1865,32 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case20_put_it_in_the_board_pack"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case20_put_it_in_the_board_pack"
+          ]
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case20_put_it_in_the_board_pack"
+          ]
+        }
+      }
     },
     {
       "name": "create_record",
@@ -1374,11 +1906,27 @@
         "agent_loop"
       ],
       "measured_by_model": {
-        "claude-opus-5": {
+        "claude-haiku-4-5-20251001": {
           "runs": 6,
           "passed": 5,
           "reliability": 0.8333333333333334,
           "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 6,
+          "passed": 3,
+          "reliability": 0.5,
+          "cases_below_their_bar": [
+            "case2_business_card"
+          ]
+        },
+        "claude-sonnet-5": {
+          "runs": 6,
+          "passed": 3,
+          "reliability": 0.5,
+          "cases_below_their_bar": [
+            "case2_business_card"
+          ]
         }
       }
     },
@@ -1392,7 +1940,32 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case20_put_it_in_the_board_pack"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case20_put_it_in_the_board_pack"
+          ]
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case20_put_it_in_the_board_pack"
+          ]
+        }
+      }
     },
     {
       "name": "search_records",
@@ -1426,11 +1999,27 @@
         "agent_loop"
       ],
       "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case5_before_the_meeting"
+          ]
+        },
         "claude-opus-5": {
           "runs": 3,
           "passed": 3,
           "reliability": 1,
           "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case5_before_the_meeting"
+          ]
         }
       }
     },
@@ -1446,7 +2035,26 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "search_context",
@@ -1465,7 +2073,23 @@
         "agent_loop"
       ],
       "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case6_ask_the_company"
+          ]
+        },
         "claude-opus-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case6_ask_the_company"
+          ]
+        },
+        "claude-sonnet-5": {
           "runs": 3,
           "passed": 0,
           "reliability": 0,
@@ -1485,7 +2109,28 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case33_two_cards_for_one_company"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "advance_project_phase",
@@ -1497,7 +2142,30 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case41_close_the_project"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case41_close_the_project"
+          ]
+        }
+      }
     },
     {
       "name": "relink_activity",
@@ -1509,7 +2177,28 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case9_filed_in_the_wrong_place"
+          ]
+        }
+      }
     },
     {
       "name": "decide_approval",
@@ -1521,7 +2210,26 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "promote_lead",
@@ -1533,7 +2241,30 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case40_sort_the_queue"
+          ]
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case40_sort_the_queue"
+          ]
+        }
+      }
     },
     {
       "name": "list_approvals",
@@ -1548,7 +2279,26 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "check_availability",
@@ -1560,7 +2310,28 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case23_find_us_a_slot"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "archive_record",
@@ -1572,7 +2343,28 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case33_two_cards_for_one_company"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "qualify_lead",
@@ -1584,7 +2376,30 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case40_sort_the_queue"
+          ]
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case40_sort_the_queue"
+          ]
+        }
+      }
     },
     {
       "name": "apply_tag",
@@ -1598,7 +2413,26 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "relink_activities",
@@ -1610,7 +2444,28 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case9_filed_in_the_wrong_place"
+          ]
+        }
+      }
     },
     {
       "name": "update_tag",
@@ -1622,7 +2477,30 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case32_two_words_for_one_thing"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case32_two_words_for_one_thing"
+          ]
+        }
+      }
     },
     {
       "name": "merge_tags",
@@ -1634,7 +2512,30 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case32_two_words_for_one_thing"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case32_two_words_for_one_thing"
+          ]
+        }
+      }
     },
     {
       "name": "disqualify_lead",
@@ -1646,7 +2547,30 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case40_sort_the_queue"
+          ]
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case40_sort_the_queue"
+          ]
+        }
+      }
     },
     {
       "name": "create_tag",
@@ -1658,7 +2582,26 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "list_channel_providers",
@@ -1670,7 +2613,26 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "remove_tag",
@@ -1682,7 +2644,28 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case31_wrong_word_on_the_record"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "read_project_360",
@@ -1694,7 +2677,30 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case41_close_the_project"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case41_close_the_project"
+          ]
+        }
+      }
     },
     {
       "name": "read_approval",
@@ -1708,7 +2714,26 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "get_record_tags",
@@ -1723,7 +2748,28 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case31_wrong_word_on_the_record"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "list_colleagues",
@@ -1739,7 +2785,28 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case33_two_cards_for_one_company"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "commit_import",
@@ -1751,7 +2818,28 @@
       "permitted_in_cases": [],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case10_finish_the_import"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "data_coverage",
@@ -1765,7 +2853,26 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "list_tags",
@@ -1780,7 +2887,30 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 6,
+          "passed": 3,
+          "reliability": 0.5,
+          "cases_below_their_bar": [
+            "case32_two_words_for_one_thing"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 6,
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 6,
+          "passed": 3,
+          "reliability": 0.5,
+          "cases_below_their_bar": [
+            "case32_two_words_for_one_thing"
+          ]
+        }
+      }
     },
     {
       "name": "get_tag",
@@ -1795,7 +2925,30 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case32_two_words_for_one_thing"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case32_two_words_for_one_thing"
+          ]
+        }
+      }
     },
     {
       "name": "read_import_report",
@@ -1809,7 +2962,28 @@
       ],
       "driven": true,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case10_finish_the_import"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     }
   ],
   "unit_tools": [

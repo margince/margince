@@ -1,0 +1,18 @@
+{
+  "scenario": "case20_put_it_in_the_board_pack",
+  "criteria": [
+    1,
+    3
+  ],
+  "passed": 0,
+  "runs": 3,
+  "pass_at": 2,
+  "usage": {
+    "input_tokens": 54,
+    "output_tokens": 2860,
+    "cache_creation_input_tokens": 15415,
+    "cache_read_input_tokens": 248627,
+    "runs_measured": 3,
+    "cost_usd": 0.07
+  }
+}
