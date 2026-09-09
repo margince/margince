@@ -79,6 +79,54 @@ api() {
   fi
 }
 
+# activate_seat gives a seeded colleague a password, which is what makes the
+# seat ACTIVE and therefore a colleague at all.
+#
+# POST /users writes status='invited' — a seat with no password_hash signs in
+# nowhere — and identity.Colleagues lists only status='active'. So every seat
+# this seed created was invisible to list_colleagues, on every call of every
+# run, and two scoring criteria across two cases could not be reached by any
+# model: the tool was right to find nobody and the fixture was what was wrong.
+#
+# The route back is the one the product itself uses for an installation with no
+# outbound email: mint a single-use set-password link, then redeem it. Issuance
+# admits an invited member deliberately, and redemption is what sets
+# status='active'.
+#
+# The token rides in the URL FRAGMENT, which is why it is split on `#` here
+# rather than read from a query parameter.
+activate_seat() {
+  local user_id="$1" who="$2" password="colleague-password-123"
+  local link status
+  # ONLY an invited seat. Redemption revokes every live session and replaces the
+  # password, so calling this on a seat that is already active turns a re-run of
+  # an idempotent seed into a logout for whoever was using it.
+  status="$(api GET "/users/$user_id" | python3 -c 'import json,sys
+try:
+    print(json.load(sys.stdin).get("status",""))
+except Exception:
+    print("")')"
+  [[ "$status" != "active" ]] || return 0
+  link="$(api POST "/users/$user_id/password-link" '{}' | python3 -c 'import json,sys
+try:
+    print(json.load(sys.stdin).get("set_password_url",""))
+except Exception:
+    print("")')"
+  [[ -n "$link" ]] || { echo "could not mint a set-password link for $who" >&2; exit 1; }
+  local token="${link##*#}"
+  token="${token##*token=}"
+  [[ -n "$token" && "$token" != "$link" ]] || {
+    echo "the set-password link for $who carries no fragment token: $link" >&2; exit 1; }
+  local code
+  code="$(status_of POST /auth/reset-password \
+    "$(printf '{"token":%s,"new_password":"%s"}' "$(json_string "$token")" "$password")")"
+  [[ "$code" = "204" ]] || { echo "redeeming $who's set-password link answered HTTP $code" >&2; exit 1; }
+}
+
+# json_string quotes a value as a JSON string, so a token containing a quote or
+# a backslash cannot break out of the body it is placed in.
+json_string() { printf '%s' "$1" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'; }
+
 # id_of reads the id out of a create response, or empty when the create was
 # refused (a 409 on a natural key, which a re-run expects).
 id_of() { printf '%s' "$1" | python3 -c 'import json,sys
@@ -254,6 +302,7 @@ rows = json.load(sys.stdin).get("data", [])
 print(rows[0]["id"] if rows else "")')"
 fi
 [[ -n "$colleague" ]] || { echo "could not resolve the colleague seat" >&2; exit 1; }
+activate_seat "$colleague" "Sofia Meier"
 
 # --- CASE 4: companies in and around Köln, owned by the colleague ------------
 #
@@ -560,6 +609,31 @@ if [[ -z "$aachen" ]]; then
     file_mail_on_company "Rückruf Aachener Metallwerke ($n/3)" \
       "Abstimmung zum Angebot für Aachener Metallwerke." "$(days_ago "$n")" "$vorort"
   done
+fi
+
+# --- CASE 2: the person the card names is already here, once -----------------
+#
+# Case 2 asserts that the assistant REPORTS the duplicate its create filed —
+# "a queue nobody is told about is a queue nobody reads". Nothing seeded the
+# other half, so there was no duplicate to file: three runs scored on the word
+# "already" borrowed from case 8's approval queue, and the one honest answer
+# ("neither she nor Terralogic existed, so I created both") scored FAIL.
+#
+# A NAME COLLISION is the lane that files a review row on a manual create.
+# manualDedupePerson passes QueueNameCollisions, so a second "Lucy Vo" is
+# queued for a human rather than refused — which is exactly the state the case
+# describes. The email and phone are deliberately DIFFERENT: an exact address
+# match is a claimed-address refusal, not a duplicate report, and that would
+# test the opposite thing.
+#
+# She sits at another company on purpose. Two people really can share a name,
+# so the review row is a question; if this Lucy were at Terralogic the honest
+# answer would be "that is the same person", and the case is about reporting
+# the QUEUE, not about being right.
+lucy_twin="$(person_id_by_email "Lucy Vo" "l.vo@saigontech.test")"
+if [[ -z "$lucy_twin" ]]; then
+  body="$(printf '{"full_name":"Lucy Vo","owner_id":"%s","title":"Procurement Lead","emails":[{"email":"l.vo@saigontech.test","is_primary":true}],"phones":[{"phone":"+842839334455","is_primary":true}]}' "$colleague")"
+  lucy_twin="$(create_or_die "/people" "$body" "the Lucy Vo already on file")"
 fi
 
 # --- CASE 20 + 21: a priced pipeline, and one deal nobody put a number on ----
@@ -1000,6 +1074,7 @@ if [[ -z "$lena" ]]; then
     "email":"lena.fischer@demo.test","display_name":"Lena Fischer","role":"rep"}')")"
 fi
 [[ -n "$lena" ]] || { echo "could not resolve the Lena Fischer seat" >&2; exit 1; }
+activate_seat "$lena" "Lena Fischer"
 
 # --- CASE 40: the lead queue, one lead per terminal outcome -----------------
 #
@@ -1112,5 +1187,25 @@ if [[ -z "$nuria" ]]; then
   nuria="$(create_or_die "/people" "$body" "Nuria Sanz")"
   link_employment "$nuria" "$levante" "Nuria Sanz at Levante Cold Chain"
 fi
+
+# --- THE ROSTER IS VERIFIED, not assumed ---------------------------------
+#
+# The seats above are the fixture's most silent failure mode. A seat that stays
+# `invited` is not a colleague, list_colleagues answers `[]`, and a run reads
+# that as "this person does not work here" — a scenario failure with the fixture
+# as its cause and nothing saying so. It went unnoticed across whole sweeps.
+#
+# Asked of the ROSTER READ the tools use, not of the rows this script created:
+# a seat that exists and is not listed is exactly the state being guarded
+# against, so checking that the POST succeeded would prove nothing.
+roster="$(api GET '/users?limit=100' | python3 -c 'import json,sys
+rows = json.load(sys.stdin).get("data", [])
+print("\n".join(r.get("email","") for r in rows if r.get("status") == "active"))')"
+for seat in sofia.meier@demo.test lena.fischer@demo.test; do
+  printf '%s\n' "$roster" | grep -qx "$seat" || {
+    echo "$seat holds no ACTIVE seat, so list_colleagues will not name them and every case " \
+         "that hands work to a colleague fails for the fixture's reason" >&2
+    exit 1; }
+done
 
 echo "LLM fixtures seeded"

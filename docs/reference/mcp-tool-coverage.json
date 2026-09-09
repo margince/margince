@@ -5,7 +5,7 @@
     "driven": 36,
     "never_driven": 39,
     "permitted_but_never_required": 19,
-    "tokens_served_but_never_driven": 12378,
+    "tokens_served_but_never_driven": 12728,
     "use_case_cases": 21,
     "acceptance_criteria_named": 48,
     "tools_added_by_shipped_units": 7,
@@ -1151,7 +1151,7 @@
   "tools": [
     {
       "name": "send_account_email",
-      "tokens": 742,
+      "tokens": 768,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -1161,7 +1161,7 @@
     },
     {
       "name": "send_email",
-      "tokens": 675,
+      "tokens": 698,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -1187,7 +1187,7 @@
     },
     {
       "name": "send_message",
-      "tokens": 518,
+      "tokens": 546,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -1251,6 +1251,16 @@
       "measured_by_model": {}
     },
     {
+      "name": "forecast_movement",
+      "tokens": 453,
+      "agents": [],
+      "required_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
       "name": "advance_deal",
       "tokens": 447,
       "agents": [],
@@ -1260,6 +1270,16 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
+      "measured_by_model": {}
+    },
+    {
+      "name": "book_meeting",
+      "tokens": 424,
+      "agents": [],
+      "required_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1291,18 +1311,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "book_meeting",
-      "tokens": 393,
-      "agents": [],
-      "required_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
       "name": "enrich",
-      "tokens": 393,
+      "tokens": 398,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -1311,16 +1321,6 @@
         "agent_loop",
         "enrich"
       ],
-      "measured_by_model": {}
-    },
-    {
-      "name": "forecast_movement",
-      "tokens": 351,
-      "agents": [],
-      "required_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": false,
-      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1349,6 +1349,19 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
+      "measured_by_model": {}
+    },
+    {
+      "name": "forecast_input_checks",
+      "tokens": 324,
+      "agents": [],
+      "required_by_cases": [],
+      "permitted_in_cases": [
+        "case21_what_are_we_closing",
+        "case22_can_i_trust_the_numbers"
+      ],
+      "driven": false,
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1438,19 +1451,6 @@
       "required_by_cases": [],
       "permitted_in_cases": [
         "case4_use_the_moment"
-      ],
-      "driven": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
-      "name": "forecast_input_checks",
-      "tokens": 252,
-      "agents": [],
-      "required_by_cases": [],
-      "permitted_in_cases": [
-        "case21_what_are_we_closing",
-        "case22_can_i_trust_the_numbers"
       ],
       "driven": false,
       "graded_by_certification_tasks": null,
@@ -1555,6 +1555,19 @@
       "measured_by_model": {}
     },
     {
+      "name": "list_input_checks",
+      "tokens": 209,
+      "agents": [],
+      "required_by_cases": [],
+      "permitted_in_cases": [
+        "case21_what_are_we_closing",
+        "case22_can_i_trust_the_numbers"
+      ],
+      "driven": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
       "name": "at_risk_relationships",
       "tokens": 208,
       "agents": [
@@ -1643,19 +1656,6 @@
       "measured_by_model": {}
     },
     {
-      "name": "list_input_checks",
-      "tokens": 146,
-      "agents": [],
-      "required_by_cases": [],
-      "permitted_in_cases": [
-        "case21_what_are_we_closing",
-        "case22_can_i_trust_the_numbers"
-      ],
-      "driven": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
       "name": "whoami",
       "tokens": 128,
       "agents": [],
@@ -1687,7 +1687,7 @@
     },
     {
       "name": "run_report",
-      "tokens": 939,
+      "tokens": 990,
       "agents": [],
       "required_by_cases": [
         "case7_ask_for_a_number"
@@ -1789,6 +1789,39 @@
         "claude-sonnet-5": {
           "runs": 6,
           "passed": 6,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "forecast_readings",
+      "tokens": 509,
+      "agents": [],
+      "required_by_cases": [
+        "case21_what_are_we_closing"
+      ],
+      "permitted_in_cases": [
+        "case22_can_i_trust_the_numbers"
+      ],
+      "driven": true,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -1929,7 +1962,7 @@
     },
     {
       "name": "compose_analytics_report",
-      "tokens": 390,
+      "tokens": 440,
       "agents": [],
       "required_by_cases": [
         "case20_put_it_in_the_board_pack"
@@ -2019,39 +2052,6 @@
       }
     },
     {
-      "name": "forecast_readings",
-      "tokens": 357,
-      "agents": [],
-      "required_by_cases": [
-        "case21_what_are_we_closing"
-      ],
-      "permitted_in_cases": [
-        "case22_can_i_trust_the_numbers"
-      ],
-      "driven": true,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "search_context",
       "tokens": 345,
       "agents": [],
@@ -2095,8 +2095,76 @@
       }
     },
     {
+      "name": "advance_project_phase",
+      "tokens": 340,
+      "agents": [],
+      "required_by_cases": [
+        "case41_close_the_project"
+      ],
+      "permitted_in_cases": [],
+      "driven": true,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case41_close_the_project"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case41_close_the_project"
+          ]
+        }
+      }
+    },
+    {
+      "name": "promote_lead",
+      "tokens": 303,
+      "agents": [],
+      "required_by_cases": [
+        "case40_sort_the_queue"
+      ],
+      "permitted_in_cases": [],
+      "driven": true,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case40_sort_the_queue"
+          ]
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "merge_records",
-      "tokens": 292,
+      "tokens": 294,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company"
@@ -2130,11 +2198,11 @@
       }
     },
     {
-      "name": "advance_project_phase",
-      "tokens": 279,
+      "name": "archive_record",
+      "tokens": 290,
       "agents": [],
       "required_by_cases": [
-        "case41_close_the_project"
+        "case33_two_cards_for_one_company"
       ],
       "permitted_in_cases": [],
       "driven": true,
@@ -2145,7 +2213,7 @@
           "passed": 0,
           "reliability": 0,
           "cases_below_their_bar": [
-            "case41_close_the_project"
+            "case33_two_cards_for_one_company"
           ]
         },
         "claude-opus-5": {
@@ -2156,10 +2224,10 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
           "cases_below_their_bar": [
-            "case41_close_the_project"
+            "case33_two_cards_for_one_company"
           ]
         }
       }
@@ -2219,39 +2287,6 @@
           "passed": 3,
           "reliability": 1,
           "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "promote_lead",
-      "tokens": 270,
-      "agents": [],
-      "required_by_cases": [
-        "case40_sort_the_queue"
-      ],
-      "permitted_in_cases": [],
-      "driven": true,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case40_sort_the_queue"
-          ]
         },
         "claude-sonnet-5": {
           "runs": 3,
@@ -2331,41 +2366,6 @@
       }
     },
     {
-      "name": "archive_record",
-      "tokens": 261,
-      "agents": [],
-      "required_by_cases": [
-        "case33_two_cards_for_one_company"
-      ],
-      "permitted_in_cases": [],
-      "driven": true,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
-        }
-      }
-    },
-    {
       "name": "qualify_lead",
       "tokens": 229,
       "agents": [],
@@ -2427,6 +2427,39 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "disqualify_lead",
+      "tokens": 209,
+      "agents": [],
+      "required_by_cases": [
+        "case40_sort_the_queue"
+      ],
+      "permitted_in_cases": [],
+      "driven": true,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case40_sort_the_queue"
+          ]
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
@@ -2533,13 +2566,15 @@
       }
     },
     {
-      "name": "disqualify_lead",
-      "tokens": 190,
+      "name": "data_coverage",
+      "tokens": 195,
       "agents": [],
       "required_by_cases": [
-        "case40_sort_the_queue"
+        "case22_can_i_trust_the_numbers"
       ],
-      "permitted_in_cases": [],
+      "permitted_in_cases": [
+        "case21_what_are_we_closing"
+      ],
       "driven": true,
       "graded_by_certification_tasks": null,
       "measured_by_model": {
@@ -2551,17 +2586,54 @@
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case40_sort_the_queue"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "list_colleagues",
+      "tokens": 195,
+      "agents": [],
+      "required_by_cases": [
+        "case33_two_cards_for_one_company"
+      ],
+      "permitted_in_cases": [
+        "case30_a_word_for_it",
+        "case31_wrong_word_on_the_record",
+        "case32_two_words_for_one_thing"
+      ],
+      "driven": true,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case33_two_cards_for_one_company"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case33_two_cards_for_one_company"
+          ]
         }
       }
     },
@@ -2767,47 +2839,8 @@
       }
     },
     {
-      "name": "list_colleagues",
-      "tokens": 141,
-      "agents": [],
-      "required_by_cases": [
-        "case33_two_cards_for_one_company"
-      ],
-      "permitted_in_cases": [
-        "case30_a_word_for_it",
-        "case31_wrong_word_on_the_record",
-        "case32_two_words_for_one_thing"
-      ],
-      "driven": true,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
-        }
-      }
-    },
-    {
       "name": "commit_import",
-      "tokens": 118,
+      "tokens": 128,
       "agents": [],
       "required_by_cases": [
         "case10_finish_the_import"
@@ -2823,39 +2856,6 @@
           "cases_below_their_bar": [
             "case10_finish_the_import"
           ]
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "data_coverage",
-      "tokens": 109,
-      "agents": [],
-      "required_by_cases": [
-        "case22_can_i_trust_the_numbers"
-      ],
-      "permitted_in_cases": [
-        "case21_what_are_we_closing"
-      ],
-      "driven": true,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
@@ -2949,7 +2949,7 @@
     },
     {
       "name": "read_import_report",
-      "tokens": 73,
+      "tokens": 77,
       "agents": [],
       "required_by_cases": [
         "case10_finish_the_import"

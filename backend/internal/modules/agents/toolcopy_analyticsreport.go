@@ -6,6 +6,23 @@ package agents
 // Written copy for composing a report. See toolcopy.go for what each field
 // answers.
 //
+// THE PURPOSE LEADS WITH THE JOB, not with the mechanism, and that ordering is
+// load-bearing. Asked for "a short written pipeline section for the board pack",
+// three measured runs read a catalogue of 75 tools, took the figures from
+// forecast_readings and typed them into prose — the one thing this tool refuses
+// to let a document do. It was served every time and chosen none of them. Its
+// first sentence had been "Render a report whose every figure comes from a
+// saved analytics run": true, and about handles, run ids and cells, while the
+// words a caller scans for — write, document, section, summary — were absent or
+// buried. A tool nobody picks for the job it does is a tool that is not there.
+//
+// AND IT SAYS WHAT IT IS NOT FOR, in the same breath, because the first attempt
+// at this over-reached. Offering "a written-up answer with figures in it" took
+// a model off run_report for a question that just wanted a number — asked for
+// one, it went and composed. The boundary belongs beside the invitation: a
+// Purpose broad enough to be found is broad enough to be found by the wrong
+// caller, and Instead: alone was too far down to stop it.
+//
 // The BLOCK VOCABULARY is deliberately not here. Fourteen block kinds with
 // their fields would be run_report's 3.4KB mistake again — text every client
 // holds for a session and every scheduled run re-sends on every step, to answer
@@ -19,9 +36,12 @@ package agents
 // instruction to read first costs a turn on every goal, including the ones with
 // nothing to look up.
 var composeAnalyticsReportCopy = toolCopy{
-	Purpose: "Render a report whose every figure comes from a saved analytics run. The " +
-		"document carries the STRUCTURE and the WORDS; each number names a run id and a cell " +
-		"inside it, and the server resolves those handles under the reader's own authority.",
+	Purpose: "WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary " +
+		"for a meeting — whose every number comes from a saved analytics run instead of " +
+		"being typed. Not for answering with a figure: a number in the reply is " +
+		"run_analytics_query's or run_report's. The document carries the STRUCTURE and the " +
+		"WORDS; each figure names a run id and a cell inside it, and the server resolves " +
+		"those handles under the reader's own authority.",
 	Limits: "It writes no number of its own and refuses any document that does. A block " +
 		"carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the " +
 		"literal is what renders, the two can disagree, and no reader could tell the page " +

@@ -39,10 +39,24 @@ may_call:
 
 must_mention:
   # Criterion 1: it found the account from a description, not a name.
-  - "Vietnam Partner"
+  # "JSC", not "Vietnam Partner" alone. The prompt already says "Vietnam
+  # partner", so the old assertion was satisfied by echoing the question back
+  # and could not tell a run that FOUND the account from one that repeated the
+  # user. The legal suffix appears only on the record.
+  #
+  # It is thin — the fixture named the company after the description the user
+  # gives, so there is no other token the workspace alone can supply. Mai
+  # Nguyen below is the stronger evidence that the record was opened, and this
+  # entry is the weaker half of a pair rather than the case's proof.
+  - "Vietnam Partner JSC|\bJSC\b"
   # Criterion 5: the promise nobody kept. The fixture logs an outbound message
   # saying the list would be sent, and nothing after it.
-  - "Aufstellung|list|promised|zugesagt|never sent|no record|outstanding|follow up"
+  # THE UNKEPT PROMISE, which the header calls the highest-value thing this
+  # case produces. A bare "list" matched; so did "no record" — so an answer
+  # DENYING the finding ("there is no record of Mai Nguyen, nothing was
+  # promised") scored the criterion. Anchored to something being owed and not
+  # delivered.
+  - "(?:Aufstellung|breakdown|summary)[\s\S]{0,120}(?:waiting|no reply|outstanding|never (?:replied|came|sent)|quiet|promis\w*|zugesagt|owed)|(?:waiting for them|no reply|outstanding|promis\w*|zugesagt|owed)[\s\S]{0,120}(?:Aufstellung|breakdown|summary)"
   # Criterion 2's server half is already pinned; here it must NAME the people
   # rather than describing seats.
   - "Mai Nguyen"
