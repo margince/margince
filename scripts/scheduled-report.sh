@@ -15,21 +15,38 @@ set -euo pipefail
 : "${REPO:?REPO must name the repository to file against}"
 : "${RUN_URL:?RUN_URL must link the run that produced this verdict}"
 
-# report <title> <label> <body>
+# EVERY open issue, read ONCE for the whole run — not a first page of them, and
+# not once per finding. A capped read answers "no issue with this title" the
+# moment the tracker outgrows the cap, and because the cap pages newest-first,
+# the issue it stops short of is precisely the long-lived one the dedupe exists
+# to find. The tracker passing that mark is invisible from here: nothing fails,
+# a second issue is simply filed under a title that already had one, and the
+# discussion on the first is left behind.
 #
-# The lookup reads EVERY open issue, not a first page of them. A capped read
-# answers "no issue with this title" the moment the tracker outgrows the cap —
-# and because the cap pages newest-first, the issue it stops short of is
-# precisely the long-lived one this dedupe exists to find. The tracker passing
-# that mark is invisible from here: nothing fails, a second issue is simply
-# filed under a title that already had one, and the discussion on the first is
-# left behind. The oldest open match therefore wins: it is the one carrying
-# whatever triage the title has already collected.
+# Read once because there are now two callers per arm rather than one, and every
+# arm asks about a different title on the same tracker. Paginating the whole
+# thing per question got more expensive with each arm added, for an answer that
+# cannot change inside one run.
+open_issues="$(mktemp)"
+trap 'rm -f "$open_issues"' EXIT
+gh api --paginate "repos/$REPO/issues?state=open&per_page=100" |
+  jq -sc '[.[][] | select(has("pull_request") | not) | {number, title}]' >"$open_issues"
+
+# lookup <title> — the number of the OLDEST open issue under this EXACT title,
+# or nothing.
+#
+# Oldest, because it is the one carrying whatever triage the title has already
+# collected. Two issues under one title is the state a capped read produced, and
+# the repeat belongs on the one people have been talking in.
+lookup() {
+  jq -r --arg t "$1" '[.[] | select(.title == $t)] | min_by(.number) | .number // empty' \
+    "$open_issues"
+}
+
+# report <title> <label> <body>
 report() {
   local title="$1" label="$2" body="$3" existing
-  existing="$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100" |
-    jq -rs --arg t "$title" '[.[][] | select(has("pull_request") | not)
-      | select(.title == $t)] | min_by(.number) | .number // empty')"
+  existing="$(lookup "$title")"
   if [[ -n "$existing" ]]; then
     echo "already open as #$existing — commenting"
     gh issue comment "$existing" --repo "$REPO" \
@@ -38,6 +55,40 @@ report() {
   fi
   echo "filing: $title"
   gh issue create --repo "$REPO" --title "$title" --label "$label" --body "$body"
+}
+
+# resolve <title> — the other half of report, for a check that came back GREEN.
+#
+# Without this the issue is the only artifact of a red and nothing retracts it:
+# a finding outlives its fix by however long it takes somebody to notice by
+# hand, and the tracker answers "is main red, and is anyone on it" wrongly in
+# both directions at once. It happened to margince/margince#5118 the day this
+# was written — filed 05:35Z, fixed on main at 06:49Z, still open hours later.
+#
+# It also makes each red its own issue rather than one standing title
+# accumulating every distinct breakage a lane has ever had, each with a
+# different cause and a different fix. The dedupe above is right that a daily
+# re-file would bury a live discussion; it was never an argument for keeping the
+# discussion open once the subject was gone.
+#
+# CALLED ONLY FOR A CHECK THAT ACTUALLY PASSED. A `skipped` or `cancelled`
+# result must reach neither half — it is the absence of a verdict, and reading
+# it as a green one would close a finding nothing re-examined. That is the one
+# direction this must not fail in, so it is a case in
+# scripts/test-scheduled-report.sh rather than a caution here.
+resolve() {
+  local title="$1" existing
+  existing="$(lookup "$title")"
+  if [[ -z "$existing" ]]; then
+    return
+  fi
+  echo "green again — closing #$existing"
+  gh issue close "$existing" --repo "$REPO" --reason completed \
+    --comment "Green on the $(date -u +%Y-%m-%d) run: $RUN_URL
+
+Closed by the lane that filed it, which re-ran and passed. If this issue was
+about something the run does not measure, reopen it — the close means the check
+is green, not that every question on the thread was answered."
 }
 
 # Each report is attempted independently. Under `set -e` a bare call would abort
@@ -61,6 +112,8 @@ alert on the same package, and it is worth acting on rather than deferring.
 
 Reproduce locally with \`make vuln\`."\
     || unreported=1
+elif [[ "${VULN_RESULT:-}" = "success" ]]; then
+  resolve "govulncheck reports a vulnerability reachable from main"
 fi
 
 if [[ "${GATE_RESULT:-}" = "failure" ]]; then
@@ -79,6 +132,8 @@ attached to \`main\` at all, which looks identical to green on every dashboard.
 The failing conditions are printed in the \`quality-gate\` job log of the run
 above."\
     || unreported=1
+elif [[ "${GATE_RESULT:-}" = "success" ]]; then
+  resolve "SonarCloud quality gate is not green on main"
 fi
 
 if [[ "${LANE_RESULT:-}" = "failure" ]]; then
@@ -95,6 +150,8 @@ push's verdict.
 So the breakage may predate the most recent commit. Reproduce locally with
 \`make check-backend\` on \`main\`."\
     || unreported=1
+elif [[ "${LANE_RESULT:-}" = "success" ]]; then
+  resolve "the backend merge gate is red on main"
 fi
 
 # Two findings, not one, because the job result cannot tell them apart: a failed
@@ -121,6 +178,11 @@ and the two timeouts need re-deriving, not raising).
 Reproduce with \`make db-up && make bench-perf-check\`. The published budgets
 page is untouched either way: this lane never sets MARGINCE_BENCH_RECORD."\
     || unreported=1
+elif [[ "${PERF_RESULT:-}" = "success" ]] || [[ "${PERF_OUTCOME:-}" = "breach" ]]; then
+  # A MEASURED BREACH IS PROOF THE LANE RAN, which is the only thing this
+  # title claims — so it retracts here as well as on a pass, and the arm below
+  # files the breach under its own title.
+  resolve "the weekly PERF-3/PERF-7 run could not complete"
 fi
 
 if [[ "${PERF_OUTCOME:-}" = "breach" ]]; then
@@ -143,6 +205,8 @@ because a mid-market SLO gated on an SMB corpus renders \`inconclusive\`, never
 \`within budget\`. So the breach may predate this run by up to a week, and
 bisecting is the honest first move rather than assuming the newest commit."\
     || unreported=1
+elif [[ "${PERF_RESULT:-}" = "success" ]]; then
+  resolve "a PERF-3/PERF-7 budget is breaching on main"
 fi
 
 # The mobile budget splits the same two ways and for the same reason. Its
@@ -165,6 +229,10 @@ the preview server on :4317 never came up.
 Reproduce with \`make bench-mobile-check\`. The published budgets page is
 untouched either way: this lane clears MARGINCE_BENCH_RECORD."\
     || unreported=1
+elif [[ "${MOBILE_RESULT:-}" = "success" ]] || [[ "${MOBILE_OUTCOME:-}" = "breach" ]]; then
+  # Same split, same reason: a measured p95 means the lane completed, whatever
+  # the number was.
+  resolve "the weekly MOBILE-AC-2 run could not complete"
 fi
 
 if [[ "${MOBILE_OUTCOME:-}" = "breach" ]]; then
@@ -189,6 +257,8 @@ No record was written — this lane clears \`MARGINCE_BENCH_RECORD\`, so the
 published page still shows the last number a human measured. Publish a new one
 with \`make bench-mobile\` only once the breach is understood."\
     || unreported=1
+elif [[ "${MOBILE_RESULT:-}" = "success" ]]; then
+  resolve "PERF-1's perceived budget is breaching on main"
 fi
 
 if [[ "${CLOCK_RESULT:-}" = "failure" ]]; then
@@ -211,6 +281,8 @@ copy of a guard the file wants once.
 Reproduce locally with \`make fe-clock-drift\`, and read the failures as claims
 about the fixtures rather than about the components."\
     || unreported=1
+elif [[ "${CLOCK_RESULT:-}" = "success" ]]; then
+  resolve "the frontend suite's verdict depends on the calendar"
 fi
 
 if [[ "${CACHE_RESULT:-}" = "failure" ]]; then
@@ -233,6 +305,8 @@ the \`go-build-\` prefix changed, teach the script the new shape —
 
 Inspect without deleting anything: \`DRY_RUN=1 scripts/reap-build-caches.sh\`."\
     || unreported=1
+elif [[ "${CACHE_RESULT:-}" = "success" ]]; then
+  resolve "the Actions build-cache reaper is failing"
 fi
 
 # --- main-health.yml -----------------------------------------------------------
@@ -262,6 +336,8 @@ ${MAIN_SUSPECTS:-_no suspect range was computed for this run._}
 
 Reproduce locally on \`main\` with \`make check-backend\`."\
     || unreported=1
+elif [[ "${MAIN_GATES_RESULT:-}" = "success" ]]; then
+  resolve "main is red: the backend gate fails on the tip"
 fi
 
 if [[ "${MAIN_INTEGRATION_RESULT:-}" = "failure" ]]; then
@@ -280,6 +356,8 @@ Reproduce locally with \`make db-up && make test-integration\` on \`main\`. Unti
 this is fixed, every other pull request inherits the failure through its merge
 commit and reads as red for a reason its author did not cause."\
     || unreported=1
+elif [[ "${MAIN_INTEGRATION_RESULT:-}" = "success" ]]; then
+  resolve "main is red: the integration lane fails on the tip"
 fi
 
 if [[ "${MAIN_FRONTEND_RESULT:-}" = "failure" ]]; then
@@ -307,6 +385,8 @@ runs neither the Storybook build nor the coverage report, so it can pass over a
 red \`fe-bundle\` or a broken lcov and send you looking for a failure that is
 not there."\
     || unreported=1
+elif [[ "${MAIN_FRONTEND_RESULT:-}" = "success" ]]; then
+  resolve "main is red: the frontend lane fails on the tip"
 fi
 
 if [[ "${MAIN_UAT_RESULT:-}" = "failure" ]]; then
@@ -332,6 +412,8 @@ preview and drives Playwright against the seed mock, so it needs no database and
 no running stack — but it does need the browser: \`pnpm exec playwright install
 --with-deps chromium\` once."\
     || unreported=1
+elif [[ "${MAIN_UAT_RESULT:-}" = "success" ]]; then
+  resolve "main is red: the screen-acceptance UAT fails on the tip"
 fi
 
 if [[ "${MAIN_SONAR_RESULT:-}" = "failure" ]]; then
@@ -368,6 +450,8 @@ ${MAIN_SUSPECTS:-_no suspect range was computed for this run._}
 Until it is fixed, treat the quality gate's reading for \`main\` as stale rather
 than as a verdict."\
     || unreported=1
+elif [[ "${MAIN_SONAR_RESULT:-}" = "success" ]]; then
+  resolve "main's SonarCloud analysis was not published"
 fi
 
 # The model lane, same two-findings shape and for the same reason. A missing
@@ -398,6 +482,10 @@ than as six scenarios of apparently bad answers.
 
 Reproduce locally with \`MARGINCE_E2E_LLM=1 make e2e-llm\`."\
     || unreported=1
+elif [[ "${LLM_RESULT:-}" = "success" ]] || [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then
+  # A scenario that drove and failed proves the lane RAN, so "could not run"
+  # is no longer true and the arm below owns what is.
+  resolve "the weekly model-driven use cases could not run"
 fi
 
 if [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then
@@ -427,6 +515,8 @@ the assistant cites the record correctly, quotes the post-mortem note correctly,
 and then repeats the note's wrong month in its own voice. If that is what the
 transcript shows, this issue is the existing finding rather than a new one."\
     || unreported=1
+elif [[ "${LLM_RESULT:-}" = "success" ]]; then
+  resolve "a use case is failing when driven by a real model"
 fi
 
 # --- merge-attest.yml -----------------------------------------------------------

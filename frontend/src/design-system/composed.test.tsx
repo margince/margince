@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { Button } from "./atoms";
 import {
   type BoardColumn,
   type BoardMoneyColumn,
@@ -317,6 +318,60 @@ describe("DealCard + PipelineBoard", () => {
     );
     expect(screen.getByText("1 leads")).toBeTruthy();
     expect(screen.queryByText("1 deals")).toBeNull();
+  });
+});
+
+describe("RecordView's chrome", () => {
+  /** The element the class draws, or a failure naming what was missing. */
+  const chrome = (selector: string): Element => {
+    const found = document.querySelector(selector);
+    if (!found) {
+      throw new Error(`no ${selector} in the record`);
+    }
+    return found;
+  };
+
+  const precedes = (first: Element, second: Element) =>
+    Boolean(
+      first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+
+  it("draws the tab strip above the band, and the band above the columns", () => {
+    render(
+      <RecordView
+        name="Fleet retrofit"
+        zone="UTC"
+        tabs={<Button>Overview</Button>}
+        band={<p>Kick-off pending</p>}
+      />,
+    );
+
+    const tabs = chrome(".record-tabs");
+    const band = chrome(".record-band");
+    // The work column, which every shape of `PageZones` draws; the grid class
+    // itself is absent on a record that has neither rail nor aside.
+    const zones = chrome(".page-zones-main");
+    expect(precedes(tabs, band), "the band is drawn above the strip").toBe(
+      true,
+    );
+    expect(precedes(band, zones), "the band is drawn below the columns").toBe(
+      true,
+    );
+  });
+
+  it("draws the tab strip on a record that carries no band", () => {
+    render(
+      <RecordView
+        name="Fleet retrofit"
+        zone="UTC"
+        tabs={<Button>Overview</Button>}
+      />,
+    );
+
+    expect(document.querySelector(".record-band")).toBeNull();
+    expect(precedes(chrome(".record-tabs"), chrome(".page-zones-main"))).toBe(
+      true,
+    );
   });
 });
 

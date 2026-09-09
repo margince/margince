@@ -221,7 +221,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"who_knows", `{"person_id":"` + person.String() + `"}`},
 		{"account_coverage", `{"deal_id":"` + deal.String() + `"}`},
 		{"intro_path_to", `{"company_id":"` + company.String() + `"}`},
-		{"qualify_lead", `{"record_id":"` + lead.String() + `"}`},
+		{"qualify_lead", `{"lead_id":"` + lead.String() + `"}`},
 		// The passthrough shapes, whose declared schema is a GUARANTEED SUBSET
 		// rather than a type this module marshals. They are the ones a unit test
 		// cannot check at all: nothing here builds the document, so the only way

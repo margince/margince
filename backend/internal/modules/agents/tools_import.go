@@ -135,8 +135,15 @@ func refuseUnimportableObject(object string) error {
 			return nil
 		}
 	}
-	return &BadArgsError{Cause: fmt.Errorf("`object` must be one of %s",
-		strings.Join(importObjectEnum, ", "))}
+	// The caller's word in Cause, which is bounded and escaped, and the set in
+	// Guidance, which is ours. Both in Cause meant the vocabulary shared a
+	// budget sized for an echo, and the refusal never said which value was
+	// wrong — only what the right ones were.
+	return &BadArgsError{
+		Cause:    fmt.Errorf("`object` %q is not one this tool imports", object),
+		Field:    "object",
+		Guidance: "it is one of: " + strings.Join(importObjectEnum, ", "),
+	}
 }
 
 type readImportRun struct{ imports Imports }

@@ -2396,7 +2396,7 @@ public.contract.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.contract.value_basis text NOT NULL gen=- def='total'::text
 public.contract.value_minor bigint gen=- def=-
 public.contract.version bigint NOT NULL gen=- def=1
-public.contract_account_ix CREATE INDEX contract_account_ix ON public.contract USING btree (company_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.contract_account_ix CREATE INDEX contract_account_ix ON public.contract USING btree (company_id, starts_on DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.contract_deal_ix CREATE INDEX contract_deal_ix ON public.contract USING btree (deal_id) WHERE ((deal_id IS NOT NULL) AND (archived_at IS NULL))
 public.contract_pkey CREATE UNIQUE INDEX contract_pkey ON public.contract USING btree (id)
 public.contract_renewal_due_ix CREATE INDEX contract_renewal_due_ix ON public.contract USING btree (renewal_on) WHERE ((renewal_on IS NOT NULL) AND (archived_at IS NULL))
@@ -5610,6 +5610,8 @@ public.technical_lookup_cache.technical_lookup_cache_pkey PRIMARY KEY (query, re
 public.technical_lookup_cache_pkey CREATE UNIQUE INDEX technical_lookup_cache_pkey ON public.technical_lookup_cache USING btree (query, record_kind)
 public.transcript_read acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.transcript_read.activity_id uuid NOT NULL gen=- def=-
+public.transcript_read.attempt integer NOT NULL gen=- def=1
+public.transcript_read.attempt_at timestamp with time zone NOT NULL gen=- def=now()
 public.transcript_read.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.transcript_read.finished_at timestamp with time zone gen=- def=-
 public.transcript_read.id uuid NOT NULL gen=- def=-
@@ -5620,6 +5622,7 @@ public.transcript_read.started_at timestamp with time zone gen=- def=-
 public.transcript_read.status text NOT NULL gen=- def='queued'::text
 public.transcript_read.status_detail text gen=- def=-
 public.transcript_read.transcript_read_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.transcript_read.transcript_read_attempt_positive CHECK ((attempt >= 1))
 public.transcript_read.transcript_read_pkey PRIMARY KEY (id)
 public.transcript_read.transcript_read_started_shape CHECK ((((status = 'queued'::text) AND (started_at IS NULL)) OR ((status <> 'queued'::text) AND (started_at IS NOT NULL))))
 public.transcript_read.transcript_read_status CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text])))

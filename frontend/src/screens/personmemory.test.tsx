@@ -203,6 +203,25 @@ describe("the person page's memory card", () => {
     expect(screen.getByText("Withheld")).toBeTruthy();
   });
 
+  // Five cuts do not fit beside the title on the one band a panel head is, so
+  // the strip stands in the card's body above the rows. Both halves matter: a
+  // strip put back in the head gives this card a taller head than every other
+  // card in the stack, and a strip moved without its wiring narrows nothing.
+  it("narrows the list from a strip under the head rather than inside it", async () => {
+    const user = userEvent.setup();
+    const { container } = renderCard(viewWith([emailRow(), noteRow]));
+
+    const strip = container.querySelector(".segmented");
+    expect(strip).not.toBeNull();
+    expect(strip?.closest(".panel-head")).toBeNull();
+    expect(strip?.closest(".panel-body")).not.toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Notes" }));
+
+    expect(screen.getByText("Call prep")).toBeTruthy();
+    expect(screen.queryByText("Re: the renewal quote")).toBeNull();
+  });
+
   it("leaves every other kind reading as it did", () => {
     renderCard(viewWith([noteRow]), vi.fn());
 

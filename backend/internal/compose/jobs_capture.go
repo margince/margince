@@ -100,7 +100,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		// machinery exists — a role that cannot send cannot fire either.
 		if cfg.SendDelivery != nil {
 			addDeclaredWorker[ScheduledSendArgs](reg,
-				newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendPacing))
+				newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendPacing, cfg.SendOrigin))
 		}
 	}
 

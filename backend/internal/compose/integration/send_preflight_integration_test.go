@@ -47,6 +47,7 @@ type preflightEnv struct {
 	*apptest.AppEnv
 	activityID string
 	personID   string
+	dealID     string
 	ws, user   string
 }
 
@@ -158,6 +159,30 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	return &preflightEnv{AppEnv: e, activityID: activity.ID, personID: person.ID, ws: ws, user: user}
 }
 
+// stakeADeal gives the fixture's anchor real transactional evidence: an open
+// deal with the recipient staked on it, relinked onto p.activityID after the
+// fact (a reply inherits its links from the anchor, and offers the caller no
+// way to name one directly).
+//
+// Opt in, never automatic: resolveCategory's live-deal arm runs before the
+// purpose fallback, so baking this into setupPreflightIn would silently
+// change what EVERY consumer's send is authorized by — a caller testing
+// refusal or a purpose-scoped withdrawal would find its send going through on
+// a basis it never asked about. Only a caller whose bare "transactional"
+// claim needs to be genuinely evidenced should call this; one that already
+// did and now wants a withdrawal or a refusal to hold must close the deal
+// first — see closeDealAsLost.
+func (p *preflightEnv) stakeADeal(t *testing.T) {
+	t.Helper()
+	stages := apptest.DiscoverSeededPipeline(t, p.AppEnv)
+	p.dealID = apptest.StakeOnOpenDeal(t, p.AppEnv, "Preflight opportunity", stages, p.personID)
+	if status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/relink", AnyMap{
+		"entity_type": "deal", "entity_id": p.dealID,
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("relink the anchor onto the deal → %d", status)
+	}
+}
+
 // send issues the authenticated send and returns the status plus the
 // validation error's own code and message — the words the user is shown, which
 // is where the "what do I do about it" has to live.
@@ -264,6 +289,7 @@ func TestSendRefusesAConnectedMailboxWithoutTheSendGrant(t *testing.T) {
 func TestSendProceedsOnceTheMailboxHoldsTheSendGrant(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	status, code, _ := p.send(t)
 

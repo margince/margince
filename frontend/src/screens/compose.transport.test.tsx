@@ -237,3 +237,107 @@ describe("the composer's transport dial", () => {
     expect(await screen.findByText(/can no longer be answered/i)).toBeTruthy();
   });
 });
+
+// The carriage bounds a channel publishes, held in FRONT of the send. A file the
+// transport cannot carry parks the delivery today (comms/gates.go
+// carriageRefusal); the composer reads the same published bounds and refuses
+// before staging, so the rep learns while the offer is still in front of them
+// rather than from a bounced message later.
+describe("a channel reply held to its carriage bounds", () => {
+  // Dispact takes files, but only small ones. The offer is four times the
+  // per-file cap; the survey is under it.
+  const OFFER = {
+    id: "att-1",
+    entity_type: "person",
+    entity_id: "p-1",
+    filename: "Offer_Nordwand_v3.pdf",
+    byte_size: 412_000,
+  };
+  const SURVEY = {
+    id: "att-2",
+    entity_type: "person",
+    entity_id: "p-1",
+    filename: "Site_note.txt",
+    byte_size: 40_000,
+  };
+  const DIRECTORY = {
+    data: [
+      {
+        provider: "dispact",
+        label: "Dispact",
+        credential_model: "workspace_bot",
+        supplies_transport: true,
+        attachments: {
+          carries: true,
+          max_files: 10,
+          max_bytes_per_file: 100_000,
+          max_total_bytes: 20_000_000,
+          max_body_with_files: 0,
+        },
+      },
+    ],
+  };
+
+  const withCarriage = () =>
+    stubRoutes({
+      "GET /attachments": () =>
+        jsonResponse({ data: [OFFER, SURVEY], page: { has_more: false } }),
+      "GET /channel-providers": () => jsonResponse(DIRECTORY),
+      "POST /activities/a-chat/send-message": () => jsonResponse(ACTIVITY, 202),
+    });
+
+  const attach = async (
+    user: ReturnType<typeof userEvent.setup>,
+    name: RegExp,
+  ) => {
+    await user.click(await screen.findByRole("button", { name: /Attach/ }));
+    await user.click(await screen.findByRole("button", { name }));
+  };
+
+  it("warns and refuses to send a file the channel cannot carry", async () => {
+    const user = userEvent.setup();
+    const sent = withCarriage();
+    render(drawer([MAIL, CHAT], "dispact"));
+
+    await screen.findByLabelText("How to send");
+    writeMessage("Body", "Here is the offer.");
+    await attach(user, /^Offer_Nordwand_v3\.pdf/);
+
+    // The reason names the file AND the transport, so the rep knows which of the
+    // two to change rather than guessing.
+    expect(
+      await screen.findByText(
+        /Offer_Nordwand_v3\.pdf is larger than .* Dispact accepts/,
+      ),
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    // A message that would only park at the door never goes to the door.
+    expect(
+      sent.some((r) => r.key === "POST /activities/a-chat/send-message"),
+    ).toBe(false);
+  });
+
+  it("sends a file the channel can carry, by id", async () => {
+    const user = userEvent.setup();
+    const sent = withCarriage();
+    render(drawer([MAIL, CHAT], "dispact"));
+
+    await screen.findByLabelText("How to send");
+    writeMessage("Body", "Here is the note.");
+    await attach(user, /^Site_note\.txt/);
+
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    const req = await waitFor(() => {
+      const found = sent.find(
+        (r) => r.key === "POST /activities/a-chat/send-message",
+      );
+      expect(found).toBeTruthy();
+      return found;
+    });
+    const body = req?.body as { attachment_ids?: string[] } | undefined;
+    expect(body?.attachment_ids).toEqual(["att-2"]);
+  });
+});

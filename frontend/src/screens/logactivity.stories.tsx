@@ -71,3 +71,30 @@ export const OpenedOnACall: Story = {
     );
   },
 };
+
+// A task is the one kind held by a colleague, so it is the only one that draws
+// the assignee picker — beside the due date, defaulting to Unassigned. The
+// roster it offers is the workspace's people less agent seats: the walk stubbed
+// here carries a Runner Bot the picker must not list, because the server
+// refuses one as an assignee.
+export const OpenedOnATask: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": admin(),
+      "GET /users": () =>
+        jsonResponse({
+          data: [
+            { id: "u1", display_name: "Ada Ops", is_agent: false },
+            { id: "u2", display_name: "Priya Lead", is_agent: false },
+            { id: "agent-1", display_name: "Runner Bot", is_agent: true },
+          ],
+          page: { next_cursor: null },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <LogActivity entityType="person" entityId="p1" askedKind="task" />
+      </StoryProviders>
+    );
+  },
+};

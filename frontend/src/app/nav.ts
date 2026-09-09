@@ -179,25 +179,51 @@ export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
   "deals",
 ]);
 
-// Which RECORD screens keep the reading column instead of taking the width they
-// are given. This is the one place that decision lives, because it is a
-// judgement per surface and it gets revised by opening the page and looking:
-// move a screen out of this set and it goes full width, put one in and it is
-// capped. Settings is always capped and is not listed here — it is a whole
-// section, not a record.
+// Every RecordView RECORD page keeps ONE reading column, so a reader who walks
+// from a company to a deal to the lead behind it meets the same measure on
+// each. That is the invariant this set states: a screen whose record page is
+// drawn as a RecordView belongs here, and one missing from it is the one page
+// in the walk that jumps.
 //
-// The two that are here read DOWN rather than across: a rail of facts beside
-// prose, where a measured line length is the point and a fact a monitor away
-// from its label is worse, not wider. A list, a board or a report is scanned
-// ACROSS, and the cap only ever pushed columns off the right edge of a wide
-// display.
+// A detail page that lays out its OWN surface is deliberately absent, not
+// forgotten: `#/offers/<id>` draws SectionHeader and Card itself, with no
+// RecordView, no tab strip and no details pane, so it shares no measure for
+// this set to keep. Settings is absent for the same kind of reason — it is
+// always capped, and it is a whole section rather than a record.
 //
-// Keyed on the screen, applied only when the route carries an id: `#/companies`
-// is the list and belongs to the other family, `#/companies/<id>` is the record.
+// A record reads DOWN rather than across: a rail of facts beside prose, where a
+// measured line length is the point and a fact a monitor away from its label is
+// worse, not wider. A list, a board or a report is scanned ACROSS, and the cap
+// only ever pushed columns off the right edge of a wide display — which is why
+// the key is the id and not the screen alone.
+//
+// Keyed on the screen, applied only when the route carries a RECORD id:
+// `#/companies` is the list and belongs to the other family, `#/companies/<id>`
+// is the record.
 export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
   "companies",
   "contacts",
+  "leads",
+  "deals",
+  "projects",
 ]);
+
+// The one id segment that is not a record id: `#/deals/new` is the deals LIST
+// with its create form open (App.tsx, DealsRoute), so it is scanned across like
+// every other list and must not take the record column.
+export const CREATE_ID = "new";
+
+// The screen that segment belongs to, spelled once. Deals is the only route
+// that reads `new` as a create form, so anywhere else the word is an ordinary
+// id: `#/leads/new` is the lead whose id happens to be "new" and is as much a
+// record as any other.
+const CREATE_SCREEN: Screen = "deals";
+
+// Whether the route's id is that create segment rather than a record id — the
+// question the shell's column policy asks before it calls a page a record.
+export function opensCreateForm(route: Route): boolean {
+  return route.screen === CREATE_SCREEN && route.id === CREATE_ID;
+}
 
 // Screens that keep the same reading column with NO id, because they are not
 // records and never carry one. Every one of them reads DOWN: Brief is a

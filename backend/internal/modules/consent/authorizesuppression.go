@@ -73,19 +73,28 @@ func applySuppression(d commsauthz.Decision, kinds []string) commsauthz.Decision
 //     NOT the other two subject-serving categories: a record confirmation is
 //     an unsolicited invitation to review a record and a consent confirmation
 //     solicits a NEW grant, and Art. 18(2) offers no gateway for either.
-//   - A SUBJECT'S REQUEST binds everything. Somebody said stop, in words a rep
-//     wrote down; answering it with mail they did not ask for is the thing they
-//     asked us not to do.
-//   - Everything else binds every category too, which is where a hard bounce
-//     lands and where an unrecognised reason code lands. No template makes a
-//     dead address accept mail, and a code this function does not know must
-//     refuse rather than pick a narrower rule — the direction liveSuppression,
+//   - A SUBJECT'S REQUEST binds everything EXCEPT those same three. It used to
+//     bind all fourteen, on the reasoning that somebody said stop and answering
+//     with unasked-for mail is the thing they asked us not to do. That reasoning
+//     is right about the twelve and wrong about these three, and the way it was
+//     wrong is visible: a person who said "stop emailing me" never received the
+//     confirmation that we had stopped, because opt-out confirmation was bound
+//     by the very request it was confirming. The privacy notice that answers
+//     their own rights request and the security warning about their own account
+//     fail the same way. Art. 12(3), 13/14 and 34 are obligations the controller
+//     owes REGARDLESS of what the subject wants sent, which is exactly the
+//     shape of Art. 18(2)'s carve-out — so the two share survivesARestriction
+//     rather than keeping a second list to drift apart from it.
+//   - Everything else binds every category, which is where a hard bounce lands
+//     and where an unrecognised reason code lands. No template makes a dead
+//     address accept mail, and a code this function does not know must refuse
+//     rather than pick a narrower rule — the direction liveSuppression,
 //     blockedReasonCode and the validators all already fail in.
 func suppressionBinds(kind string, category commsauthz.Category) bool {
 	switch kind {
 	case commsauthz.ReasonObjection:
 		return category == commsauthz.CategoryMarketing
-	case commsauthz.ReasonRestricted:
+	case commsauthz.ReasonRestricted, commsauthz.ReasonSubjectRequest:
 		return !survivesARestriction(category)
 	default:
 		return true
@@ -117,7 +126,16 @@ func survivesARestriction(c commsauthz.Category) bool {
 // asserts the implication over every category and every reason code.
 func bindsEveryCategory(kinds []string) (string, bool) {
 	for _, kind := range kinds {
-		if kind != commsauthz.ReasonObjection && kind != commsauthz.ReasonRestricted {
+		switch kind {
+		case commsauthz.ReasonObjection, commsauthz.ReasonRestricted,
+			// subject_request joined the scoped kinds when it stopped binding
+			// the three categories Art. 12(3)/13/14/34 oblige us to send. Left
+			// here it would take the early exit and refuse an opt-out
+			// confirmation without ever asking suppressionBinds — the rule and
+			// its shortcut disagreeing, which is what this pair exists to
+			// prevent.
+			commsauthz.ReasonSubjectRequest:
+		default:
 			return kind, true
 		}
 	}

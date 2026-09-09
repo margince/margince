@@ -216,6 +216,12 @@ export const en = {
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.closeMenu": "Close",
+  // The agent panel's one promise, as opposed to its readings: what the agent
+  // can REACH. Row scope bounds it on the server, and a guarantee nobody is
+  // told about is one nobody can rely on — "what can this thing see" is the
+  // question a person most reasonably has about an agent working over their
+  // data. Held by AC-shell-8.
+  "shell.agent.scope": "Your agent reads only what you can see.",
   "shell.capture.importing": "Importing mail history",
   "shell.capture.share": "{percent} · {scanned} of {total} messages",
   "shell.capture.count": "{scanned} messages so far",
@@ -3410,6 +3416,8 @@ export const en = {
     "Could not read that file — try pasting the text instead.",
   "log.dueAt": "Due date",
   "log.date": "Date",
+  "log.assignee": "Assignee",
+  "log.unassigned": "Unassigned",
   "log.save": "Log",
   "log.saving": "Logging…",
 
@@ -3498,6 +3506,16 @@ export const en = {
   "compose.fileUploading": "Filing the file…",
   "compose.fileStoredUnnamed":
     "The file is on the record, but we could not read back which one it is. Attach it from the list above.",
+  "compose.carriageCarries":
+    "{channel} cannot carry files, so this message and its {count} attached cannot go on it. Send the text on {channel}, or the files another way.",
+  "compose.carriageCount":
+    "{channel} carries at most {limit} files in one message, and this has {named}. Send the rest as a second message.",
+  "compose.carriagePerFile":
+    "{filename} is larger than the {limit} {channel} accepts for one file. Send a smaller version, or share it another way.",
+  "compose.carriageAggregate":
+    "These {count} files come to {total} together, and {channel} carries at most {limit} in one message. Send them across several messages.",
+  "compose.carriageCaption":
+    "{channel} carries the text of a message with files as a caption, at most {limit} characters, and this has {length}. Shorten it, or send the files separately.",
   "calendar.previousMonth": "Previous month",
   "calendar.nextMonth": "Next month",
   "compose.schedulePick": "Pick date and time",
@@ -3974,6 +3992,16 @@ export const en = {
   "agent.activity.documentExtractNamed.failed": "I couldn't read {name}.",
   // A company's website being read. The same shape as the document lines: the
   // unnamed pair says which kind of thing, the named one says which company.
+  "agent.activity.transcriptRead.queued":
+    "The meeting transcript is queued to be read.",
+  "agent.activity.transcriptRead.running":
+    "I'm reading the transcript for next steps.",
+  "agent.activity.transcriptRead.stalled":
+    "Reading the transcript has taken unusually long. It may have stopped.",
+  "agent.activity.transcriptRead.done": "I've read the transcript.",
+  "agent.activity.transcriptRead.degraded":
+    "I stopped before finishing the transcript.",
+  "agent.activity.transcriptRead.failed": "I couldn't read the transcript.",
   "agent.activity.siteRead.queued": "The company website is queued to be read.",
   "agent.activity.siteRead.running": "I'm reading the company website.",
   "agent.activity.siteRead.stalled":
@@ -6152,6 +6180,12 @@ export const en = {
   "confirm.erasure.ask": "Remove my details",
   "confirm.erasure.staged": "Removal requested. Confirm below to send it.",
   "confirm.submit": "Confirm",
+  "confirm.subscription.title": "Confirm your subscription",
+  "confirm.subscription.ask": "Confirm that you want to receive {purpose}.",
+  "confirm.subscription.confirm": "Yes, subscribe me",
+  "confirm.subscription.alreadyTitle": "You are subscribed",
+  "confirm.subscription.alreadyBody":
+    "Your subscription to {purpose} is confirmed. You can stop it at any time from any email we send.",
   "confirm.done.title": "Thank you",
   "confirm.done.body":
     "I have recorded your answer. Anything you changed goes to a person here to apply, and this link is now used up.",

@@ -81,12 +81,25 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
+	// A deal with the recipient staked on it — real evidence for the
+	// "transactional" claim below, since the purpose key alone authorizes
+	// nothing. It rides the anchor's own links, inherited by the reply
+	// sendExpectingAcceptance stages off this activity. Automatic here (unlike
+	// setupPreflightIn's opt-in stakeADeal) because this fixture has exactly
+	// one consumer — TestTestMailboxFullLoop — so nothing else's authorization
+	// basis is silently changed by it.
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	dealID := apptest.StakeOnOpenDeal(t, e, "Test mailbox opportunity", stages, person.ID)
+
 	var activity struct {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "subject": "Inbound question", "direction": "inbound",
-		"links": []AnyMap{{"entity_type": "person", "entity_id": person.ID}},
+		"links": []AnyMap{
+			{"entity_type": "person", "entity_id": person.ID},
+			{"entity_type": "deal", "entity_id": dealID},
+		},
 	}, nil, &activity); status != http.StatusCreated {
 		t.Fatalf("log anchor activity → %d", status)
 	}
@@ -123,7 +136,7 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 	}); err != nil {
 		t.Fatalf("resolving the acting human: %v", err)
 	}
-	return &preflightEnv{AppEnv: e, activityID: activity.ID, personID: person.ID, ws: ws, user: user}
+	return &preflightEnv{AppEnv: e, activityID: activity.ID, personID: person.ID, dealID: dealID, ws: ws, user: user}
 }
 
 // connectTestMailbox drives the REAL connect endpoint and returns the created

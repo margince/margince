@@ -4189,6 +4189,27 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 reason: readOnlyReason,
                 reasonId: readOnlyReasonId,
               })}
+              // The strip frames the whole record rather than the work alone:
+              // it runs across both columns, and the details pane opens under
+              // it, so choosing a body and choosing what stands beside it read
+              // as two controls on one page instead of one nested in the other.
+              tabs={
+                <RecordTabs
+                  options={DEAL_TABS}
+                  value={tab}
+                  onChange={setTab}
+                  labels={{
+                    overview: t("tab.overview"),
+                    files: t("tab.documents"),
+                    history: t("tab.history"),
+                  }}
+                  // The switch for the deal's details column, at the end of the
+                  // tab row: it chooses what the page shows BESIDE the work, so
+                  // it stands with the controls that choose what the work
+                  // column shows, and never in the head among the deal's verbs.
+                  trailing={<PageAsideToggle />}
+                />
+              }
               timeline={timelineEntries}
               timelineGroups={groupChronology(
                 timelineEntries,
@@ -4219,25 +4240,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 t,
               )}
             >
-              {/* The same strip every record carries: a place a reader
-                  navigates, drawn as a rule with the open body underlined. */}
-              <RecordTabs
-                options={DEAL_TABS}
-                value={tab}
-                onChange={setTab}
-                labels={{
-                  overview: t("tab.overview"),
-                  files: t("tab.documents"),
-                  history: t("tab.history"),
-                }}
-                // The switch for the deal's details column, at the end of the
-                // tab row: it chooses what the page shows BESIDE the work, so
-                // it stands with the controls that choose what the work column
-                // shows. In the head it sat among the deal's own verbs — write,
-                // edit, the overflow — and read as one more thing to do to the
-                // record rather than as a way to see more of it.
-                trailing={<PageAsideToggle />}
-              />
               {/* One stack for the whole overview: the work column draws its
                   children with no interval of its own, so the reading and the
                   people under it take the record's rhythm from here rather

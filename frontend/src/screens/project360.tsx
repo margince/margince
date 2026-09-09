@@ -6,7 +6,7 @@ import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCan, useRecordWriteRefusal } from "../app/capability";
-import { PageAsideToggle, usePageAside } from "../app/pageaside";
+import { usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { OverflowMenu } from "../design-system/atoms";
@@ -53,6 +53,7 @@ import {
   ProjectDocumentsCard,
   StakeholdersCard,
 } from "./projectsections";
+import { ProjectTabs } from "./projecttabs";
 import {
   ChronologyFilter,
   ChronologyFooter,
@@ -183,13 +184,10 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         </>
       }
       actions={
-        <>
-          <ProjectActions
-            project={project}
-            refusedReasonId={readOnly ? readOnlyReasonId : undefined}
-          />
-          <PageAsideToggle />
-        </>
+        <ProjectActions
+          project={project}
+          refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+        />
       }
       // In the header row, where a reader looks for a record's verbs — as the
       // company, contact and lead pages already put them. Without it the row
@@ -197,29 +195,31 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       // with no primary action was also the one whose verbs were somewhere
       // else.
       actionsInline
+      tabs={<ProjectTabs />}
       band={
-        <div className="project-band">
-          {/* One sentence for why this record takes no changes, whichever
-              reason applies, so the stepper below can point at it. */}
-          {readOnlyReason && (
-            <p id={readOnlyReasonId} className="t-caption">
-              {readOnlyReason}
-            </p>
-          )}
-          <PhaseStepper
-            phase={project.phase}
-            refusedReasonId={readOnly ? readOnlyReasonId : undefined}
-            pending={false}
-            onMove={setMoveTo}
-          />
-          <RollupsStrip view={view} />
-        </div>
+        // ONE sentence and nothing else: why this record takes no changes, so
+        // every control it refuses points at it. Absent while the project is
+        // writable, where a reserved gap reads as a record with nothing said.
+        readOnlyReason ? (
+          <p id={readOnlyReasonId} className="t-caption">
+            {readOnlyReason}
+          </p>
+        ) : undefined
       }
       {...chronology}
     >
-      {/* The record's work column, at the record's own step — the one every
-          other record page's bodies are read down. */}
+      {/* The record's work column, at the record's own step. The phase and the
+          readings open it: they describe the whole project but are read as
+          cards, so they stand BESIDE the details pane as on every other
+          record, not in a band across both columns that the pane reflowed. */}
       <div className="record-stack">
+        <PhaseStepper
+          phase={project.phase}
+          refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+          pending={false}
+          onMove={setMoveTo}
+        />
+        <RollupsStrip view={view} />
         <div id={PROJECT_DEALS_ANCHOR}>
           <ProjectDealsCard
             view={view}

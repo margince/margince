@@ -1132,7 +1132,7 @@ export interface components {
          *     It names WHAT was recorded and at WHICH authority, never the reason the subject gave: that is their words about themselves, and an event fans out further than the record it describes.
          */
         PublicEventConsentSuppressed: {
-            /** @description Which stop this is (subject_request for a hand-recorded one). */
+            /** @description Which stop this is. `subject_request` and `marketing_objection` are the two recorded by hand; `processing_restriction` and `hard_bounce` are written by machinery. They differ in reach: a subject request stops everything except the privacy notice, security notice and opt-out confirmation the controller owes regardless, while an objection is Art. 21(2) and stops marketing alone. */
             kind: string;
             /** @description Whose decision it is, which is what says who may lift it (machine | user | admin | subject). */
             decided_by_level: string;

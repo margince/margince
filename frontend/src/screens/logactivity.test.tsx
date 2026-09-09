@@ -6,6 +6,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -886,5 +887,85 @@ describe("log activity from a 360", () => {
     expect(
       (screen.getByLabelText("Transcript") as HTMLTextAreaElement).value,
     ).toBe("");
+  });
+});
+
+describe("assigning a task at create time", () => {
+  // Two people and an agent seat, so the picker's eligibility is a real filter
+  // rather than an empty list agreeing with itself. The agent is who the server
+  // refuses as an assignee, so it is the one the picker must not offer.
+  const rosterUsers = {
+    data: [
+      { id: "u1", display_name: "Dana Ops", is_agent: false },
+      { id: "u2", display_name: "Priya Lead", is_agent: false },
+      { id: "agent-1", display_name: "Runner Bot", is_agent: true },
+    ],
+    page: { next_cursor: null },
+  };
+
+  function renderTaskComposer(captured?: Captured[]) {
+    stubApi(
+      {
+        "GET /people/p1": () => jsonResponse(person),
+        "GET /users": () => jsonResponse(rosterUsers),
+        "POST /activities": createdActivity,
+      },
+      captured,
+    );
+    render(<LogActivity entityType="person" entityId="p1" askedKind="task" />);
+  }
+
+  it("carries the chosen assignee on the posted task", async () => {
+    const captured: Captured[] = [];
+    renderTaskComposer(captured);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Subject *"), "Send proposal");
+    await user.click(screen.getByLabelText("Assignee"));
+    await user.click(await screen.findByRole("option", { name: "Priya Lead" }));
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((e) => e.key === "POST /activities")).toBe(true),
+    );
+    const post = captured.find((e) => e.key === "POST /activities");
+    expect(post?.body).toMatchObject({ kind: "task", assignee_id: "u2" });
+  });
+
+  it("posts no assignee when the task is left unassigned", async () => {
+    const captured: Captured[] = [];
+    renderTaskComposer(captured);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Subject *"), "Send proposal");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((e) => e.key === "POST /activities")).toBe(true),
+    );
+    const post = captured.find((e) => e.key === "POST /activities");
+    expect(post?.body).toMatchObject({ kind: "task" });
+    expect(post?.body).not.toHaveProperty("assignee_id");
+  });
+
+  it("offers no assignee on a note, which has nobody to hold it", async () => {
+    stubApi({
+      "GET /people/p1": () => jsonResponse(person),
+      "GET /users": () => jsonResponse(rosterUsers),
+    });
+    render(<LogActivity entityType="person" entityId="p1" />);
+    await screen.findByLabelText("Subject *");
+    expect(screen.queryByLabelText("Assignee")).toBeNull();
+  });
+
+  it("does not offer an agent seat as an assignee", async () => {
+    renderTaskComposer();
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText("Assignee"));
+    const listbox = screen.getByRole("listbox");
+    expect(
+      await within(listbox).findByRole("option", { name: "Dana Ops" }),
+    ).toBeTruthy();
+    expect(
+      within(listbox).queryByRole("option", { name: "Runner Bot" }),
+    ).toBeNull();
   });
 });

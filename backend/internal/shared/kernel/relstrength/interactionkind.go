@@ -9,31 +9,34 @@ import "strings"
 // exchange worth SCORING: the deal-health window, person strength, and the
 // company signal scan.
 //
-// A task is intent and a note is a record of thinking; neither means two people
-// spoke, and counting them would let a rep's own to-do list score as a
-// relationship.
+// The membership test is whether two people spoke. A task is intent and a note
+// is a record of thinking; neither means two people spoke, and counting them
+// would let a rep's own to-do list score as a relationship. A chat message
+// passes that test the same way an email does, and an account whose whole
+// relationship runs over a channel read as having no interactions at all while
+// it was excluded.
+//
+// What a message does NOT share with the others is its unit: one row is one
+// exchange for an email, a call and a meeting, and one line of a conversation
+// for a message. InteractionUnitSQL below is where that difference is answered,
+// and it is answered there rather than by keeping the kind out, because the
+// membership question and the counting question have different answers.
 //
 // It is unexported and reached only through the SQL renderers below, because
 // every reader of it is a query.
-var interactionKinds = []string{"email", "call", "meeting"}
+var interactionKinds = []string{"email", "call", "meeting", "message"}
 
 // participantKinds is the closed set of kinds that HAVE participants — an
 // activity where it is meaningful to ask who was there.
 //
-// TWO QUESTIONS, TWO SETS, AND THE DIFFERENCE IS ONE KIND. "Who was in the
-// room" and "does this count as warmth" were one set until a group chat
-// arrived, because until then the answers never differed: a task and a note
-// have no room AND no warmth. A chat message has a room full of people and an
-// unsettled claim to warmth — nobody has decided whether a hundred one-line
-// replies mean a relationship the way a meeting does — so folding it into one
-// set would have answered that unasked question by moving every installation's
-// deal-health and person-strength numbers.
-//
-// This set is therefore the WIDER one, and only ever that way round: a kind may
-// be worth recording the people on without being worth scoring, while a kind
-// scored with nobody recorded on it would be a relationship with no one in it.
-// backend/gates/activitykindsets_test.go holds that direction, and holds both
-// sets against the contract's own kind vocabulary.
+// TWO QUESTIONS, TWO SETS. "Who was in the room" and "does this count as
+// warmth" hold the same four kinds today, and they are still two sets because
+// they are still two questions: a kind may be worth recording the people on
+// without being worth scoring, while a kind scored with nobody recorded on it
+// would be a relationship with no one in it. That direction is the one a diff
+// may move them apart in, and only that one.
+// Held by: TestEveryScoredKindHasParticipants (backend/gates/activitykindsets_test.go),
+// which also holds both sets against the contract's own kind vocabulary.
 //
 // Unexported for the same reason: a caller that could append to it would change
 // what four different writers stamp, and those four must agree or a captured
@@ -65,6 +68,46 @@ func InteractionKindSQLList() string {
 // `kind IN %s` shape the deal-health and person-strength queries use.
 func InteractionKindSQLGroup() string {
 	return "(" + InteractionKindSQLList() + ")"
+}
+
+// InteractionUnitSQL renders what ONE interaction is, for a query that counts
+// them: `count(DISTINCT <unit>)` in place of `count(*)`.
+//
+// An email, a call and a meeting are one interaction per row, because each row
+// is one exchange somebody decided to have. A channel message is not: a
+// conversation arrives as dozens of one-line replies, and counting rows makes an
+// afternoon of chat outweigh a quarter of meetings. FreqSaturation is 20, so
+// twenty lines typed in five minutes would fill a ninety-day quota of contact.
+//
+// So a message counts once per conversation per day. That is the unit a person
+// uses out loud — "we talked on Tuesday" — and unlike a per-message weight it
+// introduces no constant, so there is no number that has to be tuned against a
+// real channel before the count is honest. Twenty days of talking across the
+// quarter saturates frequency, which is a relationship; twenty lines in an
+// afternoon is one day of one.
+//
+// The directed counts read the same unit, so a conversation-day with traffic
+// both ways yields the unit under both filters and reads as balanced. That is
+// why Inputs does not require the two directions to sum to the total.
+//
+// UTC decides the day. The boundary only changes whether a conversation running
+// past midnight counts once or twice, every fixed zone is arbitrary for a
+// workspace spanning several, and UTC is the one a reader can reproduce from the
+// stored value alone.
+//
+// A message with no thread_key falls back to its own id, so it counts as one
+// rather than dropping out of the count: a unit that renders NULL is skipped by
+// count(DISTINCT), and a count that can silently shrink is the wrong way for
+// this to fail. The two prefixes keep the spaces apart, because a thread_key is
+// free text from a provider and could otherwise equal a uuid rendered as text.
+//
+// alias is the statement's alias for `activity`, always a compile-time literal
+// at the call site as the other renderers here require.
+func InteractionUnitSQL(alias string) string {
+	return "CASE WHEN " + alias + ".kind = 'message'" +
+		" THEN 'conversation-day:' || coalesce(" + alias + ".thread_key, " + alias + ".id::text)" +
+		" || ':' || (" + alias + ".occurred_at AT TIME ZONE 'UTC')::date" +
+		" ELSE 'activity:' || " + alias + ".id::text END"
 }
 
 // ParticipantKindSQLList renders the participant set for the backfill, which

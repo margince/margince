@@ -7,11 +7,24 @@
 # flag. Four landed that way in one afternoon across three sessions; the fourth
 # author had just finished explaining the trap to somebody else.
 #
-# It is NOT a gate. `ci` is the one required check and this job is not it, so a
-# red here blocks nothing. Prevention is a branch-protection decision (#2496)
-# and is not this workflow's to make; what it does is make the fact visible on
-# the pull request, at the moment it becomes true, instead of leaving it to be
-# noticed by whoever reads the review timeline carefully enough.
+# It is NOT a gate, and the job therefore SUCCEEDS whatever it finds. That is
+# load-bearing rather than lenient: `ci` is the one required check, but a red
+# check of any kind leaves the pull request BLOCKED and `gh pr merge` refusing,
+# with administrator override as the only way past — so a job that failed on a
+# finding was a gate no matter what its name said, and the strictest one in the
+# repository, because the only hand that could clear it was the one every
+# contributor is asked not to use.
+#
+# It became unclearable in the ordinary case. A review records the commit id it
+# was made against; a rebase rewrites those ids; and CodeRabbit tracks CONTENT,
+# answering `@coderabbitai review` on a rebased branch with "Already reviewed
+# the last commit" and declining. So the reviewer had read every change, the
+# report said BEHIND, and neither of the remedies it printed moved it.
+#
+# The finding goes to a sticky pull-request comment instead, which is where the
+# reader already is — louder than a green job's step summary, and it withdraws
+# itself when the coverage closes. Prevention is a branch-protection decision
+# (#2496) and is not this workflow's to make.
 #
 # It reads what GitHub records. A review carries the commit it was made
 # against, so this speaks precisely for the reviewers that leave one — and says
@@ -48,7 +61,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      # write, for the sticky comment the finding now lives in.
+      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -93,9 +107,9 @@ jobs:
           # order alone reads them as already covered.
           history="$(git rev-list --parents "${BASE_SHA}..${HEAD_SHA}")"
 
-          # Captured rather than piped into the summary, so the report's own
-          # exit status is what fails the step. Through a pipe it would be
-          # tee's, and the job would stay green while printing the finding.
+          # Captured rather than piped, so the report's own exit status is
+          # readable. Through a pipe it would be tee's, and the finding would
+          # have nothing to switch on.
           status=0
           out="$(REVIEW_COVERAGE_HEAD="$HEAD_SHA" \
                  REVIEW_COVERAGE_HISTORY="$history" \
@@ -107,4 +121,28 @@ jobs:
             printf '%s\n' "$out"
             echo '```'
           } >>"$GITHUB_STEP_SUMMARY"
-          exit "$status"
+
+          # The sticky comment. Found by its marker rather than by author or
+          # position, so a run edits the one it left last time instead of
+          # stacking a new finding on every push — and so a reader sees one
+          # current answer rather than a column of superseded ones.
+          marker='<!-- review-coverage-report -->'
+          if [ "$status" -eq 0 ]; then
+            body="$(printf '%s\n%s' "$marker" 'Every reviewer has read the head of this branch.')"
+          else
+            body="$(printf '%s\n%s\n\n```\n%s\n```\n\n%s' "$marker" \
+              '**Code a reviewer flagged was changed afterwards and not read again.**' \
+              "$out" \
+              'This blocks nothing. If the reviewer is a bot that tracks content rather than commit ids, a rebase alone will show it BEHIND — `@coderabbitai full review` re-reads the whole changeset.')"
+          fi
+
+          # Never fails the job, including when it cannot comment at all: the
+          # report is worth having on a token that cannot write, and a job that
+          # went red because commenting failed would be the gate this is not.
+          existing="$(gh api --paginate "repos/${{ github.repository }}/issues/${PR}/comments" \
+            --jq "[.[] | select(.body != null and (.body | contains(\"$marker\"))) | .id] | first // empty" || true)"
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${{ github.repository }}/issues/comments/${existing}" -f body="$body" >/dev/null || true
+          elif [ "$status" -ne 0 ]; then
+            gh api -X POST "repos/${{ github.repository }}/issues/${PR}/comments" -f body="$body" >/dev/null || true
+          fi

@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -90,7 +92,24 @@ func requireGenuineTrigger(trigger string) error {
 	if validTriggers[trigger] {
 		return nil
 	}
-	return &BadArgsError{Cause: fmt.Errorf("trigger %q is not genuine engagement", trigger)}
+	// The four that count ride in Guidance, which is ours, and the caller's word
+	// in Cause, which is bounded. Naming none of them left an agent guessing at
+	// a closed set of four, while the REST twin (people.handlers_lead) spelled
+	// it out — one door taught the vocabulary and the other refused without it.
+	return &BadArgsError{
+		Cause:    fmt.Errorf("trigger %q is not genuine engagement", trigger),
+		Field:    "trigger",
+		Guidance: "promotion rests on one of: " + strings.Join(genuineTriggerNames(), ", "),
+	}
+}
+
+// genuineTriggerNames is the closed set, derived from the predicate that admits
+// it rather than restated beside it: a second list is how the sentence and the
+// check come to disagree about what promotes a lead.
+func genuineTriggerNames() []string {
+	names := slices.Collect(maps.Keys(validTriggers))
+	slices.Sort(names)
+	return names
 }
 
 // DisqualifyLeadCommand is one lead retirement, whichever door asked for it.
@@ -256,7 +275,14 @@ func (r *advanceProjectPhaseResolver) Guards(ctx context.Context, cmd AdvancePro
 // costs a human's yes.
 func requireProjectPhase(toPhase string, reason *string) error {
 	if !projectPhases[toPhase] {
-		return &BadArgsError{Cause: fmt.Errorf("to_phase %q is not a project phase", toPhase)}
+		// The ladder rides in Guidance, which is ours, and the caller's word in
+		// Cause, which is bounded. Naming no phase at all left an agent guessing
+		// at a closed set of four.
+		return &BadArgsError{
+			Cause:    fmt.Errorf("to_phase %q is not a project phase", toPhase),
+			Field:    "to_phase",
+			Guidance: "the phases are: " + strings.Join(projectPhaseNames(), ", "),
+		}
 	}
 	if toPhase == projectPhaseClosed && (reason == nil || strings.TrimSpace(*reason) == "") {
 		return &BadArgsError{Cause: errors.New("reason is required when to_phase is closed")}

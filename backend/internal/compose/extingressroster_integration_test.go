@@ -115,7 +115,7 @@ func TestAUnitsGroupRosterLandsAsParticipants(t *testing.T) {
 		rows, err := tx.Query(ctx, `
 			SELECT channel_user_id, address, user_id, person_id
 			  FROM activity_participant
-			 WHERE activity_id = $1 AND channel_user_id IS NOT NULL
+			 WHERE activity_id = $1 AND channel_user_id IS NOT NULL AND role NOT IN ('from', 'to')
 			 ORDER BY channel_user_id`, activityID)
 		if err != nil {
 			return err
@@ -176,9 +176,11 @@ func TestARosterAccountResolvesToTheContactItIsBoundTo(t *testing.T) {
 	}
 }
 
-// A record naming nobody lands exactly as it did before the field existed. The
-// ordinary two-party message is the overwhelming majority of what a chat unit
-// sends, and it must not have gained a row.
+// A record naming no ROSTER lands exactly as it did before the field
+// existed: the two parties the message is already between (stamped by
+// stampCaptureParticipants, role from/to) and nothing more. The ordinary
+// two-party message is the overwhelming majority of what a chat unit sends,
+// and it must not have gained an EXTRA row.
 func TestATwoPartyMessageStillNamesNoRoster(t *testing.T) {
 	e := setupIngress(t)
 	registerProbeTransport(t, e)
@@ -188,7 +190,8 @@ func TestATwoPartyMessageStillNamesNoRoster(t *testing.T) {
 		t.Fatalf("Ingest: %v", err)
 	}
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND channel_user_id IS NOT NULL`,
+		`SELECT count(*) FROM activity_participant
+		  WHERE activity_id = $1 AND channel_user_id IS NOT NULL AND role NOT IN ('from', 'to')`,
 		ids.MustParse(result.Ref.ID)); got != 0 {
 		t.Fatalf("a message naming nobody left %d roster row(s)", got)
 	}

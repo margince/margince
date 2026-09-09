@@ -215,6 +215,7 @@ export const vi = {
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
   "shell.closeMenu": "Đóng",
+  "shell.agent.scope": "Trợ lý của bạn chỉ đọc những gì bạn xem được.",
   "shell.capture.importing": "Đang nhập lịch sử thư",
   "shell.capture.share": "{percent} · {scanned} trên {total} thư",
   "shell.capture.count": "{scanned} thư cho đến nay",
@@ -3288,6 +3289,8 @@ export const vi = {
   "log.body": "Nội dung",
   "log.dueAt": "Ngày đến hạn",
   "log.date": "Ngày",
+  "log.assignee": "Người phụ trách",
+  "log.unassigned": "Chưa giao",
   "log.save": "Ghi nhận",
   "log.saving": "Đang ghi nhận…",
 
@@ -3374,6 +3377,16 @@ export const vi = {
   "compose.fileUploading": "Đang lưu tệp…",
   "compose.fileStoredUnnamed":
     "Tệp đã ở trên hồ sơ, nhưng chúng tôi không đọc lại được đó là tệp nào. Hãy đính kèm nó từ danh sách phía trên.",
+  "compose.carriageCarries":
+    "{channel} không mang được tệp, nên tin nhắn này cùng {count} tệp đính kèm không thể gửi trên đó. Hãy gửi phần chữ qua {channel}, hoặc gửi tệp bằng cách khác.",
+  "compose.carriageCount":
+    "{channel} mang tối đa {limit} tệp trong một tin nhắn, mà tin này có {named}. Hãy gửi phần còn lại thành một tin nhắn thứ hai.",
+  "compose.carriagePerFile":
+    "{filename} lớn hơn mức {limit} mà {channel} chấp nhận cho một tệp. Hãy gửi bản nhỏ hơn, hoặc chia sẻ bằng cách khác.",
+  "compose.carriageAggregate":
+    "{count} tệp này cộng lại là {total}, mà {channel} chỉ mang tối đa {limit} trong một tin nhắn. Hãy gửi chúng qua nhiều tin nhắn.",
+  "compose.carriageCaption":
+    "{channel} mang phần chữ của tin nhắn có tệp dưới dạng chú thích, tối đa {limit} ký tự, mà tin này có {length}. Hãy rút ngắn, hoặc gửi tệp riêng.",
   "calendar.previousMonth": "Tháng trước",
   "calendar.nextMonth": "Tháng sau",
   "compose.schedulePick": "Chọn ngày và giờ",
@@ -3853,6 +3866,15 @@ export const vi = {
     "Tôi đã đọc {name} đến mức các bản ghi cho phép rồi dừng.",
   "agent.activity.accountScanNamed.failed":
     "Tôi không hoàn thành được việc đọc {name}.",
+  "agent.activity.transcriptRead.queued": "Bản chép lời đang chờ được đọc.",
+  "agent.activity.transcriptRead.running":
+    "Tôi đang đọc bản chép lời để tìm các bước tiếp theo.",
+  "agent.activity.transcriptRead.stalled":
+    "Việc đọc bản chép lời kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.transcriptRead.done": "Tôi đã đọc xong bản chép lời.",
+  "agent.activity.transcriptRead.degraded":
+    "Tôi đã dừng trước khi đọc hết bản chép lời.",
+  "agent.activity.transcriptRead.failed": "Tôi không đọc được bản chép lời.",
   "agent.activity.siteRead.queued": "Trang web của công ty đang chờ được đọc.",
   "agent.activity.siteRead.running": "Tôi đang đọc trang web của công ty.",
   "agent.activity.siteRead.stalled":
@@ -5952,6 +5974,12 @@ export const vi = {
   "confirm.erasure.ask": "Xóa thông tin của tôi",
   "confirm.erasure.staged": "Đã yêu cầu xóa. Xác nhận bên dưới để gửi.",
   "confirm.submit": "Xác nhận",
+  "confirm.subscription.title": "Xác nhận đăng ký",
+  "confirm.subscription.ask": "Xác nhận rằng bạn muốn nhận {purpose}.",
+  "confirm.subscription.confirm": "Có, đăng ký cho tôi",
+  "confirm.subscription.alreadyTitle": "Bạn đã đăng ký",
+  "confirm.subscription.alreadyBody":
+    "Đăng ký {purpose} của bạn đã được xác nhận. Bạn có thể dừng bất cứ lúc nào từ email chúng tôi gửi.",
   "confirm.done.title": "Cảm ơn bạn",
   "confirm.done.body":
     "Tôi đã ghi nhận câu trả lời của bạn. Những thay đổi sẽ được một người ở đây áp dụng, và liên kết này đã được dùng.",

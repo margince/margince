@@ -1874,6 +1874,30 @@ test.describe("§3.8: 390px mobile", () => {
     await expectNoAaViolations(page, "brief — the agent's panel (390px)");
   });
 
+  // AC-shell-8, restated against the taskbar. It described the record-scoped Ask
+  // composer on a floating button, which the agent surfaces no longer offer —
+  // but the sentence that button carried is a promise about what the agent can
+  // REACH, and row scope still bounds it. Deleting the control deleted the
+  // promise from the product and left the property in place, which is the wrong
+  // direction: a guarantee nobody is told about is one nobody can rely on.
+  //
+  // So the criterion is now about the claim rather than about its container,
+  // and it is asserted on the surface a reader meets the agent on.
+  test("AC-shell-8: the agent's panel states what the agent can reach", async ({
+    page,
+  }) => {
+    await page.goto("/#/brief");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+
+    await page.getByRole("button", { name: "Expand the agent panel" }).click();
+    await expect(
+      page
+        .locator(".arpanel")
+        .getByText("Ihr Agent liest nur das, was Sie sehen können."),
+    ).toBeVisible();
+  });
+
   // The whole keyboard path this surface has: it opens from the bar, Escape
   // closes it from inside, and focus lands back on the control that opened it
   // rather than on <body> — from where the next Tab starts at the top of a page

@@ -292,6 +292,13 @@ func readMember(ctx context.Context, tx pgx.Tx, m exportMember) (memberData, err
 	if err := pgRows.Err(); err != nil {
 		return memberData{}, err
 	}
+	// The bundle reads every column of every row in scope and applies neither
+	// the role masks nor this — so a private company's id left through the deal
+	// member while the company member of the same bundle correctly omitted
+	// the company itself.
+	if err := withholdUnreadableReferences(ctx, tx, m.table, columns, data.rows); err != nil {
+		return memberData{}, err
+	}
 	return data, nil
 }
 

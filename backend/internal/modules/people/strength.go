@@ -88,6 +88,11 @@ type RelationshipStrength struct {
 // shared definition — see relstrength.InteractionKindSQLGroup.
 var strengthKinds = relstrength.InteractionKindSQLGroup()
 
+// strengthInteractionUnit is what ONE interaction is when these folds count
+// them, from the same shared definition — see relstrength.InteractionUnitSQL.
+// Every fold below aliases activity as `a`, so one rendering serves them all.
+var strengthInteractionUnit = relstrength.InteractionUnitSQL("a")
+
 // PersonStrength computes the §4 baseline for one person. The person
 // read is row-scoped exactly like GetPerson: a person the caller cannot
 // see has no strength to disclose.
@@ -354,9 +359,9 @@ func contactStrengths(
 	rows, err := tx.Query(ctx, `
 		SELECT l.person_id,
 		       max(a.occurred_at),
-		       count(*) FILTER (WHERE a.occurred_at >= $2),
-		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
-		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
 		       (SELECT i.id FROM activity i
@@ -427,9 +432,9 @@ func strengthInputs(
 	// touch, the 90-day direction counts, and the contributing ids.
 	if err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at),
-		       count(*) FILTER (WHERE a.occurred_at >= $2),
-		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
-		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
 		       (SELECT i.id FROM activity i

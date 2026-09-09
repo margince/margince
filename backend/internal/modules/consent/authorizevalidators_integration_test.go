@@ -216,7 +216,7 @@ func TestAnEvidencedInvoiceSurvivesToTransmit(t *testing.T) {
 		got, err = e.gate.decideOne(e.ctx, tx, r,
 			stagedRequestFor(commsauthz.TransmitRequest{
 				DeliveryID: delivery, PurposeKey: "transactional",
-			}, r, claims, ""), commsauthz.PhaseTransmit)
+			}, r, claims, "", nil), commsauthz.PhaseTransmit)
 		return err
 	}); err != nil {
 		t.Fatalf("deciding at transmit: %v", err)

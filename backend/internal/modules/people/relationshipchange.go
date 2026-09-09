@@ -190,13 +190,13 @@ func changeInputs(
 	// unchanged and the whole derivation silent.
 	if err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at),
-		       count(*) FILTER (WHERE a.occurred_at >= $2),
-		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
-		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
 		       max(a.occurred_at) FILTER (WHERE a.occurred_at < $3),
-		       count(*) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3),
-		       count(*) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3 AND a.direction = 'inbound'),
-		       count(*) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3 AND a.direction = 'outbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3 AND a.direction = 'inbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3 AND a.direction = 'outbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound')
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1

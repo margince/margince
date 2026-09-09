@@ -52,11 +52,20 @@ import (
 // agent's differ in the CREDENTIAL and in nothing else. The approved retry has
 // to be the identical request — the diff hash binds it — which is a second
 // reason it is built in one place.
-func accountSendBody(company, subject string) AnyMap {
+//
+// The deal link is evidence, not decoration: an account-started send opens no
+// thread (that is the whole point of the suite it is fixturing), and a bare
+// `transactional` claim with nothing behind it resolves as a REVIEW —
+// ReasonLegacyTransactionalUnevidenced — not an allow. The company link stays
+// too, because linkedActivities counts by it.
+func accountSendBody(company, deal, subject string) AnyMap {
 	return AnyMap{
 		"subject": subject, "body": "Good morning — introducing ourselves.",
 		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
-		"links": []AnyMap{{"entity_type": "company", "entity_id": company}},
+		"links": []AnyMap{
+			{"entity_type": "company", "entity_id": company},
+			{"entity_type": "deal", "entity_id": deal},
+		},
 	}
 }
 
@@ -65,6 +74,7 @@ func accountSendBody(company, subject string) AnyMap {
 type accountSendEnv struct {
 	*preflightEnv
 	company string
+	deal    string
 }
 
 func setupAccountSend(t *testing.T) *accountSendEnv {
@@ -73,7 +83,31 @@ func setupAccountSend(t *testing.T) *accountSendEnv {
 	// Without the send grant every send below refuses at the pre-flight, and
 	// this suite would pass while proving nothing about authority.
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
-	return &accountSendEnv{preflightEnv: p, company: anchorCompany(t, p.AppEnv, "Northwind")}
+	company := anchorCompany(t, p.AppEnv, "Northwind")
+	return &accountSendEnv{preflightEnv: p, company: company, deal: openDealWithStakeholder(t, p.AppEnv, company, p.personID)}
+}
+
+// openDealWithStakeholder plants a live opportunity on company with the recipient
+// staked on it, through the real endpoints — the shape resolveCategory's
+// live-deal arm looks for (backend/internal/modules/consent/authorizeevidence.go).
+func openDealWithStakeholder(t *testing.T, e *apptest.AppEnv, company, personID string) string {
+	t.Helper()
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	var deal struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
+		"name": "Northwind rollout", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
+		"company_id": company, "source": "manual",
+	}, nil, &deal); status != http.StatusCreated {
+		t.Fatalf("create deal → %d", status)
+	}
+	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
+		"kind": "deal_stakeholder", "deal_id": deal.ID, "person_id": personID, "source": "manual",
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("stake the recipient on the deal → %d", status)
+	}
+	return deal.ID
 }
 
 // deliveryCount is what a send did or did not do, read from the table both
@@ -107,7 +141,7 @@ func TestAHumansAccountStartedSendLeavesWithoutAnApproval(t *testing.T) {
 	var sent struct {
 		ID string `json:"id"`
 	}
-	if status := a.Call(t, "POST", "/v1/emails", accountSendBody(a.company, "Hello from Fable"), nil, &sent); status != http.StatusAccepted {
+	if status := a.Call(t, "POST", "/v1/emails", accountSendBody(a.company, a.deal, "Hello from Fable"), nil, &sent); status != http.StatusAccepted {
 		t.Fatalf("human account-started send → %d, want 202 — a human's own action is the approval", status)
 	}
 	if sent.ID == "" {
@@ -215,7 +249,10 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 	args, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
 		"body": "Good morning.", "consent_purpose": "transactional",
-		"links": []map[string]string{{"entity_type": "company", "entity_id": a.company}},
+		"links": []map[string]string{
+			{"entity_type": "company", "entity_id": a.company},
+			{"entity_type": "deal", "entity_id": a.deal},
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -264,7 +301,10 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 	retry, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
 		"body": "Good morning.", "consent_purpose": "transactional",
-		"links":       []map[string]string{{"entity_type": "company", "entity_id": a.company}},
+		"links": []map[string]string{
+			{"entity_type": "company", "entity_id": a.company},
+			{"entity_type": "deal", "entity_id": a.deal},
+		},
 		"approval_id": approvalID,
 	})
 	if err != nil {

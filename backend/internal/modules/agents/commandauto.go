@@ -28,6 +28,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -313,7 +314,11 @@ func requireLinkTarget(entityType string) error {
 	if relinkTargets[entityType] {
 		return nil
 	}
-	return &BadArgsError{Cause: fmt.Errorf("entity_type %q is not a link target", entityType)}
+	return &BadArgsError{
+		Cause:    fmt.Errorf("entity_type %q is not a link target", entityType),
+		Field:    "entity_type",
+		Guidance: "a link target is one of: " + strings.Join(relinkTargetNames(), ", "),
+	}
 }
 
 // DecideApprovalCommand is one person's answer to one staged proposal,

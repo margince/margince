@@ -33,6 +33,7 @@ import {
   type NavLevelGroup,
   type NavSection,
   navEntryHref,
+  opensCreateForm,
   RAIL_LESS_SCREENS,
 } from "./nav";
 import {
@@ -835,10 +836,9 @@ export function Shell({
   const onUnitPage =
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
   const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
-  // Record pages only: the id is what makes it one. `#/companies` is the list,
-  // and a list belongs to the other family.
-  const griddedRecord =
-    route.id !== undefined && GRIDDED_RECORD_SCREENS.has(route.screen);
+  // A RECORD id makes one: `#/companies` and `#/deals/new` are both lists.
+  const recordPage = route.id !== undefined && !opensCreateForm(route);
+  const griddedRecord = recordPage && GRIDDED_RECORD_SCREENS.has(route.screen);
   // The id-less half of the same policy: a screen that reads down but is not a
   // record, so there is no id to key on. Brief is the one today.
   const griddedScreen = GRIDDED_SCREENS.has(route.screen);

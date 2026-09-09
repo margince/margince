@@ -69,8 +69,8 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await expect(current).toHaveText("Initiative");
   // The phase history lives in the details column, which starts closed: the
   // reader opens it from the Details switch before the birth row is on screen.
-  // A project record carries no tab row, so its switch stands with the head's
-  // verbs rather than at the end of the tabs.
+  // That switch stands at the end of the tab row, where every record page
+  // carries it, so it is found by its name rather than by where it sits.
   await page.getByRole("button", { name: "Details" }).click();
   await expect(page.getByText("Gestartet in Initiative")).toBeVisible();
   await expect(

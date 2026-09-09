@@ -2110,7 +2110,7 @@ describe("the money slot says WHY it has no figure", () => {
     });
     renderCompany();
     await strip();
-    expect((await screen.findAllByText(/186\.4k/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/186\.4k/i)).length).toBeGreaterThan(0);
     expect(
       (await screen.findAllByText(/Last synced a while ago/)).length,
     ).toBeGreaterThan(0);
@@ -2127,7 +2127,7 @@ describe("the money slot says WHY it has no figure", () => {
     });
     renderCompany();
     await strip();
-    expect((await screen.findAllByText(/186\.4k/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/186\.4k/i)).length).toBeGreaterThan(0);
     expect(
       (await screen.findAllByText(/Last sync failed/)).length,
     ).toBeGreaterThan(0);
@@ -2157,7 +2157,7 @@ describe("the money slot says WHY it has no figure", () => {
     });
     renderCompany();
     await strip();
-    expect((await screen.findAllByText(/186\.4k/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/186\.4k/i)).length).toBeGreaterThan(0);
     expect((await screen.findAllByText("datev")).length).toBeGreaterThan(0);
   });
 });

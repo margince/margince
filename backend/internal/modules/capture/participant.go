@@ -39,13 +39,22 @@ const (
 // mailbox owner whose connection produced it, and the counterparty it was
 // exchanged with.
 //
-// The counterparty lands as an ADDRESS, not a person: capture creates the
-// person after this transaction commits (the tiered creation gate may also
-// decide not to create one at all), so the address is the honest answer at
-// this point. promoteParticipantToPerson upgrades the row later, when and if
-// an identity resolves. Recording the address now rather than waiting is what
-// keeps a suppressed or deferred counterparty from vanishing from the record
-// of who was in the conversation.
+// The counterparty lands as an ADDRESS or a CHANNEL ACCOUNT, never as a
+// person: capture creates the person after this transaction commits (the
+// tiered creation gate may also decide not to create one at all), so the bare
+// identity is the honest answer at this point. promoteParticipantToPerson
+// upgrades the row later, when and if an identity resolves. Recording it now
+// rather than waiting is what keeps a suppressed or deferred counterparty from
+// vanishing from the record of who was in the conversation.
+//
+// A channel record carries a ChannelIdentity and no Email (counterparty.go),
+// so the account id — activity_participant.channel_user_id, read against
+// activity.channel_provider rather than duplicating the provider onto this
+// row (1788759372's own reasoning) — is what stands in for the address a mail
+// record would carry. Without it a channel counterparty got no participant
+// row at all, which is silent everywhere except consent's thread-reply
+// evidence (authorIsTheSubject): a customer's own inbound message stopped
+// being proof that a rep's reply answers it.
 //
 // Direction decides the roles and nothing else: on an outbound message our
 // user is the sender, on an inbound one they are the recipient. That
@@ -58,7 +67,7 @@ func stampCaptureParticipants(
 	ownerUserID ids.UUID,
 	kind string,
 	direction string,
-	counterpartyEmail string,
+	counterparty connector.Counterparty,
 ) error {
 	// The same kinds the hand-logged path accepts. Without this a captured note
 	// becomes a conversation while an identical hand-logged one does not, and
@@ -72,13 +81,13 @@ func stampCaptureParticipants(
 	}
 
 	if ownerUserID != ids.Nil {
-		if err := insertParticipant(ctx, tx, activityID, ourRole, &ownerUserID, nil, ""); err != nil {
+		if err := insertParticipant(ctx, tx, activityID, ourRole, &ownerUserID, nil, "", ""); err != nil {
 			return fmt.Errorf("capture: stamping the mailbox owner as a participant: %w", err)
 		}
 	}
 	// Normalized the same way person_email is, so the promotion below and the
 	// erasure lookup both match without a runtime case fold.
-	address := strings.ToLower(strings.TrimSpace(counterpartyEmail))
+	address := strings.ToLower(strings.TrimSpace(counterparty.Email))
 	// Never the owner's OWN address as the other end. The connector derives the
 	// counterparty by comparing the From header against the one address the
 	// grant names, so a message the owner sent from an alias arrives with that
@@ -97,8 +106,12 @@ func stampCaptureParticipants(
 	if self.Covers(address) {
 		address = ""
 	}
-	if address != "" {
-		if err := insertParticipant(ctx, tx, activityID, theirRole, nil, nil, address); err != nil {
+	var channelUserID string
+	if counterparty.ChannelIdentity.Provider != "" {
+		channelUserID = strings.TrimSpace(counterparty.ChannelIdentity.ChannelUserID)
+	}
+	if address != "" || channelUserID != "" {
+		if err := insertParticipant(ctx, tx, activityID, theirRole, nil, nil, address, channelUserID); err != nil {
 			return fmt.Errorf("capture: stamping the counterparty as a participant: %w", err)
 		}
 	}
@@ -398,6 +411,7 @@ func insertParticipant(
 	userID *ids.UUID,
 	personID *ids.PersonID,
 	address string,
+	channelUserID string,
 ) error {
 	// The user arm rides a SELECT over app_user for the same reason the logged
 	// path does: a principal's UserID need not name a workspace member, and
@@ -405,12 +419,12 @@ func insertParticipant(
 	// read off the wire, over a participant row that is a nicety rather than
 	// the point of the write.
 	_, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, person_id, address, role)
-		SELECT $1, $2, $3, NULLIF($4, ''), $5
+		INSERT INTO activity_participant (activity_id, user_id, person_id, address, channel_user_id, role)
+		SELECT $1, $2, $3, NULLIF($4, ''), NULLIF($6, ''), $5
 		 WHERE $2::uuid IS NULL
 		    OR EXISTS (SELECT 1 FROM app_user u WHERE u.id = $2)
 		ON CONFLICT DO NOTHING`,
-		activityID, userID, personID, address, role)
+		activityID, userID, personID, address, role, channelUserID)
 	return err
 }
 

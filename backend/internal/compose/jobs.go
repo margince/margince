@@ -118,6 +118,16 @@ type JobRunnerConfig struct {
 	// delivery and its dispatch job, and a role that cannot do that would only
 	// wake a message to fail it.
 	SendDelivery DeliveryMachinery
+	// SendOrigin is the installation's public base URL and the posture it is
+	// judged under — the same pair the api's send path carries.
+	//
+	// A fired message that carries a one-click unsubscribe link builds it from
+	// this. Empty refuses that send rather than emitting a forgeable link,
+	// which means an unset origin does not disable a feature: it makes every
+	// scheduled correspondence and marketing message fail at fire time, while
+	// the transactional ones beside them go out. No worker is gated on it,
+	// because a role that can fire a link-less message should still fire it.
+	SendOrigin SendOrigin
 
 	// CloseDateInterval is the deals close-date hygiene sweep's cadence — the
 	// operator-facing --close-date-interval. No worker is gated on it: the

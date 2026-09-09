@@ -10,16 +10,16 @@
   "totals": {
     "tools": 75,
     "resources": 12,
-    "tool_catalog_bytes": 215188,
+    "tool_catalog_bytes": 215184,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 54943,
+    "approx_wire_tokens_total": 54942,
     "largest_tool_bytes": 8975,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 52992,
-      "input_schema_bytes": 45348,
+      "input_schema_bytes": 45344,
       "output_schema_bytes": 100669,
-      "description_plus_input_schema_bytes": 98340
+      "description_plus_input_schema_bytes": 98336
     }
   },
   "tools": {
@@ -8682,14 +8682,14 @@
               "maxLength": 255,
               "type": "string"
             },
-            "record_id": {
+            "lead_id": {
               "description": "The lead to qualify",
               "format": "uuid",
               "type": "string"
             }
           },
           "required": [
-            "record_id"
+            "lead_id"
           ],
           "type": "object"
         },

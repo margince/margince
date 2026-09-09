@@ -6,7 +6,7 @@
   "catalog": {
     "tools": 75,
     "system_frame_tokens": 353,
-    "tokens": 22572,
+    "tokens": 22571,
     "median_tool_tokens": 266,
     "mean_tool_tokens": 300
   },
@@ -248,7 +248,7 @@
     },
     {
       "name": "qualify_lead",
-      "tokens": 230
+      "tokens": 229
     },
     {
       "name": "apply_tag",

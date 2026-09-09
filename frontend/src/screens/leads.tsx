@@ -26,7 +26,6 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { RecordView } from "../design-system/composed";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ContactLink } from "../design-system/contactlink";
@@ -79,6 +78,7 @@ import {
   useRosterPartial,
 } from "./entityref";
 import { RecordHistoryTab, useRecordHistory } from "./history";
+import { leadBand } from "./leadband";
 import {
   promoteEligible,
   scoreFactorLabel,
@@ -753,7 +753,7 @@ function LeadIdentityFields({
  * over as one object rather than as a mutation plus a loose function, so no
  * caller can reach past `save` to `mutate` and skip the version it stamps.
  */
-type LeadWriter = ReturnType<typeof useLeadPatch>;
+export type LeadWriter = ReturnType<typeof useLeadPatch>;
 
 /**
  * The lead page's ONE write, and the two facts every control on it reads.
@@ -850,24 +850,6 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   };
 
   return { patch, claim, readOnly, readOnlyReason, save, saveField };
-}
-
-// What the page's write refused, stated once for both of them.
-//
-// Two mutations, one sentence: the patch every field goes through, and the
-// claim that takes an unowned lead. They are alternatives — a pick is one or
-// the other — so whichever refused is the one to name.
-function LeadWriteRefusal({ writer }: Readonly<{ writer: LeadWriter }>) {
-  const t = useT();
-  const error = writer.patch.error ?? writer.claim.error;
-  if (!error) {
-    return null;
-  }
-  return (
-    <Callout tone="danger" live="alert">
-      {problemMessageOf(error, t)}
-    </Callout>
-  );
 }
 
 /**
@@ -1347,65 +1329,6 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
             )}
           </Field>
         </div>
-      </ConfirmModal>
-    </>
-  );
-}
-
-/**
- * ReopenAction puts a disqualified lead back on the open ladder.
- *
- * The page could say "Disqualified: <reason>" and could not offer the way
- * back. A judgement that somebody is not worth pursuing is exactly the kind
- * that changes — the budget arrives, the champion returns — and with no way
- * back the operator re-keys the lead, which loses its history and its score
- * along with its reason.
- *
- * No reason field, unlike the demote beside it. The demote asks for one
- * because it unwinds a person and a reader of that trail needs to know why;
- * reopening restores a status the trail already holds, and there is nothing a
- * caller could say that the server does not read for itself.
- */
-function ReopenAction({ id }: Readonly<{ id: string }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const reopen = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.POST("/leads/{id}/reopen", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-    onSuccess: () => {
-      for (const key of leadWriteKeys(id)) {
-        queryClient.invalidateQueries({ queryKey: key });
-      }
-      setOpen(false);
-    },
-  });
-  const close = () => {
-    setOpen(false);
-    reopen.reset();
-  };
-  return (
-    <>
-      <Button small onClick={() => setOpen(true)}>
-        {t("lead.reopen")}
-      </Button>
-      <ConfirmModal
-        open={open}
-        onClose={close}
-        title={t("lead.reopenDialog")}
-        confirmLabel={t("lead.reopenConfirm")}
-        onConfirm={() => reopen.mutate()}
-        pending={reopen.isPending}
-        error={reopen.isError ? problemMessageOf(reopen.error, t) : undefined}
-      >
-        <p className="t-body">{t("lead.reopenExplain")}</p>
       </ConfirmModal>
     </>
   );
@@ -2049,40 +1972,7 @@ function LeadRecord({
         { overlay, pending: timelineQuery.isPending },
         t,
       )}
-      band={
-        <>
-          {/* The page's one write serves both columns and every tab, so what
-              it REFUSES is stated where both are visible. In the ladder panel
-              this reached only the Overview tab, and a rail write refused
-              while the reader was on History said nothing at all. */}
-          <LeadWriteRefusal writer={writer} />
-          {/* Stated ONCE for the page. Every control the closure refuses
-              points at this element by id, so a screen reader reaches it from
-              each of them without the sentence being printed beside all six. */}
-          {writer.readOnlyReason && (
-            <p id={terminalReasonId} className="t-caption">
-              {/* Which closure, not merely THAT it is closed. Both terminal
-                  states archive the row, so keying this off archived_at alone
-                  told every promoted lead it had been disqualified — invisible
-                  until ADR-0119 stopped the page redirecting away before
-                  anyone could read it. A live lead that is somebody else's
-                  prints the writer's own sentence instead. */}
-              {lead.archived_at
-                ? lead.status === "promoted"
-                  ? t("lead.terminalPromoted")
-                  : t("lead.terminalDisqualified")
-                : writer.readOnlyReason}
-            </p>
-          )}
-          {/* The way back, beside the sentence that says the lead is closed.
-              Offered only on a disqualification a reader may WRITE: the
-              promoted closure is the demote's to reverse, and a reader who
-              cannot change this lead cannot reopen it either. */}
-          {lead.archived_at &&
-            lead.status === "disqualified" &&
-            lead.writable !== false && <ReopenAction id={id} />}
-        </>
-      }
+      band={leadBand({ lead, writer, reasonId: terminalReasonId, id, t })}
       // The same strip every record in the product carries: a place a reader
       // navigates, drawn as a rule with the open body underlined, rather than
       // a pill that offers a setting.

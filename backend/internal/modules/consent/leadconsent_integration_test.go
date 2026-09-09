@@ -625,7 +625,7 @@ func TestALeadsReplyIsStillAllowedAtTransmit(t *testing.T) {
 	}
 	transmitReq := stagedRequestFor(
 		commsauthz.TransmitRequest{DeliveryID: delivery, Recipients: []connector.Recipient{recipient}},
-		recipient, map[string]stagedClaim{}, threadKey)
+		recipient, map[string]stagedClaim{}, threadKey, nil)
 
 	d, err := gate.decideOne(ctx, tx, recipient, transmitReq, commsauthz.PhaseTransmit)
 	if err != nil {

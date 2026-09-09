@@ -92,12 +92,32 @@ const (
 	wantMinimumOverlayShadows = 4
 )
 
-// pagingParameterTypes are the generated types the contract spells its shared
-// paging and ordering parameters with. Recognising them by TYPE rather than by
-// name is what keeps the exclusion honest: it is the contract's own component
-// reuse that says these three are a page's shape, and a filter that happened to
-// be called `sort` on some operation would still be judged.
-var pagingParameterTypes = map[string]bool{"Cursor": true, "Limit": true, "Sort": true}
+// unjudgedParameterTypes are the generated types this gate does not judge.
+//
+// Recognising them by TYPE rather than by name is what keeps the exclusion
+// honest: it is the contract's own component reuse that says a parameter is a
+// page's shape, and a filter that happened to be called `sort` on some
+// operation would still be judged.
+//
+// `Cursor` and `Limit` are NOT here any more. They were scoped out with `Sort`
+// as "a page's shape rather than its membership", and the distinction is real —
+// a dropped filter answers a wider question than the one asked, where a dropped
+// page dial answers the right question in the wrong shape. But the second is
+// still a claim the surface does not keep: `?limit=5` returning the whole set
+// means the caller sized a page and got a catalog, and `?cursor=` accepted and
+// inert is the shape that walks page one forever.
+//
+// There is deliberately NO waiver list beside this. An operation that will not
+// honour a dial removes the declaration from the contract instead — the honest
+// state after a retirement is that the parameter is gone, not that it is
+// declared and excused.
+//
+// `Sort` stays scoped out for now, and only because honouring it is a per-store
+// change rather than a contract edit: three operations declare it unread, and
+// each needs its store to take a sort vocabulary and a keyset cursor that
+// carries the sort key. Issue #827 holds that half; this line is what will be
+// deleted when it lands.
+var unjudgedParameterTypes = map[string]bool{"Sort": true}
 
 // declaredFilter is one narrowing query parameter of one operation: the Go
 // field a handler reads, and the name a caller types.
@@ -282,9 +302,11 @@ func TestTheDeclaredFilterCensusReadsTheGeneratedShape(t *testing.T) {
 	for _, filter := range people {
 		wire = append(wire, filter.wire)
 	}
-	// The person list declares exactly these, and the three paging components
-	// it also declares are not among them.
-	want := "ai_written,captured_by_kind,company_id,include_archived,owner_id,owner_team_id,q,tag_id,tag_mode,unassigned"
+	// The person list declares exactly these. cursor and limit ARE among them —
+	// the gate judges a page dial the same way it judges a filter — and `sort`
+	// is not, because it is the one type still scoped out.
+	want := "ai_written,captured_by_kind,company_id,cursor,include_archived,limit,owner_id," +
+		"owner_team_id,q,tag_id,tag_mode,unassigned"
 	if got := strings.Join(wire, ","); got != want {
 		t.Errorf("listPeople's narrowing parameters = %q, want %q", got, want)
 	}
@@ -477,8 +499,8 @@ func narrowingParametersByType(t *testing.T) map[string][]declaredFilter {
 }
 
 // narrowingFields reads one params struct's query fields: the `form` tag names
-// the wire parameter, and a field typed by one of the shared paging components
-// is not one of them.
+// the wire parameter, and a field typed by one this gate does not judge
+// (unjudgedParameterTypes) is not one of them.
 func narrowingFields(structType *ast.StructType) []declaredFilter {
 	var out []declaredFilter
 	for _, field := range structType.Fields.List {
@@ -486,7 +508,7 @@ func narrowingFields(structType *ast.StructType) []declaredFilter {
 			continue
 		}
 		wire := formTagName(field.Tag.Value)
-		if wire == "" || pagingParameterTypes[pointedToTypeName(field.Type)] {
+		if wire == "" || unjudgedParameterTypes[pointedToTypeName(field.Type)] {
 			continue
 		}
 		out = append(out, declaredFilter{field: field.Names[0].Name, wire: wire})

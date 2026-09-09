@@ -11,10 +11,16 @@
   overflow: hidden;
 }
 
-/* One height for every header, whether it carries a title alone or a title
- * with a badge or a button beside it — a fixed min-height with centred
- * content, so the row does not grow by exactly the button's height. */
 /* The header band, and its rule runs the full width of the card.
+ *
+ * ONE height, and it is fixed: --panel-head-h, whatever the head carries. A
+ * title alone, a title over a description, a title beside a badge or a button
+ * all draw the same band, so a reader scanning a page of panels reads a column
+ * of titles at one interval instead of a ragged one. A floor is what this used
+ * to be, and a floor is an invitation: a description raised the band here, two
+ * screens then re-spaced it there, and the same card stood at three heights.
+ * What does not fit on one band is not header content — a toolbar row or a
+ * `PanelBody` under the head is where it belongs.
  *
  * That is the one distinction that decides every rule in this file: a rule
  * dividing the CARD from its content runs edge to edge, and a rule dividing two
@@ -27,20 +33,32 @@
 .panel-head {
   display: flex;
   align-items: center;
+  /* The band is one row. Wrapping is what a head reached for when its content
+     stopped fitting, and a second row is a second height — the thing this band
+     exists to refuse. */
+  flex-wrap: nowrap;
   gap: var(--space-3);
-  min-height: 52px;
+  height: var(--panel-head-h);
   padding: 0 var(--padPanel);
   border-bottom: 1px solid var(--borderSubtle);
 }
 /* The zone's title in the display face: the one word a reader finds a zone
- * by, so it is set as a heading rather than as a label on a card. */
+ * by, so it is set as a heading rather than as a label on a card.
+ *
+ * ONE size, and this is the only rule in the product that states it. A title is
+ * what a reader scans a column of panels for, so a pane that set its own read
+ * as a different kind of card — and four sizes were in the tree, from body up
+ * to a section rung. `--fs-panel-title` is the house's answer: a tone below and
+ * a screen sheet anywhere in the tree may recolour this title and may not
+ * resize it, which `panel.test.tsx` sweeps for. */
 .panel-head .panel-title {
   font-family: var(--f-display);
-  font-size: var(--fs-h3);
+  font-size: var(--fs-panel-title);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
+
 /* The title and its description are one stacked item, and that item absorbs the
  * row's free space — so whatever comes after it (a badge, a button, two of
  * them) sits at the far end rather than crowding the title.
@@ -53,28 +71,45 @@
 .panel-head-text {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  /* No gap: the two lines' own leading is already the interval between them,
+     and inside a fixed band a gap on top of it is what pushes the pair past the
+     band's edges. The stack measures 43px of the 56 the band gives it. */
+  gap: 0;
+  min-width: 0;
   margin-right: auto;
 }
 
 /* The description reads UNDER the title, not beside it at the same volume: the
  * title is what a reader scans a page of panels for, and the line under it is
- * what they read once they have found the one they want. */
+ * what they read once they have found the one they want. It is meta type for
+ * that reason and not only for room, though room is why the pair fits: 16px of
+ * title over 12px of meta clears the band with air to spare. */
 .panel-head-sub {
   font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 
-/* A header carrying a description pays for its own vertical interval, and only
- * then: `min-height` is a floor, so two lines of type otherwise sit against the
- * hairline above the panel and the border below it, while a title alone — and a
- * title beside a button — keep the one height the band promises.
- *
- * Presence-based rather than a modifier class the component remembers to set,
- * so the markup and the spacing cannot disagree about whether there is a
- * description, which is the same reason the seam rule below is adjacency. */
-.panel-head:has(.panel-head-sub) {
-  padding-block: var(--space-3);
+/* Both lines of the head end in an ellipsis rather than in a second row: the
+ * band's height is fixed, so a title long enough to wrap would otherwise be
+ * clipped mid-letter with nothing to say it had been. A record named by a
+ * legal entity is the case — the ellipsis is what tells a reader the name goes
+ * on, and the full string is still the element's text for a screen reader and
+ * for the pointer. */
+.panel-head .panel-title,
+.panel-head-sub {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Only the title block gives way. A badge, a button or a count is sized by its
+ * own words, and a shrunken one reads as a different control — or loses its
+ * label to the ellipsis above. `:where()` carries no specificity, so a caller
+ * whose action genuinely can give way (a wrapping action strip) says so with an
+ * ordinary class of its own and wins without depending on sheet order. */
+.panel-head > :where(:not(.panel-head-text)) {
+  flex-shrink: 0;
 }
 
 .panel-body {
@@ -253,12 +288,18 @@
 
 /* The lead panel — the one card on a page asking for a move rather than
  * reporting state. Tinted, not shouted: the border and the header band carry
- * it, and the title comes up to reading size because it is the sentence a
- * reader is meant to land on first.
+ * it, and the title carries it in ink alone.
  *
- * The geometry is the lead's, not the tone's, so it is stated once for both
- * families and only the four tinted properties differ below. A lead that
- * changed size when its finding turned bad would read as a different card. */
+ * A TONE ONLY TINTS. The band's height, its padding and its alignment belong to
+ * `.panel-head` above, and the title's size to `--fs-panel-title` — a lead that
+ * changed size when its finding turned bad, or an indigo panel whose title
+ * stood smaller than the one beside it, would read as a different card rather
+ * than as the same card in a different mood. Each of these families did set its
+ * own title size once, a rung DOWN, which is how a page could show the ask and
+ * the report at two sizes and neither of them chosen. What is left for a tone
+ * is the ground, the hairline's colour and the title's colour; the icon
+ * alignment below is the tone's own, because only a toned head leads its title
+ * with a mark. */
 .panel-accent > .panel-head,
 .panel-warn > .panel-head {
   gap: var(--space-2);
@@ -268,8 +309,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
 }
 
 /* tone="accent": the ordinary ask. */
@@ -310,26 +349,13 @@
  * produced the panel rather than about how the account is doing — which is why
  * it sits beside "accent" and "warn" rather than replacing either. A reader
  * seeing indigo anywhere knows the same thing: Margince did this. */
-.panel-ai > .panel-head,
-.panel-ai > .panel-head .panel-title {
-  gap: var(--space-2);
-}
-/* The band hugs its two lines instead of centring them in a row sized for one.
-   This head carries who read the record OVER what they read, and a 48px row
-   built for a single title left the pair floating with more air under them
-   than the band is tall. Its verb rides the first line rather than the middle
-   of the stack. */
 .panel-ai > .panel-head {
-  align-items: flex-start;
-  min-height: 0;
-  padding-block: var(--space-3);
+  gap: var(--space-2);
 }
 .panel-ai > .panel-head .panel-title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
 }
 /* The family's edge, and the members that are not panels read it here: a box
    whose indigo drifted off the panel's would tell a reader the two were

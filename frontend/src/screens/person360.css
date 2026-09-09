@@ -284,15 +284,6 @@
 /* A thread as one row. It is a `PanelRow`, so the hairline and the gutters come
    from there; the column template is the memory's own — date, channel, what it
    said, its standing, the time. */
-/* In the paired half the filter strip does not always fit beside the title.
-   It drops under the title as one row rather than breaking into two ragged
-   rows beside it, and the head grows to hold both. */
-.pe-memory .panel-head {
-  flex-wrap: wrap;
-  /* ds:ignore a head that wraps to two rows pays a row's interval, not a band's */
-  padding-block: var(--space-2);
-}
-
 /* Three lines, not six columns: the panel sits in a half-width pair, where
    a date, a kind, a status, a time and a reply on one line left the subject
    a word per line. The first line is the row's meta, the subject takes a line

@@ -7,7 +7,11 @@
 // expressed in the overlay package's mapping IR.
 package hubspot
 
-import "github.com/margince/margince/backend/internal/modules/overlay"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/modules/overlay"
+)
 
 // The five HubSpot object classes design.md §9 maps — the one spelling
 // shared with adapter.go's per-object watermark-property switch (design.md
@@ -127,10 +131,24 @@ var objectMappings = []overlay.ObjectMapping{
 //
 // Derived from objectMappings, never a second hand-written list, so a mapping
 // added or removed here can never leave a stale fingerprint behind.
+//
+// A declaration this package cannot fingerprint PANICS rather than answering a
+// partial map, and this is the one place that is right: the mappings are
+// compile-time constants of this package, so a failure here is a declaration
+// somebody just wrote carrying a value JSON cannot encode — a build-time
+// mistake, found at startup, on a map every staleness verdict is read from. An
+// error return would push that decision out to callers who have no better
+// answer than to stop, and a map missing one entry would silently spare every
+// row that declaration projected.
 func ProjectionFingerprints() map[string]string {
 	out := make(map[string]string, len(objectMappings))
 	for _, m := range objectMappings {
-		out[m.Source] = overlay.Fingerprint(m)
+		fingerprint, err := overlay.Fingerprint(m)
+		if err != nil {
+			//craft:ignore panic-in-domain composition-time declaration assertion — the mappings are this package constants, so this fires only while cmd wiring runs, never on a request path
+			panic(fmt.Sprintf("hubspot: the %s declaration cannot be fingerprinted: %v", m.Source, err))
+		}
+		out[m.Source] = fingerprint
 	}
 	return out
 }

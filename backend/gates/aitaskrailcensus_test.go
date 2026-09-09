@@ -50,6 +50,7 @@ var carrierSources = map[string]string{
 	"agent_runner":          runner.ActivitySource,
 	"attachment_extraction": activities.ExtractionActivitySource,
 	"account_scan":          companyscan.ActivitySource,
+	"transcript_read":       activities.TranscriptActivitySource,
 }
 
 func TestEveryAITaskNamesTheSourceThatReportsIt(t *testing.T) {

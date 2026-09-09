@@ -627,16 +627,18 @@ jobs:
   report:
     name: report
     needs: [vuln, quality-gate, backend-lane, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches]
+    # Every result, not only the failures — see the same condition in
+    # main-health.yml for why. In short: the reporter now retracts a finding
+    # whose check came back green, and a job gated on a failure is never reached
+    # on the run that would do it.
+    #
+    # This lane's two weekly jobs are the reason the condition says `!cancelled()`
+    # rather than `always()`: perf-budgets and perf-mobile are `skipped` on the
+    # daily cron, and a skipped check is the absence of a verdict. The reporter
+    # reads it as neither red nor green, which is only true if it arrives as
+    # `skipped` rather than being turned into one by this expression.
     if: >-
       !cancelled()
-      && (needs.vuln.result == 'failure'
-        || needs.quality-gate.result == 'failure'
-        || needs.backend-lane.result == 'failure'
-        || needs['fe-clock-drift'].result == 'failure'
-        || needs.perf-budgets.result == 'failure'
-        || needs['perf-mobile'].result == 'failure'
-        || needs['llm-use-cases'].result == 'failure'
-        || needs.reap-caches.result == 'failure')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

@@ -157,8 +157,10 @@ describe("overlay refusal copy — translator coverage", () => {
   });
 
   it("merge-person (POST /people/{id}/merge)", () => {
+    // Edit, merge and archive live in their own shared file, imported by
+    // both PersonScreen's header (contacts.tsx) and PersonPageV2's.
     assertTranslatedRefusal(
-      "contacts.tsx",
+      "personeditmergearchive.tsx",
       '"/people/{id}/merge"',
       "merge-person",
     );

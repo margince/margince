@@ -111,17 +111,30 @@ func TestTheWriteCarriesItsAuditAndItsEvent(t *testing.T) {
 	}
 }
 
-// TestOnlyTheSubjectsOwnRequestIsRecordableByHand bounds the door.
+// TestOnlyAStopTheSubjectAskedForIsRecordableByHand bounds the door.
 //
-// An objection and a processing restriction carry legal consequences a relayed
-// phone call does not establish, and a hard bounce is a fact only the mail path
-// observes. A door that accepted them would let a rep write, in good faith, a
-// row asserting something nobody verified — and marketing_objection is
-// unliftable, so the mistake would be permanent.
-func TestOnlyTheSubjectsOwnRequestIsRecordableByHand(t *testing.T) {
+// A processing restriction is an Art. 18 legal state with its own workflow, and
+// a hard bounce is a fact only the mail path observes. A door accepting either
+// would let a rep write, in good faith, a row asserting something nobody
+// verified.
+//
+// marketing_objection USED TO BE REFUSED HERE too, on that reasoning plus the
+// observation that it is unliftable, so a mistake would be permanent. That read
+// the article backwards: Art. 21(2) is an unconditional right the subject
+// exercises "at any time" and by any means, so demanding a form or a
+// self-service link before one can be written puts a condition on it. The
+// practical cost exceeded the theoretical one — nothing wrote the kind at all,
+// so a rep told "stop the newsletter" reached for subject_request, which
+// stopped that person's invoices too.
+//
+// The permanence is real and accepted: an objection is undone by the subject
+// reversing it or by the per-message exception path, never by a seat. A stop
+// too hard to lift costs an awkward conversation; one too easy costs mail
+// somebody explicitly refused.
+func TestOnlyAStopTheSubjectAskedForIsRecordableByHand(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	for _, kind := range []string{"marketing_objection", "processing_restriction", "hard_bounce", ""} {
+	for _, kind := range []string{"processing_restriction", "hard_bounce", ""} {
 		err := e.store.Suppress(e.ctx, SuppressInput{PersonID: e.person, Kind: kind})
 		// A VALIDATION error naming the field, not merely some error. Without
 		// this the test stays green with the check deleted — a bad kind would
@@ -350,5 +363,166 @@ func TestASuppressionMayCarryNoReason(t *testing.T) {
 	}
 	if kind, _, _ := liveSuppressionRow(t, e, e.person); kind != suppressibleKind {
 		t.Errorf("kind = %q, want %q", kind, suppressibleKind)
+	}
+}
+
+// TestARepRecordsAnObjectionAtTheSubjectsOwnLevel is the capability R4 named as
+// missing: nothing in production wrote marketing_objection, so the only stop a
+// rep could record was the broad one.
+//
+// The LEVEL is the whole point of the test. Art. 21 gives the right to the data
+// subject, so the row records the subject's authority and not the rep's, and
+// CanOverrule refuses to rank anything above LevelSubject. A row written at the
+// rep's own level would be liftable by any admin — an installation quietly
+// undoing a stop the person asked for.
+func TestARepRecordsAnObjectionAtTheSubjectsOwnLevel(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		PersonID: e.person,
+		Kind:     commsauthz.ReasonObjection,
+		Reason:   "asked on the phone to stop the newsletter",
+	}); err != nil {
+		t.Fatalf("recording an objection: %v", err)
+	}
+
+	kind, level, _ := liveSuppressionRow(t, e, e.person)
+	if kind != commsauthz.ReasonObjection {
+		t.Errorf("kind = %q, want %q", kind, commsauthz.ReasonObjection)
+	}
+	if level != string(commsauthz.LevelSubject) {
+		t.Errorf("decided_by_level = %q, want %q — an objection recorded at the seat's own level "+
+			"is one the next admin can lift", level, commsauthz.LevelSubject)
+	}
+}
+
+// TestNoSeatLiftsAnObjectionItRecorded is the consequence of that level, proved
+// through the real lift door rather than by reasoning about CanOverrule.
+//
+// The admin here holds every grant the lift door asks for. What refuses them is
+// the authority ON THE ROW, which is the subject's.
+func TestNoSeatLiftsAnObjectionItRecorded(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		PersonID: e.person, Kind: commsauthz.ReasonObjection, Reason: "stop the newsletter",
+	}); err != nil {
+		t.Fatalf("recording an objection: %v", err)
+	}
+
+	// THE ROW MUST BE NAMED, or this proves nothing.
+	//
+	// admitLift refuses a zero SuppressionID as a validation error before it
+	// ever compares authority, so a LiftInput without one passes this test with
+	// the subject-level stamp deleted — asserting the shape of the request
+	// rather than who may lift. Found by mutation, which is the only reason
+	// this line exists.
+	var id ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT id FROM communication_suppression
+		 WHERE person_id = $1 AND revoked_at IS NULL`, e.person).Scan(&id); err != nil {
+		t.Fatalf("reading back the objection: %v", err)
+	}
+
+	// e.ctx binds an ADMIN seat — TestARepRecordsTheSubjectsOwnRequest asserts
+	// its rows land at admin level — so this is the strongest seat the product
+	// has, holding every grant the lift door asks for. What refuses it is the
+	// authority ON THE ROW, which belongs to the subject.
+	err := e.store.Lift(e.ctx, LiftInput{
+		PersonID: e.person, SuppressionID: id,
+		Reason: "the rep says it was a misunderstanding",
+	})
+	if err == nil {
+		t.Fatal("an admin lifted the subject's own Art. 21 objection")
+	}
+	// And refused for the RIGHT reason: a validation error here would mean the
+	// request was malformed, not that the authority held.
+	var invalid *ValidationError
+	if errors.As(err, &invalid) {
+		t.Fatalf("the lift was refused as malformed (%v), so this says nothing about authority", err)
+	}
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("the lift was refused with %v, want a permission denial naming the level", err)
+	}
+
+	// WHAT MAKES THIS SUBJECT-LEVEL AND NOT MERELY ADMIN-LEVEL. CanOverrule is
+	// strictly greater, so an admin cannot lift an admin row either and the
+	// refusal above reads the same for both. The difference is who COULD: an
+	// admin-level row is liftable by anything ranking above admin, and a
+	// subject-level row is liftable by nothing at all, which is the whole
+	// reason Art. 21 rows are stamped that way.
+	//
+	// So the level itself is the assertion. Without it this test passes with
+	// the subject-level stamp deleted — found by mutation.
+	if _, level, _ := liveSuppressionRow(t, e, e.person); level != string(commsauthz.LevelSubject) {
+		t.Errorf("the surviving row is at %q, not %q: an admin-level objection is one a higher "+
+			"rank could still lift", level, commsauthz.LevelSubject)
+	}
+
+	if kind, _, _ := liveSuppressionRow(t, e, e.person); kind != commsauthz.ReasonObjection {
+		t.Errorf("the objection is no longer the live row (kind = %q) after a refused lift", kind)
+	}
+}
+
+// TestAnObjectionLeavesTheInvoiceAlone is R3 from the other side, and the
+// reason the objection kind had to exist at all.
+//
+// Before this a rep told "stop the newsletter" had only subject_request, which
+// bound every category — so the person's invoices stopped with their marketing.
+// An objection reaches marketing and nothing else.
+func TestAnObjectionLeavesTheInvoiceAlone(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		PersonID: e.person, Kind: commsauthz.ReasonObjection, Reason: "no more newsletters",
+	}); err != nil {
+		t.Fatalf("recording an objection: %v", err)
+	}
+
+	for _, c := range []struct {
+		category commsauthz.Category
+		stopped  bool
+	}{
+		{commsauthz.CategoryMarketing, true},
+		{commsauthz.CategoryInvoiceOrPayment, false},
+		{commsauthz.CategoryReplyToInbound, false},
+		{commsauthz.CategoryContractNotice, false},
+	} {
+		if got := suppressionBinds(commsauthz.ReasonObjection, c.category); got != c.stopped {
+			t.Errorf("an objection against %s: binds = %v, want %v", c.category, got, c.stopped)
+		}
+	}
+}
+
+// TestAStopEverythingStillConfirmsItself is the R3 half about subject_request.
+//
+// "Stop contacting me" reaches nearly everything — and NOT the confirmation
+// that we stopped, the privacy notice answering their rights request, or the
+// security warning about their own account. Those three are obligations the
+// controller owes whatever the subject wants sent, and binding them meant a
+// person who asked us to stop never heard that we had.
+func TestAStopEverythingStillConfirmsItself(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		PersonID: e.person, Kind: suppressibleKind, Reason: "stop contacting me",
+	}); err != nil {
+		t.Fatalf("recording the request: %v", err)
+	}
+
+	for _, c := range []struct {
+		category commsauthz.Category
+		stopped  bool
+	}{
+		{commsauthz.CategoryMarketing, true},
+		{commsauthz.CategoryInvoiceOrPayment, true},
+		{commsauthz.CategoryReplyToInbound, true},
+		{commsauthz.CategoryOptoutConfirmation, false},
+		{commsauthz.CategoryPrivacyNotice, false},
+		{commsauthz.CategorySecurityNotice, false},
+	} {
+		if got := suppressionBinds(commsauthz.ReasonSubjectRequest, c.category); got != c.stopped {
+			t.Errorf("a subject request against %s: binds = %v, want %v", c.category, got, c.stopped)
+		}
 	}
 }

@@ -176,9 +176,32 @@ const auditLog = () =>
     page: { next_cursor: null, has_more: false },
   });
 
+// The Account tab's bookability card indexes its own answer, so a tab story
+// that leaves this endpoint unrouted takes the WHOLE SCREEN down: the fallback
+// empty page carries no `working_hours`, the card reads `start_time` off
+// undefined and throws mid-render. Routed here rather than per story for the
+// reason settings.testkit.tsx gives about its own fakes — an endpoint added to
+// one of them alone leaves the others failing in exactly that way, nowhere near
+// the cause. The shape is restated rather than shared with that testkit because
+// the testkit is built on `vi`, which no Storybook build has.
+const WORKING_HOURS: RouteMap = {
+  "GET /me/working-hours": () =>
+    jsonResponse({
+      chosen: false,
+      working_hours: {
+        start_time: "09:00",
+        end_time: "17:00",
+        days: [1, 2, 3, 4, 5],
+        timezone: "Europe/Berlin",
+      },
+    }),
+};
+
 function tab(tabId: string, routes: RouteMap) {
   return () => {
-    installFetchStub(routes);
+    // The story's own routes last, so a story about this card can still say
+    // something different from the default.
+    installFetchStub({ ...WORKING_HOURS, ...routes });
     return (
       <StoryProviders>
         <SettingsScreen route={settingsAddress(tabId)} />

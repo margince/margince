@@ -130,9 +130,16 @@ export const UnitsWithGrantsDark: Story = {
 // keyboard-reachable. This is the width at which the stacked row's
 // `.settingrow-measure` wrapper earns its place: without the `min-width: 0` it
 // carries, the grid grows to its own width inside a flex control column and the
-// PAGE scrolls instead of the table. Above it, the version Badge and the link to
-// the unit's own page share the panel head with the unit name and are supposed
-// to wrap onto their own row.
+// PAGE scrolls instead of the table. Above it, the version Badge shares the
+// panel head with the unit name on ONE line: the band is a fixed height, so a
+// name too long for the room left beside the version ends in an ellipsis rather
+// than pushing the badge onto a second row.
+//
+// The link to the unit's own page belongs on that line too and no story can
+// show it. It renders from the SPA's generated screen registry rather than from
+// the API's list, and the registry every story runs against is the vanilla one,
+// empty by construction — narrowing a composed build is the only way to watch
+// the link truncate.
 //
 // Storybook applies the viewport from the MANAGER, by resizing the preview
 // iframe — so the fe-uat capture, which loads a bare iframe.html, renders this at

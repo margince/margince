@@ -18,6 +18,8 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"maps"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -420,4 +422,21 @@ func (t advanceProjectPhase) readArgs(in json.RawMessage) (advanceProjectPhaseAr
 		return advanceProjectPhaseArgs{}, err
 	}
 	return args, nil
+}
+
+// projectPhaseNames is the ladder as a refusal names it, derived from the
+// membership test rather than restated beside it: a second list is how the
+// sentence and the check come to disagree about what a phase is.
+func projectPhaseNames() []string {
+	names := slices.Collect(maps.Keys(projectPhases))
+	slices.Sort(names)
+	return names
+}
+
+// relinkTargetNames is the link-target vocabulary as a refusal names it,
+// derived for the same reason.
+func relinkTargetNames() []string {
+	names := slices.Collect(maps.Keys(relinkTargets))
+	slices.Sort(names)
+	return names
 }

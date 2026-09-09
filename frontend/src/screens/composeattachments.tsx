@@ -21,12 +21,15 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, PendingBody } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { FileDropzone } from "../design-system/filedropzone";
 import { Popover } from "../design-system/popover";
 import { TokenList } from "../design-system/tokeninput";
 import { formatBytes, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
+import { type CarriageViolation, carriageViolations } from "./carriage";
+import { useProviderCarriage } from "./channelproviders";
 import { problemMessageOf, throwProblem } from "./common";
 import type { RelinkKind } from "./compose";
 import "./composeattachments.css";
@@ -324,5 +327,105 @@ function AttachPicker({
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * Where this message breaks the resolved channel's carriage bounds, read from
+ * the directory the transport publishes.
+ *
+ * Empty when the transport is unknown — mail, or a provider the directory does
+ * not name — so the mail path keeps its own limits and only a channel reply is
+ * held here. The dispatcher's `carriageRefusal` is the authority (backend
+ * `comms/gates.go`); this pre-check moves the same answer in front of the send.
+ */
+export function useCarriageBlocks(
+  provider: string | undefined,
+  files: readonly ChosenFile[],
+  body: string,
+): CarriageViolation[] {
+  const carriageFor = useProviderCarriage();
+  const carriage = provider ? carriageFor(provider) : undefined;
+  return carriage ? carriageViolations(carriage, files, body) : [];
+}
+
+// carriageReason is one broken bound in the reader's own language. The wording
+// lives here, where `t` does, and not in the pure check that found the
+// violation — the check is language-free so a test can assert the bound rather
+// than the sentence. Bytes read through `formatBytes` and counts through
+// `formatNumber`, as everywhere a size or a tally reaches a reader.
+function carriageReason(
+  t: Translator,
+  locale: Locale,
+  channel: string,
+  violation: CarriageViolation,
+): string {
+  switch (violation.kind) {
+    case "carries":
+      return t("compose.carriageCarries", {
+        channel,
+        count: formatNumber(violation.count, locale),
+      });
+    case "count":
+      return t("compose.carriageCount", {
+        channel,
+        limit: formatNumber(violation.limit, locale),
+        named: formatNumber(violation.named, locale),
+      });
+    case "perFile":
+      return t("compose.carriagePerFile", {
+        channel,
+        filename: violation.filename,
+        limit: formatBytes(violation.limit, locale),
+      });
+    case "aggregate":
+      return t("compose.carriageAggregate", {
+        channel,
+        count: formatNumber(violation.count, locale),
+        total: formatBytes(violation.total, locale),
+        limit: formatBytes(violation.limit, locale),
+      });
+    case "caption":
+      return t("compose.carriageCaption", {
+        channel,
+        limit: formatNumber(violation.limit, locale),
+        length: formatNumber(violation.length, locale),
+      });
+  }
+}
+
+/**
+ * Why the attached files cannot go as they are, beside the shelf they are on.
+ *
+ * `status`, not `alert`: it answers what the reader just attached rather than
+ * reporting a failure they must drop everything for. Null when nothing is
+ * wrong, or when there is no resolved channel to name — mail warns nowhere
+ * here, holding to its own path's limits.
+ */
+export function CarriageNotice({
+  channel,
+  blocks,
+}: Readonly<{ channel?: string; blocks: readonly CarriageViolation[] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (!channel || blocks.length === 0) {
+    return null;
+  }
+  return (
+    <Callout tone="warn" live="status">
+      <ul className="compose-carriage">
+        {blocks.map((violation) => (
+          <li
+            key={
+              violation.kind === "perFile"
+                ? `perFile-${violation.filename}`
+                : violation.kind
+            }
+          >
+            {carriageReason(t, locale, channel, violation)}
+          </li>
+        ))}
+      </ul>
+    </Callout>
   );
 }

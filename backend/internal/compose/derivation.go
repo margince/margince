@@ -53,7 +53,12 @@ const asOfKey = "as_of"
 // reservedDerivationKeys are the query-string names a handle owns. Report
 // vocabularies may not squat on them, or a minted URL would be ambiguous.
 // Derived from here rather than restated, so adding a key updates the gate.
-var reservedDerivationKeys = []string{"by", "agg", nullPredicateKey, asOfKey, reservedDerivationColumn}
+var reservedDerivationKeys = []string{groupByKey, "agg", nullPredicateKey, asOfKey, reservedDerivationColumn}
+
+// groupByKey names the dimensions a handle groups by. Named because a refusal
+// quotes it back, and a refusal naming an argument the caller did not send is
+// the confusion FieldNotAllowedError.Slot exists to prevent.
+const groupByKey = "by"
 
 // derivationQuery is one parsed derivation handle: the equality
 // predicates that pin the explained cell (plan filters + the row's
@@ -214,13 +219,17 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 	grouped := map[string]bool{}
 	for _, dim := range q.GroupBy {
 		if _, ok := spec.dimensions[dim]; !ok {
-			// Slot and Allowed, not the name alone. Without them the refusal
-			// says "use a name this report declares" and declares nothing, so
-			// a caller loops on guesses — the same refusal Run's own group_by
-			// path gives, which this one silently did not match.
+			// Slot and Allowed, not the name alone: without them the refusal
+			// says "use a name this report declares" and declares nothing, so a
+			// caller loops on guesses.
+			//
+			// Slot is the HANDLE's key rather than the plan's `group_by`. This
+			// path resolves a minted URL, whose arguments a caller can see and
+			// edit, and naming the plan's spelling would quote back an argument
+			// they never sent.
 			return derivationPlan{}, &FieldNotAllowedError{
 				Field:   dim,
-				Slot:    slotGroupBy,
+				Slot:    groupByKey,
 				Allowed: allowedReportNames(spec.dimensions),
 			}
 		}
@@ -230,14 +239,14 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 	// Predicates admit the union of the report's dimensions and filters:
 	// a group-key value pins the cell, a filter value replays the plan.
 	for key, value := range q.Predicates {
-		pred, err := resolvePredicate(spec, key, value, false)
+		pred, err := resolveValuePredicate(spec, key, value)
 		if err != nil {
 			return derivationPlan{}, err
 		}
 		plan.preds = append(plan.preds, pred)
 	}
 	for field := range q.Unset {
-		pred, err := resolvePredicate(spec, field, "", true)
+		pred, err := resolveNullPredicate(spec, field)
 		if err != nil {
 			return derivationPlan{}, err
 		}
@@ -399,50 +408,93 @@ func sortedKeys(m map[string]string) []string {
 	return keys
 }
 
-// allowedPredicateNames is what a derivation predicate may name: the union a
-// predicate is actually resolved against above — the report's dimensions, its
-// filters and its thresholds.
-//
-// Derived from the spec rather than listed, and the UNION rather than either
-// half, because a refusal naming only the dimensions would refuse a caller a
-// filter name this engine accepts.
-func allowedPredicateNames(spec reportSpec) []string {
-	names := make([]string, 0, len(spec.dimensions)+len(spec.filters)+len(spec.thresholds))
-	names = append(names, allowedReportNames(spec.dimensions)...)
-	names = append(names, allowedReportNames(spec.filters)...)
-	for key := range spec.thresholds {
-		names = append(names, key)
+// resolveValuePredicate resolves a predicate that pins a VALUE, against what
+// this report admits one over: a threshold, a dimension or a filter.
+func resolveValuePredicate(spec reportSpec, name, value string) (boundExpr, error) {
+	if threshold, ok := spec.thresholds[name]; ok {
+		return boundExpr{field: name, value: value, threshold: &threshold}, nil
 	}
+	expr, ok := predicateExpr(spec, name)
+	if !ok {
+		// No Slot: a handle pins a value with a bare `field=value`, so there is
+		// no argument name to quote back — FieldNotAllowedError falls back to
+		// the unqualified wording and still names the vocabulary.
+		return boundExpr{}, &FieldNotAllowedError{
+			Field:   name,
+			Allowed: allowedPredicateNames(spec),
+		}
+	}
+	return boundExpr{field: name, expr: expr, value: value}, nil
+}
+
+// resolveNullPredicate resolves a predicate asserting a column is UNSET.
+//
+// A THRESHOLD IS REFUSED HERE, and that is the whole reason this is its own
+// function. A threshold is a comparison over a number, not a column that can be
+// null, and the fetch below switches on `threshold != nil` BEFORE `isNull` — so
+// a threshold carrying isNull took the threshold arm with an empty value and
+// died later telling the caller to "send it as a number", advice for a request
+// they did not make. Refusing it here says what is actually wrong, and names
+// the keys that can be unset.
+func resolveNullPredicate(spec reportSpec, name string) (boundExpr, error) {
+	if _, isThreshold := spec.thresholds[name]; isThreshold {
+		return boundExpr{}, &FieldNotAllowedError{
+			Field:   name,
+			Slot:    nullPredicateKey,
+			Allowed: allowedNullableNames(spec),
+		}
+	}
+	expr, ok := predicateExpr(spec, name)
+	if !ok {
+		return boundExpr{}, &FieldNotAllowedError{
+			Field:   name,
+			Slot:    nullPredicateKey,
+			Allowed: allowedNullableNames(spec),
+		}
+	}
+	return boundExpr{field: name, expr: expr, isNull: true}, nil
+}
+
+// predicateExpr is the column expression a predicate name resolves to: a
+// dimension's or a filter's. One lookup, so the two resolvers above cannot come
+// to disagree about what a predicate may name.
+func predicateExpr(spec reportSpec, name string) (string, bool) {
+	if expr, ok := spec.dimensions[name]; ok {
+		return expr, true
+	}
+	expr, ok := spec.filters[name]
+	return expr, ok
+}
+
+// allowedPredicateNames is what a VALUE predicate may name — the union
+// resolveValuePredicate resolves against.
+//
+// The filter half comes from catalogFilterNames, which the report catalog and
+// the plan's own `filters` refusal already use, rather than a second spelling of
+// "filters and thresholds as one list": that pairing has a reason
+// (reportcatalog.go) and two copies of it would drift.
+//
+// THE TWO HALVES ARE SCOPED DIFFERENTLY and this says so rather than reading as
+// though they were not: grantedSpec narrows a caller's dimensions and measures
+// and leaves filters and thresholds alone, so the dimension half is this seat's
+// and the filter half is the installation's. It discloses nothing either way —
+// the report catalog publishes every filter and threshold name to every caller —
+// but a reader comparing this list against the catalog will find the dimensions
+// shorter, and that is why.
+func allowedPredicateNames(spec reportSpec) []string {
+	names := append(allowedReportNames(spec.dimensions), catalogFilterNames(spec)...)
 	slices.Sort(names)
 	return slices.Compact(names)
 }
 
-// resolvePredicate resolves one predicate name against what this report admits: a
-// threshold, a dimension or a filter, in that order.
+// allowedNullableNames is what an UNSET predicate may name: the same union
+// WITHOUT the thresholds, which resolveNullPredicate refuses.
 //
-// The two callers differ only in whether the predicate pins a value or asserts
-// its absence, and they resolved the name identically — twice, which is how one
-// of them came to refuse without naming the vocabulary while the other did.
-func resolvePredicate(spec reportSpec, name, value string, isNull bool) (boundExpr, error) {
-	if threshold, ok := spec.thresholds[name]; ok {
-		if isNull {
-			return boundExpr{field: name, isNull: true, threshold: &threshold}, nil
-		}
-		return boundExpr{field: name, value: value, threshold: &threshold}, nil
-	}
-	expr, ok := spec.dimensions[name]
-	if !ok {
-		expr, ok = spec.filters[name]
-	}
-	if !ok {
-		return boundExpr{}, &FieldNotAllowedError{
-			Field:   name,
-			Slot:    slotFilters,
-			Allowed: allowedPredicateNames(spec),
-		}
-	}
-	if isNull {
-		return boundExpr{field: name, expr: expr, isNull: true}, nil
-	}
-	return boundExpr{field: name, expr: expr, value: value}, nil
+// Two sets rather than one, because naming a vocabulary the resolver goes on to
+// refuse is the same defect as naming none — the caller picks a name off the
+// list and is refused again.
+func allowedNullableNames(spec reportSpec) []string {
+	names := append(allowedReportNames(spec.dimensions), allowedReportNames(spec.filters)...)
+	slices.Sort(names)
+	return slices.Compact(names)
 }

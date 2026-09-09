@@ -209,6 +209,7 @@ export const de = {
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
   "shell.closeMenu": "Schließen",
+  "shell.agent.scope": "Ihr Agent liest nur das, was Sie sehen können.",
   "shell.capture.importing": "E-Mail-Verlauf wird importiert",
   "shell.capture.share": "{percent} · {scanned} von {total} Nachrichten",
   "shell.capture.count": "Bisher {scanned} Nachrichten",
@@ -3321,6 +3322,8 @@ export const de = {
   "log.body": "Details",
   "log.dueAt": "Fällig am",
   "log.date": "Datum",
+  "log.assignee": "Zuständig",
+  "log.unassigned": "Nicht zugewiesen",
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
 
@@ -3406,6 +3409,16 @@ export const de = {
   "compose.fileUploading": "Datei wird abgelegt…",
   "compose.fileStoredUnnamed":
     "Die Datei liegt am Datensatz, aber wir konnten nicht zurücklesen, welche es ist. Hängen Sie sie über die Liste oben an.",
+  "compose.carriageCarries":
+    "{channel} kann keine Dateien übertragen, daher können diese Nachricht und ihre {count} Anhänge dort nicht gesendet werden. Senden Sie den Text über {channel} oder die Dateien auf anderem Weg.",
+  "compose.carriageCount":
+    "{channel} überträgt höchstens {limit} Dateien in einer Nachricht, und diese hat {named}. Senden Sie den Rest als zweite Nachricht.",
+  "compose.carriagePerFile":
+    "{filename} ist größer als die {limit}, die {channel} für eine einzelne Datei zulässt. Senden Sie eine kleinere Fassung oder teilen Sie sie auf anderem Weg.",
+  "compose.carriageAggregate":
+    "Diese {count} Dateien ergeben zusammen {total}, und {channel} überträgt höchstens {limit} in einer Nachricht. Verteilen Sie sie auf mehrere Nachrichten.",
+  "compose.carriageCaption":
+    "{channel} überträgt den Text einer Nachricht mit Dateien als Bildunterschrift, höchstens {limit} Zeichen, und diese hat {length}. Kürzen Sie ihn oder senden Sie die Dateien separat.",
   "calendar.previousMonth": "Voriger Monat",
   "calendar.nextMonth": "Nächster Monat",
   "compose.schedulePick": "Datum und Uhrzeit wählen",
@@ -3895,6 +3908,17 @@ export const de = {
     "Ich habe {name} so weit gelesen, wie die Datensätze es zuließen, und dann aufgehört.",
   "agent.activity.accountScanNamed.failed":
     "Ich konnte das Lesen von {name} nicht abschließen.",
+  "agent.activity.transcriptRead.queued":
+    "Das Transkript steht zum Lesen in der Warteschlange.",
+  "agent.activity.transcriptRead.running":
+    "Ich lese das Transkript auf nächste Schritte durch.",
+  "agent.activity.transcriptRead.stalled":
+    "Das Lesen des Transkripts dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.transcriptRead.done": "Ich habe das Transkript gelesen.",
+  "agent.activity.transcriptRead.degraded":
+    "Ich habe das Transkript nicht zu Ende gelesen.",
+  "agent.activity.transcriptRead.failed":
+    "Ich konnte das Transkript nicht lesen.",
   "agent.activity.siteRead.queued":
     "Die Firmenwebsite steht zum Lesen in der Warteschlange.",
   "agent.activity.siteRead.running": "Ich lese die Firmenwebsite.",
@@ -6009,6 +6033,13 @@ export const de = {
   "confirm.erasure.ask": "Meine Daten löschen",
   "confirm.erasure.staged": "Löschung angefragt. Zum Senden unten bestätigen.",
   "confirm.submit": "Bestätigen",
+  "confirm.subscription.title": "Abo bestätigen",
+  "confirm.subscription.ask":
+    "Bestätigen Sie, dass Sie {purpose} erhalten möchten.",
+  "confirm.subscription.confirm": "Ja, ich möchte das Abo",
+  "confirm.subscription.alreadyTitle": "Abo bestätigt",
+  "confirm.subscription.alreadyBody":
+    "Ihr Abo für {purpose} ist bestätigt. Sie können es jederzeit über jede unserer E-Mails beenden.",
   "confirm.done.title": "Danke",
   "confirm.done.body":
     "Ich habe Ihre Antwort erfasst. Änderungen gehen an eine Person hier zur Übernahme, und dieser Link ist jetzt verbraucht.",

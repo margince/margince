@@ -439,6 +439,10 @@ func mapRecord(m overlay.ObjectMapping, objectClass string, raw ObjectRecord) (o
 
 	ownerID, _ := out["owner_id"].(string)
 
+	fingerprint, err := overlay.Fingerprint(m)
+	if err != nil {
+		return overlay.Record{}, err
+	}
 	return overlay.Record{
 		ExternalID: externalID,
 		// The mirror is keyed by canonical entity type, not the incumbent
@@ -453,7 +457,7 @@ func mapRecord(m overlay.ObjectMapping, objectClass string, raw ObjectRecord) (o
 		// Stamped from the declaration that produced Fields just above, so the
 		// row the mirror stores names its own projection rather than whichever
 		// declaration is current when someone later asks.
-		ProjectionFingerprint: overlay.Fingerprint(m),
+		ProjectionFingerprint: fingerprint,
 	}, nil
 }
 

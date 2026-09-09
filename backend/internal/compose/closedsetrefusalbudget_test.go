@@ -26,7 +26,9 @@ package compose
 // modules/agents, modules/search or shared/ports/datasource — compose is
 // downstream of all three, so importing them here is legal but provoking their
 // refusals from this package is not the same test. Those carry the same
-// obligation and are held where they live; this file does not speak for them.
+// obligation. Two of them are NOT held anywhere — the enrich depths and the
+// approval decision, both agents' own sets — and saying so is better than a
+// sentence implying somebody covers them.
 //
 // IT ASSERTS ON THE CLASSIFIED FAULT, not on err.Error(). The renderer is not
 // the only ceiling: httperr bounds a module-declared fault at MaxFaultText
@@ -35,6 +37,8 @@ package compose
 // Asking httperr.Classify is asking the surface rather than a model of it.
 
 import (
+	"encoding/json"
+	"fmt"
 	"maps"
 	"slices"
 	"strings"
@@ -51,7 +55,70 @@ import (
 // echo leaves nothing for the set.
 const floodedCallerTokenLen = 4000
 
-func floodedCallerToken() string { return strings.Repeat("k", floodedCallerTokenLen) }
+// TWO SHAPES, and neither replaces the other.
+//
+// A plain ASCII flood measures the bound: whatever is echoed must be at most
+// MaxCallerToken, and a long run of the token's own byte is what proves it.
+//
+// An ESCAPING flood measures the expansion, which the ASCII one cannot see: a
+// token bounded at 80 bytes by QuoteCaller still grows downstream because
+// agents.echoSafe renders what does not print, and an astral-escaping regression
+// that pushed a refusal from 358 to 466 bytes went unseen here while the flood
+// was ASCII only.
+//
+// Each shape carries its OWN over-echo assertion, because what "too much of the
+// caller's token survived" looks like depends on how the token renders. Sharing
+// one assertion is how the ASCII check came to be applied to a token with no run
+// longer than a single byte, where it could never match and proved nothing.
+type floodShape struct {
+	what  string
+	token string
+	// overEchoed says whether more of ONE caller token reached the refusal than
+	// MaxCallerToken admits. Nil where this shape cannot answer that — see
+	// below; the length ceiling is what such a shape proves instead.
+	overEchoed func(detail string) bool
+}
+
+func floodShapes() []floodShape {
+	return []floodShape{
+		{
+			// A single repeated byte, so an over-echo is a RUN longer than the
+			// bound — visible whatever else the refusal says, and however many
+			// tokens it names.
+			what:  "plain ascii",
+			token: strings.Repeat("k", floodedCallerTokenLen),
+			overEchoed: func(detail string) bool {
+				return strings.Contains(detail, strings.Repeat("k", httperr.MaxCallerToken+1))
+			},
+		},
+		{
+			// NO run assertion, and the reason is worth stating rather than
+			// leaving as an empty field. Once escaped, this token's characters
+			// are `\`, `u`, digits and letters that ordinary refusal prose is
+			// also made of, so no substring search separates "the caller's
+			// token survived" from "the sentence around it". Counting escapes
+			// instead fails on a refusal that legitimately names SEVERAL bounded
+			// tokens — unservedPlanArguments names four — so the count would be
+			// a fixture of how many, not a bound on each.
+			//
+			// What this shape proves is the LENGTH ceiling above, and it does
+			// NOT catch the astral-escaping regression that motivated it: that
+			// pushed a refusal from 358 to 466 bytes, still inside the 512 the
+			// surface admits. Measured, not assumed — reverting the fix leaves
+			// this green. The regression is held where the escaping happens, by
+			// TestEchoSafeLeavesRealNamesAlone in modules/agents, which reds on
+			// it.
+			//
+			// It stays because it is the only shape that trips this ceiling once
+			// a vocabulary grows: the same inflation over a few more prebuilt
+			// reports crosses 512, and this is what would fail then. A ceiling
+			// nothing currently approaches is still a ceiling; what would be
+			// dishonest is claiming it earns its place today.
+			what:  "characters that grow under escaping",
+			token: strings.Repeat("k\u2028\U000e0020", floodedCallerTokenLen/12),
+		},
+	}
+}
 
 // setBearingRefusal is one vocabulary, the refusal that names it, and the way to
 // provoke that refusal with a token of the caller's choosing.
@@ -174,6 +241,34 @@ func closedSetRefusals(t *testing.T) []setBearingRefusal {
 			},
 		},
 		{
+			// The refusal maxUnservedNamed exists for. Each unknown key is
+			// bounded, but the COUNT of them is the caller's too — twenty
+			// pushed the served vocabulary off the end of the sentence that
+			// names it, which is why the list is truncated and counted.
+			what:    "the plan arguments this tool takes",
+			members: []string{slotFilters, slotGroupBy, slotAggregates},
+			refuse: func(token string) error {
+				// TWENTY unknown keys, not one: each is bounded on its own and
+				// the count is what crowds the served set out.
+				args := map[string]string{}
+				for i := range 20 {
+					args[fmt.Sprintf("%s-%d", token, i)] = "x"
+				}
+				body, err := json.Marshal(args)
+				if err != nil {
+					t.Fatalf("could not build a plan with unknown keys: %v", err)
+				}
+				unserved := unservedPlanArguments(body)
+				if len(unserved) == 0 {
+					t.Fatal("twenty unknown plan keys were all served, so this case measures nothing")
+				}
+				// The sentence the tool surface builds, as registry.go builds it.
+				return httperr.Validation("arguments", "malformed_json",
+					"this tool does not take "+strings.Join(unserved, ", ")+
+						"; its plan arguments are `"+slotFilters+"`, `"+slotGroupBy+"` and `"+slotAggregates+"`")
+			},
+		},
+		{
 			// The catalog read here, the refusal built by the engine — so this
 			// asserts the engine names every key rather than replaying a set the
 			// test handed it. An unknown key is refused before the engine touches
@@ -242,26 +337,28 @@ func TestEveryClosedSetSurvivesTheToolSurface(t *testing.T) {
 func TestACallersTokenCannotCrowdOutTheSet(t *testing.T) {
 	t.Parallel()
 	for _, subject := range closedSetRefusals(t) {
-		t.Run(subject.what, func(t *testing.T) {
-			t.Parallel()
-			detail := classifiedDetail(t, subject, floodedCallerToken())
+		for _, flood := range floodShapes() {
+			t.Run(subject.what+"/"+flood.what, func(t *testing.T) {
+				t.Parallel()
+				detail := classifiedDetail(t, subject, flood.token)
 
-			if len(detail) > agents.MaxFaultDetail {
-				t.Errorf("a caller's oversized name pushed the %s refusal to %d bytes, past the %d "+
-					"the surface admits — so the token is not bounded where it enters",
-					subject.what, len(detail), agents.MaxFaultDetail)
-			}
-			if strings.Contains(detail, strings.Repeat("k", httperr.MaxCallerToken+1)) {
-				t.Errorf("the %s refusal echoed more of the caller's token than MaxCallerToken (%d) "+
-					"admits:\n%s", subject.what, httperr.MaxCallerToken, detail)
-			}
-			for _, member := range subject.members {
-				if !strings.Contains(detail, member) {
-					t.Errorf("a caller's oversized name pushed %q out of the %s refusal:\n%s",
-						member, subject.what, detail)
+				if len(detail) > agents.MaxFaultDetail {
+					t.Errorf("a caller's oversized name pushed the %s refusal to %d bytes, past the %d "+
+						"the surface admits — so the token is not bounded where it enters",
+						subject.what, len(detail), agents.MaxFaultDetail)
 				}
-			}
-		})
+				if flood.overEchoed != nil && flood.overEchoed(detail) {
+					t.Errorf("the %s refusal echoed more of the caller's token than MaxCallerToken (%d) "+
+						"admits:\n%s", subject.what, httperr.MaxCallerToken, detail)
+				}
+				for _, member := range subject.members {
+					if !strings.Contains(detail, member) {
+						t.Errorf("a caller's oversized name pushed %q out of the %s refusal:\n%s",
+							member, subject.what, detail)
+					}
+				}
+			})
+		}
 	}
 }
 

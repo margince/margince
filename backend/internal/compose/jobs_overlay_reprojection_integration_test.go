@@ -395,7 +395,7 @@ func TestStaleProjectionsSkipARowThatFailedAgainstTheCurrentDeclaration(t *testi
 		t.Fatalf("before the failure is recorded StaleProjections reports %v, want [%s] — "+
 			"the skip below would prove nothing about a row the sweep never named", stale, staleRowExternalID)
 	}
-	if err := r.ms.RecordReprojectionFailure(r.sweepCtx, m.Target, staleRowExternalID, overlay.Fingerprint(m)); err != nil {
+	if err := r.ms.RecordReprojectionFailure(r.sweepCtx, m.Target, staleRowExternalID, declarationFingerprint(t, m)); err != nil {
 		t.Fatalf("RecordReprojectionFailure: %v", err)
 	}
 
@@ -413,7 +413,7 @@ func TestStaleProjectionsRetryARowWhoseDeclarationChanged(t *testing.T) {
 	r := setupReprojection(t)
 	m := r.mirrorContactsAndDeclaration(t)
 
-	if err := r.ms.RecordReprojectionFailure(r.sweepCtx, m.Target, staleRowExternalID, overlay.Fingerprint(m)); err != nil {
+	if err := r.ms.RecordReprojectionFailure(r.sweepCtx, m.Target, staleRowExternalID, declarationFingerprint(t, m)); err != nil {
 		t.Fatalf("RecordReprojectionFailure: %v", err)
 	}
 	if stale := r.staleProjections(t, m); len(stale) != 0 {
@@ -500,10 +500,11 @@ func TestSweepReprojectionRecordsARefetchThatCannotLand(t *testing.T) {
 	// The mirror keys on the CANONICAL class a declaration projects onto
 	// ("person"), never the incumbent's own name for it ("contacts"), and the
 	// fingerprint is the one StaleProjections compares against.
-	if recorded := r.reprojectionFailureRecord(t, m.Target); recorded != overlay.Fingerprint(m) {
+	declared := declarationFingerprint(t, m)
+	if recorded := r.reprojectionFailureRecord(t, m.Target); recorded != declared {
 		t.Fatalf("%s/%s records %q, want %q — the declaration the re-fetch failed to reach, keyed the way the mirror is keyed; "+
 			"a record the row never receives is silent, and the skip below is the only thing that would ever notice",
-			m.Target, staleRowExternalID, recorded, overlay.Fingerprint(m))
+			m.Target, staleRowExternalID, recorded, declared)
 	}
 
 	r.inc.enqueued = nil
@@ -638,4 +639,16 @@ func TestSweepReprojectionCoalescesRepeatedPassesIntoOneJob(t *testing.T) {
 				"for a row still queued spends one live incumbent read per tick on a record already waiting to be read", got, pass)
 		}
 	}
+}
+
+// declarationFingerprint digests the declaration under test, failing the test
+// if it cannot: an unencodable declaration is a broken fixture, never the
+// answer any of these cases is about.
+func declarationFingerprint(t *testing.T, m overlay.ObjectMapping) string {
+	t.Helper()
+	digest, err := overlay.Fingerprint(m)
+	if err != nil {
+		t.Fatalf("fingerprinting the declaration under test: %v", err)
+	}
+	return digest
 }
