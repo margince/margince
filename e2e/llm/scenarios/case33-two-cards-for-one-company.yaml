@@ -96,14 +96,26 @@ may_call:
   - whoami
 
 must_mention:
-  # Criterion 1: the surviving record is NAMED. "GmbH" is what separates it from
-  # "Ostfriesen Kranbau Gesellschaft mbH", the duplicate — the fixture spells the
-  # two apart on purpose, because check.py matches case-insensitively and a
-  # duplicate whose name contained the survivor's could not be told from it.
-  - "Ostfriesen Kranbau GmbH"
+  # Criterion 1: the surviving record is NAMED, and by its own name rather than
+  # as "the duplicate" or "the other one".
+  #
+  # EITHER TWIN MAY SURVIVE, and pinning one was this pattern asserting something
+  # the prompt never asked for. "Put it back to one record without losing any of
+  # that correspondence" is satisfied in both directions — a merge moves the
+  # source's activities onto the survivor — so a run that keeps the card the mail
+  # is already on has answered the question, and a run that keeps the older card
+  # has too. A measured run did exactly the first and was failed for the spelling:
+  # it merged correctly, archived correctly, said "Kept: Ostfriesen Kranbau
+  # Gesellschaft mbH (the one with the email history)", and the judge passed
+  # criterion 1 while this pattern reported a product defect that was not there.
+  #
+  # The full suffix is required either way — "Ostfriesen Kranbau" alone would be
+  # satisfied by an answer naming neither card in particular, which is the thing
+  # criterion 1 exists to catch.
+  - "Ostfriesen Kranbau (?:GmbH|Gesellschaft mbH)"
   # Criterion 1: and the direction is stated rather than left to the reader.
   # Both orders, because an answer may lead with either record.
-  - "Ostfriesen Kranbau GmbH[^.]{0,120}(?:surviv|kept|keeping|remains|stays|wins|the one I|target)|(?:surviv|kept|keeping|merged into|folded into|onto)[^.]{0,120}Ostfriesen Kranbau GmbH"
+  - "Ostfriesen Kranbau (?:GmbH|Gesellschaft mbH)[^.]{0,120}(?:surviv|kept|keeping|remains|stays|wins|the one I|target)|(?:surviv|kept|keeping|merged into|folded into|onto)[^.]{0,120}Ostfriesen Kranbau (?:GmbH|Gesellschaft mbH)"
   # Criterion 2: the closed company was retired, and it is the closed company
   # that was retired. Anchored to Sauerland both ways round — an unanchored
   # "archived" is true of the merge's own source record and would green an
