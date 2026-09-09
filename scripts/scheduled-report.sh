@@ -138,6 +138,14 @@ elif [[ "${VULN_RESULT:-}" = "success" ]]; then
   resolve "govulncheck reports a vulnerability reachable from main"
 fi
 
+# `high` where its siblings are `critical`, and the difference is not a lane's
+# importance but who it stops. The taxonomy's honest test for `critical` is
+# "does this stop somebody else from working", and `main`'s required-status-check
+# ruleset names exactly ONE context: `ci`. A red lane inside `ci` is inherited by
+# every open pull request; a red SonarCloud verdict is inherited by nobody,
+# because `SonarCloud Code Analysis` is deliberately not required. That is the
+# same asymmetry this arm exists to compensate for — nothing is blocked, so
+# nothing prompts anyone to look, so the issue is the only signal.
 if [[ "${GATE_RESULT:-}" = "failure" ]]; then
   report "SonarCloud quality gate is not green on main" "priority: high,area: ci-tests,bug" \
 "The quality gate on \`main\` read \`${GATE_STATUS:-unknown}\` on the scheduled
@@ -159,7 +167,7 @@ elif [[ "${GATE_RESULT:-}" = "success" ]]; then
 fi
 
 if [[ "${LANE_RESULT:-}" = "failure" ]]; then
-  report "the backend merge gate is red on main" "priority: high,area: ci-tests,bug" \
+  report "the backend merge gate is red on main" "priority: critical,area: ci-tests,bug" \
 "\`make check-backend\` failed on the scheduled run of \`main\`: $RUN_URL
 
 Worth reading before assuming the last green run means anything. \`main\`'s
@@ -345,7 +353,7 @@ fi
 # person looking, which is worse than a dozen candidates and a failing test name.
 
 if [[ "${MAIN_GATES_RESULT:-}" = "failure" ]]; then
-  report "main is red: the backend gate fails on the tip" "priority: high,area: ci-tests,bug" \
+  report "main is red: the backend gate fails on the tip" "priority: critical,area: ci-tests,bug" \
 "\`make check-backend\` failed against \`main\` on the two-hourly health check:
 $RUN_URL
 
@@ -363,7 +371,7 @@ elif [[ "${MAIN_GATES_RESULT:-}" = "success" ]]; then
 fi
 
 if [[ "${MAIN_INTEGRATION_RESULT:-}" = "failure" ]]; then
-  report "main is red: the integration lane fails on the tip" "priority: high,area: ci-tests,bug" \
+  report "main is red: the integration lane fails on the tip" "priority: critical,area: ci-tests,bug" \
 "The real-Postgres lane failed against \`main\` on the two-hourly health check:
 $RUN_URL
 
@@ -383,7 +391,7 @@ elif [[ "${MAIN_INTEGRATION_RESULT:-}" = "success" ]]; then
 fi
 
 if [[ "${MAIN_FRONTEND_RESULT:-}" = "failure" ]]; then
-  report "main is red: the frontend lane fails on the tip" "priority: high,area: ci-tests,bug" \
+  report "main is red: the frontend lane fails on the tip" "priority: critical,area: ci-tests,bug" \
 "The SPA lane (biome + vitest + tsc + build) failed against \`main\` on the
 two-hourly health check: $RUN_URL
 
@@ -412,7 +420,7 @@ elif [[ "${MAIN_FRONTEND_RESULT:-}" = "success" ]]; then
 fi
 
 if [[ "${MAIN_UAT_RESULT:-}" = "failure" ]]; then
-  report "main is red: the screen-acceptance UAT fails on the tip" "priority: high,area: ci-tests,bug" \
+  report "main is red: the screen-acceptance UAT fails on the tip" "priority: critical,area: ci-tests,bug" \
 "The UAT lane (AC screens + axe WCAG 2.2 AA + the 390px sweep, against the built
 app over the seed mock) failed against \`main\` on the two-hourly health check:
 $RUN_URL
@@ -438,6 +446,14 @@ elif [[ "${MAIN_UAT_RESULT:-}" = "success" ]]; then
   resolve "main is red: the screen-acceptance UAT fails on the tip"
 fi
 
+# `high` where its siblings are `critical`, and the difference is not a lane's
+# importance but who it stops. The taxonomy's honest test for `critical` is
+# "does this stop somebody else from working", and `main`'s required-status-check
+# ruleset names exactly ONE context: `ci`. A red lane inside `ci` is inherited by
+# every open pull request; a red SonarCloud verdict is inherited by nobody,
+# because `SonarCloud Code Analysis` is deliberately not required. That is the
+# same asymmetry this arm exists to compensate for — nothing is blocked, so
+# nothing prompts anyone to look, so the issue is the only signal.
 if [[ "${MAIN_SONAR_RESULT:-}" = "failure" ]]; then
   report "main's SonarCloud analysis was not published" "priority: high,area: ci-tests,bug" \
 "The \`sonarcloud (main)\` job failed on the two-hourly health check, with every
