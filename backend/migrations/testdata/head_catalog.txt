@@ -1953,7 +1953,7 @@ public.contract.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.contract.value_basis text NOT NULL gen=- def='total'::text
 public.contract.value_minor bigint gen=- def=-
 public.contract.version bigint NOT NULL gen=- def=1
-public.contract_account_ix CREATE INDEX contract_account_ix ON public.contract USING btree (organization_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.contract_account_ix CREATE INDEX contract_account_ix ON public.contract USING btree (organization_id, starts_on DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.contract_deal_ix CREATE INDEX contract_deal_ix ON public.contract USING btree (deal_id) WHERE ((deal_id IS NOT NULL) AND (archived_at IS NULL))
 public.contract_pkey CREATE UNIQUE INDEX contract_pkey ON public.contract USING btree (id)
 public.contract_renewal_due_ix CREATE INDEX contract_renewal_due_ix ON public.contract USING btree (renewal_on) WHERE ((renewal_on IS NOT NULL) AND (archived_at IS NULL))
