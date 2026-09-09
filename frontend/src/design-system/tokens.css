@@ -715,11 +715,11 @@
      than fix contrast. */
   --textOnAccentControl: #04240f;
   /* --success and --danger lighten in dark mode exactly like --accent does
-     (#15803d/#b91c1c to #4ade80/#f87171), so white — safe on both in light
-     theme, 5.02:1 and 6.47:1 — fails on both here: 1.74:1 on --success,
+     (#15803d/#b91c1c to #34d399/#f87171), so white — safe on both in light
+     theme, 5.02:1 and 6.47:1 — fails on both here: 1.92:1 on --success,
      2.77:1 on --danger, under even the 3:1 non-text floor. This ink (the
      same value as --textOnAccentControl; the two fills happen to share one
-     working ink, not one meaning) gives 9.54:1 on --success and 6.00:1 on
+     working ink, not one meaning) gives 8.64:1 on --success and 6.00:1 on
      --danger — kept as its own token because status and accent are
      different fills that could retune independently later. */
   --textOnStatusControl: #04240f;
@@ -769,12 +769,16 @@
   --textMeta: #8fa099;
   --textChip: #95a69f;
 
-  --success: #4ade80;
-  /* Dark inverts the problem: the lifted --success IS the readable ink on the
+  /* Not #4ade80: that value is --accentText here, and a confirmation painted
+   * in the accent's own tone reads as a lead rather than as a result. One step
+   * up the same emerald ramp keeps the two claims apart at 8.53:1 on --bgCard.
+   *
+   * Dark inverts the problem: the lifted --success IS the readable ink on the
    * tint over a dark card, so the two coincide here. Named anyway, because the
    * call sites read the role and must not have to know which theme collapses
    * it — the same reason --textOnAccentControl exists. */
-  --successText: #4ade80;
+  --success: #34d399;
+  --successText: #34d399;
   --warn: #fbbf24;
   --danger: #f87171;
   --dangerBg: rgba(248, 113, 113, 0.16);
@@ -885,8 +889,8 @@
     --textMeta: #8fa099;
     --textChip: #95a69f;
 
-    --success: #4ade80;
-    --successText: #4ade80;
+    --success: #34d399;
+    --successText: #34d399;
     --warn: #fbbf24;
     --danger: #f87171;
     --dangerBg: rgba(248, 113, 113, 0.16);
