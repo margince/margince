@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 12 |
 | Tool catalog | 210.4 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 55013 |
+| Approx. wire tokens | 55012 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -9483,14 +9483,14 @@ Fill in what a lead's own data already implies — today the company name, from 
       "maxLength": 255,
       "type": "string"
     },
-    "record_id": {
+    "lead_id": {
       "description": "The lead to qualify",
       "format": "uuid",
       "type": "string"
     }
   },
   "required": [
-    "record_id"
+    "lead_id"
   ],
   "type": "object"
 }
