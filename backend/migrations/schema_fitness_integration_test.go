@@ -433,6 +433,12 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// records a completed PARSE, and every meeting this pass must re-read
 	// already carries one.
 	"activity_meeting_attendee_repair.activity_id": "job bookkeeping: written by the system-principal attendee repair sweeping every captured meeting in the workspace, never from a request. The row records THAT a meeting's attendees were re-resolved and what the parse found — it returns no record to any caller and discloses nothing about the meeting it names",
+	// The same shape again, for the pass that closes meetings the calendar had
+	// already called off when they were captured. Its marker records a completed
+	// JUDGEMENT rather than a completed parse, which is why it is a table of its
+	// own rather than a column on the repair above: the two ask different
+	// questions about the same row, and one marker could not say which had run.
+	"activity_meeting_rsvp_backfill.activity_id": "job bookkeeping: written by the system-principal rsvp backfill sweeping every captured meeting in the workspace, never from a request. The row records THAT a meeting's stored original was re-read for its RSVP and what that said — it returns no record to any caller and discloses nothing about the meeting it names",
 	// The LinkedIn ghost's match arms (CG-DDL-2). A ghost is not a record and
 	// carries no client-supplied reference: the matcher resolves both ids from
 	// its own row-scoped lookups, and a human confirming a suggestion

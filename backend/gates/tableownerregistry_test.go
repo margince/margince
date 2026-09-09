@@ -432,6 +432,12 @@ var tableOwners = map[string]string{
 	// records a completed PARSE, and every meeting this pass must re-read
 	// already carries one.
 	"activity_meeting_attendee_repair": "internal/compose",
+	// Which captured meetings have had their stored original re-read for the
+	// RSVP nobody looked at when they were captured. The same bookkeeping,
+	// owned here for the same reason — and a marker of its own again, because
+	// this one records a completed JUDGEMENT about whether the meeting is off,
+	// which neither marker above answers.
+	"activity_meeting_rsvp_backfill": "internal/compose",
 	// The rep's own "not this, not now" on a suggestion: per user, keyed on
 	// the evidence it fired on. Same ruling — view state, no audit row.
 	"suggestion_dismissal": "internal/compose/org360",

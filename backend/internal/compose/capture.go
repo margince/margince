@@ -279,6 +279,15 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// name it completes is read off the participant rows this same
 		// transaction has just written.
 		WithParticipantNamer(people.FillParticipantNamesTx).
+		// Closing a meeting the calendar says is off — called off by its
+		// organizer, or declined by the seat whose calendar it is. From the
+		// module that owns `activity` and its status history, for the reason
+		// every seam above travels this way.
+		//
+		// Without it a cancelled meeting stays on the timeline as booked: the
+		// provider stops listing an event once it is off, so the pull that
+		// carries the cancellation is the only one that will ever mention it.
+		WithMeetingCloser(activities.CancelCapturedMeetingTx).
 		// The 24-hour trace's payload posture. It rides the Sink because the
 		// Sink is where a payload would be written, and it is a deployment
 		// decision rather than a workspace one -- there is no API that flips it.
