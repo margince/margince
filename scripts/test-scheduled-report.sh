@@ -29,11 +29,21 @@ case "$1 ${2:-}" in
 "api --paginate")
 	# Paginate at 100 so a case can put its match beyond the first page, which
 	# is the whole failure being tested.
+	#
+	# Counted with `n` rather than NR, and blank records skipped, because a
+	# here-string always delivers ONE line: an empty tracker arrives as a single
+	# blank record with NR == 1, and keyed on NR this emitted
+	# `[{"number":,"title":""}]`. jq refused it and nothing said so — errexit is
+	# suppressed inside a function called as `report ... || unreported=1`, so the
+	# reporter read the empty output of a FAILED read as "no issue open" and filed
+	# regardless. Every case here passing `""` was asserting over a parse error
+	# rather than over an empty tracker.
 	awk -F'\t' '
-		{ items[NR] = "{\"number\":" $1 ",\"title\":\"" $2 "\"}" }
+		$0 == "" { next }
+		{ items[++n] = "{\"number\":" $1 ",\"title\":\"" $2 "\"}" }
 		END {
-			if (NR == 0) { print "[]"; exit }
-			for (i = 1; i <= NR; i++) {
+			if (n == 0) { print "[]"; exit }
+			for (i = 1; i <= n; i++) {
 				page = page (page == "" ? "" : ",") items[i]
 				if (i % 100 == 0) { print "[" page "]"; page = "" }
 			}
@@ -41,6 +51,7 @@ case "$1 ${2:-}" in
 		}' <<<"$OPEN_TITLES"
 	;;
 "issue comment") echo "comment $3" >>"$ACTION_LOG" ;;
+"issue close") echo "close $3" >>"$ACTION_LOG" ;;
 "issue create")
 	for i in $(seq 1 $#); do
 		if [ "${!i}" = "--title" ]; then j=$((i + 1)); echo "create ${!j}" >>"$ACTION_LOG"; fi
@@ -58,17 +69,23 @@ export PATH="$stub_dir:$PATH"
 
 readonly GATE_TITLE="SonarCloud quality gate is not green on main"
 
-# expect <name> <expected-actions> <open-issues-tsv>
+# expect_actions <name> <expected-actions> <open-issues-tsv> <env assignment>...
 #
-# Only the quality gate is reported failing, so the expected action is exactly
-# one line naming what the reporter did about GATE_TITLE.
-expect() {
-	local name="$1" want="$2" open="$3" out status got
+# The general driver: run the reporter under a given set of lane results and
+# assert on the comma-joined list of things it did to the tracker. Every case
+# below is one of these, because "it filed something" is not evidence it filed
+# the right thing — and now that a green check CLOSES an issue, "it did nothing"
+# is a distinct and testable answer that used to be indistinguishable from a
+# run that never reached the arm.
+expect_actions() {
+	local name="$1" want="$2" open="$3"
+	shift 3
+	local out status got
 	export ACTION_LOG="$stub_dir/actions"
 	: >"$ACTION_LOG"
 	set +e
-	out="$(OPEN_TITLES="$open" GH_TOKEN=stub REPO=owner/repo RUN_URL=https://example.test/run/1 \
-		GATE_RESULT=failure GATE_STATUS=ERROR \
+	out="$(env OPEN_TITLES="$open" GH_TOKEN=stub REPO=owner/repo \
+		RUN_URL=https://example.test/run/1 "$@" \
 		"$root/scripts/scheduled-report.sh" 2>&1)"
 	status=$?
 	set -e
@@ -80,9 +97,17 @@ expect() {
 		echo "  actions want '$want' got '$got'"
 		printf '  output: %s\n' "$out" | head -5
 		failures=$((failures + 1))
-	else
-		echo "ok: $name"
+		return
 	fi
+	echo "ok: $name"
+}
+
+# expect <name> <expected-actions> <open-issues-tsv>
+#
+# Only the quality gate is reported failing, so the expected action is exactly
+# one line naming what the reporter did about GATE_TITLE.
+expect() {
+	expect_actions "$1" "$2" "$3" GATE_RESULT=failure GATE_STATUS=ERROR
 }
 
 # expect_llm <name> <LLM_OUTCOME> <expected-title>
@@ -154,6 +179,99 @@ expect "duplicates already filed: the oldest keeps the discussion" \
 expect "a similar title is a different finding" \
 	"create $GATE_TITLE" \
 	"$(printf '55\tSonarCloud quality gate is not green on staging\n')"
+
+# --- retraction: what a check that came back GREEN does -------------------------
+#
+# The other half of the reporter, and the half that did not exist. A finding was
+# filed when a lane went red and never withdrawn when it went green, so the
+# tracker reported a red main over a green tree for as long as it took somebody
+# to close the issue by hand. margince/margince#5118 is the worked example:
+# filed 05:35Z, fixed on main at 06:49Z, still open hours after.
+#
+# The cases below are written around the ONE direction this must not fail in.
+# Filing a finding wrongly is loud — somebody reads the issue and says so.
+# Retracting one wrongly is silent: the issue closes, the red stays, and nothing
+# ever asks again. So a result that is not a pass must reach neither half.
+
+expect_actions "a green check closes the issue it filed" \
+	"close 40" \
+	"$(printf '99\ta later finding\n40\t%s\n' "$GATE_TITLE")" \
+	GATE_RESULT=success
+
+# Nothing to retract is not a failure, and not a reason to say anything.
+expect_actions "a green check with no open issue does nothing" \
+	"" "" GATE_RESULT=success
+
+# THE ONE THAT MATTERS. A skipped job is the ABSENCE of a verdict, not a passing
+# one: the weekly perf lanes are skipped on the daily cron, and the daily lane's
+# arms are unset entirely when main-health runs the same reporter. Reading any
+# of those as green would close a finding that nothing re-examined.
+expect_actions "a skipped check neither files nor closes" \
+	"" "$(printf '40\t%s\n' "$GATE_TITLE")" \
+	GATE_RESULT=skipped
+
+expect_actions "a cancelled check neither files nor closes" \
+	"" "$(printf '40\t%s\n' "$GATE_TITLE")" \
+	GATE_RESULT=cancelled
+
+# An unset result is how EVERY arm of the other workflow arrives. main-health and
+# scheduled.yml run one reporter and each passes only its own lanes, so on any
+# given run most arms see nothing at all.
+expect_actions "an unset check neither files nor closes" \
+	"" "$(printf '40\t%s\n' "$GATE_TITLE")" \
+	GATE_STATUS=ERROR
+
+# The same rule the filing side follows: the oldest open match is the one
+# carrying the discussion, so it is the one that gets closed.
+expect_actions "duplicates already filed: the oldest is the one closed" \
+	"close 12" \
+	"$(printf '300\t%s\n12\t%s\n' "$GATE_TITLE" "$GATE_TITLE")" \
+	GATE_RESULT=success
+
+# --- retraction where ONE job result feeds TWO titles ---------------------------
+#
+# Three lanes split their result into "could not run" and "the thing it measures
+# is bad", and a mirrored else is wrong for them: the middle case — a lane that
+# ran and measured something bad — is a FAILURE that nonetheless retracts "could
+# not run". Getting this wrong leaves a permanent "could not complete" issue open
+# on a lane that completes every week, which is the stale-issue defect in a new
+# costume.
+#
+# Parameterised over the three, because each is its own pair of titles and a copy
+# of one case would pass on the day another arm's spelling drifted.
+
+# expect_split <lane> <result-var> <outcome-var> <measured-value> <ran-title> <bad-title>
+expect_split() {
+	local lane="$1" res="$2" out="$3" measured="$4" ran_title="$5" bad_title="$6"
+	local open
+	open="$(printf '10\t%s\n20\t%s\n' "$ran_title" "$bad_title")"
+
+	# It ran and what it measured was bad: retract "could not run", report the bad
+	# measurement. Both, in the order the reporter's arms appear.
+	expect_actions "$lane/a measured failure retracts 'could not run' and files what it measured" \
+		"close 10,comment 20" "$open" "$res=failure" "$out=$measured"
+
+	# It ran and everything held: both titles are false, so both go.
+	expect_actions "$lane/a green run retracts both of its findings" \
+		"close 10,close 20" "$open" "$res=success"
+
+	# It never ran: the honest report, and the bad-measurement title untouched
+	# because nothing measured anything.
+	expect_actions "$lane/a lane that never ran files only 'could not run'" \
+		"comment 10" "$open" "$res=failure"
+}
+
+expect_split perf PERF_RESULT PERF_OUTCOME breach \
+	"the weekly PERF-3/PERF-7 run could not complete" \
+	"a PERF-3/PERF-7 budget is breaching on main"
+
+expect_split mobile MOBILE_RESULT MOBILE_OUTCOME breach \
+	"the weekly MOBILE-AC-2 run could not complete" \
+	"PERF-1's perceived budget is breaching on main"
+
+expect_split llm LLM_RESULT LLM_OUTCOME scenario-failed \
+	"the weekly model-driven use cases could not run" \
+	"a use case is failing when driven by a real model"
 
 # --- main-health arms ----------------------------------------------------------
 #
@@ -496,17 +614,114 @@ if [[ -z "$report_job" ]]; then
 	echo "FAIL: no 'report' job found in main-health.yml — the wiring checks below would pass by scanning nothing"
 	failures=$((failures + 1))
 fi
+# What this loop USED to ask of the report job's `if:` was whether it selects a
+# failing lane. It no longer may: the job has to run whatever the lanes said, or
+# the retraction half of the reporter is unreachable. So the per-lane question is
+# now about the wiring that carries a result IN, and reachability moved below,
+# where it is one question per workflow rather than one per lane.
+needs_list="$(grep -oE '^    needs: \[[^]]*\]' <<<"$report_job" | sed -E 's/^    needs: \[//; s/\]$//')"
+if [[ -z "$needs_list" ]]; then
+	echo "FAIL: main-health's report job declares no 'needs:' list, so every needs.<job>.result it passes reads empty"
+	failures=$((failures + 1))
+fi
 for lane in $lanes; do
 	# MAIN_UAT_RESULT -> uat
 	job="$(printf '%s' "$lane" | sed -E 's/^MAIN_(.+)_RESULT$/\1/' | tr '[:upper:]' '[:lower:]')"
-	if ! grep -qE "needs\.${job}\.result == 'failure'" <<<"$report_job"; then
-		echo "FAIL: $lane has a reporter arm, but main-health's report job does not run for a failing '${job}' — the arm is unreachable"
+	# A job absent from `needs:` is still legal to reference: needs.<job>.result
+	# simply answers with an empty string, which the reporter reads as "no
+	# verdict" and passes over in silence. The arm is reached, does nothing, and
+	# nothing fails — which is the shape this census exists to refuse.
+	case ",${needs_list// /}," in
+	*",$job,"*) ;;
+	*)
+		echo "FAIL: $lane has a reporter arm, but '${job}' is not in main-health's report job 'needs:' — needs.${job}.result reads empty and the arm silently does nothing"
 		failures=$((failures + 1))
-	fi
+		;;
+	esac
 	if ! grep -qE "^ *${lane}: \\\$\{\{ needs\.${job}\.result \}\}" <<<"$report_job"; then
 		echo "FAIL: $lane has a reporter arm, but main-health never passes needs.${job}.result in as $lane"
 		failures=$((failures + 1))
 	fi
+done
+
+# --- every finding that can be FILED can be RETRACTED ---------------------------
+#
+# Derived from the reporter rather than listed here, because a list kept beside
+# the arms stops being true the day somebody adds one. A `report` with a literal
+# title makes a STANDING claim about a lane's state, and a standing claim nothing
+# withdraws is the defect this whole change is about: an arm added without its
+# `resolve` is a one-line omission whose only symptom is an issue nobody closes.
+#
+# The exemption is the CODE SHAPE, not a skip-list. `report "$merge_title"` names
+# one past merge and there is no state a later run could retract, so `[^"$]` is
+# what excuses it — a future computed title is exempt automatically, and a future
+# literal one is not.
+reporter="$root/scripts/scheduled-report.sh"
+reported="$(grep -oE '^  report "[^"$]+"' "$reporter" | sed -E 's/^  report "//; s/"$//' | sort -u)"
+resolved="$(grep -oE '^  resolve "[^"$]+"' "$reporter" | sed -E 's/^  resolve "//; s/"$//' | sort -u)"
+# A pattern that has stopped matching reads as total coverage, which is the
+# loudest way this file could lie.
+if [[ -z "$reported" ]]; then
+	echo "FAIL: the census found no literal report title in the reporter — the pattern stopped matching, it did not stop mattering"
+	failures=$((failures + 1))
+fi
+while IFS= read -r title; do
+	[[ -z "$title" ]] && continue
+	if ! grep -qxF "$title" <<<"$resolved"; then
+		echo "FAIL: the reporter files \"$title\" and never retracts it — a green run leaves that issue open over a fixed tree"
+		failures=$((failures + 1))
+	fi
+done <<<"$reported"
+# And the other direction, because a retraction for a title nothing files is dead
+# code that reads exactly like coverage: the check above would count it and be
+# satisfied by it.
+while IFS= read -r title; do
+	[[ -z "$title" ]] && continue
+	if ! grep -qxF "$title" <<<"$reported"; then
+		echo "FAIL: the reporter retracts \"$title\" but no arm files it — either the title drifted or the arm is gone"
+		failures=$((failures + 1))
+	fi
+done <<<"$resolved"
+
+# --- the report job is REACHED on a green run -----------------------------------
+#
+# One question per workflow, because it is one fact about the job: it must run
+# whatever its lanes said. Gate it on a failure again and retraction breaks in
+# the silent direction — green run, skipped job, issue left open over a fixed
+# tree, and no assertion anywhere fails. That is how the defect this change
+# fixes went unnoticed for as long as it did.
+for wf in "$health" "$root/.github/workflows/scheduled.yml"; do
+	wf_name="$(basename "$wf")"
+	wf_job="$(awk '/^  report:/{inside=1} inside&&/^  [A-Za-z_][A-Za-z0-9_-]*:/&&!/^  report:/{exit} inside' "$wf")"
+	if [[ -z "$wf_job" ]]; then
+		echo "FAIL: no 'report' job found in $wf_name — the checks below would pass by scanning nothing"
+		failures=$((failures + 1))
+		continue
+	fi
+	# The `if:` block alone: from its key to the next key at the same indent. The
+	# comments explaining it sit ABOVE the key and are deliberately out of scope —
+	# they name the very clause being forbidden here, so a check that read prose
+	# would fail on the comment explaining why the code is right.
+	cond="$(awk '/^    if:/{inside=1; print; next} inside&&/^    [a-z]/{exit} inside' <<<"$wf_job")"
+	if [[ -z "$cond" ]]; then
+		echo "FAIL: $wf_name's report job has no 'if:' — it either never runs, or runs on a cancelled workflow carrying results no lane produced"
+		failures=$((failures + 1))
+		continue
+	fi
+	if grep -qE 'needs[.[]' <<<"$cond"; then
+		echo "FAIL: $wf_name's report job gates its 'if:' on a lane result."
+		echo "      The reporter RETRACTS a finding whose check came back green, and this job is"
+		echo "      skipped on exactly the run that would do it. Green run, skipped job, issue left"
+		echo "      open over a fixed tree, and nothing fails."
+		failures=$((failures + 1))
+		continue
+	fi
+	if ! grep -qF '!cancelled()' <<<"$cond"; then
+		echo "FAIL: $wf_name's report job does not guard on '!cancelled()', so a cancelled run reaches the reporter carrying lane results nothing produced"
+		failures=$((failures + 1))
+		continue
+	fi
+	echo "ok: $wf_name's report job is reached whatever its lanes said"
 done
 
 if [[ "$failures" -ne 0 ]]; then
