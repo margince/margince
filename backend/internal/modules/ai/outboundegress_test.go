@@ -277,9 +277,18 @@ func TestTheOutboundClientRefusesARedirectThatMovesTheKey(t *testing.T) {
 		"another host":                {"https://api.vendor.example/v1", "https://attacker.example/v1", true},
 		"a subdomain is another host": {"https://api.vendor.example/v1", "https://evil.api.vendor.example/v1", true},
 		"a downgrade to cleartext":    {"https://api.vendor.example/v1", "http://api.vendor.example/v1", true},
+		// A hostname is not an endpoint: one machine serves many, and :8443 is a
+		// different service from :443 — possibly somebody else's, on shared
+		// hosting. The dial guard is no help, because the address never changed.
+		"another port on the same host": {"https://api.vendor.example/v1", "https://api.vendor.example:8443/v1", true},
+		"one explicit port for another": {"https://api.vendor.example:8443/v1", "https://api.vendor.example:9443/v1", true},
 		// Followed: the key goes nowhere it was not already going.
 		"another path on the same host": {"https://api.vendor.example/v1", "https://api.vendor.example/v2", false},
 		"the same host in another case": {"https://api.vendor.example/v1", "https://API.Vendor.Example/v1", false},
+		// One endpoint under two spellings. A rule comparing URL.Host as text
+		// would refuse this and call a vendor's own normalisation an attack.
+		"the default port spelled out":   {"https://api.vendor.example/v1", "https://api.vendor.example:443/v1", false},
+		"the default port left implicit": {"http://gateway.internal:80/v1", "http://gateway.internal/v2", false},
 		// An operator's own gateway may be plain http throughout; only a
 		// DOWNGRADE moves a key from protected to unprotected.
 		"http to http on one host": {"http://gateway.internal/v1", "http://gateway.internal/v2", false},

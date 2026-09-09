@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -164,9 +165,36 @@ func refuseOffHostRedirect(req *http.Request, via []*http.Request) error {
 		return fmt.Errorf("ai: refusing a redirect from %s to %s: the model key travels with the request, and the binding named the first host",
 			previous.URL.Hostname(), req.URL.Hostname())
 	}
+	// The PORT as well as the host, because a hostname is not an endpoint: one
+	// machine serves many, and :8443 on the vendor's own host is a different
+	// service from :443 — quite possibly somebody else's, on shared hosting.
+	// The dial guard cannot help here either; it judges the address, and the
+	// address has not changed.
+	if effectivePort(previous.URL) != effectivePort(req.URL) {
+		return fmt.Errorf("ai: refusing a redirect from %s to port %s on the same host: another port is another service, and it is not the one the binding named",
+			previous.URL.Host, effectivePort(req.URL))
+	}
 	if strings.EqualFold(previous.URL.Scheme, "https") && !strings.EqualFold(req.URL.Scheme, "https") {
 		return fmt.Errorf("ai: refusing a redirect from https to %s on %s: the model key would leave in clear",
 			req.URL.Scheme, req.URL.Hostname())
 	}
 	return nil
+}
+
+// effectivePort is the port a url actually dials: the one it names, or its
+// scheme's default when it names none.
+//
+// Read rather than compared as text, because `https://vendor.example` and
+// `https://vendor.example:443` are one endpoint under two spellings, and a
+// redirect between them moves the request nowhere. A rule that compared
+// `URL.Host` would refuse that hop and call a vendor's own normalisation an
+// attack.
+func effectivePort(u *url.URL) string {
+	if port := u.Port(); port != "" {
+		return port
+	}
+	if strings.EqualFold(u.Scheme, "https") {
+		return "443"
+	}
+	return "80"
 }
