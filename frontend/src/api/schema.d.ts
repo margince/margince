@@ -3265,7 +3265,7 @@ export interface paths {
         post?: never;
         /**
          * Retire a pipeline (soft delete; archive is the delete).
-         * @description Retires a pipeline as a CHOICE. It leaves the pickers and the new-deal flows, and
+         * @description Retires a pipeline as a CHOICE. It drops out of the pickers and the new-deal flows, and
          *     `listPipelines` stops returning it unless `include_archived` names it — which is
          *     what that parameter has always been about and what nothing could produce until now.
          *
