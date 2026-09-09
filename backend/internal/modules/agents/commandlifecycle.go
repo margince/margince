@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -90,7 +92,24 @@ func requireGenuineTrigger(trigger string) error {
 	if validTriggers[trigger] {
 		return nil
 	}
-	return &BadArgsError{Cause: fmt.Errorf("trigger %q is not genuine engagement", trigger)}
+	// The four that count ride in Guidance, which is ours, and the caller's word
+	// in Cause, which is bounded. Naming none of them left an agent guessing at
+	// a closed set of four, while the REST twin (people.handlers_lead) spelled
+	// it out — one door taught the vocabulary and the other refused without it.
+	return &BadArgsError{
+		Cause:    fmt.Errorf("trigger %q is not genuine engagement", trigger),
+		Field:    "trigger",
+		Guidance: "promotion rests on one of: " + strings.Join(genuineTriggerNames(), ", "),
+	}
+}
+
+// genuineTriggerNames is the closed set, derived from the predicate that admits
+// it rather than restated beside it: a second list is how the sentence and the
+// check come to disagree about what promotes a lead.
+func genuineTriggerNames() []string {
+	names := slices.Collect(maps.Keys(validTriggers))
+	slices.Sort(names)
+	return names
 }
 
 // DisqualifyLeadCommand is one lead retirement, whichever door asked for it.
