@@ -77,6 +77,19 @@ func (s *Store) PrepareRender(ctx context.Context, id ids.OfferID) (RenderIngred
 		if err != nil {
 			return err
 		}
+		// The document says no more about the buyer than this caller's own
+		// read of the offer does. An offer is anchored on its DEAL, which
+		// every seat reads; the organization it names is not, and the block
+		// below carries the buyer's display name and legal name — strictly
+		// more than the id the API withholds.
+		//
+		// Applied to the OFFER rather than probed inside the block, so the
+		// two spellings of the same withholding cannot diverge: with the
+		// reference gone, the live read has nothing to look up and the frozen
+		// snapshot has nothing to return.
+		if err := withholdUnreadableBuyerOn(ctx, tx, &offer); err != nil {
+			return err
+		}
 		lines, err := readOfferLines(ctx, tx, id)
 		if err != nil {
 			return err

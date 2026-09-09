@@ -45,9 +45,16 @@ import (
 var offerRenderDeskPerms = principal.Permissions{
 	RoleKeys: []string{"deal_desk"},
 	Objects: map[string]principal.ObjectGrant{
-		"deal":                  {Create: true, Read: true, Update: true},
-		"offer":                 {Create: true, Read: true, Update: true},
-		"offer_template":        {Create: true, Read: true},
+		"deal":           {Create: true, Read: true, Update: true},
+		"offer":          {Create: true, Read: true, Update: true},
+		"offer_template": {Create: true, Read: true},
+		// The buyer block names an organization, and a seat with no
+		// organization grant is refused that reference everywhere else on this
+		// surface — GetOffer and even CreateOffer's own response answer
+		// buyer_org_id as null for it. The cases below are about which block
+		// the render resolves (live while draft, frozen once sent), not about
+		// who may see one, so the seat holds the grant that question assumes.
+		"organization":          {Read: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeAll,
