@@ -5956,7 +5956,8 @@ export const vi = {
   "confirm.subscription.ask": "Xác nhận rằng bạn muốn nhận {purpose}.",
   "confirm.subscription.confirm": "Có, đăng ký cho tôi",
   "confirm.subscription.alreadyTitle": "Bạn đã đăng ký",
-  "confirm.subscription.alreadyBody": "Đăng ký {purpose} của bạn đã được xác nhận. Bạn có thể dừng bất cứ lúc nào từ email chúng tôi gửi.",
+  "confirm.subscription.alreadyBody":
+    "Đăng ký {purpose} của bạn đã được xác nhận. Bạn có thể dừng bất cứ lúc nào từ email chúng tôi gửi.",
   "confirm.done.title": "Cảm ơn bạn",
   "confirm.done.body":
     "Tôi đã ghi nhận câu trả lời của bạn. Những thay đổi sẽ được một người ở đây áp dụng, và liên kết này đã được dùng.",

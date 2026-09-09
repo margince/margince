@@ -10,8 +10,8 @@ import {
 } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { SubscriptionConfirmBody } from "./confirmsubscription";
 import { throwProblem } from "./common";
+import { SubscriptionConfirmBody } from "./confirmsubscription";
 import {
   explainPublicError,
   LinkInvalidError,
