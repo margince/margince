@@ -158,16 +158,71 @@ func joinLines(lines []string) string {
 	return out
 }
 
+// TestAGenericIDNamesAGenericVerb closes the gap the census above states it
+// cannot see, and it closes it from the SCHEMA alone.
+//
+// `record_id` and a bare `id` are the spellings of the GENERIC shape: a verb
+// that is handed the record's type as an argument and its id beside it. They
+// carry no information about which record without that type, so a verb hard-wired
+// to one record type wearing one of them tells the caller nothing and disagrees
+// with every dedicated sibling. That is exactly what qualify_lead did — it
+// required `record_id` with no `record_type` anywhere in its schema, and asked
+// only leads.
+//
+// WHY THIS ONE REACHES WHAT THE OTHER CANNOT. The census above groups by the
+// record type the CONTRACT declares, so a composed intent — which no
+// `x-mcp-tool` declares and no policy row names — is outside it. This test asks
+// a question the schema answers on its own: if you take a generic id, you must
+// take the type that gives it meaning. No declaration needed, so every
+// registered tool is in the corpus, composed intents included.
+func TestAGenericIDNamesAGenericVerb(t *testing.T) {
+	t.Parallel()
+
+	genericIDs := map[string]bool{"record_id": true, "id": true}
+	checked := 0
+	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
+		var schema struct {
+			Required   []string `json:"required"`
+			Properties map[string]struct {
+				Format string `json:"format"`
+			} `json:"properties"`
+		}
+		if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+			t.Fatalf("%s: input schema is not readable: %v", spec.Name, err)
+		}
+		_, takesType := schema.Properties["record_type"]
+		for _, req := range schema.Required {
+			if !genericIDs[req] || schema.Properties[req].Format != "uuid" {
+				continue
+			}
+			checked++
+			if takesType {
+				continue
+			}
+			t.Errorf("%s requires %q but takes no `record_type`, so the argument names no record: "+
+				"a generic id is only meaningful beside the type that says what it points at. A verb "+
+				"that answers ONE record type names that type's id — `lead_id`, `deal_id`, "+
+				"`project_id` — which is also what its siblings ask for.", spec.Name, req)
+		}
+	}
+	if checked == 0 {
+		t.Fatal("no tool requires a generic id, so this census measures nothing — the spellings it " +
+			"guards may have been renamed out from under it")
+	}
+}
+
 // WHAT THIS CENSUS CANNOT SEE, said out loud because under-recognition is the
 // one way a gate fails without a failing assertion (AGENTS.md, "a census that
 // can fail short has already failed"):
 //
 //   - A COMPOSED INTENT. `qualify_lead` composes getLead + updateLead, so no
-//     `x-mcp-tool` declares it and it carries no policy row — it is outside this
-//     corpus entirely. It is also the verb whose divergence prompted this gate.
-//     Reaching it needs every record-scoped tool to declare its record type in
-//     Go, which is a real change and the honest next step rather than something
-//     this file can assert around.
+//     `x-mcp-tool` declares it and it carries no policy row — it is outside THIS
+//     census. TestAGenericIDNamesAGenericVerb below covers the half that matters
+//     by asking the schema instead of the contract, so the shape qualify_lead
+//     actually had is now held. What remains out of reach is a composed intent
+//     that names a plausible `<type>_id` for the WRONG type; catching that needs
+//     every record-scoped tool to declare its record type in Go, which is a real
+//     change and the honest next step.
 //   - A RECORD TYPE WITH ONE VERB has no sibling to disagree with, so a lone
 //     wrong spelling passes. TestOneVerbPerRecordTypeIsStillHeldToTheConvention
 //     below plants that case rather than leaving it to chance.
