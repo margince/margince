@@ -127,10 +127,9 @@ func CreateOpenDeal(t *testing.T, e *AppEnv, stages SeededStages) string {
 // open stage and stakes personID on it as a deal_stakeholder, through the
 // real endpoints, and returns the deal id.
 //
-// The one spelling of "give this recipient real transactional evidence" a
-// consent fixture needs now that a bare purpose claim no longer supplies
-// it on its own — resolveCategory's live-deal arm reads exactly this shape
-// (an open deal, this person staked on it).
+// Gives a consent fixture real transactional evidence, since a bare purpose
+// claim no longer supplies it on its own — resolveCategory's live-deal arm
+// reads exactly this shape: an open deal, this person staked on it.
 func StakeOnOpenDeal(t *testing.T, e *AppEnv, name string, stages SeededStages, personID string) string {
 	t.Helper()
 	var deal map[string]any

@@ -25,6 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -314,11 +315,13 @@ func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (str
 		SELECT a.thread_key
 		  FROM comms_outbound o
 		  JOIN activity a ON a.id = o.activity_id
-		 WHERE o.id = $1`, deliveryID).Scan(&key)
+		 WHERE o.id = $1 AND `+auth.ActivityAvailableClause("a"), deliveryID).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// The delivery (or its activity) is gone. Not this function's answer to
-		// give: the caller asks the evidence question with no thread, which
-		// refuses rather than inventing one.
+		// The delivery (or its activity) is gone, or the activity is held under
+		// a statutory retention restriction. Either way, not this function's
+		// answer to give: the caller asks the evidence question with no
+		// thread, which refuses rather than reading a hold this transaction
+		// runs under the system principal specifically to avoid bypassing.
 		return "", nil
 	}
 	if err != nil {
