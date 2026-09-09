@@ -216,6 +216,12 @@ export const en = {
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.closeMenu": "Close",
+  // The agent panel's one promise, as opposed to its readings: what the agent
+  // can REACH. Row scope bounds it on the server, and a guarantee nobody is
+  // told about is one nobody can rely on — "what can this thing see" is the
+  // question a person most reasonably has about an agent working over their
+  // data. Held by AC-shell-8.
+  "shell.agent.scope": "Your agent reads only what you can see.",
   "shell.capture.importing": "Importing mail history",
   "shell.capture.share": "{percent} · {scanned} of {total} messages",
   "shell.capture.count": "{scanned} messages so far",

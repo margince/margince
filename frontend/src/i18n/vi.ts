@@ -215,6 +215,7 @@ export const vi = {
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
   "shell.closeMenu": "Đóng",
+  "shell.agent.scope": "Trợ lý của bạn chỉ đọc những gì bạn xem được.",
   "shell.capture.importing": "Đang nhập lịch sử thư",
   "shell.capture.share": "{percent} · {scanned} trên {total} thư",
   "shell.capture.count": "{scanned} thư cho đến nay",
