@@ -142,7 +142,14 @@ function probeFlushText(flushPx) {
         opaque(style.backgroundColor) &&
         style.backgroundColor !== groundUnder(el);
       if (!filled && !framed) continue;
-      if (px(style.paddingLeft) > 0 && px(style.paddingRight) > 0) continue;
+      // Each inline edge is asked about separately. Reading only the left one
+      // is a blind spot of exactly the shape this gate exists to close: a rule
+      // that pays on the left and nothing on the right always shows a wide left
+      // gap, so the element was dropped before its flush right edge was ever
+      // looked at, and the sweep reported PASS over it.
+      const askLeft = px(style.paddingLeft) === 0;
+      const askRight = px(style.paddingRight) === 0;
+      if (!askLeft && !askRight) continue;
       if (centred(style)) continue;
 
       const range = document.createRange();
@@ -151,7 +158,10 @@ function probeFlushText(flushPx) {
       let nearest = null;
       while ((node = walker.nextNode()) !== null) {
         if (node.textContent.trim() === "") continue;
-        let insetAlready = false;
+        // Text a descendant already stands off on a given side is that
+        // descendant's business — on that side only.
+        let insetLeft = false;
+        let insetRight = false;
         for (
           let up = node.parentElement;
           up && up !== el;
@@ -159,17 +169,36 @@ function probeFlushText(flushPx) {
         ) {
           const upStyle = getComputedStyle(up);
           if (px(upStyle.paddingLeft) > 0 || px(upStyle.marginLeft) > 0) {
-            insetAlready = true;
-            break;
+            insetLeft = true;
+          }
+          if (px(upStyle.paddingRight) > 0 || px(upStyle.marginRight) > 0) {
+            insetRight = true;
           }
         }
-        if (insetAlready) continue;
         range.selectNodeContents(node);
         const textBox = range.getBoundingClientRect();
         if (textBox.width < 1) continue;
-        const gap = textBox.left - (box.left + px(style.borderLeftWidth));
-        if (nearest === null || gap < nearest.gap) {
-          nearest = { gap, text: node.textContent.trim() };
+        const edges = [];
+        if (askLeft && !insetLeft) {
+          edges.push({
+            side: "left",
+            gap: textBox.left - (box.left + px(style.borderLeftWidth)),
+          });
+        }
+        if (askRight && !insetRight) {
+          edges.push({
+            side: "right",
+            gap: box.right - px(style.borderRightWidth) - textBox.right,
+          });
+        }
+        for (const edge of edges) {
+          if (nearest === null || edge.gap < nearest.gap) {
+            nearest = {
+              gap: edge.gap,
+              side: edge.side,
+              text: node.textContent.trim(),
+            };
+          }
         }
       }
       if (nearest === null || nearest.gap > flushPx) continue;
@@ -180,6 +209,7 @@ function probeFlushText(flushPx) {
             ? `.${el.className.trim().split(/\s+/).join(".")}`
             : `<${el.tagName.toLowerCase()}>`,
         gap: Math.round(nearest.gap * 10) / 10,
+        side: nearest.side,
         text: nearest.text.slice(0, 60),
       });
     }
@@ -314,6 +344,9 @@ async function main() {
 
   const findings = [];
   const unread = [];
+  // The swept-pair count when the run failed as a HARNESS rather than as a
+  // sweep, zero otherwise.
+  let harnessFailure = 0;
   try {
     for (const viewport of VIEWPORTS) {
       console.log(
@@ -324,16 +357,37 @@ async function main() {
       unread.push(...pass.unread);
     }
     if (unread.length > 0) {
-      console.log(
-        `Re-reading ${unread.length} story/viewport pair(s) one at a time…`,
-      );
-      const quiet = await reReadAlone(browser, port, unread.splice(0));
-      findings.push(...quiet.findings);
-      unread.push(...quiet.unread);
+      // A handful of misses is a story, and worth the quiet re-read below. Most
+      // of the catalog missing is the HARNESS — the server gone, Chromium
+      // unable to start, a build serving no iframe — and re-reading thousands
+      // of pairs one at a time at up to RENDER_BUDGET_MS each spends hours
+      // arriving at the verdict this count already gives.
+      const sweptPairs = stories.length * VIEWPORTS.length;
+      // Reported after the browser and the server are shut down, rather than
+      // exiting here: process.exit skips the finally below and leaves Chromium
+      // orphaned on a machine whose harness is already unwell.
+      harnessFailure = unread.length > sweptPairs / 2 ? sweptPairs : 0;
+      if (harnessFailure === 0) {
+        console.log(
+          `Re-reading ${unread.length} story/viewport pair(s) one at a time…`,
+        );
+        const quiet = await reReadAlone(browser, port, unread.splice(0));
+        findings.push(...quiet.findings);
+        unread.push(...quiet.unread);
+      }
     }
   } finally {
     await browser.close();
     close();
+  }
+
+  if (harnessFailure > 0) {
+    console.error(
+      `\n${unread.length} of ${harnessFailure} story/viewport pairs could not be read.\n` +
+        "That is the harness rather than the stylesheets — nothing rendered to\n" +
+        "measure. Fix the run and try again; this says nothing about the CSS.",
+    );
+    process.exit(1);
   }
 
   // One CSS defect shows up in every story that renders the component, so the
@@ -364,7 +418,7 @@ async function main() {
         `  ${selector}  — ${group.stories.size} stor${group.stories.size === 1 ? "y" : "ies"} [${[...group.viewports].join(", ")}]`,
       );
       console.error(
-        `      ${JSON.stringify(group.sample.text)} sits ${group.sample.gap}px from the edge`,
+        `      ${JSON.stringify(group.sample.text)} sits ${group.sample.gap}px from the ${group.sample.side} edge`,
       );
       console.error(`      e.g. ${[...group.stories][0]}`);
     }
