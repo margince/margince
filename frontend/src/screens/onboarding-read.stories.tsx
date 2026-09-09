@@ -6,6 +6,10 @@ import { configuredAiProfile } from "./onboarding.stories.fixtures";
 import { ConversationEntries, ReadCompanyStep } from "./onboarding-read";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import "./onboarding.css";
+// `.staging-card` is the panel-ai family's staged member and lives in the
+// design system's own sheet; nothing in this surface's import graph pulls it,
+// so without this the staged box renders with no edge and no tint at all.
+import "../design-system/panel.css";
 
 const meta: Meta = {
   title: "Onboarding/Read the company",

@@ -11,6 +11,10 @@ import { ProfileDigest, type ProfileDigestRead } from "./profile-digest";
 // two-column fold answers to it; without the sheet the story shows one column
 // at every width and the fold is never reviewed.
 import "./conversation.css";
+// `.staging-card` is the panel-ai family's staged member and lives in the
+// design system's own sheet; nothing in this surface's import graph pulls it,
+// so without this the staged box renders with no edge and no tint at all.
+import "../../design-system/panel.css";
 
 // The digest's two faces: the deck's narrow companion, and the whole-record
 // document a reader reaches through "Read the whole profile". The document

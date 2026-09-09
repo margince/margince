@@ -6,6 +6,10 @@ import { useState } from "react";
 import type { CompanyFieldName } from "../onboarding";
 import { StoryProviders } from "../story-utils";
 import { type DeckCard, ReviewDeck } from "./review-deck";
+// `.staging-card` is the panel-ai family's staged member and lives in the
+// design system's own sheet; nothing in this surface's import graph pulls it,
+// so without this the staged box renders with no edge and no tint at all.
+import "../../design-system/panel.css";
 
 // The deck asks one card at a time, so a reviewer needs one card fixed in
 // view to see what it offers on its own. `icp` never had a site to read it
