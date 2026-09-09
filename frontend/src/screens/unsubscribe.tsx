@@ -116,11 +116,30 @@ function UnsubscribeBody({
       </PublicPage>
     );
   }
+  if (center.error instanceof LinkInvalidError) {
+    // WITHDRAW-ONLY, not dead. A withdrawal credential outlives the preference
+    // token that rode with it, and it carries no authority to READ a consent
+    // state — so this page's opening fetch 404s for exactly the links that
+    // still work. Treating that as a dead end would put "this link is no
+    // longer valid" in front of the person whose link we just fixed.
+    //
+    // The press is its own authority: the POST resolves the credential itself
+    // and refuses it if it is genuinely dead. So the button stays, and what
+    // goes is everything that needed the read — the purpose label, the locked
+    // explanation, and the link to a preference centre this token cannot open.
+    return (
+      <WithdrawOnlyBody
+        purpose={purpose}
+        stopped={stopped}
+        doneHeading={doneHeading}
+        unsubscribe={unsubscribe}
+      />
+    );
+  }
   if (center.error) {
-    // A dead link is final and offers nothing to retry; a rate limit or a
-    // network failure is a "not now", and a reader who came here to stop
-    // an email deserves a way to try again rather than a dead end.
-    const retryable = !(center.error instanceof LinkInvalidError);
+    // A rate limit or a network failure is a "not now", and a reader who came
+    // here to stop an email deserves a way to try again rather than a dead end.
+    const retryable = true;
     return (
       <PublicPage>
         <Callout
@@ -153,24 +172,12 @@ function UnsubscribeBody({
 
   if (stopped !== null) {
     return (
-      <PublicPage>
-        <Card>
-          <div className="unsub-done">
-            <span className="unsub-done-mark" aria-hidden="true">
-              <Check size={22} />
-            </span>
-            <h1 ref={doneHeading} tabIndex={-1}>
-              {stopped.length > 0
-                ? t("prefs.unsub.doneTitle")
-                : t("prefs.unsub.alreadyOff")}
-            </h1>
-            {stopped.length > 0 && (
-              <p>{t("prefs.unsub.doneBody", { label: labelOf(t, target) })}</p>
-            )}
-          </div>
-        </Card>
+      <StoppedBody stopped={stopped} heading={doneHeading}>
+        {stopped.length > 0 && (
+          <p>{t("prefs.unsub.doneBody", { label: labelOf(t, target) })}</p>
+        )}
         <ManageLink token={token} label={t("prefs.unsub.manage")} />
-      </PublicPage>
+      </StoppedBody>
     );
   }
 
@@ -214,6 +221,101 @@ function UnsubscribeBody({
           <a className="link-button" href={`#/preferences/${token}`}>
             {t("prefs.unsub.seeAll")}
           </a>
+        </div>
+        {unsubscribe.error ? (
+          <Callout
+            tone={
+              unsubscribe.error instanceof RateLimitedError ? "warn" : "danger"
+            }
+          >
+            {explainPublicError(unsubscribe.error, t)}
+          </Callout>
+        ) : null}
+      </Card>
+      <p className="unsub-privacy">{t("prefs.unsub.privacy")}</p>
+    </PublicPage>
+  );
+}
+
+// StoppedBody is the outcome panel both bodies land on, so the two cannot
+// drift into telling a person two different things about the same press.
+//
+// The empty array is NOT the same as a stop: it is the server saying nothing
+// moved, which is how a replay is told apart from a first press.
+function StoppedBody({
+  stopped,
+  heading,
+  children,
+}: Readonly<{
+  stopped: string[];
+  heading: React.RefObject<HTMLHeadingElement | null>;
+  children?: React.ReactNode;
+}>) {
+  const t = useT();
+  return (
+    <PublicPage>
+      <Card>
+        <div className="unsub-done">
+          <span className="unsub-done-mark" aria-hidden="true">
+            <Check size={22} />
+          </span>
+          <h1 ref={heading} tabIndex={-1}>
+            {stopped.length > 0
+              ? t("prefs.unsub.doneTitle")
+              : t("prefs.unsub.alreadyOff")}
+          </h1>
+          {children}
+        </div>
+      </Card>
+    </PublicPage>
+  );
+}
+
+// WithdrawOnlyBody is the page a link can draw when it may stop mail and may
+// not read anything.
+//
+// It states the purpose by KEY rather than by label, because the label lives
+// behind the read this credential does not have. A key is worse copy than a
+// label and better than a page that will not load.
+function WithdrawOnlyBody({
+  purpose,
+  stopped,
+  doneHeading,
+  unsubscribe,
+}: Readonly<{
+  purpose: string;
+  stopped: string[] | null;
+  doneHeading: React.RefObject<HTMLHeadingElement | null>;
+  unsubscribe: {
+    mutate: (key: string) => void;
+    isPending: boolean;
+    error: unknown;
+  };
+}>) {
+  const t = useT();
+  if (stopped !== null) {
+    return <StoppedBody stopped={stopped} heading={doneHeading} />;
+  }
+  return (
+    <PublicPage>
+      <h1 className="t-display">{t("prefs.unsub.title")}</h1>
+      <p className="unsub-lead">{t("prefs.unsub.lead")}</p>
+      <Card>
+        <p className="unsub-kind">
+          <Mail size={16} aria-hidden="true" /> {purpose}
+        </p>
+        <Callout tone="info" title={t("prefs.unsub.afterTitle")}>
+          {t("prefs.unsub.afterBody")}
+        </Callout>
+        <div className="unsub-actions">
+          <Button
+            variant="primary"
+            pending={unsubscribe.isPending}
+            busyLabel={t("prefs.unsub.busy")}
+            onClick={() => unsubscribe.mutate(purpose)}
+          >
+            {t("prefs.unsub.confirm")}
+          </Button>
         </div>
         {unsubscribe.error ? (
           <Callout
