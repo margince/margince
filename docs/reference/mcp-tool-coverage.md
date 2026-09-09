@@ -39,11 +39,11 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-haiku-4-5-20251001` | 21 of 21 | 11 | 10 | 30/63 | 48% |
+| `claude-haiku-4-5-20251001` | 21 of 21 | 10 | 11 | 29/63 | 46% |
 | `claude-opus-5` | 21 of 21 | 17 | 4 | 50/63 | 79% |
 | `claude-sonnet-5` | 21 of 21 | 12 | 9 | 36/63 | 57% |
 
-> `claude-haiku-4-5-20251001` below its bar on: case10_finish_the_import, case20_put_it_in_the_board_pack, case23_find_us_a_slot, case31_wrong_word_on_the_record, case32_two_words_for_one_thing, case33_two_cards_for_one_company, case41_close_the_project, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company
+> `claude-haiku-4-5-20251001` below its bar on: case10_finish_the_import, case20_put_it_in_the_board_pack, case23_find_us_a_slot, case31_wrong_word_on_the_record, case32_two_words_for_one_thing, case33_two_cards_for_one_company, case41_close_the_project, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company, case8_whats_waiting
 
 > `claude-opus-5` below its bar on: case2_business_card, case3_spreadsheet, case40_sort_the_queue, case6_ask_the_company
 
@@ -154,7 +154,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-haiku-4-5-20251001` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_report` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_report` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-sonnet-5` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_report` |
-| [case8_whats_waiting](../../e2e/llm/scenarios/case8-whats-waiting.yaml) | `claude-haiku-4-5-20251001` | pass | 2/3 | 2 | **1** The staged change is read, not just listed<br>**2** Each verdict lands on the item it was given for<br>**3** The decision is taken, not handed back | `decide_approval`, `list_approvals`, `read_approval` |
+| [case8_whats_waiting](../../e2e/llm/scenarios/case8-whats-waiting.yaml) | `claude-haiku-4-5-20251001` | **FAIL** | 1/3 | 2 | **1** The staged change is read, not just listed<br>**2** Each verdict lands on the item it was given for<br>**3** The decision is taken, not handed back | `decide_approval`, `list_approvals`, `read_approval` |
 | [case8_whats_waiting](../../e2e/llm/scenarios/case8-whats-waiting.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The staged change is read, not just listed<br>**2** Each verdict lands on the item it was given for<br>**3** The decision is taken, not handed back | `decide_approval`, `list_approvals`, `read_approval` |
 | [case8_whats_waiting](../../e2e/llm/scenarios/case8-whats-waiting.yaml) | `claude-sonnet-5` | pass | 3/3 | 2 | **1** The staged change is read, not just listed<br>**2** Each verdict lands on the item it was given for<br>**3** The decision is taken, not handed back | `decide_approval`, `list_approvals`, `read_approval` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `claude-haiku-4-5-20251001` | pass | 3/3 | 2 | **1** A misfiled message is moved, not also-linked<br>**2** A picked set moves as one act<br>**3** History is re-filed, never re-written | `relink_activities`, `relink_activity` |
@@ -299,9 +299,9 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `merge_records` | 0.00 | 0/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `advance_project_phase` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
-| `decide_approval` | 0.67 | 2/3 | — | `case8_whats_waiting` |
+| `decide_approval` | 0.33 | 1/3 | `case8_whats_waiting` | `case8_whats_waiting` |
 | `promote_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
-| `list_approvals` | 0.67 | 2/3 | — | `case8_whats_waiting` |
+| `list_approvals` | 0.33 | 1/3 | `case8_whats_waiting` | `case8_whats_waiting` |
 | `check_availability` | 0.33 | 1/3 | `case23_find_us_a_slot` | `case23_find_us_a_slot` |
 | `archive_record` | 0.00 | 0/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `qualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
@@ -311,7 +311,7 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `list_channel_providers` | 0.67 | 2/3 | — | `case42_can_i_answer_on_whatsapp` |
 | `remove_tag` | 0.00 | 0/3 | `case31_wrong_word_on_the_record` | `case31_wrong_word_on_the_record` |
 | `read_project_360` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
-| `read_approval` | 0.67 | 2/3 | — | `case8_whats_waiting` |
+| `read_approval` | 0.33 | 1/3 | `case8_whats_waiting` | `case8_whats_waiting` |
 | `get_record_tags` | 0.00 | 0/3 | `case31_wrong_word_on_the_record` | `case31_wrong_word_on_the_record` |
 | `list_colleagues` | 0.00 | 0/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `commit_import` | 0.33 | 1/3 | `case10_finish_the_import` | `case10_finish_the_import` |
