@@ -20,23 +20,45 @@ const TONE_GLYPHS: ReadonlyArray<readonly [CalloutTone, string]> = [
   ["success", "lucide-circle-check"],
 ];
 
+/** Every kind a caller can pass, passing none included. */
+const KINDS: ReadonlyArray<CalloutKind | undefined> = [
+  "outcome",
+  "event",
+  "standing",
+  undefined,
+];
+
+/** The tones, read off the glyph table rather than listed a second time. */
+const TONES: ReadonlyArray<CalloutTone> = TONE_GLYPHS.map(([tone]) => tone);
+
 /**
  * The whole derivation as a table: what the notice IS, how bad the news is, and
  * how loudly a screen reader is told. `null` is the silent case — a notice
  * rendered with the page has nothing to interrupt for.
+ *
+ * Every pair is stated rather than only the interesting ones, and the census
+ * below fails when one goes missing: the pairs that look uninteresting today
+ * are exactly where a change to the derivation would land unnoticed.
  */
 const DERIVATIONS: ReadonlyArray<
   readonly [CalloutKind | undefined, CalloutTone, string | null]
 > = [
-  ["outcome", "danger", "alert"],
-  ["outcome", "warn", "status"],
   ["outcome", "info", "status"],
+  ["outcome", "warn", "status"],
+  ["outcome", "danger", "alert"],
   ["outcome", "success", "status"],
-  ["event", "danger", "status"],
   ["event", "info", "status"],
-  ["standing", "danger", null],
+  ["event", "warn", "status"],
+  ["event", "danger", "status"],
+  ["event", "success", "status"],
   ["standing", "info", null],
+  ["standing", "warn", null],
+  ["standing", "danger", null],
+  ["standing", "success", null],
+  [undefined, "info", null],
+  [undefined, "warn", null],
   [undefined, "danger", null],
+  [undefined, "success", null],
 ];
 
 describe("Callout", () => {
@@ -97,6 +119,16 @@ describe("Callout", () => {
       container.querySelector(".callout-icon .lucide-mail-x"),
     ).toBeTruthy();
     expect(container.querySelector(".lucide-triangle-alert")).toBeNull();
+  });
+
+  it("states the announcement for every kind against every tone", () => {
+    // A table that quietly covers nine of sixteen pairs reports PASS for the
+    // seven it never rendered, and there is no failing assertion to notice.
+    const stated = DERIVATIONS.map(([kind, tone]) => `${kind}/${tone}`).sort();
+    const pairs = KINDS.flatMap((kind) =>
+      TONES.map((tone) => `${kind}/${tone}`),
+    ).sort();
+    expect(stated).toEqual(pairs);
   });
 
   it.each(DERIVATIONS)(

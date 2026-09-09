@@ -114,7 +114,10 @@ export function Callout({
 }: Readonly<{
   tone?: CalloutTone;
   kind?: CalloutKind;
-  /** Replaces the tone's glyph, where the notice is about a nameable thing. */
+  /**
+   * Replaces the tone's glyph, where the notice is about a nameable thing
+   * rather than about how bad the news is.
+   */
   icon?: LucideIcon;
   title?: ReactNode;
   /** Buttons or links, laid out after the body. */
