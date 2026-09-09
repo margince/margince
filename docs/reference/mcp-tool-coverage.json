@@ -52,21 +52,20 @@
     {
       "model": "claude-sonnet-5",
       "cases_with_a_committed_run": 21,
-      "cases_that_reached_their_bar": 12,
-      "cases_below_their_bar": 9,
+      "cases_that_reached_their_bar": 13,
+      "cases_below_their_bar": 8,
       "runs": 63,
-      "passed": 36,
-      "reliability": 0.5714285714285714,
+      "passed": 40,
+      "reliability": 0.6349206349206349,
       "cases_below_their_bar_named": [
         "case20_put_it_in_the_board_pack",
         "case2_business_card",
         "case32_two_words_for_one_thing",
-        "case40_sort_the_queue",
+        "case33_two_cards_for_one_company",
         "case41_close_the_project",
         "case4_use_the_moment",
         "case5_before_the_meeting",
-        "case6_ask_the_company",
-        "case9_filed_in_the_wrong_place"
+        "case6_ask_the_company"
       ]
     }
   ],
@@ -534,9 +533,9 @@
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 2,
+          "passed": 1,
           "pass_at": 2,
-          "held": true
+          "held": false
         }
       ]
     },
@@ -568,7 +567,7 @@
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 0,
+          "passed": 1,
           "pass_at": 2,
           "held": false
         }
@@ -605,9 +604,9 @@
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false
+          "held": true
         }
       ]
     },
@@ -816,7 +815,7 @@
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true
         }
@@ -852,9 +851,9 @@
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 0,
+          "passed": 3,
           "pass_at": 2,
-          "held": false
+          "held": true
         }
       ]
     }
@@ -1845,8 +1844,8 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
           "cases_below_their_bar": [
             "case4_use_the_moment"
           ]
@@ -2122,9 +2121,11 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case33_two_cards_for_one_company"
+          ]
         }
       }
     },
@@ -2188,11 +2189,9 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case9_filed_in_the_wrong_place"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2223,8 +2222,8 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
@@ -2256,11 +2255,9 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case40_sort_the_queue"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2294,8 +2291,8 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
@@ -2360,9 +2357,11 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case33_two_cards_for_one_company"
+          ]
         }
       }
     },
@@ -2393,11 +2392,9 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case40_sort_the_queue"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2459,11 +2456,9 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case9_filed_in_the_wrong_place"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2564,11 +2559,9 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case40_sort_the_queue"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2731,8 +2724,8 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
@@ -2804,9 +2797,11 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case33_two_cards_for_one_company"
+          ]
         }
       }
     },
