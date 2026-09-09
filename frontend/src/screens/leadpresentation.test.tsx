@@ -244,8 +244,17 @@ describe("lead work-board presentation", () => {
     // And nothing was PATCHed. A status PATCH here is the defect: the board
     // would be asking the server for a transition it refuses by design.
     for (const call of fetchMock.mock.calls) {
-      const init = call[1] as RequestInit | undefined;
-      expect(String(init?.method ?? "GET").toUpperCase()).not.toBe("PATCH");
+      // The METHOD LIVES ON THE REQUEST, not on init. openapi-fetch builds a
+      // Request and passes only a signal in init, so reading init.method here
+      // always saw undefined and this assertion passed however the board
+      // behaved — it guarded nothing.
+      const [input, init] = call as [
+        RequestInfo | URL,
+        RequestInit | undefined,
+      ];
+      const method =
+        input instanceof Request ? input.method : (init?.method ?? "GET");
+      expect(method.toUpperCase()).not.toBe("PATCH");
     }
   });
 
@@ -334,8 +343,17 @@ describe("lead work-board presentation", () => {
     dropOn("contacted", terminal.id);
     expect(screen.queryByRole("dialog")).toBeNull();
     for (const call of fetchMock.mock.calls) {
-      const init = call[1] as RequestInit | undefined;
-      expect(String(init?.method ?? "GET").toUpperCase()).not.toBe("PATCH");
+      // The METHOD LIVES ON THE REQUEST, not on init. openapi-fetch builds a
+      // Request and passes only a signal in init, so reading init.method here
+      // always saw undefined and this assertion passed however the board
+      // behaved — it guarded nothing.
+      const [input, init] = call as [
+        RequestInfo | URL,
+        RequestInit | undefined,
+      ];
+      const method =
+        input instanceof Request ? input.method : (init?.method ?? "GET");
+      expect(method.toUpperCase()).not.toBe("PATCH");
     }
   });
 });

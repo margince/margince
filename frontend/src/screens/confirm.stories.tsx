@@ -14,12 +14,16 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // Unknown, expired and already-spent tokens all read as absent (404), which is
 // why the refused story routes a 404 rather than a message of its own.
 
-type ConfirmDetails = components["schemas"]["ConfirmDetails"];
+// The record branch of the union. The story shows the record card, which is
+// what this endpoint answers for a record link; the subscription branch has
+// its own story beside confirmsubscription.tsx.
+type ConfirmDetails = components["schemas"]["RecordConfirmationPage"];
 
 const TOKEN = "cfm-7f3a";
 const DETAILS_ROUTE = `GET /public/confirm/${TOKEN}`;
 
 const held: ConfirmDetails = {
+  kind: "record_confirmation",
   full_name: "Dana Buyer",
   title: "Head of Procurement",
   company: "Brandt Automotive GmbH",

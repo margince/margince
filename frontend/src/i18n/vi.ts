@@ -5974,6 +5974,12 @@ export const vi = {
   "confirm.erasure.ask": "Xóa thông tin của tôi",
   "confirm.erasure.staged": "Đã yêu cầu xóa. Xác nhận bên dưới để gửi.",
   "confirm.submit": "Xác nhận",
+  "confirm.subscription.title": "Xác nhận đăng ký",
+  "confirm.subscription.ask": "Xác nhận rằng bạn muốn nhận {purpose}.",
+  "confirm.subscription.confirm": "Có, đăng ký cho tôi",
+  "confirm.subscription.alreadyTitle": "Bạn đã đăng ký",
+  "confirm.subscription.alreadyBody":
+    "Đăng ký {purpose} của bạn đã được xác nhận. Bạn có thể dừng bất cứ lúc nào từ email chúng tôi gửi.",
   "confirm.done.title": "Cảm ơn bạn",
   "confirm.done.body":
     "Tôi đã ghi nhận câu trả lời của bạn. Những thay đổi sẽ được một người ở đây áp dụng, và liên kết này đã được dùng.",
