@@ -88,6 +88,14 @@ export function WeeklySection() {
             {review.data && (
               <>
                 <Badge quiet>{t("brief.weekly.frozen")}</Badge>
+                {/* Two badges, two different facts: the one beside it says how
+                    settled the week is, this says part of what is under it was
+                    written by a model. Drawn only when a narrative actually
+                    arrived — the numbers under it are a deterministic pass, so
+                    a standing mark would claim the whole panel. */}
+                {narratedByModel(review.data) && (
+                  <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+                )}
                 {/* When it was written, which is what makes the badge a fact
                     rather than a decoration — a reader can tell a week closed
                     an hour ago from one closed on Monday. */}
@@ -212,12 +220,25 @@ function WeeklyNarrative({ review }: Readonly<{ review: WeeklyReview }>) {
   if (!review.narrative) {
     return null;
   }
+  // Indigo on the SENTENCE and not on the panel around it. The panel also
+  // carries the week's outlook, its scorecard and its five frozen figures, and
+  // every one of those is a deterministic pass — a tinted panel head would
+  // claim a model wrote the numbers too.
   return (
-    <div className="brief-weekly-narrative">
-      <ProvenanceTag provenance={{ kind: "agent" }} />
-      <p>{review.narrative}</p>
-    </div>
+    <Panel tone="ai" className="brief-weekly-narrative">
+      <PanelBody className="brief-weekly-narrative-text">
+        <ProvenanceTag provenance={{ kind: "agent" }} />
+        <p>{review.narrative}</p>
+      </PanelBody>
+    </Panel>
   );
+}
+
+/** Whether a model actually wrote a sentence about this week — which is neither
+ *  "a pass ran" nor "there is a sentence field". Both the head's badge and the
+ *  narrative's own tint answer to it, so they cannot come to disagree. */
+function narratedByModel(review: WeeklyReview): boolean {
+  return Boolean(review.narrated_at && review.narrative);
 }
 
 /** The outcome as a word. A lookup rather than a template key, because a

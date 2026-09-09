@@ -2,7 +2,12 @@ import { MutationObserver, type QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProblemError } from "../screens/common";
 import { ENTITY_NAME_KEY } from "../screens/entityref";
-import { createQueryClient, retryQuery } from "./queryclient";
+import {
+  createQueryClient,
+  liveInterval,
+  liveOnReturn,
+  retryQuery,
+} from "./queryclient";
 
 // The data-layer parameters are invisible until they are wrong: a retried 4xx
 // doubles a refusal the server already made final, and an unreported failure
@@ -65,10 +70,31 @@ describe("the query retry policy", () => {
 });
 
 describe("the query client defaults", () => {
-  it("serves cached data for the pinned staleness window, and not on focus", () => {
-    const defaults = createQueryClient().getDefaultOptions().queries;
-    expect(defaults?.staleTime).toBe(30_000);
-    expect(defaults?.refetchOnWindowFocus).toBe(false);
+  it("serves cached data for the pinned staleness window", () => {
+    expect(createQueryClient().getDefaultOptions().queries?.staleTime).toBe(
+      30_000,
+    );
+  });
+
+  // FE-PARAM-3 and FE-PARAM-5 are one predicate each rather than a flag, and
+  // both answers of each are load-bearing: a record read repeats and refetches
+  // on the way back to the tab, and nothing else does either. Asked of both
+  // kinds of key, because what a change could get wrong is one kind while the
+  // other stays right.
+  //
+  // The predicates, not the defaults they are installed as: what they are
+  // wired to is proved end to end in screens/liverecord.test.tsx, by driving
+  // each record page's own read through this client.
+  it("repeats a record read, and nothing else", () => {
+    expect(liveInterval({ queryKey: ["person360", "p-1"] })).toBe(60_000);
+    expect(liveInterval({ queryKey: ["me", "ai-activity"] })).toBe(false);
+  });
+
+  it("refetches a record on the way back to the tab, and nothing else", () => {
+    // "always" and not `true`: `true` refetches only a read already stale, so
+    // inside the staleness window above the return would be served the cache.
+    expect(liveOnReturn({ queryKey: ["person360", "p-1"] })).toBe("always");
+    expect(liveOnReturn({ queryKey: ["me", "ai-activity"] })).toBe(false);
   });
 
   it("reports a failed query once, through the global sink", async () => {

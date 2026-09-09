@@ -29,6 +29,15 @@ export {
   signalKindLabel,
   signalTone,
 } from "./labels";
+export {
+  isLate,
+  MOMENT_EVIDENCE_LABEL,
+  MOMENT_RULE_LABEL,
+  MomentRow,
+  momentGrounding,
+  momentIsARow,
+  standingTone,
+} from "./moment";
 export { CallCard, RecordReading, RecordReadingPair } from "./reading";
 export {
   RecordSpine,

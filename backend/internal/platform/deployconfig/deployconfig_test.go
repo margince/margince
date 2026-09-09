@@ -17,7 +17,7 @@ import (
 
 const fullConfig = `
 version: 1
-organization:
+workspace:
   name: Gradion
   base_currency: EUR
   timezone: Europe/Berlin
@@ -53,8 +53,8 @@ func TestParseAcceptsTheFullDocumentedShape(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if cfg.Organization.Name != "Gradion" || cfg.BootstrapAdmin.Email != "lars@example.com" {
-		t.Fatalf("parsed organization/admin = %+v / %+v", cfg.Organization, cfg.BootstrapAdmin)
+	if cfg.Workspace.Name != "Gradion" || cfg.BootstrapAdmin.Email != "lars@example.com" {
+		t.Fatalf("parsed organization/admin = %+v / %+v", cfg.Workspace, cfg.BootstrapAdmin)
 	}
 	if cfg.Seeds.Pipeline.Name != "Sales" || len(cfg.Seeds.Pipeline.Stages) != 2 {
 		t.Fatalf("parsed pipeline seed = %+v", cfg.Seeds.Pipeline)
@@ -82,8 +82,8 @@ func TestParseRejectsUnknownKeys(t *testing.T) {
 func TestParseValidatesFailClosed(t *testing.T) {
 	cases := map[string]string{ // #nosec G101 -- yaml documents that must FAIL validation, not credentials
 		"unsupported version":     "version: 2\n",
-		"bad timezone":            "version: 1\norganization: { name: X, timezone: Mars/Olympus }\n",
-		"bad currency":            "version: 1\norganization: { name: X, base_currency: euros }\n",
+		"bad timezone":            "version: 1\nworkspace: { name: X, timezone: Mars/Olympus }\n",
+		"bad currency":            "version: 1\nworkspace: { name: X, base_currency: euros }\n",
 		"admin without password":  "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A }\n",
 		"inline secret refused":   "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password: hunter2hunter2 }\n",
 		"empty pipeline":          "version: 1\nseeds: { pipeline: { name: Sales, stages: [] } }\n",
@@ -247,14 +247,14 @@ func writeTemp(t *testing.T, doc string) string {
 }
 
 func TestAllowTestMailboxGateDefaultsOff(t *testing.T) {
-	cfg, err := Load(writeTemp(t, "version: 1\norganization:\n  name: T\n"), runtimeenv.Production)
+	cfg, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\n"), runtimeenv.Production)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cfg.Operations.AllowTestMailbox {
 		t.Fatal("AllowTestMailbox must default OFF — a capability that can fake a real send outcome is stated, never assumed")
 	}
-	on, err := Load(writeTemp(t, "version: 1\norganization:\n  name: T\noperations:\n  allow_test_mailbox: true\n"), runtimeenv.Production)
+	on, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\noperations:\n  allow_test_mailbox: true\n"), runtimeenv.Production)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,14 +264,14 @@ func TestAllowTestMailboxGateDefaultsOff(t *testing.T) {
 }
 
 func TestMCPConnectorGateDefaultsOff(t *testing.T) {
-	cfg, err := Load(writeTemp(t, "version: 1\norganization:\n  name: T\n"), runtimeenv.Production)
+	cfg, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\n"), runtimeenv.Production)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cfg.MCP.ConnectorEnabled {
 		t.Fatal("the connector gate must default OFF — an unset flag must never expose /mcp")
 	}
-	on, err := Load(writeTemp(t, "version: 1\norganization:\n  name: T\nmcp:\n  connector_enabled: true\n"), runtimeenv.Production)
+	on, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\nmcp:\n  connector_enabled: true\n"), runtimeenv.Production)
 	if err != nil {
 		t.Fatal(err)
 	}

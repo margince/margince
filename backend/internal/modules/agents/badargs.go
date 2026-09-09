@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -95,6 +96,32 @@ func decodeArgs[T any](in json.RawMessage, into *T) error {
 // Long enough to name the offending key and what was wanted, short enough
 // that the field cannot carry prose.
 const maxBadArgsDetail = 200
+
+// MaxFaultDetail bounds a CLASSIFIED refusal's detail, which is a different
+// obligation from maxBadArgsDetail above.
+//
+// The two differ in who wrote the text. A bad-args detail quotes the caller's
+// own argument names and is mostly their words, so 200 is generous. A
+// classified fault's detail is OURS: it names what was refused and then, for
+// every closed vocabulary on this surface, lists the whole set that would have
+// worked. Sharing one figure meant the set was measured against a budget sized
+// for something else, and it lost: a report's block grammar never reached a
+// caller at all, and the analytics populations arrived cut mid-name — worse than
+// absent, because a truncated list reads as a complete one.
+//
+// The caller's share of one of these is bounded at its SOURCE
+// (httperr.QuoteCaller), so this figure is spent on our own text rather than on
+// whatever a caller sent. That is what makes it safe to be the larger number:
+// the refusal's length is a property of the vocabulary it names.
+//
+// NOT derived, and it cannot be from here — the vocabularies live in compose,
+// downstream of this package, so naming them would invert the dependency.
+//
+// Exported as a shared FIGURE for that reason, the way httperr.MaxFaultText is:
+// the gate that CAN see those vocabularies reads this number and fails when one
+// of them no longer fits, rather than keeping a second copy of it that would
+// agree only until somebody edited one.
+const MaxFaultDetail = 512
 
 // BadArgsError maps to a tool-call validation failure.
 //
@@ -179,7 +206,7 @@ func boundDetail(s string, n int) string {
 }
 
 // echoSafe prepares caller-authored text for a tool result: bounded, and with
-// every control character rendered as a visible escape.
+// everything that does not PRINT rendered as a visible escape.
 //
 // Bounding alone is not enough. A tool result lands in a transcript that later
 // prompts of the same run read, and the author of these strings is the model
@@ -187,10 +214,23 @@ func boundDetail(s string, n int) string {
 // line of conversation, and an escape byte can move a terminal's cursor.
 // Rendering them keeps what the caller actually wrote while taking away its
 // ability to forge the frame around it.
+//
+// UNPRINTABLE, not "an ASCII control character", and the difference is a
+// reachable injection. This switch tested `r < 0x20 || r == 0x7f`, which admits
+// every character above ASCII that ends a line or reverses one: U+2028 LINE
+// SEPARATOR and U+2029 PARAGRAPH SEPARATOR are line terminators to a great many
+// tokenizers and renderers, U+0085 NEXT LINE is one to some, U+202E flips the
+// reading order of everything after it, and U+200B is invisible. A caller who
+// cannot write a newline into the frame could write U+2028 and get one.
+//
+// unicode.IsPrint is the same question `%q` asks — which matters, because
+// httperr.QuoteCaller bounds a caller's token with `%q` before it ever reaches
+// here, and two spellings of "safe to echo" that disagreed would mean the
+// protection depended on which door the text came through.
 func echoSafe(s string, n int) string {
 	var b strings.Builder
 	b.Grow(len(s))
-	for _, r := range s {
+	for i, r := range s {
 		switch {
 		case r == '\n':
 			b.WriteString(`\n`)
@@ -198,8 +238,14 @@ func echoSafe(s string, n int) string {
 			b.WriteString(`\r`)
 		case r == '\t':
 			b.WriteString(`\t`)
-		case r < 0x20 || r == 0x7f:
-			fmt.Fprintf(&b, `\x%02x`, r)
+		case r == utf8.RuneError && !utf8.ValidString(s[i:i+1]):
+			// A byte that is not UTF-8 at all. Ranging yields RuneError for it,
+			// which IS printable, so writing the rune back would silently
+			// replace the caller's byte with U+FFFD and report a name they did
+			// not send. The byte itself is what they sent.
+			fmt.Fprintf(&b, `\x%02x`, s[i])
+		case !unicode.IsPrint(r):
+			fmt.Fprintf(&b, `\u%04x`, r)
 		default:
 			b.WriteRune(r)
 		}

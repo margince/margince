@@ -129,21 +129,19 @@
   font-size: var(--fs-sm);
 }
 
-/* The suggested opener, set apart as the quotation it is. Its rule and ground
-   follow the panel's own tint for the same reason the icon does. */
+/* The suggested opener, set apart as the quotation it is.
+ *
+ * NEUTRAL, and that is the point: the panel around it already carries who
+ * wrote it, in its border and its head band, so a second tint in here restates
+ * that claim as decoration — and painting only the indigo half would leave a
+ * model-written opener unframed while a composition's kept its frame. The
+ * recessed ground is the plate's, so the block reads as inset rather than as a
+ * card inside a card. */
 .mb-open {
   margin-top: var(--space-4);
   padding: var(--space-3) var(--space-4);
-}
-
-.panel-ai .mb-open {
-  border-inline-start: 2px solid var(--ai);
-  background: var(--aiLight);
-}
-
-.panel-accent .mb-open {
-  border-inline-start: 2px solid var(--accent);
-  background: var(--accentLight);
+  border-inline-start: 2px solid var(--borderSubtle);
+  background: var(--bgCard);
 }
 
 .mb-arc-row {

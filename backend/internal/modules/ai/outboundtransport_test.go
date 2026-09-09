@@ -32,7 +32,7 @@ import (
 func TestOutboundClientKeepsItsConnectionsHonest(t *testing.T) {
 	t.Parallel()
 
-	client := newOutboundClient()
+	client := newOutboundClient(providerAnthropic)
 	transport, ok := client.Transport.(*http.Transport)
 	if !ok {
 		t.Fatalf("the outbound client's transport is %T, so nothing retires a dead connection", client.Transport)

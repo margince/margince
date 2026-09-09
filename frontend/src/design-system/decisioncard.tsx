@@ -836,9 +836,9 @@ export function DecisionCard({
     <article
       // `.staging-card` as well as its own class, and that is reuse rather than
       // decoration: the AI-tinted, dashed "this is not real yet" ground is
-      // already declared once, in trust.css, and it is the same claim this card
-      // makes. Re-spelling it here would be a second copy of the one signal that
-      // separates a proposal from a persisted fact.
+      // declared once with the rest of the panel-ai family (panel.css) and is
+      // the same claim this card makes. Re-spelling it here would be a second
+      // copy of the one signal separating a proposal from a persisted fact.
       className={["staging-card dcard", className ?? ""]
         .filter(Boolean)
         .join(" ")}

@@ -462,7 +462,7 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 var shapeCensus = map[string]int{
 	"cannot-drift":   162,
 	"once":           174,
-	"one-of-a-kind":  174,
+	"one-of-a-kind":  172,
 	"is-every-named": 88,
 	"only-noun":      12,
 	"no-second":      11,
@@ -823,7 +823,7 @@ func TestTheBindingIsReadOffTheCommentRatherThanGuessedAt(t *testing.T) {
 	}{
 		{"Held by: TestFoo (backend/foo_test.go)", "TestFoo", "backend/foo_test.go"},
 		{"prose above\n// Held by:  TestBarBaz  ( backend/bar_test.go )\nmore prose", "TestBarBaz", "backend/bar_test.go"},
-		{"Held by: TestX (cli/craft/x_test.go) and see also the sibling", "TestX", "cli/craft/x_test.go"},
+		{"Held by: TestX (backend/gates/x_test.go) and see also the sibling", "TestX", "backend/gates/x_test.go"},
 	}
 	for _, c := range binds {
 		match := heldBy.FindStringSubmatch(c.comment)

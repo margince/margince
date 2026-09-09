@@ -184,6 +184,50 @@ function Brief({
 
 export const Populated: Story = { render: () => <Brief view={populated} /> };
 
+// The account card fires on owed promises and nothing else. Here nothing is
+// owed while the rules still have something to say, so the quiet card is NOT
+// drawn: "nothing needs you today" over a row asking for an answer is the
+// panel disagreeing with itself, and the row is the half a reader can check.
+const nothingOwed = {
+  ...populated,
+  moment: {
+    claim_key: "moment:nothing_needed",
+    evidence_fingerprint: "quiet",
+    rule: "nothing_needed",
+    headline: "Nothing is owed to this account",
+    why_now: "No promise to this account is open or coming due.",
+    confidence: "observed_fact",
+    evidence: [],
+    recommended_action: {
+      kind: "log_activity",
+      label: "Log something",
+      state: "will_confirm",
+    },
+  },
+} as unknown as View;
+
+export const NothingOwedButAdviceStands: Story = {
+  render: () => <Brief view={nothingOwed} />,
+};
+
+// The same card when it IS the whole answer: with no advice and nothing
+// scheduled it leads the list, keeping the reason and the verb that the
+// panel's own bare sentence has nowhere to put.
+export const NothingOwedAndNothingAdvised: Story = {
+  render: () => (
+    <Brief
+      view={
+        {
+          ...nothingOwed,
+          suggestions: [],
+          next_meeting: undefined,
+          next_steps: { data: [], page },
+        } as unknown as View
+      }
+    />
+  ),
+};
+
 // Margince reading the account: the rules' rows stand, and the pending row
 // above them says more is coming rather than that this is everything.
 export const BeingRead: Story = {

@@ -29,7 +29,7 @@ configurable logger.
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
 | `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role |
-| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file (bootstrap + auth — organization, bootstrap_admin, seeds, email; strict decoding, secrets as `*_file` references). A missing file boots an existing installation; bootstrapping an empty database requires `organization` + `bootstrap_admin` |
+| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file (bootstrap + auth — workspace, bootstrap_admin, seeds, email; strict decoding, secrets as `*_file` references). A missing file boots an existing installation; bootstrapping an empty database requires `workspace` + `bootstrap_admin` |
 | `--schema-dsn` | `MARGINCE_SCHEMA_DSN` | — | Postgres DSN, **owner** role, for the customfields runtime-DDL pool; unset = `createCustomField`/`updateCustomFieldOptions` answer 501 |
 | `--addr` | — | `:8080` | listen address |
 | `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–15) — see below |
@@ -940,7 +940,7 @@ The **deployment configuration** (`--config`, default `margince.yaml`) is
 seeded the same way for local dev. The annotated reference is
 [`config/margince.example.yaml`](../../config/margince.example.yaml); `make dev`
 copies it to a gitignored `config/margince.yaml` on first run and then
-**leaves it** (create-if-missing / leave-if-exists), so an engineer's edits — organization,
+**leaves it** (create-if-missing / leave-if-exists), so an engineer's edits — workspace,
 `bootstrap_admin`, or the `ai.capture_payloads` posture — persist across
 `make dev-stop` / `make dev` rather than being regenerated each boot. The
 admin `password_file` it references (`config/margince-admin-password`) is
@@ -1356,12 +1356,36 @@ else's host**, because the provider name alone would let a deployment declare
 zero egress and send every call over the public internet. Under that profile
 each binding's resolved `base_url` (an omitted one is the provider default,
 which is loopback) must name an address on infrastructure you control:
-loopback, link-local, or a private range (`10.x`, `172.16–31.x`, `192.168.x`,
-or an IPv6 unique-local address). **A private-range host on another machine
-counts** — your own GPU box is your own infrastructure. A **DNS name is
-refused** even when it looks internal: resolving it at boot says only where it
-pointed at boot, and a profile satisfied by an answer that can change an hour
-later is not a guarantee. Use the IP, or `localhost`.
+loopback or a private range (`10.x`, `172.16–31.x`, `192.168.x`, or an IPv6
+unique-local address). **A private-range host on another machine counts** — your
+own GPU box is your own infrastructure. A **DNS name is refused** even when it
+looks internal: resolving it at boot says only where it pointed at boot, and a
+profile satisfied by an answer that can change an hour later is not a guarantee.
+Use the IP, or `localhost`.
+
+Two egress rules bind **every** profile, checked when the binding is written and
+again on the socket the call actually opens (so a name that resolves — or
+rebinds — to a refused address is stopped at connect time):
+
+- `ollama`, `vllm` and `openai_compatible` may reach loopback, a private range,
+  or a public host — the local model, the GPU box, the self-hosted gateway.
+- `anthropic`, `openai` and `gemini` may reach a **public host over https only**.
+  Their `base_url` overrides a vendor's own API host, and the call carries this
+  installation's model key in a header (`x-api-key`, `x-goog-api-key`) that Go
+  does not strip across hosts. To reach a gateway on your own network, or one
+  served over http, bind `openai_compatible` instead.
+
+Neither lane may reach the ranges that serve nobody: link-local
+(`169.254.0.0/16`, `fe80::/10` — where every cloud's instance-metadata service
+lives), carrier-grade NAT, the documentation ranges, and the encapsulations that
+carry another address inside them. A `base_url` carrying userinfo
+(`http://user:token@host`) is refused outright — a binding never carries a
+credential.
+
+A redirect is held to the same rule as the binding: the outbound client follows
+a redirect that stays on the same host and keeps its scheme, and refuses one that
+changes host or downgrades https to http, because either would carry the model
+key somewhere the binding never named.
 
 An editor with a YAML language server picks up
 [`config/margince.schema.json`](../../config/margince.schema.json)

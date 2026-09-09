@@ -7,17 +7,19 @@ package ai
 // (ai-operational-spec §4.3).
 //
 // The profile check reads the provider NAME, and `ollama` and `vllm` both take
-// an operator-supplied base_url with nothing constraining it. So a deployment
-// could declare zero egress and send every call to a third-party host, while the
-// config validated and the code claimed the guarantee held by construction.
+// an operator-supplied base_url. So a deployment could declare zero egress and
+// send every call to a third-party host, while the config validated and the code
+// claimed the guarantee held by construction.
 //
 // A local provider name is not on its own a local endpoint, and this is the
-// other half.
+// other half. It is a stricter rule than the one every profile carries
+// (outboundegress.go): that one asks whether an address can be an inference
+// endpoint at all, this one asks whether it is the customer's own — a public
+// host is an ordinary binding elsewhere and a broken promise here.
 
 import (
 	"errors"
 	"fmt"
-	"net"
 	"net/url"
 	"strings"
 )
@@ -64,16 +66,47 @@ func requireSovereignEndpoint(label, provider, baseURL string) error {
 			label, host)
 	}
 	return fmt.Errorf(
-		"ai: routing config: %s: profile sovereign forbids the host %q — the profile promises zero egress, and that address is not on infrastructure this installation can see is yours. Point it at loopback, a link-local address, or a private range (10.x, 172.16-31.x, 192.168.x, or an IPv6 unique-local address)",
+		"ai: routing config: %s: profile sovereign forbids the host %q — the profile promises zero egress, and that address is not on infrastructure this installation can see is yours. Point it at loopback or a private range (10.x, 172.16-31.x, 192.168.x, or an IPv6 unique-local address)",
 		label, host)
 }
 
-// hostOf extracts the host a base_url names, refusing a value that names none —
-// which on this path is not a formatting nit: "no host" is exactly the shape a
-// check written as a string comparison would wave through. `localhost:11434`
+// hostOf is parsedEndpoint's host, for the callers that judge the host alone.
+func hostOf(baseURL string) (string, error) {
+	parsed, err := parsedEndpoint(baseURL)
+	if err != nil {
+		return "", err
+	}
+	return parsed.Hostname(), nil
+}
+
+// safeToName is the part of a base_url that may appear in an error or a boot log.
+//
+// An ALLOWLIST — scheme and host, rebuilt — rather than a list of parts to
+// blank, and the difference IS the rule. Every blanking version of this loses to
+// the next shape nobody thought of: url.Redacted() hides the password and keeps
+// the username; clearing the userinfo still leaves an opaque url, since
+// `http:sk-live-...@` parses with no host at all and the whole payload under
+// Opaque; clearing that still leaves a path (`http:///p/sk-live-...`), a query
+// (`?api_key=...`) and a fragment. All four reach these errors, and a token
+// pasted into a base_url lands in whichever one the operator's typo produced.
+//
+// What a reader needs here is which scheme and which host this installation
+// read. The label already says which binding, and the value itself is in the
+// config file they are about to open.
+//
+// Held by: TestARefusalNamesNothingButTheSchemeAndHost (backend/internal/modules/ai/sovereignendpoint_test.go)
+func safeToName(parsed *url.URL) string {
+	shown := url.URL{Scheme: parsed.Scheme, Host: parsed.Host}
+	return shown.String()
+}
+
+// parsedEndpoint parses a base_url and refuses a value that cannot be an
+// endpoint at all: one that names no host — not a formatting nit here, since
+// "no host" is exactly the shape a check written as a string comparison would
+// wave through — or one whose scheme this adapter cannot dial. `localhost:11434`
 // lands here too, because a url with no scheme parses as one whose SCHEME is
 // "localhost", so the error names the shape rather than the omission.
-func hostOf(baseURL string) (string, error) {
+func parsedEndpoint(baseURL string) (*url.URL, error) {
 	parsed, err := url.Parse(baseURL)
 	if err != nil {
 		// The value is NOT echoed. A base_url may carry userinfo
@@ -84,14 +117,14 @@ func hostOf(baseURL string) (string, error) {
 		// NOT the raw error: url.Error quotes the WHOLE input in its own
 		// Error(), so wrapping it would put back exactly what omitting the
 		// value was meant to keep out. Its .Err is the syntax fault alone.
-		return "", fmt.Errorf("base_url cannot be parsed as a url: %w", parseFault(err))
+		return nil, fmt.Errorf("base_url cannot be parsed as a url: %w", parseFault(err))
 	}
-	host := parsed.Hostname()
-	if host == "" {
-		// Redacted for the same reason: Redacted() replaces any password with
-		// xxxxx, and a value with no host is exactly the malformed shape most
-		// likely to have been pasted with a credential still in it.
-		return "", fmt.Errorf("base_url %q names no host; write the whole url, e.g. http://127.0.0.1:11434", parsed.Redacted())
+	if parsed.Hostname() == "" {
+		// Reduced to scheme and host for the same reason: a value with no host
+		// is exactly the malformed shape most likely to have been pasted with a
+		// credential still in it, and "no host" is also the shape that files the
+		// whole payload under Opaque or Path.
+		return nil, fmt.Errorf("base_url %q names no host; write the whole url, e.g. http://127.0.0.1:11434", safeToName(parsed))
 	}
 	// The scheme is checked HERE rather than left to the first call: a scheme
 	// this adapter cannot dial makes the endpoint unreachable, and an endpoint
@@ -99,13 +132,13 @@ func hostOf(baseURL string) (string, error) {
 	// deployment that fails at 3am with a transport error instead of at boot
 	// with a config one.
 	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
-		// Redacted, like the two branches above: a scheme this adapter cannot
+		// Reduced, like the two branches above: a scheme this adapter cannot
 		// dial is a malformed value, and a malformed value is the shape most
 		// likely to have been pasted with a credential still in it. The scheme
 		// itself is safe to name and is what the operator has to change.
-		return "", fmt.Errorf("base_url %q must be an http(s) url; %q is not a scheme this adapter can call", parsed.Redacted(), parsed.Scheme)
+		return nil, fmt.Errorf("base_url %q must be an http(s) url; %q is not a scheme this adapter can call", safeToName(parsed), parsed.Scheme)
 	}
-	return host, nil
+	return parsed, nil
 }
 
 // What a base_url's host is, from the profile's point of view. Three answers
@@ -141,21 +174,16 @@ func classifyHost(host string) hostVerdict {
 	if isReservedLoopbackName(strings.TrimSuffix(host, ".")) {
 		return hostIsLocal
 	}
-	// A zone ("fe80::1%eth0") says which interface a link-local address is
-	// reached on, and net.ParseIP does not take one. Dropped for the judgment,
-	// which is about the address: an interface cannot make a link-local address
-	// non-local.
-	address, _, _ := strings.Cut(host, "%")
-	ip := net.ParseIP(address)
+	ip := parseHostAddress(host)
 	if ip == nil {
 		return hostIsAName
 	}
-	// IsPrivate covers RFC 1918 and IPv6 unique-local (fc00::/7); the other two
-	// carry loopback and the link-local ranges an on-host or same-segment
-	// deployment uses. An IPv4-mapped IPv6 address is judged by its IPv4 rules,
-	// which is what the net package's own predicates do — so ::ffff:8.8.8.8 is
-	// as public as 8.8.8.8, and the mapping buys nothing.
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() {
+	// The same predicate the egress classes read, so "ours" means one thing.
+	// Link-local is NOT ours: 169.254.169.254 is the cloud metadata service on
+	// every major provider, and no deployment serves inference from an
+	// autoconfiguration address — an operator with a box on the same segment
+	// gives it a private address.
+	if customerControlled(ip) {
 		return hostIsLocal
 	}
 	return hostIsElsewhere

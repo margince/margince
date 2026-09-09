@@ -214,9 +214,16 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 // message only on the module-declared path, so one from a direct Validation
 // call reaches this point unbounded. The message needs both outright — it
 // quotes the caller's own token back, since a refused plan names the target it
-// could not resolve, into a transcript later prompts of this run read — and it
-// borrows httperr.MaxFaultText as its figure so the two bounds are one number
-// rather than two that agree by coincidence.
+// could not resolve, into a transcript later prompts of this run read.
+//
+// THREE FIGURES, and each answers a different question about whose words are
+// being echoed. A classified fault's detail is OURS and names closed
+// vocabularies, so it gets MaxFaultDetail. The per-field remedy is also ours
+// and borrows httperr.MaxFaultText, the same number that package applies on
+// the module-declared path. The flattened field:code fallthrough is the
+// caller's own list, as long as they chose to make it, so it keeps
+// maxBadArgsDetail. They agreed on one number until a closed set was measured
+// against a budget sized for an argument-name echo and lost.
 //
 // The field and the code get the same treatment because nothing in the taxonomy
 // PROMISES they are ours either. A field slot fed from a caller-chosen key is
@@ -225,7 +232,7 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 // occupants.
 func faultExplanation(fault httperr.Fault) string {
 	if len(fault.Fields) == 0 {
-		return echoSafe(fault.Code, maxBadArgsDetail) + ": " + echoSafe(fault.Detail, maxBadArgsDetail)
+		return echoSafe(fault.Code, maxBadArgsDetail) + ": " + echoSafe(fault.Detail, MaxFaultDetail)
 	}
 
 	parts := make([]string, 0, len(fault.Fields))
@@ -268,6 +275,13 @@ func faultExplanation(fault httperr.Fault) string {
 	if remedied {
 		return named
 	}
+	// maxBadArgsDetail, not MaxFaultDetail, and the two branches of this
+	// function differ for a reason. Reaching HERE means the fault named fields
+	// and none of them carried guidance, and the doc above records what Detail
+	// then is: the flattened field:code list, whose length is the CALLER's
+	// choice of how many inputs to get wrong. That is the axis maxRemedyBudget
+	// exists to bound, so widening it here would undo that on the one branch
+	// where the text is not ours.
 	return named + ": " + echoSafe(fault.Detail, maxBadArgsDetail)
 }
 

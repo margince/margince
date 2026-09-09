@@ -7,10 +7,11 @@
 # an erasure that misses a PII table, a vulnerable dependency, a swallowed
 # error, or a UI regression fails the merge instead of shipping.
 #
-# Job names follow the craftsmanship wiring (ADR-0045,
-# cli/craft/wiring): external/fork PRs hit the same deterministic-gates
-# + craftsmanship + craft-residue jobs as internal work, and craftsmanship
-# runs only after the deterministic gates are green.
+# Job names are load-bearing (ADR-0045), and two gates in backend/gates hold
+# them: contributorwiring_test.go asserts external/fork PRs hit the same
+# deterministic-gates + craftsmanship + craft-residue jobs as internal work, and
+# laneordering_test.go asserts craftsmanship runs only after the deterministic
+# gates are green.
 name: ci
 
 on:
@@ -504,6 +505,10 @@ jobs:
 
   # The code-craftsmanship gate (ADR-0045) runs only after the deterministic
   # gates are green — a red build must never be judged on style.
+  #
+  # No Go toolchain: the gate is a pinned binary fetched by
+  # scripts/craft-pin.sh, not source in this tree. No secret either, which is
+  # what keeps this job covering a pull request from a fork.
   craftsmanship:
     name: craftsmanship
     timeout-minutes: 20
@@ -516,13 +521,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
       - name: craft static (strict — blocker + major)
         working-directory: .
         run: make craft-static
+      # AGENTS.md is one of this job's path-filter inputs, so the rulebook is
+      # held against the standard exactly when either one changes.
+      - name: craft prose (rulebook agrees with the standard)
+        working-directory: .
+        run: make craft-prose
 
   # No unresolved review-loop markers (CRAFT-FIX / CRAFT-DISPUTE) reach main.
   craft-residue:
@@ -538,10 +544,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
       - name: craft residue
         working-directory: .
         run: make craft-residue
@@ -994,7 +996,7 @@ jobs:
           chmod 600 "$RUNNER_TEMP/admin-password"
           cat > "$RUNNER_TEMP/margince.yaml" <<EOF
           version: 1
-          organization:
+          workspace:
             name: Demo Workspace
             base_currency: EUR
             timezone: Europe/Berlin

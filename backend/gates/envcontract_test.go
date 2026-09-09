@@ -27,7 +27,7 @@ package gates
 //
 //   - Obligation 1 covers Go readers, in the licensed trees only. A var read
 //     solely by deploy shell or a workflow is documented in docs/deployment.md
-//     by hand, and cli/craft is a module of its own that no sweep here walks.
+//     by hand, and this sweep walks the backend tree only.
 //     Obligations 2 and 3 do count those non-Go readers, because there the
 //     question is merely whether a name is still real.
 //   - MARGINCE_-prefixed names only. The BYOK keys (GEMINI_API_KEY,

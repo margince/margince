@@ -167,7 +167,7 @@ func TestPublicTreeCitesNoDocumentGitIgnores(t *testing.T) {
 		// MARKDOWN ONLY, and the boundary is not laziness. The obligation is
 		// that a reader can follow what this repository TELLS them, and what it
 		// tells them is prose. A path inside a Go string literal is usually a
-		// fixture building a temp tree — cli/craft's assembler tests write an
+		// fixture building a temp tree — the gen-composition tests write an
 		// AGENTS.md under an extensions/ path that git ignores, and nothing is
 		// wrong with that — and a fixture cannot be told from a citation by
 		// looking at it. Reporting those would either add a waiver list or teach

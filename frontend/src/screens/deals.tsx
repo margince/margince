@@ -3972,6 +3972,30 @@ function dealBand({
   );
 }
 
+/**
+ * useDeal is the deal page's read of the deal record itself.
+ *
+ * A hook rather than a query inline in the screen, so the four record reads
+ * are mounted the same way — which is what lets one suite prove the live
+ * cadence over all of them (FE-PARAM-5, app/queryclient.ts). The cadence
+ * itself is the client's, keyed on the read: nothing is spread in here to
+ * forget.
+ */
+export function useDeal(id: string) {
+  return useQuery({
+    queryKey: ["deal", id],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/deals/{id}", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
 export function DealScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const details = usePageAside();
@@ -3984,18 +4008,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const [tab, setTab] = useState<DealTab>("overview");
   const [pending, setPending] = useState<PendingAdvance | null>(null);
   const advance = useAdvanceDeal();
-  const dealQuery = useQuery({
-    queryKey: ["deal", id],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const dealQuery = useDeal(id);
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
   // Every write affordance on this page answers ONE question, asked once: an
   // archived deal takes no changes, and one this caller cannot write takes

@@ -4,6 +4,7 @@
 package org360
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -129,6 +130,20 @@ func TestAnAccountOwingNothingGetsTheQuietState(t *testing.T) {
 	}
 	if got.Headline == "" {
 		t.Error("the quiet state is an answer, not a blank card")
+	}
+}
+
+// The quiet card speaks for the promises it read and not for the page. The
+// same payload carries the suggestions the rules found, so a card claiming
+// nothing needs the reader today would be contradicted by the rows beside it
+// — and this card never looked at what those rows fired on.
+func TestTheQuietAccountCardClaimsOnlyThePromisesItRead(t *testing.T) {
+	got := accountMomentOf(nil, nil)
+	if got.Headline != "Nothing is owed to this account" {
+		t.Errorf("headline = %q, want a claim bounded by what the card checked", got.Headline)
+	}
+	if !strings.Contains(got.WhyNow, "promise") {
+		t.Errorf("why-now = %q, want the promise scope the headline claims", got.WhyNow)
 	}
 }
 

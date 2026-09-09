@@ -165,8 +165,11 @@ describe("overlay refusal copy — translator coverage", () => {
   });
 
   it("create-org (POST /organizations)", () => {
+    // The create request left the screen with the rest of the form mapping:
+    // the header's edit built the same body from the same field list and could
+    // only reach it by importing from a 2,900-line screen.
     assertTranslatedRefusal(
-      "organizations.tsx",
+      "companyform.ts",
       'api.POST("/organizations", {',
       "create-org",
     );

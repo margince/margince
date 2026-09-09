@@ -109,9 +109,12 @@ loop your PR will run:
    tree was cleared to zero findings before this bar was armed, so
    `make craft-static` is green and CI runs the same bar as a required
    check. A *genuine* false positive is waived in-source
-   with a reason: `//craft:ignore <check> <reason>`. The gate tool
-   (`cli/craft/`) is part of this repo — don't edit it to silence a
-   finding on your own PR; fix the gate in its own reviewed change.
+   with a reason: `//craft:ignore <check> <reason>` — that is the only
+   way to stand a finding down, and the reason is read by the next
+   person to touch the line. The gate itself is a checksum-pinned
+   binary that `scripts/craft-pin.sh` fetches on first use, so there is
+   nothing to install and nothing in this repo to edit: the verdict you
+   get on your laptop is the verdict your pull request gets.
 3. **CI must be all green before merge**: the same deterministic gates
    plus automated review and static analysis. Address findings
    rather than dismissing them; squash-merge is the house style.

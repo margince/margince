@@ -346,6 +346,15 @@ describe("BriefScreen — the weekly retrospective", () => {
 });
 
 describe("BriefScreen — the week's sentence", () => {
+  // The retrospective's own section. Scoped rather than page-wide: Brief draws
+  // several readings, and a query for the AI mark across the whole screen would
+  // answer about whichever one happened to come first in the document.
+  function weeklySection(): HTMLElement {
+    const section = document.getElementById("brief-weekly");
+    expect(section).not.toBeNull();
+    return section as HTMLElement;
+  }
+
   const narrated = {
     id: "01a04000-0000-7000-8000-00000000000a",
     local_week_start: "2026-06-29",
@@ -380,12 +389,24 @@ describe("BriefScreen — the week's sentence", () => {
     });
     render(<BriefScreen />);
 
-    await screen.findByText("Weber signed; two promises slipped to this week.");
+    const sentence = await screen.findByText(
+      "Weber signed; two promises slipped to this week.",
+    );
     // Model-authored prose sitting beside numbers a deterministic pass
     // computed; nothing else on the panel would tell them apart.
     expect(
       screen.getAllByText(en["trust.agentUnnamed"]).length,
     ).toBeGreaterThan(0);
+    const weekly = within(weeklySection());
+    expect(weekly.getByText(en["co.assistant.aiTag"])).toBeTruthy();
+    // The tint is around the SENTENCE, not the panel: the outlook, the
+    // scorecard and the five frozen figures under it are a deterministic pass,
+    // and an indigo band over the lot would claim a model wrote the numbers.
+    const tinted = weeklySection().querySelector(".panel-ai");
+    expect(tinted?.contains(sentence)).toBe(true);
+    expect(
+      tinted?.textContent?.includes(en["brief.weekly.tasksDelivered"]),
+    ).toBe(false);
   });
 
   it("says no pass ran, rather than showing nothing", async () => {
@@ -401,6 +422,12 @@ describe("BriefScreen — the week's sentence", () => {
     // Never a blank week, never a silent one: the counts are still the week's,
     // and a rep reading silence would conclude there was nothing to remark on.
     await screen.findByText(en["brief.weekly.noNarrative"]);
+    // The mirror of the tinted case: no model wrote anything here, so nothing
+    // wears the mark that says one did.
+    expect(weeklySection().querySelector(".panel-ai")).toBeNull();
+    expect(
+      within(weeklySection()).queryByText(en["co.assistant.aiTag"]),
+    ).toBeNull();
   });
 
   it("stays silent when a pass ran and had nothing to add", async () => {

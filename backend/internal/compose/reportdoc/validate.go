@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -156,8 +157,9 @@ func checkSeverity(b Block, where string) error {
 	}
 	if !b.Severity.known() {
 		return &InvalidError{
-			Where:  where,
-			Reason: fmt.Sprintf("no such severity %q", b.Severity),
+			Where: where,
+			Reason: fmt.Sprintf("no such severity %s. The severities are: %s",
+				httperr.QuoteCaller(string(b.Severity)), strings.Join(Severities(), ", ")),
 		}
 	}
 	return nil

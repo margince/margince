@@ -313,7 +313,6 @@ var claimedTrees = []claimedTree{
 	{root: ".", mustHaveClaims: true},
 	{root: "../extensions"},
 	{root: "../fixtures"},
-	{root: "../cli"},
 	{root: "../desktop"},
 }
 

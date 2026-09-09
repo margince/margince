@@ -90,6 +90,19 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 		return err
 	}
 	for _, d := range set.Decisions {
+		// The ids THIS RECIPIENT'S decision was taken on, so the transmit phase
+		// can put the same questions to the same records.
+		//
+		// From the decision and not from the request: decideOne copies the
+		// request's evidence onto the decision only when the resolution passed
+		// refuseUnreadableEvidence, so an id the caller was never shown to hold
+		// is absent here rather than being handed to a phase that runs as the
+		// system principal. See authorizeevidencecarry.go, and decideOne's own
+		// note on why the two differ.
+		evidence, err := evidenceJSON(d.Evidence)
+		if err != nil {
+			return err
+		}
 		subjectKind := nullableText(d.SubjectKind)
 		var subjectID *ids.UUID
 		if d.SubjectKind != "" {
@@ -106,18 +119,18 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 		// A denial under observe or warn DOES commit, and those rows are real.
 		// They are read from the table, not from a counter that would mean one
 		// thing in one posture and another in the next.
-		_, err := tx.Exec(ctx, `
+		_, err = tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
-			   content_fingerprint, mode, actor)
-			VALUES ($1,0,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+			   content_fingerprint, mode, actor, evidence)
+			VALUES ($1,0,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`,
 			deliveryID, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), nullableCategory(d.Requested),
 			string(d.Resolved), string(d.Verdict), d.ReasonCode,
 			nullableBasis(d.Basis), nullableText(d.Suppression),
-			sum[:], string(d.Mode), by)
+			sum[:], string(d.Mode), by, evidence)
 		if err != nil {
 			return fmt.Errorf("consent: record the staging decision: %w", err)
 		}
