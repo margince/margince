@@ -2,10 +2,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch, requireVersion } from "../api/version";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
@@ -22,7 +20,6 @@ import { primaryEmail } from "../format/primaryemail";
 import { normalizeProfileUrl } from "../format/profileurl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { ArchiveAction } from "./archive";
 import {
   LoadMoreButton,
   OverlayUnavailable,
@@ -40,7 +37,6 @@ import {
   type ObjectCustomFields,
   useObjectCustomFields,
 } from "./customfields.form";
-import { EditAction } from "./edit";
 import { EntityRef } from "./entityref";
 import { RecordHistoryTab } from "./history";
 import {
@@ -53,7 +49,6 @@ import {
   useTagChips,
 } from "./listquery";
 import { LogActivity } from "./logactivity";
-import { MergeAction } from "./merge";
 import {
   IdentityRail,
   type Person360,
@@ -65,6 +60,8 @@ import {
 } from "./person360";
 import { EnrichedFields } from "./personcorrections";
 import { PersonDealRooms } from "./persondealrooms";
+import { PersonEditMergeArchive } from "./personeditmergearchive";
+import { contactCreateFields, mapPersonBody } from "./personformfields";
 import { PersonNetworkTab } from "./personnetwork";
 import { PersonProjects } from "./personprojects";
 import {
@@ -92,8 +89,6 @@ import { VCardImport } from "./vcard-import";
 // view-existing link (P-16) are the four shared blocks wired in here.
 
 type Person = components["schemas"]["Person"];
-type CreatePersonRequest = components["schemas"]["CreatePersonRequest"];
-type UpdatePersonRequest = components["schemas"]["UpdatePersonRequest"];
 
 async function fetchPeoplePage(
   query: ListQuery,
@@ -123,199 +118,6 @@ async function fetchPeoplePage(
       has_more: data.page.has_more,
     },
   };
-}
-
-// Merge-target search (P-2): reuses the list read, mapped down to the
-// {id, name} shape MergeAction renders — the caller filters out the source
-// row since this fetch has no notion of "the record being merged away".
-async function searchPeopleTargets(
-  q: string,
-): Promise<{ id: string; name: string }[]> {
-  const { data, error } = await api.GET("/people", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data.data.map((candidate) => ({
-    id: candidate.id,
-    name: candidate.full_name,
-  }));
-}
-
-function asEmailType(value: string | undefined): "work" | "personal" | "other" {
-  return value === "personal" || value === "other" ? value : "work";
-}
-
-function asPhoneType(
-  value: string | undefined,
-): "work" | "mobile" | "home" | "other" {
-  return value === "mobile" || value === "home" || value === "other"
-    ? value
-    : "work";
-}
-
-// The email rows a writer supplied, blank ones dropped and position taken from
-// where each one sits in the list.
-//
-// ONE MAPPER FOR BOTH REQUESTS, because `PersonEmailInput` is one schema for
-// both: create and update describing an address differently is exactly what
-// that shared schema exists to prevent.
-function personEmailInputs(rows: FormRows) {
-  return (rows.emails ?? [])
-    .filter((row) => (row.email ?? "").trim().length > 0)
-    .map((row, index) => ({
-      email: row.email.trim(),
-      email_type: asEmailType(row.email_type),
-      is_primary: row.is_primary === "true",
-      position: index,
-    }));
-}
-
-// The phone rows, the same way and for the same reason.
-function personPhoneInputs(rows: FormRows) {
-  return (rows.phones ?? [])
-    .filter((row) => (row.phone ?? "").trim().length > 0)
-    .map((row, index) => ({
-      phone: row.phone.trim(),
-      phone_type: asPhoneType(row.phone_type),
-      is_primary: row.is_primary === "true",
-      position: index,
-    }));
-}
-
-// Builds the create-contact request body: scalar fields trim to undefined
-// when blank (never sent rather than sent empty), `social.linkedin` folds
-// into the `social` object, and each repeatable row becomes an
-// emails/phones entry keyed by its position in the list.
-export function mapPersonBody(
-  values: Record<string, string>,
-  rows: FormRows,
-): CreatePersonRequest {
-  const linkedin = values["social.linkedin"]?.trim();
-  const emails = personEmailInputs(rows);
-  const phones = personPhoneInputs(rows);
-  return {
-    full_name: values.full_name.trim(),
-    first_name: values.first_name?.trim() || undefined,
-    last_name: values.last_name?.trim() || undefined,
-    title: values.title?.trim() || undefined,
-    social: linkedin ? { linkedin } : undefined,
-    emails: emails.length > 0 ? emails : undefined,
-    phones: phones.length > 0 ? phones : undefined,
-    source: "manual",
-  };
-}
-
-function stringField(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-// Builds the PATCH body.
-//
-// `emails` and `phones` REPLACE their sets rather than adding to them, which is
-// what a correction needs: a bounced address is fixed by sending the set that
-// should stand, and an append-only field could never remove the one that is
-// dead. So an empty list is SENT, not omitted — a contact whose last address
-// was wrong and is now gone is a real answer, and omitting it would silently
-// keep the address the reader just deleted.
-//
-// `rows` is absent only where a caller has no repeatable fields at all; the
-// person form always has both, so the sets go out on every save.
-export function mapPersonUpdate(
-  values: Record<string, unknown>,
-  rows?: FormRows,
-): UpdatePersonRequest {
-  const linkedin = stringField(values["social.linkedin"]).trim();
-  return {
-    full_name: stringField(values.full_name).trim() || undefined,
-    first_name: stringField(values.first_name).trim() || undefined,
-    last_name: stringField(values.last_name).trim() || undefined,
-    title: stringField(values.title).trim() || undefined,
-    social: linkedin ? { linkedin } : undefined,
-    emails: rows ? personEmailInputs(rows) : undefined,
-    phones: rows ? personPhoneInputs(rows) : undefined,
-  };
-}
-
-// Built inside ContactsScreen (not module-level) because the email/phone
-// "Type" options are display text, not raw values — fieldControl (create.tsx)
-// renders option.label verbatim, so the human-readable string has to be
-// resolved via useT() before it reaches CreateField, unlike organizations.tsx's
-// size_band options, which are already display-ready raw labels ("1-10").
-function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
-  return [
-    { key: "full_name", label: "create.fullName", required: true },
-    { key: "first_name", label: "create.firstName" },
-    { key: "last_name", label: "create.lastName" },
-    { key: "title", label: "create.personTitle" },
-    { key: "social.linkedin", label: "create.linkedin" },
-    {
-      key: "emails",
-      label: "create.email",
-      type: "repeatable",
-      addLabel: "field.addEmail",
-      rowFields: [
-        {
-          key: "email",
-          label: "create.email",
-          type: "email",
-          required: true,
-        },
-        {
-          key: "email_type",
-          label: "field.emailType",
-          type: "select",
-          options: [
-            { value: "work", label: t("field.emailWork") },
-            { value: "personal", label: t("field.emailPersonal") },
-            { value: "other", label: t("field.emailOther") },
-          ],
-        },
-      ],
-      primaryKey: "is_primary",
-    },
-    {
-      key: "phones",
-      label: "create.phone",
-      type: "repeatable",
-      addLabel: "field.addPhone",
-      rowFields: [
-        { key: "phone", label: "create.phone", required: true },
-        {
-          key: "phone_type",
-          label: "field.phoneType",
-          type: "select",
-          options: [
-            { value: "work", label: t("field.phoneWork") },
-            { value: "mobile", label: t("field.phoneMobile") },
-            { value: "home", label: t("field.phoneHome") },
-            { value: "other", label: t("field.phoneOther") },
-          ],
-        },
-      ],
-      primaryKey: "is_primary",
-    },
-  ];
-}
-
-// The edit form is contactCreateFields WITHOUT the create-only parts, so the
-// two cannot come to describe an address differently — the same reason one
-// mapper serves both request bodies.
-//
-// It carries the email and phone rows because nothing else in the product can
-// change them. A bounced send names the address that refused it and sends the
-// reader here; a form that omitted the field left that reader at a page which
-// reported the failure and could not fix it.
-//
-// Moving the primary marker between two addresses of the SAME type is refused
-// by the server with a bare 409 today. Not a limit of this form and not
-// introduced here — the same PATCH has answered that way since the field
-// existed — but the primary radio is the first control that reaches it, so the
-// conflict is shown rather than swallowed. Correcting an address, adding one
-// and removing one all work.
-function personEditFields(t: ReturnType<typeof useT>): CreateField[] {
-  return contactCreateFields(t);
 }
 
 async function createContact(
@@ -589,10 +391,6 @@ function PersonActionBadges({
   archivedReasonId,
 }: Readonly<{
   person: Person;
-  // Read at screen level and handed down, so the schema request runs BESIDE the
-  // person's rather than after it. Started here, it would begin only once the
-  // record had landed and the strip first rendered — and an edit opened in that
-  // gap would offer a form with no custom fields on it.
   cf: ObjectCustomFields;
   // Minted once for the page by the caller, because the archive is a fact
   // about the record rather than about any one verb that refuses.
@@ -601,7 +399,7 @@ function PersonActionBadges({
   const t = useT();
   const overlay = useSorMode() === "overlay";
   const viewerId = useViewerId();
-  const id = person.id;
+  const disabledReasonId = person.archived_at ? archivedReasonId : undefined;
   return (
     <>
       <ProvenanceTag provenance={provenanceOf(person.captured_by, viewerId)} />
@@ -623,114 +421,11 @@ function PersonActionBadges({
           pointing at the page's one sentence about the archive
           (STATE-4a): a missing control says nothing about the
           record, while a refused one names the reason. */}
-      <EditAction<Person>
-        disabledReasonId={person.archived_at ? archivedReasonId : undefined}
-        label={t("record.edit")}
-        savedMessage={(saved) =>
-          t("record.saveDone", { name: saved.full_name })
-        }
-        notice={overlay ? t("overlay.partialWriteBack") : undefined}
-        // An address is unique among LIVE rows across the workspace
-        // (uq_person_email_dedupe), so a correction can now collide with the
-        // contact that already holds it — 409 `duplicate_email`, naming that
-        // record. Create has always offered the way there; edit could not
-        // collide until it carried the address field, and a conflict the
-        // reader cannot follow is a dead end on the one screen that fixes
-        // addresses.
-        resolveExisting={(_code, existingId) => ({
-          screen: "contacts",
-          id: existingId,
-        })}
-        fields={[...personEditFields(t), ...cf.formFields]}
-        record={{
-          id: person.id,
-          version: person.version,
-          full_name: person.full_name,
-          first_name: person.first_name ?? "",
-          last_name: person.last_name ?? "",
-          title: person.title ?? "",
-          "social.linkedin": stringField(person.social?.linkedin),
-          // The rows the form prefills from. `is_primary` is stringified by
-          // prefillRows like every other cell, and read back as `=== "true"`,
-          // so the primary marker survives a save that did not touch it.
-          emails: person.emails ?? [],
-          phones: person.phones ?? [],
-          ...cf.recordSlice(person),
-        }}
-        update={async (values, rows, opened) => {
-          const { data, error } = await api.PATCH("/people/{id}", {
-            params: {
-              path: { id },
-              ...ifMatch(requireVersion(opened?.version)),
-            },
-            body: {
-              ...mapPersonUpdate(values, rows),
-              // A diff against what the form prefilled from: a
-              // snapshot sends `null` for every empty custom field,
-              // and the API reads that as clearing a column nobody
-              // touched.
-              ...cf.toPatch(values, opened ?? {}),
-            },
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return data;
-        }}
-        invalidate="people"
-        recordKey="person"
-      />
-      {/* Merge has no incumbent-first projection — the seam
-          refuses it outright (overlay/provider_writes.go
-          Merge) — unlike edit/archive below, which it
-          serves, so it stays hidden here. */}
-      {!overlay && (
-        <MergeAction
-          disabledReasonId={person.archived_at ? archivedReasonId : undefined}
-          label={t("merge.contact")}
-          sourceId={person.id}
-          sourceName={person.full_name}
-          searchTargets={searchPeopleTargets}
-          merge={async (targetId) => {
-            const { data, error } = await api.POST("/people/{id}/merge", {
-              params: {
-                path: { id: person.id },
-                ...ifMatch(requireVersion(person.version)),
-              },
-              body: { target_id: targetId },
-            });
-            if (error) {
-              throwProblem(error, t);
-            }
-            return data;
-          }}
-          invalidate="people"
-          recordKey="person"
-          survivorRoute={(targetId) => ({
-            screen: "contacts",
-            id: targetId,
-          })}
-        />
-      )}
-      <ArchiveAction
-        disabledReasonId={person.archived_at ? archivedReasonId : undefined}
-        label={t("record.archive")}
-        confirmText={t("record.archiveConfirm")}
-        archivedMessage={t("record.archiveDone", {
-          name: person.full_name,
-        })}
-        archive={async () => {
-          const { data, error } = await api.DELETE("/people/{id}", {
-            params: { path: { id } },
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return data;
-        }}
-        invalidate="people"
-        recordKey="person"
-        onArchived={() => navigate({ screen: "contacts" })}
+      <PersonEditMergeArchive
+        person={person}
+        cf={cf}
+        disabledReasonId={disabledReasonId}
+        overlay={overlay}
       />
       {/* A record grant probes the native row via
           auth.EnsureLinkTarget, which a mirrored record has
@@ -741,7 +436,7 @@ function PersonActionBadges({
         <ShareAction
           recordType="person"
           recordId={person.id}
-          disabledReasonId={person.archived_at ? archivedReasonId : undefined}
+          disabledReasonId={disabledReasonId}
         />
       )}
     </>
