@@ -28,9 +28,11 @@
 # no secret literal beyond the shared dev defaults, and there is one set of names
 # rather than two.
 #
-#   scripts/dev.sh up    [slug] [--fresh]  # spin infra + db + api + FE
-#   scripts/dev.sh stop  [slug] [--drop]   # stop THIS stack; --drop also drops its db
-#   scripts/dev.sh sweep       [--drop]    # stop EVERY stack on the machine
+#   scripts/dev.sh up       [slug] [--fresh]  # spin infra + db + api + FE
+#   scripts/dev.sh stop     [slug] [--drop]   # stop THIS stack; --drop also drops its db
+#   scripts/dev.sh sweep          [--drop]    # stop EVERY stack on the machine
+#   scripts/dev.sh snapshot [slug]            # copy this stack's db to its template
+#   scripts/dev.sh restore  [slug]            # put the db back as the template holds it
 set -euo pipefail
 # Runtime state (logs, pids, claims) lives under dev_state_root below, one
 # directory per machine rather than per worktree — keep everything this script
@@ -943,6 +945,24 @@ sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
   rm -rf "$(dev_state_root)"/*
 }
 
+# ensure_infra brings the containers up QUIETLY, and says everything if it fails.
+#
+# `make db-up >/dev/null` is not quiet: compose writes its per-container progress
+# to stderr, so a lane that calls this between runs prints nine lines of
+# "Container margince-redis-1 Healthy" around every one of them and buries its
+# own output. Redirecting stderr as well would be the other mistake — an
+# infrastructure failure here is the reason every statement after it fails, and
+# swallowing it leaves a caller reading a psql error about a database that was
+# never reachable.
+ensure_infra() {
+  local out
+  if ! out="$(make db-up 2>&1)"; then
+    printf '%s\n' "$out" >&2
+    echo "FAIL: the dev infrastructure could not be brought up" >&2
+    exit 1
+  fi
+}
+
 drop_stray_dev_dbs() { # every margince_dev_<slug> database an isolated env left behind
   local strays
   strays=$(psql_owner postgres -tAc \
@@ -1446,6 +1466,13 @@ stop)
       # WITH (FORCE) (PG13+) terminates any lingering connection so the drop
       # doesn't fail on a slow-to-close api/vite child.
       psql_owner postgres -c "DROP DATABASE IF EXISTS \"${db}\" WITH (FORCE)" >/dev/null 2>&1 || true
+      # And the snapshot beside it, if this stack ever took one. It is a copy of
+      # the same stack's database and outlives it for no reason; left behind it
+      # is a whole database's worth of disk that nothing will ever read, since
+      # the next `snapshot` overwrites it anyway. `sweep --drop` already reaps it
+      # through the margince_dev_% scan — this is the same rule for the stack
+      # somebody drops by name.
+      psql_owner postgres -c "DROP DATABASE IF EXISTS \"${db}_tmpl\" WITH (FORCE)" >/dev/null 2>&1 || true
       echo "dropped ${db}"
     fi
   fi
@@ -1467,8 +1494,55 @@ sweep)
   fi
   ;;
 
+snapshot)
+  # Copy this stack's database to `<db>_tmpl`, so a caller that dirties the
+  # world can put it back in about a second (the `restore` verb below) instead
+  # of paying a migrate and a reseed for it.
+  #
+  # This is the shape the integration lanes already use — a migrated template
+  # and CREATE DATABASE ... TEMPLATE, which is a file copy (scripts/lib-testdb.sh).
+  # What is new here is snapshotting a SEEDED and signed-in world rather than a
+  # migrated empty one, so a restore returns the records AND the credentials
+  # minted against them.
+  #
+  # THE STACK MUST BE DOWN. Postgres refuses to copy a database that any session
+  # is connected to, and the api's pool reconnects the instant it is terminated —
+  # so a snapshot attempted against a running stack fails on a race rather than
+  # on a rule, which is the confusing way to learn this.
+  ensure_infra
+  for _p in "$api_port" "$fe_port"; do
+    if [[ -n "$(port_listeners "$_p")" ]]; then
+      echo "FAIL: $label is running, and Postgres cannot copy a database a session is connected to." >&2
+      echo "  Stop it first:  make dev-stop${slug:+ DEV_SLUG=$slug}" >&2
+      exit 1
+    fi
+  done
+  psql_owner postgres -c "DROP DATABASE IF EXISTS \"${db}_tmpl\" WITH (FORCE)" </dev/null
+  psql_owner postgres -c "CREATE DATABASE \"${db}_tmpl\" TEMPLATE \"${db}\"" </dev/null
+  echo "dev: snapshotted ${db} → ${db}_tmpl"
+  ;;
+
+restore)
+  # Put the database back exactly as the snapshot holds it, with the stack left
+  # RUNNING: WITH (FORCE) closes the api's connections, the clone lands, and the
+  # pool redials on its next query.
+  #
+  # A restore is safer for the api's in-memory state than the reseed it replaces,
+  # which is the opposite of what one expects. A fresh seed mints new uuids for
+  # every record, so anything the process had cached by id went stale; a clone is
+  # byte-identical to the world the process was already looking at.
+  ensure_infra
+  if [[ -z "$(psql_owner postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${db}_tmpl'" </dev/null)" ]]; then
+    echo "FAIL: no snapshot to restore — ${db}_tmpl does not exist." >&2
+    echo "  Take one:  make dev-snapshot${slug:+ DEV_SLUG=$slug}   (with the stack stopped)" >&2
+    exit 1
+  fi
+  psql_owner postgres -c "DROP DATABASE IF EXISTS \"${db}\" WITH (FORCE)" </dev/null
+  psql_owner postgres -c "CREATE DATABASE \"${db}\" TEMPLATE \"${db}_tmpl\"" </dev/null
+  ;;
+
 *)
-  echo "usage: dev.sh {up|stop|sweep} [slug] [--drop]" >&2
+  echo "usage: dev.sh {up|stop|sweep|snapshot|restore} [slug] [--drop]" >&2
   exit 2
   ;;
 esac
