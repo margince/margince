@@ -235,7 +235,7 @@ func activityFields(t *testing.T, rec connector.NormalizedRecord) capture.Activi
 // bytes, then apply the shared meeting rules — so a fixture asserts on the
 // result rather than on either half.
 func classifyRaw(raw []byte, owner string) (meetingmap.Meeting, error) {
-	ev, err := decodeEvent(raw)
+	ev, err := decodeEvent(raw, owner)
 	if err != nil {
 		return meetingmap.Meeting{}, err
 	}

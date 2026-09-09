@@ -52,6 +52,10 @@ type Sink struct {
 	// nameParticipants completes a resolved attendee's name from the name the
 	// invitation gave them. Nil names nobody.
 	nameParticipants ParticipantNamer
+	// cancelMeeting closes a captured meeting the calendar says is off — called
+	// off by its organizer, or declined by the seat whose calendar it is. Nil
+	// captures meetings and cancels none.
+	cancelMeeting MeetingCanceller
 }
 
 // fieldSourceSystem / fieldSourceID are the shared system_log detail keys for

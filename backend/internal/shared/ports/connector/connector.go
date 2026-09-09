@@ -167,6 +167,23 @@ type Sink interface {
 	Upsert(ctx context.Context, rec NormalizedRecord) (datasource.EntityRef, error)
 }
 
+// MeetingCanceller is the Sink's second calendar verb: a meeting already
+// captured is called off. It is separate from Sink rather than a method on it
+// because cancelling is a calendar-only act — the mail and channel connectors
+// have nothing to say through it, and widening the one interface every
+// connector and fixture implements would make them all answer a question only
+// two of them are asked.
+//
+// A connector that finds no captured meeting under the key has nothing to
+// cancel, which is the ordinary case: most cancelled events were never worth
+// capturing in the first place. That is reported as a no-op, never an error.
+type MeetingCanceller interface {
+	// CancelMeeting marks the meeting captured under this natural key as
+	// cancelled. Idempotent: cancelling an already-cancelled meeting writes
+	// nothing and succeeds, so a resynced calendar costs no second transition.
+	CancelMeeting(ctx context.Context, key NaturalKey, at time.Time) error
+}
+
 // NormalizedRecord — a provider record mapped onto the clean relational
 // core with provenance. Fields holds the typed domain struct for
 // EntityType so a wrong mapping fails to compile, not at runtime.

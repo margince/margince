@@ -53,6 +53,14 @@ type eventActor struct {
 	Email       string `json:"email"`
 	DisplayName string `json:"displayName"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	Resource    bool   `json:"resource"`
+	// Self marks the attendee entry belonging to the calendar this event was
+	// read from. It is Google's own answer to "which of these is you", which
+	// beats matching the owner's address: the account may be invited under an
+	// alias, or through a group, and would then match nothing.
+	Self bool `json:"self"`
+	// ResponseStatus is this attendee's RSVP — "needsAction", "declined",
+	// "tentative" or "accepted".
+	ResponseStatus string `json:"responseStatus"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 }
 
 // roomResourceDomain is where Google Calendar homes every booked room and
@@ -75,29 +83,59 @@ func (a eventActor) isRoom() bool {
 
 // decodeEvent reads one raw Calendar event resource into the neutral shape —
 // this connector's whole contribution to the calendar mapping.
-func decodeEvent(raw []byte) (meetingmap.Event, error) {
+//
+// The owner is needed to read the RSVP: "did I decline this" is a question
+// about one attendee among many, and which one is the owner is not something
+// the event says on its own in every case.
+func decodeEvent(raw []byte, owner string) (meetingmap.Event, error) {
 	var ev rawEvent
 	if err := json.Unmarshal(raw, &ev); err != nil {
 		return meetingmap.Event{}, fmt.Errorf("gcal: parsing calendar event: %w", err)
 	}
-	return decode(ev), nil
+	return decode(ev, owner), nil
 }
 
 // decode maps Google's event resource onto the neutral shape.
-func decode(ev rawEvent) meetingmap.Event {
+func decode(ev rawEvent, owner string) meetingmap.Event {
 	attendees := make([]meetingmap.Actor, 0, len(ev.Attendees))
 	for _, a := range ev.Attendees {
 		attendees = append(attendees, meetingmap.Actor{Email: a.Email, Name: a.DisplayName, Room: a.isRoom()})
 	}
 	return meetingmap.Event{
-		ID:          ev.ID,
-		Cancelled:   strings.EqualFold(strings.TrimSpace(ev.Status), "cancelled"),
-		Subject:     ev.Summary,
-		Description: ev.Description,
-		StartsAt:    parseStart(ev.Start),
-		Organizer:   meetingmap.Actor{Email: ev.Organizer.Email, Name: ev.Organizer.DisplayName},
-		Attendees:   attendees,
+		ID:            ev.ID,
+		Cancelled:     strings.EqualFold(strings.TrimSpace(ev.Status), "cancelled"),
+		OwnerDeclined: ownerDeclined(ev.Attendees, owner),
+		Subject:       ev.Summary,
+		Description:   ev.Description,
+		StartsAt:      parseStart(ev.Start),
+		Organizer:     meetingmap.Actor{Email: ev.Organizer.Email, Name: ev.Organizer.DisplayName},
+		Attendees:     attendees,
 	}
+}
+
+// ownerDeclined reports that the connected account answered NO to this
+// invitation.
+//
+// Google's `self` flag is the authority and the address is the fallback. The
+// flag is the account's own answer to which attendee it is, so it holds when the
+// invitation went to an alias or reached the account through a group — cases
+// where matching the owner's address finds nobody at all. The address still
+// answers for a payload that carries no flag.
+//
+// Only "declined" counts. A tentative answer is an attendance somebody may yet
+// make, and "needsAction" is an invitation nobody has read; taking either off
+// the schedule would hide a meeting that is still going to happen.
+func ownerDeclined(attendees []eventActor, owner string) bool {
+	ownerAddress := strings.ToLower(strings.TrimSpace(owner))
+	for _, a := range attendees {
+		if !a.Self && (ownerAddress == "" || !strings.EqualFold(strings.TrimSpace(a.Email), ownerAddress)) {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(a.ResponseStatus), "declined") {
+			return true
+		}
+	}
+	return false
 }
 
 // ParticipantsOf reads the organizer and attendees out of one stored event
