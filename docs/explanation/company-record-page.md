@@ -263,6 +263,30 @@ endpoint an authenticated write sink, and capping the stored count silently
 deletes the earliest judgments so a rep working through a long list has
 dismissed advice come back.
 
+## What needs you, and the one answer it gives
+
+The needs list has three producers — the moment leads it, the suggestions
+follow, the manual moves come last — and the reader takes the top of it as the
+verdict. The moment fires on **owed promises only**; everything else arrives
+through the suggestions or the scan's findings. Two rules stop the list
+disagreeing with itself, each held where it sees what the other cannot:
+
+- **The quiet card claims only the promises it read** — *"Nothing is owed to
+  this account"*, never "nothing needs you today", a claim about work it did
+  not look at, in the payload carrying the rows contradicting it. Every client
+  reads it, the tool surface included, so the bound is the server's.
+- **A quiet card is not a row when the list has other rows** (`momentIsARow`) —
+  only the client can apply this, because the scan's findings arrive on their
+  own read. The row goes only where the list holds something, and what it holds
+  *is* the answer.
+
+The 360 is also a **live read** (FE-PARAM-5): every 60 seconds while the tab
+has focus, because a page read once on arrival goes stale silently — a stale
+"what needs you" looks like a current one. A cadence, not a stream; the
+contract serves no push. A read is live for the key it reads under
+(`isRecordRead`), not because its screen opted in, so the contact, project and
+deal records are live too — the deal's model-written *briefing* is not.
+
 ## The account scan
 
 The rules say what the *records* show. The account scan is what the
@@ -324,9 +348,15 @@ name on it — a system principal reads every audience away) with the row id
 as the correlation id, reads, and settles. Every transition announces itself
 on the rail with the account's name as the subject, so the reader who opened
 three accounts and moved on finds out which is ready. A budget deferral
-parks the row and snoozes the job; no lane, no exchanges the reader may read,
-or a reply the grounding refused whole settles `degraded` with a reason the
-reader can read, and the rules' rows stand alone.
+parks the row and snoozes the job; no lane, or a reply the grounding refused
+whole, settles `degraded` with a reason the reader can read, and the rules'
+rows stand alone. An account with no exchange the reader may read settles
+`done` and not `degraded`: the read covered everything it was ever going to,
+and `read` saying nought exchanges beside `generated_by` saying the rules
+wrote the advice is the whole of what happened. `degraded` reaches the rail's
+faults arm, which holds the orb amber until somebody acknowledges it, so
+degrading an empty account would raise a warning on every account nobody has
+written to yet — which every account is, on the day it is added.
 
 **The page.** While the read runs, the needs list keeps the rules' rows and
 draws the `AiPending` row above them — the indigo tile breathing, the answer's
@@ -564,6 +594,8 @@ list, approval, signal) and durably own no business entity. See
 | The account scan: row, rail carrier, ensure rule, merge | `backend/internal/compose/orgscan/{store,service}.go` |
 | The account scan's job, and its wiring into both roles | `backend/internal/compose/jobs_accountscan.go` |
 | The visit baseline (`user_record_view`) | `backend/internal/compose/org360/viewbaseline.go` |
+| The account card, and the moment vocabulary every record page reads it with | `backend/internal/compose/org360/moment.go`, `frontend/src/screens/record360/moment.tsx` |
+| The live record cadence (FE-PARAM-5), and which reads it recognises | `frontend/src/app/queryclient.ts`, `frontend/src/screens/activitykeys.ts` |
 | The connections graph | `backend/internal/compose/org360/{graph,graphreads,graphplace,graphourside}.go` |
 | HTTP transport + the overlay refusal | `backend/internal/compose/org360/handlers.go` |
 | The brief: cache, input, fingerprint | `backend/internal/compose/orgbrief/{service,input}.go` |

@@ -29,7 +29,7 @@ configurable logger.
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
 | `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role |
-| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file (bootstrap + auth — organization, bootstrap_admin, seeds, email; strict decoding, secrets as `*_file` references). A missing file boots an existing installation; bootstrapping an empty database requires `organization` + `bootstrap_admin` |
+| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file (bootstrap + auth — workspace, bootstrap_admin, seeds, email; strict decoding, secrets as `*_file` references). A missing file boots an existing installation; bootstrapping an empty database requires `workspace` + `bootstrap_admin` |
 | `--schema-dsn` | `MARGINCE_SCHEMA_DSN` | — | Postgres DSN, **owner** role, for the customfields runtime-DDL pool; unset = `createCustomField`/`updateCustomFieldOptions` answer 501 |
 | `--addr` | — | `:8080` | listen address |
 | `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–15) — see below |
@@ -940,7 +940,7 @@ The **deployment configuration** (`--config`, default `margince.yaml`) is
 seeded the same way for local dev. The annotated reference is
 [`config/margince.example.yaml`](../../config/margince.example.yaml); `make dev`
 copies it to a gitignored `config/margince.yaml` on first run and then
-**leaves it** (create-if-missing / leave-if-exists), so an engineer's edits — organization,
+**leaves it** (create-if-missing / leave-if-exists), so an engineer's edits — workspace,
 `bootstrap_admin`, or the `ai.capture_payloads` posture — persist across
 `make dev-stop` / `make dev` rather than being regenerated each boot. The
 admin `password_file` it references (`config/margince-admin-password`) is

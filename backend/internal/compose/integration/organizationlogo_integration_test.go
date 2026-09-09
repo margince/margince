@@ -19,6 +19,7 @@ import (
 	"image/png"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -170,6 +171,84 @@ func TestOrganizationLogoRemovesLegacyTransparentCanvasAtTheDisplayBoundary(t *t
 	}
 	if bounds := displayed.Bounds(); bounds.Dx() != 32 || bounds.Dy() != 8 {
 		t.Fatalf("displayed logo is %v, want the original 4:1 wordmark", bounds)
+	}
+}
+
+// A client that already holds today's picture is told so — 304, no body —
+// without the endpoint decoding, scanning or re-encoding the stored PNG, or
+// even opening it in blob storage. countingBlobstore is shared with
+// knowledgeorphan_integration_test.go.
+func TestOrganizationLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlreadyHasIt(t *testing.T) {
+	e := Setup(t)
+	blob := newCountingBlobstore()
+	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	ctx := e.Admin()
+	orgID := seedLoggedOrg(ctx, t, e, blob, logoPNG(t))
+	url := "/v1/organizations/" + orgID.String() + "/logo"
+
+	first := httptest.NewRecorder()
+	handlers.GetOrganizationLogo(first, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(orgID.UUID))
+	if first.Code != http.StatusOK {
+		t.Fatalf("first GET = %d, want 200: %s", first.Code, first.Body.String())
+	}
+	etag := first.Header().Get("ETag")
+	if etag == "" {
+		t.Fatal("the 200 response carries no ETag")
+	}
+	if got := blob.getCount(); got != 1 {
+		t.Fatalf("blob.Get calls after the first request = %d, want 1", got)
+	}
+
+	// The ETag and LogoURL's own cache-busting query token are meant to be
+	// the SAME digest of the same key (logoRevisionDigest) — pin that they
+	// still are, so the two spellings cannot silently drift apart.
+	key, err := e.People.OrganizationLogoKey(ctx, orgID, people.LogoWide)
+	if err != nil {
+		t.Fatalf("read the stored logo key: %v", err)
+	}
+	wantURL := *people.LogoURL(orgID.UUID, &key, people.LogoWide)
+	wantDigest := wantURL[strings.LastIndex(wantURL, "=")+1:]
+	if gotDigest := strings.Trim(etag, `"`); gotDigest != wantDigest {
+		t.Fatalf("ETag digest = %q, want %q (LogoURL's own query token)", gotDigest, wantDigest)
+	}
+
+	matching := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx)
+	req.Header.Set("If-None-Match", etag)
+	handlers.GetOrganizationLogo(matching, req, crmcontracts.Id(orgID.UUID))
+	if matching.Code != http.StatusNotModified {
+		t.Fatalf("GET with a matching If-None-Match = %d, want 304: %s", matching.Code, matching.Body.String())
+	}
+	if matching.Body.Len() != 0 {
+		t.Fatalf("a 304 response body = %d bytes, want none", matching.Body.Len())
+	}
+	if got := blob.getCount(); got != 1 {
+		t.Fatalf("blob.Get calls after the matching request = %d, want still 1 (the cache hit must not touch blob storage)", got)
+	}
+
+	// RFC 9110 §13.1.2: If-None-Match comparison is WEAK, so a proxy that
+	// prefixes this server's own strong tag with "W/" must still count as a
+	// match rather than falling through to the full decode/re-encode path.
+	weak := httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx)
+	req.Header.Set("If-None-Match", "W/"+etag)
+	handlers.GetOrganizationLogo(weak, req, crmcontracts.Id(orgID.UUID))
+	if weak.Code != http.StatusNotModified {
+		t.Fatalf("GET with a weak (W/-prefixed) matching If-None-Match = %d, want 304: %s", weak.Code, weak.Body.String())
+	}
+	if got := blob.getCount(); got != 1 {
+		t.Fatalf("blob.Get calls after the weak-match request = %d, want still 1", got)
+	}
+
+	stale := httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx)
+	req.Header.Set("If-None-Match", `"stale-revision"`)
+	handlers.GetOrganizationLogo(stale, req, crmcontracts.Id(orgID.UUID))
+	if stale.Code != http.StatusOK {
+		t.Fatalf("GET with a stale If-None-Match = %d, want 200: %s", stale.Code, stale.Body.String())
+	}
+	if got := blob.getCount(); got != 2 {
+		t.Fatalf("blob.Get calls after the stale-etag request = %d, want 2", got)
 	}
 }
 

@@ -171,12 +171,55 @@ function messageBearingShapes(): unknown[][] {
  * itself, which carries no message and does not need re-reading.
  */
 export function showsAMessage(query: { queryKey: QueryKey }): boolean {
-  const key = query.queryKey as unknown[];
-  return messageBearingShapes().some(
-    (shape) =>
-      key.length >= shape.length &&
-      shape.every((segment, at) => segment === SHAPE_ID || segment === key[at]),
+  return messageBearingShapes().some((shape) =>
+    matchesShape(query.queryKey as unknown[], shape, true),
   );
+}
+
+// One key against one shape, with the id position wild. `prefix` is what the
+// two callers differ on: an audience change reaches anything drawn FROM a
+// matching read, while a record's own read is that key and no longer one.
+function matchesShape(
+  key: readonly unknown[],
+  shape: readonly unknown[],
+  prefix: boolean,
+): boolean {
+  if (prefix ? key.length < shape.length : key.length !== shape.length) {
+    return false;
+  }
+  return shape.every(
+    (segment, at) => segment === SHAPE_ID || segment === key[at],
+  );
+}
+
+// ── The record's own read ───────────────────────────────────────────────────
+
+// The deal's record read. It is NOT in TIMELINE_SEED_KEYS because the deal's
+// seed is the status card, which is written by a model; what carries the
+// deal's own fields is this.
+const DEAL_RECORD_KEY = (id: string): QueryKey => ["deal", id];
+
+/**
+ * Whether a cached read IS a record — the one read that carries that record's
+ * own fields and, for the three composite kinds, its open work and the first
+ * page of its timeline.
+ *
+ * The data layer asks this to decide which reads are LIVE (FE-PARAM-5,
+ * app/queryclient.ts): a record on screen re-reads itself, and everything else
+ * is served from cache the way it always was.
+ *
+ * Derived from TIMELINE_SEED_KEYS rather than listed a second time, so a
+ * record kind that grows a composite read joins this by being added there —
+ * the list that goes stale silently is the one nobody has to touch. Matched
+ * EXACTLY rather than as a prefix: a record's read is that key, and a prefix
+ * would sweep in whatever else a page happens to hang under it.
+ */
+export function isRecordRead(key: QueryKey): boolean {
+  const shapes = Object.values(TIMELINE_SEED_KEYS).map(
+    (seed) => seed(SHAPE_ID) as unknown[],
+  );
+  shapes.push(DEAL_RECORD_KEY(SHAPE_ID) as unknown[]);
+  return shapes.some((shape) => matchesShape(key as unknown[], shape, false));
 }
 
 // The canonical email read's key belongs to the component that reads under it,

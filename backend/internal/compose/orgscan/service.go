@@ -268,6 +268,16 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, orgID ids.Organizati
 		Status: StatusDone, Fingerprint: fingerprint, GeneratedBy: by, Findings: findings,
 		ReadExchanges: len(in.Messages), ReadDeals: len(in.Account.OpenDeals),
 	}
+	// Every case below is the DEPLOYMENT falling short of the read it was asked
+	// for, and each has a repair behind it. An account with no exchange this
+	// reader may read is deliberately NOT among them: that read covered
+	// everything it was ever going to cover, so nothing was lost — `read` says
+	// nought exchanges and `generated_by` says the rules wrote the advice,
+	// which is the whole of what happened. Degrading it raised a fault on the
+	// agent rail for every freshly added company, amber held on the orb until
+	// somebody acknowledged it, over an account behaving exactly as a new
+	// account does; an ambient warning that is on for the ordinary case is one
+	// nobody reads.
 	var lane *LaneError
 	switch {
 	case errors.As(err, &lane):
@@ -282,8 +292,6 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, orgID ids.Organizati
 		return errors.Join(err, s.fail(ctx, h, "The account could not be read. Try again later."))
 	case s.lane == nil:
 		out.Status, out.DegradeReason = StatusDegraded, "No model lane is configured, so the rules' own advice stands alone."
-	case len(in.Messages) == 0:
-		out.Status, out.DegradeReason = StatusDegraded, "There are no exchanges this reader may read, so there was nothing to read the account from."
 	}
 	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		return settle(ctx, tx, h.ID, &h.ClaimedAt, out)
