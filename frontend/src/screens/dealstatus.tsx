@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
-import { Button } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -264,17 +264,17 @@ function Briefing({
           between a scanning reader and the call. */}
       <Panel
         title={t("deal360.brief")}
-        // Indigo follows the WRITER: the same read degrades to a deterministic
-        // composition when no model lane answers, and a band that tinted both
-        // would tell a reader a model weighed a deal nothing weighed.
-        tone={card.generated_by === "model" ? "ai" : undefined}
-        titleAction={<WrittenBy by={card.generated_by} />}
+        // A machine's reading in EVERY state it can be in, so the tint rides
+        // the panel; which writer answered is sourcing, and sits in the foot
+        // beside the verb that has it written again.
+        tone="ai"
+        titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
         footer={
           <div className="deal360-foot">
-            {/* Asking for the brief again is the machine's own verb, and it is
-                quiet rather than filled because it sits inside the panel the
-                machine already wrote. */}
+            <WrittenBy by={card.generated_by} />
             <Button
+              // Quiet rather than filled: this asks the panel's own writer to
+              // run again, inside the panel that writer already filled.
               variant="aiQuiet"
               small
               pending={rewriting}

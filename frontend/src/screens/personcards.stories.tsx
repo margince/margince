@@ -6,14 +6,14 @@ import type { components } from "../api/schema";
 import { PersonBriefCard } from "./personcards";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
-// The relationship brief, drawn by who wrote it.
+// The relationship brief.
 //
-// The card has one visible variable that changes nothing about its facts and
-// everything about how they should be read: whether a MODEL wrote the prose or
-// the deterministic fallback composed it over the same records. Indigo is the
-// product's one mark of machine authorship, so the band carries it for the
-// first and must not for the second — and the two frames below are the only
-// place that difference can be checked at a glance.
+// The card is a MACHINE's reading in every state it can be in, so the indigo
+// band and the disclosure badge ride the panel rather than the writer that
+// answered on the day. What does vary is the writer, and the foot names it:
+// `Written by Margince` over a model's prose, `Assembled from your records`
+// over the composition it degrades to. The two frames below differ in that
+// line and in nothing else, which is the claim worth documenting.
 //
 // EVERY INSTANT IS FIXED. `make fe-clock-drift` runs the suite at +200 days and
 // requires the same verdict, and this card prints the moment it was generated.
@@ -92,24 +92,23 @@ const meta: Meta<typeof PersonBriefCard> = {
 export default meta;
 type Story = StoryObj<typeof PersonBriefCard>;
 
-// The model's own reading: the band goes indigo and the badge beside the title
-// names the writer, because a reader weighing a sentence is weighing who wrote
-// it.
+// The model's own prose. The foot says so; the band and the badge would look
+// the same either way.
 export const ModelWritten: Story = {
   render: card(brief({ generated_by: "model" })),
 };
 
-// The same facts, composed over the same records without a model. Nothing here
-// is indigo: the tint is a claim about authorship, and this composition would
-// be borrowing it.
+// The same facts composed over the same records without a model. STILL
+// indigo, because the reading is still the machine's — only the foot changes,
+// and it is the honest place for a reader to check what produced the words.
 export const Composed: Story = { render: card(brief({})) };
 
-// A brief with nothing to say. No writer to name and no tint to carry, because
-// there is no prose either — the card says so rather than inventing a sentence.
+// A brief with nothing to say. No writer to name and no stamp, because nothing
+// was assembled — the card says so rather than inventing a sentence.
 export const Empty: Story = { render: card(brief({ sentences: [] })) };
 
-// Dark, on the model's reading: `--aiText` and `--aiLight` are a pair tuned per
-// theme, and an indigo band is where the dark accent lift shows first.
+// Dark: `--aiText` and `--aiLight` are a pair tuned per theme, and an indigo
+// head band is where the dark accent lift shows first.
 export const ModelWrittenDark: Story = {
   globals: { theme: "dark" },
   render: card(brief({ generated_by: "model" })),

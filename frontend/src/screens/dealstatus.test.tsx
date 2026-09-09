@@ -4,7 +4,13 @@
 /** @vitest-environment jsdom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { DealStatusCardPanel } from "./dealstatus";
@@ -292,11 +298,10 @@ describe("Deal360's signal chips state their trigger", () => {
   });
 });
 
-describe("Deal360's brief says who wrote it", () => {
+describe("Deal360's brief discloses the machine that wrote it", () => {
   // The panel the fold lives in, which is the brief. Named this way rather than
-  // by "the first .panel-ai on the page": the day's work above it is the
-  // agent's own reading and wears the indigo band unconditionally, so a
-  // page-wide query would answer about that panel in both directions.
+  // by "the first .panel-ai on the page": the day's work above it wears the
+  // indigo band too, so a page-wide query would answer about the wrong panel.
   function briefPanel(container: HTMLElement): HTMLElement {
     const fold = container.querySelector("details.deal360-fold");
     const panel = fold?.closest(".panel");
@@ -304,13 +309,16 @@ describe("Deal360's brief says who wrote it", () => {
     return panel as HTMLElement;
   }
 
-  // Both directions, because a lookup that returned "ai" for everything and
-  // one that returned nothing for everything each satisfy half of this.
-  it("tints the brief indigo when a model wrote it", async () => {
+  it("tints the brief and discloses it when a model wrote it", async () => {
     serve({ writer: "model" });
     const { container } = renderCard();
     await screen.findByText("They asked for slots.");
-    expect(briefPanel(container).classList).toContain("panel-ai");
+    const brief = briefPanel(container);
+    expect(brief.classList).toContain("panel-ai");
+    // Scoped to the brief: the day's work above it discloses itself too, and a
+    // page-wide query would be satisfied by that panel's badge alone.
+    expect(within(brief).getByText("AI-assisted")).toBeInTheDocument();
+    expect(within(brief).getByText("Written by Margince")).toBeInTheDocument();
     // The verb that asks for another reading is the machine's own, drawn quiet
     // because it sits inside the panel the machine already wrote.
     expect(
@@ -318,13 +326,18 @@ describe("Deal360's brief says who wrote it", () => {
     ).toContain("btn-aiQuiet");
   });
 
-  it("leaves a deterministic composition untinted", async () => {
-    // The same read degrades to a composition over the same records when no
-    // model lane answers. Indigo means "Margince wrote this", so a band that
-    // tinted this too would tell a reader a model weighed the deal.
+  it("keeps the tint over a composition, and says it was assembled", async () => {
+    // The tint is a claim about the FEATURE — this reading is assembled by a
+    // machine in every state it can be in — so it does not come and go with
+    // whichever writer answered on the day. That writer is still named, in the
+    // foot, which is where a reader checks sourcing rather than authorship.
     serve({ writer: "deterministic" });
     const { container } = renderCard();
     await screen.findByText("They asked for slots.");
-    expect(briefPanel(container).classList).not.toContain("panel-ai");
+    const brief = within(briefPanel(container));
+    expect(briefPanel(container).classList).toContain("panel-ai");
+    expect(brief.getByText("AI-assisted")).toBeInTheDocument();
+    expect(brief.getByText("Assembled from your records")).toBeInTheDocument();
+    expect(brief.queryByText("Written by Margince")).toBeNull();
   });
 });

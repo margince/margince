@@ -52,18 +52,18 @@ const meta: Meta = { title: "Records/Deal next step" };
 export default meta;
 type Story = StoryObj;
 
-// The model's own reading. The brief's band goes indigo, the badge names the
-// writer, and "Write it again" is the machine's verb — quiet, because it sits
-// inside the panel the machine already wrote.
+// The model's own prose. The brief's band is indigo and its head discloses
+// itself; the foot names the writer beside "Write it again", the machine's own
+// verb — quiet, because it sits inside the panel that writer already filled.
 export const ExistingTask: Story = { render: panel("model") };
 
-// The same read with no model lane behind it. The briefing is still written and
-// still cited; nothing is indigo, because indigo is a claim about authorship
-// and a deterministic composition would be borrowing it.
+// The same read with no model lane behind it. STILL indigo, because the
+// briefing is the machine's reading either way; the only thing that moves is
+// the foot, which now says the words were assembled from the records.
 export const ComposedBrief: Story = { render: panel("deterministic") };
 
-// The indigo band and the quiet indigo verb in the dark theme: `--aiText` on
-// `--aiLight` is the pair the dark accent lift moves first.
+// The indigo head band and the quiet indigo verb in the dark theme: `--aiText`
+// on `--aiLight` is the pair the dark accent lift moves first.
 export const ExistingTaskDark: Story = {
   globals: { theme: "dark" },
   render: panel("model"),
