@@ -1,16 +1,19 @@
-/* A seat the product read out of messages, not one a colleague typed.
+/* A seat the product read out of messages, not one a colleague typed. The
+ * tint, the dashed edge and the corner are `.staging-card`'s, worn by the seat
+ * itself: one drawing of "an agent staged this and nobody has accepted it" for
+ * every surface that stages something.
  *
- * The indigo family means exactly one thing in this product: an agent decided
- * it. Dashed while unconfirmed, because dashes going solid is what acceptance
- * looks like everywhere else here. Text on the light fill takes --aiText, never
- * --ai, which fails AA on its own family's ground. */
-.cp-seat-suggested {
-  border: 1.5px dashed var(--aiMed);
-  border-radius: var(--r-sm);
-  background: var(--aiLight);
+ * What is left here is the MEASURE — a seat is a tile in a board column, where
+ * the staged card's own reading padding would make the suggested seats half
+ * again as tall as the confirmed ones beside them. Two classes, so that
+ * measure wins wherever the two sheets land in the bundle. */
+.cp-seat.staging-card {
   padding: var(--space-2);
 }
 
+/* Who read the seat out of the messages, over the name it proposes. On the
+ * staged card's own light fill, so the ink is --aiText: --ai fails AA on the
+ * ground its own family paints. */
 .cp-seat-mark {
   margin: 0 0 var(--space-1);
   font-size: var(--fs-meta);

@@ -20,6 +20,7 @@ import { Sparkles } from "lucide-react";
 import { Children, type ReactNode } from "react";
 import {
   Avatar,
+  Badge,
   Button,
   EmptyState,
   Skeleton,
@@ -36,6 +37,10 @@ import "../company360.css";
  * failed one draws rows — and neither may draw the quiet sentence, which is a
  * claim about the record ("nothing needs you") that a read still in flight
  * has no basis for.
+ *
+ * Indigo in every state, because the pane's answer is a machine's whichever
+ * one it is giving: the moves are what the agent found, and "nothing needs
+ * you" is its reading too.
  */
 export function TodayPanel({
   state = "ready",
@@ -67,6 +72,10 @@ export function TodayPanel({
           floated alone at the bottom of the pane. */}
       <div className="co-360-headtext">
         <h3 className="co-360-title-text t-h3">{t("today.title")}</h3>
+        {/* The disclosure sits on the head this pane actually draws. The rows
+            under it are the agent's reading of the record — what it found and
+            what it prepared — so the claim is read before any of them. */}
+        <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
         {footer}
       </div>
       {onOpenTasks && (
@@ -78,7 +87,7 @@ export function TodayPanel({
   );
   if (state === "loading") {
     return (
-      <Panel className="co-reading-today">
+      <Panel tone="ai" className="co-reading-today">
         {head}
         <PanelBody>
           <Skeleton width="100%" height={64} />
@@ -88,7 +97,7 @@ export function TodayPanel({
   }
   if (state === "failed") {
     return (
-      <Panel className="co-reading-today">
+      <Panel tone="ai" className="co-reading-today">
         {head}
         <PanelBody>
           <EmptyState>{t("today.failed")}</EmptyState>
@@ -100,7 +109,7 @@ export function TodayPanel({
   // an empty array is truthy.
   const rows = Children.toArray(children);
   return (
-    <Panel className="co-reading-today">
+    <Panel tone="ai" className="co-reading-today">
       {head}
       {rows.length === 0 ? (
         // Not "nothing to do": the brief read everything it can read and found
@@ -283,8 +292,10 @@ export function TodoRow({
       {verb && (
         <Button
           small
-          variant="ghost"
-          className={verb.byMargince ? "co-todo-verb" : undefined}
+          // Tinted, not filled: three filled buttons down a column outshout
+          // the one move above them that the pane is actually recommending,
+          // and `aiQuiet` is that volume for an agent's verb among equals.
+          variant={verb.byMargince ? "aiQuiet" : "ghost"}
           onClick={verb.onAct}
         >
           {verb.byMargince && <Sparkles aria-hidden="true" />}

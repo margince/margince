@@ -66,24 +66,10 @@
   padding: var(--space-1) var(--space-1) 0;
 }
 
-/* THE CALL, on the wash that says a machine reached it. The tint fades down
-   the card, strongest at the verdict and gone by the thread's last stop: it
-   marks the authorship of the sentence without tinting the evidence under it.
-   background-image rather than background, so the card keeps its own ground
-   under the gradient's transparent end. */
-.co-reading-call {
-  background-image: linear-gradient(180deg, var(--aiLight), transparent);
-}
-/* The 360's head is a LINE inside the pane, not a band across it (DESIGN.md
-   §7): the mark, the name, the claim — and the verdict under them on the same
-   ground. The tint is the pane's own gradient, so the head keeps no fill and
-   no rule of its own. */
-.co-reading-call > .panel-head {
-  background: none;
-  border-bottom: 0;
-  padding-top: var(--padPanel);
-  padding-bottom: 0;
-}
+/* THE CALL. That a machine reached it is `Panel`'s own tone="ai" — the indigo
+   edge and the banded head it draws for every panel a machine wrote, this one
+   included. A second wash spelled here painted the same claim twice, and the
+   head override under it then had to undo half of what the tone had drawn. */
 
 /* The reference sections, side by side. Half the measure each, because a
    reader consults them rather than reads them through; one column as soon as
@@ -299,10 +285,10 @@
   margin-inline-start: 0;
 }
 
-/* "Worth doing next": the overview's lead panel. The tint that makes it read
-   as the one card asking for a move is Panel's own tone="accent" now — this
-   class no longer reaches into .panel-head or .panel-foot, and what is left of
-   it is only the name the moves inside the panel are laid out under. */
+/* "Worth doing next": the overview's lead panel. The tint that says a rule
+   wrote every row of it is Panel's own tone="ai" now — this class no longer
+   reaches into .panel-head or .panel-foot, and what is left of it is only the
+   name the moves inside the panel are laid out under. */
 
 /* One move: the ask at the row's loudest weight, the reason under it — the
    reason is the part a rep judges, and everything else is chrome around it.
@@ -1818,23 +1804,12 @@
   color: var(--danger);
 }
 
-/* Tinted, not filled. Three filled buttons down a column outshout the single
-   move above them that the card is actually recommending; a tint says the same
-   thing about who does the work at a volume a list can carry.
-
-   Written against `.btn` as well as its own class, because `.btn-ghost` sets
-   the neutral border and text on the same weight and lands after this sheet —
-   at equal specificity the chip came out grey and the hue said nothing. */
-.btn.co-todo-verb {
+/* The row's verb keeps its own width. The row is a flex line, and a flex line
+   shrinks a button before it wraps the title beside it — a verb squeezed to
+   half a word is one a reader can no longer read. Whose work it is says itself
+   in `Button`'s own aiQuiet variant, not here. */
+.co-todo > .btn {
   flex: none;
-  border-color: var(--aiMed);
-  background: var(--aiLight);
-  color: var(--aiText);
-}
-
-.btn.co-todo-verb:hover {
-  background: var(--aiChip);
-  color: var(--aiText);
 }
 
 /* What happened lately, as a list to scan. One row per exchange: the mark, the

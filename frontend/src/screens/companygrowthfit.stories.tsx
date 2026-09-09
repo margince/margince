@@ -207,6 +207,14 @@ export const Strong: Story = {
   render: () => <Panel route={() => jsonResponse(strong)} />,
 };
 
+// The head's indigo says a machine assessed this, and the badge beside the
+// "as of" stamp says it in words. On dark the band's ink lifts and its ground
+// does not, so the pairing is worth looking at twice.
+export const StrongDark: Story = {
+  ...Strong,
+  globals: { theme: "dark" },
+};
+
 export const Weak: Story = {
   render: () => <Panel route={() => jsonResponse(weak)} />,
 };

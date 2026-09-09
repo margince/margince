@@ -646,10 +646,10 @@ const QUESTIONS: readonly Question[] = Object.keys({
  * AskCard is "Ask Margince": three prepared questions, answered from this
  * account's own records.
  *
- * The questions are BUTTONS, not a text box. Each one names the records its
- * answer is written from, which is what lets every sentence carry a citation
- * the reader can open — and a text box that quietly answered from a subset
- * would look exactly like one that had searched everything.
+ * The questions are BUTTONS, not a text box — indigo, because the agent
+ * answers them, and quiet because no one of them is the move. Each names the
+ * records its answer is written from, so every sentence carries a citation the
+ * reader can open; a text box answering from a subset would look the same.
  */
 export function AskSection({
   orgId,
@@ -722,6 +722,7 @@ export function AskSection({
           <Button
             key={question}
             small
+            variant="aiQuiet"
             onClick={() => ask.mutate({ question, project: projectId })}
             disabled={ask.isPending}
           >
@@ -1765,11 +1766,6 @@ export function useSuggestionsBody({
   // "no advice" or "we cannot advise you" are not things a rep acts on.
   ready: boolean;
   rows: ReactNode;
-  // How many rows `rows` draws. A caller that wants to count them beside its
-  // own title cannot count a ReactNode, and a caller that recomputed the
-  // number from the same view would be a second answer free to disagree with
-  // the one on screen.
-  count: number;
   // Whether any row this section DRAWS offers to answer a specific message.
   //
   // Computed from the post-filter list rather than from the raw advice: a
@@ -1851,7 +1847,7 @@ export function useSuggestionsBody({
   // section gives.
   const suggestions = keep ? all.filter(keep) : all;
   if (state !== "ready" || suggestions.length === 0) {
-    return { ready: false, rows: null, count: 0, hasDraftReply: false };
+    return { ready: false, rows: null, hasDraftReply: false };
   }
   // How many the cap dropped that THIS caller should report. The count
   // describes the whole list, so a narrowed caller reports none: "2 more" under
@@ -1938,7 +1934,6 @@ export function useSuggestionsBody({
   return {
     ready: true,
     rows,
-    count: suggestions.length,
     hasDraftReply: suggestions.some(
       (suggestion) => suggestion.action?.kind === "draft_reply",
     ),
@@ -2053,7 +2048,11 @@ export function SuggestionsSection({
     <Panel
       title={t("co.suggest.title")}
       footer={footer}
-      tone="accent"
+      // Indigo rather than accent: every row under this head was written by a
+      // rule, so the panel's tint is a claim about who wrote it and not about
+      // how the account is doing.
+      tone="ai"
+      titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
       className="co-lead"
     >
       {body.rows}
