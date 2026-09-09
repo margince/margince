@@ -146,11 +146,21 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 // anything above LevelSubject, so stamping it here is what makes the objection
 // hold against the whole staff.
 //
-// The cost is real and accepted: a mistyped objection can be undone only by the
-// subject reversing it or by the per-message exception path. That is the right
-// way round — the failure of a stop that is too hard to lift is an awkward
-// conversation, and the failure of one that is too easy is mail somebody
-// explicitly refused.
+// THE COST IS REAL AND CURRENTLY WORSE THAN THE DESIGN INTENDS. The plan has a
+// subject-initiated reversal and a per-message exception path; NEITHER EXISTS
+// YET. PublicSaveChoices writes person_consent and never touches this table, so
+// today a mistyped objection is undone by a database correction and nothing
+// else.
+//
+// Shipping it anyway, because the alternative was worse in the direction that
+// matters: with no writer at all, a rep told "stop the newsletter" recorded a
+// subject_request, which stopped that person's invoices. A stop too hard to
+// lift is an awkward conversation. A stop too easy to lift is mail somebody
+// explicitly refused, and one that was never recordable is both.
+//
+// The reversal path is the slice that closes this; the door's own description
+// in crm.yaml says plainly that nothing lifts one today, so nobody records one
+// expecting an undo button.
 //
 // subject_request keeps the seat's own level: it is the rep's report of a
 // conversation, with no article behind it, and an admin correcting a

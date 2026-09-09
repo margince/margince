@@ -14331,9 +14331,12 @@ paths:
 
         A `marketing_objection` is different: it is recorded at the SUBJECT'S authority whoever
         types it, because Art. 21 gives the right to the data subject and a rep relaying the call
-        is a courier rather than its author. Nothing an installation can do lifts it — only the
-        subject reversing it, or the per-message exception path, which records a send as
-        exceptional rather than making the objection go away.
+        is a courier rather than its author.
+
+        **Nothing lifts it today.** No seat outranks the subject, and the subject-initiated
+        reversal that would let them take it back is not built yet — the preference centre writes
+        consent state and never touches a suppression. Record one only when the person actually
+        asked for it: a mistake currently needs a database correction, not a product action.
 
         Two kinds are recordable here. `subject_request` is "stop contacting me", and it stops
         every category except the three the controller owes regardless of what the subject wants
