@@ -354,7 +354,14 @@ const TYPE_KEY: Record<Command["type"], MessageKey> = {
   record: "palette.typeRecord",
 };
 
-export const ASK_QUERY_KEY = "margince.askQuery";
+/**
+ * The dial the Ask-AI row writes its question into: `#/ai?q=<question>`.
+ *
+ * In the ADDRESS rather than in storage, because the reader is often already
+ * standing on the AI surface — a same-route navigation remounts nothing, so a
+ * question held anywhere else is a question that screen never reads.
+ */
+export const ASK_QUESTION_PARAM = "q";
 
 export function CommandPalette({
   open,
@@ -434,12 +441,13 @@ export function CommandPalette({
     Math.max(0, Math.min(index, rows.length - 1));
 
   const run = (command: Command) => {
-    if (command.id === "ask-ai") {
-      // NOSONAR: persisted value is a trimmed plain string from a controlled input, consumed as text (never eval'd or rendered as HTML)
-      sessionStorage.setItem(ASK_QUERY_KEY, query.trim());
-    }
     onClose();
-    navigate(command.route);
+    navigate(
+      command.route,
+      command.id === "ask-ai"
+        ? new Map([[ASK_QUESTION_PARAM, query.trim()]])
+        : undefined,
+    );
   };
 
   if (!open) {

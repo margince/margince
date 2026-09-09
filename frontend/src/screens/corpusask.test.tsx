@@ -1,7 +1,12 @@
 /** @vitest-environment jsdom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -267,15 +272,24 @@ describe("CorpusAskCard", () => {
     expect(screen.queryByText(/not covered by this set/i)).toBeNull();
   });
 
-  it("asks the question the palette carried, without making the reader retype it", async () => {
+  // A carried question is one the reader has already asked. Filling the box and
+  // waiting for a press was the surface admitting it could not answer.
+  it("asks the question the palette carried, once, with nothing left to press", async () => {
     const backend = backendFor(ASKER);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<CorpusAskCard carriedQuestion="how long are messages kept" />);
 
-    // Already in the box, not printed beside an empty one.
-    const box = await screen.findByLabelText(/your question/i);
-    expect(box).toHaveValue("how long are messages kept");
-    await userEvent.click(screen.getByRole("button", { name: /^ask$/i }));
+    // In the box, not printed beside an empty one — and answered.
+    await waitFor(() =>
+      expect(screen.getByLabelText(/your question/i)).toHaveValue(
+        "how long are messages kept",
+      ),
+    );
+    expect(
+      await screen.findByText("Captured messages are kept for 400 days."),
+    ).toBeTruthy();
+    // ONE call. The arrival is replayed for the set list landing and for a
+    // caller re-rendering, and a model call is not a thing to make twice.
     expect(backend.asked).toEqual([{ question: "how long are messages kept" }]);
   });
 
