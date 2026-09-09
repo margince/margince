@@ -56,8 +56,13 @@ func logoPNG(t *testing.T) []byte {
 // Bounded by the deadline rather than a fixed sleep: an in-memory store
 // settles in microseconds, so this returns on its first or second check in
 // the ordinary case, and only fails as slowly as a genuine regression would.
-func waitForPutCount(t *testing.T, blob *countingBlobstore, key string, want int) {
+//
+// Every caller waits for exactly 2: the seed's own Put plus the one
+// write-back a successful trim produces. A literal rather than a `want`
+// parameter, since every call site passed the same value.
+func waitForPutCount(t *testing.T, blob *countingBlobstore, key string) {
 	t.Helper()
+	const want = 2
 	deadline := time.Now().Add(2 * time.Second)
 	for {
 		if got := blob.putCount(key); got == want {
@@ -274,7 +279,7 @@ func TestOrganizationLogoWritesBackATrimmedLegacyLogoSoTheNextReadNeedsNoCrop(t 
 	// returns; an in-memory store's Put settles in microseconds, so the loop
 	// exits on its first or second check in the ordinary case and only the
 	// bound (not a fixed sleep) protects against a real regression hanging.
-	waitForPutCount(t, blob, key, 2)
+	waitForPutCount(t, blob, key)
 
 	rc, _, err := blob.Get(ctx, key)
 	if err != nil {
@@ -567,7 +572,7 @@ func TestOrganizationLogoWriteBackCoalescesConcurrentReadersOfTheSameUntrimmedKe
 
 	// One write-back, whichever of the readers claimed it: the seed Put plus
 	// this one is 2, not 1+readers.
-	waitForPutCount(t, inner, key, 2)
+	waitForPutCount(t, inner, key)
 }
 
 // writeBackTrimmedLogo re-checks the slot's current key AFTER blob.Put, not
@@ -642,7 +647,7 @@ func TestOrganizationLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(
 	}
 
 	blob.releaseHeld()
-	waitForPutCount(t, inner, staleKey, 2)
+	waitForPutCount(t, inner, staleKey)
 	waitForNotFound(t, blob, staleKey)
 
 	current, err := e.People.OrganizationLogoKey(ctx, orgID, people.LogoWide)
@@ -782,7 +787,7 @@ func TestOrganizationLogoWriteBackLogsRatherThanFailsWhenTheCollectingDeleteErro
 	}
 
 	blob.releaseHeld()
-	waitForPutCount(t, inner, staleKey, 2)
+	waitForPutCount(t, inner, staleKey)
 	waitAttempted(t, blob, "delete", staleKey)
 
 	// The failed collect leaves the resurrected object behind rather than
