@@ -10,15 +10,21 @@ import (
 
 // TestStandaloneFleetKindsSelectsExactlyTheCollapsedPasses — statsBySweep
 // must read a Fleet kind that fans out to nothing PER KIND rather than per
-// workspace_id, because none of its rows will ever carry one (margince#4983:
-// the query filtered every one of them out, forever, and the gauge read
-// greenest exactly when such a pass was failing). A Fleet kind that DOES
-// declare a FanOutTo must NOT be in this list — its own row still carries
-// no workspace, but its children (a different kind) are the real signal,
-// and counting the dispatcher's row too would double the pass.
+// workspace_id, because none of its rows will ever carry one: excluding
+// every such row filters that kind out of the sweep read forever, and the
+// gauge reads greenest exactly when such a pass is failing. A Fleet kind
+// that DOES declare a FanOutTo must NOT be in this list — its own row still
+// carries no workspace, but its children (a different kind) are the real
+// signal, and counting the dispatcher's row too would double the pass.
+//
+// Walks allSpecs() (core plus any composed/extension declarations), not the
+// core-only specs map, so an extension's own collapsed pass is held to the
+// same rule.
 func TestStandaloneFleetKindsSelectsExactlyTheCollapsedPasses(t *testing.T) {
+	t.Parallel()
+
 	var dispatchers, standalone int
-	for kind, spec := range specs {
+	for kind, spec := range allSpecs() {
 		if !spec.Fleet {
 			continue
 		}

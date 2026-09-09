@@ -291,16 +291,18 @@ func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 // covers.
 //
 // A Fleet kind that fans out to NOTHING is a different shape, not a
-// malformed row: ADR-0103's collapsed pass owns no tenant by declaration, so
+// malformed row: it owns no tenant by declaration (every such kind is
+// ADR-0103's collapsed periodic pass today, though the selection is by
+// declared shape — Fleet with no FanOutTo — rather than by that name), so
 // none of its rows will EVER carry a workspace_id — the first arm's
-// predicate excludes every one of them, forever, which is the defect this
-// query used to have (margince#4983). standaloneFleetKinds() names exactly
-// those kinds, and the second arm reads the latest tagged row PER KIND for
-// them instead of per workspace — the closest reading "did the last pass
-// happen" has when there is no workspace grain to read at all. The two arms
-// are kind-disjoint by construction (a kind is declared with a FanOutTo or
-// without one, never both), so UNION ALL cannot double-count one kind
-// between them; the exclusion in the first arm is defensive, so the split
+// predicate excludes every one of them, forever. standaloneFleetKinds()
+// names exactly those kinds, and the second arm reads the latest tagged row
+// PER KIND for them instead of per workspace — the closest reading "did the
+// last pass happen" has when there is no workspace grain to read at all.
+// The two arms are kind-disjoint by construction (a kind is declared with a
+// FanOutTo or without one, never both), so UNION ALL cannot double-count
+// one kind between them; the exclusion in the first arm is defensive, so
+// the split
 // holds even if that ever stopped being true of the data.
 func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) {
 	standalone := standaloneFleetKinds()

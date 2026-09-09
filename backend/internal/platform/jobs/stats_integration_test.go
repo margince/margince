@@ -578,11 +578,22 @@ func TestSweepIgnoresAWorkspacesSupersededFailure(t *testing.T) {
 // TestSweepOmitsADispatchersOwnRow — a dispatcher carries no workspace, so
 // it is not one workspace's share of anything. Counting it would add a
 // phantom tenant to every sweep it tagged.
+//
+// gmail_sync is seeded alongside the made-up kind deliberately: a fixture
+// kind can never appear in the standalone-fleet-kind set regardless of
+// whether that set is derived correctly, so it alone would keep passing
+// even if the new predicate started routing every dispatcher's own row into
+// the per-kind arm. gmail_sync is a REAL declared dispatcher (FanOutTo:
+// "capture_sync") and is the case that would actually catch that mistake.
 func TestSweepOmitsADispatchersOwnRow(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	seedJob(ctx, t, pool, seed{
 		Kind: "the_dispatcher", State: "completed",
+		Tags: []string{jobs.SweepTag},
+	})
+	seedJob(ctx, t, pool, seed{
+		Kind: "gmail_sync", State: "completed",
 		Tags: []string{jobs.SweepTag},
 	})
 
@@ -593,14 +604,16 @@ func TestSweepOmitsADispatchersOwnRow(t *testing.T) {
 	if _, ok := sweepFor(snap, "the_dispatcher"); ok {
 		t.Error("an untenanted row was counted as a workspace's share of a fleet pass")
 	}
+	if _, ok := sweepFor(snap, "gmail_sync"); ok {
+		t.Error("a real dispatcher's own row was counted — its children (capture_sync) carry the per-workspace signal, not its own row")
+	}
 }
 
-// TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace — margince#4983:
-// a Fleet kind that fans out to nothing (embed_drift_sweep, ADR-0103's
-// collapsed shape) never carries a workspace_id, so its own tagged row used
-// to be filtered out by the same test that correctly excludes a
-// dispatcher's row above — leaving the gauge unable to see ANY of its
-// passes, ever, and reading greenest exactly when one was failing.
+// TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace — a Fleet kind
+// that fans out to nothing (embed_drift_sweep, ADR-0103's collapsed shape)
+// never carries a workspace_id, so a query keyed only on workspace_id
+// excludes every one of its rows forever — the gauge would then read
+// greenest exactly when such a pass was failing on every tick.
 // embed_drift_sweep is used rather than a made-up kind for the same reason
 // TestTheUnitPairSeesAFailedConnectionTheWorkspacePairMasks uses
 // telegram_poll: the standalone-kind arm is derived from the contract, so a
@@ -661,6 +674,42 @@ func TestSweepReadsOnlyTheLatestTickOfAStandaloneFleetPass(t *testing.T) {
 	}
 	if pass.Failed != 0 {
 		t.Errorf("Failed = %d, want 0: the LATEST tick succeeded", pass.Failed)
+	}
+}
+
+// TestSweepDoesNotDoubleCountAStandaloneKindsRowThatCarriesAWorkspaceID —
+// nothing in the tree writes a workspace_id onto an embed_drift_sweep row
+// today, so the per-workspace arm's exclusion of the standalone-kind set is
+// defensive rather than load-bearing. This is what proves it actually holds:
+// without it, a row shaped like the second one below would be read by BOTH
+// arms and summed into one inflated count by the outer GROUP BY.
+func TestSweepDoesNotDoubleCountAStandaloneKindsRowThatCarriesAWorkspaceID(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	ctx := t.Context()
+
+	// The ordinary shape: no workspace_id at all.
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "completed",
+		Tags: []string{jobs.SweepTag},
+	})
+	// A row of the SAME kind that also carries a workspace_id — a shape
+	// nothing here produces, exercising the defensive exclusion rather than
+	// data the fleet actually writes.
+	seedJob(ctx, t, pool, seed{
+		Kind: "embed_drift_sweep", State: "completed",
+		Tags: []string{jobs.SweepTag}, Workspace: ids.NewV7(),
+	})
+
+	snap, err := jobs.Stats(ctx, pool)
+	if err != nil {
+		t.Fatalf("Stats: %v", err)
+	}
+	pass, ok := sweepFor(snap, "embed_drift_sweep")
+	if !ok {
+		t.Fatal("no sweep reported for the standalone kind")
+	}
+	if pass.Workspaces != 1 {
+		t.Errorf("Workspaces = %d, want 1: a row that slipped past the per-workspace arm's exclusion must not also be summed on top of the per-kind arm's own reading", pass.Workspaces)
 	}
 }
 
