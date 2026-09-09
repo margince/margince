@@ -23,10 +23,10 @@ import (
 )
 
 type dossierResponse struct {
-	CompanyID string `json:"company_id"`
-	GeneratedBy    string `json:"generated_by"`
-	NeedsRefresh   *bool  `json:"needs_refresh"`
-	Sections       []struct {
+	CompanyID    string `json:"company_id"`
+	GeneratedBy  string `json:"generated_by"`
+	NeedsRefresh *bool  `json:"needs_refresh"`
+	Sections     []struct {
 		Kind      string `json:"kind"`
 		Sentences []struct {
 			Text     string `json:"text"`

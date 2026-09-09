@@ -30,7 +30,7 @@ type StageChanged struct {
 	ToStatus           string
 	AmountMinor        *int64
 	Currency           *string
-	PartnerCompanyID       *ids.UUID
+	PartnerCompanyID   *ids.UUID
 	PartnerAttribution *string
 	FxRateToBase       *string
 }

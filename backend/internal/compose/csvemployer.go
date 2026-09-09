@@ -234,8 +234,8 @@ func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migra
 	pid := ids.From[ids.PersonKind](personID)
 	oid := resolved.id
 	if _, err := w.people.CreateRelationship(ctx, people.CreateRelationshipInput{
-		Kind:           relationshipKindEmployment,
-		PersonID:       &pid,
+		Kind:      relationshipKindEmployment,
+		PersonID:  &pid,
 		CompanyID: &oid,
 		// Stated rather than left nil: a company column on a contact row means
 		// THE employer, singular, and a caller who said so must not have the

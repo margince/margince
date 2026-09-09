@@ -234,10 +234,10 @@ func coverageDeniedPerms() principal.Permissions {
 	return principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"deal":         {Read: true},
-			"person":       {Read: true},
-			"company": {Read: true},
-			"activity":     {Read: true},
+			"deal":     {Read: true},
+			"person":   {Read: true},
+			"company":  {Read: true},
+			"activity": {Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}
@@ -326,7 +326,7 @@ func personDeniedPerms() principal.Permissions {
 		Objects: map[string]principal.ObjectGrant{
 			"deal":         {Read: true},
 			"relationship": {Read: true},
-			"company": {Read: true},
+			"company":      {Read: true},
 			"activity":     {Read: true},
 		},
 		RowScope: principal.RowScopeAll,

@@ -117,15 +117,15 @@ func (g *CommissionGen) accrue(ctx context.Context, env events.Envelope, moved d
 		return err
 	}
 	_, err = g.ledger.Accrue(ctx, commissions.AccrueInput{
-		DealID:         ids.From[ids.DealKind](env.Entity.ID),
-		PartnerCompanyID:   ids.From[ids.CompanyKind](*moved.PartnerCompanyID),
-		TriggerEventID: &env.EventID,
-		Attribution:    *moved.PartnerAttribution,
-		MarginTier:     tier,
-		RateBps:        commissions.RateBpsForTier(tier),
-		BasisMinor:     *moved.AmountMinor,
-		Currency:       *moved.Currency,
-		FxRateToBase:   moved.FxRateToBase,
+		DealID:           ids.From[ids.DealKind](env.Entity.ID),
+		PartnerCompanyID: ids.From[ids.CompanyKind](*moved.PartnerCompanyID),
+		TriggerEventID:   &env.EventID,
+		Attribution:      *moved.PartnerAttribution,
+		MarginTier:       tier,
+		RateBps:          commissions.RateBpsForTier(tier),
+		BasisMinor:       *moved.AmountMinor,
+		Currency:         *moved.Currency,
+		FxRateToBase:     moved.FxRateToBase,
 	})
 	switch {
 	case errors.Is(err, commissions.ErrAlreadyAccrued):

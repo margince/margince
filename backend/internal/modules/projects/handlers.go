@@ -191,12 +191,12 @@ func projectCreateInput(req crmcontracts.CreateProjectRequest) (CreateProjectInp
 		return CreateProjectInput{}, err
 	}
 	in := CreateProjectInput{
-		Name:           name,
-		CompanyID: pathID[ids.CompanyKind](req.CompanyId),
-		OwnerID:        idArg[ids.UserKind](req.OwnerId),
-		Description:    req.Description,
-		Source:         req.Source,
-		CustomFields:   req.AdditionalProperties,
+		Name:         name,
+		CompanyID:    pathID[ids.CompanyKind](req.CompanyId),
+		OwnerID:      idArg[ids.UserKind](req.OwnerId),
+		Description:  req.Description,
+		Source:       req.Source,
+		CustomFields: req.AdditionalProperties,
 	}
 	if req.StartedAt != nil {
 		in.StartedAt = &req.StartedAt.Time

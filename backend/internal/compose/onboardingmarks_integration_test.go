@@ -73,7 +73,7 @@ func TestTheColdStartParksBothMarksAndTheConfirmationBindsEachToItsSlot(t *testi
 		}
 	}
 	// The profile the shell reads carries both URLs, each on its own path.
-	profile, err := e.People.GetCompany(ctx)
+	profile, err := e.People.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("read the company profile: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestTheConfirmationKeepsTheBadgeAPersonChoseAndStillLandsTheLockup(t *testi
 		int64(len(chosen)), imagenorm.ContentType); err != nil {
 		t.Fatalf("store the person's own badge: %v", err)
 	}
-	if _, err := e.People.SetCompanyLogo(human, people.LogoIcon, uploaded, "badge.png"); err != nil {
+	if _, err := e.People.SetAnchorCompanyLogo(human, people.LogoIcon, uploaded, "badge.png"); err != nil {
 		t.Fatalf("record the person's own badge: %v", err)
 	}
 

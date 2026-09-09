@@ -114,7 +114,7 @@ var activityLinkRepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"person":                {Read: true},
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"deal":                  {Read: true},
 		"activity":              {Read: true},
 		"installation_settings": {Read: true},

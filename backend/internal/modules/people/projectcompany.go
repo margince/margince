@@ -151,16 +151,16 @@ func CompaniesOnProjectTx(
 
 // ProjectCompany is one company's place on a project.
 type ProjectCompany struct {
-	CompanyID ids.CompanyID
-	DisplayName    string
-	Role           string
+	CompanyID   ids.CompanyID
+	DisplayName string
+	Role        string
 }
 
 // SetProjectCompanyInput is one company's place on a project.
 type SetProjectCompanyInput struct {
-	ProjectID      ids.ProjectID
+	ProjectID ids.ProjectID
 	CompanyID ids.CompanyID
-	Role           string
+	Role      string
 }
 
 // SetProjectCompany puts a company on a project, or re-roles the edge that

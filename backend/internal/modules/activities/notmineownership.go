@@ -68,10 +68,10 @@ var handOffTriggers = []string{
 // before any statement names it. Each record's own table is its entity type,
 // and the name reaches SQL through pgx.Identifier.Sanitize below.
 var ownerBearing = map[datasource.EntityType]bool{
-	datasource.EntityPerson:       true,
+	datasource.EntityPerson:  true,
 	datasource.EntityCompany: true,
-	datasource.EntityDeal:         true,
-	datasource.EntityLead:         true,
+	datasource.EntityDeal:    true,
+	datasource.EntityLead:    true,
 }
 
 // notMineRearm is one trigger's arm of the re-arm.

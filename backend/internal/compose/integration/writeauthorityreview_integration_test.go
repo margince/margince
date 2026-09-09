@@ -84,12 +84,12 @@ func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
 	// reason its own name does not mention.
 	starts := time.Date(2026, time.January, 5, 0, 0, 0, 0, time.UTC)
 	contract, err := store.CreateContract(owner, contracts.CreateContractInput{
-		CompanyID: ids.From[ids.CompanyKind](company),
-		DealID:         idPtr(ids.From[ids.DealKind](deal)),
-		Title:          "Framework agreement",
-		StartsOn:       &starts,
-		ValueBasis:     "total",
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		DealID:     idPtr(ids.From[ids.DealKind](deal)),
+		Title:      "Framework agreement",
+		StartsOn:   &starts,
+		ValueBasis: "total",
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatalf("the owner creates the contract → %v", err)

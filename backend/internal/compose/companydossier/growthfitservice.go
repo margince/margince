@@ -296,7 +296,7 @@ func growthFitFingerprint(in Input, routingVersion string, offering Offering, la
 
 func (g storedGrowthFit) wire(companyID ids.CompanyID) crmcontracts.CompanyGrowthFit {
 	out := crmcontracts.CompanyGrowthFit{
-		CompanyId:   openapi_types.UUID(companyID.UUID),
+		CompanyId:        openapi_types.UUID(companyID.UUID),
 		Band:             crmcontracts.GrowthFitBand(g.Band),
 		DataCompleteness: g.Completeness,
 		GeneratedAt:      g.GeneratedAt,

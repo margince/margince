@@ -225,7 +225,7 @@ func TestCompanyReadMessageHandlerKeepsUnavailableStatesHonest(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			recorder := httptest.NewRecorder()
-			handlers.MessageCompanySiteRead(recorder, request.Clone(request.Context()), readID)
+			handlers.MessageAnchorCompanySiteRead(recorder, request.Clone(request.Context()), readID)
 			if recorder.Code != http.StatusNotImplemented {
 				t.Fatalf("status = %d, want 501", recorder.Code)
 			}

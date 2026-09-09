@@ -367,7 +367,7 @@ type attachmentScan struct {
 	category    string
 	docState    string
 	supersedes  *ids.UUID
-	companyID       *ids.UUID
+	companyID   *ids.UUID
 	contractID  *ids.UUID
 }
 

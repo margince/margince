@@ -52,8 +52,8 @@ import (
 // meetingFixture is the account a briefing is asked about: a deal, the people
 // on it, and the exchange history that decides who counts as engaged.
 type meetingFixture struct {
-	company  ids.UUID
-	deal ids.UUID
+	company ids.UUID
+	deal    ids.UUID
 	// engaged has traffic both ways inside the window; quiet has none. The
 	// pair is the fixture's whole point — "everyone is engaged" and "nobody is"
 	// are both answers a bug can produce, and only a mixed account can tell
@@ -91,15 +91,15 @@ func (s *scenario) seedMeetingAccount(t *testing.T) meetingFixture {
 	// state the product cannot reach.
 	pipeline, stage := s.defaultOpenStage(t)
 
-	f.org = s.seedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
+	f.company = s.seedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
 		VALUES ($1, $2, 'Vietnam Partner JSC', 'manual', 'human:x')`, s.Colleague)
 	f.deal = s.seedID(t, `INSERT INTO deal
 		(id, owner_id, company_id, pipeline_id, stage_id, name, status, source, captured_by)
 		VALUES ($1, $2, $3, $4, $5, 'Distribution agreement', 'open', 'manual', 'human:x')`,
-		s.Colleague, f.org, pipeline, stage)
+		s.Colleague, f.company, pipeline, stage)
 
-	f.engaged = s.seedPerson(t, engagedPersonName, f.org)
-	f.quiet = s.seedPerson(t, quietPersonName, f.org)
+	f.engaged = s.seedPerson(t, engagedPersonName, f.company)
+	f.quiet = s.seedPerson(t, quietPersonName, f.company)
 
 	// Both are seats on the deal. Only one of them has spoken.
 	s.seed(t, `INSERT INTO relationship (id, kind, deal_id, person_id, role, source, captured_by)
@@ -113,9 +113,9 @@ func (s *scenario) seedMeetingAccount(t *testing.T) meetingFixture {
 	// a one-sided conversation does not read as a relationship. That asymmetry
 	// is the product's claim and the fixture has to honour it.
 	f.exchanges = map[ids.UUID]bool{
-		s.seedDatedActivity(t, "email", "inbound", f.engaged, f.org, f.deal, daysAgo(20),
+		s.seedDatedActivity(t, "email", "inbound", f.engaged, f.company, f.deal, daysAgo(20),
 			"Cảm ơn — we will review the appendix this week."): true,
-		s.seedDatedActivity(t, "email", "outbound", f.engaged, f.org, f.deal, daysAgo(18),
+		s.seedDatedActivity(t, "email", "outbound", f.engaged, f.company, f.deal, daysAgo(18),
 			"Ich schicke die Aufstellung mit."): true,
 	}
 
@@ -133,21 +133,21 @@ func (s *scenario) seedColdAccount(t *testing.T) meetingFixture {
 	var f meetingFixture
 	pipeline, stage := s.defaultOpenStage(t)
 
-	f.org = s.seedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
+	f.company = s.seedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
 		VALUES ($1, $2, 'Quiet Partner GmbH', 'manual', 'human:x')`, s.Colleague)
 	f.deal = s.seedID(t, `INSERT INTO deal
 		(id, owner_id, company_id, pipeline_id, stage_id, name, status, source, captured_by)
 		VALUES ($1, $2, $3, $4, $5, 'Renewal', 'open', 'manual', 'human:x')`,
-		s.Colleague, f.org, pipeline, stage)
+		s.Colleague, f.company, pipeline, stage)
 
-	f.engaged = s.seedPerson(t, engagedPersonName, f.org)
+	f.engaged = s.seedPerson(t, engagedPersonName, f.company)
 	s.seed(t, `INSERT INTO relationship (id, kind, deal_id, person_id, role, source, captured_by)
 		VALUES ($1, 'deal_stakeholder', $2, $3, 'champion', 'manual', 'human:x')`,
 		ids.NewV7(), f.deal, f.engaged)
 
 	// The one exchange there has ever been, long enough ago to be cold.
 	f.exchanges = map[ids.UUID]bool{
-		s.seedDatedActivity(t, "email", "inbound", f.engaged, f.org, f.deal, daysAgo(coldDays),
+		s.seedDatedActivity(t, "email", "inbound", f.engaged, f.company, f.deal, daysAgo(coldDays),
 			"We will come back to you after the budget round."): true,
 	}
 	return f

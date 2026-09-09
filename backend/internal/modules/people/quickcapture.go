@@ -56,16 +56,16 @@ type QuickCaptureInput struct {
 	// answered the question the name was only guessing at.
 	CompanyID   *ids.CompanyID
 	CompanyName *string
-	Role             *string
-	ProfileURL       *string
-	Email            *string
-	Phone            *string
+	Role        *string
+	ProfileURL  *string
+	Email       *string
+	Phone       *string
 }
 
 // QuickCaptureResult is the person that landed, plus the employer they were
 // attached to and whether that employer is a record this call created.
 type QuickCaptureResult struct {
-	Person              crmcontracts.Person
+	Person         crmcontracts.Person
 	CompanyID      *ids.CompanyID
 	CompanyCreated bool
 }
@@ -118,11 +118,11 @@ func (s *Store) quickCaptureInTx(
 
 	personID := ids.From[ids.PersonKind](ids.UUID(person.Id))
 	if _, err := s.CreateRelationshipTx(ctx, tx, CreateRelationshipInput{
-		Kind:           employmentKind,
-		PersonID:       &personID,
+		Kind:      employmentKind,
+		PersonID:  &personID,
 		CompanyID: companyID,
-		Role:           in.Role,
-		Source:         quickCaptureSource,
+		Role:      in.Role,
+		Source:    quickCaptureSource,
 	}); err != nil {
 		return out, err
 	}

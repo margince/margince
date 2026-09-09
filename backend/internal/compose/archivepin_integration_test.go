@@ -181,9 +181,9 @@ func bumpVersion(as context.Context, t *testing.T, e *integration.Env, p *Provid
 	t.Helper()
 	before := versionOf(t, e, table, ref.ID)
 	patch := map[datasource.EntityType]string{
-		datasource.EntityPerson:       `{"title":"changed under the approval"}`,
+		datasource.EntityPerson:  `{"title":"changed under the approval"}`,
 		datasource.EntityCompany: `{"description":"changed under the approval"}`,
-		datasource.EntityDeal:         `{"name":"changed under the approval"}`,
+		datasource.EntityDeal:    `{"name":"changed under the approval"}`,
 	}[ref.Type]
 	if _, err := p.Update(as, datasource.UpdateInput{
 		Ref: ref, Patch: json.RawMessage(patch), Source: "test",

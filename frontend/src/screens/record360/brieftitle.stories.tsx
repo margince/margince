@@ -57,6 +57,6 @@ export const LongName: Story = {
 };
 
 // No name reached this reader — a withheld record, or a read that failed
-// before the organisation came back. The card still says what it is a reading
+// before the company came back. The card still says what it is a reading
 // of, in words that do not pretend to know which account it was.
 export const Unnamed: Story = { render: () => <Head /> };

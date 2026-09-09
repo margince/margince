@@ -54,7 +54,7 @@ import (
 // and borrowing the incumbent-import constants sends a reader to the overlay
 // path looking for why this consumer lives there.
 const (
-	matchEntityPerson       = "person"
+	matchEntityPerson  = "person"
 	matchEntityCompany = "company"
 )
 

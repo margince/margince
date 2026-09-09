@@ -28,7 +28,7 @@ import (
 func TestTheCompanyMarkIsSetAndTakenOffThroughOneStatement(t *testing.T) {
 	e := newAnchorEnv(t)
 
-	superseded, err := e.store.SetCompanyLogo(e.ctx, LogoWide, "logos/first.png", "first.png")
+	superseded, err := e.store.SetAnchorCompanyLogo(e.ctx, LogoWide, "logos/first.png", "first.png")
 	if err != nil {
 		t.Fatalf("setting the company mark: %v", err)
 	}
@@ -39,7 +39,7 @@ func TestTheCompanyMarkIsSetAndTakenOffThroughOneStatement(t *testing.T) {
 
 	// A second set hands back the first object, which is the only signal the
 	// caller has that its bytes are now unreferenced.
-	superseded, err = e.store.SetCompanyLogo(e.ctx, LogoWide, "logos/second.png", "second.png")
+	superseded, err = e.store.SetAnchorCompanyLogo(e.ctx, LogoWide, "logos/second.png", "second.png")
 	if err != nil {
 		t.Fatalf("replacing the company mark: %v", err)
 	}
@@ -73,10 +73,10 @@ func TestTheCompanyMarkIsSetAndTakenOffThroughOneStatement(t *testing.T) {
 func TestTheTwoCompanyMarksAreWrittenAndClearedIndependently(t *testing.T) {
 	e := newAnchorEnv(t)
 
-	if _, err := e.store.SetCompanyLogo(e.ctx, LogoWide, "logos/wide.png", "wide.png"); err != nil {
+	if _, err := e.store.SetAnchorCompanyLogo(e.ctx, LogoWide, "logos/wide.png", "wide.png"); err != nil {
 		t.Fatalf("setting the wide mark: %v", err)
 	}
-	if _, err := e.store.SetCompanyLogo(e.ctx, LogoIcon, "logos/icon.png", "icon.png"); err != nil {
+	if _, err := e.store.SetAnchorCompanyLogo(e.ctx, LogoIcon, "logos/icon.png", "icon.png"); err != nil {
 		t.Fatalf("setting the icon: %v", err)
 	}
 	assertCompanyMark(t, e, "logos/wide.png", "wide.png")

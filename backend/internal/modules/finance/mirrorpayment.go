@@ -19,10 +19,10 @@ import (
 )
 
 type paymentArgs struct {
-	connectionID   ids.UUID
-	companyID ids.CompanyID
-	payment        SourcePayment
-	capturedBy     string
+	connectionID ids.UUID
+	companyID    ids.CompanyID
+	payment      SourcePayment
+	capturedBy   string
 	// source is the provider's own name, stamped on every row it produced.
 	source string
 	rowIDs map[string]ids.UUID
@@ -128,7 +128,7 @@ func paymentImageOf(args paymentArgs, hash string) paymentImage {
 	pay := args.payment
 	return paymentImage{
 		CompanyID: args.companyID,
-		InvoiceID:      resolveInvoice(pay, args.rowIDs), Currency: pay.Currency,
+		InvoiceID: resolveInvoice(pay, args.rowIDs), Currency: pay.Currency,
 		AmountMinor: pay.AmountMinor, PaidAt: pay.PaidAt, SyncHash: hash,
 	}
 }

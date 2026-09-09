@@ -34,8 +34,8 @@ import (
 func boundedTagAuthor() principal.Permissions {
 	return principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
-			"tag":          {Create: true, Read: true, Update: true, Delete: true},
-			"person":       {Create: true, Read: true, Update: true, Delete: true},
+			"tag":     {Create: true, Read: true, Update: true, Delete: true},
+			"person":  {Create: true, Read: true, Update: true, Delete: true},
 			"company": {Create: true, Read: true, Update: true, Delete: true},
 		},
 		RowScope: principal.RowScopeOwn,

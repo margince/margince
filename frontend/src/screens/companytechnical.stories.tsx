@@ -25,7 +25,7 @@ export default meta;
 
 type Story = StoryObj;
 
-const ORG = "019ff000-0000-7000-8000-0000000000a1";
+const COMPANY = "019ff000-0000-7000-8000-0000000000a1";
 
 /** A technical fact as the contract sends it: the value, and the public record
  * that proved it. */
@@ -108,7 +108,7 @@ function lanes(
   overrides: Record<string, string> = {},
 ): Record<string, unknown> {
   return {
-    company_id: ORG,
+    company_id: COMPANY,
     lanes: ["dns", "certlog", "homepage"].map((lane) => ({
       lane,
       outcome: overrides[lane] ?? "applied",
@@ -129,14 +129,14 @@ export const Read: Story = {
   render: () => {
     installFetchStub({
       "GET /me": A_READER,
-      [`GET /companies/${ORG}/facts`]: () =>
+      [`GET /companies/${COMPANY}/facts`]: () =>
         jsonResponse({ data: READ_FACTS }),
-      [`GET /companies/${ORG}/technical-enrich/latest`]: () =>
+      [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse(lanes()),
     });
     return (
       <StoryProviders locale="de">
-        <TechnicalProfileCard companyId={ORG} />
+        <TechnicalProfileCard companyId={COMPANY} />
       </StoryProviders>
     );
   },
@@ -154,13 +154,13 @@ export const NotReadYet: Story = {
   render: () => {
     installFetchStub({
       "GET /me": A_READER,
-      [`GET /companies/${ORG}/facts`]: () => jsonResponse({ data: [] }),
-      [`GET /companies/${ORG}/technical-enrich/latest`]: () =>
+      [`GET /companies/${COMPANY}/facts`]: () => jsonResponse({ data: [] }),
+      [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse({ title: "not found" }, 404),
     });
     return (
       <StoryProviders locale="de">
-        <TechnicalProfileCard companyId={ORG} />
+        <TechnicalProfileCard companyId={COMPANY} />
       </StoryProviders>
     );
   },
@@ -177,16 +177,16 @@ export const OneSourceDidNotAnswer: Story = {
   render: () => {
     installFetchStub({
       "GET /me": A_READER,
-      [`GET /companies/${ORG}/facts`]: () =>
+      [`GET /companies/${COMPANY}/facts`]: () =>
         jsonResponse({
           data: READ_FACTS.filter((row) => row.field !== "operated_service"),
         }),
-      [`GET /companies/${ORG}/technical-enrich/latest`]: () =>
+      [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse(lanes({ certlog: "failed" })),
     });
     return (
       <StoryProviders locale="de">
-        <TechnicalProfileCard companyId={ORG} />
+        <TechnicalProfileCard companyId={COMPANY} />
       </StoryProviders>
     );
   },
@@ -198,16 +198,16 @@ export const TheSiteDeclined: Story = {
   render: () => {
     installFetchStub({
       "GET /me": A_READER,
-      [`GET /companies/${ORG}/facts`]: () =>
+      [`GET /companies/${COMPANY}/facts`]: () =>
         jsonResponse({
           data: READ_FACTS.filter((row) => row.field !== "technology"),
         }),
-      [`GET /companies/${ORG}/technical-enrich/latest`]: () =>
+      [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse(lanes({ homepage: "refused" })),
     });
     return (
       <StoryProviders locale="de">
-        <TechnicalProfileCard companyId={ORG} />
+        <TechnicalProfileCard companyId={COMPANY} />
       </StoryProviders>
     );
   },
@@ -230,14 +230,14 @@ export const AfterAHumanCorrection: Story = {
     );
     installFetchStub({
       "GET /me": A_READER,
-      [`GET /companies/${ORG}/facts`]: () =>
+      [`GET /companies/${COMPANY}/facts`]: () =>
         jsonResponse({ data: corrected }),
-      [`GET /companies/${ORG}/technical-enrich/latest`]: () =>
+      [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse(lanes()),
     });
     return (
       <StoryProviders locale="de">
-        <TechnicalProfileCard companyId={ORG} />
+        <TechnicalProfileCard companyId={COMPANY} />
       </StoryProviders>
     );
   },

@@ -26,8 +26,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	company360svc "github.com/margince/margince/backend/internal/compose/company360"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -116,7 +116,7 @@ func seedCompanySubjectSignal(t *testing.T, owner *pgx.Conn, company ids.UUID) i
 // oneHopFixture is an account with one of every edge the card draws, plus two
 // records that sit exactly two hops out.
 type oneHopFixture struct {
-	company, parent, reseller      ids.UUID
+	company, parent, reseller  ids.UUID
 	employee, stakeholder      ids.UUID
 	deal                       ids.UUID
 	grandparent, otherEmployer ids.UUID
@@ -130,17 +130,17 @@ func seedOneHop(t *testing.T, e *integration.Env) oneHopFixture {
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	f := oneHopFixture{
 		parent:   e.SeedCompany(t, "Holding", &e.Rep1),
-		company:      e.SeedCompany(t, "Acme", &e.Rep1),
+		company:  e.SeedCompany(t, "Acme", &e.Rep1),
 		reseller: e.SeedCompany(t, "Reseller", &e.Rep1),
 	}
-	e.WsExec(t, `UPDATE company SET parent_company_id = $2 WHERE id = $1`, f.org, f.parent)
+	e.WsExec(t, `UPDATE company SET parent_company_id = $2 WHERE id = $1`, f.company, f.parent)
 	e.WsExec(t, `INSERT INTO relationship (kind, company_id, counterparty_company_id, source, captured_by)
-		VALUES ('partner_of', $1, $2, 'manual', 'human:x')`, f.org, f.reseller)
+		VALUES ('partner_of', $1, $2, 'manual', 'human:x')`, f.company, f.reseller)
 
 	f.employee = e.SeedPerson(t, "Dana Buyer", &e.Rep1)
-	employ(t, e, f.employee, f.org, "cto")
+	employ(t, e, f.employee, f.company, "cto")
 	f.deal = e.SeedDeal(t, "Renewal", pipeline, stage, &e.Rep1)
-	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, f.deal, f.org)
+	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, f.deal, f.company)
 	f.stakeholder = e.SeedPerson(t, "Outside Counsel", &e.Rep1)
 	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:x')`, f.stakeholder, f.deal)
@@ -162,17 +162,17 @@ func TestCompanyGraphCentresOnTheAccountAndWalksOneHop(t *testing.T) {
 	f := seedOneHop(t, e)
 
 	graph, err := company360Service(e).Graph(e.As(e.Rep1, nil, graphAdminPerms),
-		ids.From[ids.CompanyKind](f.org))
+		ids.From[ids.CompanyKind](f.company))
 	if err != nil {
 		t.Fatalf("graph: %v", err)
 	}
-	if ids.UUID(graph.RootId) != f.org {
-		t.Errorf("root_id = %v, want the account %v", graph.RootId, f.org)
+	if ids.UUID(graph.RootId) != f.company {
+		t.Errorf("root_id = %v, want the account %v", graph.RootId, f.company)
 	}
 	if !graph.AsOf.Equal(company360Clock) {
 		t.Errorf("as_of = %v, want the read's pinned instant %v", graph.AsOf, company360Clock)
 	}
-	assertExactlyOneRoot(t, graph, f.org)
+	assertExactlyOneRoot(t, graph, f.company)
 	for _, want := range []ids.UUID{f.parent, f.reseller, f.employee, f.deal, f.stakeholder} {
 		if !graphHasNode(graph, want) {
 			t.Errorf("node %v is missing — it is one hop from the account", want)

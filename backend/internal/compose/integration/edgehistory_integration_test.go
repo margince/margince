@@ -36,11 +36,11 @@ import (
 func linkEmployment(t *testing.T, e *Env, person, company ids.UUID, role string) ids.UUID {
 	t.Helper()
 	rel, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind:           "employment",
-		PersonID:       ptr(PersonIDOf(person)),
+		Kind:      "employment",
+		PersonID:  ptr(PersonIDOf(person)),
 		CompanyID: ptr(ids.From[ids.CompanyKind](company)),
-		Role:           &role,
-		Source:         "manual",
+		Role:      &role,
+		Source:    "manual",
 	})
 	if err != nil {
 		t.Fatalf("linking the person to the company: %v", err)
@@ -54,10 +54,10 @@ func linkEmployment(t *testing.T, e *Env, person, company ids.UUID, role string)
 func seedCoSell(t *testing.T, e *Env, company, counterparty ids.UUID) ids.UUID {
 	t.Helper()
 	rel, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind:              "co_sell_with",
-		CompanyID:    ptr(ids.From[ids.CompanyKind](company)),
+		Kind:                  "co_sell_with",
+		CompanyID:             ptr(ids.From[ids.CompanyKind](company)),
 		CounterpartyCompanyID: ptr(ids.From[ids.CompanyKind](counterparty)),
-		Source:            "manual",
+		Source:                "manual",
 	})
 	if err != nil {
 		t.Fatalf("linking the two companies: %v", err)

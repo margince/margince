@@ -203,7 +203,7 @@ type ListSignalsInput struct {
 	// company's, but it is compared against BOTH the resolver's
 	// resolved_company_id and the polymorphic (entity_type, entity_id) subject
 	// pair, so it stays untyped here (rule 6).
-	CompanyID  *ids.UUID
+	CompanyID       *ids.UUID
 	IncludeArchived bool
 }
 

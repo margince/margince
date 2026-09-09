@@ -62,11 +62,11 @@ func LinkTargetVisibleClause(ctx context.Context, alias string, arg func(any) in
 // half a dozen table-name positions across the package, and a typo in any
 // of them silently renders a predicate that matches nothing.
 const (
-	tablePerson       = "person"
+	tablePerson  = "person"
 	tableCompany = "company"
-	tableDeal         = "deal"
-	tableLead         = "lead"
-	tableProject      = "project"
+	tableDeal    = "deal"
+	tableLead    = "lead"
+	tableProject = "project"
 )
 
 // linkTargetTables names every record type an activity_link points at, in

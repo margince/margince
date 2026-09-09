@@ -169,7 +169,7 @@ const EMPTY_USAGE = {
   budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" as const },
 };
 
-const ORG_360_VIEW = {
+const COMPANY_360_VIEW = {
   as_of: "2026-08-01T09:00:00Z",
   company: {
     id: "o-1",
@@ -270,7 +270,7 @@ function stubAgentRailApi(routes: FetchRoutes = {}) {
       return routes.license ? routes.license() : jsonResponse(LICENSE("valid"));
     }
     if (pathname.endsWith("/360")) {
-      return jsonResponse({ state: "ready", view: ORG_360_VIEW });
+      return jsonResponse({ state: "ready", view: COMPANY_360_VIEW });
     }
     return jsonResponse({ data: [], page: emptyPage });
   });

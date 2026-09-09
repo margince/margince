@@ -31,7 +31,7 @@ type Company = components["schemas"]["Company"];
 // the pair before it draws.
 const CAN_REJECT = meRoute({ company: ["read", "update", "delete"] });
 
-const ORG: Company = {
+const COMPANY: Company = {
   writable: true,
   id: "00000000-0000-7000-8000-0000000000c1",
   display_name: "Expensify Ltd",
@@ -68,7 +68,7 @@ function inMenu(company: Company, me: ReturnType<typeof meRoute>) {
  * outlives the record and somebody reviewing the blocked-domain list months
  * later has only that sentence. */
 export const Offered: Story = {
-  render: () => inMenu(ORG, CAN_REJECT),
+  render: () => inMenu(COMPANY, CAN_REJECT),
 };
 
 /** A seat holding the archive and not the standing domain decision. Nothing is
@@ -77,12 +77,12 @@ export const Offered: Story = {
  * cause, and a control the reader has no authority for reports no fact about
  * this account. */
 export const WithoutBothGrants: Story = {
-  render: () => inMenu(ORG, meRoute({ company: ["read", "delete"] })),
+  render: () => inMenu(COMPANY, meRoute({ company: ["read", "delete"] })),
 };
 
 /** A company somebody typed in by hand. It was never derived from mail, so
  * there is no domain to refuse and nothing a refusal would stop — Archive is
  * the verb for this record, and it is next door in the same menu. */
 export const NoDomainToRefuse: Story = {
-  render: () => inMenu({ ...ORG, domains: [] }, CAN_REJECT),
+  render: () => inMenu({ ...COMPANY, domains: [] }, CAN_REJECT),
 };

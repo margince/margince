@@ -56,12 +56,12 @@ func (e *SearchEnv) exportRep(user, team ids.UUID) context.Context {
 // slice and a rep3 (team2) slice, so a team-scoped caller must see its
 // own and none of the other's.
 type exportFixture struct {
-	rep1Person, rep3Person ids.UUID
-	rep1Company, rep3Company       ids.UUID
-	rep1Deal, rep3Deal     ids.UUID
-	rep1Lead, rep3Lead     ids.UUID
-	rep1Activity           ids.UUID
-	rep3Activity           ids.UUID
+	rep1Person, rep3Person   ids.UUID
+	rep1Company, rep3Company ids.UUID
+	rep1Deal, rep3Deal       ids.UUID
+	rep1Lead, rep3Lead       ids.UUID
+	rep1Activity             ids.UUID
+	rep3Activity             ids.UUID
 }
 
 func (e *SearchEnv) seedExportFixture(t *testing.T) exportFixture {

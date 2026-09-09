@@ -186,8 +186,8 @@ func (r *mergeResolver) Guards(ctx context.Context, cmd MergeCommand) error {
 // they named none.
 type EnrichCommand struct {
 	CompanyID ids.UUID
-	URL            string
-	Depth          EnrichDepth
+	URL       string
+	Depth     EnrichDepth
 }
 
 // NewEnrichCall binds one site read to the resolver that answers for it,

@@ -19,8 +19,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	company360svc "github.com/margince/margince/backend/internal/compose/company360"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -361,7 +361,7 @@ func TestWithoutTheActivityGrantTheReadingIsRefusedNotEmptied(t *testing.T) {
 var roleProposalReadOnlyPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"person":                {Read: true},
 		"deal":                  {Read: true, Update: true},
 		"relationship":          {Read: true, Create: true},

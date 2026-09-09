@@ -22,7 +22,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const ORG = "o-1";
+const COMPANY = "o-1";
 
 // The version is what both verbs pin. A fixture without it models a row the
 // server does not produce, and every read that offers a verdict now returns
@@ -94,8 +94,8 @@ describe("a human's verdict on a machine's claim", () => {
     const calls = recordCalls();
     wrap(
       <EvidenceVerdict
-        companyId={ORG}
-        claim={profileFieldClaim(ORG, field)}
+        companyId={COMPANY}
+        claim={profileFieldClaim(COMPANY, field)}
         canEdit
       />,
     );
@@ -120,8 +120,8 @@ describe("a human's verdict on a machine's claim", () => {
     const calls = recordCalls();
     wrap(
       <EvidenceVerdict
-        companyId={ORG}
-        claim={profileFieldClaim(ORG, field)}
+        companyId={COMPANY}
+        claim={profileFieldClaim(COMPANY, field)}
         canEdit
       />,
     );
@@ -141,7 +141,7 @@ describe("a human's verdict on a machine's claim", () => {
 
   it("addresses a single-value fact by its bare-colon key", async () => {
     const calls = recordCalls();
-    wrap(<EvidenceVerdict companyId={ORG} claim={factClaim(ORG, fact)} canEdit />);
+    wrap(<EvidenceVerdict companyId={COMPANY} claim={factClaim(COMPANY, fact)} canEdit />);
 
     await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
@@ -155,8 +155,8 @@ describe("a human's verdict on a machine's claim", () => {
   it("offers no verdict to a reader who cannot update the company", () => {
     wrap(
       <EvidenceVerdict
-        companyId={ORG}
-        claim={profileFieldClaim(ORG, field)}
+        companyId={COMPANY}
+        claim={profileFieldClaim(COMPANY, field)}
         canEdit={false}
       />,
     );
@@ -167,8 +167,8 @@ describe("a human's verdict on a machine's claim", () => {
   it("says who stood behind a value rather than offering to confirm it again", () => {
     wrap(
       <EvidenceVerdict
-        companyId={ORG}
-        claim={profileFieldClaim(ORG, {
+        companyId={COMPANY}
+        claim={profileFieldClaim(COMPANY, {
           ...field,
           source: "human",
           verified_at: "2026-08-02T09:00:00Z",

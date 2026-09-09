@@ -295,10 +295,10 @@ func (d stored) wire(companyID ids.CompanyID, now time.Time) crmcontracts.Compan
 		})
 	}
 	out := crmcontracts.CompanyDossier{
-		CompanyId: openapi_types.UUID(companyID.UUID),
-		GeneratedAt:    d.GeneratedAt,
-		GeneratedBy:    crmcontracts.WrittenBy(d.GeneratedBy),
-		Sections:       sections,
+		CompanyId:   openapi_types.UUID(companyID.UUID),
+		GeneratedAt: d.GeneratedAt,
+		GeneratedBy: crmcontracts.WrittenBy(d.GeneratedBy),
+		Sections:    sections,
 	}
 	// Said out loud BESIDE the content, never instead of it: a stale dossier is
 	// more useful than none. A company with no dated source is not stale — it

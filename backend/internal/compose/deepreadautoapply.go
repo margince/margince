@@ -103,11 +103,11 @@ func (w *siteDeepReadWorker) applyForRequester(ctx context.Context, args SiteDee
 		return proposalIDs, nil
 	}
 	if err := w.people.ApplyDeepRead(ctx, people.DeepReadProposal{
-		CompanyID: companyID,
-		SourceURL:      claim.SeedURL,
-		SiteReadID:     args.SiteReadID,
-		Fields:         fields,
-		Facts:          mergedFacts,
+		CompanyID:  companyID,
+		SourceURL:  claim.SeedURL,
+		SiteReadID: args.SiteReadID,
+		Fields:     fields,
+		Facts:      mergedFacts,
 	}); err != nil {
 		// The people are staged; surfacing the error finishes the read failed,
 		// which is what tells the human the company half did not land.
@@ -139,11 +139,11 @@ func (w *siteDeepReadWorker) autoApply(ctx context.Context, args SiteDeepReadArg
 	var applyErr error
 	if len(fields) > 0 || len(mergedFacts) > 0 {
 		if err := w.people.ApplyDeepRead(ctx, people.DeepReadProposal{
-			CompanyID: companyID,
-			SourceURL:      claim.SeedURL,
-			SiteReadID:     args.SiteReadID,
-			Fields:         fields,
-			Facts:          mergedFacts,
+			CompanyID:  companyID,
+			SourceURL:  claim.SeedURL,
+			SiteReadID: args.SiteReadID,
+			Fields:     fields,
+			Facts:      mergedFacts,
 		}); err != nil {
 			applyErr, outcome = err, autoEnrichOutcomeFailed
 		} else {

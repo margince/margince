@@ -56,11 +56,11 @@ func contractOnArchivedDeal(t *testing.T, e *Env) ids.ContractID {
 	anchorOnCompany(t, e, dealUUID, company)
 
 	created, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
-		CompanyID: ids.From[ids.CompanyKind](company),
-		DealID:         &deal,
-		Title:          "An agreement on a deal that goes away",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		DealID:     &deal,
+		Title:      "An agreement on a deal that goes away",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -100,11 +100,11 @@ func TestAContractOnALiveAnchorStaysReadable(t *testing.T) {
 	anchorOnCompany(t, e, dealUUID, company)
 
 	created, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
-		CompanyID: ids.From[ids.CompanyKind](company),
-		DealID:         &deal,
-		Title:          "An agreement on a live deal",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		DealID:     &deal,
+		Title:      "An agreement on a live deal",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatal(err)

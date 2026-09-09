@@ -35,13 +35,13 @@ import (
 )
 
 type contractVisEnv struct {
-	store *Store
-	owner *pgx.Conn
-	pool  *pgxpool.Pool
-	ws    ids.UUID
-	user  ids.UUID
-	company   ids.UUID
-	deal  ids.UUID
+	store   *Store
+	owner   *pgx.Conn
+	pool    *pgxpool.Pool
+	ws      ids.UUID
+	user    ids.UUID
+	company ids.UUID
+	deal    ids.UUID
 }
 
 func setupContractVis(t *testing.T) *contractVisEnv {
@@ -78,7 +78,7 @@ func setupContractVis(t *testing.T) *contractVisEnv {
 			[]any{e.user, "rep-" + e.user.String() + "@vis.test"},
 		},
 		{`INSERT INTO company (id, display_name, source, captured_by)
-		  VALUES ($1, 'Acme', 'manual', 'human:test')`, []any{e.org}},
+		  VALUES ($1, 'Acme', 'manual', 'human:test')`, []any{e.company}},
 	} {
 		if _, err := owner.Exec(ctx, seed.sql, seed.args...); err != nil {
 			t.Fatalf("seeding: %v", err)
@@ -111,13 +111,13 @@ func (e *contractVisEnv) seedDealAndContract(t *testing.T) ids.UUID {
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO deal (id, company_id, name, pipeline_id, stage_id, owner_id, source, captured_by)
 		VALUES ($1, $2, 'A deal', $3, $4, $5, 'manual', 'human:test')`,
-		e.deal, e.org, pipeline, stage, e.user); err != nil {
+		e.deal, e.company, pipeline, stage, e.user); err != nil {
 		t.Fatalf("seeding the deal: %v", err)
 	}
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO contract (id, company_id, deal_id, title, value_basis, status, source, captured_by)
 		VALUES ($1, $2, $3, 'An agreement', 'total', 'active', 'manual', 'human:test')`,
-		contract, e.org, e.deal); err != nil {
+		contract, e.company, e.deal); err != nil {
 		t.Fatalf("seeding the contract: %v", err)
 	}
 	return contract

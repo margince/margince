@@ -278,16 +278,16 @@ var segmentEngines = map[string]storekit.Query{
 		Table:     "deal",
 		BaseWhere: whereArchivedNull,
 		Fields: map[string]storekit.Field{
-			"pipeline_id":       {Expr: "t.pipeline_id", Type: storekit.FieldID, References: storekit.RefPipeline},
-			"stage_id":          {Expr: "t.stage_id", Type: storekit.FieldID, References: storekit.RefStage},
-			ownerIDField:        {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
-			ownerTeamIDField:    ownerTeamField,
-			"company_id":   {Expr: "t.company_id", Type: storekit.FieldID, References: storekit.RefCompany},
-			"partner_company_id":    {Expr: "t.partner_company_id", Type: storekit.FieldID, References: storekit.RefCompany},
-			"project_id":        {Expr: "t.project_id", Type: storekit.FieldID, References: storekit.RefProject},
-			"status":            {Expr: "t.status", Type: storekit.FieldPicklist, Options: dealStatusValues},
-			"forecast_category": {Expr: "t.forecast_category", Type: storekit.FieldPicklist, Options: forecastValues},
-			tagFilterField:      tagLinkFor("deal"),
+			"pipeline_id":        {Expr: "t.pipeline_id", Type: storekit.FieldID, References: storekit.RefPipeline},
+			"stage_id":           {Expr: "t.stage_id", Type: storekit.FieldID, References: storekit.RefStage},
+			ownerIDField:         {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
+			ownerTeamIDField:     ownerTeamField,
+			"company_id":         {Expr: "t.company_id", Type: storekit.FieldID, References: storekit.RefCompany},
+			"partner_company_id": {Expr: "t.partner_company_id", Type: storekit.FieldID, References: storekit.RefCompany},
+			"project_id":         {Expr: "t.project_id", Type: storekit.FieldID, References: storekit.RefProject},
+			"status":             {Expr: "t.status", Type: storekit.FieldPicklist, Options: dealStatusValues},
+			"forecast_category":  {Expr: "t.forecast_category", Type: storekit.FieldPicklist, Options: forecastValues},
+			tagFilterField:       tagLinkFor("deal"),
 			// The customer's own attributes, so "the pipeline for manufacturing"
 			// is a filter rather than a spreadsheet. Same columns and same types
 			// as the company engine offers directly, reached through the
@@ -306,11 +306,11 @@ var segmentEngines = map[string]storekit.Query{
 		Table:     "lead",
 		BaseWhere: whereArchivedNull,
 		Fields: map[string]storekit.Field{
-			"status":            {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
-			ownerIDField:        {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
-			ownerTeamIDField:    ownerTeamField,
+			"status":                {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
+			ownerIDField:            {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
+			ownerTeamIDField:        ownerTeamField,
 			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldText},
-			tagFilterField:      tagLinkFor("lead"),
+			tagFilterField:          tagLinkFor("lead"),
 		},
 	},
 	projectEntity: {
@@ -324,9 +324,9 @@ var segmentEngines = map[string]storekit.Query{
 			// saved view that filtered on the column would answer for whichever
 			// one happened to be written there — including a company that was
 			// taken off the project.
-			"company_id": projectCompanyField(),
-			"phase":           {Expr: "t.phase", Type: storekit.FieldPicklist, Options: projectPhaseValues},
-			tagFilterField:    tagLinkFor(projectEntity),
+			"company_id":   projectCompanyField(),
+			"phase":        {Expr: "t.phase", Type: storekit.FieldPicklist, Options: projectPhaseValues},
+			tagFilterField: tagLinkFor(projectEntity),
 		},
 	},
 }

@@ -78,9 +78,9 @@ const fieldSubjectType = "subject_type"
 // about a contact requires the grant to edit that contact.
 var feedbackSubjects = map[string]bool{
 	"company": true,
-	"person":       true,
-	"deal":         true,
-	"lead":         true,
+	"person":  true,
+	"deal":    true,
+	"lead":    true,
 }
 
 // FeedbackStore owns the ledger.

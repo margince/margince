@@ -46,7 +46,7 @@ const (
 // domain the company actually has — and, because the args cannot carry one,
 // there is no way to point this lane at a domain the record never held.
 type TechnicalEnrichCompanyArgs struct {
-	Workspace      ids.UUID `json:"workspace_id"`
+	Workspace ids.UUID `json:"workspace_id"`
 	CompanyID ids.UUID `json:"company_id"`
 }
 
@@ -263,7 +263,7 @@ func (w *technicalBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.
 	}
 	for _, companyID := range due {
 		if _, err := client.Insert(wsCtx, TechnicalEnrichCompanyArgs{
-			Workspace:      ws,
+			Workspace: ws,
 			CompanyID: companyID.UUID,
 		}, technicalBackfillOpts()); err != nil {
 			return 0, err

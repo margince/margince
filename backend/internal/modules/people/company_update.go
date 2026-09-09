@@ -36,13 +36,13 @@ type UpdateCompanyInput struct {
 	LegalName   *string
 	// Description, when non-nil, sets or (when empty) clears the one-line
 	// summary the company page shows under the title. nil leaves it untouched.
-	Description *string
-	Industry    *string
-	SizeBand    *string
-	OwnerID     *ids.UserID
+	Description     *string
+	Industry        *string
+	SizeBand        *string
+	OwnerID         *ids.UserID
 	ParentCompanyID *ids.CompanyID
-	Address     *crmcontracts.Address
-	IfVersion   *int64
+	Address         *crmcontracts.Address
+	IfVersion       *int64
 	// LinkedInURL, when non-nil, sets or (when empty) clears the canonical
 	// LinkedIn company URL (PO-DDL-N-2). nil leaves it untouched.
 	LinkedInURL *string

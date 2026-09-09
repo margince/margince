@@ -86,7 +86,7 @@ type ListProjectsInput struct {
 	Cursor          *string
 	Limit           *int
 	Query           *string
-	CompanyID  *ids.CompanyID
+	CompanyID       *ids.CompanyID
 	OwnerID         *ids.UserID
 	Phase           *string
 	Key             *string

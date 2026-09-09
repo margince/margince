@@ -245,7 +245,7 @@ var defaults = map[string]Document{
 			"list":              writeNoDelete,
 			"offer":             writeNoDelete,
 			"offer_template":    writeNoDelete,
-			"company":      writeNoDelete,
+			"company":           writeNoDelete,
 			"person":            writeNoDelete,
 			"product":           writeNoDelete,
 			"project":           writeNoDelete,

@@ -94,7 +94,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"archiveTag":           archiveCommand,
 	"archiveOffer":         archiveCommand,
 	"archiveOfferTemplate": archiveCommand,
-	"archiveCompany":  archiveCommand,
+	"archiveCompany":       archiveCommand,
 	"archivePerson":        archiveCommand,
 	"archiveProduct":       archiveCommand,
 	"archiveProject":       archiveCommand,
@@ -109,7 +109,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"createImportRun":           previewImportCommand,
 	"createLead":                createCommand,
 	"createOfferTemplate":       createCommand,
-	"createCompany":        createCommand,
+	"createCompany":             createCommand,
 	"createPerson":              createCommand,
 	"createProduct":             createCommand,
 	"createTag":                 createCommand,
@@ -124,7 +124,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"updateDeal":                patchCommand,
 	"updateLead":                patchCommand,
 	"updateOffer":               patchCommand,
-	"updateCompany":        patchCommand,
+	"updateCompany":             patchCommand,
 	"updatePerson":              patchCommand,
 	"updateProduct":             patchCommand,
 	"updateTag":                 patchCommand,
@@ -145,12 +145,12 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"updateCompanyFact":          updateFactCommand,
 	"confirmCompanyProfileField": confirmProfileFieldCommand,
 	"updateCompanyProfileField":  updateProfileFieldCommand,
-	"retireCustomField":               retireCustomFieldCommand,
-	"updateCustomFieldOptions":        updateCustomFieldOptionsCommand,
-	"setProjectStakeholder":           setStakeholderCommand,
-	"removeProjectStakeholder":        removeStakeholderCommand,
-	"setProjectCompany":               setCompanyCommand,
-	"removeProjectCompany":            removeCompanyCommand,
+	"retireCustomField":          retireCustomFieldCommand,
+	"updateCustomFieldOptions":   updateCustomFieldOptionsCommand,
+	"setProjectStakeholder":      setStakeholderCommand,
+	"removeProjectStakeholder":   removeStakeholderCommand,
+	"setProjectCompany":          setCompanyCommand,
+	"removeProjectCompany":       removeCompanyCommand,
 
 	// The five bespoke auto-execute commands (agentcommandnested.go). All
 	// five are nested creates or child actions that are 🟢 today and have
@@ -202,7 +202,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"advanceProjectPhase": advanceProjectPhaseCommand,
 	"advanceDeal":         advanceDealCommand,
 	"mergePerson":         mergeCommand,
-	"mergeCompany":   mergeCommand,
+	"mergeCompany":        mergeCommand,
 	// mergeTags is NOT one of those two. They fold a record into another
 	// record through the SoR provider; this folds a vocabulary word, which no
 	// provider serves, so it resolves against the tag seam instead.

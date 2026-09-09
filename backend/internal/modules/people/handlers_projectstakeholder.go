@@ -117,9 +117,9 @@ func (h Handlers) SetProjectCompany(w http.ResponseWriter, r *http.Request, id c
 		role = *req.Role
 	}
 	on, err := h.store.SetProjectCompany(r.Context(), SetProjectCompanyInput{
-		ProjectID:      pathID[ids.ProjectKind](id),
+		ProjectID: pathID[ids.ProjectKind](id),
 		CompanyID: pathID[ids.CompanyKind](req.CompanyId),
-		Role:           role,
+		Role:      role,
 	})
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -145,9 +145,9 @@ func wireProjectCompanies(on []ProjectCompany) []crmcontracts.ProjectCompany {
 	out := make([]crmcontracts.ProjectCompany, 0, len(on))
 	for _, one := range on {
 		out = append(out, crmcontracts.ProjectCompany{
-			CompanyId: openapi_types.UUID(one.CompanyID.UUID),
-			DisplayName:    one.DisplayName,
-			Role:           one.Role,
+			CompanyId:   openapi_types.UUID(one.CompanyID.UUID),
+			DisplayName: one.DisplayName,
+			Role:        one.Role,
 		})
 	}
 	return out

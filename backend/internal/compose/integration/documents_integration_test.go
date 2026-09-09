@@ -146,7 +146,7 @@ func TestAttachmentMetadataRefusesASupersedesCycle(t *testing.T) {
 var docWritePerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"company":          {Read: true, Update: true},
+		"company":               {Read: true, Update: true},
 		"deal":                  {Read: true},
 		"person":                {Read: true},
 		"installation_settings": {Read: true},
@@ -204,7 +204,7 @@ func TestAnUploadedDocumentReachesTheAccountLibrary(t *testing.T) {
 var docUploadPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"company":          {Read: true, Update: true},
+		"company":               {Read: true, Update: true},
 		"deal":                  {Read: true, Update: true},
 		"person":                {Read: true},
 		"installation_settings": {Read: true},

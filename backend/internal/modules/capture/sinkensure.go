@@ -55,13 +55,13 @@ type EnsureOutcome struct {
 
 // EnsureRequest names one captured message's counterparty for the resolver.
 type EnsureRequest struct {
-	Email       string
-	DisplayName string // untrusted header text
-	Domain      string
-	OwnerID     ids.UUID // the granting human — owner of anything created
-	ActivityID  ids.UUID
-	Source      string
-	CapturedBy  string
+	Email           string
+	DisplayName     string // untrusted header text
+	Domain          string
+	OwnerID         ids.UUID // the granting human — owner of anything created
+	ActivityID      ids.UUID
+	Source          string
+	CapturedBy      string
 	SuppressCompany bool // free-mail domain: person yes, company no
 	// Replied says this counterparty wrote to US. A record is also created for
 	// somebody we wrote to twice with no answer, and the two must not be
@@ -102,15 +102,15 @@ func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedR
 	// The party the ladder judged — see counterpartyDecision.subject.
 	cp := decision.subject
 	outcome, err := s.ensurer.EnsureCounterparty(ctx, EnsureRequest{
-		Email:       cp.Email,
-		DisplayName: cp.DisplayName,
-		Domain:      cp.Domain,
-		OwnerID:     decision.owner,
-		ActivityID:  ref.ID,
-		Source:      captureSource(rec),
-		CapturedBy:  decision.capturedBy,
+		Email:           cp.Email,
+		DisplayName:     cp.DisplayName,
+		Domain:          cp.Domain,
+		OwnerID:         decision.owner,
+		ActivityID:      ref.ID,
+		Source:          captureSource(rec),
+		CapturedBy:      decision.capturedBy,
 		SuppressCompany: decision.suppressCompany,
-		Replied:     decision.replied,
+		Replied:         decision.replied,
 	})
 	if err != nil {
 		s.logEnsureFault(ctx, rec, err)
@@ -131,10 +131,10 @@ type counterpartyDecision struct {
 	// written to twice. Both create a record; only the first is the person
 	// initiating contact, and the acquisition evidence must not claim the
 	// stronger fact for the weaker case.
-	replied     bool
+	replied         bool
 	suppressCompany bool
-	owner       ids.UUID
-	capturedBy  string
+	owner           ids.UUID
+	capturedBy      string
 	// channel routes the post-commit step to the channel ensure seam. The two
 	// seams take different contracts — one names its human by an address, the
 	// other by a provider identity — so which one a record belongs to is

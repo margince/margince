@@ -170,11 +170,11 @@ func TestAnEmptyAccountAnswersNothingRatherThanSomethingEmpty(t *testing.T) {
 // brief whatever it says, because company_brief is keyed per user.
 func TestTheWriterIsToldWhichSubjectsToStayOffOf(t *testing.T) {
 	restricted := crmcontracts.Company360{
-		Company:    crmcontracts.Company{DisplayName: "Nordwind AG"},
+		Company:         crmcontracts.Company{DisplayName: "Nordwind AG"},
 		SectionsOmitted: []crmcontracts.Company360SectionsOmitted{"deals"},
 		People: &struct {
 			Data []crmcontracts.Company360Contact `json:"data"`
-			Page crmcontracts.PageInfo                 `json:"page"`
+			Page crmcontracts.PageInfo            `json:"page"`
 		}{Data: []crmcontracts.Company360Contact{{
 			PersonId: openapi_types.UUID(ids.NewV7()), FullName: "Dana Buyer",
 		}}},

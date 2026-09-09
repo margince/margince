@@ -37,10 +37,10 @@ type projectFixture struct {
 func seedProject(ctx context.Context, t *testing.T, e *Env, name string, company ids.UUID, owner *ids.UUID) projectFixture {
 	t.Helper()
 	in := projects.CreateProjectInput{
-		Name:           name,
+		Name:      name,
 		CompanyID: companyIDOf(company),
-		OwnerID:        userIDPtr(owner),
-		Source:         "manual",
+		OwnerID:   userIDPtr(owner),
+		Source:    "manual",
 	}
 	p, err := e.Projects.CreateProject(ctx, in)
 	if err != nil {
@@ -519,7 +519,7 @@ func TestRelinkReplacesOnlyTheLinksTheCallerCanSee(t *testing.T) {
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"activity":              {Read: true, Update: true},
-			"company":          {Read: true},
+			"company":               {Read: true},
 			"person":                {Read: true},
 			"installation_settings": {Read: true},
 		},
@@ -723,8 +723,8 @@ func TestAProjectCreatedWithoutAnOwnerBelongsToItsCreator(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"project":      {Create: true, Read: true, Update: true},
-			"deal":         {Create: true, Read: true, Update: true},
+			"project": {Create: true, Read: true, Update: true},
+			"deal":    {Create: true, Read: true, Update: true},
 			"company": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,

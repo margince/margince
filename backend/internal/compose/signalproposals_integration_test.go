@@ -288,9 +288,9 @@ var teamScopedDecider = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"company": {Read: true, Update: true},
-		"signal":       {Read: true, Update: true},
-		"deal":         {Read: true},
-		"person":       {Read: true},
+		"signal":  {Read: true, Update: true},
+		"deal":    {Read: true},
+		"person":  {Read: true},
 	},
 	RowScope: principal.RowScopeTeam,
 }

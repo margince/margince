@@ -23,7 +23,7 @@ import { TagsPanel } from "./tagspanel";
 // the wire cannot tell them apart — only the words on screen can, which is
 // what these assert.
 
-const ORG = "01a06151-0000-7000-8000-000000000001";
+const COMPANY = "01a06151-0000-7000-8000-000000000001";
 
 type PanelTag = {
   tag_id: string;
@@ -36,12 +36,12 @@ type PanelTag = {
 
 function mount(tags: PanelTag[], withheld = false, canEdit = true) {
   installFetchStub({
-    [`GET /records/company/${ORG}/tags`]: () =>
+    [`GET /records/company/${COMPANY}/tags`]: () =>
       jsonResponse({ data: tags, withheld }),
   });
   render(
     <StoryProviders>
-      <TagsPanel entityType="company" entityID={ORG} canEdit={canEdit} />
+      <TagsPanel entityType="company" entityID={COMPANY} canEdit={canEdit} />
     </StoryProviders>,
   );
 }
@@ -67,11 +67,11 @@ describe("the tags panel", () => {
   // until the default landed.
   it("survives an answer that carries no list at all", async () => {
     installFetchStub({
-      [`GET /records/company/${ORG}/tags`]: () => jsonResponse({}),
+      [`GET /records/company/${COMPANY}/tags`]: () => jsonResponse({}),
     });
     render(
       <StoryProviders>
-        <TagsPanel entityType="company" entityID={ORG} canEdit />
+        <TagsPanel entityType="company" entityID={COMPANY} canEdit />
       </StoryProviders>,
     );
     // The panel draws its empty state rather than throwing.
@@ -171,8 +171,8 @@ describe("the tags panel", () => {
 // gated on permission alone floated above no panel and opened a picker whose
 // apply the server refuses.
 describe("the company mount's add-tag verb", () => {
-  const ORG_ROW = {
-    id: ORG,
+  const COMPANY_ROW = {
+    id: COMPANY,
     name: "Aurora GmbH",
     writable: true,
   };
@@ -185,14 +185,14 @@ describe("the company mount's add-tag verb", () => {
   ) {
     installFetchStub({
       "GET /me": meRoute(grants as never, { seat }),
-      [`GET /records/company/${ORG}/tags`]: () =>
+      [`GET /records/company/${COMPANY}/tags`]: () =>
         jsonResponse({ data: [], withheld }),
     });
     render(
       <StoryProviders>
         <CompanyTagsSection
-          company={{ ...ORG_ROW, ...row } as never}
-          companyId={ORG}
+          company={{ ...COMPANY_ROW, ...row } as never}
+          companyId={COMPANY}
         />
       </StoryProviders>,
     );

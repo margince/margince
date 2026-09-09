@@ -21,7 +21,7 @@ type Project360Result struct {
 	AsOf            time.Time               `json:"as_of"`
 	Project         Project360Project       `json:"project"`
 	SectionsOmitted []string                `json:"sections_omitted"`
-	Company    *Project360Company `json:"company,omitempty"`
+	Company         *Project360Company      `json:"company,omitempty"`
 	PhaseHistory    *Project360PhaseHistory `json:"phase_history,omitempty"`
 	Deals           *Project360Deals        `json:"deals,omitempty"`
 	Stakeholders    *Project360Stakeholders `json:"stakeholders,omitempty"`
@@ -39,23 +39,23 @@ type Project360Result struct {
 
 // Project360Project is the anchor row's fields an agent acts on.
 type Project360Project struct {
-	ProjectID      ids.UUID   `json:"project_id"`
-	Name           string     `json:"name"`
-	Key            string     `json:"key"`
-	Phase          string     `json:"phase"`
-	ClosedReason   string     `json:"closed_reason"`
-	Description    string     `json:"description"`
-	CompanyID *ids.UUID  `json:"company_id,omitempty"`
-	OwnerID        *ids.UUID  `json:"owner_id,omitempty"`
-	StartedAt      *time.Time `json:"started_at,omitempty"`
-	TargetEndDate  *time.Time `json:"target_end_date,omitempty"`
-	EndedAt        *time.Time `json:"ended_at,omitempty"`
+	ProjectID     ids.UUID   `json:"project_id"`
+	Name          string     `json:"name"`
+	Key           string     `json:"key"`
+	Phase         string     `json:"phase"`
+	ClosedReason  string     `json:"closed_reason"`
+	Description   string     `json:"description"`
+	CompanyID     *ids.UUID  `json:"company_id,omitempty"`
+	OwnerID       *ids.UUID  `json:"owner_id,omitempty"`
+	StartedAt     *time.Time `json:"started_at,omitempty"`
+	TargetEndDate *time.Time `json:"target_end_date,omitempty"`
+	EndedAt       *time.Time `json:"ended_at,omitempty"`
 }
 
 // Project360Company names the company the project is for.
 type Project360Company struct {
 	CompanyID ids.UUID `json:"company_id"`
-	Name           string   `json:"name"`
+	Name      string   `json:"name"`
 }
 
 // Project360PhaseHistory is every transition the project made, oldest

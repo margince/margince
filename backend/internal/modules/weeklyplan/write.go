@@ -239,11 +239,11 @@ func checkLink(recordType string, id ids.UUID) error {
 // same five words at the other end — two writers of one list, so a sixth type
 // added there and not here is refused rather than written.
 var linkTables = map[string]string{
-	"deal":         "deal",
-	"lead":         "lead",
-	"person":       "person",
+	"deal":    "deal",
+	"lead":    "lead",
+	"person":  "person",
 	"company": "company",
-	"project":      "project",
+	"project": "project",
 }
 
 // ensureLinkVisible refuses a link to a record the caller cannot open.

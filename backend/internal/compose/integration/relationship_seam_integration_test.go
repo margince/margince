@@ -42,7 +42,7 @@ import (
 type edgeFields struct {
 	Kind             string    `json:"kind"`
 	PersonID         *ids.UUID `json:"person_id"`
-	CompanyID   *ids.UUID `json:"company_id"`
+	CompanyID        *ids.UUID `json:"company_id"`
 	DealID           *ids.UUID `json:"deal_id"`
 	ProjectID        *ids.UUID `json:"project_id"`
 	Role             *string   `json:"role"`
@@ -81,7 +81,7 @@ func relationshipReaderPerms() principal.Permissions {
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"person":                {Create: true, Read: true, Update: true, Delete: true},
-			"company":          {Create: true, Read: true, Update: true, Delete: true},
+			"company":               {Create: true, Read: true, Update: true, Delete: true},
 			"relationship":          {Create: true, Read: true, Update: true, Delete: true},
 			"installation_settings": {Read: true},
 		},

@@ -115,9 +115,9 @@ var recordAddressTargets = []string{
 // request supplies none: the field that is the object's own natural identity.
 // Stated per object rather than guessed, and the report says which was used.
 var csvSourceKeyDefault = map[string]string{
-	migration.ObjectLead:         fieldEmail,
+	migration.ObjectLead:    fieldEmail,
 	migration.ObjectCompany: fieldDisplayName,
-	migration.ObjectPerson:       fieldEmail,
+	migration.ObjectPerson:  fieldEmail,
 }
 
 // importTargets is the closed set a mapping may name for one object.

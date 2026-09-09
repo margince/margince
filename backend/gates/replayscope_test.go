@@ -45,11 +45,11 @@ import (
 // record contains, so "this table has no owner_id" is never on its own a
 // reason to skip the probe.
 var rowScopedResponses = map[string]expectedTarget{
-	"Person":       {table: "person", idPath: "id"},
+	"Person":  {table: "person", idPath: "id"},
 	"Company": {table: "company", idPath: "id"},
-	"Deal":         {table: "deal", idPath: "id"},
-	"Lead":         {table: "lead", idPath: "id"},
-	"Project":      {table: "project", idPath: "id"},
+	"Deal":    {table: "deal", idPath: "id"},
+	"Lead":    {table: "lead", idPath: "id"},
+	"Project": {table: "project", idPath: "id"},
 	// A contract has no owner column; it is row-scoped through the deal it came
 	// from, falling back to its company (ADR-0109 §8). It still hands back
 	// a record — terms, value, dates — so it is probed like any other.
@@ -71,7 +71,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	// no scope of its own: it is the same company's, which is why one
 	// probe covers the body.
 	"RejectCompanyResponse": {table: "company", idPath: "company.id"},
-	"DemoteLeadResponse":         {table: "lead", idPath: "lead.id"},
+	"DemoteLeadResponse":    {table: "lead", idPath: "lead.id"},
 	// The quick-capture result wraps the person it created, alongside the
 	// employer it attached them to. The person is the record a replay hands
 	// back, so it is probed exactly as PromoteLeadResponse above is — the
@@ -104,7 +104,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	// its own — the claim belongs to the company named in the path and
 	// inherits exactly its visibility, so the probe is the parent's.
 	"CompanyProfileField":  {table: "company", pathParam: "id"},
-	"CompanyFact":     {table: "company", pathParam: "id"},
+	"CompanyFact":          {table: "company", pathParam: "id"},
 	"VoiceBuild":           {table: "voice_profile", pathParam: "id"},
 	"VoiceLearningSummary": {table: "voice_profile", pathParam: "id"},
 	"VoiceProfileVersion":  {table: "voice_profile", pathParam: "id"},
@@ -225,11 +225,11 @@ func TestReplayScopeCoversEveryIdempotentOperation(t *testing.T) {
 // gatekit:fixture the field-to-table convention this census reads, not costs
 // anyone is waived from: an entry here adds a check rather than removing one.
 var companionRecordFields = map[string]string{
-	"person_id":       "person",
+	"person_id":  "person",
 	"company_id": "company",
-	"deal_id":         "deal",
-	"lead_id":         "lead",
-	"project_id":      "project",
+	"deal_id":    "deal",
+	"lead_id":    "lead",
+	"project_id": "project",
 }
 
 // companionsInContract names the row-scoped references a route's response

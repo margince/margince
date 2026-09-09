@@ -33,7 +33,7 @@ type Company = components["schemas"]["Company"];
 // Typed, not asserted. A fixture cast into the contract type can drop a required
 // field and still compile, so the test would go on passing after the wire shape
 // moved under it — which is the one thing a fixture must not do.
-const ORG: Company = {
+const COMPANY: Company = {
   // Absent reads as NOT writable, which is the fail-closed default a real
   // response never relies on: the server answers this per row.
   writable: true,
@@ -200,7 +200,7 @@ function renderInApp(ui: ReactNode) {
 }
 
 function renderLine() {
-  renderInApp(<CompanyIdentityLine company={ORG} />);
+  renderInApp(<CompanyIdentityLine company={COMPANY} />);
 }
 
 // The owner control's mount. It sits in the record's facts box beside the
@@ -208,7 +208,7 @@ function renderLine() {
 // one mount, so the three roster states below are asserted where a reader
 // actually meets them.
 function renderFacts() {
-  renderInApp(<CompanyFacts company={ORG} />);
+  renderInApp(<CompanyFacts company={COMPANY} />);
 }
 
 describe("who wrote this record", () => {
@@ -311,7 +311,7 @@ describe("the owner the edit form prefills", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyActionBadges
-        company={ORG}
+        company={COMPANY}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,
@@ -340,7 +340,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyPrimaryActions
-        company={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -367,7 +367,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     stubGrants({ activity: ["create"] });
     renderInApp(
       <CompanyPrimaryActions
-        company={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -388,7 +388,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const answer = stubMeInFlight();
     renderInApp(
       <CompanyPrimaryActions
-        company={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -426,7 +426,7 @@ describe("an archived account's verbs", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyActionBadges
-        company={{ ...ORG, archived_at: "2026-07-13T00:00:00Z" }}
+        company={{ ...COMPANY, archived_at: "2026-07-13T00:00:00Z" }}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,
@@ -477,7 +477,7 @@ describe("an account whose lifecycle and relationship agree", () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyRelationshipBadges
-        company={{ ...ORG, relationship_types: ["customer", "partner"] }}
+        company={{ ...COMPANY, relationship_types: ["customer", "partner"] }}
       />,
     );
 
@@ -492,7 +492,7 @@ describe("an account whose lifecycle and relationship agree", () => {
     renderInApp(
       <CompanyRelationshipBadges
         company={{
-          ...ORG,
+          ...COMPANY,
           lifecycle: "prospect",
           relationship_types: ["customer"],
         }}

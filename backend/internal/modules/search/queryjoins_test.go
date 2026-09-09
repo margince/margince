@@ -20,12 +20,12 @@ import (
 // record tables a hop lands on. Written from the DDL rather than from the
 // derivation, so a test cannot agree with the code by construction.
 var joinSchema = map[string][]StoredColumn{
-	"person":       columnsOf("id:uuid", "full_name", "owner_id:uuid", "visibility"),
-	"company": columnsOf("id:uuid", "display_name", "owner_id:uuid", "is_anchor:boolean", "visibility"),
-	"deal":         columnsOf("id:uuid", "name", "owner_id:uuid", "company_id:uuid", "visibility"),
-	"lead":         columnsOf("id:uuid", "full_name", "owner_id:uuid", "visibility"),
-	"project":      columnsOf("id:uuid", "name", "owner_id:uuid", "company_id:uuid", "visibility"),
-	"activity":     columnsOf("id:uuid", "subject", "kind", "owner_id:uuid", "visibility"),
+	"person":   columnsOf("id:uuid", "full_name", "owner_id:uuid", "visibility"),
+	"company":  columnsOf("id:uuid", "display_name", "owner_id:uuid", "is_anchor:boolean", "visibility"),
+	"deal":     columnsOf("id:uuid", "name", "owner_id:uuid", "company_id:uuid", "visibility"),
+	"lead":     columnsOf("id:uuid", "full_name", "owner_id:uuid", "visibility"),
+	"project":  columnsOf("id:uuid", "name", "owner_id:uuid", "company_id:uuid", "visibility"),
+	"activity": columnsOf("id:uuid", "subject", "kind", "owner_id:uuid", "visibility"),
 	// core 0007 + 0131. counterparty_company_id is deliberately here: it is the
 	// column the derivation must NOT read.
 	"relationship": columnsOf("id:uuid", "kind", "person_id:uuid", "company_id:uuid",
@@ -292,9 +292,9 @@ func TestADirectEdgeWinsAJoinEdgeOfTheSameName(t *testing.T) {
 // `_id` and look the name up as a record type", publishes a hop here.
 func TestAReferenceNamedForItsRoleYieldsNoHop(t *testing.T) {
 	roleNamed := map[string][]StoredColumn{
-		"person":       joinSchema["person"],
-		"company": joinSchema["company"],
-		"activity":     joinSchema["activity"],
+		"person":   joinSchema["person"],
+		"company":  joinSchema["company"],
+		"activity": joinSchema["activity"],
 		"relationship": columnsOf("id:uuid", "kind", "person_id:uuid", "counterparty_company_id:uuid",
 			"archived_at:timestamp with time zone", "ended_at:date"),
 		// The positive control, on the OTHER table: a properly named arm that

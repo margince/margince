@@ -63,7 +63,7 @@ var roomPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"person":                {Create: true, Read: true, Update: true},
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"relationship":          {Read: true},
 		"activity":              {Create: true, Read: true, Update: true},
 		"deal":                  {Read: true},
@@ -120,7 +120,7 @@ func TestPerson360NamesTheSectionsACallerMayNotRead(t *testing.T) {
 	perms := roomPerms
 	perms.Objects = map[string]principal.ObjectGrant{
 		"person":       {Read: true},
-		"company": {Read: true},
+		"company":      {Read: true},
 		"relationship": {Read: true},
 	}
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)

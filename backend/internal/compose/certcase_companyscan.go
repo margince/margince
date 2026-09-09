@@ -35,9 +35,9 @@ import (
 
 // companyScanFixture is one account as the scan reads it.
 type companyScanFixture struct {
-	Name            string                  `json:"name"`
-	Industry        string                  `json:"industry,omitempty"`
-	SectionsOmitted []string                `json:"sections_omitted,omitempty"`
+	Name            string                      `json:"name"`
+	Industry        string                      `json:"industry,omitempty"`
+	SectionsOmitted []string                    `json:"sections_omitted,omitempty"`
 	Contacts        []companyScanNamedFixture   `json:"contacts,omitempty"`
 	Deals           []companyBriefDealFixture   `json:"open_deals,omitempty"`
 	Tasks           []companyScanNamedFixture   `json:"open_tasks,omitempty"`
@@ -152,10 +152,10 @@ func companyScanInput(f companyScanFixture) (companyscan.Input, map[string]strin
 
 // companyScanCase certifies one reading of one account.
 type companyScanCase struct {
-	in       companyscan.Input
-	companyID    ids.CompanyID
-	label    map[string]string
-	expected []string
+	in        companyscan.Input
+	companyID ids.CompanyID
+	label     map[string]string
+	expected  []string
 }
 
 // Run issues the one request this site sends, through the production

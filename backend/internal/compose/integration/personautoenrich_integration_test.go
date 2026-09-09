@@ -38,7 +38,7 @@ import (
 // sitePage is what a team page published about one person, in the shape the
 // staged proposal carries it.
 type sitePage struct {
-	CompanyID  ids.UUID `json:"company_id"`
+	CompanyID       ids.UUID `json:"company_id"`
 	SiteReadID      ids.UUID `json:"site_read_id"`
 	NaturalKey      string   `json:"natural_key"`
 	Name            string   `json:"name"`

@@ -402,7 +402,7 @@ func TestRetentionAppliedWireSnapshot(t *testing.T) {
 // signals family's golden snapshots are stable across test runs — a real
 // ids.NewV7() would churn the fixtures on every regeneration for no reason.
 var (
-	signalSnapshotID    = openapi_types.UUID(ids.MustParse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"))
+	signalSnapshotID        = openapi_types.UUID(ids.MustParse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"))
 	signalSnapshotCompanyID = openapi_types.UUID(ids.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"))
 )
 
@@ -435,11 +435,11 @@ func TestSignalResolvedWireSnapshot(t *testing.T) {
 	matchedOn := "domain"
 	confidence := float32(0.95)
 	sample := crmcontracts.PublicEventSignalResolved{
-		SignalId:        signalSnapshotID,
-		ResolutionState: "resolved",
-		ResolvedCompanyId:   &signalSnapshotCompanyID,
-		MatchedOn:       &matchedOn,
-		MatchConfidence: &confidence,
+		SignalId:          signalSnapshotID,
+		ResolutionState:   "resolved",
+		ResolvedCompanyId: &signalSnapshotCompanyID,
+		MatchedOn:         &matchedOn,
+		MatchConfidence:   &confidence,
 	}
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }

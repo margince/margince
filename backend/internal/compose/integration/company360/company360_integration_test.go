@@ -32,8 +32,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	company360svc "github.com/margince/margince/backend/internal/compose/company360"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -71,7 +71,7 @@ var company360SignalPerms = withSignalRead(integration.AccountRepPerms)
 var company360NoDealPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"person":                {Read: true},
 		"activity":              {Read: true},
 		"relationship":          {Read: true},
@@ -494,8 +494,8 @@ func TestCompany360NextMeetingWithholdsAttendeesWithoutThePersonGrant(t *testing
 	noPeople := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"company": {Read: true},
-			"activity":     {Read: true},
+			"company":  {Read: true},
+			"activity": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	})
@@ -699,7 +699,7 @@ func TestCompany360OmitsRoutesWithoutTheActivityGrant(t *testing.T) {
 var company360NoActivityPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"person":                {Read: true},
 		"deal":                  {Read: true},
 		"relationship":          {Read: true},
@@ -739,8 +739,8 @@ func TestCompany360_StateStripPricesOpenDealsAndNamesTheirCloseDate(t *testing.T
 	// amount in the workspace's own currency and an expected close date.
 	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Priced deal", PipelineID: pipeline, StageID: stage,
-		CompanyID: ptrTo(ids.From[ids.CompanyKind](companyID)),
-		AmountMinor:    ptrTo(int64(250000)), Currency: ptrTo("EUR"),
+		CompanyID:   ptrTo(ids.From[ids.CompanyKind](companyID)),
+		AmountMinor: ptrTo(int64(250000)), Currency: ptrTo("EUR"),
 		ExpectedClose: &closeOn, Source: "manual",
 	}); err != nil {
 		t.Fatalf("creating the deal: %v", err)

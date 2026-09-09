@@ -36,7 +36,7 @@ type financeEnv struct {
 	store    *Store
 	ctx      context.Context
 	ws       ids.UUID
-	company      ids.CompanyID
+	company  ids.CompanyID
 	external string
 }
 
@@ -67,7 +67,7 @@ func setupFinance(t *testing.T) *financeEnv {
 
 	e := &financeEnv{
 		ws:       ids.NewV7(),
-		company:      ids.New[ids.CompanyKind](),
+		company:  ids.New[ids.CompanyKind](),
 		external: "ACME-01",
 	}
 	connID := ids.NewV7()
@@ -78,7 +78,7 @@ func setupFinance(t *testing.T) *financeEnv {
 	if _, err := owner.Exec(ctx,
 		`INSERT INTO company (id, display_name, lifecycle, source, captured_by)
 		 VALUES ($1, 'Ledger GmbH', 'customer', 'manual', 'human:test')`,
-		e.org); err != nil {
+		e.company); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx, `
@@ -93,7 +93,7 @@ func setupFinance(t *testing.T) *financeEnv {
 		       (connection_id, company_id, external_customer_id,
 		        sync_hash, source, captured_by)
 		VALUES ($1, $2, $3, 'seed', 'system', 'system:test')`,
-		connID, e.org, e.external); err != nil {
+		connID, e.company, e.external); err != nil {
 		t.Fatal(err)
 	}
 
@@ -124,7 +124,7 @@ func setupFinance(t *testing.T) *financeEnv {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"finance":      {Read: true},
+				"finance": {Read: true},
 				"company": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
@@ -214,7 +214,7 @@ func TestASecondSyncOverAnUnchangedSourceWritesNothing(t *testing.T) {
 // make every invoice look edited.
 func TestAnUnchangedInvoiceKeepsItsVersion(t *testing.T) {
 	e := setupFinance(t)
-	ctx, companyID, provider := e.ctx, e.org, e.provider()
+	ctx, companyID, provider := e.ctx, e.company, e.provider()
 	store := e.store
 
 	if _, err := store.SyncConnection(ctx, provider); err != nil {
@@ -266,7 +266,7 @@ func invoiceVersions(
 // rather than with a state that says it cannot.
 func TestAfterASyncTheCardHasFiguresToShow(t *testing.T) {
 	e := setupFinance(t)
-	ctx, companyID, provider := e.ctx, e.org, e.provider()
+	ctx, companyID, provider := e.ctx, e.company, e.provider()
 	store := e.store
 
 	// Before the pass: connected and mapped, but nothing synced. The card says
@@ -328,7 +328,7 @@ func TestAfterASyncTheCardHasFiguresToShow(t *testing.T) {
 // was suppressed for want of a name for a number it had already computed.
 func TestAnAccountBilledInTwoCurrenciesStillReportsATotal(t *testing.T) {
 	e := setupFinance(t)
-	ctx, companyID, provider := e.ctx, e.org, e.provider()
+	ctx, companyID, provider := e.ctx, e.company, e.provider()
 
 	if _, err := e.store.SyncConnection(ctx, provider); err != nil {
 		t.Fatal(err)
@@ -378,7 +378,7 @@ func TestAnAccountBilledInTwoCurrenciesStillReportsATotal(t *testing.T) {
 // proves the amount landed on the right row.
 func TestTheCreditNoteReducesItsTargetInTheMirror(t *testing.T) {
 	e := setupFinance(t)
-	ctx, companyID, provider := e.ctx, e.org, e.provider()
+	ctx, companyID, provider := e.ctx, e.company, e.provider()
 	if _, err := e.store.SyncConnection(ctx, provider); err != nil {
 		t.Fatal(err)
 	}
@@ -440,7 +440,7 @@ func TestCrossingADueDateDoesNotRewriteTheLedger(t *testing.T) {
 // source has no reason to change again, so nothing would ever fix it.
 func TestASyncRepairsAnInvoiceThatIsMissingItsRate(t *testing.T) {
 	e := setupFinance(t)
-	ctx, companyID, provider := e.ctx, e.org, e.provider()
+	ctx, companyID, provider := e.ctx, e.company, e.provider()
 
 	if _, err := e.store.SyncConnection(ctx, provider); err != nil {
 		t.Fatal(err)

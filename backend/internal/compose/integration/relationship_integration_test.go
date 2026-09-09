@@ -30,8 +30,8 @@ import (
 
 type relEnv struct {
 	*apptest.AppEnv
-	personID string
-	companyID    string
+	personID  string
+	companyID string
 }
 
 func setupRelationships(t *testing.T) *relEnv {

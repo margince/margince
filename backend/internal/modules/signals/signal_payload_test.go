@@ -28,8 +28,8 @@ import (
 )
 
 var (
-	signalPayloadTestSignalID = openapi_types.UUID(ids.MustParse("11111111-1111-1111-1111-111111111111"))
-	signalPayloadTestCompanyID    = openapi_types.UUID(ids.MustParse("22222222-2222-2222-2222-222222222222"))
+	signalPayloadTestSignalID  = openapi_types.UUID(ids.MustParse("11111111-1111-1111-1111-111111111111"))
+	signalPayloadTestCompanyID = openapi_types.UUID(ids.MustParse("22222222-2222-2222-2222-222222222222"))
 )
 
 // TestDetectedPayload_Unresolved proves the raw (no subject yet) shape: no
@@ -198,9 +198,9 @@ func TestResolvedPayload_Dropped(t *testing.T) {
 func TestResolvedPayload_ResolvedToCompany(t *testing.T) {
 	companyID := ids.From[ids.CompanyKind](ids.UUID(signalPayloadTestCompanyID))
 	sig := crmcontracts.Signal{
-		Id:              signalPayloadTestSignalID,
-		ResolutionState: "resolved",
-		ResolvedCompanyId:   &signalPayloadTestCompanyID,
+		Id:                signalPayloadTestSignalID,
+		ResolutionState:   "resolved",
+		ResolvedCompanyId: &signalPayloadTestCompanyID,
 	}
 	candidates := []candidate{{CompanyID: companyID, MatchedOn: "domain", Confidence: 0.95}}
 	payload := resolvedPayload(sig, candidates)

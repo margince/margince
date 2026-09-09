@@ -22,12 +22,12 @@ import (
 type EntityType string
 
 const (
-	EntityPerson       EntityType = "person"
-	EntityCompany EntityType = "company"
-	EntityDeal         EntityType = "deal"
-	EntityLead         EntityType = "lead"
-	EntityActivity     EntityType = "activity"
-	EntityProject      EntityType = "project"
+	EntityPerson   EntityType = "person"
+	EntityCompany  EntityType = "company"
+	EntityDeal     EntityType = "deal"
+	EntityLead     EntityType = "lead"
+	EntityActivity EntityType = "activity"
+	EntityProject  EntityType = "project"
 	// EntityRelationship is an EDGE between two records — employment, a deal
 	// or project stakeholder seat, a company↔company partner tie. It belongs in THIS
 	// vocabulary and deliberately not in RecordType below: the seam's record
@@ -93,11 +93,11 @@ type RecordType string
 // The record vocabulary. Each value is mirrored by a schema CHECK, pinned
 // together by TestEveryDomainEnumMatchesItsSchemaCheck.
 const (
-	RecordPerson       RecordType = "person"
+	RecordPerson  RecordType = "person"
 	RecordCompany RecordType = "company"
-	RecordDeal         RecordType = "deal"
-	RecordLead         RecordType = "lead"
-	RecordProject      RecordType = "project"
+	RecordDeal    RecordType = "deal"
+	RecordLead    RecordType = "lead"
+	RecordProject RecordType = "project"
 )
 
 // RecordTypes returns the vocabulary in a stable order, for the callers

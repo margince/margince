@@ -91,8 +91,8 @@ type RoutingDecision struct {
 
 // leadRoutingFacts is the lead-local slice a rule may look at.
 type leadRoutingFacts struct {
-	Source          string
-	CompanyName     string
+	Source              string
+	CompanyName         string
 	CandidateCompanyKey string
 }
 

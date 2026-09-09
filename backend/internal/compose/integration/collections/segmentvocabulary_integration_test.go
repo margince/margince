@@ -52,7 +52,7 @@ var testPerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"custom_field": fullGrant,
 		"person":       fullGrant,
-		"company": fullGrant,
+		"company":      fullGrant,
 		"deal":         fullGrant,
 		"lead":         fullGrant,
 		"project":      fullGrant,

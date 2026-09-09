@@ -32,8 +32,8 @@ import (
 // employmentFixture is one person at each of two companies owned by
 // different reps, plus a third whose employment is archived.
 type employmentFixture struct {
-	rep1Company, rep3Company           ids.UUID
-	atRep1Company, atRep3Company       ids.UUID
+	rep1Company, rep3Company       ids.UUID
+	atRep1Company, atRep3Company   ids.UUID
 	formerlyAtRep1Company          ids.UUID
 	leftRep1Company                ids.UUID
 	servingNoticeAtRep1Company     ids.UUID

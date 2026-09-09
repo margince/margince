@@ -87,9 +87,9 @@ func (e *scrapeEngine) Propose(ctx context.Context, companyID ids.UUID, override
 
 	proposal := crmcontracts.EnrichmentProposal{
 		CompanyId: openapi_types.UUID(companyID),
-		SourceUrl:      rawURL,
-		Status:         crmcontracts.EnrichmentProposalStatusStaged,
-		Fields:         fields,
+		SourceUrl: rawURL,
+		Status:    crmcontracts.EnrichmentProposalStatusStaged,
+		Fields:    fields,
 	}
 	proposedChange, err := json.Marshal(proposal)
 	if err != nil {

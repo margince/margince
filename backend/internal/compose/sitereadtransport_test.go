@@ -18,14 +18,14 @@ func TestDeferredSiteReadMetadataReachesBothWireShapes(t *testing.T) {
 	statusDetail := "AI budget reached its current limit. This website read will resume automatically."
 	companyID := ids.New[ids.CompanyKind]()
 	read := people.SiteRead{
-		ID:             ids.NewV7(),
-		CompanyID: &companyID,
-		TargetKind:     "company",
-		SeedURL:        "https://acme.example",
-		Status:         siteReadStatusDeferred,
-		StatusCode:     &statusCode,
-		StatusDetail:   &statusDetail,
-		NextAttemptAt:  &nextAttempt,
+		ID:            ids.NewV7(),
+		CompanyID:     &companyID,
+		TargetKind:    "company",
+		SeedURL:       "https://acme.example",
+		Status:        siteReadStatusDeferred,
+		StatusCode:    &statusCode,
+		StatusDetail:  &statusDetail,
+		NextAttemptAt: &nextAttempt,
 	}
 
 	report := siteReadReport(read)

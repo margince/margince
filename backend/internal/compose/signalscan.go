@@ -48,9 +48,9 @@ const kindGhostedThread = "ghosted_thread"
 
 // ghostedCandidate is one account the deterministic rule fired on.
 type ghostedCandidate struct {
-	CompanyID ids.UUID
-	ActivityID     ids.UUID
-	At             time.Time
+	CompanyID  ids.UUID
+	ActivityID ids.UUID
+	At         time.Time
 }
 
 // scanGhostedThreads finds the accounts whose newest interaction is ours and
@@ -163,11 +163,11 @@ func WriteGhostedSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Ghosted
 	for _, found := range candidates {
 		days := int(now.Sub(found.At).Hours() / 24)
 		raised, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-			Kind:           kindGhostedThread,
-			CompanyID: found.CompanyID,
-			Summary:        fmt.Sprintf(said.ghostedThread, days),
-			Severity:       severityWarn,
-			Fingerprint:    signalFingerprint(kindGhostedThread, found.CompanyID, found.ActivityID),
+			Kind:        kindGhostedThread,
+			CompanyID:   found.CompanyID,
+			Summary:     fmt.Sprintf(said.ghostedThread, days),
+			Severity:    severityWarn,
+			Fingerprint: signalFingerprint(kindGhostedThread, found.CompanyID, found.ActivityID),
 			// The message is CITED, not quoted. This finding is shared with
 			// everyone who can see the account, while the message it points at
 			// may be readable by one person — capture files mail against

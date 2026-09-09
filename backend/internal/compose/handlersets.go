@@ -9,13 +9,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
-	"github.com/margince/margince/backend/internal/compose/dealstatus"
-	"github.com/margince/margince/backend/internal/compose/leaddraft"
-	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/leaddraft"
+	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/person360"
 	"github.com/margince/margince/backend/internal/compose/personbrief"
 	"github.com/margince/margince/backend/internal/compose/persondraft"
@@ -78,16 +78,16 @@ type (
 	customfieldsHandlers   = customfields.Handlers
 	overlayHandlers        = overlay.Handlers
 	webhooksHandlers       = webhooks.Handlers
-	company360Handlers         = company360.Handlers
+	company360Handlers     = company360.Handlers
 	person360Handlers      = person360.Handlers
 	project360Handlers     = project360.Handlers
 	personBriefHandlers    = personbrief.Handlers
 	personResearchHandlers = personresearch.Handlers
 	meetingBriefHandlers   = meetingbrief.Handlers
 	dealStatusHandlers     = dealstatus.Handlers
-	companyBriefHandlers       = companybrief.Handlers
-	companyDossierHandlers     = companydossier.Handlers
-	companyScanHandlers        = companyscan.Handlers
+	companyBriefHandlers   = companybrief.Handlers
+	companyDossierHandlers = companydossier.Handlers
+	companyScanHandlers    = companyscan.Handlers
 	accountDraftHandlers   = accountdraft.Handlers
 	personDraftHandlers    = persondraft.Handlers
 	leadDraftHandlers      = leaddraft.Handlers

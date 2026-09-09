@@ -124,9 +124,9 @@ func decisionOutcomeOf(approve bool, edited json.RawMessage) decisionOutcome {
 // outside this set is inert: SetAutoApply refuses to write it, so no reader has
 // to defend against one.
 var AutoApplyKinds = map[string]bool{
-	"close_date_correction": true,
-	"company_name_promotion":    true,
-	"lifecycle_change":      true,
+	"close_date_correction":  true,
+	"company_name_promotion": true,
+	"lifecycle_change":       true,
 }
 
 // AdminGovernedAutoKinds are the kinds that may apply without asking on an

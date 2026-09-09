@@ -48,7 +48,7 @@ func championSeatReader() principal.Permissions {
 		Objects: map[string]principal.ObjectGrant{
 			"deal":         {Read: true},
 			"person":       {Read: true},
-			"company": {Read: true},
+			"company":      {Read: true},
 			"relationship": {Read: true},
 		},
 		RowScope: principal.RowScopeOwn,

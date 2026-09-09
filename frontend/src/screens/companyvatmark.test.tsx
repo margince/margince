@@ -27,11 +27,11 @@ import { VatMark } from "./companyvatmark";
 // matters most is the one the old surface could not serve: the verdict beside
 // the number, with no click.
 
-const ORG_ID = "00000000-0000-7000-8000-0000000000a1";
+const COMPANY_ID = "00000000-0000-7000-8000-0000000000a1";
 const NUMBER = "DE811907980";
 
 const CHECKED = {
-  company_id: ORG_ID,
+  company_id: COMPANY_ID,
   vat_number: NUMBER,
   status: "valid",
   consultation_number: "WAPIAAAAXk3rN2p9",
@@ -87,7 +87,7 @@ function render(ui: ReactNode) {
 }
 
 function mark(stated = NUMBER, canAsk = true) {
-  return <VatMark companyId={ORG_ID} stated={stated} canAsk={canAsk} />;
+  return <VatMark companyId={COMPANY_ID} stated={stated} canAsk={canAsk} />;
 }
 
 describe("the VAT mark beside the number", () => {
@@ -187,7 +187,7 @@ describe("the VAT mark beside the number", () => {
         calls.some(
           (one) =>
             one.method === "POST" &&
-            one.pathname === `/v1/companies/${ORG_ID}/vat-check`,
+            one.pathname === `/v1/companies/${COMPANY_ID}/vat-check`,
         ),
       ).toBe(true);
     });

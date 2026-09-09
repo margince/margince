@@ -252,12 +252,12 @@ func (s *Service) AskScoped(
 		return crmcontracts.CompanyAnswer{}, err
 	}
 	out := crmcontracts.CompanyAnswer{
-		CompanyId: openapi_types.UUID(companyID.UUID),
-		Question:       question,
-		GeneratedAt:    s.now().UTC(),
-		GeneratedBy:    by,
-		Scope:          scope,
-		Sentences:      wireSentences(withEvidenceNames(sentences, in)),
+		CompanyId:   openapi_types.UUID(companyID.UUID),
+		Question:    question,
+		GeneratedAt: s.now().UTC(),
+		GeneratedBy: by,
+		Scope:       scope,
+		Sentences:   wireSentences(withEvidenceNames(sentences, in)),
 	}
 	if err := briefevidence.Attach(ctx, s.emailRows, briefevidence.FromSentences(out.Sentences)); err != nil {
 		return crmcontracts.CompanyAnswer{}, err
@@ -302,11 +302,11 @@ func (b stored) wire(companyID ids.CompanyID, scope *crmcontracts.ProjectScope) 
 		})
 	}
 	return crmcontracts.CompanyBrief{
-		CompanyId: openapi_types.UUID(companyID.UUID),
-		GeneratedAt:    b.GeneratedAt,
-		GeneratedBy:    b.GeneratedBy,
-		Scope:          scope,
-		Sections:       sections,
+		CompanyId:   openapi_types.UUID(companyID.UUID),
+		GeneratedAt: b.GeneratedAt,
+		GeneratedBy: b.GeneratedBy,
+		Scope:       scope,
+		Sections:    sections,
 	}
 }
 

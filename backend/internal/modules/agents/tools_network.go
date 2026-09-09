@@ -64,7 +64,7 @@ type WhoKnowsAnswer struct {
 // itself cut short.
 type IntroPathAnswer struct {
 	CompanyID ids.UUID     `json:"company_id"`
-	Routes         []IntroRoute `json:"routes"`
+	Routes    []IntroRoute `json:"routes"`
 	// CandidatesTruncated says the ranking was computed over a bounded slice of
 	// the account's contacts, so a warmer route may exist outside it. A ranked
 	// list presented as complete is how a model tells a rep that nobody warmer

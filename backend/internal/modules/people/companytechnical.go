@@ -118,9 +118,9 @@ type TechnicalEnrichment struct {
 // lookup just read. It is what becomes a company event.
 type TechnicalChange struct {
 	CompanyID ids.CompanyID
-	Field          string
-	ValueKey       string
-	Value          string
+	Field     string
+	ValueKey  string
+	Value     string
 	// Previous is what the record held before, empty when this is the first
 	// time the field was read. PreviousKey is that value's stable key, for a
 	// consumer that renders the display label itself rather than repeating

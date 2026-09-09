@@ -213,11 +213,11 @@ func technicalChanges(in TechnicalEnrichment, held []heldFact, removed []map[str
 		}
 		change := TechnicalChange{
 			CompanyID: in.CompanyID,
-			Field:          observation.Field,
-			ValueKey:       observation.ValueKey,
-			Value:          observation.Value,
-			Kind:           TechnicalAppeared,
-			Evidence:       observation.Evidence,
+			Field:     observation.Field,
+			ValueKey:  observation.ValueKey,
+			Value:     observation.Value,
+			Kind:      TechnicalAppeared,
+			Evidence:  observation.Evidence,
 		}
 		// A single-valued field that already held a different value MOVED
 		// rather than appeared — "mail moved to Microsoft 365" is the sentence
@@ -261,7 +261,7 @@ func goneChanges(
 		}
 		changes = append(changes, TechnicalChange{
 			CompanyID: in.CompanyID,
-			Field:          field, ValueKey: valueKey, Value: value,
+			Field:     field, ValueKey: valueKey, Value: value,
 			Previous: value, PreviousKey: valueKey, Kind: TechnicalGone,
 			Evidence: heldByKey[field+technicalKeySeparator+valueKey].Value,
 		})

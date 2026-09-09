@@ -251,7 +251,7 @@ func (r setCompanyResolver) Guards(ctx context.Context, cmd SetCompanyCommand) e
 // RemoveCompanyCommand is one project-company detach. CompanyID is a
 // second PATH parameter, not a body field.
 type RemoveCompanyCommand struct {
-	ID             ids.UUID
+	ID        ids.UUID
 	CompanyID ids.UUID
 }
 

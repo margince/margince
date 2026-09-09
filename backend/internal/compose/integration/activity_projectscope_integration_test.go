@@ -32,9 +32,9 @@ import (
 // scopeFixture is one account running two engagements, plus ordinary
 // correspondence belonging to neither — the shape the rule exists for.
 type scopeFixture struct {
-	person ids.UUID
-	company    ids.UUID
-	erp    ids.ProjectID
+	person  ids.UUID
+	company ids.UUID
+	erp     ids.ProjectID
 	// other is the second engagement, the one a scope to erp must drop.
 	other ids.ProjectID
 	// The keys the SERVER minted for the two projects. A caller no longer
@@ -271,7 +271,7 @@ func TestAssembledContextScopedToOneProjectDropsPeopleReachedOnlyThroughTheOther
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	retriever := search.NewRetriever(search.NewStore(harnessDB(e.Pool, e.WS)), nil)
-	anchor := datasource.EntityRef{Type: datasource.EntityCompany, ID: f.org}
+	anchor := datasource.EntityRef{Type: datasource.EntityCompany, ID: f.company}
 
 	scoped := walkIDs(e.Admin(), t, retriever, anchor, retrieval.AssembleOptions{MaxItems: 25, ProjectID: f.erp.String()})
 	if scoped[f.bystander.String()] {
@@ -304,7 +304,7 @@ func TestAScopedAccountPageDerivesItsHealthFromOneEngagement(t *testing.T) {
 	// puts them in the account's contact set at all, and the fixture leaves it
 	// to the tests that want it — the sections proved elsewhere count contacts
 	// and would each have to be retaught a third one.
-	bystanderID, companyID := PersonIDOf(f.bystander), companyIDOf(f.org)
+	bystanderID, companyID := PersonIDOf(f.bystander), companyIDOf(f.company)
 	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
 		Kind: "employment", PersonID: &bystanderID, CompanyID: &companyID,
 	}); err != nil {

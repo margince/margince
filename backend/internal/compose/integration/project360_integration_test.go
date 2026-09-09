@@ -47,7 +47,7 @@ var project360RepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"project":               {Read: true},
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"person":                {Read: true},
 		"deal":                  {Read: true},
 		"activity":              {Read: true},

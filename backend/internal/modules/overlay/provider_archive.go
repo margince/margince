@@ -35,9 +35,9 @@ import (
 // set, and nothing there derives this one: ArchivableTypes below is how a
 // caller asks the ROUTED executor instead of assuming either.
 var archivableTypes = map[datasource.EntityType]bool{
-	datasource.EntityPerson:       true,
+	datasource.EntityPerson:  true,
 	datasource.EntityCompany: true,
-	datasource.EntityDeal:         true,
+	datasource.EntityDeal:    true,
 }
 
 // Archive removes a record from the incumbent (its own archive/delete) after

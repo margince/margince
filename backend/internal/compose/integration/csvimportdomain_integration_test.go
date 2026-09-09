@@ -50,7 +50,7 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 
-	var companies struct {
+	var listed struct {
 		Data []struct {
 			DisplayName string `json:"display_name"`
 			Domains     []struct {
@@ -59,11 +59,11 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 			} `json:"domains"`
 		} `json:"data"`
 	}
-	if s := e.Call(t, http.MethodGet, "/v1/companies?limit=100", nil, nil, &companies); s != http.StatusOK {
+	if s := e.Call(t, http.MethodGet, "/v1/companies?limit=100", nil, nil, &listed); s != http.StatusOK {
 		t.Fatalf("GET /v1/companies → %d, want 200", s)
 	}
 	found := map[string]string{}
-	for _, company := range companies.Data {
+	for _, company := range listed.Data {
 		if len(company.Domains) > 0 {
 			found[company.DisplayName] = company.Domains[0].Domain
 		}
@@ -186,17 +186,17 @@ func TestCSVImportOfOneDomainKeepsTheCompanysOthers(t *testing.T) {
 	}
 
 	// A human adds a second domain the spreadsheet has no column for.
-	var companies struct {
+	var listed struct {
 		Data []struct {
 			ID          string `json:"id"`
 			DisplayName string `json:"display_name"`
 		} `json:"data"`
 	}
-	if s := e.Call(t, http.MethodGet, "/v1/companies?limit=100", nil, nil, &companies); s != http.StatusOK {
+	if s := e.Call(t, http.MethodGet, "/v1/companies?limit=100", nil, nil, &listed); s != http.StatusOK {
 		t.Fatalf("GET /v1/companies → %d, want 200", s)
 	}
 	var companyID string
-	for _, company := range companies.Data {
+	for _, company := range listed.Data {
 		if company.DisplayName == "Fabrikam" {
 			companyID = company.ID
 		}

@@ -658,7 +658,7 @@ bench-mobile-check:
 ## because the two states that must look right — a populated account and a
 ## freshly imported one — are data states rather than fixtures.
 ## Screenshots land OUTSIDE the repo for eyeball comparison against the PNGs.
-## Override E2E_ORG_POPULATED / E2E_ORG_SPARSE to aim it at other companies.
+## Override E2E_COMPANY_POPULATED / E2E_COMPANY_SPARSE to aim it at other companies.
 E2E_SHOT_DIR ?= /tmp/e2e-company
 # scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
 # is /bin/sh — dash on most Linux images, where sourcing it fails before the
@@ -712,8 +712,8 @@ e2e-company:
 	app="$${BASE_URL:-}"; [ -n "$$app" ] || app="$$(dev_app_base_url)"; \
 	cd frontend && BASE_URL="$$app" \
 		E2E_SHOT_DIR="$(E2E_SHOT_DIR)" \
-		E2E_ORG_POPULATED="$(E2E_ORG_POPULATED)" \
-		E2E_ORG_SPARSE="$(E2E_ORG_SPARSE)" \
+		E2E_COMPANY_POPULATED="$(E2E_COMPANY_POPULATED)" \
+		E2E_COMPANY_SPARSE="$(E2E_COMPANY_SPARSE)" \
 		pnpm exec playwright test company-record.spec.ts
 	@echo "screenshots: $(E2E_SHOT_DIR)"
 

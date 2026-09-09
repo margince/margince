@@ -69,7 +69,7 @@ const (
 
 // pastCase is one account that lived through an account-manager change.
 type pastCase struct {
-	company        ids.UUID
+	company    ids.UUID
 	complaint  ids.UUID
 	postMortem ids.UUID
 }
@@ -78,17 +78,17 @@ type pastCase struct {
 func (s *scenario) seedContradiction(t *testing.T) pastCase {
 	t.Helper()
 	var c pastCase
-	c.org = s.seedID(t, `INSERT INTO company
+	c.company = s.seedID(t, `INSERT INTO company
 		(id, owner_id, display_name, industry, source, captured_by)
 		VALUES ($1, $2, $3, 'Managed Services', 'manual', 'human:x')`,
 		s.Colleague, "Reply Deutschland "+sharedAccountWord)
-	person := s.seedPerson(t, "Katrin Sommer", c.org)
+	person := s.seedPerson(t, "Katrin Sommer", c.company)
 
 	// The email, dated. This is the record.
-	c.complaint = s.seedCompanyActivity(t, "email", "inbound", person, c.org,
+	c.complaint = s.seedCompanyActivity(t, "email", "inbound", person, c.company,
 		daysAgo(complaintDaysAgo), theRecordSays)
 	// The note, written later, wrong about the month. This is the prose.
-	c.postMortem = s.seedCompanyActivity(t, "note", "", person, c.org,
+	c.postMortem = s.seedCompanyActivity(t, "note", "", person, c.company,
 		daysAgo(complaintDaysAgo-90), thePostMortemSays)
 	return c
 }
@@ -108,7 +108,7 @@ func (s *scenario) seedTwoMorePastCases(t *testing.T) []pastCase {
 			s.Colleague, account.company+" "+sharedAccountWord)
 		person := s.seedPerson(t, "Kontakt "+account.company, company)
 		out = append(out, pastCase{
-			company:       company,
+			company:   company,
 			complaint: s.seedCompanyActivity(t, "email", "inbound", person, company, daysAgo(200), account.complaint),
 		})
 	}
@@ -166,7 +166,7 @@ func TestCase6BothTheRecordAndTheProseReachTheCaller(t *testing.T) {
 
 	// The timeline is how an assistant FINDS the two activities.
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
-		"record_type": "company", "record_id": c.org.String(),
+		"record_type": "company", "record_id": c.company.String(),
 	})
 	var answer agents.AssembledContextResult
 	got.JSON(t, &answer)
@@ -256,7 +256,7 @@ func TestCase6EveryEventCarriesItsOwnDate(t *testing.T) {
 	c := s.seedContradiction(t)
 
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
-		"record_type": "company", "record_id": c.org.String(),
+		"record_type": "company", "record_id": c.company.String(),
 	})
 	var answer agents.AssembledContextResult
 	got.JSON(t, &answer)
@@ -307,17 +307,17 @@ func TestCase6EveryPastCaseReachesTheCallerWithItsHistory(t *testing.T) {
 		found[hit.Record.ID] = true
 	}
 	for _, account := range append([]pastCase{first}, more...) {
-		if !found[account.org] {
+		if !found[account.company] {
 			t.Fatalf("case 6 criterion 4: %s lived through this and is missing from the sweep, so "+
 				"an assistant would call a pattern a one-off",
-				s.readString(t, "company", "display_name", account.org))
+				s.readString(t, "company", "display_name", account.company))
 		}
 		// The complaint itself, through the timeline. A company that arrives
 		// with no history attached is a name, not a past case.
 		if !s.hasComplaintOnTimeline(t, account) {
 			t.Fatalf("case 6 criterion 4: %s came back with no complaint on its timeline — the "+
 				"account is named and the evidence that makes it relevant is not there",
-				s.readString(t, "company", "display_name", account.org))
+				s.readString(t, "company", "display_name", account.company))
 		}
 	}
 
@@ -336,7 +336,7 @@ func TestCase6EveryPastCaseReachesTheCallerWithItsHistory(t *testing.T) {
 func (s *scenario) hasComplaintOnTimeline(t *testing.T, account pastCase) bool {
 	t.Helper()
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
-		"record_type": "company", "record_id": account.org.String(),
+		"record_type": "company", "record_id": account.company.String(),
 	})
 	var answer agents.AssembledContextResult
 	got.JSON(t, &answer)

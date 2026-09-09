@@ -39,9 +39,9 @@ const auditFieldProject = "project_id"
 
 // quietProject is one project the rule fired on.
 type quietProject struct {
-	ProjectID      ids.UUID
+	ProjectID ids.UUID
 	CompanyID ids.UUID
-	Name           string
+	Name      string
 	// QuietSince is the instant the silence is measured from — the last filed
 	// activity, or the project's creation when nothing was ever filed. It is
 	// what keys the finding to ONE quiet episode: a new activity moves it, and
@@ -101,12 +101,12 @@ func WriteProjectQuietSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Gh
 	for _, project := range found {
 		days := int(now.Sub(project.QuietSince).Hours() / 24)
 		raised, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-			Kind:           kindProjectGoneQuiet,
-			CompanyID: project.CompanyID,
-			ProjectID:      project.ProjectID,
-			Summary:        fmt.Sprintf(said.projectQuiet, project.Name, days),
-			Severity:       severityWarn,
-			Fingerprint:    fingerprintOf(kindProjectGoneQuiet, project.ProjectID.String(), project.QuietSince.UTC().Format(time.RFC3339Nano)),
+			Kind:        kindProjectGoneQuiet,
+			CompanyID:   project.CompanyID,
+			ProjectID:   project.ProjectID,
+			Summary:     fmt.Sprintf(said.projectQuiet, project.Name, days),
+			Severity:    severityWarn,
+			Fingerprint: fingerprintOf(kindProjectGoneQuiet, project.ProjectID.String(), project.QuietSince.UTC().Format(time.RFC3339Nano)),
 			Audit: map[string]any{
 				paramKind: kindProjectGoneQuiet, "days_silent": days,
 				auditFieldProject: project.ProjectID.String(), "quiet_since": project.QuietSince.UTC(),

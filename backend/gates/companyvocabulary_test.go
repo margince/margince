@@ -63,7 +63,7 @@ var notThisRecordType = regexp.MustCompile(
 	`(?i)organi[sz]er|organi[sz]ational|organi[sz]e[sd]|organi[sz]ing|organi[sz]es`)
 
 // hostname matches a .org TLD. There are 275 in this tree — a go.mod require,
-// a disposable-email fixture list, schema.company in a comment — and in each one
+// a disposable-email fixture list, schema.org in a comment — and in each one
 // `company` sits between a dot and a slash or a quote exactly as an identifier
 // component would.
 var hostname = regexp.MustCompile(`[a-z0-9][a-z0-9.-]*\.orgs?\b`)

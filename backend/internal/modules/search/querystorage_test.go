@@ -229,8 +229,8 @@ func TestTheStorageFilterOnlyEverNarrows(t *testing.T) {
 func TestAnInverseRelationIsFilteredByTheReferringTablesSchema(t *testing.T) {
 	schema := map[string][]StoredColumn{
 		"company": columnsOf("id:uuid", "display_name"),
-		"deal":         columnsOf("id:uuid", "name", "company_id:uuid"),
-		"project":      columnsOf("id:uuid", "name"), // no company_id: no edge back
+		"deal":    columnsOf("id:uuid", "name", "company_id:uuid"),
+		"project": columnsOf("id:uuid", "name"), // no company_id: no edge back
 	}
 	resolver := NewVocabularyResolver().WithColumnReader(stubColumns{tables: schema})
 	vocab, err := resolver.Resolve(readerFor(entityCompany, entityDeal, entityProject), entityCompany)
@@ -256,8 +256,8 @@ func TestAnInverseRelationIsFilteredByTheReferringTablesSchema(t *testing.T) {
 func TestTheSchemaIsReadAtMostOncePerTablePerResolve(t *testing.T) {
 	reader := &countingColumns{tables: map[string][]StoredColumn{
 		"company": columnsOf("id:uuid", "display_name"),
-		"deal":         columnsOf("id:uuid", "name", "company_id:uuid", "project_id:uuid"),
-		"project":      columnsOf("id:uuid", "name", "company_id:uuid"),
+		"deal":    columnsOf("id:uuid", "name", "company_id:uuid", "project_id:uuid"),
+		"project": columnsOf("id:uuid", "name", "company_id:uuid"),
 	}}
 	resolver := NewVocabularyResolver().WithColumnReader(reader)
 	if _, err := resolver.Resolve(readerFor(entityCompany, entityDeal, entityProject)); err != nil {

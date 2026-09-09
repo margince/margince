@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	company360svc "github.com/margince/margince/backend/internal/compose/company360"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"

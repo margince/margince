@@ -60,10 +60,10 @@ var picklistInContract = map[string]struct{ schema, property string }{
 	"company.lifecycle":         {"Company", "lifecycle"},
 	"company.size_band":         {"Company", "size_band"},
 	"company.relationship_type": {"Company", "relationship_types"},
-	"deal.status":                    {"Deal", "status"},
-	"deal.forecast_category":         {"Deal", "forecast_category"},
-	"lead.status":                    {"Lead", "status"},
-	"project.phase":                  {"Project", "phase"},
+	"deal.status":               {"Deal", "status"},
+	"deal.forecast_category":    {"Deal", "forecast_category"},
+	"lead.status":               {"Lead", "status"},
+	"project.phase":             {"Project", "phase"},
 	// A deal filters on its customer's account through a link leaf, so two of the
 	// sets above appear a second time under the deal engine. Both entries name the
 	// Company property they reach, which is the point: a link leaf offering a

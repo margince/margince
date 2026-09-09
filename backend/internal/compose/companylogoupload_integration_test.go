@@ -79,7 +79,7 @@ func uploadMark(t *testing.T, e *integration.Env, handlers companyHandlers, imag
 		WithContext(e.As(e.Rep1, nil, integration.AdminPerms))
 	request.Header.Set("Content-Type", contentType)
 	recorder := httptest.NewRecorder()
-	handlers.UploadCompanyLogo(recorder, request)
+	handlers.UploadAnchorCompanyLogo(recorder, request)
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("upload → %d %s, want 200", recorder.Code, recorder.Body.String())
 	}
@@ -189,7 +189,7 @@ func TestRemovingAMarkGivesTheFieldBackToTheNextRead(t *testing.T) {
 	}
 
 	recorder := httptest.NewRecorder()
-	handlers.DeleteCompanyLogo(recorder,
+	handlers.DeleteAnchorCompanyLogo(recorder,
 		httptest.NewRequest(http.MethodDelete, "/v1/company/logo", nil).WithContext(ctx))
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("delete → %d %s, want 200", recorder.Code, recorder.Body.String())

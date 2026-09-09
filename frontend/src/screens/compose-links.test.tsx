@@ -50,7 +50,7 @@ const PURPOSES = {
 // The account view the grounding selects are populated from: two contacts,
 // two open deals and two live projects, so every pick is a real choice rather
 // than the only option — and the sole-project default stays out of the way.
-const ORG_VIEW = {
+const COMPANY_VIEW = {
   company: { id: "company-1", name: "Acme" },
   people: {
     data: [
@@ -121,7 +121,7 @@ function stubRoutes(
       if (override) return override();
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse({ data: [] });
-      if (key === "GET /companies/company-1/360") return jsonResponse(ORG_VIEW);
+      if (key === "GET /companies/company-1/360") return jsonResponse(COMPANY_VIEW);
       if (isPreviewDoor(url.pathname)) {
         return jsonResponse(allowedPreview(previewedAddresses(body)));
       }
@@ -279,7 +279,7 @@ describe("what a sent message files under", () => {
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
       "GET /companies/company-1/360": () =>
         jsonResponse({
-          ...ORG_VIEW,
+          ...COMPANY_VIEW,
           projects: [
             {
               project_id: "proj-1",

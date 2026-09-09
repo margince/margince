@@ -89,8 +89,8 @@ func (e *stagingEnv) approve(t *testing.T, id ids.ApprovalID) {
 			RoleKeys: []string{"admin"},
 			RowScope: principal.RowScopeAll,
 			Objects: map[string]principal.ObjectGrant{
-				"company": {Create: true, Read: true, Update: true, Delete: true},
-				"approval":     {Create: true, Read: true, Update: true, Delete: true},
+				"company":  {Create: true, Read: true, Update: true, Delete: true},
+				"approval": {Create: true, Read: true, Update: true, Delete: true},
 				// A merge staging targets tags, and a decider who cannot see
 				// the target is answered not-found — existence-hiding working
 				// correctly, and not what any case here is about.

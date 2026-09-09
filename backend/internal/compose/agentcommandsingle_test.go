@@ -73,7 +73,7 @@ var contractBodies = map[string]string{
 	"advanceProjectPhase": `{"to_phase":"pursuing"}`,
 	"advanceDeal":         `{"to_stage_id":"019ff000-0000-7000-8000-000000000003"}`,
 	"mergePerson":         `{"target_id":"019ff000-0000-7000-8000-000000000004"}`,
-	"mergeCompany":   `{"target_id":"019ff000-0000-7000-8000-000000000005"}`,
+	"mergeCompany":        `{"target_id":"019ff000-0000-7000-8000-000000000005"}`,
 	"scrapeCompany":       `{"url":"https://acme.test/about"}`,
 	"deepReadCompany":     `{"url":"https://acme.test"}`,
 	"logActivity":         `{"kind":"note","body":"hi"}`,
@@ -96,21 +96,21 @@ var contractBodies = map[string]string{
 
 	// The operand family's own bodies, on the same rule: every required member
 	// crm.yaml declares, and nothing else.
-	"setProjectStakeholder":          `{"person_id":"019ff000-0000-7000-8000-000000000031","role":"champion"}`,
-	"setProjectCompany":              `{"company_id":"019ff000-0000-7000-8000-000000000032","role":"partner"}`,
-	"applyTag":                       `{"entity_type":"person","entity_id":"019ff000-0000-7000-8000-000000000033"}`,
-	"removeTag":                      `{"entity_type":"person","entity_id":"019ff000-0000-7000-8000-000000000034"}`,
-	"mergeTags":                      `{"into_tag_id":"019ff000-0000-7000-8000-000000000035"}`,
-	"demoteLead":                     `{"reason":"the account went quiet"}`,
-	"createOffer":                    `{"currency":"EUR","source":"manual"}`,
-	"addOfferLineItem":               `{"quantity":2}`,
-	"updateOfferLineItem":            `{"quantity":3}`,
-	"openDealRoomThread":             `{"body":"can we revisit the delivery date?"}`,
-	"replyDealRoomThread":            `{"body":"yes — moving it a week."}`,
+	"setProjectStakeholder":     `{"person_id":"019ff000-0000-7000-8000-000000000031","role":"champion"}`,
+	"setProjectCompany":         `{"company_id":"019ff000-0000-7000-8000-000000000032","role":"partner"}`,
+	"applyTag":                  `{"entity_type":"person","entity_id":"019ff000-0000-7000-8000-000000000033"}`,
+	"removeTag":                 `{"entity_type":"person","entity_id":"019ff000-0000-7000-8000-000000000034"}`,
+	"mergeTags":                 `{"into_tag_id":"019ff000-0000-7000-8000-000000000035"}`,
+	"demoteLead":                `{"reason":"the account went quiet"}`,
+	"createOffer":               `{"currency":"EUR","source":"manual"}`,
+	"addOfferLineItem":          `{"quantity":2}`,
+	"updateOfferLineItem":       `{"quantity":3}`,
+	"openDealRoomThread":        `{"body":"can we revisit the delivery date?"}`,
+	"replyDealRoomThread":       `{"body":"yes — moving it a week."}`,
 	"createCompanyFact":         `{"category":"company","field":"headcount","value":"240"}`,
 	"updateCompanyFact":         `{"value":"260"}`,
 	"updateCompanyProfileField": `{"value":"Acme GmbH"}`,
-	"updateCustomFieldOptions":       `{"options":["bronze","silver","gold"]}`,
+	"updateCustomFieldOptions":  `{"options":["bronze","silver","gold"]}`,
 }
 
 // What a registration does not say: that the decoder bound to a route can

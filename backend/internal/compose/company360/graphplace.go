@@ -98,7 +98,7 @@ func (g *graphAssembly) placeDeals() {
 
 // graphRelatedCompany is one company one hop away, and how it is attached.
 type graphRelatedCompany struct {
-	companyID       ids.UUID
+	companyID   ids.UUID
 	displayName string
 	// logoObjectKey is where the company's resolved logo lives, nil when it
 	// has none — the node's face, so a related company on the graph is

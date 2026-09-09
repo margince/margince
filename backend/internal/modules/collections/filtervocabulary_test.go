@@ -183,13 +183,13 @@ func TestTheVocabularyTellsACallerWhatAnIDFieldReferences(t *testing.T) {
 		byName[f.Name] = f
 	}
 	for name, want := range map[string]storekit.Reference{
-		"stage_id":        storekit.RefStage,
-		"pipeline_id":     storekit.RefPipeline,
-		"owner_id":        storekit.RefAppUser,
-		"owner_team_id":   storekit.RefTeam,
-		"company_id": storekit.RefCompany,
-		"project_id":      storekit.RefProject,
-		"tag":             storekit.RefTag,
+		"stage_id":      storekit.RefStage,
+		"pipeline_id":   storekit.RefPipeline,
+		"owner_id":      storekit.RefAppUser,
+		"owner_team_id": storekit.RefTeam,
+		"company_id":    storekit.RefCompany,
+		"project_id":    storekit.RefProject,
+		"tag":           storekit.RefTag,
 	} {
 		if got := byName[name].References; got != want {
 			t.Errorf("%s references %q, want %q", name, got, want)

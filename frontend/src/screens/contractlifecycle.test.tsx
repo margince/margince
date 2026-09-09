@@ -56,7 +56,7 @@ function show(ui: ReactNode) {
 // A predecessor's own company has exactly one deal on record for these
 // tests — enough to prove the picker lists it and sends its id, without a
 // second candidate to disambiguate against.
-const ORG_DEAL = { id: "d-1", name: "Renewal — 2025 term" };
+const COMPANY_DEAL = { id: "d-1", name: "Renewal — 2025 term" };
 
 function stubRenewalFetch(onRenewal: (request: Request) => Promise<Response>) {
   vi.stubGlobal(
@@ -67,7 +67,7 @@ function stubRenewalFetch(onRenewal: (request: Request) => Promise<Response>) {
       const url = new URL(request.url);
       if (request.method === "GET" && url.pathname === "/v1/deals") {
         return new Response(
-          JSON.stringify({ data: [ORG_DEAL], page: { has_more: false } }),
+          JSON.stringify({ data: [COMPANY_DEAL], page: { has_more: false } }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
@@ -179,7 +179,7 @@ describe("ContractRenewModal", () => {
 
     await user.click(await screen.findByRole("combobox", { name: "Deal" }));
     await user.click(
-      await screen.findByRole("option", { name: ORG_DEAL.name }),
+      await screen.findByRole("option", { name: COMPANY_DEAL.name }),
     );
     await user.click(screen.getByRole("button", { name: "Renew" }));
 
@@ -190,7 +190,7 @@ describe("ContractRenewModal", () => {
       title: "Framework agreement 2024",
       value_basis: "annualized_12m",
       auto_renew: false,
-      deal_id: ORG_DEAL.id,
+      deal_id: COMPANY_DEAL.id,
     });
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });

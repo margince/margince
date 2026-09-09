@@ -108,8 +108,8 @@ func TestAnEmptyFieldWritesNoSentence(t *testing.T) {
 // claim from having nothing to say.
 func TestASectionWithNothingToSayIsAbsentRatherThanEmpty(t *testing.T) {
 	in := Input{
-		CompanyID: ids.NewV7().String(),
-		ProfileFields:  []crmcontracts.CompanyProfileField{field("legal_name", "Voltaq Systems GmbH", rowID())},
+		CompanyID:     ids.NewV7().String(),
+		ProfileFields: []crmcontracts.CompanyProfileField{field("legal_name", "Voltaq Systems GmbH", rowID())},
 	}
 	sections := Deterministic(in)
 	if len(sections) != 1 {
@@ -181,8 +181,8 @@ func TestNoFloorSentenceSpellsAnIDAtTheReader(t *testing.T) {
 // only restate it under the raw column name.
 func TestAFieldWithNoMappedLabelWritesNoSentence(t *testing.T) {
 	in := Input{
-		CompanyID: ids.NewV7().String(),
-		ProfileFields:  []crmcontracts.CompanyProfileField{field("display_name", "Acme GmbH", rowID())},
+		CompanyID:     ids.NewV7().String(),
+		ProfileFields: []crmcontracts.CompanyProfileField{field("display_name", "Acme GmbH", rowID())},
 	}
 	if sections := Deterministic(in); len(sections) != 0 {
 		t.Errorf("sections = %+v, want none — display_name has no mapped label", sections)

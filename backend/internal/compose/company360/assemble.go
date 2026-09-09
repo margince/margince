@@ -187,13 +187,13 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.Company
 // here and shared, rather than each section paying for its own copy of the
 // same rows at the same instant.
 type assembly struct {
-	svc   *Service
-	ctx   context.Context
-	tx    pgx.Tx
+	svc       *Service
+	ctx       context.Context
+	tx        pgx.Tx
 	companyID ids.CompanyID
-	now   time.Time
-	opts  AssembleOptions
-	out   *crmcontracts.Company360
+	now       time.Time
+	opts      AssembleOptions
+	out       *crmcontracts.Company360
 
 	// baseCurrency is the installation's reporting currency, resolved at most
 	// ONCE per assembly. It is one installation-wide value, and every section
@@ -267,7 +267,7 @@ func (a *assembly) readContacts() error {
 	}
 	a.out.People = &struct {
 		Data []crmcontracts.Company360Contact `json:"data"`
-		Page crmcontracts.PageInfo                 `json:"page"`
+		Page crmcontracts.PageInfo            `json:"page"`
 	}{Data: data, Page: page}
 	return nil
 }
@@ -380,7 +380,7 @@ func (a *assembly) readNextSteps() error {
 	}
 	a.out.NextSteps = &struct {
 		Data []crmcontracts.Company360NextStep `json:"data"`
-		Page crmcontracts.PageInfo                  `json:"page"`
+		Page crmcontracts.PageInfo             `json:"page"`
 	}{Data: data, Page: page}
 	return nil
 }

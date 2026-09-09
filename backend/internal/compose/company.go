@@ -247,9 +247,9 @@ func parseableWebsite(website string) bool {
 // a value someone chose.
 func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 	out := crmcontracts.CompanyProfile{
-		CompanyId: openapi_types.UUID(c.CompanyID.UUID),
-		DisplayName:    c.DisplayName,
-		Website:        c.Website,
+		CompanyId:   openapi_types.UUID(c.CompanyID.UUID),
+		DisplayName: c.DisplayName,
+		Website:     c.Website,
 		// The module's own spelling of the logo endpoint, not a second one: the
 		// shell draws the installation's mark from this profile and the record
 		// screens draw it from Company.logo_url, and a company with two

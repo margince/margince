@@ -24,10 +24,10 @@ import (
 // SiteReadClaim is what BeginSiteRead's CAS hands the worker: the claimed
 // dossier's own identity, so the crawl derives from the row, not the job.
 type SiteReadClaim struct {
-	CompanyID *ids.UUID
-	TargetKind     string
-	SeedURL        string
-	RequestedBy    string
+	CompanyID   *ids.UUID
+	TargetKind  string
+	SeedURL     string
+	RequestedBy string
 	// ClaimedAt is the lease this attempt holds: the started_at its own CAS
 	// stamped, which is the value the reclaim predicate reads to decide the
 	// read is abandoned. Every claim stamps a fresh one and a reclaim can only

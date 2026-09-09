@@ -534,7 +534,7 @@ type companyListDTO struct {
 	} `json:"data"`
 }
 
-func companies(t *testing.T, e *apptest.AppEnv) companyListDTO {
+func companyList(t *testing.T, e *apptest.AppEnv) companyListDTO {
 	t.Helper()
 	var companies companyListDTO
 	if status := e.Call(t, http.MethodGet, "/v1/companies?limit=100", nil, nil, &companies); status != http.StatusOK {
@@ -565,12 +565,12 @@ func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
-	before := len(companies(t, e).Data)
+	before := len(companyList(t, e).Data)
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 
-	companies := companies(t, e)
+	companies := companyList(t, e)
 	if len(companies.Data) != before+2 {
 		t.Fatalf("companies = %d, want %d", len(companies.Data), before+2)
 	}
@@ -608,12 +608,12 @@ func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+editedRun.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve corrected → %d, want 202", status)
 	}
-	for _, o := range companies(t, e).Data {
+	for _, o := range companyList(t, e).Data {
 		if o.DisplayName == "Initech" && o.LegalName != "Initech SE" {
 			t.Fatalf("legal name = %q, want the corrected value", o.LegalName)
 		}
 	}
-	if got := len(companies(t, e).Data); got != before+2 {
+	if got := len(companyList(t, e).Data); got != before+2 {
 		t.Fatalf("companies = %d, want %d — a correction updates, it does not duplicate", got, before+2)
 	}
 }
@@ -685,7 +685,7 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	}
 
 	named := 0
-	for _, o := range companies(t, e).Data {
+	for _, o := range companyList(t, e).Data {
 		if o.DisplayName == "Akeneo" {
 			named++
 		}
@@ -730,7 +730,7 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run3.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve 3 → %d, want 202", status)
 	}
-	for _, o := range companies(t, e).Data {
+	for _, o := range companyList(t, e).Data {
 		if o.DisplayName == "Nordwind Logistik" {
 			t.Error("the commit landed a row the preview disclosed as skipped")
 		}
@@ -808,7 +808,7 @@ func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
 		map[string]any{"display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the incumbent → %d, want 201", status)
 	}
-	companiesBefore := len(companies(t, e).Data)
+	companiesBefore := len(companyList(t, e).Data)
 
 	const file = "Company\nKestrel Data\nNordwind Logistik\n"
 	profile, _ := uploadCSV(t, e, "company", file)
@@ -839,7 +839,7 @@ func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
 	}
 
 	// Exactly one company added, and no second Kestrel.
-	after := companies(t, e).Data
+	after := companyList(t, e).Data
 	if len(after) != companiesBefore+1 {
 		t.Errorf("companies went from %d to %d; the preview promised one new company", companiesBefore, len(after))
 	}

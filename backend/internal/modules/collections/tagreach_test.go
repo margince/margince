@@ -24,9 +24,9 @@ import (
 func TestCountingATagsReachNeedsTheVocabularyRead(t *testing.T) {
 	t.Parallel()
 	ctx := taggerWith(map[string]principal.ObjectGrant{
-		"person":       {Read: true},
+		"person":  {Read: true},
 		"company": {Read: true},
-		"deal":         {Read: true},
+		"deal":    {Read: true},
 	})
 
 	_, err := CountTagReachBatch(ctx, nil, []ids.TagID{ids.New[ids.TagKind]()})
@@ -62,10 +62,10 @@ func TestATypeTheCallerMayNotReadIsNotCounted(t *testing.T) {
 func TestTheVocabularyReadGetsPastTheDoor(t *testing.T) {
 	t.Parallel()
 	ctx := taggerWith(map[string]principal.ObjectGrant{
-		"tag":          {Read: true},
-		"person":       {Read: true},
+		"tag":     {Read: true},
+		"person":  {Read: true},
 		"company": {Read: true},
-		"deal":         {Read: true},
+		"deal":    {Read: true},
 	})
 
 	defer func() {

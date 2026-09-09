@@ -36,7 +36,7 @@ func clearableDealColumns(current crmcontracts.Deal) map[string]storekit.Clearab
 		"forecast_category":   {Column: "forecast_category", Current: current.ForecastCategory},
 		"wait_until":          {Column: "wait_until", Current: current.WaitUntil},
 		"owner_id":            {Column: "owner_id", Current: current.OwnerId},
-		"company_id":     {Column: "company_id", Current: current.CompanyId},
+		"company_id":          {Column: "company_id", Current: current.CompanyId},
 		"project_id":          {Column: "project_id", Current: current.ProjectId},
 	}
 }
@@ -61,7 +61,7 @@ func dealClearPairs(current crmcontracts.Deal) map[string][]storekit.Clearable {
 		{Column: "partner_attribution", Current: current.PartnerAttribution},
 	}
 	return map[string][]storekit.Clearable{
-		"partner_company_id":      partner,
+		"partner_company_id":  partner,
 		"partner_attribution": partner,
 	}
 }

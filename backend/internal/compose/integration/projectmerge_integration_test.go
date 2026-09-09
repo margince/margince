@@ -119,7 +119,7 @@ func TestTheMergeRefusalBlocksAndNamesProjectsTheCallerDoesNotOwn(t *testing.T) 
 	outsider := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"company":          {Read: true, Update: true, Delete: true},
+			"company":               {Read: true, Update: true, Delete: true},
 			"project":               {Read: true},
 			"person":                {Read: true, Update: true},
 			"installation_settings": {Read: true},
@@ -157,7 +157,7 @@ func TestTheMergeRefusalNamesTheProjectsTheCallerCanSee(t *testing.T) {
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"company":          {Read: true, Update: true, Delete: true},
+			"company":               {Read: true, Update: true, Delete: true},
 			"project":               {Read: true},
 			"person":                {Read: true, Update: true},
 			"installation_settings": {Read: true},
@@ -197,7 +197,7 @@ func TestTheMergeRefusalWithholdsProjectNamesFromACallerWithoutTheGrant(t *testi
 	ungranted := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"company":          {Read: true, Update: true, Delete: true},
+			"company":               {Read: true, Update: true, Delete: true},
 			"person":                {Read: true, Update: true},
 			"installation_settings": {Read: true},
 		},

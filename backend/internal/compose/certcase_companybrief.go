@@ -39,10 +39,10 @@ import (
 
 // companyBriefFixture is one account as the brief reads it.
 type companyBriefFixture struct {
-	Name     string                `json:"name"`
-	Industry string                `json:"industry"`
-	Strength int                   `json:"strength"`
-	Contacts int                   `json:"contact_count"`
+	Name     string                    `json:"name"`
+	Industry string                    `json:"industry"`
+	Strength int                       `json:"strength"`
+	Contacts int                       `json:"contact_count"`
 	Deals    []companyBriefDealFixture `json:"open_deals"`
 	Recent   []companyBriefActFixture  `json:"recent"`
 	// SectionsOmitted is what this reader was NOT allowed to see. Without it
@@ -180,12 +180,12 @@ func refuseUngroundableBrief(want []string, label map[string]string) error {
 // (the production grounding filter, the labelled records the reply must cite)
 // is the same question asked of the same input.
 type companyBriefCase struct {
-	site     string
-	request  func(companybrief.Input) model.Request
-	in       companybrief.Input
-	companyID    string
-	label    map[string]string
-	expected []string
+	site      string
+	request   func(companybrief.Input) model.Request
+	in        companybrief.Input
+	companyID string
+	label     map[string]string
+	expected  []string
 }
 
 // Run issues the one request this site sends, through the production

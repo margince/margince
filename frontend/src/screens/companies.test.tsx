@@ -806,7 +806,7 @@ describe("CompanyScreen — profile fields card (B5)", () => {
     stubFetch(async (url) => {
       // The tab's rows are editable, and an edit affordance needs all three
       // write axes: the grant, a full seat, and the record's own `writable`.
-      // Left to the catch-all below, /me answers with the ORG body — no seat,
+      // Left to the catch-all below, /me answers with the COMPANY body — no seat,
       // no grants — and every row correctly renders read-only, which reads
       // exactly like the values having gone missing.
       if (url.includes("/me")) {

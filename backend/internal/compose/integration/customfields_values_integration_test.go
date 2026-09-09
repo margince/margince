@@ -39,7 +39,7 @@ var cfvPerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"custom_field":          {Create: true, Read: true, Update: true, Delete: true},
 		"person":                {Create: true, Read: true, Update: true, Delete: true},
-		"company":          {Create: true, Read: true, Update: true, Delete: true},
+		"company":               {Create: true, Read: true, Update: true, Delete: true},
 		"lead":                  {Create: true, Read: true, Update: true, Delete: true},
 		"installation_settings": {Read: true},
 	},
@@ -151,7 +151,7 @@ func TestCustomFieldValues_CompanyRoundTrip(t *testing.T) {
 	}
 	assertCF(t, created.AdditionalProperties, col, "emea")
 
-	got, err := f.store.GetAnchorCompany(f.ctx, companyIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
+	got, err := f.store.GetCompany(f.ctx, companyIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("GetCompany: %v", err)
 	}

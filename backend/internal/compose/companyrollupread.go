@@ -64,7 +64,7 @@ type CompanyRollupResult struct {
 //
 // The rollup surfaces deal money and activity counts, so it demands the
 // same object grants the forecast and activity reports do. Aggregation
-// itself stays ORG-scoped: within a readable company, per-deal and
+// itself stays COMPANY-scoped: within a readable company, per-deal and
 // per-activity row visibility is deliberately not consulted, so account
 // totals stay whole (the contract's description states the same policy).
 //

@@ -142,7 +142,7 @@ type capturedFile struct {
 	byteSize     int64
 	partID       *string
 	sourceID     *string
-	company *string
+	company      *string
 }
 
 func withFiles(rec connector.NormalizedRecord, parts ...connector.Part) connector.NormalizedRecord {

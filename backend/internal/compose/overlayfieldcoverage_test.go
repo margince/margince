@@ -37,7 +37,7 @@ const contractFile = "../../api/crm.yaml"
 // gatekit:fixture the contract schema name each overlay entity's fields are
 // read from — expected wiring, not a waived cost.
 var contractSchemaNameFor = map[string]string{
-	"person":       "Person",
+	"person":  "Person",
 	"company": "Company",
 }
 

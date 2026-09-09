@@ -30,11 +30,11 @@ import (
 // a typo is a compile error rather than a participant row that silently never
 // gets written.
 const (
-	linkEntityPerson       = "person"
-	linkEntityCompany = "company"
-	linkEntityDeal         = "deal"
-	linkEntityActivity     = "activity"
-	linkEntityProject      = "project"
+	linkEntityPerson   = "person"
+	linkEntityCompany  = "company"
+	linkEntityDeal     = "deal"
+	linkEntityActivity = "activity"
+	linkEntityProject  = "project"
 )
 
 // stampLoggedParticipants records who was in a hand-logged interaction: the

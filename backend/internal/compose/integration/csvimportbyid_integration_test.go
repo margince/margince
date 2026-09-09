@@ -204,7 +204,7 @@ func TestCSVImportByIDRefusesAnIDNothingAnswersTo(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupImportApp(t)
-			before := len(companies(t, e).Data)
+			before := len(companyList(t, e).Data)
 
 			file := "Id,Company,City\n" + tc.id + ",Kestrel Data,Bremen\n"
 			profile, _ := uploadCSV(t, e, "company", file)
@@ -235,7 +235,7 @@ func TestCSVImportByIDRefusesAnIDNothingAnswersTo(t *testing.T) {
 			if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 				t.Fatalf("approve → %d, want 202", status)
 			}
-			if after := len(companies(t, e).Data); after != before {
+			if after := len(companyList(t, e).Data); after != before {
 				t.Errorf("companies went from %d to %d; a refused row must land nothing", before, after)
 			}
 		})
@@ -432,7 +432,7 @@ func TestThePreviewPromisesWhatTheCommitPerformsForACollision(t *testing.T) {
 				nil, nil, &predicted); status != http.StatusOK {
 				t.Fatalf("report → %d, want 200", status)
 			}
-			before := len(companies(t, e).Data)
+			before := len(companyList(t, e).Data)
 
 			if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve",
 				nil, nil, nil); status != http.StatusAccepted {
@@ -440,7 +440,7 @@ func TestThePreviewPromisesWhatTheCommitPerformsForACollision(t *testing.T) {
 			}
 
 			// What the preview PROMISED, measured against what the estate did.
-			if landed := len(companies(t, e).Data) - before; landed != predicted.Disposition.Created {
+			if landed := len(companyList(t, e).Data) - before; landed != predicted.Disposition.Created {
 				t.Errorf("the preview promised %d create(s) and %d company/companies landed — a row "+
 					"previewing as one outcome and committing as another is what makes an approval "+
 					"a decision about something else", predicted.Disposition.Created, landed)

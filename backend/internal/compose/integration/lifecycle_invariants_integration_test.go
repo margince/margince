@@ -284,7 +284,7 @@ func TestDuplicate409DoesNotDiscloseOutOfScopeIDs(t *testing.T) {
 var domainCreateRepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"company":          {Create: true, Read: true, Update: true},
+		"company":               {Create: true, Read: true, Update: true},
 		"person":                {Create: true, Read: true, Update: true},
 		"installation_settings": {Read: true},
 	},

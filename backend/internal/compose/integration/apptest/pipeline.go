@@ -105,13 +105,13 @@ func CreateOpenDeal(t *testing.T, e *AppEnv, stages SeededStages) string {
 
 	var deal map[string]any
 	status = e.Call(t, "POST", "/v1/deals", map[string]any{
-		"name":            "Acme rollout",
-		"amount_minor":    250_000_00,
-		"currency":        "EUR",
-		"pipeline_id":     stages.PipelineID,
-		"stage_id":        stages.Open,
-		"company_id": company["id"],
-		"source":          "ui",
+		"name":         "Acme rollout",
+		"amount_minor": 250_000_00,
+		"currency":     "EUR",
+		"pipeline_id":  stages.PipelineID,
+		"stage_id":     stages.Open,
+		"company_id":   company["id"],
+		"source":       "ui",
 	}, nil, &deal)
 	if status != http.StatusCreated {
 		t.Fatalf("create deal = %d %v", status, deal)

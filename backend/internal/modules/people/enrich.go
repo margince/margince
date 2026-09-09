@@ -137,8 +137,8 @@ func (s *Store) ApplyEnrichment(ctx context.Context, companyID ids.CompanyID, in
 func UnmarshalEnrichment(raw json.RawMessage) (ids.CompanyID, string, []ColdStartFieldInput, error) {
 	var proposal struct {
 		CompanyID ids.CompanyID `json:"company_id"`
-		SourceURL      string             `json:"source_url"`
-		Fields         []struct {
+		SourceURL string        `json:"source_url"`
+		Fields    []struct {
 			Field           string  `json:"field"`
 			Value           string  `json:"value"`
 			EvidenceSnippet string  `json:"evidence_snippet"`

@@ -43,7 +43,7 @@ import (
 // company actually has rather than the one it had when the job was made. A
 // copy in the args would be the stale-coordinate bug moved one layer out.
 type GeocodeCompanyArgs struct {
-	Workspace      ids.UUID `json:"workspace_id"`
+	Workspace ids.UUID `json:"workspace_id"`
 	CompanyID ids.UUID `json:"company_id"`
 }
 
@@ -72,7 +72,7 @@ func GeocodeEnqueueFor(enqueue geocodeEnqueuer) people.GeocodeEnqueue {
 			return errors.New("compose: geocoding a company outside any workspace")
 		}
 		return enqueue.EnqueueTx(ctx, tx, GeocodeCompanyArgs{
-			Workspace:      ws,
+			Workspace: ws,
 			CompanyID: companyID.UUID,
 		}, geocodeInsertOpts())
 	}

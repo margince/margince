@@ -29,14 +29,14 @@ import (
 // lifecycle answer while letting the effect differ: only a person becomes a
 // person.
 var verdictKinds = map[string]string{
-	capture.KindPerson:             capture.PendingStatusReal,
-	capture.KindRoleMailbox:        capture.PendingStatusReal,
+	capture.KindPerson:        capture.PendingStatusReal,
+	capture.KindRoleMailbox:   capture.PendingStatusReal,
 	capture.KindCompanySender: capture.PendingStatusReal,
-	capture.KindNewsletter:         capture.PendingStatusNoise,
-	capture.KindTransactional:      capture.PendingStatusNoise,
-	capture.KindSpam:               capture.PendingStatusNoise,
-	capture.KindPersonal:           capture.PendingStatusNoise,
-	capture.KindAdvisor:            capture.PendingStatusReal,
+	capture.KindNewsletter:    capture.PendingStatusNoise,
+	capture.KindTransactional: capture.PendingStatusNoise,
+	capture.KindSpam:          capture.PendingStatusNoise,
+	capture.KindPersonal:      capture.PendingStatusNoise,
+	capture.KindAdvisor:       capture.PendingStatusReal,
 }
 
 // verdictKindNames is the vocabulary for the readers that need the LIST rather

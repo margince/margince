@@ -18,9 +18,9 @@ import (
 // people/companies it created. The cost estimator turns these into
 // expected units for a wider window.
 type BackfillYields struct {
-	Scanned              int64
-	Captured             int64
-	PeopleCreated        int64
+	Scanned          int64
+	Captured         int64
+	PeopleCreated    int64
 	CompaniesCreated int64
 }
 

@@ -197,15 +197,15 @@ func refusedPersonCreate(ctx context.Context, tx pgx.Tx, match PersonResolution,
 // CompanySpec is every column a company create writes, across all four
 // paths.
 type CompanySpec struct {
-	DisplayName string
-	LegalName   *string
-	Description *string
-	Industry    *string
-	SizeBand    *string
-	OwnerID     *ids.UserID
+	DisplayName     string
+	LegalName       *string
+	Description     *string
+	Industry        *string
+	SizeBand        *string
+	OwnerID         *ids.UserID
 	ParentCompanyID *ids.CompanyID
-	Address     *crmcontracts.Address
-	Domains     []CompanyDomainInput
+	Address         *crmcontracts.Address
+	Domains         []CompanyDomainInput
 
 	// NameSource is the ADR-0072/A118 authority ladder entry for the name
 	// being written ("" writes the column default, 'human'). A row named from

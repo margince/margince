@@ -29,17 +29,17 @@ import (
 // each so a dimension, measure, and filter that mean the same column cannot
 // drift apart.
 const (
-	colOwnerID        = "t.owner_id"
-	colAmountMinor    = "t.amount_minor"
-	colPipelineID     = "t.pipeline_id"
-	colStageID        = "t.stage_id"
-	colCompanyID = "t.company_id"
-	colPartnerCompanyID   = "t.partner_company_id"
-	colCurrency       = "t.currency"
-	colStatus         = "t.status"
-	colProjectID      = "t.project_id"
-	colLostReason     = "t.lost_reason"
-	whereArchivedNull = "t.archived_at IS NULL"
+	colOwnerID          = "t.owner_id"
+	colAmountMinor      = "t.amount_minor"
+	colPipelineID       = "t.pipeline_id"
+	colStageID          = "t.stage_id"
+	colCompanyID        = "t.company_id"
+	colPartnerCompanyID = "t.partner_company_id"
+	colCurrency         = "t.currency"
+	colStatus           = "t.status"
+	colProjectID        = "t.project_id"
+	colLostReason       = "t.lost_reason"
+	whereArchivedNull   = "t.archived_at IS NULL"
 	// whereOpenDeal is the population of deals still IN PLAY: live, and not yet
 	// won or lost. Three specs measure it — the forecast, the
 	// open-deals-per-company roll-up and the pipeline composition — and a
@@ -97,19 +97,19 @@ const (
 	// borrowed from an unrelated surface's vocabulary (overlay's query-param
 	// names happen to share these spellings, but renaming one must never
 	// rename the other).
-	fieldStageID        = "stage_id"
-	fieldStatus         = "status"
-	fieldWinProbability = "win_probability"
-	fieldCompanyID = "company_id"
-	fieldPartnerSourced = "partner_sourced"
-	fieldPartnerCompanyID   = "partner_company_id"
-	fieldStalled        = "stalled"
-	fieldCurrency       = "currency"
-	fieldPipelineID     = "pipeline_id"
-	fieldOwnerID        = "owner_id"
-	fieldAmountMinor    = "amount_minor"
-	fieldProjectID      = "project_id"
-	fieldLostReason     = "lost_reason"
+	fieldStageID          = "stage_id"
+	fieldStatus           = "status"
+	fieldWinProbability   = "win_probability"
+	fieldCompanyID        = "company_id"
+	fieldPartnerSourced   = "partner_sourced"
+	fieldPartnerCompanyID = "partner_company_id"
+	fieldStalled          = "stalled"
+	fieldCurrency         = "currency"
+	fieldPipelineID       = "pipeline_id"
+	fieldOwnerID          = "owner_id"
+	fieldAmountMinor      = "amount_minor"
+	fieldProjectID        = "project_id"
+	fieldLostReason       = "lost_reason"
 
 	// The aggregate-function vocabulary aggregateSelect switches on. Named for
 	// the same reason as the field names above: it is a CLOSED set that several

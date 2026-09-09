@@ -240,7 +240,7 @@ func (e *Env) everyClock(
 	t *testing.T, person ids.PersonID, company ids.CompanyID, deal ids.DealID, project ids.UUID,
 ) map[string]*time.Time {
 	t.Helper()
-	company, err := e.People.GetCompany(e.Admin(), company, storekit.LiveOnly)
+	record, err := e.People.GetCompany(e.Admin(), company, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,10 +249,10 @@ func (e *Env) everyClock(
 		t.Fatal(err)
 	}
 	return map[string]*time.Time{
-		"person":       e.personClock(t, person),
-		"company": company.LastActivityAt,
-		"deal":         got.LastActivityAt,
-		"project":      e.projectClock(t, project),
+		"person":  e.personClock(t, person),
+		"company": record.LastActivityAt,
+		"deal":    got.LastActivityAt,
+		"project": e.projectClock(t, project),
 	}
 }
 

@@ -32,7 +32,7 @@ func TestCompareCompanySiteReadClassifiesEveryRefreshRelationship(t *testing.T) 
 		},
 	}
 	company := Company{
-		DisplayName:        "Acme",
+		DisplayName:   "Acme",
 		CompanySource: companySourceHuman,
 		ProfileFields: []CompanyProfileField{
 			{Field: fieldIndustry, Value: "Manufacturing", Source: companySourceHuman},
@@ -145,7 +145,7 @@ func TestResolveSiteReadConflictsAppliesEveryResolutionAction(t *testing.T) {
 		},
 	}
 	company := Company{
-		DisplayName:        "Acme GmbH",
+		DisplayName:   "Acme GmbH",
 		CompanySource: companySourceHuman,
 		ProfileFields: []CompanyProfileField{
 			{Field: fieldIndustry, Value: "Manufacturing", Source: companySourceHuman},

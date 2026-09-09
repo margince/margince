@@ -48,9 +48,9 @@ type RecordTags struct {
 // project as well; answering for them here would ship a surface no screen
 // offers, and the refusal names the field so a caller can see why.
 var recordTagTypes = map[string]bool{
-	typePerson:       true,
+	typePerson:  true,
 	typeCompany: true,
-	typeDeal:         true,
+	typeDeal:    true,
 }
 
 // RecordTagTypesServed answers the types this read serves, in a stable order.

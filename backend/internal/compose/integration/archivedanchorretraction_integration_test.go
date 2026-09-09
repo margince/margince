@@ -38,10 +38,10 @@ import (
 var retractionAdmin = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
-		"person":       {Create: true, Read: true, Update: true, Delete: true},
-		"company": {Create: true, Read: true, Update: true, Delete: true},
-		"deal":         {Create: true, Read: true, Update: true, Delete: true},
-		"deal_room":    {Create: true, Read: true, Update: true, Delete: true},
+		"person":    {Create: true, Read: true, Update: true, Delete: true},
+		"company":   {Create: true, Read: true, Update: true, Delete: true},
+		"deal":      {Create: true, Read: true, Update: true, Delete: true},
+		"deal_room": {Create: true, Read: true, Update: true, Delete: true},
 	},
 	RowScope: principal.RowScopeAll,
 }

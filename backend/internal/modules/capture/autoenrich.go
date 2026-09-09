@@ -35,7 +35,7 @@ const autoEnrichMaxAttempts = 2
 // domain that seeds the crawl.
 type DueCompany struct {
 	CompanyID ids.CompanyID
-	Domain         string
+	Domain    string
 }
 
 // AutoEnrichStore owns the sweep's scheduling state and daily-cap reservation.

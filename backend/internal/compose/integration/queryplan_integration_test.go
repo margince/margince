@@ -120,10 +120,10 @@ func (q *queryEnv) answer(ctx context.Context, doc string) (search.QueryResult, 
 // a company they own, so a rep sees exactly their own half through
 // either the target or the hop.
 type queryFixture struct {
-	rep1Company, rep3Company   ids.UUID
-	rep1Deal, rep3Deal ids.UUID
-	sharedDeal         ids.UUID
-	project            ids.UUID
+	rep1Company, rep3Company ids.UUID
+	rep1Deal, rep3Deal       ids.UUID
+	sharedDeal               ids.UUID
+	project                  ids.UUID
 }
 
 // seedLocatedCompany inserts a company that has already been geocoded: an

@@ -34,9 +34,9 @@ func TestADealMayOnlyNameARealPartner(t *testing.T) {
 	plainCompany := companyIDOf(e.SeedCompany(t, "Just A Customer", nil))
 	tier := "tier2_20"
 	if _, err := e.People.UpsertPartner(admin, people.UpsertPartnerInput{
-		CompanyID: partnerCompany,
-		PartnerRole:    "consulting",
-		MarginTier:     &tier,
+		CompanyID:   partnerCompany,
+		PartnerRole: "consulting",
+		MarginTier:  &tier,
 	}); err != nil {
 		t.Fatalf("making the company a partner: %v", err)
 	}

@@ -151,7 +151,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await timeline.getByRole("button", { name: "Neu verknüpfen" }).click();
   await dialog
     .getByRole("searchbox", {
-      name: "Kontakt, Organisation, Deal, Lead oder Projekt suchen",
+      name: "Kontakt, Firma, Deal, Lead oder Projekt suchen",
     })
     .fill("Brandt ERP");
   await dialog.getByRole("button", { name: "Brandt ERP" }).click();

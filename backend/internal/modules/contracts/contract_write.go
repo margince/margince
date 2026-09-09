@@ -27,7 +27,7 @@ import (
 // absent by design: an agreement is born a draft and leaves that state only
 // through an asserted transition.
 type CreateContractInput struct {
-	CompanyID   ids.CompanyID
+	CompanyID        ids.CompanyID
 	DealID           *ids.DealID
 	ProjectID        *ids.ProjectID
 	ContractNumber   *string
@@ -104,7 +104,7 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	}
 	created := crmcontracts.PublicEventContractCreated{
 		Title:          in.Title,
-		CompanyId: openapi_types.UUID(in.CompanyID.UUID),
+		CompanyId:      openapi_types.UUID(in.CompanyID.UUID),
 		Status:         StatusDraft,
 		ValueBasis:     in.ValueBasis,
 		ContractNumber: in.ContractNumber,

@@ -265,7 +265,7 @@ func (e *dedupeEnv) asAgent() context.Context {
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"person":       {Create: true, Read: true, Update: true},
+				"person":  {Create: true, Read: true, Update: true},
 				"company": {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
@@ -300,9 +300,9 @@ func (e *dedupeEnv) asOwnScoped(other ids.UUID) context.Context {
 		Type: principal.PrincipalHuman, ID: "human:" + other.String(), UserID: other,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"person":       {Read: true, Update: true},
+				"person":  {Read: true, Update: true},
 				"company": {Read: true, Update: true},
-				"lead":         {Read: true, Update: true},
+				"lead":    {Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeOwn,
 		},

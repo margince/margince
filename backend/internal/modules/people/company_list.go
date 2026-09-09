@@ -78,7 +78,7 @@ type ListCompaniesInput struct {
 var companyListFields = map[string]string{
 	createdAtColumn:    storekit.KindTimestamp,
 	updatedAtColumn:    storekit.KindTimestamp,
-	companyNameColumn:      fieldcatalog.TypeText,
+	companyNameColumn:  fieldcatalog.TypeText,
 	ownerIDColumn:      storekit.KindUUID,
 	lastActivityColumn: storekit.KindTimestamp,
 }

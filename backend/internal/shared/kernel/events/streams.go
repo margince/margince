@@ -19,17 +19,17 @@ import (
 const StreamPrefix = "gw:events:crm:"
 
 const (
-	personStreamEntity       = "person"
-	companyStreamEntity = "company"
-	dealStreamEntity         = "deal"
-	leadStreamEntity         = "lead"
-	activityStreamEntity     = "activity"
-	approvalStreamEntity     = "approval"
-	captureStreamEntity      = "capture"
-	coldstartStreamEntity    = "coldstart"
-	auditStreamEntity        = "audit"
-	identityStreamEntity     = "identity"
-	voiceStreamEntity        = "voice"
+	personStreamEntity    = "person"
+	companyStreamEntity   = "company"
+	dealStreamEntity      = "deal"
+	leadStreamEntity      = "lead"
+	activityStreamEntity  = "activity"
+	approvalStreamEntity  = "approval"
+	captureStreamEntity   = "capture"
+	coldstartStreamEntity = "coldstart"
+	auditStreamEntity     = "audit"
+	identityStreamEntity  = "identity"
+	voiceStreamEntity     = "voice"
 )
 
 // streamOverlay is the §5.10 overlay-mirror stream's entity segment — named

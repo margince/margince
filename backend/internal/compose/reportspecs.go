@@ -74,8 +74,8 @@ var prebuiltReports = map[string]reportSpec{
 		// no more than it does now.
 		dimensions: map[string]string{
 			fieldCompanyID: colCompanyID,
-			fieldOwnerID:        colOwnerID,
-			fieldCurrency:       colCurrency,
+			fieldOwnerID:   colOwnerID,
+			fieldCurrency:  colCurrency,
 		},
 		measures:       map[string]string{fieldAmountMinor: colAmountMinor},
 		nativeMeasures: nativeMoney(fieldAmountMinor),
@@ -189,7 +189,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldPipelineID:     colPipelineID,
 			fieldStatus:         colStatus,
 			fieldOwnerID:        colOwnerID,
-			fieldCompanyID: colCompanyID,
+			fieldCompanyID:      colCompanyID,
 			fieldPartnerSourced: deals.PartnerSourcedSQL("t"),
 			// Narrowing to ONE partner, beside the boolean that asks whether
 			// there is one. The board's totals are read from this report with
@@ -197,9 +197,9 @@ var prebuiltReports = map[string]reportSpec{
 			// and this report refuses answers 422 — and the board then falls
 			// back to counting loaded cards, which looks like a working total.
 			fieldPartnerCompanyID: colPartnerCompanyID,
-			fieldStalled:      deals.StalledSQL("t"),
-			fieldCurrency:     colCurrency,
-			fieldProjectID:    colProjectID,
+			fieldStalled:          deals.StalledSQL("t"),
+			fieldCurrency:         colCurrency,
+			fieldProjectID:        colProjectID,
 		},
 		filterScopes: projectFilterScope,
 		// Both company references, which a normal deal read masks per row
@@ -208,8 +208,8 @@ var prebuiltReports = map[string]reportSpec{
 		// filtered to one company answers whether that company exists and has
 		// a deal, which is the disclosure whether or not the id is printed.
 		referenceScopes: map[string]string{
-			colPartnerCompanyID:   tableCompany,
-			colCompanyID: tableCompany,
+			colPartnerCompanyID: tableCompany,
+			colCompanyID:        tableCompany,
 		},
 		defaultBy: moneyDefaultBy(fieldStageID),
 		defaultAggs: []reportAggregate{

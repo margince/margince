@@ -68,18 +68,18 @@ const dealTaggableType = "deal"
 type ListDealsInput struct {
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the person and account lists.
-	TagIDs         []ids.UUID
-	TagMode        storekit.TagMode
-	Cursor         *string
-	Limit          *int
-	Query          *string
-	PipelineID     *ids.PipelineID
-	StageID        *ids.StageID
-	OwnerID        *ids.UserID
-	CompanyID *ids.CompanyID
-	ProjectID      *ids.ProjectID
-	PartnerCompanyID   *ids.CompanyID
-	PartnerSourced *bool
+	TagIDs           []ids.UUID
+	TagMode          storekit.TagMode
+	Cursor           *string
+	Limit            *int
+	Query            *string
+	PipelineID       *ids.PipelineID
+	StageID          *ids.StageID
+	OwnerID          *ids.UserID
+	CompanyID        *ids.CompanyID
+	ProjectID        *ids.ProjectID
+	PartnerCompanyID *ids.CompanyID
+	PartnerSourced   *bool
 	// PartnerAttribution narrows to what the partner did — "sourced" or
 	// "influenced". Narrower than PartnerSourced, which only asks whether a
 	// partner is named at all.

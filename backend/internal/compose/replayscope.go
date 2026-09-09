@@ -75,7 +75,7 @@ type companionRef struct {
 // One spelling each, so a typo cannot make two entries disagree in silence.
 const (
 	tablePerson        = "person"
-	tableCompany  = "company"
+	tableCompany       = "company"
 	tableDeal          = "deal"
 	tableLead          = "lead"
 	tableProject       = "project"
@@ -106,10 +106,10 @@ const (
 
 	// The fields a body names another record by, spelled where the table that
 	// uses them is.
-	offerDealField       = "deal_id"
-	companionPersonField = "person_id"
-	companionCompanyField    = "company_id"
-	companionLeadField   = "lead_id"
+	offerDealField        = "deal_id"
+	companionPersonField  = "person_id"
+	companionCompanyField = "company_id"
+	companionLeadField    = "lead_id"
 
 	objectOffer         = "offer"
 	objectPipeline      = "pipeline"

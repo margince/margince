@@ -51,7 +51,7 @@ var graphPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"person":                {Read: true},
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"relationship":          {Read: true},
 		"activity":              {Read: true},
 		"installation_settings": {Read: true},

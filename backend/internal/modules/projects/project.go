@@ -45,13 +45,13 @@ type CreateProjectInput struct {
 	// Key is NOT an input: the server mints it from the name (keymint.go) and
 	// createProjectTx fills this in for the response. A caller-chosen key is a
 	// subject-line matcher a caller can get wrong.
-	Key            *string
-	CompanyID ids.CompanyID
-	OwnerID        *ids.UserID
-	Description    *string
-	StartedAt      *time.Time
-	TargetEndDate  *time.Time
-	Source         string
+	Key           *string
+	CompanyID     ids.CompanyID
+	OwnerID       *ids.UserID
+	Description   *string
+	StartedAt     *time.Time
+	TargetEndDate *time.Time
+	Source        string
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (storekit customcolumns).
@@ -130,9 +130,9 @@ func createProjectTx(
 		return crmcontracts.Project{}, fmt.Errorf("audit project create: %w", err)
 	}
 	created := crmcontracts.PublicEventProjectCreated{
-		Name:           in.Name,
+		Name:      in.Name,
 		CompanyId: openapi_types.UUID(in.CompanyID.UUID),
-		Phase:          PhaseInitiative,
+		Phase:     PhaseInitiative,
 	}
 	if in.Key != nil {
 		created.Key = in.Key

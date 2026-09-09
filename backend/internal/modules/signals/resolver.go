@@ -100,7 +100,7 @@ func registrableHost(host string) string {
 
 // candidate is one plausible company with its inspectable basis.
 type candidate struct {
-	CompanyID      ids.CompanyID
+	CompanyID  ids.CompanyID
 	MatchedOn  string // domain | name | prior_interaction
 	Confidence float64
 	Detail     string
@@ -456,7 +456,7 @@ func candidateDetail(cs []candidate, chosen *candidate) (string, error) {
 	entries := make([]map[string]any, len(cs))
 	for i, c := range cs {
 		entries[i] = map[string]any{
-			"company_id":     c.CompanyID,
+			"company_id": c.CompanyID,
 			"matched_on": c.MatchedOn,
 			"confidence": c.Confidence,
 			"reason":     c.Detail,

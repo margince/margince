@@ -59,10 +59,10 @@ func bootstrapForAgentSeat(t *testing.T, pool *pgxpool.Pool) (ids.WorkspaceID, s
 	err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		wsID, err = createInstallation(ctx, tx, InstallationBootstrap{
-			CompanyName: slug,
-			AdminEmail:       "admin@" + slug + ".test",
-			AdminName:        "Admin",
-			AdminPassword:    agentSeatAdminPassword,
+			CompanyName:   slug,
+			AdminEmail:    "admin@" + slug + ".test",
+			AdminName:     "Admin",
+			AdminPassword: agentSeatAdminPassword,
 		}, originConfigured, nil, &[]string{})
 		return err
 	})

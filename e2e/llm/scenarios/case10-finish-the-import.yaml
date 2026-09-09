@@ -109,7 +109,7 @@ must_mention:
   # cross the words that make it a forecast or an offer, and stops at a table
   # cell, so "Would create 4 companies" and "ready to commit once you
   # confirm" reach nothing while "4 companies created", "the partner list is
-  # committed" and "vier Organisationen angelegt" all land.
+  # committed" and "vier Firmen angelegt" all land.
   - "(?:^|[.;:!?\n|])(?:(?!\b(?:would|will|going to|about to|once|after|if|before|not|nothing|no|never|shall|should|ready|awaiting|waiting|pending|to)\b)[^.;:!?\n|])*?(?:(?:I |we |)(?:have |'ve |has |had |)(?:committed|imported|created|added|landed)\b|(?:is|are) (?:now )?(?:committed|imported|in the (?:CRM|workspace|system))|\bdrin\b|angelegt|eingelesen)"
 
 must_not_mention:

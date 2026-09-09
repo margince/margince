@@ -31,7 +31,7 @@ import (
 const bootstrappedAdminEmail = "ada@example.com"
 
 type growthFitResponse struct {
-	CompanyID   string  `json:"company_id"`
+	CompanyID        string  `json:"company_id"`
 	Band             string  `json:"band"`
 	BandCappedReason *string `json:"band_capped_reason"`
 	NextStep         *string `json:"next_step"`

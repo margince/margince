@@ -69,9 +69,9 @@ func fillCompanies(
 	var customer *openapi_types.UUID
 	for _, one := range on {
 		listed = append(listed, crmcontracts.ProjectCompany{
-			CompanyId: openapi_types.UUID(one.CompanyID.UUID),
-			DisplayName:    one.DisplayName,
-			Role:           one.Role,
+			CompanyId:   openapi_types.UUID(one.CompanyID.UUID),
+			DisplayName: one.DisplayName,
+			Role:        one.Role,
 		})
 		if customer == nil && one.Role == CompanyRoleCustomer {
 			id := openapi_types.UUID(one.CompanyID.UUID)

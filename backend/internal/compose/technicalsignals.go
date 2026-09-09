@@ -52,9 +52,9 @@ func technicalChangeRecorder() people.TechnicalChangeRecorder {
 			return nil
 		}
 		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-			Kind:           kindTechnicalChange,
+			Kind:      kindTechnicalChange,
 			CompanyID: change.CompanyID.UUID,
-			Summary:        summary,
+			Summary:   summary,
 			// Never `warn` or `urgent`: a company changing its own systems is
 			// news about the account, not a problem with it.
 			Severity: severityInfo,

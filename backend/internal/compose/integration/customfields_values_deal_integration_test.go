@@ -43,7 +43,7 @@ var dealCFVPerms = principal.Permissions{
 		"deal":                  {Create: true, Read: true, Update: true, Delete: true},
 		"pipeline":              {Create: true, Read: true, Update: true, Delete: true},
 		"project":               {Create: true, Read: true, Update: true, Delete: true},
-		"company":          {Create: true, Read: true, Update: true, Delete: true},
+		"company":               {Create: true, Read: true, Update: true, Delete: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeAll,

@@ -18,7 +18,7 @@ import (
 
 func TestSiteLeadSourceIDIsCompanyStableAcrossPagesAndNameReflow(t *testing.T) {
 	company := ids.NewV7()
-	// The key is the ORG + name, not the page: the same person found on
+	// The key is the COMPANY + name, not the page: the same person found on
 	// /team or /about, or after a re-crawl moved the page, is one lead.
 	teamPage := siteLeadSourceID(company, "Anna Muster", "")
 	aboutPage := siteLeadSourceID(company, "  anna   MUSTER ", "")

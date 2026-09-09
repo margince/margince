@@ -76,8 +76,8 @@ func RegisterEnrichTool(r *Registry, p datasource.SystemOfRecordProvider, enrich
 
 type enrichArgs struct {
 	CompanyID ids.UUID    `json:"company_id"`
-	URL            string      `json:"url"`
-	Depth          EnrichDepth `json:"depth"`
+	URL       string      `json:"url"`
+	Depth     EnrichDepth `json:"depth"`
 }
 
 type enrichCompany struct {

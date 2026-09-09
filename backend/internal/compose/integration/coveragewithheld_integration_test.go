@@ -37,10 +37,10 @@ import (
 // difference in what they are served is that grant's doing and nothing else's.
 func coverageReaderPerms(withEdge bool) principal.Permissions {
 	objects := map[string]principal.ObjectGrant{
-		"deal":         {Read: true},
-		"person":       {Read: true},
-		"company": {Read: true},
-		"activity":     {Read: true},
+		"deal":     {Read: true},
+		"person":   {Read: true},
+		"company":  {Read: true},
+		"activity": {Read: true},
 	}
 	if withEdge {
 		objects["relationship"] = principal.ObjectGrant{Read: true}

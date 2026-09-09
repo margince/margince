@@ -45,7 +45,7 @@ const (
 	objPerson   = "person"
 	objActivity = "activity"
 	objDeal     = "deal"
-	objCompany      = "company"
+	objCompany  = "company"
 	objPipeline = "pipeline"
 	// objRelationship gates the EDGE — an employment or a stakeholder seat.
 	// Every seeded role holds read on it (identity/internal/policy.go: crud for
@@ -86,7 +86,7 @@ var (
 	ContractRepPerms = principal.Permissions{
 		RoleKeys: []string{roleRep},
 		Objects: map[string]principal.ObjectGrant{
-			objCompany:             {Read: true},
+			objCompany:         {Read: true},
 			objDeal:            {Create: true, Read: true, Update: true},
 			"contract":         {Create: true, Read: true, Update: true},
 			objPipeline:        {Read: true},
@@ -105,7 +105,7 @@ var (
 	AccountRepPerms = principal.Permissions{
 		RoleKeys: []string{roleRep},
 		Objects: map[string]principal.ObjectGrant{
-			objCompany:             {Read: true},
+			objCompany:         {Read: true},
 			objPerson:          {Create: true, Read: true, Update: true},
 			objDeal:            {Create: true, Read: true, Update: true},
 			objActivity:        {Create: true, Read: true, Update: true},
@@ -157,9 +157,9 @@ var (
 	AdminPerms       = principal.Permissions{
 		RoleKeys: []string{roleAdmin},
 		Objects: map[string]principal.ObjectGrant{
-			objPerson: {Create: true, Read: true, Update: true, Delete: true},
-			objCompany:    {Create: true, Read: true, Update: true, Delete: true},
-			objDeal:   {Create: true, Read: true, Update: true, Delete: true},
+			objPerson:  {Create: true, Read: true, Update: true, Delete: true},
+			objCompany: {Create: true, Read: true, Update: true, Delete: true},
+			objDeal:    {Create: true, Read: true, Update: true, Delete: true},
 			// The admin role holds contracts in full (identity/internal/policy.go),
 			// mirrored here so the fixture matches production rather than a
 			// narrower admin that would make a suite pass for the wrong reason.

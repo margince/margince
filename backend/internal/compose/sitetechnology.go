@@ -56,10 +56,10 @@ func (w *siteDeepReadWorker) readSiteTechnology(ctx context.Context, claim peopl
 	// recognisable stack is an authoritative empty answer, and saying so is
 	// what lets a technology the company dropped leave the record.
 	apply := people.TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      []people.TechnicalLane{people.LaneHomepage},
-		Observations:   found,
-		ObservedAt:     time.Now().UTC(),
+		CompanyID:    companyID,
+		Completed:    []people.TechnicalLane{people.LaneHomepage},
+		Observations: found,
+		ObservedAt:   time.Now().UTC(),
 	}
 	if err := w.people.ApplyTechnicalEnrichment(ctx, apply, technicalChangeRecorder()); err != nil {
 		w.log.WarnContext(ctx, "writing what the site runs failed",

@@ -88,11 +88,11 @@ type ProjectPhaseAdvancer interface {
 // relinkTargets is the link-target vocabulary, mirroring the contract enum so a
 // target the store would refuse is refused before it reaches the store.
 var relinkTargets = map[string]bool{
-	string(datasource.EntityPerson):       true,
+	string(datasource.EntityPerson):  true,
 	string(datasource.EntityCompany): true,
-	string(datasource.EntityDeal):         true,
-	string(datasource.EntityLead):         true,
-	string(datasource.EntityProject):      true,
+	string(datasource.EntityDeal):    true,
+	string(datasource.EntityLead):    true,
+	string(datasource.EntityProject): true,
 }
 
 type relinkActivityArgs struct {

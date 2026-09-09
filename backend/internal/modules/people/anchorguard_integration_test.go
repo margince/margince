@@ -283,7 +283,7 @@ func (e *anchorEnv) newCompany(t *testing.T) ids.CompanyID {
 // AFTER a partial write; the row's own state is what would catch that.
 func (e *anchorEnv) assertCompanyStillReadable(t *testing.T) {
 	t.Helper()
-	if _, err := e.store.GetCompany(e.ctx); err != nil {
+	if _, err := e.store.GetAnchorCompany(e.ctx); err != nil {
 		t.Fatalf("the company read must survive a refused operation, got %v — a workspace whose anchor is gone reads as one that was never set up", err)
 	}
 	var intact bool

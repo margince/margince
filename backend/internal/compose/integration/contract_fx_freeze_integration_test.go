@@ -49,12 +49,12 @@ func draftInCurrency(t *testing.T, e *Env, company ids.UUID, currency string) id
 	t.Helper()
 	value := int64(250_000)
 	created, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
-		CompanyID: ids.From[ids.CompanyKind](company),
-		Title:          "A foreign-currency agreement",
-		ValueMinor:     &value,
-		Currency:       &currency,
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		Title:      "A foreign-currency agreement",
+		ValueMinor: &value,
+		Currency:   &currency,
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -154,10 +154,10 @@ func TestAContractWithNoCurrencyActivatesWithoutARate(t *testing.T) {
 	company := e.SeedCompany(t, "Acme", nil)
 
 	created, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
-		CompanyID: ids.From[ids.CompanyKind](company),
-		Title:          "An agreement with no money in it",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		Title:      "An agreement with no money in it",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatal(err)

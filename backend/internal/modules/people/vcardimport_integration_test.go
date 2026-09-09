@@ -252,7 +252,7 @@ func TestImportingRefusesACallerWhoMayNotUpdatePeople(t *testing.T) {
 			Objects: map[string]principal.ObjectGrant{
 				// Create but not update.
 				"person":       {Create: true, Read: true},
-				"company": {Create: true, Read: true, Update: true},
+				"company":      {Create: true, Read: true, Update: true},
 				"relationship": {Create: true, Read: true},
 			},
 			RowScope: principal.RowScopeAll,

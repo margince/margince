@@ -29,8 +29,8 @@ import (
 //
 // gatekit:fixture the reference columns a report row can carry, and the table each points at
 var referenceColumns = map[string]string{
-	colCompanyID:     tableCompany,
-	colPartnerCompanyID:       tableCompany,
+	colCompanyID:          tableCompany,
+	colPartnerCompanyID:   tableCompany,
 	colProjectID:          tableProject,
 	activityProjectIDExpr: tableProject,
 }

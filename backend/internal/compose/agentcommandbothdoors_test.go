@@ -173,13 +173,13 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 	},
 
 	"archivePerson":       archiveDoors("people", "person"),
-	"archiveCompany": archiveDoors("companies", "company"),
+	"archiveCompany":      archiveDoors("companies", "company"),
 	"archiveDeal":         archiveDoors("deals", "deal"),
 	"archiveProject":      archiveDoors("projects", "project"),
 	"archiveRelationship": archiveDoors("relationships", "relationship"),
 	"archiveActivity":     archiveDoors("activities", "activity"),
 
-	"createPerson":       createDoors("people", "person", `{"full_name":"Ada Lovelace"}`),
+	"createPerson":  createDoors("people", "person", `{"full_name":"Ada Lovelace"}`),
 	"createCompany": createDoors("companies", "company", `{"display_name":"Acme"}`),
 	"createDeal": createDoors("deals", "deal", `{"name":"Acme renewal",`+
 		`"pipeline_id":"019ff000-0000-7000-8000-000000000011","stage_id":"019ff000-0000-7000-8000-000000000012"}`),
@@ -190,14 +190,14 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 		`{"kind":"employment","person_id":"019ff000-0000-7000-8000-000000000014"}`),
 
 	"updatePerson":       updateDoors("people", "person", `{"title":"CTO"}`),
-	"updateCompany": updateDoors("companies", "company", `{"industry":"payments"}`),
+	"updateCompany":      updateDoors("companies", "company", `{"industry":"payments"}`),
 	"updateDeal":         updateDoors("deals", "deal", `{"forecast_category":"commit"}`),
 	"updateLead":         updateDoors("leads", "lead", `{"status":"contacted"}`),
 	"updateActivity":     updateDoors("activities", "activity", `{"subject":"Renewal call"}`),
 	"updateProject":      updateDoors("projects", "project", `{"description":"Rollout"}`),
 	"updateRelationship": updateDoors("relationships", "relationship", `{"role":"champion"}`),
 
-	"mergePerson":       mergeDoors("people", "person"),
+	"mergePerson":  mergeDoors("people", "person"),
 	"mergeCompany": mergeDoors("companies", "company"),
 
 	// The tag merge does NOT reuse mergeDoors: that one is a record merge typed

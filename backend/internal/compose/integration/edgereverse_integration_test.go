@@ -37,9 +37,9 @@ type relationshipList struct {
 // linkedPair is one employment, its two records, and the versions a caller
 // reading either record's history would have in hand.
 type linkedPair struct {
-	person string
-	company    string
-	edge   relationshipRecord
+	person  string
+	company string
+	edge    relationshipRecord
 }
 
 // seedEmployment creates the person, the company and the link between them
@@ -172,15 +172,15 @@ func TestEndToEnd_anEdgeIsReversibleFromTheOtherEndToo(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
 
-	entry := theEdgeEntry(t, readHistory(t, e, "company", pair.org), "create")
+	entry := theEdgeEntry(t, readHistory(t, e, "company", pair.company), "create")
 	var company struct {
 		Version int64 `json:"version"`
 	}
-	if status := e.Call(t, "GET", "/v1/companies/"+pair.org, nil, nil, &company); status != 200 {
+	if status := e.Call(t, "GET", "/v1/companies/"+pair.company, nil, nil, &company); status != 200 {
 		t.Fatalf("read company → %d", status)
 	}
 
-	status, reversal := reverseEntry(t, e, "company", pair.org, entry.ID, company.Version)
+	status, reversal := reverseEntry(t, e, "company", pair.company, entry.ID, company.Version)
 	if status != 200 {
 		t.Fatalf("reverse from the company → %d, want 200 (reason %v)", status, reversal.Undoable.Reason)
 	}
@@ -369,7 +369,7 @@ func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing
 	pair := seedEmploymentOverHTTP(t, e)
 
 	fromPerson := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
-	fromCompany := theEdgeEntry(t, readHistory(t, e, "company", pair.org), "create")
+	fromCompany := theEdgeEntry(t, readHistory(t, e, "company", pair.company), "create")
 	if fromPerson.ID != fromCompany.ID {
 		t.Fatalf("the two ends name different entries for one link: %s vs %s", fromPerson.ID, fromCompany.ID)
 	}
@@ -377,7 +377,7 @@ func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing
 	var company struct {
 		Version int64 `json:"version"`
 	}
-	if status := e.Call(t, "GET", "/v1/companies/"+pair.org, nil, nil, &company); status != 200 {
+	if status := e.Call(t, "GET", "/v1/companies/"+pair.company, nil, nil, &company); status != 200 {
 		t.Fatalf("read company → %d", status)
 	}
 
@@ -391,7 +391,7 @@ func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing
 		results <- outcome{status, reasonOf(entry)}
 	}()
 	go func() {
-		status, entry := reverseEntry(t, e, "company", pair.org, fromCompany.ID, company.Version)
+		status, entry := reverseEntry(t, e, "company", pair.company, fromCompany.ID, company.Version)
 		results <- outcome{status, reasonOf(entry)}
 	}()
 

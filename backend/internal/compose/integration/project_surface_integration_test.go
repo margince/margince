@@ -60,7 +60,7 @@ func projectKeys(projects *[]crmcontracts.Company360Project) map[string]crmcontr
 // employer whose projects are theirs.
 func employAtAccount(t *testing.T, e *Env, f scopeFixture) {
 	t.Helper()
-	personID, companyID := PersonIDOf(f.person), companyIDOf(f.org)
+	personID, companyID := PersonIDOf(f.person), companyIDOf(f.company)
 	primary := true
 	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
 		Kind: "employment", PersonID: &personID, CompanyID: &companyID, IsCurrentPrimary: &primary,
@@ -76,7 +76,7 @@ func TestCompany360ListsTheAccountsLiveProjectsWorkInMotionFirst(t *testing.T) {
 		t.Fatalf("advancing the ERP project: %v", err)
 	}
 
-	page, err := companySurfaceService(e).Assemble(e.Admin(), companyIDOf(f.org))
+	page, err := companySurfaceService(e).Assemble(e.Admin(), companyIDOf(f.company))
 	if err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
@@ -111,7 +111,7 @@ func TestBothPagesNameTheProjectsSectionWhenTheCallerLacksTheGrant(t *testing.T)
 	employAtAccount(t, e, f)
 	noProjectGrant := e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(roomPerms, "project"))
 
-	companyPage, err := companySurfaceService(e).Assemble(noProjectGrant, companyIDOf(f.org))
+	companyPage, err := companySurfaceService(e).Assemble(noProjectGrant, companyIDOf(f.company))
 	if err != nil {
 		t.Fatalf("assemble company page: %v", err)
 	}
@@ -209,7 +209,7 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 	svc := companySurfaceService(e)
 	req := accountdraft.Request{PersonID: f.person.String(), ProjectID: &f.erp}
 
-	scoped, err := svc.AssembleScoped(e.Admin(), companyIDOf(f.org), company360.AssembleOptions{ProjectID: &f.erp})
+	scoped, err := svc.AssembleScoped(e.Admin(), companyIDOf(f.company), company360.AssembleOptions{ProjectID: &f.erp})
 	if err != nil {
 		t.Fatalf("assemble scoped: %v", err)
 	}
@@ -234,7 +234,7 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 		t.Errorf("open commitments = %d, want the ERP task alone — the other engagement's task is out of scope", in.Project.OpenCommitments)
 	}
 
-	wide, err := svc.Assemble(e.Admin(), companyIDOf(f.org))
+	wide, err := svc.Assemble(e.Admin(), companyIDOf(f.company))
 	if err != nil {
 		t.Fatalf("assemble unscoped: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 	// floor, no model lane) and a project of another company is refused as
 	// a field error rather than grounding this account's draft in it.
 	draft := accountdraft.NewService(svc, nil)
-	if _, err := draft.Draft(e.Admin(), companyIDOf(f.org), req); err != nil {
+	if _, err := draft.Draft(e.Admin(), companyIDOf(f.company), req); err != nil {
 		t.Fatalf("draft scoped to the account's own project: %v", err)
 	}
 	elsewhere := e.SeedCompany(t, "Other GmbH", &e.Rep1)
@@ -261,7 +261,7 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 		t.Fatalf("create the other company's project: %v", err)
 	}
 	foreignID := projectIDOf(ids.UUID(foreign.Id))
-	_, err = draft.Draft(e.Admin(), companyIDOf(f.org), accountdraft.Request{PersonID: f.person.String(), ProjectID: &foreignID})
+	_, err = draft.Draft(e.Admin(), companyIDOf(f.company), accountdraft.Request{PersonID: f.person.String(), ProjectID: &foreignID})
 	var detailed *httperr.DetailedError
 	if !errors.As(err, &detailed) || detailed.Status != 422 {
 		t.Errorf("draft scoped to another company's project: err = %v, want a 422 naming project_id", err)
@@ -327,7 +327,7 @@ func TestAssembledContextOnTheAccountReportsRelatedProjects(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	retriever := search.NewRetriever(search.NewStore(harnessDB(e.Pool, e.WS)), nil)
-	anchor := datasource.EntityRef{Type: datasource.EntityCompany, ID: f.org}
+	anchor := datasource.EntityRef{Type: datasource.EntityCompany, ID: f.company}
 
 	got, err := retriever.AssembleContext(e.Admin(), anchor, retrieval.AssembleOptions{MaxItems: 25})
 	if err != nil {
@@ -411,7 +411,7 @@ func TestPerson360WithholdsTheEmployersProjectWhenTheEmploymentEdgeIsOutOfScope(
 		t.Fatalf("a rep with the employer in scope lists %v, want both projects — the refusal below would prove nothing", admitted.Projects)
 	}
 
-	e.MakeCapturePrivate(t, "company", f.org, e.Rep3)
+	e.MakeCapturePrivate(t, "company", f.company, e.Rep3)
 	withheld, err := svc.Assemble(rep, PersonIDOf(f.person))
 	if err != nil {
 		t.Fatalf("assemble with the employer out of scope: %v", err)

@@ -48,13 +48,13 @@ type edgeAnchorEnv struct {
 	them  ids.UUID
 
 	// Mine — owned by the acting rep.
-	myPerson ids.PersonID
-	myCompany    ids.CompanyID
+	myPerson  ids.PersonID
+	myCompany ids.CompanyID
 
 	// Theirs, and readable: promoted records the other rep owns. These are the
 	// subjects the old gate could not refuse.
 	theirPerson  ids.PersonID
-	theirCompany     ids.CompanyID
+	theirCompany ids.CompanyID
 	theirPartner ids.CompanyID
 	theirProject ids.ProjectID
 
@@ -176,7 +176,7 @@ func (e *edgeAnchorEnv) as(user ids.UUID) context.Context {
 			Objects: map[string]principal.ObjectGrant{
 				"relationship": {Create: true, Read: true, Update: true, Delete: true},
 				"person":       {Create: true, Read: true, Update: true},
-				"company": {Create: true, Read: true, Update: true},
+				"company":      {Create: true, Read: true, Update: true},
 				"project":      {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeOwn,

@@ -37,7 +37,7 @@ func uploadIcon(t *testing.T, e *integration.Env, handlers companyHandlers, imag
 		WithContext(e.As(e.Rep1, nil, integration.AdminPerms))
 	request.Header.Set("Content-Type", contentType)
 	recorder := httptest.NewRecorder()
-	handlers.UploadCompanyLogoIcon(recorder, request)
+	handlers.UploadAnchorCompanyLogoIcon(recorder, request)
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("icon upload → %d %s, want 200", recorder.Code, recorder.Body.String())
 	}
@@ -82,7 +82,7 @@ func TestTheSquareBadgeIsStoredWithoutDisturbingTheWideMark(t *testing.T) {
 
 	// The profile answers each slot's own endpoint, which is what the sidebar
 	// picks between at its two widths.
-	read, err := e.People.GetCompany(ctx)
+	read, err := e.People.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("reading the company back: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestRemovingTheBadgeLeavesTheWideMarkStanding(t *testing.T) {
 	}
 
 	recorder := httptest.NewRecorder()
-	handlers.DeleteCompanyLogoIcon(recorder,
+	handlers.DeleteAnchorCompanyLogoIcon(recorder,
 		httptest.NewRequest(http.MethodDelete, "/v1/company/logo/icon", nil).WithContext(ctx))
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("delete → %d %s, want 200", recorder.Code, recorder.Body.String())

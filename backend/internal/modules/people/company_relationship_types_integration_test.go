@@ -38,7 +38,7 @@ func asAdmin(e *dedupeEnv) context.Context {
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
 				"person":       {Create: true, Read: true, Update: true, Delete: true},
-				"company": {Create: true, Read: true, Update: true, Delete: true},
+				"company":      {Create: true, Read: true, Update: true, Delete: true},
 				"relationship": {Create: true, Read: true},
 				"partner":      {Create: true, Read: true, Update: true},
 			},

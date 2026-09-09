@@ -33,11 +33,11 @@ const (
 // drifts across the read/write/signal call sites. activityTarget is the type
 // all five engagement classes map onto.
 const (
-	personTarget       = "person"
-	companyTarget = "company"
-	dealTarget         = "deal"
-	leadTarget         = "lead"
-	activityTarget     = "activity"
+	personTarget   = "person"
+	companyTarget  = "company"
+	dealTarget     = "deal"
+	leadTarget     = "lead"
+	activityTarget = "activity"
 )
 
 // baselineHSLastModifiedDate is the watermark property every object

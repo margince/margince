@@ -115,7 +115,7 @@ func (s *Store) SyncConnection(
 
 // link is one accounting customer's mapping onto a company.
 type link struct {
-	companyID     ids.CompanyID
+	companyID          ids.CompanyID
 	externalCustomerID string
 }
 

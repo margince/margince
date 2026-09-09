@@ -90,11 +90,11 @@ var activityLinkArms = []activityLinkArm{
 // neighborhood. An event naming ONLY a lead still prepares against it — an
 // honest "this is all we hold" beats naming nothing at all.
 var subjectTier = map[string]int{
-	string(datasource.EntityDeal):         0,
-	string(datasource.EntityProject):      1,
+	string(datasource.EntityDeal):    0,
+	string(datasource.EntityProject): 1,
 	string(datasource.EntityCompany): 2,
-	string(datasource.EntityPerson):       3,
-	string(datasource.EntityLead):         4,
+	string(datasource.EntityPerson):  3,
+	string(datasource.EntityLead):    4,
 }
 
 // How the event came to name the record, weakest evidence last. A link is

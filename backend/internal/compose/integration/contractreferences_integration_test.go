@@ -35,8 +35,8 @@ type contractReferenceFixture struct {
 	onPrivateCompany ids.ContractID
 	// onOtherTeamsProject names a delivery, on a company the reader can open.
 	onOtherTeamsProject ids.ContractID
-	openCompany             ids.UUID
-	privateCompany          ids.UUID
+	openCompany         ids.UUID
+	privateCompany      ids.UUID
 	project             ids.ProjectID
 }
 
@@ -54,11 +54,11 @@ func seedContractReferenceFixture(t *testing.T, e *Env) contractReferenceFixture
 	privateDeal := e.SeedDeal(t, "Meridian renewal", pipeline, open, &e.Rep1)
 	anchorOnCompany(t, e, privateDeal, privateCompany)
 	onPrivateCompany := seedContract(t, e, contracts.CreateContractInput{
-		CompanyID: companyIDOf(privateCompany),
-		DealID:         dealIDPtr(privateDeal),
-		Title:          "An agreement with a company the reader cannot open",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  companyIDOf(privateCompany),
+		DealID:     dealIDPtr(privateDeal),
+		Title:      "An agreement with a company the reader cannot open",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	e.MakeCapturePrivate(t, "company", privateCompany, e.Rep3)
 
@@ -66,18 +66,18 @@ func seedContractReferenceFixture(t *testing.T, e *Env) contractReferenceFixture
 	openDeal := e.SeedDeal(t, "Kestrel expansion", pipeline, open, &e.Rep1)
 	anchorOnCompany(t, e, openDeal, openCompany)
 	onOtherTeamsProject := seedContract(t, e, contracts.CreateContractInput{
-		CompanyID: companyIDOf(openCompany),
-		DealID:         dealIDPtr(openDeal),
-		ProjectID:      &project.ID,
-		Title:          "An agreement funding a delivery",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  companyIDOf(openCompany),
+		DealID:     dealIDPtr(openDeal),
+		ProjectID:  &project.ID,
+		Title:      "An agreement funding a delivery",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	return contractReferenceFixture{
-		onPrivateCompany:        onPrivateCompany,
+		onPrivateCompany:    onPrivateCompany,
 		onOtherTeamsProject: onOtherTeamsProject,
-		openCompany:             openCompany,
-		privateCompany:          privateCompany,
+		openCompany:         openCompany,
+		privateCompany:      privateCompany,
 		project:             project.ID,
 	}
 }
@@ -195,12 +195,12 @@ func TestAContractIsNotTheWayBackToACompanyTheProjectAlreadyWithholds(t *testing
 	deal := e.SeedDeal(t, "Halden platform", pipeline, open, &e.Rep1)
 	anchorOnCompany(t, e, deal, company)
 	contract := seedContract(t, e, contracts.CreateContractInput{
-		CompanyID: companyIDOf(company),
-		DealID:         dealIDPtr(deal),
-		ProjectID:      &project.ID,
-		Title:          "The paper on a company the reader cannot open",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  companyIDOf(company),
+		DealID:     dealIDPtr(deal),
+		ProjectID:  &project.ID,
+		Title:      "The paper on a company the reader cannot open",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	e.MakeCapturePrivate(t, "company", company, e.Rep3)
 

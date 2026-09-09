@@ -20,7 +20,7 @@ import (
 )
 
 type companyProfileDTO struct {
-	CompanyID    string  `json:"company_id"`
+	CompanyID         string  `json:"company_id"`
 	DisplayName       string  `json:"display_name"`
 	Website           *string `json:"website"`
 	LegalName         *string `json:"legal_name"`
@@ -47,10 +47,10 @@ type companyProblem struct {
 }
 
 type companyContextDTO struct {
-	CompanyID string `json:"company_id"`
-	SchemaVersion  int    `json:"schema_version"`
-	Fingerprint    string `json:"fingerprint"`
-	Scopes         []struct {
+	CompanyID     string `json:"company_id"`
+	SchemaVersion int    `json:"schema_version"`
+	Fingerprint   string `json:"fingerprint"`
+	Scopes        []struct {
 		Scope string `json:"scope"`
 		Items []struct {
 			Key    string `json:"key"`

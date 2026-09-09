@@ -55,9 +55,9 @@ const intoTagIDField = "into_tag_id"
 const nameField = "name"
 
 const (
-	typePerson       = "person"
+	typePerson  = "person"
 	typeCompany = "company"
-	typeDeal         = "deal"
+	typeDeal    = "deal"
 )
 
 // GetTag reads one tag and how much of the workspace carries it.

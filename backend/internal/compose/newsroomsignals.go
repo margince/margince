@@ -85,9 +85,9 @@ func WriteNewsroomSignals(
 			continue
 		}
 		filed, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-			Kind:           item.Kind,
+			Kind:      item.Kind,
 			CompanyID: companyID,
-			Summary:        item.Headline,
+			Summary:   item.Headline,
 			// Never `warn` or `urgent`: a company announcing something is news
 			// about the account, not a problem with it, and the severity
 			// vocabulary is what a reader triages by.

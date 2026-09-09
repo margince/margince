@@ -129,17 +129,17 @@ func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error
 		return CreateDealInput{}, err
 	}
 	in := CreateDealInput{
-		Name:                  req.Name,
-		AmountMinor:           req.AmountMinor,
-		Currency:              req.Currency,
-		PipelineID:            pathID[ids.PipelineKind](req.PipelineId),
-		StageID:               pathID[ids.StageKind](req.StageId),
-		Source:                req.Source,
+		Name:             req.Name,
+		AmountMinor:      req.AmountMinor,
+		Currency:         req.Currency,
+		PipelineID:       pathID[ids.PipelineKind](req.PipelineId),
+		StageID:          pathID[ids.StageKind](req.StageId),
+		Source:           req.Source,
 		CompanyID:        idArg[ids.CompanyKind](req.CompanyId),
 		PartnerCompanyID: idArg[ids.CompanyKind](req.PartnerCompanyId),
-		ProjectID:             idArg[ids.ProjectKind](req.ProjectId),
-		OwnerID:               idArg[ids.UserKind](req.OwnerId),
-		CustomFields:          req.AdditionalProperties,
+		ProjectID:        idArg[ids.ProjectKind](req.ProjectId),
+		OwnerID:          idArg[ids.UserKind](req.OwnerId),
+		CustomFields:     req.AdditionalProperties,
 	}
 	if req.PartnerAttribution != nil {
 		attribution := string(*req.PartnerAttribution)
@@ -153,15 +153,15 @@ func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error
 
 func dealUpdateInput(req crmcontracts.UpdateDealRequest, ifVersion *int64) UpdateDealInput {
 	in := UpdateDealInput{
-		Name:                  req.Name,
-		AmountMinor:           req.AmountMinor,
-		Currency:              req.Currency,
+		Name:             req.Name,
+		AmountMinor:      req.AmountMinor,
+		Currency:         req.Currency,
 		CompanyID:        idArg[ids.CompanyKind](req.CompanyId),
-		ProjectID:             idArg[ids.ProjectKind](req.ProjectId),
-		OwnerID:               idArg[ids.UserKind](req.OwnerId),
+		ProjectID:        idArg[ids.ProjectKind](req.ProjectId),
+		OwnerID:          idArg[ids.UserKind](req.OwnerId),
 		PartnerCompanyID: idArg[ids.CompanyKind](req.PartnerCompanyId),
-		IfVersion:             ifVersion,
-		CustomFields:          req.AdditionalProperties,
+		IfVersion:        ifVersion,
+		CustomFields:     req.AdditionalProperties,
 	}
 	if req.PartnerAttribution != nil {
 		attribution := string(*req.PartnerAttribution)

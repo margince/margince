@@ -26,12 +26,12 @@ import (
 type BlockedDomain struct {
 	// ID is the disposition row, which the audit trail names. Not on the wire:
 	// the domain is what an operator identifies a decision by.
-	ID             ids.UUID
-	Domain         string
-	Admission      string
-	Reason         string
-	Source         string
-	DecidedAt      time.Time
+	ID        ids.UUID
+	Domain    string
+	Admission string
+	Reason    string
+	Source    string
+	DecidedAt time.Time
 	CompanyID *ids.CompanyID
 }
 

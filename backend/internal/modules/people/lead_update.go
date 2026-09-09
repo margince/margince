@@ -25,13 +25,13 @@ type UpdateLeadInput struct {
 	// reversal path names them here instead.
 	Clear []string
 	// Trail names what the audit trail calls this write; zero is an update.
-	Trail           storekit.AuditTrail
-	FullName        *string
-	Email           *string
-	Title           *string
-	CompanyName     *string
+	Trail               storekit.AuditTrail
+	FullName            *string
+	Email               *string
+	Title               *string
+	CompanyName         *string
 	CandidateCompanyKey *string
-	Status          *string // only new ↔ working here; terminal states have their own paths
+	Status              *string // only new ↔ working here; terminal states have their own paths
 	// Source corrects where the lead came from; the score follows it.
 	Source *string
 	Score  *int

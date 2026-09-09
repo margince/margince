@@ -89,7 +89,7 @@ var linkPriority = map[crmcontracts.ActivityLinkEntityType]int{
 	flipObjectLead: 1,
 	flipObjectDeal: 2,
 	crmcontracts.ActivityLinkEntityTypeProject: 3,
-	flipObjectPerson:       4,
+	flipObjectPerson:  4,
 	flipObjectCompany: 5,
 }
 

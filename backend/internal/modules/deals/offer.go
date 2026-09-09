@@ -57,11 +57,11 @@ func (e *OfferEmptyError) FieldFault() (field, code, message string) {
 }
 
 type CreateOfferInput struct {
-	Currency   string
+	Currency       string
 	BuyerCompanyID *ids.CompanyID
-	ValidUntil *string // ISO date
-	IntroText  *string
-	TermsText  *string
+	ValidUntil     *string // ISO date
+	IntroText      *string
+	TermsText      *string
 	// TemplateID picks the offer_template render.go's PrepareRender
 	// resolves into a locale; unset falls back to de-DE (the
 	// offer_template package default), never a blank column.
@@ -362,13 +362,13 @@ func ensureDraft(offer crmcontracts.Offer) error {
 }
 
 type UpdateOfferInput struct {
-	Currency   *string
+	Currency       *string
 	BuyerCompanyID *ids.CompanyID
-	ValidUntil *string // ISO date
-	IntroText  *string
-	TermsText  *string
-	TemplateID *ids.OfferTemplateID
-	IfVersion  *int64
+	ValidUntil     *string // ISO date
+	IntroText      *string
+	TermsText      *string
+	TemplateID     *ids.OfferTemplateID
+	IfVersion      *int64
 }
 
 func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferInput) (crmcontracts.Offer, error) {

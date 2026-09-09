@@ -62,10 +62,10 @@ type vcardCreateProposal struct {
 	// naming no company still displays as nothing; omitempty just cannot
 	// be the reason it does, or that card can never be staged at all.
 	Company string `json:"company"`
-	Title        string `json:"title,omitempty"`
-	Phones       string `json:"phones,omitempty"`
-	URL          string `json:"url,omitempty"`
-	Address      string `json:"address,omitempty"`
+	Title   string `json:"title,omitempty"`
+	Phones  string `json:"phones,omitempty"`
+	URL     string `json:"url,omitempty"`
+	Address string `json:"address,omitempty"`
 	// CandidatePersonID names the near-match the import saw, when the
 	// importer could see it too. Informational for the decider; the create
 	// itself does not read it.
@@ -113,14 +113,14 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry peopl
 			// The dedupe lane's own folding, not a plain lowercase: a name it
 			// treats as the same person must hit the same decline memory, or
 			// a re-spelt card walks past a refusal.
-			FullName:     people.NormalizePersonName(entry.FullName),
-			Emails:       loweredCardEmails(entry),
-			Company: strings.TrimSpace(entry.Company),
-			Title:        strings.TrimSpace(entry.Title),
-			Phones:       strings.Join(phones, ", "),
-			URL:          strings.TrimSpace(entry.URL),
-			Address:      strings.TrimSpace(entry.Address),
-			StagedBy:     subject.String(),
+			FullName: people.NormalizePersonName(entry.FullName),
+			Emails:   loweredCardEmails(entry),
+			Company:  strings.TrimSpace(entry.Company),
+			Title:    strings.TrimSpace(entry.Title),
+			Phones:   strings.Join(phones, ", "),
+			URL:      strings.TrimSpace(entry.URL),
+			Address:  strings.TrimSpace(entry.Address),
+			StagedBy: subject.String(),
 		}
 		if candidate != nil {
 			id := openapi_types.UUID(candidate.UUID)
@@ -146,10 +146,10 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry peopl
 		// JSON omits, and a card whose value is legitimately empty (no email,
 		// no company) is not exempt from being asked about.
 		identity, err := json.Marshal(map[string]any{
-			fieldFullName:                  proposal.FullName,
-			"emails":                       proposal.Emails,
+			fieldFullName:             proposal.FullName,
+			"emails":                  proposal.Emails,
 			string(recordTypeCompany): proposal.Company,
-			"staged_by":                    proposal.StagedBy,
+			"staged_by":               proposal.StagedBy,
 		})
 		if err != nil {
 			return fmt.Errorf("compose: encoding the vCard proposal identity: %w", err)

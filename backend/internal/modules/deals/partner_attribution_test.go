@@ -265,7 +265,7 @@ func TestACreateBodyCarriesItsPartnerThroughToTheStore(t *testing.T) {
 		PipelineId:         openapi_types.UUID(ids.New[ids.PipelineKind]().UUID),
 		StageId:            openapi_types.UUID(ids.New[ids.StageKind]().UUID),
 		Source:             "ui",
-		PartnerCompanyId:       &partner,
+		PartnerCompanyId:   &partner,
 		PartnerAttribution: &claim,
 	})
 	if err != nil {

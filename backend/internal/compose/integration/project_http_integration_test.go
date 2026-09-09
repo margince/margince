@@ -27,15 +27,15 @@ import (
 )
 
 type projectDTO struct {
-	ID             string  `json:"id"`
-	Name           string  `json:"name"`
-	Key            *string `json:"key"`
-	CompanyID string  `json:"company_id"`
-	Phase          string  `json:"phase"`
-	Description    *string `json:"description"`
-	ClosedReason   *string `json:"closed_reason"`
-	ArchivedAt     *string `json:"archived_at"`
-	Version        int     `json:"version"`
+	ID           string  `json:"id"`
+	Name         string  `json:"name"`
+	Key          *string `json:"key"`
+	CompanyID    string  `json:"company_id"`
+	Phase        string  `json:"phase"`
+	Description  *string `json:"description"`
+	ClosedReason *string `json:"closed_reason"`
+	ArchivedAt   *string `json:"archived_at"`
+	Version      int     `json:"version"`
 }
 
 type projectListDTO struct {

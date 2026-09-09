@@ -63,8 +63,8 @@ func namesField(problem problemBody, field string) bool {
 // nothing about the body.
 type requiredIDFixtures struct {
 	person, company, activity string
-	tag, project                   string
-	deal, subjectUser              string
+	tag, project              string
+	deal, subjectUser         string
 }
 
 func seedRequiredIDFixtures(t *testing.T, e *apptest.AppEnv) requiredIDFixtures {

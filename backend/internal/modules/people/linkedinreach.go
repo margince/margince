@@ -30,9 +30,9 @@ import (
 
 // LinkedInReachAccount is one account this member's network reaches.
 type LinkedInReachAccount struct {
-	CompanyID ids.UUID
-	DisplayName    string
-	Connections    int
+	CompanyID   ids.UUID
+	DisplayName string
+	Connections int
 	// ContactsOnFile counts the CONFIRMED matches only. The gap between it and
 	// Connections is the answer the import was for: people you know at this
 	// account who are not in the CRM.

@@ -234,7 +234,7 @@ func vatCheckWire(check VatCheck) crmcontracts.CompanyVatCheck {
 		return &s
 	}
 	return crmcontracts.CompanyVatCheck{
-		CompanyId:     openapi_types.UUID(check.CompanyID.UUID),
+		CompanyId:          openapi_types.UUID(check.CompanyID.UUID),
 		VatNumber:          check.Number,
 		Status:             crmcontracts.CompanyVatCheckStatus(check.Status),
 		ConsultationNumber: absentWhenEmpty(check.ConsultationNumber),
@@ -306,7 +306,7 @@ func (h Handlers) RejectCompany(w http.ResponseWriter, r *http.Request, id crmco
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RejectCompanyResponse{
 		Company: out.Company,
-		Domain:       ToContractBlockedDomain(out.Domain),
+		Domain:  ToContractBlockedDomain(out.Domain),
 	})
 }
 

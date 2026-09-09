@@ -158,9 +158,9 @@ func rollupCompanyReadPerms(scope principal.RowScope) principal.Permissions {
 	return principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"company": {Read: true},
-			"deal":         {Read: true},
-			"activity":     {Read: true},
+			"company":  {Read: true},
+			"deal":     {Read: true},
+			"activity": {Read: true},
 			// The contact count is a count over employment PAIRS, so it needs
 			// the edge grant alongside person:read. Every seeded role holds it;
 			// the cases built on this fixture add or withhold `person` and

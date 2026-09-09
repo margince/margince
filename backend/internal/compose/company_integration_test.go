@@ -574,7 +574,7 @@ func TestTheCompanyReadSurvivesAFactNobodyScored(t *testing.T) {
 	// is that a production writer records no confidence for it.
 	if err := store.ApplyTechnicalEnrichment(ctx, people.TechnicalEnrichment{
 		CompanyID: saved.CompanyID,
-		Completed:      []people.TechnicalLane{people.LaneDNS},
+		Completed: []people.TechnicalLane{people.LaneDNS},
 		Observations: []people.TechnicalObservation{{
 			Field: "mail_provider", ValueKey: "google", Value: "Google Workspace",
 			Evidence: "aspmx.l.google.com", SourceURL: "dns:acme.example",

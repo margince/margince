@@ -53,7 +53,7 @@ import (
 type benchTierSpec struct {
 	tier            search.BenchTier
 	persons         int
-	companies   int
+	companies       int
 	bulkActivities  int // background timeline volume, linked cyclically to persons
 	anchorTouches   int // activities on the measured graph anchor (the hot 360)
 	relationships   int

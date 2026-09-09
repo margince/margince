@@ -41,10 +41,10 @@ func TestContractCreateReadsBackWhatWasWritten(t *testing.T) {
 	company := e.SeedCompany(t, "Acme", nil)
 
 	created, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
-		CompanyID: ids.From[ids.CompanyKind](company),
-		Title:          "MSA 2026",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		Title:      "MSA 2026",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating a contract: %v", err)
@@ -76,12 +76,12 @@ func TestUnderContractTakesTheEarlierOfTermEndAndCancellation(t *testing.T) {
 	starts := daysFromToday(-180)
 	ends := daysFromToday(120)
 	created, err := e.Contracts.CreateContract(admin, contracts.CreateContractInput{
-		CompanyID: ids.From[ids.CompanyKind](company),
-		Title:          "Cancelled early",
-		ValueBasis:     contracts.BasisTotal,
-		StartsOn:       &starts,
-		EndsOn:         &ends,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		Title:      "Cancelled early",
+		ValueBasis: contracts.BasisTotal,
+		StartsOn:   &starts,
+		EndsOn:     &ends,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -122,7 +122,7 @@ func anActiveContract(t *testing.T, e *Env, company ids.UUID, title string) ids.
 	t.Helper()
 	first, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
 		CompanyID: ids.From[ids.CompanyKind](company),
-		Title:          title, ValueBasis: contracts.BasisTotal, Source: "manual",
+		Title:     title, ValueBasis: contracts.BasisTotal, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -178,7 +178,7 @@ func TestATerminalContractDoesNotReopen(t *testing.T) {
 
 	created, err := e.Contracts.CreateContract(admin, contracts.CreateContractInput{
 		CompanyID: ids.From[ids.CompanyKind](company),
-		Title:          "Expired", ValueBasis: contracts.BasisTotal, Source: "manual",
+		Title:     "Expired", ValueBasis: contracts.BasisTotal, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -209,12 +209,12 @@ func TestTheDatabaseRefusesContradictoryTerms(t *testing.T) {
 	cases := map[string]contracts.CreateContractInput{
 		"value with no currency": {
 			CompanyID: ids.From[ids.CompanyKind](company),
-			Title:          "Half a money pair", ValueBasis: contracts.BasisTotal,
+			Title:     "Half a money pair", ValueBasis: contracts.BasisTotal,
 			ValueMinor: &value, Source: "manual",
 		},
 		"a term that ends before it starts": {
 			CompanyID: ids.From[ids.CompanyKind](company),
-			Title:          "Backwards", ValueBasis: contracts.BasisTotal,
+			Title:     "Backwards", ValueBasis: contracts.BasisTotal,
 			StartsOn: &starts, EndsOn: &ends, Source: "manual",
 		},
 	}
@@ -246,7 +246,7 @@ func TestAnInvisibleContractIsAbsentRatherThanRefused(t *testing.T) {
 	companyID := ids.From[ids.CompanyKind](company)
 	created, err := e.Contracts.CreateContract(rep1, contracts.CreateContractInput{
 		CompanyID: companyID,
-		Title:          "Rep1's agreement", ValueBasis: contracts.BasisTotal, Source: "manual",
+		Title:     "Rep1's agreement", ValueBasis: contracts.BasisTotal, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -462,7 +462,7 @@ func TestAContractAttachesToADealThatNamesNoCompany(t *testing.T) {
 
 	created, err := e.Contracts.CreateContract(admin, contracts.CreateContractInput{
 		CompanyID: ids.From[ids.CompanyKind](company),
-		Title:          "MSA 2026", ValueBasis: contracts.BasisTotal, Source: "manual",
+		Title:     "MSA 2026", ValueBasis: contracts.BasisTotal, Source: "manual",
 		DealID: &dealID,
 	})
 	if err != nil {
@@ -486,7 +486,7 @@ func TestAContractAttachesToADealThatNamesNoCompany(t *testing.T) {
 	otherDealID := ids.From[ids.DealKind](ids.UUID(otherDeal.Id))
 	_, err = e.Contracts.CreateContract(admin, contracts.CreateContractInput{
 		CompanyID: ids.From[ids.CompanyKind](company),
-		Title:          "MSA 2026 (misfiled)", ValueBasis: contracts.BasisTotal, Source: "manual",
+		Title:     "MSA 2026 (misfiled)", ValueBasis: contracts.BasisTotal, Source: "manual",
 		DealID: &otherDealID,
 	})
 	var crossCompany *contracts.CrossCompanyLinkError

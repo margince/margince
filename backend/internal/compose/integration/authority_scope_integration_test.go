@@ -34,7 +34,7 @@ func repPermsWithCompany() principal.Permissions {
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"person":                {Create: true, Read: true, Update: true},
-			"company":          {Create: true, Read: true, Update: true},
+			"company":               {Create: true, Read: true, Update: true},
 			"deal":                  {Create: true, Read: true, Update: true},
 			"pipeline":              {Read: true},
 			"installation_settings": {Read: true},

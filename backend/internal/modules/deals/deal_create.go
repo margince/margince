@@ -31,20 +31,20 @@ import (
 // placement it is born on. CustomFields carries the request body's extra
 // top-level keys.
 type CreateDealInput struct {
-	Name           string
-	AmountMinor    *int64
-	Currency       *string
-	PipelineID     ids.PipelineID
-	StageID        ids.StageID
-	CompanyID *ids.CompanyID
+	Name        string
+	AmountMinor *int64
+	Currency    *string
+	PipelineID  ids.PipelineID
+	StageID     ids.StageID
+	CompanyID   *ids.CompanyID
 	// PartnerCompanyID and PartnerAttribution are the one fact the
 	// schema stores as one: the deal_partner_attribution_pairing CHECK
 	// rejects either half alone, so birthAttribution below settles them
 	// together rather than letting a half-filled pair reach the insert.
-	PartnerCompanyID *ids.CompanyID
-	PartnerAttribution    *string
-	ProjectID             *ids.ProjectID
-	OwnerID               *ids.UserID
+	PartnerCompanyID   *ids.CompanyID
+	PartnerAttribution *string
+	ProjectID          *ids.ProjectID
+	OwnerID            *ids.UserID
 	// OwnerExact states that OwnerID — nil included — IS the decided owner,
 	// so the actor fallback below must not run. The lead-qualify seam sets
 	// it: the deal inherits the LEAD's owner, and an unassigned lead
@@ -241,7 +241,7 @@ type recordLink struct {
 // them. Both the customer and the partner are companies.
 const (
 	linkEntityCompany = "company"
-	linkEntityProject      = "project"
+	linkEntityProject = "project"
 )
 
 // createDealInTx guards the birth invariants (open stage, future close,

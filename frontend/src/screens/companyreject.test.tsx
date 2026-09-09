@@ -33,7 +33,7 @@ type Company = components["schemas"]["Company"];
 
 // Typed, not asserted: a fixture cast into the contract type can drop a
 // required field and go on compiling while the wire shape moves under it.
-const ORG: Company = {
+const COMPANY: Company = {
   writable: true,
   id: "o-1",
   display_name: "Expensify Ltd",
@@ -99,7 +99,7 @@ function stub(allow: GrantSpec, reject: (body: unknown) => Response): Sent[] {
 const rejected = () =>
   new Response(
     JSON.stringify({
-      company: { ...ORG, archived_at: "2026-09-08T10:00:00Z" },
+      company: { ...COMPANY, archived_at: "2026-09-08T10:00:00Z" },
       domain: {
         // Deliberately NOT the domain the fixture above shows. The server reads
         // the company's current primary inside the transaction, so the two can
@@ -135,7 +135,7 @@ function render(ui: ReactNode) {
 it("rejects a company in one request and reports the domain the server refused", async () => {
   const user = userEvent.setup();
   const sent = stub({ company: ["read", "update", "delete"] }, rejected);
-  render(<CompanyRejectAction company={ORG} />);
+  render(<CompanyRejectAction company={COMPANY} />);
 
   await user.click(await screen.findByTestId("reject-company"));
   await user.type(
@@ -177,7 +177,7 @@ it.each([
   stub(allow as GrantSpec, rejected);
   render(
     <>
-      <CompanyRejectAction company={ORG} />
+      <CompanyRejectAction company={COMPANY} />
       <SnapshotResolved />
     </>,
   );
@@ -193,7 +193,7 @@ it("draws nothing for a company with no primary domain", async () => {
   stub({ company: ["read", "update", "delete"] }, rejected);
   render(
     <>
-      <CompanyRejectAction company={{ ...ORG, domains: [] }} />
+      <CompanyRejectAction company={{ ...COMPANY, domains: [] }} />
       <SnapshotResolved />
     </>,
   );
@@ -207,7 +207,7 @@ it("draws nothing for a company with no primary domain", async () => {
 it("will not send until a reason is written", async () => {
   const user = userEvent.setup();
   const sent = stub({ company: ["read", "update", "delete"] }, rejected);
-  render(<CompanyRejectAction company={ORG} />);
+  render(<CompanyRejectAction company={COMPANY} />);
 
   await user.click(await screen.findByTestId("reject-company"));
   expect(screen.getByTestId("reject-company-confirm")).toBeDisabled();
@@ -224,7 +224,7 @@ it("will not send until a reason is written", async () => {
 it("mints a new idempotency key for each confirmation", async () => {
   const user = userEvent.setup();
   const sent = stub({ company: ["read", "update", "delete"] }, rejected);
-  render(<CompanyRejectAction company={ORG} />);
+  render(<CompanyRejectAction company={COMPANY} />);
 
   for (const reason of ["a tool we use", "still a tool we use"]) {
     await user.click(await screen.findByTestId("reject-company"));

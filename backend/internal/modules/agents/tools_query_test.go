@@ -66,9 +66,9 @@ func TestAPlanDocumentReachesTheGrammarVerbatim(t *testing.T) {
 func TestEveryAdmittedRefIsReadBackThroughTheSeam(t *testing.T) {
 	first, second, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		first:  recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
-		second: recordAt(datasource.EntityDeal, time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), true),
-		company:    recordAt(datasource.EntityCompany, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), true),
+		first:   recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		second:  recordAt(datasource.EntityDeal, time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), true),
+		company: recordAt(datasource.EntityCompany, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), true),
 	}}
 	answer := QueryAnswer{
 		Refs: []QueryRef{
@@ -166,8 +166,8 @@ func TestARowWhoseHopBecameUnreadableIsDropped(t *testing.T) {
 func TestAMirrorBackedHopIsMarkedExternal(t *testing.T) {
 	deal, company := ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		deal: recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
-		company:  recordAt(datasource.EntityCompany, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), false),
+		deal:    recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		company: recordAt(datasource.EntityCompany, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), false),
 	}}
 
 	result := handleQuery(t, provider, QueryAnswer{
@@ -493,9 +493,9 @@ func TestADroppedRowIsNeitherChargedNorNamed(t *testing.T) {
 	dropped, goneCompany := ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{
 		records: map[ids.UUID]datasource.Record{
-			kept:    recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+			kept:        recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 			keptCompany: recordAt(datasource.EntityCompany, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), true),
-			dropped: recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+			dropped:     recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 		},
 		fail: map[ids.UUID]error{goneCompany: apperrors.ErrPermissionDenied},
 	}

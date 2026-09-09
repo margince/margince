@@ -8,7 +8,7 @@ partner programs) beside the engineering ones, because a how-to is a thing you
 return to for one answer whichever audience you are in.
 
 Documentation for building and operating **Margince** — a governed, single-tenant CRM (a Go `/v1` API
-backend; the Vite/React web UI ships separately). One installation serves one organisation, and boot
+backend; the Vite/React web UI ships separately). One installation serves one company, and boot
 refuses a second. The docs follow the [Diátaxis](https://diataxis.fr/) split: **tutorials** to learn,
 **how-to** guides for tasks, **reference** for lookup, **explanation** for the *why*, plus
 **[principles](principles/README.md)** — the handful of statements about this codebase's shape that

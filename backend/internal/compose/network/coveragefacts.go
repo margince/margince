@@ -41,9 +41,9 @@ const scopeAll = "true"
 
 // dealFacts is the deal's own row, as the risk rules need it.
 type dealFacts struct {
-	status         string
-	companyID ids.UUID
-	lastTouchAt    time.Time
+	status      string
+	companyID   ids.UUID
+	lastTouchAt time.Time
 	// everTouched says an activity has actually been captured against the
 	// deal, which lastTouchAt cannot answer: it coalesces to the creation
 	// date, so a deal nobody has contacted and one contacted the day it was

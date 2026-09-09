@@ -158,9 +158,9 @@ func applyStatusTx(ctx context.Context, tx pgx.Tx, id ids.ContractID, existing c
 		return crmcontracts.Contract{}, fmt.Errorf("audit contract status change: %w", err)
 	}
 	changed := crmcontracts.PublicEventContractStatusChanged{
-		FromStatus:     statusOf(existing),
-		ToStatus:       to,
-		CompanyId: existing.CompanyId,
+		FromStatus: statusOf(existing),
+		ToStatus:   to,
+		CompanyId:  existing.CompanyId,
 	}
 	if supersededBy != nil {
 		successor := openapi_types.UUID(supersededBy.UUID)

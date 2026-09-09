@@ -65,7 +65,7 @@ var txSeamPerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"custom_field":          {Create: true, Read: true, Update: true, Delete: true},
 		"person":                {Create: true, Read: true, Update: true, Delete: true},
-		"company":          {Create: true, Read: true, Update: true, Delete: true},
+		"company":               {Create: true, Read: true, Update: true, Delete: true},
 		"deal":                  {Create: true, Read: true, Update: true, Delete: true},
 		"lead":                  {Create: true, Read: true, Update: true, Delete: true},
 		"pipeline":              {Create: true, Read: true, Update: true, Delete: true},

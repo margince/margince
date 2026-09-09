@@ -269,7 +269,7 @@ export function stubFetch(
 // The session a responder that never named one gets: a full seat holding
 // the grants a rep working their own accounts holds. Every write control on
 // the page asks the grant before it draws, so a responder that answered /me
-// with the ORG body (the catch-all most specs end in) would otherwise
+// with the COMPANY body (the catch-all most specs end in) would otherwise
 // describe a reader every verb is withheld from. A spec about a refusal
 // answers /me itself, with a `user`, and is passed through untouched.
 async function withSession(answer: Response): Promise<Response> {

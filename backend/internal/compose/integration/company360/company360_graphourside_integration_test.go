@@ -246,7 +246,7 @@ func TestCompanyGraphOmitsOurSideWithoutThePersonOrActivityGrant(t *testing.T) {
 	noPeople := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"company":          {Read: true},
+			"company":               {Read: true},
 			"activity":              {Read: true},
 			"installation_settings": {Read: true},
 		},
@@ -255,7 +255,7 @@ func TestCompanyGraphOmitsOurSideWithoutThePersonOrActivityGrant(t *testing.T) {
 	noActivities := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"company":          {Read: true},
+			"company":               {Read: true},
 			"person":                {Read: true},
 			"installation_settings": {Read: true},
 		},

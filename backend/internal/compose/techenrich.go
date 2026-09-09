@@ -112,8 +112,8 @@ func (e *TechnicalEnricher) Read(
 ) (people.TechnicalEnrichment, []laneOutcome) {
 	domain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(domain, ".")))
 	result := people.TechnicalEnrichment{
-		CompanyID: companyID,
-		ObservedAt:     e.now().UTC(),
+		CompanyID:  companyID,
+		ObservedAt: e.now().UTC(),
 	}
 	if domain == "" {
 		return result, nil

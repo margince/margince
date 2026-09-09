@@ -240,16 +240,16 @@ func setAddTask(out *crmcontracts.Company360Suggestion, step nextStep) {
 //
 //nolint:staticcheck // ST1003: the field names mirror the oapi-codegen type this must assign to
 func NewSuggestionAction(kind crmcontracts.Company360SuggestionActionKind) *struct {
-	ActivityId *openapi_types.UUID                              `json:"activity_id,omitempty"`
-	DealId     *openapi_types.UUID                              `json:"deal_id,omitempty"`
+	ActivityId *openapi_types.UUID                         `json:"activity_id,omitempty"`
+	DealId     *openapi_types.UUID                         `json:"deal_id,omitempty"`
 	Kind       crmcontracts.Company360SuggestionActionKind `json:"kind"`
-	Task       *crmcontracts.CreateTaskRequest                  `json:"task,omitempty"`
+	Task       *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
 } {
 	action := new(struct {
-		ActivityId *openapi_types.UUID                              `json:"activity_id,omitempty"`
-		DealId     *openapi_types.UUID                              `json:"deal_id,omitempty"`
+		ActivityId *openapi_types.UUID                         `json:"activity_id,omitempty"`
+		DealId     *openapi_types.UUID                         `json:"deal_id,omitempty"`
 		Kind       crmcontracts.Company360SuggestionActionKind `json:"kind"`
-		Task       *crmcontracts.CreateTaskRequest                  `json:"task,omitempty"`
+		Task       *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
 	})
 	action.Kind = kind
 	return action

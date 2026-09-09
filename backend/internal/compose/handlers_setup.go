@@ -59,14 +59,14 @@ type setupStatusResponse struct {
 // crm.yaml, so they follow the convention the linter enforces on hand-written
 // Go rather than the camelCase the generated contract types carry.
 type setupClaimRequest struct {
-	SetupToken       string `json:"setup_token"`
-	CompanyName string `json:"company_name"`
-	Timezone         string `json:"timezone"`
-	BaseCurrency     string `json:"base_currency"`
-	BaseLanguage     string `json:"base_language"`
-	AdminEmail       string `json:"admin_email"`
-	AdminName        string `json:"admin_name"`
-	AdminPassword    string `json:"admin_password"`
+	SetupToken    string `json:"setup_token"`
+	CompanyName   string `json:"company_name"`
+	Timezone      string `json:"timezone"`
+	BaseCurrency  string `json:"base_currency"`
+	BaseLanguage  string `json:"base_language"`
+	AdminEmail    string `json:"admin_email"`
+	AdminName     string `json:"admin_name"`
+	AdminPassword string `json:"admin_password"`
 }
 
 // setupStatus answers whether a claim is possible.
@@ -119,13 +119,13 @@ func setupClaim(svc *identity.Service, pool *pgxpool.Pool, seeds deployconfig.Se
 		// identity ones, so a shared slice would lose these.
 		var seedDiscards []string
 		wsID, discarded, err := svc.ClaimInstallation(r.Context(), in.SetupToken, identity.InstallationBootstrap{
-			CompanyName: in.CompanyName,
-			BaseCurrency:     in.BaseCurrency,
-			BaseLanguage:     in.BaseLanguage,
-			Timezone:         in.Timezone,
-			AdminEmail:       in.AdminEmail,
-			AdminName:        in.AdminName,
-			AdminPassword:    in.AdminPassword,
+			CompanyName:   in.CompanyName,
+			BaseCurrency:  in.BaseCurrency,
+			BaseLanguage:  in.BaseLanguage,
+			Timezone:      in.Timezone,
+			AdminEmail:    in.AdminEmail,
+			AdminName:     in.AdminName,
+			AdminPassword: in.AdminPassword,
 		}, configuredSeed(seeds, deals.NewHandlers(InstallationDB(pool), DealsInstallation()), &seedDiscards))
 		switch {
 		case errors.Is(err, identity.ErrAlreadyProvisioned):

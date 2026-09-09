@@ -43,11 +43,11 @@ import (
 // for. fieldTitle and fieldPhone are declared where their own writers first
 // needed them.
 const (
-	fieldRole     = "role"
-	fieldCompanyName  = "company_name"
-	fieldAddress  = "address"
-	fieldLinkedin = "linkedin"
-	fieldWebsite  = "website"
+	fieldRole        = "role"
+	fieldCompanyName = "company_name"
+	fieldAddress     = "address"
+	fieldLinkedin    = "linkedin"
+	fieldWebsite     = "website"
 )
 
 // observedField is one dated statement about one field.

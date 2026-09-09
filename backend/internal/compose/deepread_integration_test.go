@@ -115,10 +115,10 @@ func startDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (people.S
 		t.Fatal("the first start joined — the fixture is not clean")
 	}
 	return read, SiteDeepReadArgs{
-		Workspace:      e.WS,
-		CompanyID: company,
-		SiteReadID:     read.ID,
-		RequestedBy:    read.RequestedBy,
+		Workspace:   e.WS,
+		CompanyID:   company,
+		SiteReadID:  read.ID,
+		RequestedBy: read.RequestedBy,
 	}
 }
 

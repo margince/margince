@@ -89,9 +89,9 @@ func calendarOwnerCtx(e *integration.Env, owner ids.UUID) context.Context {
 		UserID: owner, OnBehalfOf: owner,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"activity":     {Create: true, Read: true, Update: true},
-				"person":       {Create: true, Read: true, Update: true},
-				"company": {Create: true, Read: true, Update: true},
+				"activity": {Create: true, Read: true, Update: true},
+				"person":   {Create: true, Read: true, Update: true},
+				"company":  {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

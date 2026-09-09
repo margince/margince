@@ -421,7 +421,7 @@ func (s *Store) DomainsOwedTheirPeople(ctx context.Context, limit int) ([]Domain
 // DomainBacklog names one company domain whose people are not attached yet.
 type DomainBacklog struct {
 	CompanyID ids.CompanyID
-	Domain         string
+	Domain    string
 }
 
 // AttachDomainBacklog gives the live people on one company domain their

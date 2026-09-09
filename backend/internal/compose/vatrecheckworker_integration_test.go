@@ -55,9 +55,9 @@ func (r *refusingRegister) Check(_ context.Context, _ string) (vatcheck.Result, 
 // been consulted — the state in which the automatic rule declines.
 type vatRecheckEnv struct {
 	*integration.Env
-	worker   *vatCheckWorker
-	register *countingRegister
-	companyID    ids.CompanyID
+	worker    *vatCheckWorker
+	register  *countingRegister
+	companyID ids.CompanyID
 }
 
 func setupVatRecheck(t *testing.T) *vatRecheckEnv {
@@ -103,9 +103,9 @@ func (v *vatRecheckEnv) work(t *testing.T, requested bool) {
 	t.Helper()
 	err := v.worker.Work(context.Background(), &river.Job[CheckCompanyVatArgs]{
 		Args: CheckCompanyVatArgs{
-			Workspace:      v.WS,
+			Workspace: v.WS,
 			CompanyID: v.companyID.UUID,
-			Requested:      requested,
+			Requested: requested,
 		},
 	})
 	if err != nil {

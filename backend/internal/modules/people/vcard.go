@@ -31,15 +31,15 @@ import (
 // as the card stated it — trimmed, unescaped, and otherwise untouched.
 type VCardEntry struct {
 	FullName string
-	// Company is the first ORG component, which is the company. The
+	// Company is the first COMPANY component, which is the company. The
 	// components after it are departments ("Acme;Sales;EMEA"), and a
 	// department is not an employer.
 	Company string
-	Title        string
-	Emails       []VCardChannel
-	Phones       []VCardChannel
-	URL          string
-	Address      string
+	Title   string
+	Emails  []VCardChannel
+	Phones  []VCardChannel
+	URL     string
+	Address string
 	// Revised is what the card's REV property states: when this card was last
 	// changed. Nil where it states none, and the import then dates the card
 	// from its own clock.
@@ -247,12 +247,12 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 	case "N":
 		// Only when FN said nothing: FN is the display name the person chose,
 		// and N is the structured fallback for a card that omits it. Split on
-		// the RAW value for the same reason ORG is: an escaped semicolon
+		// the RAW value for the same reason COMPANY is: an escaped semicolon
 		// inside a family name is part of the name, not a component boundary.
 		if entry.FullName == "" {
 			entry.FullName = nameFromStructured(params, raw)
 		}
-	case "ORG":
+	case "COMPANY":
 		// Split on the RAW value: unescaping first would turn an escaped
 		// semicolon inside a company's own name into a component separator,
 		// and "Acme; Holdings" would arrive as "Acme".

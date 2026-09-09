@@ -32,10 +32,10 @@ export default meta;
 type Story = StoryObj<typeof VatMark>;
 type VatCheck = components["schemas"]["CompanyVatCheck"];
 
-const ORG_ID = "00000000-0000-7000-8000-0000000000a1";
+const COMPANY_ID = "00000000-0000-7000-8000-0000000000a1";
 const NUMBER = "DE811907980";
-const ROUTE = `GET /companies/${ORG_ID}/vat-check`;
-const ASK = `POST /companies/${ORG_ID}/vat-check`;
+const ROUTE = `GET /companies/${COMPANY_ID}/vat-check`;
+const ASK = `POST /companies/${COMPANY_ID}/vat-check`;
 
 // The grant the ask gates on. Without it every story renders as a viewer who
 // may not write, and the button is absent for the correct reason — the
@@ -43,7 +43,7 @@ const ASK = `POST /companies/${ORG_ID}/vat-check`;
 const CAN_WRITE = meRoute({ company: ["read", "update"] });
 
 const CHECKED: VatCheck = {
-  company_id: ORG_ID,
+  company_id: COMPANY_ID,
   vat_number: NUMBER,
   status: "valid",
   consultation_number: "WAPIAAAAXk3rN2p9",
@@ -62,7 +62,7 @@ function inRow(stated: string, canAsk = true) {
         <span className="t-label">Register / USt-IdNr.</span>
         <div>
           {stated}
-          <VatMark companyId={ORG_ID} stated={stated} canAsk={canAsk} />
+          <VatMark companyId={COMPANY_ID} stated={stated} canAsk={canAsk} />
         </div>
       </div>
     </StoryProviders>

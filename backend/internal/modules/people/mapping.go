@@ -189,14 +189,14 @@ func companyCreateInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInp
 		return CreateCompanyInput{}, err
 	}
 	in := CreateCompanyInput{
-		DisplayName:  req.DisplayName,
-		LegalName:    req.LegalName,
-		Description:  req.Description,
-		Industry:     req.Industry,
-		Source:       req.Source,
-		OwnerID:      idArg[ids.UserKind](req.OwnerId),
-		ParentCompanyID:  idArg[ids.CompanyKind](req.ParentCompanyId),
-		CustomFields: req.AdditionalProperties,
+		DisplayName:     req.DisplayName,
+		LegalName:       req.LegalName,
+		Description:     req.Description,
+		Industry:        req.Industry,
+		Source:          req.Source,
+		OwnerID:         idArg[ids.UserKind](req.OwnerId),
+		ParentCompanyID: idArg[ids.CompanyKind](req.ParentCompanyId),
+		CustomFields:    req.AdditionalProperties,
 	}
 	in.Address = req.Address
 	if req.SizeBand != nil {
@@ -216,15 +216,15 @@ func companyCreateInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInp
 
 func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64) UpdateCompanyInput {
 	in := UpdateCompanyInput{
-		DisplayName:  req.DisplayName,
-		LegalName:    req.LegalName,
-		Description:  req.Description,
-		Industry:     req.Industry,
-		OwnerID:      idArg[ids.UserKind](req.OwnerId),
-		ParentCompanyID:  idArg[ids.CompanyKind](req.ParentCompanyId),
-		IfVersion:    ifVersion,
-		CustomFields: req.AdditionalProperties,
-		LinkedInURL:  req.LinkedinUrl,
+		DisplayName:     req.DisplayName,
+		LegalName:       req.LegalName,
+		Description:     req.Description,
+		Industry:        req.Industry,
+		OwnerID:         idArg[ids.UserKind](req.OwnerId),
+		ParentCompanyID: idArg[ids.CompanyKind](req.ParentCompanyId),
+		IfVersion:       ifVersion,
+		CustomFields:    req.AdditionalProperties,
+		LinkedInURL:     req.LinkedinUrl,
 	}
 	in.Address = req.Address
 	if req.SizeBand != nil {
@@ -272,17 +272,17 @@ func leadCreateInput(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error
 		return CreateLeadInput{}, err
 	}
 	in := CreateLeadInput{
-		FullName:        req.FullName,
-		Title:           req.Title,
-		CompanyName:     req.CompanyName,
+		FullName:            req.FullName,
+		Title:               req.Title,
+		CompanyName:         req.CompanyName,
 		CandidateCompanyKey: req.CandidateCompanyKey,
-		LinkedInURL:     req.LinkedinUrl,
-		SourceSystem:    req.SourceSystem,
-		SourceID:        req.SourceId,
-		Source:          req.Source,
-		OwnerID:         idArg[ids.UserKind](req.OwnerId),
-		ProjectID:       idArg[ids.ProjectKind](req.ProjectId),
-		CustomFields:    req.AdditionalProperties,
+		LinkedInURL:         req.LinkedinUrl,
+		SourceSystem:        req.SourceSystem,
+		SourceID:            req.SourceId,
+		Source:              req.Source,
+		OwnerID:             idArg[ids.UserKind](req.OwnerId),
+		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
+		CustomFields:        req.AdditionalProperties,
 	}
 	if req.Email != nil {
 		email := string(*req.Email)
@@ -332,7 +332,7 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		FullName:            req.FullName,
 		Title:               req.Title,
 		CompanyName:         req.CompanyName,
-		CandidateCompanyKey:     req.CandidateCompanyKey,
+		CandidateCompanyKey: req.CandidateCompanyKey,
 		Source:              req.Source,
 		Score:               req.Score,
 		ScoreOverrideReason: req.ScoreOverrideReason,

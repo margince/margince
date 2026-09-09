@@ -43,9 +43,9 @@ type CompanyCandidate struct {
 
 // CompanyMatch is PO-F-2's output.
 type CompanyMatch struct {
-	Decision       DedupeDecision
-	CompanyID ids.CompanyID
-	Confidence     float64
+	Decision   DedupeDecision
+	CompanyID  ids.CompanyID
+	Confidence float64
 	// Ranked carries every candidate at or above the threshold, best first.
 	// The queue records ONE pair, but the best pair may already have been
 	// dispositioned `not_a_duplicate`, and a single-winner result would let
@@ -59,8 +59,8 @@ type CompanyMatch struct {
 // a display-name collision — a reviewer deciding a merge is reading exactly
 // that comparison.
 type CompanyCandidateScore struct {
-	CompanyID ids.CompanyID
-	Confidence     float64
+	CompanyID  ids.CompanyID
+	Confidence float64
 	// MatchedField is the axis the winning pairing came from on the STORED
 	// side: "display_name" or "legal_name".
 	MatchedField string
@@ -206,10 +206,10 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 		return cmp.Compare(a.CompanyID.String(), b.CompanyID.String())
 	})
 	return CompanyMatch{
-		Decision:       DecisionFuzzyReview,
-		CompanyID: ranked[0].CompanyID,
-		Confidence:     ranked[0].Confidence,
-		Ranked:         ranked,
+		Decision:   DecisionFuzzyReview,
+		CompanyID:  ranked[0].CompanyID,
+		Confidence: ranked[0].Confidence,
+		Ranked:     ranked,
 	}, nil
 }
 

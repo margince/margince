@@ -165,7 +165,7 @@ var overlayReaderPerms = principal.Permissions{
 	RoleKeys: []string{"read_only"},
 	Objects: map[string]principal.ObjectGrant{
 		"person":                {Read: true},
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"deal":                  {Read: true},
 		"lead":                  {Read: true},
 		"activity":              {Read: true},

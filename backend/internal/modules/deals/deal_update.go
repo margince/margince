@@ -32,13 +32,13 @@ type UpdateDealInput struct {
 	// reversal path names them here instead.
 	Clear []string
 	// Trail names what the audit trail calls this write; zero is an update.
-	Trail                 storekit.AuditTrail
-	Name                  *string
-	AmountMinor           *int64
-	Currency              *string
+	Trail            storekit.AuditTrail
+	Name             *string
+	AmountMinor      *int64
+	Currency         *string
 	CompanyID        *ids.CompanyID
-	ProjectID             *ids.ProjectID
-	OwnerID               *ids.UserID
+	ProjectID        *ids.ProjectID
+	OwnerID          *ids.UserID
 	PartnerCompanyID *ids.CompanyID
 	// PartnerAttribution says what the partner did for the deal — "sourced"
 	// or "influenced". It is meaningless without PartnerCompanyID, and

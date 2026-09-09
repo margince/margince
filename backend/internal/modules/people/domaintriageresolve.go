@@ -50,8 +50,8 @@ type ResolveDomainTriageInput struct {
 
 // ResolveDomainTriageResult reports what the verdict actually did.
 type ResolveDomainTriageResult struct {
-	CompanyID *ids.CompanyID
-	CompanyCreated     bool
+	CompanyID      *ids.CompanyID
+	CompanyCreated bool
 	EdgesPlanted   int
 }
 
@@ -180,11 +180,11 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 	}
 	if len(in.Fields) > 0 || len(in.Facts) > 0 {
 		if err := s.ApplyDeepReadTx(ctx, tx, DeepReadProposal{
-			CompanyID: *res.CompanyID,
-			SourceURL:      in.SeedURL,
-			SiteReadID:     in.ReadID,
-			Fields:         in.Fields,
-			Facts:          in.Facts,
+			CompanyID:  *res.CompanyID,
+			SourceURL:  in.SeedURL,
+			SiteReadID: in.ReadID,
+			Fields:     in.Fields,
+			Facts:      in.Facts,
 		}); err != nil {
 			return ResolveDomainTriageResult{}, err
 		}

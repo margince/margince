@@ -171,8 +171,8 @@ func TestSubjectsOfAWaiverSetKeyedByANamedStringTypeAreOrderedToo(t *testing.T) 
 	type recordType string
 	w := Waive(map[recordType]string{
 		"company": "the third subject, ratified for the reason stated right here",
-		"deal":         "the first subject, ratified for the reason stated right here",
-		"person":       "the second subject, ratified for the reason stated right here",
+		"deal":    "the first subject, ratified for the reason stated right here",
+		"person":  "the second subject, ratified for the reason stated right here",
 	})
 	for range 8 {
 		got := w.Subjects()

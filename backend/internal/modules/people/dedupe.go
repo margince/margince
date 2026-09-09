@@ -22,8 +22,8 @@ import (
 // boundary because a workspace tuning its own match threshold would make
 // "no duplicates" unauditable across installations.
 const (
-	dedupeReviewThreshold = 0.72
-	dedupeNameWeight      = 0.55
+	dedupeReviewThreshold     = 0.72
+	dedupeNameWeight          = 0.55
 	dedupeCompanyDomainWeight = 0.45
 )
 
@@ -254,15 +254,15 @@ func exactPersonByEmail(ctx context.Context, tx pgx.Tx, emails []string) (ids.Pe
 
 // personCandidateRow is one row of the restricted candidate set.
 type personCandidateRow struct {
-	id       ids.PersonID
-	fullName string
-	companyID    *ids.CompanyID
+	id        ids.PersonID
+	fullName  string
+	companyID *ids.CompanyID
 	// companyDomain is a domain the incumbent's EMPLOYER is registered under;
 	// mailDomains are the ones their own live addresses sit on. Both say "these
 	// two work at the same place", and the second says it while the employer is
 	// still an open question — which is where a captured counterparty starts.
-	companyDomain   *string
-	mailDomains []string
+	companyDomain *string
+	mailDomains   []string
 }
 
 // fuzzyPerson is PO-F-1 tier 2. The candidate set is restricted to

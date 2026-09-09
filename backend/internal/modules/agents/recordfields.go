@@ -43,7 +43,7 @@ import (
 var (
 	createShapes = map[datasource.EntityType]reflect.Type{
 		datasource.EntityPerson:       reflect.TypeFor[crmcontracts.CreatePersonRequest](),
-		datasource.EntityCompany: reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
+		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
 		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.CreateDealRequest](),
 		datasource.EntityLead:         reflect.TypeFor[crmcontracts.CreateLeadRequest](),
 		datasource.EntityActivity:     reflect.TypeFor[crmcontracts.CreateActivityRequest](),
@@ -57,7 +57,7 @@ var (
 	// plus a new edge, never an update.
 	updateShapes = map[datasource.EntityType]reflect.Type{
 		datasource.EntityPerson:       reflect.TypeFor[crmcontracts.UpdatePersonRequest](),
-		datasource.EntityCompany: reflect.TypeFor[crmcontracts.UpdateCompanyRequest](),
+		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.UpdateCompanyRequest](),
 		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.UpdateDealRequest](),
 		datasource.EntityLead:         reflect.TypeFor[crmcontracts.UpdateLeadRequest](),
 		datasource.EntityActivity:     reflect.TypeFor[crmcontracts.UpdateActivityRequest](),

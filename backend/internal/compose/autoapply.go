@@ -55,7 +55,7 @@ const autoApplyActorID = "agent:auto-apply"
 //
 //nolint:goconst // wire record-type names read as data; a shared constant would tie this map to whichever other concept spells the same word
 var ownedTables = map[string]string{
-	"deal":         "deal",
+	"deal":    "deal",
 	"company": "company",
 }
 

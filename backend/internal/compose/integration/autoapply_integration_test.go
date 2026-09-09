@@ -276,7 +276,7 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	e.WsExec(t, `UPDATE company SET name_source = 'domain' WHERE id = $1`, company)
 
 	proposal, err := json.Marshal(map[string]any{
-		"company_id":   company,
+		"company_id":        company,
 		"current_name":      "Weber GmbH",
 		"proposed_name":     "Weber Fahrzeugtechnik GmbH",
 		"proposed_name_key": "weber fahrzeugtechnik gmbh",

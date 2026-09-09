@@ -371,7 +371,7 @@ func TestCompany360_ACommitmentByAnInvisiblePersonIsReportedRatherThanDropped(t 
 var company360NoPersonPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"project":               {Read: true},
 		"activity":              {Read: true},
 		"relationship":          {Read: true},
@@ -386,7 +386,7 @@ var company360NoPersonPerms = principal.Permissions{
 var company360OwnScopePerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"person":                {Read: true},
 		"project":               {Read: true},
 		"deal":                  {Read: true},
@@ -412,7 +412,7 @@ func TestCompany360_ClosedProjectsOverflowingTheCapDoNotClaimMoreWorkInFlight(t 
 	}
 	for i := range 25 {
 		closed, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
-			Name:           fmt.Sprintf("Finished %d", i),
+			Name:      fmt.Sprintf("Finished %d", i),
 			CompanyID: ids.From[ids.CompanyKind](companyID), Source: "manual",
 		})
 		if err != nil {

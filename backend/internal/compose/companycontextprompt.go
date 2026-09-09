@@ -163,8 +163,8 @@ type promptCompanyContext struct {
 	// an id, not a fact about the company, so it sits outside the scopes and is
 	// never truncated away.
 	CompanyID string                 `json:"company_id,omitempty"`
-	Scopes         []promptContextSection `json:"scopes"`
-	Truncated      bool                   `json:"truncated"`
+	Scopes    []promptContextSection `json:"scopes"`
+	Truncated bool                   `json:"truncated"`
 }
 
 type promptContextSection struct {

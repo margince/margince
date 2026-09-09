@@ -272,10 +272,10 @@ func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 // handoffProject carries the project row across the seam.
 func handoffProject(p crmcontracts.Project) agents.HandoffProject {
 	out := agents.HandoffProject{
-		ProjectID:      ids.UUID(p.Id),
-		Name:           p.Name,
+		ProjectID: ids.UUID(p.Id),
+		Name:      p.Name,
 		CompanyID: (*ids.UUID)(p.CompanyId),
-		OwnerID:        (*ids.UUID)(p.OwnerId),
+		OwnerID:   (*ids.UUID)(p.OwnerId),
 	}
 	if p.Key != nil {
 		out.Key = *p.Key

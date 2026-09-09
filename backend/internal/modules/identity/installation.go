@@ -52,13 +52,13 @@ const installationLockKey = int64(0x4d61726761_0001) // "Marga"+1
 // company retires every setup token — so neither can correct the other
 // afterwards.
 type InstallationBootstrap struct {
-	CompanyName string
-	BaseCurrency     string
-	BaseLanguage     string
-	Timezone         string
-	AdminEmail       string
-	AdminName        string
-	AdminPassword    string
+	CompanyName   string
+	BaseCurrency  string
+	BaseLanguage  string
+	Timezone      string
+	AdminEmail    string
+	AdminName     string
+	AdminPassword string
 }
 
 // BootstrapInstallation binds the installation to its singleton

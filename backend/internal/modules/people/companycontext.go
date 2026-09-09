@@ -86,11 +86,11 @@ type CompanyContextSection struct {
 // CompanyContext is the deterministic read model over the anchor company,
 // its curated profile and its repeatable facts.
 type CompanyContext struct {
-	CompanyID ids.CompanyID
-	SchemaVersion  int
-	Scopes         []CompanyContextSection
-	Fingerprint    string
-	GeneratedAt    time.Time
+	CompanyID     ids.CompanyID
+	SchemaVersion int
+	Scopes        []CompanyContextSection
+	Fingerprint   string
+	GeneratedAt   time.Time
 }
 
 var profileContextScopes = map[string]CompanyContextScope{
@@ -206,11 +206,11 @@ func assembleCompanyContext(company Company, requested []CompanyContextScope, ge
 		ordered = append(ordered, CompanyContextSection{Scope: scope, Items: items})
 	}
 	return CompanyContext{
-		CompanyID: company.CompanyID,
-		SchemaVersion:  1,
-		Scopes:         ordered,
-		Fingerprint:    fingerprintCompanyContext(ordered),
-		GeneratedAt:    generatedAt,
+		CompanyID:     company.CompanyID,
+		SchemaVersion: 1,
+		Scopes:        ordered,
+		Fingerprint:   fingerprintCompanyContext(ordered),
+		GeneratedAt:   generatedAt,
 	}
 }
 

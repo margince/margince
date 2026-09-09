@@ -105,7 +105,7 @@ func (e *dedupeEnv) as() context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"person":       {Create: true, Read: true, Update: true},
-				"company": {Create: true, Read: true, Update: true},
+				"company":      {Create: true, Read: true, Update: true},
 				"lead":         {Create: true, Read: true, Update: true},
 				"relationship": {Create: true, Read: true},
 			},
@@ -384,7 +384,7 @@ func (e *dedupeEnv) asOther() context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"person":       {Create: true, Read: true, Update: true},
-				"company": {Create: true, Read: true, Update: true},
+				"company":      {Create: true, Read: true, Update: true},
 				"lead":         {Create: true, Read: true, Update: true},
 				"relationship": {Create: true, Read: true},
 			},

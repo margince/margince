@@ -337,7 +337,7 @@ func teamScopedRep(e *Env, user ids.UUID, teams []ids.UUID) context.Context {
 	return e.As(user, teams, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"person":       {Read: true},
+			"person":  {Read: true},
 			"company": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
@@ -453,7 +453,7 @@ func TestThePersonListNarrowsToOneEmployer(t *testing.T) {
 		if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
 			Kind:             "employment",
 			PersonID:         &personID,
-			CompanyID:   &companyID,
+			CompanyID:        &companyID,
 			IsCurrentPrimary: boolPtr(ended == nil),
 			EndedAt:          ended,
 			Source:           "manual",

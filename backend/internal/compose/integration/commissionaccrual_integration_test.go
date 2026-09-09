@@ -38,10 +38,10 @@ import (
 var commissionAdminPerms = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
-		"partner":      {Create: true, Read: true, Update: true, Delete: true},
-		"commission":   {Create: true, Read: true, Update: true, Delete: true},
-		"company": {Create: true, Read: true, Update: true, Delete: true},
-		"deal":         {Create: true, Read: true, Update: true, Delete: true},
+		"partner":    {Create: true, Read: true, Update: true, Delete: true},
+		"commission": {Create: true, Read: true, Update: true, Delete: true},
+		"company":    {Create: true, Read: true, Update: true, Delete: true},
+		"deal":       {Create: true, Read: true, Update: true, Delete: true},
 		// Winning a deal freezes its FX rate, which reads the installation's
 		// base currency.
 		"installation_settings": {Read: true},
@@ -67,9 +67,9 @@ func seedAccrualFixture(t *testing.T, e *Env, tier string) accrualFixture {
 
 	partnerCompany := companyIDOf(e.SeedCompany(t, "Northgate Partners", nil))
 	if _, err := e.People.UpsertPartner(admin, people.UpsertPartnerInput{
-		CompanyID: partnerCompany,
-		PartnerRole:    "consulting",
-		MarginTier:     &tier,
+		CompanyID:   partnerCompany,
+		PartnerRole: "consulting",
+		MarginTier:  &tier,
 	}); err != nil {
 		t.Fatalf("making the company a partner on %s: %v", tier, err)
 	}
@@ -79,8 +79,8 @@ func seedAccrualFixture(t *testing.T, e *Env, tier string) accrualFixture {
 	currency := "EUR"
 	if _, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{
 		PartnerCompanyID: &partnerCompany,
-		AmountMinor:           &amount,
-		Currency:              &currency,
+		AmountMinor:      &amount,
+		Currency:         &currency,
 	}); err != nil {
 		t.Fatalf("pricing the deal and naming its partner: %v", err)
 	}

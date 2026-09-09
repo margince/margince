@@ -41,7 +41,7 @@ func demoMailbox() Mailbox {
 		ColleagueEmail: "markus.steiner@demo.test",
 		Accounts: []Account{{
 			CompanyID: "01a00000-0000-7000-8000-0000000000aa",
-			Name:           "Acme GmbH", Domain: "acme.de", Lifecycle: "customer",
+			Name:      "Acme GmbH", Domain: "acme.de", Lifecycle: "customer",
 			ContractNumber: "V-1234-ACME",
 			Now:            time.Date(2026, 8, 17, 9, 0, 0, 0, time.UTC),
 			People:         []Person{{Name: "Petra Wolf", Email: "petra.wolf@acme.de", Role: "Head of IT"}},

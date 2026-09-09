@@ -91,12 +91,12 @@ func (s *Store) Warmth(ctx context.Context, signalID ids.SignalID, now time.Time
 	}
 
 	out := crmcontracts.SignalWarmth{
-		SourceSignalId: sig.Id,
-		ResolvedCompanyId:  *sig.ResolvedCompanyId,
-		ContactIds:     []openapi_types.UUID{},
-		Contacts:       []crmcontracts.SignalWarmContact{},
-		Warm:           len(scored) > 0,
-		Routing:        crmcontracts.SignalWarmthRouting("cold_queue"),
+		SourceSignalId:    sig.Id,
+		ResolvedCompanyId: *sig.ResolvedCompanyId,
+		ContactIds:        []openapi_types.UUID{},
+		Contacts:          []crmcontracts.SignalWarmContact{},
+		Warm:              len(scored) > 0,
+		Routing:           crmcontracts.SignalWarmthRouting("cold_queue"),
 	}
 	if out.Warm {
 		out.Routing = crmcontracts.SignalWarmthRouting("warm_room")

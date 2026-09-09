@@ -62,8 +62,8 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 func (h Handlers) ListCompanyContracts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ListCompanyContractsParams) {
 	in := ListContractsInput{
 		CompanyID: ids.CompanyID{UUID: ids.UUID(id)},
-		Cursor:         params.Cursor,
-		Limit:          params.Limit,
+		Cursor:    params.Cursor,
+		Limit:     params.Limit,
 	}
 	if params.Status != nil {
 		status := string(*params.Status)
@@ -205,7 +205,7 @@ func createInput(req crmcontracts.CreateContractRequest) (CreateContractInput, e
 		return CreateContractInput{}, err
 	}
 	in := CreateContractInput{
-		CompanyID: ids.CompanyID{UUID: ids.UUID(req.CompanyId)},
+		CompanyID:      ids.CompanyID{UUID: ids.UUID(req.CompanyId)},
 		ContractNumber: req.ContractNumber,
 		Title:          req.Title,
 		ValueMinor:     req.ValueMinor,

@@ -138,10 +138,10 @@ const (
 )
 
 type mirrorArgs struct {
-	connectionID   ids.UUID
-	companyID ids.CompanyID
-	invoice        SourceInvoice
-	capturedBy     string
+	connectionID ids.UUID
+	companyID    ids.CompanyID
+	invoice      SourceInvoice
+	capturedBy   string
 	// source is the provider's own name, stamped on every row it produced so a
 	// reader can tell whose ledger a figure came from.
 	source string

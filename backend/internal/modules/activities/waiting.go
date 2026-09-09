@@ -48,9 +48,9 @@ type WaitingReply struct {
 	// OccurredAt is when they wrote, which is what the wait is measured from.
 	OccurredAt time.Time
 	// The record the thread is filed under, when it names one.
-	PersonID       ids.UUID
+	PersonID  ids.UUID
 	CompanyID ids.UUID
-	DealID         ids.UUID
+	DealID    ids.UUID
 	// HasOpenDeal reports whether an open deal is on this thread. It is what
 	// lets a caller keep an old wait that still has money behind it, and drop
 	// one that does not.

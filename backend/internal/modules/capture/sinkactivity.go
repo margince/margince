@@ -336,9 +336,9 @@ func (s *Sink) upsertActivity(
 func (s *Sink) linkActivity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, links []datasource.EntityRef) error {
 	for _, link := range links {
 		column, ok := map[datasource.EntityType]string{
-			datasource.EntityPerson:       "person_id",
+			datasource.EntityPerson:  "person_id",
 			datasource.EntityCompany: "company_id",
-			datasource.EntityDeal:         "deal_id",
+			datasource.EntityDeal:    "deal_id",
 		}[link.Type]
 		if !ok {
 			return fmt.Errorf("capture: activities cannot link a %s", link.Type)

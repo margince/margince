@@ -71,15 +71,15 @@ type peopleEnsurer struct {
 
 func (p peopleEnsurer) EnsureCounterparty(ctx context.Context, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
 	res, err := p.store.EnsureCounterparty(ctx, people.EnsureCounterpartyInput{
-		Email:       in.Email,
-		DisplayName: in.DisplayName,
-		Domain:      in.Domain,
-		OwnerID:     in.OwnerID,
-		ActivityID:  ids.From[ids.ActivityKind](in.ActivityID),
-		Source:      in.Source,
-		CapturedBy:  in.CapturedBy,
+		Email:           in.Email,
+		DisplayName:     in.DisplayName,
+		Domain:          in.Domain,
+		OwnerID:         in.OwnerID,
+		ActivityID:      ids.From[ids.ActivityKind](in.ActivityID),
+		Source:          in.Source,
+		CapturedBy:      in.CapturedBy,
 		SuppressCompany: in.SuppressCompany,
-		Replied:     in.Replied,
+		Replied:         in.Replied,
 		// The SINK's ensure, which runs while the sender is still unjudged.
 		// Owner-scoped until something says otherwise; the verdict path is the
 		// only caller that asks for the workspace.

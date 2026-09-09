@@ -130,10 +130,10 @@ func readFactRow(
 	// entity_id pointing at a row that no longer exists, so without these four
 	// the trail cannot answer which company lost which fact.
 	r.Identity = map[string]any{
-		siteReadCompanyKey:   companyID.UUID,
-		factCategoryKey:  category,
-		evidenceFieldKey: field,
-		"value_key":      valueKey,
+		siteReadCompanyKey: companyID.UUID,
+		factCategoryKey:    category,
+		evidenceFieldKey:   field,
+		"value_key":        valueKey,
 	}
 	return r, nil
 }

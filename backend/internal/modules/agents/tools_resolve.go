@@ -86,7 +86,7 @@ const resolveMaxKeysPerCandidate = 10
 // spelled with the seam's own constants so the check and the value that crosses
 // the seam cannot drift apart.
 var resolveKinds = map[string]bool{
-	string(datasource.EntityPerson):       true,
+	string(datasource.EntityPerson):  true,
 	string(datasource.EntityCompany): true,
 }
 

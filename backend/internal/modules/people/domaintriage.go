@@ -77,9 +77,9 @@ type DomainDisposition struct {
 	// Reading it as a zero uuid would forge an owner no app_user row matches,
 	// and the company insert would fail the foreign key — leaving the
 	// verdict pending for ever on a domain whose question was answered.
-	OwnerID        *ids.UUID
+	OwnerID   *ids.UUID
 	CompanyID *ids.CompanyID
-	Attempts       int
+	Attempts  int
 	// Admission is the standing decision about the domain, "" when none was
 	// made. It travels on the LOCKED read so a caller decides from the same row
 	// version it is about to write: a suppression committing between an

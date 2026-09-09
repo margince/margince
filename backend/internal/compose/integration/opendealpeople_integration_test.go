@@ -51,8 +51,8 @@ func fundedReaderPerms(withEdge bool, scope principal.RowScope) principal.Permis
 // what fundedReaderPerms then adds back.
 func fundedReaderPermsWithout(dropped string, scope principal.RowScope) principal.Permissions {
 	objects := map[string]principal.ObjectGrant{
-		"deal":         {Read: true},
-		"person":       {Read: true},
+		"deal":    {Read: true},
+		"person":  {Read: true},
 		"company": {Read: true},
 	}
 	delete(objects, dropped)

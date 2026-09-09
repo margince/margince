@@ -33,10 +33,10 @@ import (
 // run under — carried together because every fixture here needs them, and a
 // test that passed them separately could pass a mismatched set.
 type projectSeeder struct {
-	store    *deals.Store
-	projects *projects.Store
-	ctx      context.Context
-	companyID    ids.UUID
+	store     *deals.Store
+	projects  *projects.Store
+	ctx       context.Context
+	companyID ids.UUID
 	// The pipeline a seeded deal is born on. Scaffolding rather than subject:
 	// nothing in the ladder reads a stage, and a deal cannot exist without one.
 	pipelineID ids.PipelineID
@@ -69,8 +69,8 @@ func newProjectSeeder(t *testing.T, e *integration.SearchEnv) projectSeeder {
 			Objects: map[string]principal.ObjectGrant{
 				// Delete is the archive grant, which the fall-through case needs
 				// to retire a project through the real store.
-				"project":      {Create: true, Read: true, Update: true, Delete: true},
-				"deal":         {Create: true, Read: true, Update: true},
+				"project": {Create: true, Read: true, Update: true, Delete: true},
+				"deal":    {Create: true, Read: true, Update: true},
 				"company": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
@@ -97,7 +97,7 @@ func newProjectSeeder(t *testing.T, e *integration.SearchEnv) projectSeeder {
 		store:      deals.NewStore(e.DB(), compose.DealsInstallation()),
 		projects:   integration.ProjectsStore(e.DB()),
 		ctx:        ctx,
-		companyID:      companyID,
+		companyID:  companyID,
 		pipelineID: ids.From[ids.PipelineKind](pipelineID),
 		stageID:    ids.From[ids.StageKind](stageID),
 	}
@@ -108,9 +108,9 @@ func newProjectSeeder(t *testing.T, e *integration.SearchEnv) projectSeeder {
 func (s projectSeeder) project(t *testing.T, name string) seededProject {
 	t.Helper()
 	created, err := s.projects.CreateProject(s.ctx, projects.CreateProjectInput{
-		Name:           name,
+		Name:      name,
 		CompanyID: ids.From[ids.CompanyKind](s.companyID),
-		Source:         "manual",
+		Source:    "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating project %q: %v", name, err)
@@ -164,12 +164,12 @@ func (s projectSeeder) createDeal(t *testing.T, name string, projectID *ids.Proj
 	t.Helper()
 	companyID := ids.From[ids.CompanyKind](s.companyID)
 	created, err := s.store.CreateDeal(s.ctx, deals.CreateDealInput{
-		Name:           name,
-		PipelineID:     s.pipelineID,
-		StageID:        s.stageID,
-		CompanyID: &companyID,
-		ProjectID:      projectID,
-		Source:         "manual",
+		Name:       name,
+		PipelineID: s.pipelineID,
+		StageID:    s.stageID,
+		CompanyID:  &companyID,
+		ProjectID:  projectID,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating deal %q: %v", name, err)

@@ -248,11 +248,11 @@ func serverDeclaredMethods(t *testing.T) map[string]bool {
 // gatekit:fixture the expected spelling each shadow method name is built from —
 // naming-convention data, not a cost.
 var overlayEntityTitles = map[string]string{
-	string(datasource.EntityPerson):       "Person",
-	string(datasource.EntityCompany): "Company",
-	string(datasource.EntityDeal):         "Deal",
-	string(datasource.EntityLead):         "Lead",
-	string(datasource.EntityActivity):     "Activity",
+	string(datasource.EntityPerson):   "Person",
+	string(datasource.EntityCompany):  "Company",
+	string(datasource.EntityDeal):     "Deal",
+	string(datasource.EntityLead):     "Lead",
+	string(datasource.EntityActivity): "Activity",
 }
 
 // TestOverlayWriteShadowsCoverEverySupportedWrite keeps the guard and the

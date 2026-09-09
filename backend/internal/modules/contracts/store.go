@@ -46,8 +46,8 @@ const (
 // spelled at each of those is three places for one rename to miss.
 const (
 	companyTable = "company"
-	dealTable         = "deal"
-	projectTable      = "project"
+	dealTable    = "deal"
+	projectTable = "project"
 )
 
 // Status values. Asserted by a human or an approved proposal — never derived
@@ -142,7 +142,7 @@ func scanContract(row pgx.Row) (crmcontracts.Contract, error) {
 		c             crmcontracts.Contract
 		underContract bool
 		id            ids.UUID
-		companyID         ids.UUID
+		companyID     ids.UUID
 		dealID        *ids.UUID
 		projectID     *ids.UUID
 		supersededBy  *ids.UUID

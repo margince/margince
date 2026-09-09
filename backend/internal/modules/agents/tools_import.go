@@ -97,8 +97,8 @@ var importObjectEnum = []string{importObjectCompany, importObjectLead, importObj
 // the two cannot drift.
 const (
 	importObjectCompany = "company"
-	importObjectLead         = "lead"
-	importObjectPerson       = "person"
+	importObjectLead    = "lead"
+	importObjectPerson  = "person"
 )
 
 // maxImportCSVBytes caps the pasted file.

@@ -101,13 +101,13 @@ type Reference string
 // own record-type words (`app_user`, not `user`), so a client keying a picker on
 // them needs no translation table.
 const (
-	RefTag          Reference = "tag"
-	RefAppUser      Reference = "app_user"
-	RefTeam         Reference = "team"
-	RefCompany Reference = "company"
-	RefPipeline     Reference = "pipeline"
-	RefStage        Reference = "stage"
-	RefProject      Reference = "project"
+	RefTag      Reference = "tag"
+	RefAppUser  Reference = "app_user"
+	RefTeam     Reference = "team"
+	RefCompany  Reference = "company"
+	RefPipeline Reference = "pipeline"
+	RefStage    Reference = "stage"
+	RefProject  Reference = "project"
 )
 
 // ReferenceTargets is every target the engine admits, and the ONE list of them.

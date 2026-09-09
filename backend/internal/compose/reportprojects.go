@@ -68,11 +68,11 @@ var openDealValueBaseExpr = "(SELECT coalesce(sum(" + deals.OpenDealBaseValueSQL
 // columns a reader needs to act on it.
 func projectRowDimensions() map[string]string {
 	return map[string]string{
-		fieldProjectID:      colProjectRowID,
-		fieldName:           colName,
-		fieldKey:            colKey,
-		fieldPhase:          colPhase,
-		fieldOwnerID:        colOwnerID,
+		fieldProjectID: colProjectRowID,
+		fieldName:      colName,
+		fieldKey:       colKey,
+		fieldPhase:     colPhase,
+		fieldOwnerID:   colOwnerID,
 		fieldCompanyID: colProjectCustomer,
 	}
 }
@@ -116,9 +116,9 @@ func projectsByPhaseSpec() reportSpec {
 		// unowned-row arm (analyticsscope.go) still reaches this report's own
 		// default population.
 		dimensions: map[string]string{
-			fieldPhase:          colPhase,
+			fieldPhase:     colPhase,
 			fieldCompanyID: colProjectCustomer,
-			fieldOwnerID:        colOwnerID,
+			fieldOwnerID:   colOwnerID,
 		},
 		measures: map[string]string{
 			measureOpenDealValue: openDealValueBaseExpr,
@@ -126,8 +126,8 @@ func projectsByPhaseSpec() reportSpec {
 		},
 		filters: map[string]string{
 			fieldCompanyID: colProjectAnyCompany,
-			fieldOwnerID:        colOwnerID,
-			fieldPhase:          colPhase,
+			fieldOwnerID:   colOwnerID,
+			fieldPhase:     colPhase,
 		},
 		referenceScopes: map[string]string{colProjectCustomer: tableCompany, colProjectAnyCompany: tableCompany},
 		// The money measures fold DEALS, which the project grant says nothing
@@ -163,8 +163,8 @@ func projectCommitmentsSpec() reportSpec {
 		},
 		filters: map[string]string{
 			fieldCompanyID: colProjectAnyCompany,
-			fieldOwnerID:        colOwnerID,
-			fieldPhase:          colPhase,
+			fieldOwnerID:   colOwnerID,
+			fieldPhase:     colPhase,
 		},
 		referenceScopes: map[string]string{colProjectCustomer: tableCompany, colProjectAnyCompany: tableCompany},
 		// The commitment counts read TASKS, which take the activity grant.
@@ -199,8 +199,8 @@ func projectsGoneQuietSpec() reportSpec {
 		measures:   map[string]string{},
 		filters: map[string]string{
 			fieldCompanyID: colProjectAnyCompany,
-			fieldOwnerID:        colOwnerID,
-			fieldPhase:          colPhase,
+			fieldOwnerID:   colOwnerID,
+			fieldPhase:     colPhase,
 		},
 		thresholds: map[string]reportThreshold{
 			fieldDays: {

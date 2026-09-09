@@ -198,11 +198,11 @@ func setupFlipEstate(t *testing.T) flipEstate {
 	// would let a writer that reads that shape pass while dropping every real
 	// email.
 	seed(overlaymod.IncumbentClassCompanies, "company", "company-1", map[string]any{
-		"display_name":        "BÄR Pharma",
+		"display_name":   "BÄR Pharma",
 		"company_domain": []map[string]any{{"domain": "baer-pharma.test", "is_primary": true, "position": 0}},
 	})
 	seed(overlaymod.IncumbentClassCompanies, "company", "company-2", map[string]any{
-		"display_name":        "Gitex",
+		"display_name":   "Gitex",
 		"company_domain": []map[string]any{{"domain": "gitex.test", "is_primary": true, "position": 0}},
 	})
 	seed(overlaymod.IncumbentClassContacts, "person", "p-1", map[string]any{
@@ -296,11 +296,11 @@ func (f flipEstate) nativeEstateRows(t *testing.T) map[string]int {
 	t.Helper()
 	counts := map[string]int{}
 	for object, query := range map[string]string{
-		"person":       `SELECT count(*) FROM person WHERE source LIKE 'mirror:hubspot:%'`,
-		"company": `SELECT count(*) FROM company WHERE source LIKE 'mirror:hubspot:%'`,
-		"deal":         `SELECT count(*) FROM deal WHERE source LIKE 'mirror:hubspot:%'`,
-		"lead":         `SELECT count(*) FROM lead WHERE source_system = 'mirror:hubspot'`,
-		"activity":     `SELECT count(*) FROM activity WHERE source_system = 'mirror:hubspot'`,
+		"person":   `SELECT count(*) FROM person WHERE source LIKE 'mirror:hubspot:%'`,
+		"company":  `SELECT count(*) FROM company WHERE source LIKE 'mirror:hubspot:%'`,
+		"deal":     `SELECT count(*) FROM deal WHERE source LIKE 'mirror:hubspot:%'`,
+		"lead":     `SELECT count(*) FROM lead WHERE source_system = 'mirror:hubspot'`,
+		"activity": `SELECT count(*) FROM activity WHERE source_system = 'mirror:hubspot'`,
 	} {
 		var n int
 		f.inWorkspaceTx(t, func(tx pgx.Tx) error {

@@ -101,7 +101,7 @@ func (s *Service) employmentsSection(ctx context.Context, tx pgx.Tx, personID id
 		}
 		e := crmcontracts.Person360Employment{
 			RelationshipId:   openapi_types.UUID(r.ID),
-			CompanyId:   openapi_types.UUID(r.CompanyID.UUID),
+			CompanyId:        openapi_types.UUID(r.CompanyID.UUID),
 			IsCurrentPrimary: r.IsCurrentPrimary,
 			Role:             r.Role,
 			StartedAt:        r.StartedAt,

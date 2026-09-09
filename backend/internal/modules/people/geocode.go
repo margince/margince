@@ -73,7 +73,7 @@ type GeocodeEnqueue func(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID
 // GeocodableAddress is one company's address, ready to be asked about.
 type GeocodableAddress struct {
 	CompanyID ids.CompanyID
-	Query          string
+	Query     string
 	// InputHash identifies the address this query was built from, so the
 	// worker can skip one it has already resolved. Reingestion is the backfill
 	// in this design, and without the hash every re-read of a website would
@@ -394,7 +394,7 @@ func (s *Store) enqueueGeocode(ctx context.Context, tx pgx.Tx, companyID ids.Com
 
 // GeocodedPoint is one company's resolved position, for the query executor.
 type GeocodedPoint struct {
-	CompanyID ids.CompanyID
-	Lat, Lon       float64
-	GeocodedAt     time.Time
+	CompanyID  ids.CompanyID
+	Lat, Lon   float64
+	GeocodedAt time.Time
 }

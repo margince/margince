@@ -22,14 +22,14 @@ type CreateCompanyInput struct {
 	LegalName   *string
 	// Description is the one-line summary the company page shows under the
 	// title; nil leaves the column NULL, which the page renders as absent.
-	Description *string
-	Industry    *string
-	SizeBand    *string
-	OwnerID     *ids.UserID
+	Description     *string
+	Industry        *string
+	SizeBand        *string
+	OwnerID         *ids.UserID
 	ParentCompanyID *ids.CompanyID
-	Address     *crmcontracts.Address
-	Domains     []CompanyDomainInput
-	Source      string
+	Address         *crmcontracts.Address
+	Domains         []CompanyDomainInput
+	Source          string
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (customfields.go).
@@ -157,19 +157,19 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 	}
 
 	id, err := createCompany(ctx, tx, match, CompanySpec{
-		DisplayName:  in.DisplayName,
-		LegalName:    in.LegalName,
-		Description:  in.Description,
-		Industry:     in.Industry,
-		SizeBand:     in.SizeBand,
-		OwnerID:      in.OwnerID,
-		ParentCompanyID:  in.ParentCompanyID,
-		Address:      in.Address,
-		Domains:      in.Domains,
-		Source:       in.Source,
-		CapturedBy:   by,
-		CustomFields: in.CustomFields,
-		Active:       active,
+		DisplayName:     in.DisplayName,
+		LegalName:       in.LegalName,
+		Description:     in.Description,
+		Industry:        in.Industry,
+		SizeBand:        in.SizeBand,
+		OwnerID:         in.OwnerID,
+		ParentCompanyID: in.ParentCompanyID,
+		Address:         in.Address,
+		Domains:         in.Domains,
+		Source:          in.Source,
+		CapturedBy:      by,
+		CustomFields:    in.CustomFields,
+		Active:          active,
 	})
 	if err != nil {
 		return crmcontracts.Company{}, err

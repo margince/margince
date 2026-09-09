@@ -35,7 +35,7 @@ import (
 // WHICH fields are askable is decided here.
 var contractRecords = map[string]reflect.Type{
 	entityPerson:        reflect.TypeOf(crmcontracts.Person{}),
-	entityCompany:  reflect.TypeOf(crmcontracts.Company{}),
+	entityCompany:       reflect.TypeOf(crmcontracts.Company{}),
 	entityDeal:          reflect.TypeOf(crmcontracts.Deal{}),
 	entityLead:          reflect.TypeOf(crmcontracts.Lead{}),
 	entityProject:       reflect.TypeOf(crmcontracts.Project{}),

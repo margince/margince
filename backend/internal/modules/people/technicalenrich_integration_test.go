@@ -94,10 +94,10 @@ func TestACompletedLaneReplacesItsOwnRows(t *testing.T) {
 	companyID := seedTechnicalCompany(ctx, t, e, "Beispiel GmbH", "beispiel.de")
 
 	first := TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, first, nil); err != nil {
 		t.Fatalf("apply the first reading: %v", err)
@@ -130,10 +130,10 @@ func TestAFailedLaneChangesNothing(t *testing.T) {
 	companyID := seedTechnicalCompany(ctx, t, e, "Laden GmbH", "laden.de")
 
 	read := TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneCertLog},
-		Observations:   []TechnicalObservation{observation(FactOperatedService, "webshop", "Webshop")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneCertLog},
+		Observations: []TechnicalObservation{observation(FactOperatedService, "webshop", "Webshop")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the first reading: %v", err)
@@ -142,10 +142,10 @@ func TestAFailedLaneChangesNothing(t *testing.T) {
 	// The next run: the certificate log did not answer, so its lane is absent
 	// from Completed and carries no observations.
 	outage := TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "self_hosted", "Eigener Mailserver")},
-		ObservedAt:     technicalObservedAt.Add(time.Hour),
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "self_hosted", "Eigener Mailserver")},
+		ObservedAt:   technicalObservedAt.Add(time.Hour),
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, outage, nil); err != nil {
 		t.Fatalf("apply the reading taken during the outage: %v", err)
@@ -172,10 +172,10 @@ func TestAHumanCorrectionSurvivesEveryLaterLookup(t *testing.T) {
 	companyID := seedTechnicalCompany(ctx, t, e, "Korrektur GmbH", "korrektur.de")
 
 	read := TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "other", "Anderer Anbieter")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "other", "Anderer Anbieter")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the machine reading: %v", err)
@@ -229,10 +229,10 @@ func TestAHumanHeldRowIsNeverReconciledAway(t *testing.T) {
 	companyID := seedTechnicalCompany(ctx, t, e, "Bestand GmbH", "bestand.de")
 
 	read := TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneCertLog},
-		Observations:   []TechnicalObservation{observation(FactOperatedService, "careers", "Karriereseite")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneCertLog},
+		Observations: []TechnicalObservation{observation(FactOperatedService, "careers", "Karriereseite")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the first reading: %v", err)
@@ -272,10 +272,10 @@ func TestACompletedLaneWithNothingClearsItsRows(t *testing.T) {
 	companyID := seedTechnicalCompany(ctx, t, e, "Leer GmbH", "leer.de")
 
 	read := TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneCertLog},
-		Observations:   []TechnicalObservation{observation(FactOperatedService, "webshop", "Webshop")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneCertLog},
+		Observations: []TechnicalObservation{observation(FactOperatedService, "webshop", "Webshop")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the first reading: %v", err)
@@ -315,10 +315,10 @@ func TestEveryTechnicalWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 	companyID := seedTechnicalCompany(ctx, t, e, "Spur GmbH", "spur.de")
 
 	read := TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "microsoft365", "Microsoft 365")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "microsoft365", "Microsoft 365")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the reading: %v", err)
@@ -364,9 +364,9 @@ func TestALaneThatChangedNothingRecordsItAndAnnouncesNothing(t *testing.T) {
 	companyID := seedTechnicalCompany(ctx, t, e, "Leerlauf GmbH", "leerlauf.de")
 
 	empty := TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneHomepage},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:  companyID,
+		Completed:  []TechnicalLane{LaneHomepage},
+		ObservedAt: technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, empty, nil); err != nil {
 		t.Fatalf("apply the empty reading: %v", err)
@@ -408,10 +408,10 @@ func TestARefreshThatFoundTheSameStackAnnouncesNothing(t *testing.T) {
 	companyID := seedTechnicalCompany(ctx, t, e, "Gleichstand GmbH", "gleichstand.de")
 
 	read := TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "microsoft365", "Microsoft 365")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "microsoft365", "Microsoft 365")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the first reading: %v", err)
@@ -474,7 +474,7 @@ func TestATechnicalFactMustNameWhatProvedIt(t *testing.T) {
 
 	unproven := TechnicalEnrichment{
 		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneDNS},
+		Completed: []TechnicalLane{LaneDNS},
 		Observations: []TechnicalObservation{{
 			Field: FactMailProvider, ValueKey: "microsoft365", Value: "Microsoft 365",
 			// No evidence, no source: exactly what the constraint refuses.
@@ -494,10 +494,10 @@ func TestTheObservationTimeIsWhatTheSourceWasRead(t *testing.T) {
 	companyID := seedTechnicalCompany(ctx, t, e, "Zeit GmbH", "zeit.de")
 
 	read := TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the reading: %v", err)
@@ -565,10 +565,10 @@ func TestAHumanAnswerSettlesTheWholeSingleValuedField(t *testing.T) {
 	companyID := seedTechnicalCompany(ctx, t, e, "Entschieden GmbH", "entschieden.de")
 
 	read := TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneDNS},
-		Observations:   []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
-		ObservedAt:     technicalObservedAt,
+		CompanyID:    companyID,
+		Completed:    []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
+		ObservedAt:   technicalObservedAt,
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the machine reading: %v", err)
@@ -624,7 +624,7 @@ func TestAPartialDNSReadIsNotAuthoritative(t *testing.T) {
 
 	full := TechnicalEnrichment{
 		CompanyID: companyID,
-		Completed:      []TechnicalLane{LaneDNS},
+		Completed: []TechnicalLane{LaneDNS},
 		Observations: []TechnicalObservation{
 			observation(FactMailProvider, "microsoft365", "Microsoft 365"),
 			observation(FactEmailSecurity, "dmarc_reject", "DMARC durchgesetzt"),
@@ -638,9 +638,9 @@ func TestAPartialDNSReadIsNotAuthoritative(t *testing.T) {
 	// The engine reports the lane as NOT completed when a sub-lookup fails, so
 	// the apply reconciles nothing at all.
 	partial := TechnicalEnrichment{
-		CompanyID: companyID,
-		Completed:      nil,
-		ObservedAt:     technicalObservedAt.Add(time.Hour),
+		CompanyID:  companyID,
+		Completed:  nil,
+		ObservedAt: technicalObservedAt.Add(time.Hour),
 	}
 	if err := e.store.ApplyTechnicalEnrichment(ctx, partial, nil); err != nil {
 		t.Fatalf("apply the partial reading: %v", err)

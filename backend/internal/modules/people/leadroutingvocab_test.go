@@ -20,8 +20,8 @@ import "testing"
 // member fails here rather than reading as a pass.
 func TestEveryRoutableLeadFieldResolvesToItsOwnFact(t *testing.T) {
 	facts := leadRoutingFacts{
-		Source:          "the source",
-		CompanyName:     "the company name",
+		Source:              "the source",
+		CompanyName:         "the company name",
 		CandidateCompanyKey: "the candidate company key",
 	}
 	markers := map[string]bool{

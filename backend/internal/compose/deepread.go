@@ -49,10 +49,10 @@ import (
 // — so a copy in the args would be an address sitting in a table with no
 // workspace column and no RLS that no code path ever reads.
 type SiteDeepReadArgs struct {
-	Workspace      ids.UUID `json:"workspace_id"`
-	CompanyID ids.UUID `json:"company_id"`
-	SiteReadID     ids.UUID `json:"site_read_id"`
-	RequestedBy    string   `json:"requested_by"`
+	Workspace   ids.UUID `json:"workspace_id"`
+	CompanyID   ids.UUID `json:"company_id"`
+	SiteReadID  ids.UUID `json:"site_read_id"`
+	RequestedBy string   `json:"requested_by"`
 	// MaxPages is this run's page ceiling, or 0 for the deployment's own. It
 	// can only ever narrow: the worker clamps it against the configured cap, so
 	// a payload cannot raise what an operator set.

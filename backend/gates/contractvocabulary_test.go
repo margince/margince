@@ -56,8 +56,8 @@ const contractsPkgDir = "internal/contracts"
 // selections over two enums share a file in this tree, and a file-keyed entry
 // would ratify the second one nobody read.
 var deliberateSelections = gatekit.Waive(map[string]string{
-	"internal/compose/enrichextract.go:legalPageFields":         "the fields a legal/imprint page can carry, which is a property of that page kind rather than of the cold-start vocabulary; widening it would send the extractor looking for an ICP on an imprint",
-	"internal/compose/siteprofile.go:hardGateProfileFields":     "the fields whose absence blocks the profile gate, deliberately the smallest set that makes a profile usable; every further field is wanted, not required",
+	"internal/compose/enrichextract.go:legalPageFields":             "the fields a legal/imprint page can carry, which is a property of that page kind rather than of the cold-start vocabulary; widening it would send the extractor looking for an ICP on an imprint",
+	"internal/compose/siteprofile.go:hardGateProfileFields":         "the fields whose absence blocks the profile gate, deliberately the smallest set that makes a profile usable; every further field is wanted, not required",
 	"internal/compose/companydossier/growthfitwrite.go:suggestions": "the one sentence nature a growth-fit suggestion may carry; a fact or an assessment written here would be a claim the dossier never evidenced",
 })
 

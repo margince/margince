@@ -34,7 +34,7 @@ import (
 var siteReadPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"company":          {Create: true, Read: true, Update: true},
+		"company":               {Create: true, Read: true, Update: true},
 		"person":                {Create: true, Read: true, Update: true},
 		"lead":                  {Create: true, Read: true, Update: true},
 		"installation_settings": {Read: true},
@@ -47,9 +47,9 @@ var siteReadPerms = principal.Permissions{
 // cannot pass.
 type siteReadFixture struct {
 	company, otherCompany ids.UUID
-	deepread      ids.ApprovalID
-	siteLeads     []ids.ApprovalID
-	otherStaging  ids.ApprovalID
+	deepread              ids.ApprovalID
+	siteLeads             []ids.ApprovalID
+	otherStaging          ids.ApprovalID
 }
 
 func seedSiteReadStagings(t *testing.T, svc *approvals.Service, e *Env) siteReadFixture {
@@ -58,9 +58,9 @@ func seedSiteReadStagings(t *testing.T, svc *approvals.Service, e *Env) siteRead
 		company:      e.SeedCompany(t, "Acme", &e.Rep1),
 		otherCompany: e.SeedCompany(t, "Other Account", &e.Rep1),
 	}
-	f.deepread = stageFor(t, svc, e, "deepread", "company", f.org)
+	f.deepread = stageFor(t, svc, e, "deepread", "company", f.company)
 	for range 3 {
-		f.siteLeads = append(f.siteLeads, stageFor(t, svc, e, "site_lead", "company", f.org))
+		f.siteLeads = append(f.siteLeads, stageFor(t, svc, e, "site_lead", "company", f.company))
 	}
 	f.otherStaging = stageFor(t, svc, e, "deepread", "company", f.otherCompany)
 	return f
@@ -90,7 +90,7 @@ func TestApprovalListFilteredToOneTarget(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, siteReadPerms)
 	companyType := "company"
 
-	got := listIDs(rep, t, svc, approvals.ListInput{TargetType: &companyType, TargetID: &f.org})
+	got := listIDs(rep, t, svc, approvals.ListInput{TargetType: &companyType, TargetID: &f.company})
 	for _, want := range append([]ids.ApprovalID{f.deepread}, f.siteLeads...) {
 		if !got[want] {
 			t.Errorf("approval %s is missing — it is staged against the filtered account", want)
@@ -106,7 +106,7 @@ func TestApprovalListFilteredToOneTarget(t *testing.T) {
 	// The kind sub-filter narrows within the target — the parameter the
 	// contract declared and the server ignored until it was threaded through.
 	kind := "site_lead"
-	got = listIDs(rep, t, svc, approvals.ListInput{TargetType: &companyType, TargetID: &f.org, Kind: &kind})
+	got = listIDs(rep, t, svc, approvals.ListInput{TargetType: &companyType, TargetID: &f.company, Kind: &kind})
 	if len(got) != len(f.siteLeads) {
 		t.Fatalf("kind-filtered read returned %d approvals, want the %d site leads", len(got), len(f.siteLeads))
 	}
@@ -118,13 +118,13 @@ func TestApprovalListFilteredToOneTarget(t *testing.T) {
 	// is empty while the pending read is full.
 	decided := "approved"
 	if got := listIDs(rep, t, svc, approvals.ListInput{
-		TargetType: &companyType, TargetID: &f.org, Status: &decided,
+		TargetType: &companyType, TargetID: &f.company, Status: &decided,
 	}); len(got) != 0 {
 		t.Errorf("status=approved returned %d approvals, want none — every staging is still pending", len(got))
 	}
 	pending := "pending"
 	if got := listIDs(rep, t, svc, approvals.ListInput{
-		TargetType: &companyType, TargetID: &f.org, Status: &pending,
+		TargetType: &companyType, TargetID: &f.company, Status: &pending,
 	}); len(got) != len(f.siteLeads)+1 {
 		t.Errorf("status=pending returned %d approvals, want the account's %d", len(got), len(f.siteLeads)+1)
 	}
@@ -201,13 +201,13 @@ func TestApprovalListFilteredStillPrunesUndecidableKinds(t *testing.T) {
 	noLeads := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"company":          {Read: true, Update: true},
+			"company":               {Read: true, Update: true},
 			"person":                {Read: true},
 			"installation_settings": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	})
-	got := listIDs(noLeads, t, svc, approvals.ListInput{TargetType: &companyType, TargetID: &f.org})
+	got := listIDs(noLeads, t, svc, approvals.ListInput{TargetType: &companyType, TargetID: &f.company})
 	if !got[f.deepread] {
 		t.Error("the deep read is missing for a caller who holds company.update")
 	}
@@ -220,7 +220,7 @@ func TestApprovalListFilteredStillPrunesUndecidableKinds(t *testing.T) {
 	// Naming the kind explicitly does not unlock it.
 	kind := "site_lead"
 	if got := listIDs(noLeads, t, svc, approvals.ListInput{
-		TargetType: &companyType, TargetID: &f.org, Kind: &kind,
+		TargetType: &companyType, TargetID: &f.company, Kind: &kind,
 	}); len(got) != 0 {
 		t.Errorf("asking for site_lead by name returned %d approvals to a caller with no lead grant", len(got))
 	}

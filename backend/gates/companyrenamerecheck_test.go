@@ -30,9 +30,9 @@ import (
 )
 
 const (
-	peoplePackage    = "internal/modules/people"
-	renameRecheck    = "recheckCompanyNameForDuplicates"
-	companyName = "company.display_name / company.legal_name"
+	peoplePackage = "internal/modules/people"
+	renameRecheck = "recheckCompanyNameForDuplicates"
+	companyName   = "company.display_name / company.legal_name"
 )
 
 // setsAnCompanyName matches a statement that moves a name column.

@@ -30,7 +30,7 @@ func employPerson(t *testing.T, e *Env, person, company ids.UUID, ended *time.Ti
 	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
 		Kind:             "employment",
 		PersonID:         &personID,
-		CompanyID:   &companyID,
+		CompanyID:        &companyID,
 		IsCurrentPrimary: boolPtr(ended == nil),
 		EndedAt:          ended,
 		Source:           "manual",
@@ -118,7 +118,7 @@ func TestTheEmployerNeedsBothTheEdgeAndTheCompanyGrant(t *testing.T) {
 
 	for missing, grants := range map[string]map[string]principal.ObjectGrant{
 		"relationship": {objPerson: {Read: true}, objCompany: {Read: true}},
-		"company": {objPerson: {Read: true}, objRelationship: {Read: true}},
+		"company":      {objPerson: {Read: true}, objRelationship: {Read: true}},
 	} {
 		partial := e.As(e.AdminUser, nil, principal.Permissions{
 			RoleKeys: []string{roleReadOnly},

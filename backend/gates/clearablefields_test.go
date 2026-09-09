@@ -38,10 +38,10 @@ import (
 //
 // gatekit:fixture the record type each module's clearable-column map serves
 var clearableMapsByRecordType = map[string]string{
-	"clearablePersonColumns":       "person",
+	"clearablePersonColumns":  "person",
 	"clearableCompanyColumns": "company",
-	"clearableLeadColumns":         "lead",
-	"clearableDealColumns":         "deal",
+	"clearableLeadColumns":    "lead",
+	"clearableDealColumns":    "deal",
 	// A clear that writes TWO columns cannot travel in the single-column map,
 	// and a census that read only that map would report a store clearing fewer
 	// fields than it does — under-recognition, the one way this gate must not

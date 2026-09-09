@@ -193,7 +193,7 @@ func TestToContractLicenseHolder(t *testing.T) {
 	full := licensecheck.License{
 		ID:           "0199c4f2-1d6e-7a41-9f0b-7b2a2c1d5e30",
 		Subject:      "acme-prod",
-		Company:          "Acme GmbH",
+		Company:      "Acme GmbH",
 		ContactName:  "Ada Lovelace",
 		ContactEmail: "ada@acme.example",
 		Expiry:       resolvedAt.AddDate(1, 0, 0),

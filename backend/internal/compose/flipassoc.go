@@ -94,8 +94,8 @@ func (w *flipWriters) Associate(ctx context.Context, a migration.Assoc) (migrati
 		personID := ids.From[ids.PersonKind](fromID)
 		companyID := ids.From[ids.CompanyKind](toID)
 		_, err := w.people.CreateRelationship(ctx, people.CreateRelationshipInput{
-			Kind:           "employment",
-			PersonID:       &personID,
+			Kind:      "employment",
+			PersonID:  &personID,
 			CompanyID: &companyID,
 			// The mirrored label is the incumbent's own answer, so it is stated
 			// either way — a non-primary association must not be promoted by the

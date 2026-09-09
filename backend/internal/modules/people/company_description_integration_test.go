@@ -418,9 +418,9 @@ func backfillDescriptionAuthors(ctx context.Context, t *testing.T, e *dedupeEnv)
 func applySiteReadDescription(ctx context.Context, t *testing.T, e *dedupeEnv, companyID ids.CompanyID, summary string) {
 	t.Helper()
 	if err := e.store.ApplyDeepRead(ctx, DeepReadProposal{
-		CompanyID: companyID,
-		SourceURL:      "https://example.test/",
-		SiteReadID:     ids.NewV7(),
+		CompanyID:  companyID,
+		SourceURL:  "https://example.test/",
+		SiteReadID: ids.NewV7(),
 		Fields: []DeepReadField{{
 			Field: fieldOfferSummary, Value: summary,
 			EvidenceSnippet: summary, SourceURL: "https://example.test/",

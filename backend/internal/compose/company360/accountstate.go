@@ -112,8 +112,8 @@ func (a *assembly) readStateStrip() error {
 
 	if in.timeline {
 		strip.Engagement = new(struct {
-			LastInboundAt  *time.Time                                            `json:"last_inbound_at,omitempty"`
-			LastOutboundAt *time.Time                                            `json:"last_outbound_at,omitempty"`
+			LastInboundAt  *time.Time                                       `json:"last_inbound_at,omitempty"`
+			LastOutboundAt *time.Time                                       `json:"last_outbound_at,omitempty"`
 			State          crmcontracts.Company360StateStripEngagementState `json:"state"`
 		})
 		strip.Engagement.LastInboundAt = a.out.LastInboundAt
@@ -156,9 +156,9 @@ func (a *assembly) readStateStrip() error {
 	}
 	if facts.HasWorst {
 		strip.Signal = new(struct {
-			Kind     string                                               `json:"kind"`
+			Kind     string                                          `json:"kind"`
 			Severity crmcontracts.Company360StateStripSignalSeverity `json:"severity"`
-			Summary  string                                               `json:"summary"`
+			Summary  string                                          `json:"summary"`
 		})
 		strip.Signal.Kind = facts.Worst.Kind
 		strip.Signal.Severity = crmcontracts.Company360StateStripSignalSeverity(facts.Worst.Severity)

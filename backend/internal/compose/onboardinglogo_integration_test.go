@@ -228,20 +228,20 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 	if boundKey != *key {
 		t.Fatalf("the anchor names %q, want the object the read stored at %q", boundKey, *key)
 	}
-	company, err := e.People.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
+	record, err := e.People.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read the anchor: %v", err)
 	}
 	wantURL := *people.LogoURL(company.CompanyID.UUID, &boundKey, people.LogoWide)
-	if company.LogoUrl == nil || *company.LogoUrl != wantURL {
-		t.Fatalf("logo_url = %v, want %q — the face the SPA renders", company.LogoUrl, wantURL)
+	if record.LogoUrl == nil || *record.LogoUrl != wantURL {
+		t.Fatalf("logo_url = %v, want %q — the face the SPA renders", record.LogoUrl, wantURL)
 	}
 
 	// The same face on the profile the app shell reads. The record screens draw
 	// the mark from the company and the chrome draws it from the company
 	// profile, so a company that wore the mark on one and not the other would be
 	// two companies to the person looking at it.
-	profile, err := e.People.GetCompany(ctx)
+	profile, err := e.People.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("read the company profile: %v", err)
 	}
@@ -394,14 +394,14 @@ func TestConfirmingAnOnboardingReadSurvivesALogoThatNeverResolved(t *testing.T) 
 	if _, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an anchor with no resolved logo answers %v, want not-found so the monogram renders", err)
 	}
-	company, err := e.People.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
+	record, err := e.People.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read the anchor: %v", err)
 	}
-	if company.LogoUrl != nil {
-		t.Fatalf("logo_url = %q, want none", *company.LogoUrl)
+	if record.LogoUrl != nil {
+		t.Fatalf("logo_url = %q, want none", *record.LogoUrl)
 	}
-	profile, err := e.People.GetCompany(ctx)
+	profile, err := e.People.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("read the company profile: %v", err)
 	}

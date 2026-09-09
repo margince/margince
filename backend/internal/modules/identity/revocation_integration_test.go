@@ -152,7 +152,7 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 		var err error
 		wsID, err = createInstallation(ctx, tx, InstallationBootstrap{
 			CompanyName: slug,
-			AdminEmail:       adminEmail, AdminName: "Admin",
+			AdminEmail:  adminEmail, AdminName: "Admin",
 			AdminPassword: bootstrapPassword,
 		}, originConfigured, nil, &[]string{})
 		return err

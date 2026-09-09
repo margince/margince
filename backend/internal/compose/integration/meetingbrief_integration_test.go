@@ -76,7 +76,7 @@ func TestMeetingBriefRefusesACallerWithNoActivityGrant(t *testing.T) {
 	perms.Objects = map[string]principal.ObjectGrant{
 		// Everything the brief touches EXCEPT the activity it is about.
 		"person":       {Read: true},
-		"company": {Read: true},
+		"company":      {Read: true},
 		"relationship": {Read: true},
 		"deal":         {Read: true},
 	}

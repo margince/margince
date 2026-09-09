@@ -85,7 +85,7 @@ func TestOverlayWirePersonNamelessFallsBackToEmailThenUnnamed(t *testing.T) {
 
 func TestOverlayWireCompanySurfacesDomain(t *testing.T) {
 	rec := wireRecord(t, datasource.EntityCompany, map[string]any{
-		"display_name":        "Acme",
+		"display_name":   "Acme",
 		"company_domain": []map[string]any{{"domain": "acme.io", "is_primary": true, "position": 0}},
 	})
 	company, err := overlayWireCompany(wireCtx(), rec)
@@ -562,7 +562,7 @@ func TestOverlayChildReadersReadWhatTheMappingPipelineWrites(t *testing.T) {
 // the wire.
 func TestOverlayChildReadersStillReadTheSingleObjectShape(t *testing.T) {
 	legacy := map[string]any{
-		"person_email":        map[string]any{"email": "ada@example.test"},
+		"person_email":   map[string]any{"email": "ada@example.test"},
 		"company_domain": map[string]any{"domain": "acme.io"},
 	}
 	if got := overlayPersonEmail(legacy); got != "ada@example.test" {

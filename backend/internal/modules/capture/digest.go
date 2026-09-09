@@ -38,10 +38,10 @@ type DigestPayload struct {
 
 // DigestCapture is what landed in the window.
 type DigestCapture struct {
-	MessagesSynced       int `json:"messages_synced"`
-	ActivitiesCreated    int `json:"activities_created"`
-	PeopleCreated        int `json:"people_created"`
-	CompaniesCreated int `json:"companies_created"`
+	MessagesSynced    int `json:"messages_synced"`
+	ActivitiesCreated int `json:"activities_created"`
+	PeopleCreated     int `json:"people_created"`
+	CompaniesCreated  int `json:"companies_created"`
 }
 
 // DigestReview is what awaits the human.

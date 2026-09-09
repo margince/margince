@@ -127,7 +127,7 @@ func TestProjectCheckErrorNamesEachRule(t *testing.T) {
 func TestProjectCreateInputRequiresAName(t *testing.T) {
 	_, err := projectCreateInput(crmcontracts.CreateProjectRequest{
 		CompanyId: openapi_types.UUID{},
-		Source:         "ui",
+		Source:    "ui",
 	})
 	var missing *RequiredFieldError
 	if !errors.As(err, &missing) {

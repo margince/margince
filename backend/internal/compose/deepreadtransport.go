@@ -138,10 +138,10 @@ func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, overrid
 	read, joined, err := e.people.StartSiteReadQueued(ctx, companyID, seedURL, requestedBy(ctx),
 		func(ctx context.Context, tx pgx.Tx, read people.SiteRead) error {
 			return e.enqueue.EnqueueTx(ctx, tx, SiteDeepReadArgs{
-				Workspace:      storekit.MustWorkspace(ctx),
-				CompanyID: companyID.UUID,
-				SiteReadID:     read.ID,
-				RequestedBy:    read.RequestedBy,
+				Workspace:   storekit.MustWorkspace(ctx),
+				CompanyID:   companyID.UUID,
+				SiteReadID:  read.ID,
+				RequestedBy: read.RequestedBy,
 			}, siteDeepReadInsertOpts())
 		})
 	if err != nil {
@@ -189,18 +189,18 @@ func siteReadReport(read people.SiteRead) crmcontracts.SiteReadReport {
 		panic("siteReadReport called for an unbound onboarding dossier")
 	}
 	report := crmcontracts.SiteReadReport{
-		ReadId:         openapi_types.UUID(read.ID),
-		CompanyId: openapi_types.UUID(read.CompanyID.UUID),
-		SeedUrl:        read.SeedURL,
-		Status:         crmcontracts.SiteReadReportStatus(read.Status),
-		Pages:          make([]crmcontracts.SiteReadPage, 0, len(read.Pages)),
-		Skipped:        make([]crmcontracts.SiteReadSkip, 0, len(read.Skipped)),
-		ProposalIds:    make([]openapi_types.UUID, 0, len(read.ProposalIDs)),
-		FactCount:      &read.FactCount,
-		CreatedAt:      read.CreatedAt,
-		FinishedAt:     read.FinishedAt,
-		StatusDetail:   read.StatusDetail,
-		NextAttemptAt:  read.NextAttemptAt,
+		ReadId:        openapi_types.UUID(read.ID),
+		CompanyId:     openapi_types.UUID(read.CompanyID.UUID),
+		SeedUrl:       read.SeedURL,
+		Status:        crmcontracts.SiteReadReportStatus(read.Status),
+		Pages:         make([]crmcontracts.SiteReadPage, 0, len(read.Pages)),
+		Skipped:       make([]crmcontracts.SiteReadSkip, 0, len(read.Skipped)),
+		ProposalIds:   make([]openapi_types.UUID, 0, len(read.ProposalIDs)),
+		FactCount:     &read.FactCount,
+		CreatedAt:     read.CreatedAt,
+		FinishedAt:    read.FinishedAt,
+		StatusDetail:  read.StatusDetail,
+		NextAttemptAt: read.NextAttemptAt,
 	}
 	if read.StatusCode != nil {
 		code := crmcontracts.SiteReadReportStatusCode(*read.StatusCode)

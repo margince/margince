@@ -52,7 +52,7 @@ func TestOverlayWireCompanyDerivesWebsiteURLFromThePrimaryDomain(t *testing.T) {
 func TestOverlayWireCompanyOmitsWebsiteURLWithoutAPrimaryDomain(t *testing.T) {
 	for name, fields := range map[string]map[string]any{
 		"no row claims the flag": {
-			"display_name":        "Acme",
+			"display_name":   "Acme",
 			"company_domain": []map[string]any{{"domain": "acme.de", "position": 0}},
 		},
 		"no domain rows at all": {"display_name": "Acme"},

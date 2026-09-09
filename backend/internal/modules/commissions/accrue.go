@@ -27,7 +27,7 @@ import (
 // stood that day, and a deal reopened later clears its frozen FX, so a
 // read-back would answer a different question than the one being paid on.
 type AccrueInput struct {
-	DealID       ids.DealID
+	DealID           ids.DealID
 	PartnerCompanyID ids.CompanyID
 	// TriggerEventID is the transition that produced this accrual. Stored
 	// unique, so a replayed event fails instead of paying twice; nil for an
@@ -125,11 +125,11 @@ func accrueTx(ctx context.Context, tx pgx.Tx, in AccrueInput, by string) (crmcon
 		return crmcontracts.CommissionEntry{}, fmt.Errorf("audit commission accrual: %w", err)
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventCommissionAccrued{
-		DealId:       openapi_types.UUID(in.DealID.UUID),
+		DealId:           openapi_types.UUID(in.DealID.UUID),
 		PartnerCompanyId: openapi_types.UUID(in.PartnerCompanyID.UUID),
-		AmountMinor:  amount,
-		Currency:     in.Currency,
-		RateBps:      in.RateBps,
+		AmountMinor:      amount,
+		Currency:         in.Currency,
+		RateBps:          in.RateBps,
 	}); err != nil {
 		return crmcontracts.CommissionEntry{}, fmt.Errorf("emit commission.accrued: %w", err)
 	}

@@ -24,11 +24,11 @@ import (
 // dealReferenceFixture is one deal pointing at a hidden company pair and
 // one pointing at an out-of-scope project, both linked through the real writer.
 type dealReferenceFixture struct {
-	hiddenRefs ids.DealID
-	hiddenProj ids.DealID
+	hiddenRefs     ids.DealID
+	hiddenProj     ids.DealID
 	openCompany    ids.UUID
 	privateCompany ids.UUID
-	wonStage   ids.StageID
+	wonStage       ids.StageID
 }
 
 func seedDealReferenceFixture(t *testing.T, e *Env) dealReferenceFixture {
@@ -62,7 +62,7 @@ func seedDealReferenceFixture(t *testing.T, e *Env) dealReferenceFixture {
 	openCompanyID := companyIDOf(openCompany)
 	if _, err := e.Deals.UpdateDeal(admin, hiddenProj, deals.UpdateDealInput{
 		CompanyID: &openCompanyID,
-		ProjectID:      &project.ID,
+		ProjectID: &project.ID,
 	}); err != nil {
 		t.Fatalf("linking the deal to its project: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestEveryDealMutationResponseWithholdsTheSameReferences(t *testing.T) {
 	perms := AccountRepPerms
 	perms.Objects = map[string]principal.ObjectGrant{
 		"deal":                  {Create: true, Read: true, Update: true, Delete: true},
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"pipeline":              {Read: true},
 		"installation_settings": {Read: true},
 	}

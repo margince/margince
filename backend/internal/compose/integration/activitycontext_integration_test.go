@@ -79,10 +79,10 @@ func assertPreparedFor(t *testing.T, assembled retrieval.Context, want datasourc
 
 // meetingFixture is one workspace's calendar event and everything it can name.
 type meetingFixture struct {
-	pipeline, stage        ids.UUID
-	rep1Company, rep1Deal      ids.UUID
-	rep3Company, rep3Project   ids.UUID
-	organizer, otherPerson ids.UUID
+	pipeline, stage          ids.UUID
+	rep1Company, rep1Deal    ids.UUID
+	rep3Company, rep3Project ids.UUID
+	organizer, otherPerson   ids.UUID
 }
 
 func seedMeetingFixture(t *testing.T, e *SearchEnv) meetingFixture {

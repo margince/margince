@@ -32,11 +32,11 @@ func TestQuickCaptureWritesThePersonAndTheirEmployer(t *testing.T) {
 	profile := "https://linkedin.com/in/dana-quick"
 	email := "dana@acme-quick.test"
 	out, err := e.store.QuickCapture(ctx, QuickCaptureInput{
-		FullName:         "Dana Quick",
-		Title:            &title,
+		FullName:    "Dana Quick",
+		Title:       &title,
 		CompanyName: &companyName,
-		ProfileURL:       &profile,
-		Email:            &email,
+		ProfileURL:  &profile,
+		Email:       &email,
 	})
 	if err != nil {
 		t.Fatalf("quick capture: %v", err)
@@ -116,7 +116,7 @@ func TestQuickCaptureAttachesAnExistingEmployer(t *testing.T) {
 	// beside it must not create a second company.
 	wrongName := "Existng Employer"
 	out, err := e.store.QuickCapture(ctx, QuickCaptureInput{
-		FullName:         "Sam Second",
+		FullName:    "Sam Second",
 		CompanyID:   &companyID,
 		CompanyName: &wrongName,
 	})
@@ -177,7 +177,7 @@ func TestQuickCaptureLeavesNoPersonWhenTheEmployerIsRefused(t *testing.T) {
 
 	companyName := "Refused Employer GmbH"
 	if _, err := e.store.QuickCapture(ctx, QuickCaptureInput{
-		FullName:         "Rolled Back",
+		FullName:    "Rolled Back",
 		CompanyName: &companyName,
 	}); err == nil {
 		t.Fatal("quick capture succeeded without the company grant")

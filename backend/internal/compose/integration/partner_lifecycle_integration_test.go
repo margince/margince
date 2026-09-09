@@ -18,7 +18,7 @@ import (
 
 // partnerWire is the contract Partner shape as this suite reads it.
 type partnerWire struct {
-	CompanyID    string         `json:"company_id"`
+	CompanyID         string         `json:"company_id"`
 	CertStatus        string         `json:"cert_status"`
 	PartnerRole       string         `json:"partner_role"`
 	RelationshipStage string         `json:"relationship_stage"`

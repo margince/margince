@@ -17,10 +17,10 @@ import (
 // The filter names, spelled once so a binding and the caller's key cannot
 // drift apart.
 const (
-	filterKey            = "key"
+	filterKey       = "key"
 	filterCompanyID = "company_id"
-	filterOwnerID        = "owner_id"
-	filterPhase          = "phase"
+	filterOwnerID   = "owner_id"
+	filterPhase     = "phase"
 )
 
 var projectListFilters = storekit.FilterSet[ListProjectsInput]{

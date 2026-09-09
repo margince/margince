@@ -10,9 +10,9 @@ package claims
 import "testing"
 
 const (
-	companyID  = "019fd000-0000-7000-8000-000000000001"
-	dealID = "019fd000-0000-7000-8000-000000000002"
-	ghost  = "019fd000-0000-7000-8000-0000000000ff"
+	companyID = "019fd000-0000-7000-8000-000000000001"
+	dealID    = "019fd000-0000-7000-8000-000000000002"
+	ghost     = "019fd000-0000-7000-8000-0000000000ff"
 )
 
 // supplied is what the assembler put in front of the model: the records, and
@@ -21,7 +21,7 @@ const (
 func supplied() map[Evidence]string {
 	return map[Evidence]string{
 		{EntityType: "company", EntityID: companyID}: `{"name":"Glazed Frog GmbH","country":"Germany"}`,
-		{EntityType: "deal", EntityID: dealID}:        `{"name":"Renewal","amount":"1200.00","currency":"EUR"}`,
+		{EntityType: "deal", EntityID: dealID}:       `{"name":"Renewal","amount":"1200.00","currency":"EUR"}`,
 	}
 }
 

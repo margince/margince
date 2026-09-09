@@ -67,7 +67,7 @@ const (
 type row struct {
 	ID            ids.UUID
 	UserID        ids.UserID
-	CompanyID         ids.CompanyID
+	CompanyID     ids.CompanyID
 	Status        string
 	Attempt       int
 	RequestedAt   time.Time

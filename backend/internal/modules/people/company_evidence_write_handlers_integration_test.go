@@ -237,9 +237,9 @@ func TestACorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
 	// The machine now proposes the value it had before, exactly as a scheduled
 	// re-read of the same page would.
 	if err := e.store.ApplyDeepRead(ctx, DeepReadProposal{
-		CompanyID: companyID,
-		SourceURL:      "https://voltaq.test/impressum",
-		SiteReadID:     ids.NewV7(),
+		CompanyID:  companyID,
+		SourceURL:  "https://voltaq.test/impressum",
+		SiteReadID: ids.NewV7(),
 		Facts: []DeepReadFact{{
 			Category: "company", Field: "phone", Value: "+49 30 1234", ValueKey: "",
 			EvidenceSnippet: `"+49 30 1234"`, SourceURL: "https://voltaq.test/impressum",

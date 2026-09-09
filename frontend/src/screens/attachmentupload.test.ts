@@ -9,7 +9,7 @@ import { ProblemError } from "./common";
 // cannot be read.
 
 const FILE = new File(["signed"], "agreement.pdf", { type: "application/pdf" });
-const ORG: AttachmentParent = {
+const COMPANY: AttachmentParent = {
   entityType: "company",
   entityId: "company-1",
 };
@@ -45,7 +45,7 @@ describe("uploadAttachment", () => {
   it("sends the parent and the bytes, and returns the stored document", async () => {
     const sent = recordingFetch(() => Response.json({ id: "a-9" }));
 
-    const stored = await uploadAttachment(ORG, FILE);
+    const stored = await uploadAttachment(COMPANY, FILE);
 
     expect(stored?.id).toBe("a-9");
     expect(sent[0].url).toBe("/v1/attachments");
@@ -60,7 +60,7 @@ describe("uploadAttachment", () => {
   it("appends a filing's extra parts before the bytes", async () => {
     const sent = recordingFetch(() => Response.json({ id: "a-9" }));
 
-    await uploadAttachment(ORG, FILE, { contract_id: "c-1" });
+    await uploadAttachment(COMPANY, FILE, { contract_id: "c-1" });
 
     expect(sent[0].parts.get("contract_id")).toBe("c-1");
     // Order, because the file is documented as the last part: a reader of the
@@ -81,8 +81,8 @@ describe("uploadAttachment", () => {
       ),
     );
 
-    await expect(uploadAttachment(ORG, FILE)).rejects.toThrow(ProblemError);
-    await expect(uploadAttachment(ORG, FILE)).rejects.toThrow(
+    await expect(uploadAttachment(COMPANY, FILE)).rejects.toThrow(ProblemError);
+    await expect(uploadAttachment(COMPANY, FILE)).rejects.toThrow(
       "That file is over the limit.",
     );
   });
@@ -93,6 +93,6 @@ describe("uploadAttachment", () => {
     // the reason this does not throw.
     recordingFetch(() => new Response("", { status: 201 }));
 
-    await expect(uploadAttachment(ORG, FILE)).resolves.toBeUndefined();
+    await expect(uploadAttachment(COMPANY, FILE)).resolves.toBeUndefined();
   });
 });

@@ -80,19 +80,19 @@ var (
 
 // SDRHandoff is one handoff as a reader sees it.
 type SDRHandoff struct {
-	ID             ids.UUID
-	LeadID         *ids.UUID
-	PersonID       *ids.UUID
-	CompanyID *ids.UUID
-	SubmittedBy    ids.UUID
-	AssignedTo     *ids.UUID
-	Status         string
-	ReasonID       *ids.UUID
-	Note           string
-	DealID         *ids.UUID
-	SubmittedAt    string
-	DecidedAt      *string
-	Version        int64
+	ID          ids.UUID
+	LeadID      *ids.UUID
+	PersonID    *ids.UUID
+	CompanyID   *ids.UUID
+	SubmittedBy ids.UUID
+	AssignedTo  *ids.UUID
+	Status      string
+	ReasonID    *ids.UUID
+	Note        string
+	DealID      *ids.UUID
+	SubmittedAt string
+	DecidedAt   *string
+	Version     int64
 }
 
 // NewSDRHandoff is one prospect being handed on.
@@ -101,8 +101,8 @@ type SDRHandoff struct {
 // one working an account has people, and a row claiming both would be two
 // handoffs wearing one id.
 type NewSDRHandoff struct {
-	LeadID         *ids.UUID
-	PersonID       *ids.UUID
+	LeadID    *ids.UUID
+	PersonID  *ids.UUID
 	CompanyID *ids.UUID
 	// AssignedTo is optional. A handoff may be offered to a named AE or left for
 	// whoever picks it up, and the second is a real workflow rather than an

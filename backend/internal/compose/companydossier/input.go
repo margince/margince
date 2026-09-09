@@ -64,7 +64,7 @@ type Input struct {
 // matching a type the wire no longer carries — a citation that silently stops
 // grounding.
 var (
-	citeCompany = string(crmcontracts.CompanyBriefEvidenceEntityTypeCompany)
+	citeCompany      = string(crmcontracts.CompanyBriefEvidenceEntityTypeCompany)
 	citeProfileField = string(crmcontracts.CompanyBriefEvidenceEntityTypeProfileField)
 	citeFact         = string(crmcontracts.CompanyBriefEvidenceEntityTypeFact)
 )
@@ -88,10 +88,10 @@ func BuildInput(ctx context.Context, facts Facts, id ids.CompanyID) (Input, erro
 		return Input{}, err
 	}
 	return Input{
-		CompanyID: id.String(),
-		Name:           company.DisplayName,
-		ProfileFields:  fields,
-		Facts:          extracted,
+		CompanyID:     id.String(),
+		Name:          company.DisplayName,
+		ProfileFields: fields,
+		Facts:         extracted,
 	}, nil
 }
 

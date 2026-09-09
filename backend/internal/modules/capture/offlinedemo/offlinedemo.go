@@ -100,9 +100,9 @@ type Mailbox struct {
 // can be written from.
 type Account struct {
 	CompanyID string
-	Name           string
-	Domain         string
-	Lifecycle      string
+	Name      string
+	Domain    string
+	Lifecycle string
 	// Locale is the dataset's own answer for this company — `de`, `vi`, `ko`
 	// or `en` — carried in from company-locale.json through the auth payload.
 	// Empty when the installation was not seeded from a dataset, and the

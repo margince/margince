@@ -205,11 +205,11 @@ type DeepReadFact struct {
 // read plus the dossier that produced them. One spelling for the staging
 // worker and the accept effect.
 type DeepReadProposal struct {
-	CompanyID ids.CompanyID `json:"company_id"`
-	SourceURL      string             `json:"source_url"`
-	SiteReadID     ids.UUID           `json:"site_read_id"`
-	Fields         []DeepReadField    `json:"fields"`
-	Facts          []DeepReadFact     `json:"facts"`
+	CompanyID  ids.CompanyID   `json:"company_id"`
+	SourceURL  string          `json:"source_url"`
+	SiteReadID ids.UUID        `json:"site_read_id"`
+	Fields     []DeepReadField `json:"fields"`
+	Facts      []DeepReadFact  `json:"facts"`
 }
 
 // UnmarshalDeepRead decodes a staged deepread proposal for the accept

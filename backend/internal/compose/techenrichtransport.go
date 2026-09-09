@@ -102,7 +102,7 @@ func (h technicalHandlers) startTechnicalEnrich(
 	}
 	err = database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
 		return h.enqueue.EnqueueTx(ctx, tx, TechnicalEnrichCompanyArgs{
-			Workspace:      ws,
+			Workspace: ws,
 			CompanyID: id,
 		}, technicalInsertOpts())
 	})
@@ -137,7 +137,7 @@ func (h technicalHandlers) GetLatestTechnicalEnrich(w http.ResponseWriter, r *ht
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.TechnicalEnrichStatus{
 		CompanyId: openapi_types.UUID(id),
-		Lanes:          technicalLanesWire(lanes),
+		Lanes:     technicalLanesWire(lanes),
 	})
 }
 

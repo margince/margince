@@ -48,11 +48,11 @@ func stageLegacyDeepReadProposal(
 ) ids.UUID {
 	t.Helper()
 	proposedChange, err := json.Marshal(people.DeepReadProposal{
-		CompanyID: ids.From[ids.CompanyKind](company),
-		SourceURL:      seedURL,
-		SiteReadID:     readID,
-		Fields:         fields,
-		Facts:          facts,
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		SourceURL:  seedURL,
+		SiteReadID: readID,
+		Fields:     fields,
+		Facts:      facts,
 	})
 	if err != nil {
 		t.Fatalf("marshalling the legacy proposal: %v", err)

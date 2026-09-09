@@ -38,7 +38,7 @@ type ResolveKind string
 
 // The two kinds this read answers.
 const (
-	ResolvePerson       ResolveKind = "person"
+	ResolvePerson  ResolveKind = "person"
 	ResolveCompany ResolveKind = "company"
 )
 
@@ -154,7 +154,7 @@ func requireResolveAuthority(ctx context.Context, candidates []ResolveCandidate)
 		asked[c.Kind] = struct{}{}
 	}
 	for kind, object := range map[ResolveKind]string{
-		ResolvePerson:       entityPerson,
+		ResolvePerson:  entityPerson,
 		ResolveCompany: entityCompany,
 	} {
 		if _, wanted := asked[kind]; !wanted {

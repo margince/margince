@@ -89,11 +89,11 @@ const contextSearchMaxQueryRunes = 1000
 // Keyed by the seam's own type so the set and the value handed to the retriever
 // are the same thing, rather than two spellings kept in step.
 var contextSearchTypes = map[datasource.EntityType]bool{
-	datasource.EntityPerson:       true,
+	datasource.EntityPerson:  true,
 	datasource.EntityCompany: true,
-	datasource.EntityDeal:         true,
-	datasource.EntityLead:         true,
-	datasource.EntityProject:      true,
+	datasource.EntityDeal:    true,
+	datasource.EntityLead:    true,
+	datasource.EntityProject: true,
 }
 
 // RegisterContextSearchTool joins search_context to the surface once a retriever

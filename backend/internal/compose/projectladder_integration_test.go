@@ -44,7 +44,7 @@ const ladderCounterparty = "dana@ladder.example"
 // production seeds them.
 type ladderAccount struct {
 	e          *integration.Env
-	companyID      ids.UUID
+	companyID  ids.UUID
 	sink       *capture.Sink
 	captureCtx context.Context
 }
@@ -73,11 +73,11 @@ func seedLadderAccount(t *testing.T, e *integration.Env) ladderAccount {
 		UserID: e.Rep1, OnBehalfOf: e.Rep1,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"activity":     {Create: true, Read: true, Update: true},
-				"person":       {Create: true, Read: true},
-				"company": {Create: true, Read: true},
-				"project":      {Read: true},
-				"deal":         {Read: true},
+				"activity": {Create: true, Read: true, Update: true},
+				"person":   {Create: true, Read: true},
+				"company":  {Create: true, Read: true},
+				"project":  {Read: true},
+				"deal":     {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

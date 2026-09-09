@@ -86,9 +86,9 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 				// that column empty however the gate behaved and the assertion
 				// on it below would pass over a broken branch.
 				return e.store.ApplyDeepRead(ctx, DeepReadProposal{
-					CompanyID: companyID,
-					SourceURL:      "https://voltaq.test/about",
-					SiteReadID:     dossier.ID,
+					CompanyID:  companyID,
+					SourceURL:  "https://voltaq.test/about",
+					SiteReadID: dossier.ID,
 					Fields: []DeepReadField{{
 						Field: "industry", Value: "Energietechnik",
 						EvidenceSnippet: `"Energietechnik"`,

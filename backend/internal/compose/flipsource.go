@@ -18,11 +18,11 @@ import (
 // The estate's object classes, named once so the source, the writers,
 // and the stage catalog cannot drift on a string literal.
 const (
-	flipObjectCompany = "company"
-	flipObjectPerson       = "person"
-	flipObjectLead         = "lead"
-	flipObjectDeal         = "deal"
-	flipObjectActivity     = "activity"
+	flipObjectCompany  = "company"
+	flipObjectPerson   = "person"
+	flipObjectLead     = "lead"
+	flipObjectDeal     = "deal"
+	flipObjectActivity = "activity"
 )
 
 // flipImportOrder is the canonical import order: parents before

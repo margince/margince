@@ -69,23 +69,23 @@ var ErrBackfillUnsupported = errors.New("capture: this provider does not support
 
 // BackfillRun is the CAP-DDL-4 row — the single-row activation read.
 type BackfillRun struct {
-	ID            ids.UUID
-	ConnectionID  ids.UUID
-	WindowMonths  int
-	AfterDate     time.Time
-	Status        string
-	Cursor        []byte
-	Estimate      *int
-	Scanned       int
-	Captured      int
-	Skipped       int
-	People        int
-	Companies int
-	DedupeCands   int
-	StartedAt     *time.Time
-	CompletedAt   *time.Time
-	UpdatedAt     time.Time
-	ErrorClass    *string
+	ID           ids.UUID
+	ConnectionID ids.UUID
+	WindowMonths int
+	AfterDate    time.Time
+	Status       string
+	Cursor       []byte
+	Estimate     *int
+	Scanned      int
+	Captured     int
+	Skipped      int
+	People       int
+	Companies    int
+	DedupeCands  int
+	StartedAt    *time.Time
+	CompletedAt  *time.Time
+	UpdatedAt    time.Time
+	ErrorClass   *string
 }
 
 // connectionForUser resolves the calling user's connection for provider.

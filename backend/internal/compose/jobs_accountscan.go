@@ -33,10 +33,10 @@ import (
 // The row is the authority on all four; the args are what lets the worker
 // find it.
 type AccountScanArgs struct {
-	Workspace      ids.UUID `json:"workspace_id"`
+	Workspace ids.UUID `json:"workspace_id"`
 	CompanyID ids.UUID `json:"company_id"`
-	ScanID         ids.UUID `json:"scan_id"`
-	ViewerID       ids.UUID `json:"viewer_id"`
+	ScanID    ids.UUID `json:"scan_id"`
+	ViewerID  ids.UUID `json:"viewer_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.

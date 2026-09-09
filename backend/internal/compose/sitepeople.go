@@ -32,8 +32,8 @@ const siteLeadProposalKind = "site_lead"
 // siteLeadProposal is the thin staged payload — exactly what the site
 // published, plus the provenance the accept effect and the inbox need.
 type siteLeadProposal struct {
-	CompanyID ids.UUID `json:"company_id"`
-	SiteReadID     ids.UUID `json:"site_read_id"`
+	CompanyID  ids.UUID `json:"company_id"`
+	SiteReadID ids.UUID `json:"site_read_id"`
 	// NaturalKey is siteLeadSourceID for this person — the SAME key the accept
 	// effect captures the lead under, carried in the payload because the
 	// approval's logical identity has to be a field the payload contains

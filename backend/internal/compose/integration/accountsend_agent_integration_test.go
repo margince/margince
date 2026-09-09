@@ -94,7 +94,7 @@ func (a *accountSendEnv) linkedActivities(t *testing.T) int {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
-			WHERE l.company_id = $1 AND a.direction = 'outbound'`, a.org).Scan(&n)
+			WHERE l.company_id = $1 AND a.direction = 'outbound'`, a.company).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting the conversation's activities: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestAHumansAccountStartedSendLeavesWithoutAnApproval(t *testing.T) {
 	var sent struct {
 		ID string `json:"id"`
 	}
-	if status := a.Call(t, "POST", "/v1/emails", accountSendBody(a.org, "Hello from Fable"), nil, &sent); status != http.StatusAccepted {
+	if status := a.Call(t, "POST", "/v1/emails", accountSendBody(a.company, "Hello from Fable"), nil, &sent); status != http.StatusAccepted {
 		t.Fatalf("human account-started send → %d, want 202 — a human's own action is the approval", status)
 	}
 	if sent.ID == "" {
@@ -159,7 +159,7 @@ func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
 	args, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello over MCP",
 		"body": "Good morning.", "consent_purpose": "transactional",
-		"links": []map[string]string{{"entity_type": "company", "entity_id": a.org}},
+		"links": []map[string]string{{"entity_type": "company", "entity_id": a.company}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -215,7 +215,7 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 	args, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
 		"body": "Good morning.", "consent_purpose": "transactional",
-		"links": []map[string]string{{"entity_type": "company", "entity_id": a.org}},
+		"links": []map[string]string{{"entity_type": "company", "entity_id": a.company}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -264,7 +264,7 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 	retry, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
 		"body": "Good morning.", "consent_purpose": "transactional",
-		"links":       []map[string]string{{"entity_type": "company", "entity_id": a.org}},
+		"links":       []map[string]string{{"entity_type": "company", "entity_id": a.company}},
 		"approval_id": approvalID,
 	})
 	if err != nil {

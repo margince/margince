@@ -149,7 +149,7 @@ an outbox event; a rename owes a duplicate check; a write owes a permission prob
 **Examples:** `writeshape_test.go` (audit row ⇒ outbox event on the same path) ·
 `writeauthorityreach_test.go` · `rbacgate_test.go` · `personscrub_test.go`
 (deleting and anonymising a person clear the same tables) · `dedupespine_test.go` ·
-`companyrenamerecheck_test.go` (every organisation rename reaches the duplicate check —
+`companyrenamerecheck_test.go` (every company rename reaches the duplicate check —
 the gate whose first version was vacuous, which is why the quantifier table above
 exists).
 

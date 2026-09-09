@@ -55,7 +55,7 @@ type message struct {
 	ToAddr      string    `json:"to"`
 	ToName      string    `json:"to_name"`
 	CCAddr      string    `json:"cc,omitempty"`
-	CompanyID       string    `json:"company_id"`
+	CompanyID   string    `json:"company_id"`
 	DealID      string    `json:"deal_id,omitempty"`
 	PersonEmail string    `json:"person_email,omitempty"`
 }

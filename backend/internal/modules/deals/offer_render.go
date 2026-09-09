@@ -129,8 +129,8 @@ func resolveRenderBuyerBlock(ctx context.Context, tx pgx.Tx, offer crmcontracts.
 		return nil, fmt.Errorf("render: read buyer company: %w", scanErr)
 	}
 	block = map[string]any{
-		"company_id": offer.BuyerCompanyId.String(),
-		"display_name":    displayName,
+		"company_id":   offer.BuyerCompanyId.String(),
+		"display_name": displayName,
 	}
 	if legalName != nil {
 		block["legal_name"] = *legalName

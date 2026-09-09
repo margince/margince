@@ -38,7 +38,7 @@ func newGraph(t *testing.T) (*graphAssembly, ids.CompanyID) {
 		GroupsOmitted: []crmcontracts.CompanyGraphGroupsOmitted{},
 	}
 	g := &graphAssembly{
-		companyID:     companyID,
+		companyID: companyID,
 		now:       graphNow,
 		out:       out,
 		nodeIndex: map[ids.UUID]int{},

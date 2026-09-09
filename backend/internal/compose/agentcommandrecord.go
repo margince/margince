@@ -152,7 +152,7 @@ func enrichCall(deps restCommandDeps, r *http.Request, body []byte, depth agents
 	}
 	return agents.NewEnrichCall(deps.records, agents.EnrichCommand{
 		CompanyID: id,
-		URL:            in.URL,
-		Depth:          depth,
+		URL:       in.URL,
+		Depth:     depth,
 	}), nil
 }

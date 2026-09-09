@@ -137,7 +137,7 @@ export type EditableField =
       readonly optionLabels?: Readonly<Record<string, MessageKey>>;
     };
 
-const ORG_LIFECYCLE_STAGES = [
+const COMPANY_LIFECYCLE_STAGES = [
   "unknown",
   "target",
   "prospect",
@@ -150,8 +150,8 @@ const ORG_LIFECYCLE_STAGES = [
 // The same catalog keys the account page's stage badge reads, so the inbox and
 // the record cannot call one stage two things. Keyed off the list above:
 // a stage added there with no entry here fails the type.
-const ORG_LIFECYCLE_LABELS: Readonly<
-  Record<(typeof ORG_LIFECYCLE_STAGES)[number], MessageKey>
+const COMPANY_LIFECYCLE_LABELS: Readonly<
+  Record<(typeof COMPANY_LIFECYCLE_STAGES)[number], MessageKey>
 > = {
   unknown: "company.lifecycle.unknown",
   target: "company.lifecycle.target",
@@ -174,8 +174,8 @@ export const EDITABLE_FIELDS: Readonly<
       field: "proposed_lifecycle",
       as: "choice",
       label: "company.lifecycle",
-      options: ORG_LIFECYCLE_STAGES,
-      optionLabels: ORG_LIFECYCLE_LABELS,
+      options: COMPANY_LIFECYCLE_STAGES,
+      optionLabels: COMPANY_LIFECYCLE_LABELS,
     },
   ],
   // An automation-composed email waiting for a human to read, correct and

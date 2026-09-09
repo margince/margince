@@ -83,9 +83,9 @@ func TestASiteReadWithNoCompanyQueuesNoLookup(t *testing.T) {
 	// The triage lane's shape: a claim whose read is about a DOMAIN, with no
 	// account resolved behind it yet.
 	worker.askWhatTheCompanyRuns(ctx, people.SiteReadClaim{
-		CompanyID: nil,
-		TargetKind:     "domain",
-		SeedURL:        "https://acme.example",
+		CompanyID:  nil,
+		TargetKind: "domain",
+		SeedURL:    "https://acme.example",
 	})
 
 	rivertest.RequireNotInserted(ctx, t, riverpgxv5.New(e.Pool),

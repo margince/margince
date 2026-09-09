@@ -122,9 +122,9 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 		return
 	}
 	in := UpsertPartnerInput{
-		CompanyID: pathID[ids.CompanyKind](id),
-		PartnerRole:    string(req.PartnerRole),
-		IfVersion:      ifVersion,
+		CompanyID:   pathID[ids.CompanyKind](id),
+		PartnerRole: string(req.PartnerRole),
+		IfVersion:   ifVersion,
 	}
 	if req.CertStatus != nil {
 		status := string(*req.CertStatus)

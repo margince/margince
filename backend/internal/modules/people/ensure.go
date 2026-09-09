@@ -52,13 +52,13 @@ const (
 	evidenceSignalCollide  = "collide"
 	evidenceSignalOneSided = "one_sided"
 
-	entityPerson       = "person"
-	entityCompany = "company"
-	fieldFullName      = "full_name"
-	fieldDisplayName   = "display_name"
-	fieldEmail         = "email"
-	fieldPhone         = "phone"
-	emailTypeWork      = "work"
+	entityPerson     = "person"
+	entityCompany    = "company"
+	fieldFullName    = "full_name"
+	fieldDisplayName = "display_name"
+	fieldEmail       = "email"
+	fieldPhone       = "phone"
+	emailTypeWork    = "work"
 )
 
 // ErrCounterpartySuppressed marks an erased address (A13): deletion sticks,
@@ -111,7 +111,7 @@ type EnsureCounterpartyResult struct {
 	// one this ensure made: capture no longer creates companies at all, so
 	// there is no created-flag to report. A domain with no company yet reports
 	// TriagePending instead.
-	CompanyID *ids.CompanyID
+	CompanyID      *ids.CompanyID
 	DedupeRecorded bool
 	// NameFilled reports that this ensure completed an incumbent's split name
 	// that was previously unknown — the fill-only-if-empty path, never an

@@ -39,8 +39,8 @@ import (
 // own names, which is what a client reads the mask against.
 const (
 	filterCompanyID = "company_id"
-	filterDealID         = "deal_id"
-	filterProjectID      = "project_id"
+	filterDealID    = "deal_id"
+	filterProjectID = "project_id"
 )
 
 // maskedReference is one reference of one row: where to read it, what to call

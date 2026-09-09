@@ -63,7 +63,7 @@ const (
 const (
 	graphContactCap = 15
 	graphDealCap    = 10
-	graphCompanyCap     = 10
+	graphCompanyCap = 10
 	graphUserCap    = 10
 )
 
@@ -154,11 +154,11 @@ func (s *Service) Graph(ctx context.Context, companyID ids.CompanyID) (crmcontra
 // a subset of the candidates the warm room ranks over, which is exactly how
 // the card would come to name a different person than the warm room.
 type graphAssembly struct {
-	ctx   context.Context
-	tx    pgx.Tx
+	ctx       context.Context
+	tx        pgx.Tx
 	companyID ids.CompanyID
-	now   time.Time
-	out   *crmcontracts.CompanyGraph
+	now       time.Time
+	out       *crmcontracts.CompanyGraph
 
 	// nodeIndex maps a record id to its position in out.Nodes, so a person
 	// who is both an employee and a stakeholder is one node with two edges.

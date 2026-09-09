@@ -68,9 +68,9 @@ var recordBenchSpec = benchTierSpec{tier: search.BenchTierSMB, warmups: 5, sampl
 // different paths at three rows than at ten thousand, and an index that is never
 // exercised looks exactly as fast as one that does not exist.
 const (
-	recordBenchPersons       = 10_000
-	recordBenchCompanies = 1_000
-	recordBenchActivities    = 20_000
+	recordBenchPersons    = 10_000
+	recordBenchCompanies  = 1_000
+	recordBenchActivities = 20_000
 )
 
 func TestRecordOpenAndSaveBudgets(t *testing.T) {

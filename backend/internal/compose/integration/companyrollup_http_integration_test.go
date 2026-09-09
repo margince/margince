@@ -51,14 +51,14 @@ type companyRollupRestrictedWire struct {
 // JSON `null` and non-nil (possibly zero-length) for a JSON `[]`, which is
 // exactly the null-vs-empty distinction the happy path must assert on.
 type companyRollupResponseWire struct {
-	RootID                 string                    `json:"root_id"`
-	Scope                  string                    `json:"scope"`
+	RootID                 string                        `json:"root_id"`
+	Scope                  string                        `json:"scope"`
 	WeightedPipeline       companyRollupMoneyWire        `json:"weighted_pipeline"`
 	ClosedWon              companyRollupMoneyWire        `json:"closed_won"`
-	ActivityCount30d       int                       `json:"activity_count_30d"`
-	AggregatedAccountCount int                       `json:"aggregated_account_count"`
+	ActivityCount30d       int                           `json:"activity_count_30d"`
+	AggregatedAccountCount int                           `json:"aggregated_account_count"`
 	RestrictedExcluded     []companyRollupRestrictedWire `json:"restricted_excluded"`
-	ComputedAt             string                    `json:"computed_at"`
+	ComputedAt             string                        `json:"computed_at"`
 }
 
 // companyRollupFxProblem is the RFC 7807 body the handler's FXRateUnavailableError
@@ -126,13 +126,13 @@ func createCompanyRollupOpenDeal(t *testing.T, e *apptest.AppEnv, pipelineID, st
 	t.Helper()
 	var deal AnyMap
 	status := e.Call(t, "POST", "/v1/deals", AnyMap{
-		"name":            "Rollup HTTP Deal",
-		"amount_minor":    amountMinor,
-		"currency":        currency,
-		"pipeline_id":     pipelineID,
-		"stage_id":        stageID,
-		"company_id": companyID,
-		"source":          "ui",
+		"name":         "Rollup HTTP Deal",
+		"amount_minor": amountMinor,
+		"currency":     currency,
+		"pipeline_id":  pipelineID,
+		"stage_id":     stageID,
+		"company_id":   companyID,
+		"source":       "ui",
 	}, nil, &deal)
 	if status != http.StatusCreated {
 		t.Fatalf("create deal = %d %v", status, deal)

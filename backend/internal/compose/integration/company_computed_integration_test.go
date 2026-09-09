@@ -149,7 +149,7 @@ func pipelineFixtureFor(ctx context.Context, t *testing.T, store *deals.Store) (
 var computedFieldNoGrantPerms = principal.Permissions{
 	RoleKeys: []string{"custom-no-computed-field"},
 	Objects: map[string]principal.ObjectGrant{
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeAll,

@@ -82,8 +82,8 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	// record — a second person or company for the same human — which is worse
 	// for Rep A than the write it would have prevented.
 	"internal/modules/people:EnsureCounterparty":           "capture resolving the person and company a captured message is about, and attaching it. The row it lands on is frequently a colleague's, by design: refusing would not protect that record, it would create a duplicate of it alongside. What this may write to an incumbent is bounded instead — a name fills only where the column is still empty, and a header carrying an impersonation tell teaches an existing record nothing",
-	"internal/modules/people:writeCompanyColumn":               "the cold-start writer's per-column half, reached only from applyColdStartTx and bounded by the same accepted proposal",
-	"internal/modules/people:applyUnclaimedCompanyColumn":      "the fill arm of writeCompanyColumn, reached only through it, so the proposal that bounds one bounds the other. Newly visible to this census rather than newly unprobed: its statements sit in a package-level table, which the index could not read until it folded them",
+	"internal/modules/people:writeCompanyColumn":           "the cold-start writer's per-column half, reached only from applyColdStartTx and bounded by the same accepted proposal",
+	"internal/modules/people:applyUnclaimedCompanyColumn":  "the fill arm of writeCompanyColumn, reached only through it, so the proposal that bounds one bounds the other. Newly visible to this census rather than newly unprobed: its statements sit in a package-level table, which the index could not read until it folded them",
 	"internal/modules/people:setCompanyColumn":             "the company form's per-column half, reached only from writeCompanyFields. Its authority is taken two frames up in resolveOrCreateAnchor — auth.EnsureWritable on the anchor, after anchorCompany has resolved it live and locked it FOR UPDATE for the rest of the transaction. Newly visible for the same reason applyUnclaimedCompanyColumn is",
 	"internal/modules/people:EnsureCounterpartyTx":         "capture's resolution running inside the caller's transaction, reached only from EnsureCounterparty",
 	"internal/modules/people:ensurePerson":                 "the person half of that same capture resolution",
@@ -103,13 +103,13 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 
 	"internal/modules/people:recomputeUnderOverrideTx": "the sticky-override branch of recomputeLeadScoreTx, reached from nowhere else. Its four callers each take the row probe before they get here — RecomputeLeadScore, both manual-signal paths and UpdateLead — and the probe belongs at those entry points rather than in a branch, because an archived lead is a silent no-op to the workflow lane and a 404 to a human",
 
-	"internal/modules/people:absorbCompanyReferences":    "the company merge's cascade: it re-points the deals, projects and child companies that NAMED the absorbed company at the survivor. The merge itself takes write authority on BOTH companies through mergePair before anything moves, and the rows re-pointed here are not the ones being decided about — refusing to re-point a deal the caller cannot write would leave it pointing at a company that no longer exists",
-	"internal/modules/people:RouteLead":              "routing assigns an ownerless lead to a chosen rep, and an ownerless row is nobody's to write by construction (the write arm renders no owner_id IS NULL branch) — auth.EnsureWritable here could only ever refuse. It self-guards instead: a lead that already has an owner returns already_owned before anything is written, so routing can never overwrite a human's assignment. The claim-then-write primitive this shape wants is storekit.ClaimOwnership, which takes the claimant as `me` and so does not fit an assignment to a third party",
-	"internal/modules/deals:sweepWorkspace":          "the close-date sweep's inner pass, reached only from SweepWorkspace",
-	"internal/modules/deals:correct":                 "one close-date correction inside that sweep",
-	"internal/modules/deals:apply":                   "the correction's write, reached only from correct",
-	"internal/modules/privacy:anonymizePersonRecord": "the retention engine's person write, reached only from the pass that selected the row by its expired clock",
-	"internal/modules/privacy:anonymizeLeadTwins":    "the same pass's lead half",
+	"internal/modules/people:absorbCompanyReferences": "the company merge's cascade: it re-points the deals, projects and child companies that NAMED the absorbed company at the survivor. The merge itself takes write authority on BOTH companies through mergePair before anything moves, and the rows re-pointed here are not the ones being decided about — refusing to re-point a deal the caller cannot write would leave it pointing at a company that no longer exists",
+	"internal/modules/people:RouteLead":               "routing assigns an ownerless lead to a chosen rep, and an ownerless row is nobody's to write by construction (the write arm renders no owner_id IS NULL branch) — auth.EnsureWritable here could only ever refuse. It self-guards instead: a lead that already has an owner returns already_owned before anything is written, so routing can never overwrite a human's assignment. The claim-then-write primitive this shape wants is storekit.ClaimOwnership, which takes the claimant as `me` and so does not fit an assignment to a third party",
+	"internal/modules/deals:sweepWorkspace":           "the close-date sweep's inner pass, reached only from SweepWorkspace",
+	"internal/modules/deals:correct":                  "one close-date correction inside that sweep",
+	"internal/modules/deals:apply":                    "the correction's write, reached only from correct",
+	"internal/modules/privacy:anonymizePersonRecord":  "the retention engine's person write, reached only from the pass that selected the row by its expired clock",
+	"internal/modules/privacy:anonymizeLeadTwins":     "the same pass's lead half",
 })
 
 // writeAuthorityVocabulary derives the spellings that answer "may this caller

@@ -294,7 +294,7 @@ func TestManualSignalReadReturnsTheStoredQualificationEvidence(t *testing.T) {
 		t.Fatalf("manual signals = %d, want 1", len(signals))
 	}
 	got := signals[0]
-	if got.Band != "51-200" || got.Points != 8 || got.SignalKind != crmcontracts.LeadManualSignalKindAssumption {
+	if got.Band != "51-200" || got.Points != 8 || got.SignalKind != crmcontracts.Assumption {
 		t.Errorf("stored band, points or kind were lost: %+v", got)
 	}
 	if got.Confidence == nil || *got.Confidence != confidence {

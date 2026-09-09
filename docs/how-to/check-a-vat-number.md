@@ -64,7 +64,7 @@ Or:
 
 ```bash
 curl -sS -b cookies.txt -X PATCH \
-  "$BASE/v1/companies/$ORG/profile-fields/register_vat" \
+  "$BASE/v1/companies/$COMPANY/profile-fields/register_vat" \
   -H 'content-type: application/json' \
   -d '{"value":"DE811907980"}'
 ```
@@ -111,7 +111,7 @@ somebody asks for a fresh one.
 Open the shield and press **Check again** (or **Check with the register**, on a company never consulted).
 
 ```bash
-curl -sS -b cookies.txt -X POST "$BASE/v1/companies/$ORG/vat-check"
+curl -sS -b cookies.txt -X POST "$BASE/v1/companies/$COMPANY/vat-check"
 # 202 Accepted, no body
 ```
 
@@ -169,7 +169,7 @@ the api's, and remember `make dev` after changing it: the api and worker are com
 Confirm what is on record with:
 
 ```bash
-curl -sS -b cookies.txt "$BASE/v1/companies/$ORG/vat-check"
+curl -sS -b cookies.txt "$BASE/v1/companies/$COMPANY/vat-check"
 ```
 
 `404` means never consulted; a body with `"status"` means an answer is on record. If the job ran and

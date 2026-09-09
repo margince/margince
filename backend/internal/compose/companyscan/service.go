@@ -47,9 +47,9 @@ type Advice interface {
 
 // Queued is the read a row describes, as the job that runs it needs it.
 type Queued struct {
-	ScanID   ids.UUID
-	CompanyID    ids.CompanyID
-	ViewerID ids.UserID
+	ScanID    ids.UUID
+	CompanyID ids.CompanyID
+	ViewerID  ids.UserID
 }
 
 // Enqueue queues the read inside the transaction that wrote its row, so the
@@ -373,7 +373,7 @@ func (s *Service) wire(
 		return crmcontracts.CompanyScan{}, err
 	}
 	out := crmcontracts.CompanyScan{
-		CompanyId:  openapi_types.UUID(companyID.UUID),
+		CompanyId:       openapi_types.UUID(companyID.UUID),
 		State:           crmcontracts.CompanyScanStateNever,
 		Findings:        findings,
 		FindingsDropped: dropped,

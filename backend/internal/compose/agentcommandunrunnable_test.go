@@ -156,7 +156,7 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"archiveTag":           malformedRoutedID(http.MethodDelete, "/tags"),
 	"archiveOffer":         malformedRoutedID(http.MethodDelete, "/offers"),
 	"archiveOfferTemplate": malformedRoutedID(http.MethodDelete, "/offer-templates"),
-	"archiveCompany":  malformedRoutedID(http.MethodDelete, "/companies"),
+	"archiveCompany":       malformedRoutedID(http.MethodDelete, "/companies"),
 	"archivePerson":        malformedRoutedID(http.MethodDelete, "/people"),
 	"archiveProduct":       malformedRoutedID(http.MethodDelete, "/products"),
 	"archiveProject":       malformedRoutedID(http.MethodDelete, "/projects"),
@@ -174,7 +174,7 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"deepReadCompany":           malformedRoutedID(http.MethodPost, "/companies"),
 	"technicalEnrichCompany":    malformedRoutedID(http.MethodPost, "/companies"),
 	"mergePerson":               malformedRoutedID(http.MethodPost, "/people"),
-	"mergeCompany":         malformedRoutedID(http.MethodPost, "/companies"),
+	"mergeCompany":              malformedRoutedID(http.MethodPost, "/companies"),
 
 	"updateProject": {
 		refusal: refusedArgument("nickname", "the patch names a member a project has no field for"),
@@ -256,8 +256,8 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"updateCompanyFact":          missingOperand(http.MethodPatch, "/v1/companies/%s/facts/", "factKey"),
 	"confirmCompanyProfileField": missingOperand(http.MethodPost, "/v1/companies/%s/profile-fields//confirm", "field"),
 	"updateCompanyProfileField":  missingOperand(http.MethodPatch, "/v1/companies/%s/profile-fields/", "field"),
-	"removeProjectStakeholder":        missingOperand(http.MethodDelete, "/v1/projects/%s/stakeholders/", "person_id"),
-	"removeProjectCompany":            missingOperand(http.MethodDelete, "/v1/projects/%s/companies/", "company_id"),
+	"removeProjectStakeholder":   missingOperand(http.MethodDelete, "/v1/projects/%s/stakeholders/", "person_id"),
+	"removeProjectCompany":       missingOperand(http.MethodDelete, "/v1/projects/%s/companies/", "company_id"),
 
 	"setProjectStakeholder": {
 		refusal: namedMember("person_id", "invalid",

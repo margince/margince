@@ -44,7 +44,7 @@ import (
 // number the company actually states rather than the one it stated when the job
 // was made. A copy in the args would be a receipt for the wrong number.
 type CheckCompanyVatArgs struct {
-	Workspace      ids.UUID `json:"workspace_id"`
+	Workspace ids.UUID `json:"workspace_id"`
 	CompanyID ids.UUID `json:"company_id"`
 	// Requested marks a consultation a PERSON asked for, and it does two things
 	// that both matter.
@@ -100,9 +100,9 @@ func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) people.VatCheckEnqueue {
 			return errors.New("compose: checking a company's VAT number outside any workspace")
 		}
 		return enqueue.EnqueueTx(ctx, tx, CheckCompanyVatArgs{
-			Workspace:      ws,
+			Workspace: ws,
 			CompanyID: companyID.UUID,
-			Requested:      requested,
+			Requested: requested,
 		}, vatCheckInsertOpts())
 	}
 }
@@ -218,9 +218,9 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVa
 		// visible to anybody.
 		return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, people.VatCheck{
 			CompanyID: companyID,
-			Number:         number,
-			Status:         people.VatCheckInvalid,
-			CheckedAt:      w.clock(),
+			Number:    number,
+			Status:    people.VatCheckInvalid,
+			CheckedAt: w.clock(),
 		}))
 	}
 	var refused *vatcheck.ProviderRefusedError
@@ -243,7 +243,7 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVa
 		consultedAt = w.clock()
 	}
 	return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, people.VatCheck{
-		CompanyID:     companyID,
+		CompanyID:          companyID,
 		Number:             number,
 		Status:             people.VatCheckStatus(result.Status),
 		ConsultationNumber: result.ConsultationNumber,

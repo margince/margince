@@ -65,11 +65,11 @@ type entry struct {
 // serving a row this read cannot prove the reader may see, and the failure would
 // be invisible: the row looks like every other row.
 var scopedTypes = map[string]string{
-	"deal":         "deal",
+	"deal":    "deal",
 	"company": "company",
-	"person":       "person",
-	"lead":         "lead",
-	"project":      "project",
+	"person":  "person",
+	"lead":    "lead",
+	"project": "project",
 }
 
 // doneSince reads the admitted machine actions in the window, for the records

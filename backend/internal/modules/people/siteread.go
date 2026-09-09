@@ -42,27 +42,27 @@ type SiteReadSkip struct {
 
 // SiteRead is the dossier as the SPA polls it.
 type SiteRead struct {
-	ID             ids.UUID
-	CompanyID *ids.CompanyID
-	TargetKind     string
-	SeedURL        string
-	Status         string
-	StatusCode     *string
-	StatusDetail   *string
-	NextAttemptAt  *time.Time
-	Pages          []SiteReadPage
-	Skipped        []SiteReadSkip
-	StoppedReason  *string
-	FactCount      int
-	ProposalIDs    []ids.UUID
-	RequestedBy    string
-	ProfileFields  []DeepReadField
-	LegalEntities  []SiteReadLegalEntity
-	Facts          []DeepReadFact
-	People         []SiteReadPerson
-	Warnings       []string
-	DraftVersion   int
-	ProposalHash   string
+	ID            ids.UUID
+	CompanyID     *ids.CompanyID
+	TargetKind    string
+	SeedURL       string
+	Status        string
+	StatusCode    *string
+	StatusDetail  *string
+	NextAttemptAt *time.Time
+	Pages         []SiteReadPage
+	Skipped       []SiteReadSkip
+	StoppedReason *string
+	FactCount     int
+	ProposalIDs   []ids.UUID
+	RequestedBy   string
+	ProfileFields []DeepReadField
+	LegalEntities []SiteReadLegalEntity
+	Facts         []DeepReadFact
+	People        []SiteReadPerson
+	Warnings      []string
+	DraftVersion  int
+	ProposalHash  string
 	// Phase and PagesRead are the worker's live-progress hints while
 	// Status is 'running' (crawling | extracting + committed page count);
 	// the terminal report is the authority once Status ends.
@@ -157,7 +157,7 @@ var finishedSiteReadStatuses = map[string]bool{
 // subject does, and bind it only once a human (onboarding) or a verdict
 // (triage) says it should exist.
 const (
-	TargetKindCompany = "company"
+	TargetKindCompany      = "company"
 	TargetKindOnboarding   = "onboarding"
 	TargetKindDomainTriage = "domain_triage"
 )

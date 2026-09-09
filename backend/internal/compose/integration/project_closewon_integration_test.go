@@ -580,10 +580,10 @@ func TestARepCannotAttachAProjectTheyCannotWrite(t *testing.T) {
 	rep := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"deal":         {Read: true, Create: true, Update: true},
-			"project":      {Read: true, Update: true},
-			"company": {Read: true},
-			"pipeline":     {Read: true},
+			"deal":     {Read: true, Create: true, Update: true},
+			"project":  {Read: true, Update: true},
+			"company":  {Read: true},
+			"pipeline": {Read: true},
 		},
 		RowScope: principal.RowScopeOwn,
 	})
@@ -646,10 +646,10 @@ func TestTheProjectsOwnerStillAttachesAndWins(t *testing.T) {
 	rep := e.As(owner, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"deal":         {Read: true, Create: true, Update: true},
-			"project":      {Read: true, Update: true},
-			"company": {Read: true},
-			"pipeline":     {Read: true},
+			"deal":     {Read: true, Create: true, Update: true},
+			"project":  {Read: true, Update: true},
+			"company":  {Read: true},
+			"pipeline": {Read: true},
 		},
 		RowScope: principal.RowScopeOwn,
 	})

@@ -132,8 +132,8 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
 		CompanyID: ids.From[ids.CompanyKind](company),
-		SourceURL:      "https://acme.example",
-		Facts:          employeeRangeFact("25 to 50"),
+		SourceURL: "https://acme.example",
+		Facts:     employeeRangeFact("25 to 50"),
 	}); err != nil {
 		t.Fatalf("ApplyDeepRead: %v", err)
 	}
@@ -144,8 +144,8 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	// A later read never overwrites the standing value — fill-once.
 	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
 		CompanyID: ids.From[ids.CompanyKind](company),
-		SourceURL:      "https://acme.example",
-		Facts:          employeeRangeFact("about 300 people"),
+		SourceURL: "https://acme.example",
+		Facts:     employeeRangeFact("about 300 people"),
 	}); err != nil {
 		t.Fatalf("second ApplyDeepRead: %v", err)
 	}
@@ -158,8 +158,8 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	vague := insertCompany(t, e, e.Rep1, "vague.example", "")
 	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
 		CompanyID: ids.From[ids.CompanyKind](vague),
-		SourceURL:      "https://vague.example",
-		Facts:          employeeRangeFact("50-200 employees"),
+		SourceURL: "https://vague.example",
+		Facts:     employeeRangeFact("50-200 employees"),
 	}); err != nil {
 		t.Fatalf("ambiguous ApplyDeepRead: %v", err)
 	}
@@ -193,8 +193,8 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	}
 	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
 		CompanyID: ids.From[ids.CompanyKind](claimed),
-		SourceURL:      "https://claimed.example",
-		Facts:          employeeRangeFact("about 300 people"),
+		SourceURL: "https://claimed.example",
+		Facts:     employeeRangeFact("about 300 people"),
 	}); err != nil {
 		t.Fatalf("ApplyDeepRead against a human-claimed fact: %v", err)
 	}

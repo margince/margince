@@ -104,9 +104,9 @@ func (e *Env) SeedPartnerCompany(t *testing.T, name string, tier *string, owner 
 		RowScope: principal.RowScopeAll,
 	})
 	if _, err := e.People.UpsertPartner(seeder, people.UpsertPartnerInput{
-		CompanyID: ids.From[ids.CompanyKind](company),
-		PartnerRole:    "consulting",
-		MarginTier:     tier,
+		CompanyID:   ids.From[ids.CompanyKind](company),
+		PartnerRole: "consulting",
+		MarginTier:  tier,
 	}); err != nil {
 		t.Fatalf("giving %s a partner programme: %v", name, err)
 	}

@@ -70,7 +70,7 @@ func (w *siteDeepReadWorker) askWhatTheCompanyRuns(ctx context.Context, claim pe
 	// button on a moment ago — joins that lookup instead of asking the same
 	// three services twice.
 	if _, err := client.Insert(ctx, TechnicalEnrichCompanyArgs{
-		Workspace:      workspace,
+		Workspace: workspace,
 		CompanyID: *claim.CompanyID,
 	}, technicalInsertOpts()); err != nil {
 		w.log.WarnContext(ctx, "technical lookup not queued after site read",

@@ -68,10 +68,10 @@ const graphExpansionLimit = 50
 
 // anchorLinkColumn names the activity_link column an anchor type walks.
 var anchorLinkColumn = map[string]string{
-	string(datasource.EntityPerson):       "person_id",
+	string(datasource.EntityPerson):  "person_id",
 	string(datasource.EntityCompany): "company_id",
-	string(datasource.EntityDeal):         "deal_id",
-	string(datasource.EntityProject):      "project_id",
+	string(datasource.EntityDeal):    "deal_id",
+	string(datasource.EntityProject): "project_id",
 }
 
 // assembleGraph is the fixed-depth context walk (B-EP05.20a): anchor →

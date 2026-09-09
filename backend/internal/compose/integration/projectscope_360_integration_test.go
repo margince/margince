@@ -143,7 +143,7 @@ func TestCompany360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 	f := seedTwoEngagementAccount(t, e)
 	svc := company360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()),
 		func() time.Time { return roomFixedNow })
-	companyID := companyIDOf(f.org)
+	companyID := companyIDOf(f.company)
 
 	scoped, err := svc.AssembleScoped(e.Admin(), companyID, company360.AssembleOptions{ProjectID: &f.erp})
 	if err != nil {
@@ -212,10 +212,10 @@ func TestAProjectScopeIsGatedLikeAReadOfTheProject(t *testing.T) {
 	}
 
 	companySvc := company360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()), func() time.Time { return roomFixedNow })
-	if _, err := companySvc.AssembleScoped(rep, companyIDOf(f.org), company360.AssembleOptions{ProjectID: &f.erp}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := companySvc.AssembleScoped(rep, companyIDOf(f.company), company360.AssembleOptions{ProjectID: &f.erp}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("company page scoped without a project grant: err = %v, want permission denied", err)
 	}
-	if _, err := companySvc.AssembleScoped(e.Admin(), companyIDOf(f.org), company360.AssembleOptions{ProjectID: &nobodyID}); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := companySvc.AssembleScoped(e.Admin(), companyIDOf(f.company), company360.AssembleOptions{ProjectID: &nobodyID}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("company page scoped to a project that does not exist: err = %v, want not found", err)
 	}
 }

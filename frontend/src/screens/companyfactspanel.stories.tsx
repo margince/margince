@@ -28,7 +28,7 @@ type CompanyFact = components["schemas"]["CompanyFact"];
 //
 // Read every frame in BOTH themes with the toolbar's Theme control.
 
-const ORG = "01a04298-1971-7076-8076-8064da20fdff";
+const COMPANY = "01a04298-1971-7076-8076-8064da20fdff";
 
 function fact(over: Partial<CompanyFact> = {}): CompanyFact {
   return {
@@ -111,7 +111,7 @@ function frame(
 ) {
   const routes: RouteMap = {
     "GET /me": meRoute({}),
-    [`GET /companies/${ORG}/facts`]: () => jsonResponse({ data: facts }),
+    [`GET /companies/${COMPANY}/facts`]: () => jsonResponse({ data: facts }),
   };
   installFetchStub(routes);
   return (
@@ -121,7 +121,7 @@ function frame(
           Your seat may read this account and not correct it.
         </p>
       )}
-      <CompanyFactsPanel companyId={ORG} canEdit={canEdit} reasonId={reasonId} />
+      <CompanyFactsPanel companyId={COMPANY} canEdit={canEdit} reasonId={reasonId} />
     </StoryProviders>
   );
 }

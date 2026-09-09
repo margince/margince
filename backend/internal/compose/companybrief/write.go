@@ -46,10 +46,10 @@ type Evidence = claims.Evidence
 // literal copy would let a contract rename leave the filter matching a type
 // the wire no longer carries — a citation that silently stops grounding.
 var (
-	citeCompany = string(crmcontracts.CompanyBriefEvidenceEntityTypeCompany)
-	citeDeal         = string(crmcontracts.CompanyBriefEvidenceEntityTypeDeal)
-	citeActivity     = string(crmcontracts.CompanyBriefEvidenceEntityTypeActivity)
-	citePerson       = string(crmcontracts.CompanyBriefEvidenceEntityTypePerson)
+	citeCompany  = string(crmcontracts.CompanyBriefEvidenceEntityTypeCompany)
+	citeDeal     = string(crmcontracts.CompanyBriefEvidenceEntityTypeDeal)
+	citeActivity = string(crmcontracts.CompanyBriefEvidenceEntityTypeActivity)
+	citePerson   = string(crmcontracts.CompanyBriefEvidenceEntityTypePerson)
 )
 
 // One sentence, one record — the shape rule both writers follow.

@@ -72,9 +72,9 @@ type SignatureCompanyName struct {
 // CompanyNameCandidate is one provisionally-named company together with
 // every name that could replace the domain-derived one.
 type CompanyNameCandidate struct {
-	CompanyID ids.CompanyID
-	DisplayName    string
-	Signatures     []SignatureCompanyName
+	CompanyID   ids.CompanyID
+	DisplayName string
+	Signatures  []SignatureCompanyName
 	// DossierNames are the site-read profile values that state what the
 	// company calls itself (display_name, legal_name).
 	DossierNames []string

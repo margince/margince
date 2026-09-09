@@ -130,9 +130,9 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 		states[s.Object] = s.State
 	}
 	want := map[string]string{
-		"person":       syncStateStale,
+		"person":  syncStateStale,
 		"company": syncStateFresh,
-		"widget":       syncStateFresh,
+		"widget":  syncStateFresh,
 	}
 	for object, wantState := range want {
 		if states[object] != wantState {

@@ -18,7 +18,7 @@ import (
 type ListRelationshipsInput struct {
 	Kind            *string
 	PersonID        *ids.PersonID
-	CompanyID  *ids.CompanyID
+	CompanyID       *ids.CompanyID
 	DealID          *ids.DealID
 	ProjectID       *ids.ProjectID
 	IncludeArchived bool

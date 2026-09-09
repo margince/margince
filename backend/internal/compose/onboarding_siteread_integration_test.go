@@ -479,7 +479,7 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 			t.Fatalf("unresolved refresh = %v, want InvalidSiteReadResolutionError", err)
 		}
 	}
-	unchanged, err := e.People.GetCompany(human)
+	unchanged, err := e.People.GetAnchorCompany(human)
 	if err != nil {
 		t.Fatal(err)
 	}

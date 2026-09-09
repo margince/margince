@@ -49,11 +49,11 @@ var tableOwners = map[string]string{
 	// What was promised, asked and decided in captured conversations
 	// (ADR-0097 D1). It lives with people because a claim is an attribute of
 	// the PERSON it is about, written through the same store that owns them.
-	"conversation_claim":             "internal/modules/people",
+	"conversation_claim":        "internal/modules/people",
 	"company":                   "internal/modules/people",
 	"company_domain":            "internal/modules/people",
 	"company_relationship_type": "internal/modules/people",
-	"signal_thread_scan":             "internal/compose",
+	"signal_thread_scan":        "internal/compose",
 	// One reader's frozen walk through their worklist. Owned by the compose
 	// package that writes it, the way compose/weekly owns team_weekly_review.
 	"worklist_snapshot":      "internal/compose/worklistsnap",
@@ -69,18 +69,18 @@ var tableOwners = map[string]string{
 	// administered reason a refusal names. people owns them because the SUBJECT
 	// is a lead or a person; the deal an acceptance produces is an outcome, and
 	// compose wires the caller that does both.
-	"sdr_handoff":                "internal/modules/people",
-	"sdr_handoff_event":          "internal/modules/people",
-	"sdr_handoff_reason":         "internal/modules/people",
+	"sdr_handoff":           "internal/modules/people",
+	"sdr_handoff_event":     "internal/modules/people",
+	"sdr_handoff_reason":    "internal/modules/people",
 	"company_profile_field": "internal/modules/people",
 	"company_vat_check":     "internal/modules/people",
-	"person_profile_field":       "internal/modules/people",
+	"person_profile_field":  "internal/modules/people",
 	// The signature pass's per-person read cursor (PO-F-2a): which mail was
 	// already shown to the model, so the same empty signature is not re-read
 	// every night.
 	"person_signature_enrich_state": "internal/modules/people",
-	"company_fact":             "internal/modules/people",
-	"company_geocode_state":    "internal/modules/people",
+	"company_fact":                  "internal/modules/people",
+	"company_geocode_state":         "internal/modules/people",
 	"geocode_cache":                 "internal/modules/people",
 	// What a technical lookup last read for one company, per public source,
 	// and what those sources answered. The cache is installation-global for
@@ -88,12 +88,12 @@ var tableOwners = map[string]string{
 	// for every tenant — and people owns both because it owns the company
 	// record they describe.
 	"company_technical_state": "internal/modules/people",
-	"technical_lookup_cache":       "internal/modules/people",
+	"technical_lookup_cache":  "internal/modules/people",
 	// What a mail domain is allowed to create. It governs COMPANY
 	// creation, which people owns, so the verdict lives with the records it
 	// authorizes rather than with the capture path that asks the question.
 	"company_domain_disposition": "internal/modules/people",
-	"site_read":                       "internal/modules/people",
+	"site_read":                  "internal/modules/people",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
 	"dedupe_candidate": "internal/modules/people",
 	// deals (incl. the E03 offer engine: rate-card + versioned offers)

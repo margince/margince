@@ -235,11 +235,11 @@ func recordExtractedEvent(
 		return false, fmt.Errorf("cited message id: %w", err)
 	}
 	return signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-		Kind:           event.Kind,
-		CompanyID: thread.CompanyID,
-		Summary:        event.Summary,
-		Severity:       extractKinds[event.Kind],
-		Fingerprint:    signalFingerprint(event.Kind, thread.CompanyID, cited),
+		Kind:        event.Kind,
+		CompanyID:   thread.CompanyID,
+		Summary:     event.Summary,
+		Severity:    extractKinds[event.Kind],
+		Fingerprint: signalFingerprint(event.Kind, thread.CompanyID, cited),
 		Evidence: []signals.DerivedEvidence{
 			{Snippet: event.Summary, ActivityID: cited},
 		},

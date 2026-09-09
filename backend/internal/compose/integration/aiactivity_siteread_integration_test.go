@@ -42,7 +42,7 @@ type websiteReadFixture struct {
 	rep      context.Context
 	worker   context.Context
 	consumer *aiactivity.Consumer
-	company      ids.CompanyID
+	company  ids.CompanyID
 	readID   ids.UUID
 	// delivered is how far the fixture's subscriber has got, so drain hands
 	// the consumer only what it has not seen — a replay of the first envelope
@@ -77,7 +77,7 @@ func newWebsiteReadFixture(t *testing.T) *websiteReadFixture {
 		rep:      rep,
 		worker:   worker,
 		consumer: aiactivity.NewConsumer(aiactivity.NewStore(e.DB()), testLogger(t)),
-		company:      company,
+		company:  company,
 		readID:   read.ID,
 	}
 }
@@ -182,8 +182,8 @@ func TestAQueuedWebsiteReadIsProjectedAsTheRepsOwnLiveWork(t *testing.T) {
 	if got.StaleAfter == nil {
 		t.Fatal("a queued occurrence carries no stale_after, so a queue nobody drains would render as live forever")
 	}
-	if got.SubjectType == nil || *got.SubjectType != "company" || got.SubjectID == nil || *got.SubjectID != f.org.UUID {
-		t.Fatalf("subject = %v/%v, want company/%s", got.SubjectType, got.SubjectID, f.org)
+	if got.SubjectType == nil || *got.SubjectType != "company" || got.SubjectID == nil || *got.SubjectID != f.company.UUID {
+		t.Fatalf("subject = %v/%v, want company/%s", got.SubjectType, got.SubjectID, f.company)
 	}
 	if got.SubjectLabel == nil || *got.SubjectLabel != "Acme Systems" {
 		t.Fatalf("subject_label = %v, want the company's own name, so the rail can say which website it is reading", got.SubjectLabel)

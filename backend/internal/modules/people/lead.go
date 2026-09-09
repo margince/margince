@@ -22,18 +22,18 @@ import (
 )
 
 type CreateLeadInput struct {
-	FullName        *string
-	Email           *string
-	Title           *string
-	CompanyName     *string
+	FullName            *string
+	Email               *string
+	Title               *string
+	CompanyName         *string
 	CandidateCompanyKey *string
-	LinkedInURL     *string
-	Status          string
-	OwnerID         *ids.UserID
-	ProjectID       *ids.ProjectID
-	SourceSystem    *string
-	SourceID        *string
-	Source          string
+	LinkedInURL         *string
+	Status              string
+	OwnerID             *ids.UserID
+	ProjectID           *ids.ProjectID
+	SourceSystem        *string
+	SourceID            *string
+	Source              string
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (customfields.go).

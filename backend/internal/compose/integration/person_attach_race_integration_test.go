@@ -53,8 +53,8 @@ func TestAnAttachCannotOutrunTheArchive(t *testing.T) {
 	attached := make(chan error, 1)
 	go func() {
 		_, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-			Kind:           "employment",
-			PersonID:       &person,
+			Kind:      "employment",
+			PersonID:  &person,
 			CompanyID: &company,
 		})
 		attached <- err

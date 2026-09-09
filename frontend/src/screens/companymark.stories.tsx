@@ -23,10 +23,10 @@ export default meta;
 type Story = StoryObj<typeof CompanyMark>;
 type CompanyProfile = components["schemas"]["CompanyProfile"];
 
-const ORG = "00000000-0000-4000-8000-000000000010";
+const COMPANY = "00000000-0000-4000-8000-000000000010";
 
 const WITHOUT_MARK: CompanyProfile = {
-  company_id: ORG,
+  company_id: COMPANY,
   display_name: "Brandt Automotive GmbH",
 };
 

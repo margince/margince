@@ -61,11 +61,11 @@ func (s *Store) IntroPath(ctx context.Context, signalID ids.SignalID, now time.T
 
 	route := warmth.Contacts[0] // Warmth orders strongest-first
 	out := crmcontracts.SignalIntroPath{
-		SignalId:      sig.Id,
+		SignalId:          sig.Id,
 		ResolvedCompanyId: warmth.ResolvedCompanyId,
-		ContactId:     route.PersonId,
-		ContactName:   route.FullName,
-		Relationship:  route,
+		ContactId:         route.PersonId,
+		ContactName:       route.FullName,
+		Relationship:      route,
 	}
 	out.Evidence.SourceSignalId = sig.Id
 	out.Evidence.ResolvedCompanyId = warmth.ResolvedCompanyId

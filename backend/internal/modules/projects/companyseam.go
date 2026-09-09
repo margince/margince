@@ -39,9 +39,9 @@ type ProjectCompanies func(
 
 // CompanyOnProject is one company's place on a project.
 type CompanyOnProject struct {
-	CompanyID ids.CompanyID
-	DisplayName    string
-	Role           string
+	CompanyID   ids.CompanyID
+	DisplayName string
+	Role        string
 }
 
 // CompaniesFrom adapts a reader that answers rows of some other shape into the

@@ -45,7 +45,7 @@ func TestGetCompanyVatCheckHandler(t *testing.T) {
 	// Seeded through the real writer, because a hand-inserted row proves
 	// nothing about what production stores.
 	if err := e.store.RecordVatCheck(ctx, VatCheck{
-		CompanyID:     companyID,
+		CompanyID:          companyID,
 		Number:             "DE123456789",
 		Status:             VatCheckValid,
 		ConsultationNumber: "WAPIAAAAXk3-stand-in",
@@ -110,9 +110,9 @@ func TestAVatCheckWithNoReceiptOmitsItRatherThanSendingEmpty(t *testing.T) {
 	// things on the wire: "" reads to a client as a receipt it should show.
 	if err := e.store.RecordVatCheck(ctx, VatCheck{
 		CompanyID: ids.From[ids.CompanyKind](ids.UUID(company.Id)),
-		Number:         "DE987654321",
-		Status:         VatCheckInvalid,
-		CheckedAt:      consultedAt,
+		Number:    "DE987654321",
+		Status:    VatCheckInvalid,
+		CheckedAt: consultedAt,
 	}); err != nil {
 		t.Fatalf("recording a consultation that issued no receipt: %v", err)
 	}

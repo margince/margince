@@ -76,7 +76,7 @@ type License struct {
 	Expiry       time.Time `json:"expiry"`
 	ID           string    `json:"id"`
 	Subject      string    `json:"subject"`
-	Company          string    `json:"company,omitempty"`
+	Company      string    `json:"company,omitempty"`
 	ContactName  string    `json:"name,omitempty"`
 	ContactEmail string    `json:"email,omitempty"`
 	KeyID        string    `json:"key_id"`

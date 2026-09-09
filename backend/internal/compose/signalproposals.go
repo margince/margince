@@ -66,10 +66,10 @@ const (
 // sides — a reader deciding "is this right?" needs to see what the record says
 // now, not only what it would say next.
 type lifecycleProposal struct {
-	CompanyID ids.CompanyID `json:"company_id"`
-	CurrentStage   string             `json:"current_lifecycle"`
-	ProposedStage  string             `json:"proposed_lifecycle"`
-	SignalID       ids.UUID           `json:"signal_id"`
+	CompanyID     ids.CompanyID `json:"company_id"`
+	CurrentStage  string        `json:"current_lifecycle"`
+	ProposedStage string        `json:"proposed_lifecycle"`
+	SignalID      ids.UUID      `json:"signal_id"`
 	// Because is the signal's own summary, so the card can say why in the
 	// words the conversation used rather than in a rule's words.
 	Because string `json:"because"`
@@ -107,9 +107,9 @@ func NewSignalProposer(pool *pgxpool.Pool, svc *approvals.Service, log *slog.Log
 // contradiction is one account whose stage its own mail contradicts.
 type contradiction struct {
 	CompanyID ids.CompanyID
-	Stage          string
-	SignalID       ids.UUID
-	Summary        string
+	Stage     string
+	SignalID  ids.UUID
+	Summary   string
 }
 
 // RunWorkspace offers a stage change for every account whose open
@@ -199,11 +199,11 @@ func (p *SignalProposer) offerStageChange(ctx context.Context, account contradic
 		return false, err
 	}
 	body, err := json.Marshal(lifecycleProposal{
-		CompanyID: account.CompanyID,
-		CurrentStage:   account.Stage,
-		ProposedStage:  lifecycleEnded,
-		SignalID:       account.SignalID,
-		Because:        account.Summary,
+		CompanyID:     account.CompanyID,
+		CurrentStage:  account.Stage,
+		ProposedStage: lifecycleEnded,
+		SignalID:      account.SignalID,
+		Because:       account.Summary,
 	})
 	if err != nil {
 		return false, fmt.Errorf("compose: encoding the lifecycle proposal: %w", err)

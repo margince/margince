@@ -61,16 +61,16 @@ type HandoffFacts struct {
 // HandoffProject is the project row itself, carried across the seam with the
 // fields a handover is judged on.
 type HandoffProject struct {
-	ProjectID      ids.UUID
-	Name           string
-	Key            string
-	Phase          string
-	Description    string
-	CompanyID *ids.UUID
-	OwnerID        *ids.UUID
-	OwnerName      string
-	StartedAt      *time.Time
-	TargetEndDate  *time.Time
+	ProjectID     ids.UUID
+	Name          string
+	Key           string
+	Phase         string
+	Description   string
+	CompanyID     *ids.UUID
+	OwnerID       *ids.UUID
+	OwnerName     string
+	StartedAt     *time.Time
+	TargetEndDate *time.Time
 }
 
 // HandoffReader serves one project's handover material under the caller's row

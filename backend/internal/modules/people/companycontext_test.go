@@ -18,7 +18,7 @@ func TestAssembleCompanyContextIsCanonicalAndScoped(t *testing.T) {
 	generatedAt := time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)
 	company := Company{
 		CompanyID:         ids.From[ids.CompanyKind](ids.MustParse("018f3a1b-0000-7000-8000-0000000000a1")),
-		DisplayName:            "Gradion",
+		DisplayName:       "Gradion",
 		CompanySource:     "manual",
 		CompanyCapturedBy: "human:owner",
 		ProfileFields: []CompanyProfileField{
@@ -77,8 +77,8 @@ func TestAssembleCompanyContextFallsBackToAnchorIdentity(t *testing.T) {
 	website := "gradion.com"
 	company := Company{
 		CompanyID:         ids.From[ids.CompanyKind](ids.MustParse("018f3a1b-0000-7000-8000-0000000000a1")),
-		DisplayName:            "Gradion",
-		Website:                &website,
+		DisplayName:       "Gradion",
+		Website:           &website,
 		CompanySource:     "manual",
 		CompanyCapturedBy: "human:owner",
 	}

@@ -35,11 +35,11 @@ func TestThreeCompaniesWorkOneProjectAndEachPageFindsIt(t *testing.T) {
 
 	p := seedProject(admin, t, e, "Joint rollout", compA, nil)
 	for _, on := range []struct {
-		company  ids.UUID
-		role string
+		company ids.UUID
+		role    string
 	}{{compB, "partner"}, {compC, "subcontractor"}} {
 		if _, err := e.People.SetProjectCompany(admin, people.SetProjectCompanyInput{
-			ProjectID: p.ID, CompanyID: companyIDOf(on.org), Role: on.role,
+			ProjectID: p.ID, CompanyID: companyIDOf(on.company), Role: on.role,
 		}); err != nil {
 			t.Fatalf("put %s on the project: %v", on.role, err)
 		}

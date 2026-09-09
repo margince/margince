@@ -19,11 +19,11 @@ import (
 // withheld (fieldmask.go). They are wire names, which is why they are not the
 // column constants they happen to match today.
 const (
-	filterCompanyID     = "company_id"
+	filterCompanyID          = "company_id"
 	filterTag                = "tag_id"
 	filterTagMode            = "tag_mode"
 	filterOwnerID            = "owner_id"
-	filterPartnerCompanyID       = "partner_company_id"
+	filterPartnerCompanyID   = "partner_company_id"
 	filterPartnerAttribution = "partner_attribution"
 	filterPartnerSourced     = "partner_sourced"
 	filterPipelineID         = "pipeline_id"

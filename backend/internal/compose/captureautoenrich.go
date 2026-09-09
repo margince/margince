@@ -284,10 +284,10 @@ func startAutoEnrichRead(ctx context.Context, peopleStore *people.Store,
 	_, joined, err := peopleStore.StartSiteReadQueued(ctx, companyID, seedURL, systemAutoEnrichActor,
 		func(ctx context.Context, tx pgx.Tx, read people.SiteRead) error {
 			_, insErr := client.InsertTx(ctx, tx, SiteDeepReadArgs{
-				Workspace:      storekit.MustWorkspace(ctx),
-				CompanyID: companyID.UUID,
-				SiteReadID:     read.ID,
-				RequestedBy:    read.RequestedBy,
+				Workspace:   storekit.MustWorkspace(ctx),
+				CompanyID:   companyID.UUID,
+				SiteReadID:  read.ID,
+				RequestedBy: read.RequestedBy,
 				// Declared in the payload as well as enforced at the worker: a
 				// job carries what it was queued to cost, so an operator
 				// reading river_job sees the ceiling without inferring it.

@@ -47,7 +47,7 @@ func TestEveryVatCheckStatementRunsAgainstTheRealSchema(t *testing.T) {
 	// 2. The first check. Nothing is replaced, so the audit image has no before
 	//    half — the path that would fail if the write demanded one.
 	first := VatCheck{
-		CompanyID:     companyID,
+		CompanyID:          companyID,
 		Number:             "DE123456789",
 		Status:             VatCheckValid,
 		ConsultationNumber: "WAPIAAAAXk3-stand-in",
@@ -110,7 +110,7 @@ func TestAReceiptCannotBeStoredForALookupNobodyMade(t *testing.T) {
 	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 
 	err = e.store.RecordVatCheck(ctx, VatCheck{
-		CompanyID:     companyID,
+		CompanyID:          companyID,
 		Number:             "DE123456789",
 		Status:             VatCheckUnavailable,
 		ConsultationNumber: "WAPIAAAAXk5-stand-in",
@@ -124,9 +124,9 @@ func TestAReceiptCannotBeStoredForALookupNobodyMade(t *testing.T) {
 	// receipt.
 	if err := e.store.RecordVatCheck(ctx, VatCheck{
 		CompanyID: companyID,
-		Number:         "DE123456789",
-		Status:         VatCheckUnavailable,
-		CheckedAt:      consultedAt,
+		Number:    "DE123456789",
+		Status:    VatCheckUnavailable,
+		CheckedAt: consultedAt,
 	}); err != nil {
 		t.Fatalf("recording an unavailable register: %v", err)
 	}

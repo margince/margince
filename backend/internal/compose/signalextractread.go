@@ -86,7 +86,7 @@ type threadMessage struct {
 // belongs to already resolved — an event about nobody is not an event this
 // product can file.
 type settledThread struct {
-	Key            string
+	Key       string
 	CompanyID ids.UUID
 	// Newest is the instant the watermark advances to, read at the same time
 	// as the messages so a message arriving mid-pass is not skipped: it is

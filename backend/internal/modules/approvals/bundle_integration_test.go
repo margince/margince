@@ -48,7 +48,7 @@ func grantsFor(objects map[string]principal.ObjectGrant) principal.Permissions {
 func decidesEverything() principal.Permissions {
 	return grantsFor(map[string]principal.ObjectGrant{
 		tableCompany: {Read: true, Update: true},
-		tableLead:         {Create: true},
+		tableLead:    {Create: true},
 	})
 }
 

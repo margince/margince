@@ -246,12 +246,12 @@ func withProjectFilter(filters map[string]string) map[string]string {
 // against nothing a drill-through could show.
 func winLossSpec() reportSpec {
 	dimensions := map[string]string{
-		fieldStatus:         colStatus,
-		fieldSource:         colSource,
-		fieldOwnerID:        colOwnerID,
-		fieldPipelineID:     colPipelineID,
-		fieldCompanyID: colCompanyID,
-		fieldCurrency:       colCurrency,
+		fieldStatus:     colStatus,
+		fieldSource:     colSource,
+		fieldOwnerID:    colOwnerID,
+		fieldPipelineID: colPipelineID,
+		fieldCompanyID:  colCompanyID,
+		fieldCurrency:   colCurrency,
 		// WHY we lost, beside how much and how long. Two CHECK constraints on
 		// the table bind this column to the loss: deal_lost_reason wants one
 		// exactly when status is 'lost', and deal_lost_reason_only_when_lost

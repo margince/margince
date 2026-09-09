@@ -34,7 +34,7 @@ func partnerReader() principal.Permissions {
 	return principal.Permissions{
 		RoleKeys: []string{"admin"},
 		Objects: map[string]principal.ObjectGrant{
-			"partner":      {Read: true},
+			"partner": {Read: true},
 			"company": {Read: true},
 		},
 		RowScope: principal.RowScopeAll,

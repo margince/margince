@@ -54,7 +54,7 @@ const (
 	paramUnassigned       = "unassigned"
 	paramPipelineID       = "pipeline_id"
 	paramStageID          = "stage_id"
-	paramCompanyID   = "company_id"
+	paramCompanyID        = "company_id"
 	paramStatus           = "status"
 	paramForecastCategory = "forecast_category"
 	paramKind             = "kind"

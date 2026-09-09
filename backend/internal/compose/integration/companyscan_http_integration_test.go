@@ -20,10 +20,10 @@ import (
 )
 
 type scanResponse struct {
-	CompanyID string `json:"company_id"`
-	State          string `json:"state"`
-	DegradeReason  string `json:"degrade_reason"`
-	FindingsDrop   int    `json:"findings_dropped"`
+	CompanyID     string `json:"company_id"`
+	State         string `json:"state"`
+	DegradeReason string `json:"degrade_reason"`
+	FindingsDrop  int    `json:"findings_dropped"`
 }
 
 func TestAccountScanHTTPSurface(t *testing.T) {

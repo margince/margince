@@ -62,13 +62,13 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 				return identity.InstallationBootstrap{}, err
 			}
 			return identity.InstallationBootstrap{
-				CompanyName: cfg.Workspace.Name,
-				BaseCurrency:     cfg.Workspace.BaseCurrency,
-				BaseLanguage:     cfg.Workspace.BaseLanguage,
-				Timezone:         cfg.Workspace.Timezone,
-				AdminEmail:       b.Email,
-				AdminName:        b.DisplayName,
-				AdminPassword:    pw,
+				CompanyName:   cfg.Workspace.Name,
+				BaseCurrency:  cfg.Workspace.BaseCurrency,
+				BaseLanguage:  cfg.Workspace.BaseLanguage,
+				Timezone:      cfg.Workspace.Timezone,
+				AdminEmail:    b.Email,
+				AdminName:     b.DisplayName,
+				AdminPassword: pw,
 			}, nil
 		}
 	}

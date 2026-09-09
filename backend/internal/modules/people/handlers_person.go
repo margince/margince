@@ -204,13 +204,13 @@ func (h Handlers) QuickCapturePerson(w http.ResponseWriter, r *http.Request, _ c
 		return
 	}
 	in := QuickCaptureInput{
-		FullName:         req.FullName,
-		Title:            req.Title,
+		FullName:    req.FullName,
+		Title:       req.Title,
 		CompanyID:   idArg[ids.CompanyKind](req.CompanyId),
 		CompanyName: req.CompanyName,
-		Role:             req.Role,
-		ProfileURL:       req.ProfileUrl,
-		Phone:            req.Phone,
+		Role:        req.Role,
+		ProfileURL:  req.ProfileUrl,
+		Phone:       req.Phone,
 	}
 	if req.Email != nil {
 		email := string(*req.Email)
@@ -223,7 +223,7 @@ func (h Handlers) QuickCapturePerson(w http.ResponseWriter, r *http.Request, _ c
 		return
 	}
 	out := crmcontracts.QuickCapturePersonResult{
-		Person:              captured.Person,
+		Person:         captured.Person,
 		CompanyCreated: &captured.CompanyCreated,
 	}
 	if captured.CompanyID != nil {

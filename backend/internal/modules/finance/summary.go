@@ -43,7 +43,7 @@ func (s *Store) SummaryFor(
 	}
 	out := crmcontracts.CompanyFinanceSummary{
 		CompanyId: openapi_types.UUID(companyID.UUID),
-		State:          crmcontracts.FinanceSummaryStateNoConnection,
+		State:     crmcontracts.FinanceSummaryStateNoConnection,
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// The account itself is row-scoped, and a finance grant is not a

@@ -169,10 +169,10 @@ type CompanyFact struct {
 // nobody has filled yet.
 type Company struct {
 	CompanyID         ids.CompanyID
-	DisplayName            string
+	DisplayName       string
 	CompanySource     string
 	CompanyCapturedBy string
-	Website                *string
+	Website           *string
 	// The bucket path of the WIDE mark the record is wearing — one a website
 	// read resolved, or one a person uploaded (SetCompanyLogo) — and nil when
 	// it wears none. It never reaches the wire: LogoURL turns it into the

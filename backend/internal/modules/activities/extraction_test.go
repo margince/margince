@@ -191,11 +191,11 @@ func TestBeginExtractionReadRefusesANonPositiveReclaimInterval(t *testing.T) {
 func TestRequestAccessLinksOnlyForLinkableEntityTypes(t *testing.T) {
 	id := ids.NewV7()
 	cases := map[crmcontracts.AttachmentEntityType]bool{
-		"person":       true,
-		"company": true,
-		"deal":         true,
-		"activity":     false,
-		"lead":         false,
+		"person":   true,
+		"company":  true,
+		"deal":     true,
+		"activity": false,
+		"lead":     false,
 	}
 	for entityType, wantLinked := range cases {
 		links := requestAccessLinks(entityType, id)

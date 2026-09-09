@@ -26,9 +26,9 @@ import (
 // CreateRelationshipInput is one edge to write: its kind, the endpoints that
 // kind anchors, and the optional facts an employment carries.
 type CreateRelationshipInput struct {
-	Kind              string
-	PersonID          *ids.PersonID
-	CompanyID    *ids.CompanyID
+	Kind                  string
+	PersonID              *ids.PersonID
+	CompanyID             *ids.CompanyID
 	CounterpartyCompanyID *ids.CompanyID
 	// CounterpartyPersonID is the far end of the one person↔person kind
 	// (works_with); nil for every other kind, whose shapes refuse it.

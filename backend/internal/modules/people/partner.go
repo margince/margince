@@ -33,7 +33,7 @@ const partnerColumns = `company_id, cert_status, partner_role, margin_tier,
 	version, created_at, updated_at, archived_at`
 
 type partnerRow struct {
-	CompanyID    ids.CompanyID
+	CompanyID         ids.CompanyID
 	CertStatus        string
 	PartnerRole       *string
 	MarginTier        *string
@@ -67,7 +67,7 @@ func scanPartner(r pgx.Row) (partnerRow, error) {
 }
 
 type UpsertPartnerInput struct {
-	CompanyID    ids.CompanyID
+	CompanyID         ids.CompanyID
 	PartnerRole       string
 	CertStatus        *string
 	MarginTier        *string
@@ -400,11 +400,11 @@ func partnerListWhere(ctx context.Context, in ListPartnersInput, arg func(any) i
 
 func wirePartner(p partnerRow) crmcontracts.Partner {
 	out := crmcontracts.Partner{
-		CompanyId: openapi_types.UUID(p.CompanyID.UUID),
-		CertStatus:     crmcontracts.PartnerCertStatus(p.CertStatus),
-		CreatedAt:      p.CreatedAt,
-		UpdatedAt:      p.UpdatedAt,
-		ArchivedAt:     p.ArchivedAt,
+		CompanyId:  openapi_types.UUID(p.CompanyID.UUID),
+		CertStatus: crmcontracts.PartnerCertStatus(p.CertStatus),
+		CreatedAt:  p.CreatedAt,
+		UpdatedAt:  p.UpdatedAt,
+		ArchivedAt: p.ArchivedAt,
 	}
 	version := crmcontracts.RowVersion(p.Version)
 	out.Version = &version

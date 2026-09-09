@@ -61,9 +61,9 @@ const (
 // no longer the change a human was shown, and the accept's CAS on
 // name_source='domain' is what refuses it.
 type companyNameProposal struct {
-	CompanyID ids.CompanyID `json:"company_id"`
-	CurrentName    string             `json:"current_name"`
-	ProposedName   string             `json:"proposed_name"`
+	CompanyID    ids.CompanyID `json:"company_id"`
+	CurrentName  string        `json:"current_name"`
+	ProposedName string        `json:"proposed_name"`
 	// ProposedNameKey is ProposedName normalized. It is carried on the payload
 	// because the staging identity is a subset of it: the identity is what a
 	// human's refusal is remembered by, and it must survive a change of
@@ -79,7 +79,7 @@ type companyNameProposal struct {
 // name changing — while the question a human answered stays the same one.
 func companyNameIdentity(companyID ids.CompanyID, nameKey string) (json.RawMessage, error) {
 	identity, err := json.Marshal(map[string]string{
-		paramCompanyID: companyID.String(),
+		paramCompanyID:      companyID.String(),
 		"proposed_name_key": nameKey,
 	})
 	if err != nil {
@@ -252,7 +252,7 @@ func (p *CompanyNamePromoter) stageCompanyNameReview(ctx context.Context, cand p
 	verdict people.CompanyNameVerdict, identity json.RawMessage,
 ) error {
 	proposal := companyNameProposal{
-		CompanyID:  cand.CompanyID,
+		CompanyID:       cand.CompanyID,
 		CurrentName:     cand.DisplayName,
 		ProposedName:    verdict.Name,
 		ProposedNameKey: verdict.NameKey,

@@ -193,7 +193,7 @@ func (w *siteDeepReadWorker) probeCtx(ctx context.Context) (context.Context, err
 func siteLeadStageInput(readID, companyID ids.UUID, seedURL string, person sitePerson, bundleID ids.UUID) (approvals.StageInput, error) {
 	naturalKey := siteLeadSourceID(companyID, person.Name, person.PublishedEmail)
 	proposedChange, err := json.Marshal(siteLeadProposal{
-		CompanyID:  companyID,
+		CompanyID:       companyID,
 		SiteReadID:      readID,
 		NaturalKey:      naturalKey,
 		Name:            person.Name,

@@ -22,11 +22,11 @@ import (
 
 // ListInput narrows the ledger.
 type ListInput struct {
-	Cursor       *string
-	Limit        *int
+	Cursor           *string
+	Limit            *int
 	PartnerCompanyID *ids.CompanyID
-	DealID       *ids.DealID
-	Status       *string
+	DealID           *ids.DealID
+	Status           *string
 }
 
 // List pages the ledger under the caller's row scope.

@@ -50,7 +50,7 @@ func unfiledTask(t *testing.T, e *Env, f scopeFixture) {
 		Kind: "task", Subject: &subject,
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "person", EntityID: f.person},
-			{EntityType: "company", EntityID: f.org},
+			{EntityType: "company", EntityID: f.company},
 		},
 	})
 	if err != nil {
@@ -64,7 +64,7 @@ func TestAskScopedToOneProjectDropsTheOtherEngagementAndReportsTheScope(t *testi
 	unfiledTask(t, e, f)
 	svc := briefService(e, nil, "")
 
-	answer, err := svc.AskScoped(e.Admin(), ids.From[ids.CompanyKind](f.org),
+	answer, err := svc.AskScoped(e.Admin(), ids.From[ids.CompanyKind](f.company),
 		crmcontracts.CompanyQuestionWhatsOpen, &f.erp)
 	if err != nil {
 		t.Fatalf("ask scoped: %v", err)
@@ -100,7 +100,7 @@ func TestAskScopedToOneProjectDropsTheOtherEngagementAndReportsTheScope(t *testi
 			*answer.Scope.InScope, *answer.Scope.Total, wantInScope, wantTotal)
 	}
 
-	unscoped, err := svc.Ask(e.Admin(), ids.From[ids.CompanyKind](f.org), crmcontracts.CompanyQuestionWhatsOpen)
+	unscoped, err := svc.Ask(e.Admin(), ids.From[ids.CompanyKind](f.company), crmcontracts.CompanyQuestionWhatsOpen)
 	if err != nil {
 		t.Fatalf("ask unscoped: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestAskScopedToAProjectTheCallerCannotSeeAnswersNotFound(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	ghost := ids.From[ids.ProjectKind](ids.NewV7())
-	_, err := briefService(e, nil, "").AskScoped(e.Admin(), ids.From[ids.CompanyKind](f.org),
+	_, err := briefService(e, nil, "").AskScoped(e.Admin(), ids.From[ids.CompanyKind](f.company),
 		crmcontracts.CompanyQuestionWhatsOpen, &ghost)
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want not-found for a project that does not exist", err)
@@ -128,7 +128,7 @@ func TestCompanyBriefScopedToOneProjectWritesFromTheScopedSummaryOnly(t *testing
 	f := seedTwoEngagementAccount(t, e)
 	lane := &recordingLane{}
 	svc := briefService(e, lane, "routing-1")
-	company := ids.From[ids.CompanyKind](f.org)
+	company := ids.From[ids.CompanyKind](f.company)
 
 	scoped, err := svc.GetScoped(e.Admin(), company, false, &f.erp)
 	if err != nil {

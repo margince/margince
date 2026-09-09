@@ -155,7 +155,7 @@ func (w *geocodeBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.UU
 	}
 	for _, companyID := range due {
 		if _, err := client.Insert(wsCtx, GeocodeCompanyArgs{
-			Workspace:      ws,
+			Workspace: ws,
 			CompanyID: companyID.UUID,
 		}, geocodeBackfillOpts()); err != nil {
 			return 0, err

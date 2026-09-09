@@ -43,7 +43,7 @@ func seedSSOEnv(t *testing.T, slug string) (svc *Service, ownerConn *pgx.Conn, u
 		var err error
 		wsID, err = createInstallation(ctx, tx, InstallationBootstrap{
 			CompanyName: slug,
-			AdminEmail:       "admin@" + slug + ".test", AdminName: "Admin",
+			AdminEmail:  "admin@" + slug + ".test", AdminName: "Admin",
 			AdminPassword: bootstrapPassword,
 		}, originConfigured, nil, &[]string{})
 		return err
