@@ -26,9 +26,9 @@ import {
 } from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-keys";
 import { ModelRatePlate } from "./ai-rates";
-import { throwProblem, useMe } from "./common";
+import { throwProblem, useMe, WriteRefused } from "./common";
 import { ImapMailboxForm } from "./imap-connect-form";
-import { AiBindRefused, AppSaveRefused } from "./installation-setup.notices";
+import { AiBindRefused } from "./installation-setup.notices";
 import {
   RedirectUris,
   useOAuthApp,
@@ -725,7 +725,7 @@ function VendorAppFields({
           </p>
         </>
       )}
-      <AppSaveRefused error={save.error} />
+      <WriteRefused titleKey="oauthApp.saveFailed" error={save.error} />
       <Field
         label={t("oauthApp.clientId")}
         error={needed(clientId.trim() === "")}

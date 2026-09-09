@@ -11,11 +11,16 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import {
+  problemMessageOf,
+  QueryGate,
+  throwProblem,
+  useMe,
+  WriteRefused,
+} from "./common";
 import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";
 import { calendarDay } from "../format/calendarday";
@@ -40,20 +45,6 @@ function trimDecimal(value: string): string {
   // Lookbehind: the run of zeros is found once, not retried from each zero in
   // it. numeric(20,10) is short, but the shape is the one that hangs a tab.
   return value.replace(/(?<!0)0+$/, "").replace(/\.$/, "");
-}
-
-// What a refused Save says, in the ONE shape both of this screen's dialogs use.
-// It interrupts rather than sitting as tinted text: a message that lands after
-// the reader pressed Save is one they are not looking at, and the dialog stays
-// open behind it so the retry is the same button.
-function SaveRefused({ error }: Readonly<{ error: string | null }>) {
-  const t = useT();
-  if (error === null) return null;
-  return (
-    <Callout kind="outcome" tone="danger" title={t("settings.rates.notSaved")}>
-      {error}
-    </Callout>
-  );
 }
 
 // Withheld, not absent (design-system README, "Absent, disabled, or withheld"):
@@ -303,7 +294,7 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
             />
           )}
         </Field>
-        <SaveRefused error={error} />
+        <WriteRefused titleKey="settings.rates.notSaved" message={error} />
         <div className="form-actions">
           <Button small variant="ghost" onClick={onClose}>
             {t("create.cancel")}
@@ -561,7 +552,7 @@ function ModelCostModal({ onClose }: Readonly<{ onClose: () => void }>) {
             />
           )}
         </Field>
-        <SaveRefused error={error} />
+        <WriteRefused titleKey="settings.rates.notSaved" message={error} />
         <div className="form-actions">
           <Button small variant="ghost" onClick={onClose}>
             {t("create.cancel")}

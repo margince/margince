@@ -4,32 +4,11 @@
 import { Callout } from "../design-system/callout";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "./common";
 
-// What the document-sets card says about ITSELF: a set being re-read, a write
-// the server refused, a file it could not read, and the files a drop left
-// behind. None of them is content — every one is a claim about the surface.
-
-/**
- * A write the server refused, in the ONE shape all of this card's writes take:
- * the screen's own claim as the heading, the server's words underneath.
- *
- * The heading arrives as a KEY rather than a rendered string, so a caller
- * cannot hand this a sentence the catalog never said.
- */
-export function WriteRefused({
-  titleKey,
-  error,
-}: Readonly<{ titleKey: MessageKey; error: unknown }>) {
-  const t = useT();
-  if (error === null || error === undefined) return null;
-  return (
-    <Callout kind="outcome" tone="danger" title={t(titleKey)}>
-      {problemMessageOf(error, t)}
-    </Callout>
-  );
-}
+// What the document-sets card says about ITSELF: a set being re-read, a file it
+// could not read, and the files a drop left behind. None of them is content —
+// every one is a claim about the surface. A write the server refused is the
+// shared notice in `common.tsx`, because every card in the product has one.
 
 /** A set being re-read has nothing for the reader to do but wait, and saying so
  *  is different from saying it is not ready. */

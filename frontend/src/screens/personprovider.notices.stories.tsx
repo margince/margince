@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { LookupRefused, LookupRunning } from "./personprovider.notices";
+import { WriteRefused } from "./common";
+import { LookupRunning } from "./personprovider.notices";
 import { StoryProviders } from "./story-utils";
 
 // What the bought-contact-data panel says about itself. The two halves of a
@@ -20,7 +21,10 @@ type Story = StoryObj;
 export const Refused: Story = {
   render: () => (
     <StoryProviders>
-      <LookupRefused message="Surfe has no credit left on this key." />
+      <WriteRefused
+        titleKey="provider.profile.lookupRefused"
+        message="Surfe has no credit left on this key."
+      />
     </StoryProviders>
   ),
 };

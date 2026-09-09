@@ -131,7 +131,8 @@ const QUIET = {
 
 function renderScreen(client?: QueryClient) {
   const usedClient =
-    client ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client ??
+    new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={usedClient}>
       <LocaleProvider>
@@ -300,7 +301,9 @@ describe("the openchannel screen", () => {
 
     renderScreen();
     await screen.findByTestId("openchannel-curl");
-    expect(screen.getByText(/visible to them in the process list/)).toBeTruthy();
+    expect(
+      screen.getByText(/visible to them in the process list/),
+    ).toBeTruthy();
   });
 
   // The secret exists on a screen exactly once, and the sentence saying so is

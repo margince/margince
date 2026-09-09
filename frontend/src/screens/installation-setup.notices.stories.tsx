@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
-import { ProblemError } from "./common";
-import { AiBindRefused, AppSaveRefused } from "./installation-setup.notices";
+import { ProblemError, WriteRefused } from "./common";
+import { AiBindRefused } from "./installation-setup.notices";
 import { StoryProviders } from "./story-utils";
 
-// The cold start's two refusals. Worth their own frames because the whole point
-// of each heading is to name WHICH write failed, and a story is the only place
-// the two can be read side by side: on the screen itself they are the same
+// The cold start's refusals. Worth their own frames because the whole point of
+// each heading is to name WHICH write failed, and a story is the only place the
+// alternatives can be read side by side: on the screen itself they are the same
 // three lines of the same step, one at a time.
 
 const meta: Meta = {
@@ -65,7 +65,10 @@ export const BindRefused: Story = {
 export const AppRefused: Story = {
   render: () => (
     <Frame>
-      <AppSaveRefused error={refused("Those credentials were refused.")} />
+      <WriteRefused
+        titleKey="oauthApp.saveFailed"
+        error={refused("Those credentials were refused.")}
+      />
     </Frame>
   ),
 };
@@ -75,7 +78,10 @@ export const AppRefusedDark: Story = {
   globals: { theme: "dark" },
   render: () => (
     <Frame>
-      <AppSaveRefused error={refused("Those credentials were refused.")} />
+      <WriteRefused
+        titleKey="oauthApp.saveFailed"
+        error={refused("Those credentials were refused.")}
+      />
     </Frame>
   ),
 };
@@ -85,7 +91,7 @@ export const Quiet: Story = {
   render: () => (
     <Frame>
       <AiBindRefused keyError={null} bindError={null} />
-      <AppSaveRefused error={null} />
+      <WriteRefused titleKey="oauthApp.saveFailed" error={null} />
     </Frame>
   ),
 };

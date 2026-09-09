@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ReadWarnings, Refusal, SavedNotice } from "./company-context.notices";
+import { WriteRefused } from "./common";
+import { ReadWarnings, SavedNotice } from "./company-context.notices";
 import { StoryProviders } from "./story-utils";
 
 // The three bands the company-context card says about itself, side by side,
-// which is the one view the card itself never gives: a refusal, the
+// which is the one view the card itself never gives: the shared refusal, the
 // confirmation a save leaves behind, and the caveats a website read returned.
 // Read them in both themes — tone reaches the heading's ink and nothing else.
 
@@ -22,9 +23,9 @@ function Frame() {
   return (
     <StoryProviders>
       <div className="form-stack">
-        <Refusal
+        <WriteRefused
           titleKey="settings.companySaveFailed"
-          cause="The website could not be reached."
+          message="The website could not be reached."
         />
         <SavedNotice />
         <ReadWarnings

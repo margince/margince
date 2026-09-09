@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Callout } from "../design-system/callout";
-import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "./common";
+import { WriteRefused } from "./common";
 
 // What a provider card says when one of its switches did not take.
 //
@@ -14,9 +12,9 @@ import { problemMessageOf } from "./common";
 // nowrap flex line with a switch is a sentence nobody reads.
 
 /**
- * A refused switch, under the row it belongs to: the claim as the heading, the
- * server's own cause under it, wrapped in the plate that gives a non-row child
- * of the list its interval and drops the hairline.
+ * The shared refusal notice under the row it belongs to. The plate is the whole
+ * difference: it gives a non-row child of the list its interval and drops the
+ * hairline, and a notice has no layout hook of its own.
  *
  * Not exported: the two notices below are what a card asks for, because each
  * knows which of its writes this is about and no caller should have to pick a
@@ -26,12 +24,9 @@ function RowRefusal({
   titleKey,
   error,
 }: Readonly<{ titleKey: MessageKey; error: unknown }>) {
-  const t = useT();
   return (
     <div className="provider-row-note">
-      <Callout tone="danger" kind="outcome" title={t(titleKey)}>
-        {problemMessageOf(error, t)}
-      </Callout>
+      <WriteRefused titleKey={titleKey} error={error} />
     </div>
   );
 }

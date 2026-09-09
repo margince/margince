@@ -5,12 +5,11 @@ import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 
-// What the queue page says about ITSELF, above the three groups.
-//
-// One slot in practice: the refused write is computed only when there is no
-// skew, so a reader never meets both. They keep separate headings because they
-// are separate claims — one says the list is stale, the other that a write the
-// reader made did not land.
+// What the queue page says about ITSELF, above the three groups. One slot in
+// practice: the page's refused write — the shared `WriteRefused` — is computed
+// only when there is no skew, so a reader never meets both, and the two keep
+// separate headings because they are separate claims. One says the list is
+// stale, the other that a write the reader made did not land.
 
 /**
  * A 409 the reader can re-read past.
@@ -34,16 +33,6 @@ export function QueueSkewNotice({
         </Button>
       }
     >
-      {message}
-    </Callout>
-  );
-}
-
-/** A move or a withdrawal the server refused, in the server's own words. */
-export function QueueWriteRefused({ message }: Readonly<{ message: string }>) {
-  const t = useT();
-  return (
-    <Callout kind="outcome" tone="danger" title={t("sched.writeFailed")}>
       {message}
     </Callout>
   );

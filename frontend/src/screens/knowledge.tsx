@@ -17,13 +17,17 @@ import { FileDropzone } from "../design-system/filedropzone";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import {
+  problemMessageOf,
+  QueryGate,
+  throwProblem,
+  WriteRefused,
+} from "./common";
 import {
   IngestFailure,
   ReindexingNotice,
   type UploadRefusal,
   UploadRefusals,
-  WriteRefused,
 } from "./knowledge.notices";
 
 // The document sets a workspace can be asked questions of.

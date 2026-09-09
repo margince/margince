@@ -212,24 +212,19 @@ function findingsIn(path: string, source: string): Finding[] {
  * to hold, and stopped when the tree grew: `Test timed out in 13437ms` on main,
  * on two consecutive runs, with every assertion in it passing.
  *
- * Derived per FILE and then multiplied out, not picked whole: 1750 files at
- * 40ms each. The corpus is 1415 today, so the headroom is ~335 files — chosen
- * against this tree's merge rate rather than as a round margin, because a
- * budget with thirty files of slack is one that fails next week. It has now
- * been raised twice from 1400, and both times the assertion below is what made
- * the ceiling arrive as a named count rather than as a timeout, which is the
- * whole reason it is there. The second raise happened on two branches at once
- * — one to 1500, this one to 1750 — which is itself the argument for the wider
- * of the two: a ceiling this tree reaches every few weeks is one that should be
- * set past the next few weeks, not up to them. Raised again to 2000 when the
- * callout-anatomy work took the tree to 1758 by giving seven screens their
- * notice bands as siblings, on the same argument: 1800 would have been the
- * round margin this docblock already refuses. Measured at ~3.3ms per file on an idle ten-core machine and
- * unchanged under eight spinners — the cost is the parse, not contention for a
- * core. A CI runner is smaller and saturated by the rest of the suite running
- * in parallel, and needed more than 12.5ms per file there, so the allowance is
- * an order of magnitude over the local measurement rather than a margin
- * trimmed to fit.
+ * Derived per FILE and then multiplied out, not picked whole: a budgeted corpus
+ * at 40ms each. The invariant is that the budgeted count stays AHEAD of the
+ * real one, and the assertion below is what makes the ceiling arrive as a named
+ * count rather than as a timeout when it stops being. The margin rule is the
+ * one that survived three raises: size it against this tree's merge rate, never
+ * to the round number above today's count. A budget with thirty files of slack
+ * fails next week, and every raise that only cleared the current tree was
+ * followed by another. Measured at ~3.3ms per file on an idle ten-core machine
+ * and unchanged under eight spinners — the cost is the parse, not contention
+ * for a core. A CI runner is smaller and saturated by the rest of the suite
+ * running in parallel, and needed more than 12.5ms per file there, so the
+ * allowance is an order of magnitude over the local measurement rather than a
+ * margin trimmed to fit.
  *
  * Written as the product so the derivation is in the code and not only here.
  * scripts/test-budget.test.ts refuses a timeout it cannot statically fold —

@@ -3,7 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { en } from "../i18n/en";
-import { QueueSkewNotice, QueueWriteRefused } from "./scheduledsends.notices";
+import { WriteRefused } from "./common";
+import { QueueSkewNotice } from "./scheduledsends.notices";
 import { StoryProviders } from "./story-utils";
 
 // What the scheduled queue says about itself. Read side by side because the
@@ -27,10 +28,13 @@ export const VersionSkew: Story = {
 };
 
 /** A move the server refused, in the server's own words. */
-export const WriteRefused: Story = {
+export const Refused: Story = {
   render: () => (
     <StoryProviders>
-      <QueueWriteRefused message="That message had already gone out." />
+      <WriteRefused
+        titleKey="sched.writeFailed"
+        message="That message had already gone out."
+      />
     </StoryProviders>
   ),
 };

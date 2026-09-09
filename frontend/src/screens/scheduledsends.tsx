@@ -30,9 +30,10 @@ import {
   problemMessageOf,
   QueryStates,
   throwProblem,
+  WriteRefused,
 } from "./common";
 import { scheduleFields } from "./compose";
-import { QueueSkewNotice, QueueWriteRefused } from "./scheduledsends.notices";
+import { QueueSkewNotice } from "./scheduledsends.notices";
 import { SendPermission } from "./sendpermission";
 import { useSendPermission } from "./usesendpermission";
 
@@ -462,7 +463,7 @@ export function ScheduledSendsScreen() {
       {skew && (
         <QueueSkewNotice message={skew} onReload={() => void query.refetch()} />
       )}
-      {writeError && <QueueWriteRefused message={writeError} />}
+      <WriteRefused titleKey="sched.writeFailed" message={writeError} />
       <QueryStates query={query} pendingLabel={t("nav.scheduled")}>
         {query.data && query.data.length === 0 ? (
           // One sentence for the whole page, not one per group: a rep who has

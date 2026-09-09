@@ -6,7 +6,6 @@ import {
   IngestFailure,
   ReindexingNotice,
   UploadRefusals,
-  WriteRefused,
 } from "./knowledge.notices";
 import { StoryProviders } from "./story-utils";
 
@@ -27,18 +26,6 @@ export const Reindexing: Story = {
   render: () => (
     <StoryProviders>
       <ReindexingNotice />
-    </StoryProviders>
-  ),
-};
-
-/** A write the server refused, in the server's own words. */
-export const Refused: Story = {
-  render: () => (
-    <StoryProviders>
-      <WriteRefused
-        titleKey="knowledge.archiveFailed"
-        error={new Error("Something went wrong.")}
-      />
     </StoryProviders>
   ),
 };

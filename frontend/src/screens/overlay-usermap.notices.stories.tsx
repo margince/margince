@@ -2,12 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import {
-  DirectoryFailed,
-  MappingReadFailed,
-  MappingSaveRefused,
-  ReadCostNotice,
-} from "./overlay-usermap.notices";
+import { WriteRefused } from "./common";
+import { ReadCostNotice } from "./overlay-usermap.notices";
 import { StoryProviders } from "./story-utils";
 
 // What the mirror user-mapping card says about itself. Worth reading together:
@@ -34,7 +30,10 @@ export const ReadCost: Story = {
 export const ReadFailed: Story = {
   render: () => (
     <StoryProviders>
-      <MappingReadFailed message="HubSpot refused the stored token." />
+      <WriteRefused
+        titleKey="overlay.userMap.loadFailedTitle"
+        message="HubSpot refused the stored token."
+      />
     </StoryProviders>
   ),
 };
@@ -43,7 +42,10 @@ export const ReadFailed: Story = {
 export const DirectoryUnreadable: Story = {
   render: () => (
     <StoryProviders>
-      <DirectoryFailed message="The HubSpot owners list timed out." />
+      <WriteRefused
+        titleKey="overlay.userMap.directoryFailedTitle"
+        message="The HubSpot owners list timed out."
+      />
     </StoryProviders>
   ),
 };
@@ -52,7 +54,10 @@ export const DirectoryUnreadable: Story = {
 export const SaveRefused: Story = {
   render: () => (
     <StoryProviders>
-      <MappingSaveRefused message="That HubSpot user is already mapped." />
+      <WriteRefused
+        titleKey="overlay.userMap.saveFailedTitle"
+        message="That HubSpot user is already mapped."
+      />
     </StoryProviders>
   ),
 };

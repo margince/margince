@@ -5,28 +5,9 @@ import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 
 // What the bought-contact-data panel says about ITSELF, above the values it
-// holds. Neither is content: one reports a press the server refused, the other
-// that a run is still moving.
-
-/**
- * The refusal a POST answered with.
- *
- * A run the PLATFORM declined — no credits, daily cap, a standing objection —
- * never arrives here: it is a skipped run, and the state badge above the panel
- * says which.
- */
-export function LookupRefused({ message }: Readonly<{ message: string }>) {
-  const t = useT();
-  return (
-    <Callout
-      kind="outcome"
-      tone="danger"
-      title={t("provider.profile.lookupRefused")}
-    >
-      {message}
-    </Callout>
-  );
-}
+// holds: that a run is still moving. Not content, and not the refusal a POST
+// answered with either — that is the shared `WriteRefused`, and a run the
+// PLATFORM declined is neither, being a skipped run the state badge names.
 
 /**
  * A run that is still moving, above the values rather than in place of them.

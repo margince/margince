@@ -17,9 +17,9 @@ import {
 } from "../design-system/provider-mark";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem, WriteRefused } from "./common";
 import { usePerson360 } from "./person360";
-import { LookupRefused, LookupRunning } from "./personprovider.notices";
+import { LookupRunning } from "./personprovider.notices";
 import { categoryNames, categoryNamesTogether } from "./provider-categories";
 import {
   canEnrichNow,
@@ -214,9 +214,10 @@ function ProviderPanel({
       }
     >
       <PanelBody>
-        {enrich.error != null && (
-          <LookupRefused message={problemMessageOf(enrich.error, t)} />
-        )}
+        <WriteRefused
+          titleKey="provider.profile.lookupRefused"
+          error={enrich.error}
+        />
         {/* Above the values, because it is a caveat about what is under it. */}
         {running && <LookupRunning asking={asking} provider={name} />}
         {firstRun ? (

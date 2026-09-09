@@ -41,13 +41,9 @@ import {
   throwProblem,
   useMe,
   useSorMode,
+  WriteRefused,
 } from "./common";
-import {
-  DirectoryFailed,
-  MappingReadFailed,
-  MappingSaveRefused,
-  ReadCostNotice,
-} from "./overlay-usermap.notices";
+import { ReadCostNotice } from "./overlay-usermap.notices";
 import "./overlay-usermap.css";
 
 // The mirror user-map card (Settings → Integrations): who, in the
@@ -255,7 +251,10 @@ function OwnerPickerModal({
         {t("overlay.userMap.pickTitle", { principal })}
       </h2>
       {failure ? (
-        <DirectoryFailed message={failure} />
+        <WriteRefused
+          titleKey="overlay.userMap.directoryFailedTitle"
+          message={failure}
+        />
       ) : (
         <RecordPicker
           label={t("overlay.userMap.pickerLabel", { principal })}
@@ -271,7 +270,10 @@ function OwnerPickerModal({
           {t("overlay.userMap.truncated", { principal })}
         </p>
       )}
-      {actions.saveError && <MappingSaveRefused message={actions.saveError} />}
+      <WriteRefused
+        titleKey="overlay.userMap.saveFailedTitle"
+        message={actions.saveError}
+      />
       {/* Cancel alone: picking a candidate IS the commit, so there is no second
           confirm to draw beside it. `.actions` is the shared dialog action band
           every other modal in this tree ends with. */}
@@ -917,7 +919,8 @@ function UserMapNotice({
   }
   if (failed) {
     return (
-      <MappingReadFailed
+      <WriteRefused
+        titleKey="overlay.userMap.loadFailedTitle"
         message={problemMessageOf(error, t, t("overlay.userMap.loadFailed"))}
       />
     );

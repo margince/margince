@@ -82,6 +82,7 @@ import {
   throwProblem,
   useLogout,
   useMe,
+  WriteRefused,
 } from "./common";
 import { CompanyContextCard } from "./company-context";
 import { ConnectedAgentsCard } from "./connected-agents";
@@ -589,25 +590,6 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   );
 }
 
-// A refused write, beside the control that asked for it, and silence while the
-// write is going well. ONE spelling for every form here: the query client's own
-// handler only logs, so without it a rejected save reads as nothing happening.
-function WriteRefused({
-  titleKey,
-  write,
-}: Readonly<{
-  titleKey: MessageKey;
-  write: Readonly<{ isError: boolean; error: unknown }>;
-}>) {
-  const t = useT();
-  if (!write.isError) return null;
-  return (
-    <Callout tone="danger" kind="outcome" title={t(titleKey)}>
-      {problemMessageOf(write.error, t)}
-    </Callout>
-  );
-}
-
 // This person's own agent authority: what an agent may do unattended, the
 // credentials they have minted, the clients holding one, and the governed tools
 // those credentials reach. Every seat gets it, ungated — a connection's
@@ -832,7 +814,7 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             <h2 className="t-h3 modal-title" id={titleId}>
               {t("settings.signature")}
             </h2>
-            <WriteRefused titleKey="settings.saveFailed" write={save} />
+            <WriteRefused titleKey="settings.saveFailed" error={save.error} />
             <Field label={t("settings.signatureLabel")}>
               {(control) => (
                 <Textarea
@@ -978,7 +960,7 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         // rows use.
         <div className="form-stack settingrow-measure">
           {/* Beside this control, because the server's 422 names it. */}
-          <WriteRefused titleKey="settings.saveFailed" write={save} />
+          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
           <TextInput
             {...control}
             value={shown}
@@ -1367,7 +1349,7 @@ function PassportCard() {
               ))}
             </fieldset>
             {/* Beside the button that produced it, not below the tokens. */}
-            <WriteRefused titleKey="settings.mintFailed" write={mint} />
+            <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
             <div className="form-actions">
               <Button small disabled={mint.isPending} onClick={closeMint}>
                 {t("settings.mintCancel")}

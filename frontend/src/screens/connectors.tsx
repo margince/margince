@@ -244,9 +244,11 @@ function AddConnectionDialog({
             />
           ))}
         </SettingList>
-        {/* A documented feature-off state answers a press, so it is spoken —
-            and it is `info`, because nothing is wrong: this deployment simply
-            never wired that provider. */}
+        {/* The fact is standing — this deployment never wired that provider —
+            but the reader learns it BY pressing Connect and it is set on that
+            press alone, so it is an `outcome` and is spoken. `info` and not
+            `warn`: an unwired provider is a documented configuration, and
+            nothing about it is wrong. */}
         {notConfigured501 && (
           <Callout
             kind="outcome"

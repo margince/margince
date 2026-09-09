@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { useT } from "../../i18n";
+import { WriteRefused } from "../common";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
 import { CompanyStep } from "../onboarding-company-form";
 import { ManualCompanyInterview } from "../onboarding-manual-interview";
@@ -184,10 +184,9 @@ export function CompanyActArtifact(props: CompanyActArtifactProps) {
   );
 }
 
-// What the pane says about the press it just refused. An `outcome` in the
-// danger family, so it interrupts: the reader pressed Continue and nothing
-// happened, which is the case the derivation reserves the interruption for, and
-// a blocked write is spelled `danger` everywhere else in this tree.
+// What the pane says about the press it just refused: the shared refusal
+// notice, which interrupts because the reader pressed Continue and nothing
+// happened.
 //
 // The action beside it is the one look that can end the state named, where
 // there is one; where Continue is blocked it IS the route forward, which is why
@@ -203,10 +202,9 @@ function RefusalNotice({
   const t = useT();
   return (
     <div className="ob-conv-refusal">
-      <Callout
-        kind="outcome"
-        tone="danger"
-        title={t("ob.conv.review.refusalTitle")}
+      <WriteRefused
+        titleKey="ob.conv.review.refusalTitle"
+        message={refusal.message}
         actions={
           refusal.retry === null ? undefined : (
             <Button
@@ -219,9 +217,7 @@ function RefusalNotice({
             </Button>
           )
         }
-      >
-        <p>{refusal.message}</p>
-      </Callout>
+      />
     </div>
   );
 }

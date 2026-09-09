@@ -38,8 +38,9 @@ import {
   type QueryLike,
   throwProblem,
   useMe,
+  WriteRefused,
 } from "./common";
-import { ReadWarnings, Refusal, SavedNotice } from "./company-context.notices";
+import { ReadWarnings, SavedNotice } from "./company-context.notices";
 import { CompanyMark } from "./companymark";
 import "./company-context.css";
 
@@ -223,9 +224,9 @@ export function ManualCompanySetup() {
             </Field>
           ))}
           {save.isError && (
-            <Refusal
+            <WriteRefused
               titleKey="settings.companySaveFailed"
-              cause={problemMessageOf(save.error, t)}
+              error={save.error}
             />
           )}
         </PanelBody>
@@ -813,7 +814,10 @@ function CompanySourceCard({
         </SettingList>
         {failure !== null && (
           <div className="settings-panel-commit">
-            <Refusal titleKey="settings.companyRefreshFailed" cause={failure} />
+            <WriteRefused
+              titleKey="settings.companyRefreshFailed"
+              message={failure}
+            />
           </div>
         )}
       </PanelBody>
@@ -978,7 +982,7 @@ function CompanyProfileDialog({
           </div>
         ))}
         {error !== null && (
-          <Refusal titleKey="settings.companySaveFailed" cause={error} />
+          <WriteRefused titleKey="settings.companySaveFailed" message={error} />
         )}
         <div className="form-actions">
           <Button small variant="ghost" type="button" onClick={onClose}>
@@ -1114,9 +1118,9 @@ function RefreshReview(
       actions={
         <>
           {props.error && (
-            <Refusal
+            <WriteRefused
               titleKey="settings.companyApplyFailed"
-              cause={props.error}
+              message={props.error}
             />
           )}
           {/* An unresolved conflict refuses the verb, so it is the verb's own
