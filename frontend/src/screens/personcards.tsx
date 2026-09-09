@@ -51,9 +51,8 @@ export function PersonBriefCard({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const firstName = view.person.full_name.split(" ")[0];
-  // The timeline the page already read, by id. A citation is resolved from it
-  // rather than fetched, on the same terms as every other card here: a chip
-  // can never name a record the page beside it is withholding.
+  // Resolved from the timeline the page already read rather than fetched: a
+  // chip can never name a record the page beside it is withholding.
   const citedActivities = new Map(
     (view.activities?.data ?? []).map((row) => [row.id, row]),
   );
@@ -61,15 +60,10 @@ export function PersonBriefCard({
   return (
     <Panel
       title={t("person.brief.title")}
-      // Indigo follows the WRITER, not the card: the deterministic fallback
-      // composes over the same records and would be dressed as a model's
-      // reading by a tint it did not earn. `WrittenBy` already carries the
-      // indigo badge for a model, so the band takes the tone and nothing
-      // else is added beside it.
+      // Both follow the WRITER: a reader weighing a sentence needs to know
+      // whether a model or the deterministic fallback wrote it, and only one
+      // of the two may wear the colour that claims a machine did.
       tone={written && brief.generated_by === "model" ? "ai" : undefined}
-      // Who wrote it, on the band that claims it. A reader weighing a sentence
-      // needs to know whether a model or the deterministic fallback wrote it,
-      // and the two are not interchangeable.
       titleAction={written ? <WrittenBy by={brief.generated_by} /> : undefined}
       footer={
         written ? (

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Lock, Mail, Plus, RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { Lock, Mail, Plus, RefreshCw, Trash2 } from "lucide-react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -78,6 +78,8 @@ export const Buttons: Story = {
           <Button variant="primary">Save</Button>
           <Button variant="ghost">Cancel</Button>
           <Button variant="danger">Delete</Button>
+          <Button variant="ai">Draft a reply</Button>
+          <Button variant="aiQuiet">Shorter</Button>
         </div>
       </div>
       {/* The text affordance, beside a real Button so the thing it must not
@@ -97,10 +99,8 @@ export const Buttons: Story = {
           <button type="button" className="link-button">
             View existing
           </button>
-          {/* With an icon: lucide hands over a 24px glyph, so without a size
-              rule on the class this label wrapped underneath its own icon.
-              Compare the glyph here with the one in the buttons above — one
-              size, owned by the control rather than by the call site. */}
+          {/* With an icon: lucide hands over a 24px glyph, so the BUTTON sizes
+              it — this label wrapped under its own icon until it did. */}
           <button type="button" className="link-button">
             <Plus aria-hidden />
             Add another
@@ -127,37 +127,6 @@ export const Buttons: Story = {
           <Button variant="danger" small>
             Delete
           </Button>
-        </div>
-      </div>
-      {/* The machine's verbs, and the row is the rule: `ai` is filled and there
-          is at most ONE of it on a surface — the move the surface recommends —
-          while `aiQuiet` is the same claim without the recommendation, for an AI
-          verb among equals and for one inside a panel that is already indigo.
-          Four filled indigo buttons in a row stop meaning "a machine does this"
-          and start meaning "press me", which is what the quiet spelling exists
-          to prevent. The `Send` at the end is the other half: a person approves
-          what goes out, so that verb stays primary however the words got there. */}
-      <div style={stack}>
-        <span className="t-label">
-          The machine's verb — one filled, the rest quiet
-        </span>
-        <div style={row}>
-          <Button variant="ai">
-            <Sparkles aria-hidden />
-            Draft a reply
-          </Button>
-          <Button variant="aiQuiet" small>
-            <Sparkles aria-hidden />
-            Shorter
-          </Button>
-          <Button variant="aiQuiet" small>
-            <Sparkles aria-hidden />
-            Warmer
-          </Button>
-          <Button variant="aiQuiet" small pending busyLabel="Reading the site.">
-            Assess again
-          </Button>
-          <Button variant="primary">Send</Button>
         </div>
       </div>
       <div style={stack}>

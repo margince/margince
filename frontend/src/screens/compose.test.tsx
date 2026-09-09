@@ -26,11 +26,11 @@ import {
 } from "./sendpermission.testkit";
 import { TimelineActions } from "./timelineactions";
 
-// The composer's "why are you writing?" dial, named rather than reached for
-// by role alone: the To, Cc and Bcc lines are comboboxes of their own now
-// (they offer the record's people), so a bare role query matches four
-// controls and the readiness signal every suite waits on has to say which.
+// The composer's "why are you writing?" dial, named rather than reached for by
+// role alone: To, Cc and Bcc are comboboxes of their own now, so a bare role
+// query matches four controls and every readiness wait has to say which.
 const WHY_ASK = "Why are you writing?";
+const DISCLOSURE = { name: "AI-assisted draft" };
 type Activity = components["schemas"]["Activity"];
 
 function jsonResponse(body: unknown, status = 200) {
@@ -538,9 +538,7 @@ describe("ComposeModal", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    expect(
-      await screen.findByRole("heading", { name: "AI-assisted draft" }),
-    ).toBeTruthy();
+    expect(await screen.findByRole("heading", DISCLOSURE)).toBeTruthy();
     expect(
       screen.getByText("AI-assisted draft (Art. 50): reviewed by a human."),
     ).toBeTruthy();
@@ -575,9 +573,7 @@ describe("ComposeModal", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    expect(
-      await screen.findByRole("heading", { name: "AI-assisted draft" }),
-    ).toBeTruthy();
+    expect(await screen.findByRole("heading", DISCLOSURE)).toBeTruthy();
     expect(screen.getByText(/This draft was produced by AI/i)).toBeTruthy();
   });
 
@@ -609,9 +605,7 @@ describe("ComposeModal", () => {
     // The fill proves the draft landed, so the missing banner is the
     // disclosure being conditional rather than the response never arriving.
     expect(await screen.findByDisplayValue("Re: Q3 numbers")).toBeTruthy();
-    expect(
-      screen.queryByRole("heading", { name: "AI-assisted draft" }),
-    ).toBeNull();
+    expect(screen.queryByRole("heading", DISCLOSURE)).toBeNull();
   });
 
   it("names the voice version that styled the draft and flags a provisional profile", async () => {
@@ -1413,9 +1407,7 @@ describe("ComposeModal draft provenance", () => {
     // disclosure following the body rather than the response never arriving.
     expect(await screen.findByDisplayValue("Re: Q3")).toBeTruthy();
     expect(messageText("Body")).toBe("My own words.");
-    expect(
-      screen.queryByRole("heading", { name: "AI-assisted draft" }),
-    ).toBeNull();
+    expect(screen.queryByRole("heading", DISCLOSURE)).toBeNull();
   });
 
   it("keeps the applied draft's voice version when a re-draft is discarded", async () => {
@@ -1462,16 +1454,12 @@ describe("ComposeModal draft provenance", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    expect(
-      screen.getByRole("heading", { name: "AI-assisted draft" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("heading", DISCLOSURE)).toBeTruthy();
 
     writeMessage("Body", "");
 
     await waitFor(() =>
-      expect(
-        screen.queryByRole("heading", { name: "AI-assisted draft" }),
-      ).toBeNull(),
+      expect(screen.queryByRole("heading", DISCLOSURE)).toBeNull(),
     );
   });
 
@@ -1495,9 +1483,7 @@ describe("ComposeModal draft provenance", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    expect(
-      await screen.findByRole("heading", { name: "AI-assisted draft" }),
-    ).toBeTruthy();
+    expect(await screen.findByRole("heading", DISCLOSURE)).toBeTruthy();
     expect(screen.queryByText("Provisional voice")).toBeNull();
   });
 });

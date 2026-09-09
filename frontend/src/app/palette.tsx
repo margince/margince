@@ -24,10 +24,9 @@ import {
   searchHitDestination,
 } from "./searchkinds";
 
-// ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a
-// type tag (screen / action / record); record entries are fed by the search
-// seam once the data layer lands — the tagging and ranking mechanics are
-// already here. The "Ask AI: …" run-as-NL row is always appended last.
+// ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a type
+// tag (screen / action / record); record entries are fed by the search seam
+// once the data layer lands — the ranking mechanics are already here.
 
 export type Command = {
   id: string;
@@ -354,13 +353,8 @@ const TYPE_KEY: Record<Command["type"], MessageKey> = {
   record: "palette.typeRecord",
 };
 
-/**
- * The dial the Ask-AI row writes its question into: `#/ai?q=<question>`.
- *
- * In the ADDRESS rather than in storage, because the reader is often already
- * standing on the AI surface — a same-route navigation remounts nothing, so a
- * question held anywhere else is a question that screen never reads.
- */
+// `#/ai?q=<question>`: the row's question travels in the ADDRESS, because a
+// reader already on the AI surface changes no path and so remounts nothing.
 export const ASK_QUESTION_PARAM = "q";
 
 export function CommandPalette({
@@ -422,7 +416,6 @@ export function CommandPalette({
       }
     : null;
 
-  // The run-as-NL row (AC-shell-4): appended last whenever there is a query.
   const askRow: Command | null = query.trim()
     ? {
         id: "ask-ai",
@@ -442,11 +435,10 @@ export function CommandPalette({
 
   const run = (command: Command) => {
     onClose();
+    const asking = command.id === "ask-ai";
     navigate(
       command.route,
-      command.id === "ask-ai"
-        ? new Map([[ASK_QUESTION_PARAM, query.trim()]])
-        : undefined,
+      asking ? new Map([[ASK_QUESTION_PARAM, query.trim()]]) : undefined,
     );
   };
 
