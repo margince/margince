@@ -145,7 +145,7 @@ const companyNameWriteIdentity = "all"
 // ask this same question rather than each carrying its own list.
 var companyNameColumns = map[string]bool{fieldDisplayName: true, fieldLegalName: true}
 
-// renamesAnCompany reports whether an edit writes a name column, and so
+// renamesACompany reports whether an edit writes a name column, and so
 // whether it must take the name lock.
 //
 // TWO channels write one, and only the supplied value was ever asked about. A
@@ -154,7 +154,7 @@ var companyNameColumns = map[string]bool{fieldDisplayName: true, fieldLegalName:
 // exactly as a rename does. Missing it, a clear took the ROW lock through the
 // guarded write and reached for the name lock afterwards: the ordering this
 // file forbids, and without the serialization the re-check depends on.
-func renamesAnCompany(in UpdateCompanyInput) bool {
+func renamesACompany(in UpdateCompanyInput) bool {
 	if in.DisplayName != nil || in.LegalName != nil {
 		return true
 	}

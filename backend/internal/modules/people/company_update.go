@@ -202,7 +202,7 @@ func renamesInPatch(p *storekit.Patch) bool {
 // before-image said the name had not moved, and the provenance stamp was
 // skipped for an edit that really did change the name.
 func lockCompanyNameWritesForEdit(ctx context.Context, tx pgx.Tx, in UpdateCompanyInput) error {
-	if !renamesAnCompany(in) {
+	if !renamesACompany(in) {
 		return nil
 	}
 	return lockCompanyNameWrites(ctx, tx)

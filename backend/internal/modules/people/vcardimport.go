@@ -333,7 +333,7 @@ func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, personID ids
 // employerByName finds the company the card names, or creates it.
 //
 // Without the lookup, two cards from the same company create two companies:
-// every employee of Acme arrives with `COMPANY:Acme`, and a create-only path turns
+// every employee of Acme arrives with `ORG:Acme`, and a create-only path turns
 // a ten-card export into ten Acmes that a human then has to merge.
 func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*ids.CompanyID, error) {
 	var existing ids.CompanyID

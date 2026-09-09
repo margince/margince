@@ -469,8 +469,11 @@ func sortAndTrim(items *[]graphItem, maxItems int) {
 }
 
 func plural(entity string) string {
-	if strings.HasSuffix(entity, "person") {
+	switch {
+	case strings.HasSuffix(entity, "person"):
 		return "people"
+	case strings.HasSuffix(entity, "company"):
+		return strings.TrimSuffix(entity, "company") + "companies"
 	}
 	return entity + "s"
 }

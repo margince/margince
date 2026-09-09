@@ -110,7 +110,7 @@ func (t archiveRecord) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "archivePerson/archiveCompany/archiveDeal/archiveProject/archiveRelationship/archiveActivity",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["person",importObjectCompany,"deal","project","relationship","activity"]},
+			"record_type":{"type":"string","enum":["person","company","deal","project","relationship","activity"]},
 			"id":{"type":"string","format":"uuid"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
@@ -307,7 +307,7 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "mergePerson/mergeCompany",
 		InputSchema: schema(`{"type":"object","required":["record_type","source_id","target_id"],"properties":{
-			"record_type":{"type":"string","enum":["person",importObjectCompany]},
+			"record_type":{"type":"string","enum":["person","company"]},
 			"source_id":{"type":"string","format":"uuid","description":"The record merged away (archived, redirected to the survivor)"},
 			"target_id":{"type":"string","format":"uuid","description":"The surviving record everything relinks to"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},

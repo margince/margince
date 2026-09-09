@@ -125,7 +125,7 @@ func TestAPersonIsSelectedByTheirEmployersAttributes(t *testing.T) {
 
 // The inverse of the same edge, which is the question the employment table was
 // built to answer.
-func TestAnCompanyIsSelectedByItsPeople(t *testing.T) {
+func TestACompanyIsSelectedByItsPeople(t *testing.T) {
 	q := setupQuery(t)
 	f := q.seedEmployments(t)
 

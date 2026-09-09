@@ -114,6 +114,16 @@ func tablesWhoseCheckAdmitsOwner(t *testing.T) []string {
 		for table, vocabulary := range visibilityChecksIn(string(raw)) {
 			admits[table] = strings.Contains(vocabulary, "'owner'")
 		}
+		// A later migration can RENAME a table the CHECK was written against,
+		// and this scan reads TEXT: without following the rename it keeps
+		// answering under a name the database no longer has, and the Go list
+		// beside it — which knows only the current name — reads as drifted.
+		for old, renamed := range tableRenamesIn(string(raw)) {
+			if held, ok := admits[old]; ok {
+				delete(admits, old)
+				admits[renamed] = held
+			}
+		}
 	}
 	out := make([]string, 0, len(admits))
 	for table, ok := range admits {
@@ -170,4 +180,16 @@ func slicesContains(tables []string, want string) bool {
 		}
 	}
 	return false
+}
+
+// tableRename matches a rename, old name then new.
+var tableRename = regexp.MustCompile(`(?is)ALTER\s+TABLE\s+(?:ONLY\s+)?(\w+)\s+RENAME\s+TO\s+(\w+)`)
+
+// tableRenamesIn maps every table this migration renames to its new name.
+func tableRenamesIn(text string) map[string]string {
+	out := map[string]string{}
+	for _, m := range tableRename.FindAllStringSubmatch(text, -1) {
+		out[m[1]] = m[2]
+	}
+	return out
 }

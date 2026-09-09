@@ -30,7 +30,7 @@ const mailedCard = `BEGIN:VCARD
 VERSION:3.0
 N:Post;Petra;;;
 FN:Petra Post
-COMPANY:Briefkasten GmbH
+ORG:Briefkasten GmbH
 TITLE:Head of Mail
 EMAIL;TYPE=INTERNET:petra@briefkasten.example
 TEL;TYPE=WORK,VOICE:+49 30 5556677

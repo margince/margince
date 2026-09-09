@@ -32,7 +32,7 @@ func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
 			},
 		},
 		{
-			name: "an COMPANY with departments keeps only the company",
+			name: "an ORG with departments keeps only the company",
 			// The components after the first are departments, and a department
 			// is not an employer.
 			card: "BEGIN:VCARD\nFN:Sam Rep\nORG:Globex;Sales;EMEA\nEND:VCARD\n",
@@ -73,7 +73,7 @@ func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
 		},
 		{
 			name: "escaped punctuation arrives as punctuation",
-			card: `BEGIN:VCARD` + "\n" + `FN:Acme\, Inc.` + "\n" + `COMPANY:Acme\; Holdings` + "\n" + `END:VCARD` + "\n",
+			card: `BEGIN:VCARD` + "\n" + `FN:Acme\, Inc.` + "\n" + `ORG:Acme\; Holdings` + "\n" + `END:VCARD` + "\n",
 			want: VCardEntry{FullName: "Acme, Inc.", Company: "Acme; Holdings"},
 		},
 		{

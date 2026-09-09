@@ -107,7 +107,7 @@ func TestAPhoneHitIsReportedWithoutClaimingCertainty(t *testing.T) {
 // The domain nobody typed. A caller holding a business card has an address, and
 // the company tier is keyed on domain — so the derivation is what makes the
 // difference between an exact hit and a name guess.
-func TestResolveFindsAnCompanyByTheDomainInsideAnAddress(t *testing.T) {
+func TestResolveFindsACompanyByTheDomainInsideAnAddress(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, company := e.seedEmployedPerson(ctx, t, "Anna Weber", "anna@acme.example", "Acme GmbH", "acme.example")
@@ -129,7 +129,7 @@ func TestResolveFindsAnCompanyByTheDomainInsideAnAddress(t *testing.T) {
 
 // A consumer-mail address contributes NO domain. Without this, every private
 // address would collide onto whichever company first claimed that provider.
-func TestResolveIgnoresAConsumerMailDomainOnAnCompany(t *testing.T) {
+func TestResolveIgnoresAConsumerMailDomainOnACompany(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.seedEmployedPerson(ctx, t, "Anna Weber", "anna@gmail.com", "Gmail Holdings", "gmail.com")

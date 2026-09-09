@@ -83,7 +83,7 @@ func relationsOf(t *testing.T, entity string) map[string]Relation {
 // The defect this file exists for, in the direction it was reported: a person's
 // employer lives in `relationship`, so before the join derivation `person` had
 // no hop at all and the question could not be asked.
-func TestAPersonTraversesToTheirEmployerAndAnCompanyToItsPeople(t *testing.T) {
+func TestAPersonTraversesToTheirEmployerAndACompanyToItsPeople(t *testing.T) {
 	fromPerson := relationsOf(t, entityPerson)
 	employer, ok := fromPerson["companies"]
 	if !ok {

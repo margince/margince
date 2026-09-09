@@ -22,20 +22,7 @@ import (
 // coreFamilyStreams is the events.md §4.1 stream set, spelled out rather than
 // derived: these tests exist to catch a change to the stream layout, and an
 // expectation computed from the code under test would move with it.
-var coreFamilyStreams = []string{
-	"gw:events:crm:activity",
-	"gw:events:crm:approval",
-	"gw:events:crm:audit",
-	"gw:events:crm:capture",
-	"gw:events:crm:coldstart",
-	"gw:events:crm:deal",
-	"gw:events:crm:identity",
-	"gw:events:crm:lead",
-	"gw:events:crm:company",
-	"gw:events:crm:overlay",
-	"gw:events:crm:person",
-	"gw:events:crm:voice",
-}
+var coreFamilyStreams = []string{"gw:events:crm:activity", "gw:events:crm:approval", "gw:events:crm:audit", "gw:events:crm:capture", "gw:events:crm:coldstart", "gw:events:crm:company", "gw:events:crm:deal", "gw:events:crm:identity", "gw:events:crm:lead", "gw:events:crm:overlay", "gw:events:crm:person", "gw:events:crm:voice"}
 
 func TestStreamsMatchSpecList(t *testing.T) {
 	// The families, plus the extension tier's one stream — enumerated here
@@ -212,7 +199,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 	// TestNoCoreGroupCarriesTheExtensionStream.
 	all := coreFamilyStreams
 	want := map[string][]string{
-		"cg:context-graph": {"gw:events:crm:activity", "gw:events:crm:deal", "gw:events:crm:lead", "gw:events:crm:company", "gw:events:crm:person"},
+		"cg:context-graph": {"gw:events:crm:activity", "gw:events:crm:company", "gw:events:crm:deal", "gw:events:crm:lead", "gw:events:crm:person"},
 		// The interaction-edge projection (ADR-0078): activity events move an
 		// edge, person events (merge, archive, restore) move every edge to
 		// that contact.

@@ -309,7 +309,10 @@ func pluralRelationName(entity string) string {
 // before that, no record declared a scalar activity_id, so the rule was never
 // asked. A name a caller has to misspell to use is a worse answer than a
 // missing hop.
-var irregularPlurals = map[string]string{entityActivity: "activities"}
+var irregularPlurals = map[string]string{
+	entityActivity: "activities",
+	entityCompany:  "companies",
+}
 
 // mergeRelations keeps ONE relation per name, and a direct edge wins.
 //

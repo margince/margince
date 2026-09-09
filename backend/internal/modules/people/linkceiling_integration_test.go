@@ -66,9 +66,9 @@ func seedActivityAtTheCeiling(ctx context.Context, t *testing.T, e *dedupeEnv, f
 	return activityID
 }
 
-// linkAnCompany files the activity under one more company, in its own
+// linkACompany files the activity under one more company, in its own
 // transaction, and answers what the database said.
-func linkAnCompany(ctx context.Context, e *dedupeEnv, activityID ids.ActivityID) error {
+func linkACompany(ctx context.Context, e *dedupeEnv, activityID ids.ActivityID) error {
 	return e.store.tx(ctx, func(tx pgx.Tx) error {
 		companyID := ids.NewV7()
 		if _, err := tx.Exec(ctx, `
@@ -154,7 +154,7 @@ func TestTwoWritersCannotPushOneActivityPastTheCeiling(t *testing.T) {
 	}
 
 	// And once it can see the row, it is refused rather than admitted.
-	err := linkAnCompany(ctx, e, activityID)
+	err := linkACompany(ctx, e, activityID)
 	if !errors.As(err, &pgErr) || pgErr.Code != "23514" {
 		t.Fatalf("the twenty-sixth link got %v, want a check violation", err)
 	}
@@ -170,7 +170,7 @@ func TestAnActivityUnderTheCeilingStillTakesALink(t *testing.T) {
 	ctx := e.as()
 	activityID := seedActivityAtTheCeiling(ctx, t, e, 3)
 
-	if err := linkAnCompany(ctx, e, activityID); err != nil {
+	if err := linkACompany(ctx, e, activityID); err != nil {
 		t.Fatalf("filing an activity with room under one more record: %v", err)
 	}
 	if got := linkCount(ctx, t, e, activityID); got != 4 {

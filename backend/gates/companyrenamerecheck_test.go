@@ -35,7 +35,7 @@ const (
 	companyName   = "company.display_name / company.legal_name"
 )
 
-// setsAnCompanyName matches a statement that moves a name column.
+// setsACompanyName matches a statement that moves a name column.
 //
 // An UPDATE only. A CREATE is a different question and is answered elsewhere:
 // every path to the one `INSERT INTO company` (in `createCompany`)
@@ -45,9 +45,9 @@ const (
 // INSERT has therefore already been compared against every existing name, and
 // asking it to re-check afterwards would be asking it to compare a row with
 // itself.
-var setsAnCompanyName = regexp.MustCompile(`(?is)UPDATE\s+company\b[^;]*?\b(display_name|legal_name)\s*=`)
+var setsACompanyName = regexp.MustCompile(`(?is)UPDATE\s+company\b[^;]*?\b(display_name|legal_name)\s*=`)
 
-// assemblesAnCompanyUpdate matches an UPDATE whose COLUMN is a variable,
+// assemblesACompanyUpdate matches an UPDATE whose COLUMN is a variable,
 // so the statement names no column for the pattern above to find.
 //
 // This is not hypothetical: company_profile_field_write.go writes
@@ -59,7 +59,7 @@ var setsAnCompanyName = regexp.MustCompile(`(?is)UPDATE\s+company\b[^;]*?\b(disp
 //
 // A fragment ending at SET is judged like a named write: the gate cannot know
 // which column arrives, so it asks the same question it asks of one it can read.
-var assemblesAnCompanyUpdate = regexp.MustCompile(`(?is)UPDATE\s+company\b[^;]*?\bSET\s*$`)
+var assemblesACompanyUpdate = regexp.MustCompile(`(?is)UPDATE\s+company\b[^;]*?\bSET\s*$`)
 
 // withoutSQLNoise blanks every region of a statement the database does not
 // execute: quoted literals, dollar-quoted bodies, line comments and block
@@ -222,7 +222,7 @@ func TestEveryCompanyRenameReachesTheDuplicateRecheck(t *testing.T) {
 			continue
 		}
 		writers++
-		if assemblesAnCompanyUpdate.MatchString(withoutSQLNoise(statement)) {
+		if assemblesACompanyUpdate.MatchString(withoutSQLNoise(statement)) {
 			assembled++
 		} else {
 			named++
@@ -270,8 +270,8 @@ func TestEveryCompanyRenameReachesTheDuplicateRecheck(t *testing.T) {
 func firstRenameStatement(statements []string) (string, bool) {
 	for _, statement := range statements {
 		readable := withoutSQLNoise(statement)
-		if setsAnCompanyName.MatchString(readable) ||
-			assemblesAnCompanyUpdate.MatchString(readable) {
+		if setsACompanyName.MatchString(readable) ||
+			assemblesACompanyUpdate.MatchString(readable) {
 			return strings.Join(strings.Fields(statement), " "), true
 		}
 	}
@@ -345,8 +345,8 @@ func TestTheRenameDetectorReadsSQLAndNotProse(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			readable := withoutSQLNoise(tc.sql)
-			got := setsAnCompanyName.MatchString(readable) ||
-				assemblesAnCompanyUpdate.MatchString(readable)
+			got := setsACompanyName.MatchString(readable) ||
+				assemblesACompanyUpdate.MatchString(readable)
 			if got != tc.reads {
 				t.Errorf("reads as a company rename = %v, want %v — %s\n  raw:      %q\n  stripped: %q",
 					got, tc.reads, tc.reason, tc.sql, readable)

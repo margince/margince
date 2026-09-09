@@ -25,7 +25,7 @@ func ldPage(block string) string {
 		`</script></head><body><div id="__next"></div></body></html>`
 }
 
-func TestAShellDeclaringAnCompanyIsNotAnEmptyPage(t *testing.T) {
+func TestAShellDeclaringACompanyIsNotAnEmptyPage(t *testing.T) {
 	got := linkedDataClaims(ldPage(`{
 		"@context":"https://schema.org","@type":"Organization",
 		"name":"Intouch Sports","description":"Coaching for teams that travel."}`))
@@ -40,7 +40,7 @@ func TestAShellDeclaringAnCompanyIsNotAnEmptyPage(t *testing.T) {
 // schema.org's company vocabulary is open, so a list of accepted types
 // would read a site declaring itself a LocalBusiness subtype as declaring
 // nothing at all.
-func TestAnCompanySubtypeIsReadLikeAnyOther(t *testing.T) {
+func TestACompanySubtypeIsReadLikeAnyOther(t *testing.T) {
 	for _, kind := range []string{"Corporation", "NGO", "Dentist", "SportsActivityLocation"} {
 		got := linkedDataClaims(ldPage(fmt.Sprintf(
 			`{"@context":"https://schema.org","@type":%q,"name":"Nordic Works"}`, kind)))
