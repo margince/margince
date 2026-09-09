@@ -43,12 +43,11 @@ WORKDIR /src
 COPY go.work go.work.sum ./
 COPY backend/go.mod backend/go.sum ./backend/
 COPY backend/tools/go.mod backend/tools/go.sum ./backend/tools/
-COPY cli/craft/go.mod ./cli/craft/
 COPY composition/go.mod composition/go.sum ./composition/
 RUN GOWORK=/src/go.work go mod download
 
 # The whole repo is the build context — the composed workspace references
-# ../backend, ../backend/tools, ../cli/craft and ../extensions/* by relative
+# ../backend, ../backend/tools and ../extensions/* by relative
 # path, so a partial copy would break gen-composition.
 COPY . .
 

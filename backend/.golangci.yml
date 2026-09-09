@@ -187,10 +187,10 @@ linters:
       # would be a wider hole than the one being cut, and would go on being
       # wider as patterns are added.
       #
-      # The path prefixes are relative to THIS FILE's directory, which is how
-      # golangci reports issue paths — so backend/tools is `tools/` and
-      # cli/craft is `../cli/craft/`. Neither can match anything in the
-      # product module, whose files report as `internal/`, `cmd/` or `pkg/`.
+      # The path prefix is relative to THIS FILE's directory, which is how
+      # golangci reports issue paths — so backend/tools is `tools/`. It
+      # cannot match anything in the product module, whose files report as
+      # `internal/`, `cmd/` or `pkg/`.
       # If a golangci upgrade ever changed that convention these rules would
       # stop matching and the suppressed findings would come BACK, failing the
       # gate — the safe direction for a mistake in a config like this.
@@ -200,9 +200,6 @@ linters:
       # the gate, where the in-source waiver this replaced would have made
       # someone write a reason for it. That is the cost of the trade.
       - path: '^tools/'
-        linters: [forbidigo]
-        text: 'use slog, not fmt\.Print'
-      - path: '^\.\./cli/craft/'
         linters: [forbidigo]
         text: 'use slog, not fmt\.Print'
 
