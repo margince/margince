@@ -179,12 +179,17 @@ export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
   "deals",
 ]);
 
-// Every RECORD page keeps ONE reading column, so a reader who walks from a
-// company to a deal to the lead behind it meets the same measure on each. That
-// is the invariant this set states: a screen whose record page exists belongs
-// here, and a record page missing from it is the one page in the walk that
-// jumps. Settings is always capped and is not listed here — it is a whole
-// section, not a record.
+// Every RecordView RECORD page keeps ONE reading column, so a reader who walks
+// from a company to a deal to the lead behind it meets the same measure on
+// each. That is the invariant this set states: a screen whose record page is
+// drawn as a RecordView belongs here, and one missing from it is the one page
+// in the walk that jumps.
+//
+// A detail page that lays out its OWN surface is deliberately absent, not
+// forgotten: `#/offers/<id>` draws SectionHeader and Card itself, with no
+// RecordView, no tab strip and no details pane, so it shares no measure for
+// this set to keep. Settings is absent for the same kind of reason — it is
+// always capped, and it is a whole section rather than a record.
 //
 // A record reads DOWN rather than across: a rail of facts beside prose, where a
 // measured line length is the point and a fact a monitor away from its label is

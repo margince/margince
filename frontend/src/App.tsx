@@ -305,18 +305,13 @@ function ScreenPending() {
 }
 
 // Split out of the dispatch table purely to keep the deals list/detail split in
-// one place — it has its own create-segment vs existing-id branch below the id
-// check. The segment is CREATE_ID, spelled where the layout policy reads it so
-// the list that opens a form and the page that is not capped stay one decision.
+// one place: `#/deals/new` carries CREATE_ID and is the LIST with its form open,
+// which is the same reading the shell's layout policy takes from that segment.
 function DealsRoute({ id, id2 }: Readonly<{ id?: string; id2?: string }>) {
-  if (id && id !== CREATE_ID && id2 === "room") {
-    return <DealRoomPage dealId={id} />;
+  if (!id || id === CREATE_ID) {
+    return <DealsScreen startCreating={id === CREATE_ID} />;
   }
-  return id && id !== CREATE_ID ? (
-    <DealScreen id={id} />
-  ) : (
-    <DealsScreen startCreating={id === CREATE_ID} />
-  );
+  return id2 === "room" ? <DealRoomPage dealId={id} /> : <DealScreen id={id} />;
 }
 
 // #/share/<record_type>/<record_id> (AS-3/4/5) — both segments are required;

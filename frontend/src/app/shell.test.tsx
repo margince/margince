@@ -585,8 +585,14 @@ describe("Shell", () => {
 
   // A record page carries `main-record` on top of the cap: the class adds no
   // width and only NAMES the column as a container, which is what lets the
-  // record's tab strip measure the column it spans. A capped page that is not a
-  // record has no such strip and must not name one.
+  // record's tab strip measure the column it spans.
+  //
+  // The name comes off the ROUTE rather than off whether a strip is drawn, so a
+  // page deeper INSIDE a record keeps it: `#/deals/<id>/room` is still that
+  // deal's column, and a container named on arrival cannot go missing on the
+  // one page of a record that reaches for it late. A page that is not a record
+  // at all names none — a list with its create form open, settings, the
+  // worklist.
   it.each([
     ["#/companies/o-1", true],
     ["#/contacts/p-1", true],

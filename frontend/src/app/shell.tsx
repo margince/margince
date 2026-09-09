@@ -836,15 +836,9 @@ export function Shell({
   const onUnitPage =
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
   const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
-  // Record pages only: a RECORD id is what makes it one. `#/companies` is the
-  // list, and a list belongs to the other family — including `#/deals/new`,
-  // which carries the create segment rather than a record's id and is the deals
-  // list with its form open. A deeper segment stays on the record: the deal
-  // room is a page OF that deal and keeps the deal's column.
-  const griddedRecord =
-    route.id !== undefined &&
-    route.id !== CREATE_ID &&
-    GRIDDED_RECORD_SCREENS.has(route.screen);
+  // A RECORD id makes one: `#/companies` and `#/deals/new` are both lists.
+  const recordPage = route.id !== undefined && route.id !== CREATE_ID;
+  const griddedRecord = recordPage && GRIDDED_RECORD_SCREENS.has(route.screen);
   // The id-less half of the same policy: a screen that reads down but is not a
   // record, so there is no id to key on. Brief is the one today.
   const griddedScreen = GRIDDED_SCREENS.has(route.screen);
