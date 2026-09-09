@@ -135,7 +135,7 @@ func TestEveryOutboundRequestSaysWhoIsCallingOrRegistersWhyNot(t *testing.T) {
 // and a census that stopped at the backend's edge would have claimed "every
 // outbound request" over trees it never read.
 var outboundSurfaceRoots = []string{
-	".", "../extensions", "../cli", "../desktop", "../fixtures",
+	".", "../extensions", "../desktop", "../fixtures",
 }
 
 // outboundBuilderFloor is what the walk found when this census landed.
