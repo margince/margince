@@ -6,13 +6,12 @@ import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCan, useRecordWriteRefusal } from "../app/capability";
-import { PageAsideToggle, usePageAside } from "../app/pageaside";
+import { usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
-import { RecordTabs } from "../design-system/recordtabs";
 import {
   hasTimelineFilters,
   useRecordTimeline,
@@ -54,6 +53,7 @@ import {
   ProjectDocumentsCard,
   StakeholdersCard,
 } from "./projectsections";
+import { ProjectTabs } from "./projecttabs";
 import {
   ChronologyFilter,
   ChronologyFooter,
@@ -104,15 +104,7 @@ export function ProjectScreen({ id }: Readonly<{ id: string }>) {
   );
 }
 
-// A project is read in one body, so the strip names that one and nothing
-// else. It is here for what rides at its END: the details switch belongs to
-// the row that chooses what the work column shows, and every other record page
-// carries it there, so a reader who has learned where the switch is finds it in
-// the same place on a project.
-const PROJECT_TABS = ["overview"] as const;
-
 function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
-  const t = useT();
   const recordZone = useRecordZone();
   const details = usePageAside();
   const project = view.project;
@@ -203,21 +195,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       // with no primary action was also the one whose verbs were somewhere
       // else.
       actionsInline
-      tabs={
-        <RecordTabs
-          options={PROJECT_TABS}
-          value="overview"
-          // The one body is already the value the strip carries, so choosing it
-          // asks for the page the reader is on.
-          onChange={() => undefined}
-          labels={{ overview: t("tab.overview") }}
-          // The switch for the details pane, at the end of the tab row: it
-          // chooses what the page shows BESIDE the work, so it stands with the
-          // control that chooses what the work column shows rather than among
-          // the record's verbs.
-          trailing={<PageAsideToggle />}
-        />
-      }
+      tabs={<ProjectTabs />}
       band={
         <div className="project-band">
           {/* One sentence for why this record takes no changes, whichever

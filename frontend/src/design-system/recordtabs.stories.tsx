@@ -66,6 +66,25 @@ export const SelectedTabHasNoCount: Story = {
   render: () => <Live initial="brief" />,
 };
 
+// A record read in ONE body. The lone tab is a LABEL for the page the reader
+// is already on — no press, no handler — and what earns the row is the control
+// riding at its end, which stands where every other record page keeps it.
+export const Single: Story = {
+  render: () => (
+    <RecordTabs
+      label="Record"
+      options={["overview"]}
+      value="overview"
+      labels={LABELS}
+      trailing={
+        <Button small aria-pressed={false}>
+          Details
+        </Button>
+      }
+    />
+  ),
+};
+
 // The row's far end carries the control that opens the record's details
 // column. It sits off the strip's own scroll, so it stays in view however
 // many tabs there are, and reads as the page's control rather than a tab.

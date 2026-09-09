@@ -1105,11 +1105,10 @@ function CompanyRecord({
   // otherwise keep serving a native-looking company view.
   const overlay = view.data?.state === "overlay" || sorMode === "overlay";
   const visibleTabs = companyTabsFor(org, tab);
-  // The strip stands whatever it holds, because choosing between the account's
-  // bodies is not all it does: the details switch rides at its end, so a row
-  // that disappeared for an account with one body to read would take the only
-  // way into the pane with it. One strip on every record page is also what
-  // lets a reader learn where the switch is once.
+  // The strip stands whatever it holds: the details switch rides at its end,
+  // so a row that disappeared for an account with one body to read would take
+  // the only way into the pane with it — and one strip on every record page is
+  // what lets a reader learn where the switch is once.
   const tabs = (
     <div className="co-tabs">
       <RecordTabs
