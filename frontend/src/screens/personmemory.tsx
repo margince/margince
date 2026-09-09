@@ -65,10 +65,13 @@ export function PersonMemory({
   const shown = rows.filter((row) => matches(row, filter));
 
   return (
-    <Panel
-      className="pe-memory"
-      title={t("person.memory.title")}
-      titleAction={
+    <Panel className="pe-memory" title={t("person.memory.title")}>
+      {/* The cut sits UNDER the head, not in it. Five options do not fit beside
+          the title on the one band a panel head is, and a strip that wrapped to
+          a second row gave this card a head taller than every other card in the
+          stack. Under it, the row reads as what it is: what narrows the list
+          below it. */}
+      <PanelBody>
         <SegmentedControl
           options={FILTERS}
           value={filter}
@@ -81,8 +84,7 @@ export function PersonMemory({
             notes: t("person.memory.notes"),
           }}
         />
-      }
-    >
+      </PanelBody>
       {shown.length === 0 && (
         <PanelBody>
           <p className="pe-prose t-body">{t("person.memory.empty")}</p>

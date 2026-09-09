@@ -369,6 +369,18 @@
      screen. */
   --control-h-lg: 40px;
 
+  /* The height of a panel's header band, and it is a token for the same reason
+     --control-h is one: every panel on every screen draws the SAME band, so the
+     number belongs to the house rather than to whichever rule reaches for it
+     first. Left to each caller it drifted — a head carrying a description stood
+     taller than a head carrying a button, and two screens re-spaced the band
+     themselves — so the same card was a different object on two pages. Fixed
+     rather than a floor: what does not fit on one band is not header content
+     and goes in the body. One value at every viewport, the touch arm below
+     included, because the band holds no target of its own — the controls inside
+     it take the pointer rungs. */
+  --panel-head-h: 56px;
+
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
    * reaching for ad-hoc (inconsistently spelled 10/12/14/16 before this).
    * Layout rhythm, not part of the §2 Ledger-Green colour identity; a

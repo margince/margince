@@ -76,9 +76,9 @@ export const WithFooter: Story = {
   },
 };
 
-// `sub`: one line of description inside the header band. The band is a floor
-// rather than a fixed measure, so this is the one slot that raises it — put this
-// story beside `WithBody` above and the title-only header is unchanged.
+// `sub`: one line of description inside the header band. The band is FIXED, so
+// the description rides inside it rather than raising it — put this story
+// beside `WithBody` above and the two heads are the same height.
 export const WithSub: Story = {
   args: {
     title: "Passports",
@@ -124,6 +124,38 @@ export const WithSubRowsAndFooter: Story = {
       </>
     ),
     footer: <span className="t-mono">€64,700.00</span>,
+  },
+};
+
+// The band under pressure: a name longer than the panel is wide, a description
+// under it, and two things at the far end that must keep their own size. Both
+// lines end in an ellipsis on one row each — the band stays exactly as tall as
+// every other head on the page, and the badge and the button are not squeezed
+// to buy the title room. Narrowed to 320px on purpose; widen the frame and the
+// ellipsis is the first thing to go.
+export const LongTitleTruncates: Story = {
+  decorators: [
+    (Story) => (
+      <div style={{ maxWidth: 320 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    title: "Brandt Automotive Zulieferbetriebe Deutschland GmbH & Co. KG",
+    sub: "Every purpose this installation holds personal data under, and who answers for it.",
+    titleAction: (
+      <>
+        <Badge tone="accent">7</Badge>
+        <Button small>Add</Button>
+      </>
+    ),
+    children: (
+      <>
+        <PanelRow>Contract performance</PanelRow>
+        <PanelRow>Legitimate interest — account management</PanelRow>
+      </>
+    ),
   },
 };
 
@@ -216,6 +248,26 @@ export const AiTone: Story = {
       </>
     ),
     footer: <span>Read from 41 records · 14:22</span>,
+  },
+};
+
+// The indigo head with a description under the title — who read the record over
+// what they read. A tone TINTS: put this beside `WithSubAndTitleAction` and the
+// two bands are the same height, because the ai head used to hug its own two
+// lines and stood shorter than every other panel on the page. What differs is
+// the ground, the hairline's colour and the title, and nothing else.
+export const AiToneWithSub: Story = {
+  args: {
+    tone: "ai",
+    title: "What changed on this account",
+    sub: "Read from 41 records this morning. Nothing here is decided yet.",
+    titleAction: <Badge tone="ai">AI-assisted</Badge>,
+    children: (
+      <>
+        <PanelRow>Two contacts left the buying group in July.</PanelRow>
+        <PanelRow>The renewal date moved forward by three weeks.</PanelRow>
+      </>
+    ),
   },
 };
 

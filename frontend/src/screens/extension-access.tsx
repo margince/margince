@@ -414,18 +414,18 @@ function UnitCard({
         <div className="ext-unit-actions">
           <Badge>{t("extAccess.version", { version: unit.version })}</Badge>
           {page ? (
-            // The unit's name is IN the link text, not only in the heading
-            // beside it: several of these sit on one page, and "Open" repeated
-            // five times names nothing to anyone reading the links out of
-            // context. The hash is built through routeHash and the exported
-            // screen token rather than spelled here, so this link and the
-            // router cannot drift apart.
+            // The unit's name is IN the link text: several units share the
+            // page, and "Open" five times names nothing out of context. The
+            // hash comes from routeHash and the exported screen token, so
+            // link and router cannot drift apart.
             <a
               className="t-caption ext-unit-link"
               href={routeHash({ screen: EXTENSION_SCREEN, id: page.name })}
             >
               <ArrowUpRight aria-hidden size={15} />
-              {t("extAccess.openUnit", { name: page.name })}
+              <span className="ext-unit-link-text">
+                {t("extAccess.openUnit", { name: page.name })}
+              </span>
             </a>
           ) : null}
         </div>

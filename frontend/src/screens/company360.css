@@ -1488,13 +1488,13 @@
 
 /* The needs pane's head actions: the disclosure that a machine read the
    record, and the way to the record's own list, as ONE item at the far end of
-   `Panel`'s head band. They are grouped rather than handed in loose because a
-   `.badge` is a shrinkable flex item like anything else — beside a title long
-   enough to fill the band, "AI-assisted" came out as two lines. Grouped and
-   held whole, the TITLE gives way instead, which a tone="ai" head is already
-   sized for. Same on every record: the pane is the record-360 kit's, not the
-   company's, and its rules sit with `.co-reading`'s here for the reason
-   record360/README.md gives. */
+   `Panel`'s head band. They are grouped rather than handed in loose because
+   they are one strip of controls and read as one — what keeps each of them
+   whole beside a title long enough to fill the band is panel.css, which holds
+   everything after the title block at its natural width, so the TITLE is what
+   gives way and the ellipsis is on it. Same on every record: the pane is the
+   record-360 kit's, not the company's, and its rules sit with `.co-reading`'s
+   here for the reason record360/README.md gives. */
 .co-reading-today-actions {
   display: flex;
   align-items: center;
@@ -1598,25 +1598,38 @@
 /* THE CARD'S CLAIM OF AUTHORSHIP, and what it is a claim about: the mark on
    its own indigo tile, then the record's name at reading size. The tile is the
    whole claim — a sentence beside it saying the same thing in an eyebrow's
-   shout read as a caption typed onto the record's name. */
+   shout read as a caption typed onto the record's name.
+
+   One line, because the band it heads is one: the panel head is fixed at
+   --panel-head-h, so a wrapped identity row is not a taller card, it is a
+   clipped one. The tile keeps its size and the NAME gives way — a shrunken
+   mark would read as a smaller claim, and the string that overruns is a
+   registered legal name, which the ellipsis is exactly the right answer to. */
 .co-360-title {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
-  min-inline-size: 0;
-}
-.co-360-subject {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-inline-size: 0;
 }
 
-/* The mark, on a tile of its own, leading the line. */
+/* The ellipsis lands here rather than on `.panel-title`, which panel.css
+   already truncates: tone="ai" makes that element a flex container, and
+   `text-overflow` reaches the inline content of a block container, never a
+   flex item nested inside one. */
+.co-360-subject {
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The mark, on a tile of its own, leading the line. It never gives way: 2rem
+   in a 56px band is the claim the card is built on. */
 .co-360-title .co-360-mark {
   display: grid;
   place-items: center;
+  flex-shrink: 0;
   inline-size: 2rem;
   block-size: 2rem;
   border-radius: var(--r-md);
