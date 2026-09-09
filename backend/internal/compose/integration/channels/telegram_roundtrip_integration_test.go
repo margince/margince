@@ -87,6 +87,18 @@ func (c *telegramEnv) grantConsent(t *testing.T, personID, purposeKey string) {
 
 // TestInboundThenReplyRoundTrip is the whole loop, in the order a customer and
 // a rep actually live it.
+// What every reply in this file claims, and what the fixture grants.
+//
+// These are answers to a message the customer sent, which is what makes them
+// lawful: the inbound IS the qualifying event, and the purpose key names the
+// claim rather than evidencing it. The context is claimed too, because only a
+// marketing category carries a one-click unsubscribe link and a chat reply that
+// grew a footer would be a different message from the one the rep wrote.
+const (
+	replyPurpose = "business_correspondence"
+	replyContext = "reply_to_inbound"
+)
+
 func TestInboundThenReplyRoundTrip(t *testing.T) {
 	c := setupTelegramConnected(t)
 	inbound := telegramUpdate{
@@ -111,7 +123,7 @@ func TestInboundThenReplyRoundTrip(t *testing.T) {
 	}
 
 	// 3. The workspace records the lawful basis for answering.
-	c.grantConsent(t, personID, "transactional")
+	c.grantConsent(t, personID, replyPurpose)
 
 	// 4. The rep answers from that conversation. Their own action IS the
 	//    approval, so no token and no idempotency key ride the request.
@@ -123,7 +135,8 @@ func TestInboundThenReplyRoundTrip(t *testing.T) {
 		Body            string `json:"body"`
 	}
 	status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", integration.AnyMap{
-		"body": reply, "consent_purpose": "transactional",
+		"body": reply, "consent_purpose": replyPurpose,
+		"communication_context": replyContext,
 	}, nil, &sent)
 	if status != http.StatusAccepted {
 		t.Fatalf("the rep's reply → %d, want 202", status)
@@ -188,9 +201,10 @@ func TestCustomerReplyNamesTheChannelItArrivedOn(t *testing.T) {
 
 	// The rep answers, which is what puts an outbound activity in this chat's
 	// thread for the customer's next message to match against.
-	c.grantConsent(t, personID, "transactional")
+	c.grantConsent(t, personID, replyPurpose)
 	if status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", integration.AnyMap{
-		"body": repReply, "consent_purpose": "transactional",
+		"body": repReply, "consent_purpose": replyPurpose,
+		"communication_context": replyContext,
 	}, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("the rep's reply → %d, want 202", status)
 	}
@@ -254,12 +268,13 @@ func TestAnArchivedOutboundIsNotAConversationToReplyInto(t *testing.T) {
 	awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
 	activityID, personID := c.capturedMessage(t, opening)
 
-	c.grantConsent(t, personID, "transactional")
+	c.grantConsent(t, personID, replyPurpose)
 	var sent struct {
 		ID string `json:"id"`
 	}
 	if status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", integration.AnyMap{
-		"body": "We are — hall 4.", "consent_purpose": "transactional",
+		"body": "We are — hall 4.", "consent_purpose": replyPurpose,
+		"communication_context": replyContext,
 	}, nil, &sent); status != http.StatusAccepted {
 		t.Fatalf("the rep's reply → %d, want 202", status)
 	}
@@ -328,9 +343,10 @@ func TestAForgedThreadKeyCannotReplyIntoAnotherMediumsConversation(t *testing.T)
 	activityID, personID := c.capturedMessage(t, opening)
 
 	// A real outbound goes into the Telegram conversation.
-	c.grantConsent(t, personID, "transactional")
+	c.grantConsent(t, personID, replyPurpose)
 	if status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", integration.AnyMap{
-		"body": "Sending it over today.", "consent_purpose": "transactional",
+		"body": "Sending it over today.", "consent_purpose": replyPurpose,
+		"communication_context": replyContext,
 	}, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("the rep's reply → %d, want 202", status)
 	}
