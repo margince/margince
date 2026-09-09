@@ -183,6 +183,138 @@ func TestChangedSinceBriefDropsDecisionsTheDeckAlreadyDrew(t *testing.T) {
 	}
 }
 
+// TestAnIntroductionRequestIsNotOneOfTheDecksCards holds the two sides on one
+// spelling of the exclusion.
+//
+// The client drops `source === "approval"`; the obvious server reading is
+// category `decisions`, and that is a WIDER set — an introduction request
+// classifies as a decision and is not an approval. Reading the category dropped
+// from the door a row the count had included, which is the original defect
+// reappearing where nobody looks for it. Both versions pass every unit test on
+// their own side, because each side is self-consistent.
+func TestAnIntroductionRequestIsNotOneOfTheDecksCards(t *testing.T) {
+	t.Parallel()
+
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		Introductions: lane(
+			item("intro", "introduction_request", withDue(rankInstant.Add(time.Hour))),
+		),
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("decision", "approval", withKind("send_email")),
+		},
+	}
+	rows := classifyDay(day, rankInstant, dayMoney{})
+
+	// The premise: both rows land in the same category, so a category test
+	// cannot tell them apart and this test would prove nothing without it.
+	for _, row := range rows {
+		if row.item.Category != categoryDecisions {
+			t.Fatalf("row %q classifies as %q — the fixture no longer models two "+
+				"rows one category cannot separate", row.item.Id, row.item.Category)
+		}
+	}
+
+	kept := keepFiltered(rows, filterExceptDecisions)
+	if ids := rankedIDs(kept); len(ids) != 1 || ids[0] != "intro" {
+		t.Fatalf("kept %v, wanted the introduction alone: the deck draws "+
+			"approvals as cards and an introduction is not one", ids)
+	}
+}
+
+// TestAFoldedGroupReachesTheChangedPageThroughWorklist is the wiring half.
+//
+// groupChangedSinceBrief can be right while batches.go never calls it, and the
+// unit test below cannot tell: the fold MINTS a row, so a missing assignment
+// looks exactly like a group the night had seen. Reverting the assignment left
+// the whole package green until this test existed.
+//
+// Three failures of ONE rule, which is what batchFloor takes to fold, all after
+// the night's cutoff. The group must arrive on a page asking for what changed.
+func TestAFoldedGroupReachesTheChangedPageThroughWorklist(t *testing.T) {
+	t.Parallel()
+
+	cutoff := readInstant.Add(-6 * time.Hour)
+	fired := cutoff.Add(time.Hour)
+	rule := ids.New[ids.AutomationKind]()
+	runs := make([]TroubledAutomationRun, 0, batchFloor)
+	for at := range batchFloor {
+		runs = append(runs, TroubledAutomationRun{
+			ID: ids.NewV7(), AutomationID: rule, Name: "Route new leads",
+			Outcome: "failed", Reason: "the assignee seat is gone",
+			// Spread, so the group's own sort moment is the OLDEST — the value
+			// a freshness rule reading `occurred` would wrongly judge it by.
+			OccurredAt: fired.Add(time.Duration(at) * time.Minute),
+		})
+	}
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
+		stubBriefing{ran: true, asOf: cutoff},
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		&stubAutomations{rows: runs},
+		nil, nil, fixedClock)
+
+	// The premise: unfiltered, these three really did fold into one row. Without
+	// it the assertion below would pass over three unfolded rows and prove
+	// nothing about a minted one.
+	whole, err := svc.Worklist(pageReader(), "", "", ids.UUID{}, 25, "")
+	if err != nil {
+		t.Fatalf("unfiltered worklist: %v", err)
+	}
+	if len(whole.Queue) != 1 || whole.Queue[0].Batch == nil {
+		t.Fatalf("the unfiltered page holds %d rows and the first carries batch "+
+			"%v — the fixture no longer folds, so this test would not be about a "+
+			"minted row", len(whole.Queue), whole.Queue[0].Batch)
+	}
+
+	narrowed, err := svc.Worklist(
+		pageReader(), "", string(filterChangedSinceBrief), ids.UUID{}, 25, "")
+	if err != nil {
+		t.Fatalf("narrowed worklist: %v", err)
+	}
+	if len(narrowed.Queue) != 1 {
+		t.Fatalf("the changed page holds %d rows, wanted the incident group: a "+
+			"minted row inherits no flag, so the group was dropped from a notice "+
+			"its members belonged in", len(narrowed.Queue))
+	}
+}
+
+// TestAFoldedGroupCarriesItsMembersFreshness holds the minted row's flag.
+//
+// A fold MINTS a WorklistItem, so it inherits nothing its members carried unless
+// it is told to. The freshness stamping now runs before the fold — it has to,
+// because the filter reads it — so a group reached the changed strip with an
+// absent flag and was silently dropped from a notice its members belonged in.
+//
+// Any member, not the oldest: the batch takes its sort moment from the oldest
+// member, and judging freshness by that would report a failure that arrived this
+// morning as old news.
+func TestAFoldedGroupCarriesItsMembersFreshness(t *testing.T) {
+	t.Parallel()
+
+	old, fresh := false, true
+	members := []ranked{
+		{item: crmcontracts.WorklistItem{ChangedSinceBrief: &old}},
+		{item: crmcontracts.WorklistItem{ChangedSinceBrief: &fresh}},
+	}
+
+	if answer := groupChangedSinceBrief(members); answer == nil || !*answer {
+		t.Fatalf("a group holding one fresh member answered %v, wanted true — the "+
+			"reader has not read it", answer)
+	}
+	if answer := groupChangedSinceBrief(members[:1]); answer == nil || *answer {
+		t.Fatalf("a group whose every member is old answered %v, wanted false",
+			answer)
+	}
+	// Absent stays absent: a night that never ran leaves every member unflagged,
+	// and false would claim it had seen them.
+	unflagged := []ranked{{item: crmcontracts.WorklistItem{}}}
+	if answer := groupChangedSinceBrief(unflagged); answer != nil {
+		t.Fatalf("a group of unflagged members answered %v, wanted no answer",
+			*answer)
+	}
+}
+
 // TestANamedCategoryStillFiltersByEquality is the control.
 //
 // keepFiltered took over from a function that only ever compared categories, so
@@ -213,18 +345,58 @@ func TestANamedCategoryStillFiltersByEquality(t *testing.T) {
 	}
 }
 
-// TestOnlyADecisionsFilterOpensTheFoldedDeck holds which narrowings unfold.
+// TestEveryFoldableCategoryOpensItsOwnGroup derives the unfold set from the
+// fold itself.
+//
+// foldableCategories is a second spelling of batchKeyOf's own branches, and a
+// category that learns to fold without arriving there gets a Review verb that
+// returns the group the reader pressed it on. That is not hypothetical: the
+// frontend's reviewFilter used to send every group to `decisions`, so pressing
+// Review on a broken automation filtered its own failures out of view, and this
+// change reintroduced the same defect for `system` by keying the unfold on
+// `decisions` alone.
+//
+// The census drives real rows through batchKeyOf rather than reading the map
+// back to itself, so it fails in the direction that matters: a category that
+// folds and is missing here.
+func TestEveryFoldableCategoryOpensItsOwnGroup(t *testing.T) {
+	t.Parallel()
+
+	routine := levelRoutine
+	dupe := ranked{item: crmcontracts.WorklistItem{
+		Category: categoryDecisions, Level: routine, Source: "dedupe_candidate",
+	}}
+	cause := "one-broken-rule"
+	incident := ranked{item: crmcontracts.WorklistItem{
+		Category: categorySystem, Source: "automation_run", CauseRef: &cause,
+	}}
+
+	for _, row := range []ranked{dupe, incident} {
+		if _, folds := batchKeyOf(row); !folds {
+			t.Fatalf("a %q row did not fold — the fixture no longer models the "+
+				"case this census is about", row.item.Category)
+		}
+		if !opensTheDeck(string(row.item.Category)) {
+			t.Fatalf("category %q folds but a filter naming it does not open the "+
+				"group: pressing Review on one of these rows returns the group "+
+				"the reader pressed it on", row.item.Category)
+		}
+	}
+}
+
+// TestOnlyAFoldableCategoryOpensTheFoldedDeck holds which narrowings unfold.
 //
 // foldAndRepin draws a pile of alike routine decisions as one row and is skipped
 // for a reader who asked to see inside it. The two link-only values are not that
 // request: answering "what changed overnight" with a hundred rows the unfiltered
 // page draws as one makes the door hold more than the count that sent the
 // reader, which is the same disagreement in the other direction.
-func TestOnlyADecisionsFilterOpensTheFoldedDeck(t *testing.T) {
+func TestOnlyAFoldableCategoryOpensTheFoldedDeck(t *testing.T) {
 	t.Parallel()
 
 	folded := map[string]bool{
 		string(categoryDecisions):              true,
+		string(categorySystem):                 true,
 		string(filterExceptDecisions):          false,
 		string(filterChangedSinceBrief):        false,
 		string(crmcontracts.WorklistFilterAll): false,

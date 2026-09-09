@@ -305,22 +305,27 @@ func (s *Service) worklistFrom(
 	// the count disagreeing — the defect these two filter values exist to fix. It
 	// costs one comparison per row against an instant this call already holds.
 	rows = markChangedSinceBrief(rows, s.briefCutoff)
-	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
-	if narrowed {
-		rows = keepFiltered(rows, crmcontracts.WorklistFilter(filter))
-	}
-	// The routine-decision fold, skipped for a narrowing that IS opening the
-	// group — foldAndRepin's own rule, and the reason it is conditional at all.
+	// The fold, skipped for a narrowing that IS opening the group — foldAndRepin's
+	// own rule, and the reason it is conditional at all.
 	//
-	// `opensTheDeck` rather than `narrowed`, because the two new filter values are
+	// `opensTheDeck` rather than `narrowed`, because the two link-only values are
 	// narrowings that are not that request. A reader asking what changed overnight
 	// asked about freshness and can be owed decisions; answering with a hundred
 	// alike rows the unfiltered page draws as one would make the door show more
 	// than the count that sent them — the same disagreement in the other
-	// direction. `except_decisions` keeps no decision to fold, so the call is a
-	// no-op there and costs only the walk.
+	// direction.
+	//
+	// BEFORE the narrowing, so the filter judges the rows this page will actually
+	// draw. A fold MINTS a row, so filtering first left the members to be tested
+	// and the group they became untested: an incident group whose members were all
+	// stale reached a page asking only for what changed, because the three rows the
+	// filter had approved were replaced afterwards by one it never saw.
 	if !opensTheDeck(filter) {
 		rows = s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth)
+	}
+	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
+	if narrowed {
+		rows = keepFiltered(rows, crmcontracts.WorklistFilter(filter))
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
 	// then slicing left the last returned row comparing itself against a row the

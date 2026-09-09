@@ -61,16 +61,29 @@ const (
 	filterChangedSinceBrief = crmcontracts.WorklistFilter("changed_since_brief")
 )
 
-// opensTheDeck says whether a filter is a request to see inside the folded
-// group of routine decisions.
+// opensTheDeck says whether a filter is a request to see inside a folded group.
 //
-// Only a narrowing that lands ON decisions is. Answering "show me decisions"
-// with the group a reader was trying to open is a door back to itself, which is
-// the rule foldAndRepin states; answering "show me what changed overnight" with
-// a hundred alike rows the unfiltered page draws as one is the same door
-// misbehaving the other way.
+// A narrowing onto a FOLDABLE CATEGORY is. Answering "show me decisions" with
+// the group a reader was trying to open is a door back to itself, which is the
+// rule foldAndRepin states — and `system` folds too, so the Review verb on a
+// broken automation lands here for exactly the same reason. That verb already
+// had this bug once: it used to send every group to `decisions`, which filtered
+// a system group's own failures out of view.
+//
+// The two link-only values are NOT that request, which is why this is a set
+// rather than `narrowed`. Answering "what changed overnight" with a hundred
+// alike rows the unfiltered page draws as one makes the door hold more than the
+// count that sent the reader — the same disagreement in the other direction.
 func opensTheDeck(filter string) bool {
-	return filter == string(categoryDecisions)
+	return foldableCategories[crmcontracts.WorklistItemCategory(filter)]
+}
+
+// The categories batchKeyOf can fold, and therefore the ones a reader can ask
+// to see inside. Derived from that function's own branches; the census beside
+// it fails if a category learns to fold without arriving here.
+var foldableCategories = map[crmcontracts.WorklistItemCategory]bool{
+	categoryDecisions: true,
+	categorySystem:    true,
 }
 
 // keepFiltered narrows the candidates to what one filter value asks for.
@@ -99,16 +112,48 @@ func keepFiltered(rows []ranked, want crmcontracts.WorklistFilter) []ranked {
 func keepsRow(row ranked, want crmcontracts.WorklistFilter) bool {
 	switch want {
 	case filterExceptDecisions:
-		return row.item.Category != categoryDecisions
+		return !alreadyACard(row)
 	case filterChangedSinceBrief:
-		// Decisions excluded, and not as a convenience: the strip that counts
-		// this population counts it over the rows a decisions-drawing surface is
-		// answerable for, so that a row already on screen as a card is not also
-		// named as news. A filter admitting decisions would open a longer queue
+		// The deck's own rows excluded, and not as a convenience: the strip that
+		// counts this population counts it over the rows a decisions-drawing
+		// surface is answerable for, so a row already on screen as a card is not
+		// also named as news. A filter admitting them would open a longer queue
 		// than the number that sent the reader — the defect, one layer down.
-		return row.item.Category != categoryDecisions &&
+		return !alreadyACard(row) &&
 			row.item.ChangedSinceBrief != nil && *row.item.ChangedSinceBrief
 	default:
 		return string(row.item.Category) == string(want)
 	}
 }
+
+// alreadyACard says whether a decisions-drawing surface has already answered a
+// row, so the complement above must leave it out.
+//
+// BY SOURCE, matching the client rule exactly. The browser's spelling is
+// `item.source !== "approval"` (frontend/src/screens/brief.sentence.ts), and the
+// obvious server-side reading — category `decisions` — is a WIDER set: an
+// introduction request classifies there and is not an approval, so a category
+// test dropped from the door a row the count had included. A count and a door
+// that exclude differently is the defect this filter exists to remove, so the
+// two sides spell one rule.
+//
+// A folded group stands for its members and inherits their exclusion; a batch of
+// duplicate questions is drawn as a card exactly as its members would be.
+func alreadyACard(row ranked) bool {
+	if row.item.Source == deckAnswers {
+		return true
+	}
+	for _, folded := range row.foldedFrom {
+		if folded == deckAnswers {
+			return true
+		}
+	}
+	return false
+}
+
+// deckAnswers is the source a brief's decisions deck draws as cards.
+//
+// The client names the same constant beside its own filter, and the gate below
+// holds the pair: two spellings of one exclusion drift the first time either
+// side learns a new source.
+const deckAnswers = crmcontracts.WorklistItemSource("approval")
