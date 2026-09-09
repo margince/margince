@@ -254,13 +254,23 @@ func owedWhyNow(now time.Time, due *time.Time) string {
 // accountNothingNeeded is the quiet success state — an answer, not a blank
 // card. A reader came to the page for an answer, and "nothing is outstanding"
 // is one.
+//
+// IT CLAIMS ONLY WHAT THIS CARD CHECKED. The card fires on owed promises and
+// on nothing else, while the same payload carries the suggestions the rules
+// found — an unanswered message, a deal that has stalled, an account with
+// nothing scheduled. "Nothing needs you today" beside three of those is the
+// page contradicting itself, in the one element a reader takes as the verdict,
+// and it reads that way to every client: the screen, and an agent reading the
+// account through the tool surface. The contact page's rung 10 may say it,
+// having walked eight rungs to get there; this card may not, and the headline
+// says what it looked at instead.
 func accountNothingNeeded() crmcontracts.PersonMoment {
 	return crmcontracts.PersonMoment{
 		ClaimKey:            "moment:nothing_needed",
 		Rule:                crmcontracts.PersonMomentRuleNothingNeeded,
 		RuleVersion:         ptrOf(momentRuleVersion),
 		EvidenceFingerprint: "quiet",
-		Headline:            "Nothing needs you today",
+		Headline:            "Nothing is owed to this account",
 		WhyNow:              "No promise to this account is open or coming due.",
 		Confidence:          crmcontracts.PersonMomentConfidenceObservedFact,
 		Evidence:            []crmcontracts.PersonMomentEvidence{},

@@ -27,6 +27,15 @@ its source off a bare timeline page for the records that have no composite
 read. A record page hands in its own answers — which standing, which rows —
 and owes the reader the same shape as the record beside it.
 
+`moment.tsx` is THE MOMENT: the server picks one from a fixed ladder, and this
+holds everything a page needs to render it — the word for the rule
+(`MOMENT_RULE_LABEL`), the colour it carries (`standingTone`), what it rests on
+(`momentGrounding`), whether it belongs in the day's work at all
+(`momentIsARow`) and the row the account brief draws it as (`MomentRow`). It
+was on the contact page, with the account brief importing the vocabulary
+across — which is the shape this kit exists to end, and the tell was that every
+type in it (`Grounding`, `StandingTone`) was already the kit's own.
+
 ## What belongs here
 
 A part belongs in the kit when it holds no opinion about WHICH record it is
