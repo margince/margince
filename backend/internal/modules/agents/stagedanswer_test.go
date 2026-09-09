@@ -128,11 +128,49 @@ func TestTheStagedExplanationBoundsTheSummaryItRelays(t *testing.T) {
 	srv := NewDispatcher(nil, nil, "t", "0").
 		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
 
-	said := srv.explain("update_record", &workflow.StagedApprovalError{
-		ApprovalID: ids.New[ids.ApprovalKind](), Summary: strings.Repeat("k", 4000),
+	id := ids.New[ids.ApprovalKind]()
+	// Asserted as "the answer stops growing", which is what a bound IS — rather
+	// than against a byte figure beside the prose, which the next sentence added
+	// to this branch would have to be remembered in.
+	long := srv.explain("update_record", &workflow.StagedApprovalError{
+		ApprovalID: id, Summary: strings.Repeat("k", 4000),
 	})
-	if len(said) > workflow.MaxStagedSummary+400 {
-		t.Errorf("a 4000-byte summary produced a %d-byte answer, so the caller chose how much "+
-			"the server writes back at it", len(said))
+	longer := srv.explain("update_record", &workflow.StagedApprovalError{
+		ApprovalID: id, Summary: strings.Repeat("k", 40000),
+	})
+	if len(long) != len(longer) {
+		t.Errorf("a summary ten times longer produced a longer answer (%d then %d bytes), so the "+
+			"caller chooses how much the server writes back at it", len(long), len(longer))
+	}
+	// Asserted as growth and not as a byte ceiling. A ceiling here would have to
+	// restate the branch's own prose to know what to subtract — the two openings
+	// differ by the sentence that introduces the summary — and would then be a
+	// second copy of the text it guards. What the bound is FOR is that the
+	// caller cannot make this answer arbitrarily long, and that is what growth
+	// measures.
+	if len(long) > 4000 {
+		t.Errorf("a 4000-byte summary produced a %d-byte answer, so it was not bounded at all",
+			len(long))
+	}
+}
+
+// A 🟡 answer is read as a stop, and it is a stop for ONE call.
+//
+// Asked to merge two tags and then give the survivor a description, a measured
+// run staged the merge, relayed its summary correctly, and ended with "Confirm
+// and I'll proceed, then add the description afterward" — holding an
+// independent auto-execute write behind an approval it did not need. The answer
+// had told it what was blocked and never what was not.
+func TestAStagedAnswerSaysTheRestOfTheTaskIsNotBlocked(t *testing.T) {
+	t.Parallel()
+	srv := NewDispatcher(nil, nil, "t", "0").
+		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
+
+	said := srv.explain("merge_tags", &workflow.StagedApprovalError{
+		ApprovalID: ids.New[ids.ApprovalKind](), Summary: "Fold tag \"A\" into \"B\"",
+	})
+	if !strings.Contains(said, "THIS call only") {
+		t.Errorf("the answer does not say what is still doable, so a caller defers work the "+
+			"approval never blocked:\n%s", said)
 	}
 }

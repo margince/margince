@@ -328,7 +328,14 @@ const maxRemedyBudget = 4 * httperr.MaxFaultText
 // human's inbox: what it would do, and which of the two moves to make.
 //
 // The summary is the sentence the human's own card carries, so the person and
-// the agent are waiting on one described thing. It is escaped and bounded here
+// the agent are waiting on one described thing.
+//
+// IT ALSO SAYS WHAT IS NOT BLOCKED, because an agent reads a refusal as a stop.
+// Asked to merge two words and then give the survivor a meaning, a measured run
+// staged the merge, relayed the summary correctly, and finished with "Confirm
+// and I'll proceed, then add the description afterward" — deferring an
+// independent auto-execute write behind a human's answer it never needed. The
+// approval binds one call; nothing in the answer said so. It is escaped and bounded here
 // because a caller chose part of it — a field name off the patch — and a
 // workspace record supplied the rest, and neither is this program's prose.
 func stagedExplanation(staged *workflow.StagedApprovalError) string {
@@ -342,8 +349,8 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 			" Do not stage another: repeat this call with \"approval_id\": \"" +
 			staged.ApprovalID.String() + "\"."
 	}
-	return "This is a confirm-first (🟡) action: a person answers it before it runs, and not the " +
-		"credential that proposed it. " + what + " Tell the user what it would do, in those words — " +
-		"they release it in the CRM, and read_approval shows the whole proposal. Once they have, " +
-		"repeat this call with \"approval_id\": \"" + staged.ApprovalID.String() + "\"."
+	return "Confirm-first (🟡): a person answers this before it runs. " + what +
+		" Tell them that, in those words; they release it in the CRM, and this exact call then " +
+		"repeats with \"approval_id\": \"" + staged.ApprovalID.String() + "\". " +
+		"Blocks THIS call only — do the rest of what you were asked that does not depend on it."
 }
