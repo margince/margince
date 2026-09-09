@@ -86,9 +86,20 @@
   white-space: nowrap;
 }
 
-.lt-caption {
+/* Any sentence laid straight onto the surface's ground takes the surface's own
+   inset: the caption above the toolbar, and equally a sentence handed to the
+   body slot with no element of its own around it — a board's caveat about a
+   read that failed, standing above the rows it qualifies. One rule for both,
+   because the reason is the same and two of them drift; without it the second
+   kind printed against the card's border, which is the obligation
+   `.panel > .surfacestate-empty` meets for a state sentence dropped straight
+   into a pane. */
+.lt-caption,
+.lt > p {
   margin: 0;
   padding: var(--space-2) var(--space-4);
+}
+.lt-caption {
   border-bottom: 1px solid var(--borderSubtle);
   font-size: var(--fs-sm);
   color: var(--textMeta);
@@ -1075,9 +1086,16 @@
   }
 
   /* The identity cell is the card's heading: no label, full width, and it reads
-   * as the thing you tapped rather than as one field among several. */
+   * as the thing you tapped rather than as one field among several.
+   *
+   * Nothing is frozen in a stack — there is no sideways scroll for a cell to
+   * slide under — so the desktop column's chrome comes off here. Its opaque
+   * ground was still being painted over the card's translucent one, which put a
+   * patch of a slightly different white behind every card's title. */
   .lt-table td.lt-identity {
     display: block;
+    position: static;
+    background: none;
     padding-bottom: var(--space-2);
     font-size: var(--fs-lead);
     font-weight: 600;
@@ -1168,9 +1186,13 @@
     width: 100%;
   }
 
+  /* `.lt > p` is carried here beside `.lt-caption` for specificity as much as
+     for rhythm: it is the selector that sets the inset above, and left out, it
+     would go on winning over this narrower one. */
   .lt-head,
   .lt-tools,
   .lt-caption,
+  .lt > p,
   .lt-agg,
   .lt-foot {
     padding-left: var(--space-3);
