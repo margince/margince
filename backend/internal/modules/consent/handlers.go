@@ -74,7 +74,12 @@ func (h Handlers) WithSubjectAccessAssembler(a SubjectAccessAssembler) Handlers 
 	return h
 }
 
-func (h Handlers) ListConsentPurposes(w http.ResponseWriter, r *http.Request, _ crmcontracts.ListConsentPurposesParams) {
+// ListConsentPurposes answers the workspace's configured purposes, unpaged.
+//
+// It takes no params value because the operation declares no query parameter:
+// purposes are configuration a workspace sets up once, so the answer is the
+// whole set. It used to declare cursor and limit and honour neither.
+func (h Handlers) ListConsentPurposes(w http.ResponseWriter, r *http.Request) {
 	purposes, err := h.store.ListPurposes(r.Context())
 	if err != nil {
 		writeConsentErr(w, r, err)
