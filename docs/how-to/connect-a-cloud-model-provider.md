@@ -170,17 +170,20 @@ name does not, since what it resolves to can change after boot.
 Outside `sovereign` a `base_url` is not a promise about egress, but it is still
 the address this server dials, so each provider reaches only what its lane is
 for. `ollama`, `vllm` and `openai_compatible` may name loopback, a private range
-or a public host. `anthropic`, `openai` and `gemini` may name a **public host
-only**: the call carries this installation's model key in a header no redirect
-rule strips, and pointing one at your own network would send that key there. Use
-`openai_compatible` for a gateway you host.
+or a public host, over http or https. `anthropic`, `openai` and `gemini` may name
+a **public host over https only**: the call carries this installation's model key
+in a header Go does not strip across hosts, so pointing one at your own network
+would send that key there and cleartext would send it in the open. Use
+`openai_compatible` for a gateway you host, or one served over http.
 
 Neither lane may name link-local (`169.254.0.0/16`, `fe80::/10`), carrier-grade
 NAT or the documentation ranges — nothing serves inference from those, and the
 first of them is where every cloud keeps its instance-metadata service. The rule
 is checked at the write and again on the socket, so a DNS name that resolves to
 a refused address fails at connect time rather than slipping past. A `base_url`
-carrying userinfo is refused: a binding never carries a credential.
+carrying userinfo is refused: a binding never carries a credential. Redirects
+follow the same rule — one that stays on the host and keeps the scheme is
+followed, one that changes host or downgrades to http is refused.
 
 ## Troubleshooting
 
@@ -192,6 +195,7 @@ carrying userinfo is refused: a binding never carries a credential.
 | Boot error *"field api_key not found"* | You put an `api_key:` in the `seeds.ai_routing` binding — remove it; the key comes from the env var (see the table above). |
 | Boot error *"needs a base_url …"* | `openai_compatible` has no `base_url`. Add the vendor host root (no `/v1`). |
 | Boot error *"must name a public host"* | A native vendor binding (`anthropic`/`openai`/`gemini`) points inside your network. Bind `openai_compatible` for a self-hosted gateway (see "Where a `base_url` may point"). |
+| Boot error *"must be https"* | A native vendor binding uses `http://`. Use `https://`, or bind `openai_compatible` if the endpoint is genuinely served over http. |
 | Boot error *"not an address inference is served from"* | The `base_url` names a link-local, CGNAT or documentation address. Give the endpoint's own address (see "Where a `base_url` may point"). |
 | `http 404` on `/embeddings` | That `openai_compatible` vendor is chat-only. Rebind `embeddings:` to a lane-serving vendor or a local `bge-m3` (§3). |
 | Embed error *"returned N vectors of width W, need 1×D"* | On `openai_compatible` the adapter never sends `dimensions`, so `dimensions:` must equal the model's NATIVE width (§3). Set it to `W`. |

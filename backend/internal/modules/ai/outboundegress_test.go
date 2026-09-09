@@ -140,7 +140,11 @@ func TestTheWriteRuleAndTheDialerAgree(t *testing.T) {
 			// RFC 6874's escaping, not a quirk of this test. The two ends see
 			// the same endpoint spelled the two ways they each really get it.
 			inAURL := net.JoinHostPort(strings.Replace(address, "%", "%25", 1), "8080")
-			atTheWrite := requireDialableEndpoint("tier premium", provider, "http://"+inAURL) == nil
+			// https throughout, because the scheme is not the question here: the
+			// vendor lane refuses cleartext outright (cleartextRefused), and a
+			// disagreement about THAT would drown out the address disagreements
+			// this table exists to catch. The dialer never sees a scheme at all.
+			atTheWrite := requireDialableEndpoint("tier premium", provider, "https://"+inAURL) == nil
 			atTheSocket := guard("tcp", hostPort, nil) == nil
 			if atTheWrite != atTheSocket {
 				t.Errorf("provider %q, address %s: the write rule says allowed=%v and the dialer says allowed=%v",
@@ -412,6 +416,17 @@ embeddings: { provider: ollama, model: bge-m3 }
 `,
 			names: "names no host",
 		},
+		// The write-time half of the redirect downgrade rule: a vendor call
+		// carries the model key, so it may not start in clear either.
+		"a vendor binding in cleartext": {
+			routing: `
+profile: cloud_frontier
+tiers:
+  premium: { provider: anthropic, base_url: "http://api.anthropic.com", model: claude-x }
+embeddings: { provider: ollama, model: bge-m3 }
+`,
+			names: "must be https",
+		},
 		"a credential smuggled in as userinfo": {
 			routing: `
 profile: eu_hosted
@@ -471,7 +486,7 @@ tiers:
   local_large: { provider: ollama, base_url: "http://10.4.1.20:11434", model: m }
 embeddings: { provider: ollama, base_url: "http://127.0.0.1:11434", model: bge-m3 }
 `,
-		"a self-hosted gateway on the OpenAI wire": `
+		"a self-hosted gateway on the OpenAI wire, in cleartext": `
 profile: eu_hosted
 tiers:
   premium: { provider: openai_compatible, base_url: "http://192.168.1.5:8080", model: m }

@@ -1271,11 +1271,11 @@ rebinds — to a refused address is stopped at connect time):
 
 - `ollama`, `vllm` and `openai_compatible` may reach loopback, a private range,
   or a public host — the local model, the GPU box, the self-hosted gateway.
-- `anthropic`, `openai` and `gemini` may reach a **public host only**. Their
-  `base_url` overrides a vendor's own API host, and the call carries this
-  installation's model key in a header (`x-api-key`, `x-goog-api-key`) that no
-  redirect rule strips. To reach a gateway on your own network, bind
-  `openai_compatible` instead.
+- `anthropic`, `openai` and `gemini` may reach a **public host over https only**.
+  Their `base_url` overrides a vendor's own API host, and the call carries this
+  installation's model key in a header (`x-api-key`, `x-goog-api-key`) that Go
+  does not strip across hosts. To reach a gateway on your own network, or one
+  served over http, bind `openai_compatible` instead.
 
 Neither lane may reach the ranges that serve nobody: link-local
 (`169.254.0.0/16`, `fe80::/10` — where every cloud's instance-metadata service
@@ -1283,6 +1283,11 @@ lives), carrier-grade NAT, the documentation ranges, and the encapsulations that
 carry another address inside them. A `base_url` carrying userinfo
 (`http://user:token@host`) is refused outright — a binding never carries a
 credential.
+
+A redirect is held to the same rule as the binding: the outbound client follows
+a redirect that stays on the same host and keeps its scheme, and refuses one that
+changes host or downgrades https to http, because either would carry the model
+key somewhere the binding never named.
 
 An editor with a YAML language server picks up
 [`config/margince.schema.json`](../../config/margince.schema.json)

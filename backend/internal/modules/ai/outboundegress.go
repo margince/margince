@@ -173,11 +173,17 @@ func requireDialableEndpoint(label, provider, baseURL string) error {
 	if parsed.User != nil {
 		return userinfoRefused(label, parsed)
 	}
-	ip := parseHostAddress(parsed.Hostname())
-	if ip == nil || addressAllowed(egressFor(provider), ip) {
-		return nil
+	// The address before the scheme, because a vendor binding pointed into this
+	// deployment's own network is the more surprising of the two mistakes and
+	// the one the operator has to understand first. Both are refused; only the
+	// order of the message is decided here.
+	if ip := parseHostAddress(parsed.Hostname()); ip != nil && !addressAllowed(egressFor(provider), ip) {
+		return unreachableAddressRefused(label, provider, ip)
 	}
-	return unreachableAddressRefused(label, provider, ip)
+	if egressFor(provider) == egressPublicOnly && !strings.EqualFold(parsed.Scheme, "https") {
+		return cleartextRefused(label, provider, parsed.Scheme)
+	}
+	return nil
 }
 
 // userinfoRefused names the shape without echoing it: this error reaches a boot
@@ -186,6 +192,20 @@ func userinfoRefused(label string, parsed *url.URL) error {
 	return fmt.Errorf(
 		"ai: routing config: %s: base_url %q carries userinfo, and a binding never carries a credential — it would be sent to whatever host the value names. Give the host root alone; a model key belongs in the key vault",
 		label, safeToName(parsed))
+}
+
+// cleartextRefused is the write-time half of refuseOffHostRedirect's downgrade
+// rule. The two are one obligation: a vendor call carries this installation's
+// model key, and a client that refuses to be redirected into clear while
+// accepting a binding that starts there would be guarding one door of two.
+//
+// The vendor lane only. An operator's own gateway is reached over http all the
+// time and the key travels no further than their network, so openai_compatible,
+// ollama and vllm are untouched.
+func cleartextRefused(label, provider, scheme string) error {
+	return fmt.Errorf(
+		"ai: routing config: %s: provider %q calls a vendor's public API with this installation's model key, so its base_url must be https — %q would send the key in clear. To reach a gateway on your own network over http, bind openai_compatible instead",
+		label, provider, scheme)
 }
 
 // unreachableAddressRefused tells the operator which rule they met and what to
