@@ -308,7 +308,13 @@ def main():
     parser.add_argument("--full", action="store_true", help="print whole patterns, not their heads")
     parser.add_argument("--brief", action="store_true", help="print the generation brief and exit")
     parser.add_argument("--count", type=int, default=6, help="answers per kind, for --brief")
-    args = parser.parse_args()
+    # INTERMIXED, because `answer` is nargs="*" and the callers put options
+    # between the scenario and the answers — `probe.py case.yaml --expect correct
+    # "..."`. Plain parse_args assigns trailing positionals only on some Python
+    # versions and answers "unrecognized arguments" on others, so the same
+    # command worked locally and failed on CI. parse_intermixed_args is the
+    # documented way to accept that shape on every version.
+    args = parser.parse_intermixed_args()
 
     if args.brief:
         print(brief(args.scenario, args.count))

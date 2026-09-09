@@ -31,6 +31,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -76,14 +77,60 @@ type unitManifest struct {
 // listing is the shipped set and no allowlist is kept here. A tree with no
 // units returns nothing, which is the honest answer for a core-only build and
 // not a scan that failed.
+// shippedUnits is the set of unit directories git TRACKS under the extension
+// tier. Tracked is what "shipped" means here: a unit a lane copied in for its
+// own purposes is real to that lane and is not part of the product this page
+// describes.
+//
+// It fails rather than returning an empty set when git cannot answer. An empty
+// set would silently drop every unit and publish "the shipped units add 0
+// tools", which is the under-reporting direction this page must not fail in.
+func shippedUnits(dir string) (map[string]bool, error) {
+	out, err := exec.Command("git", "ls-files", "-z", "--", dir).Output()
+	if err != nil {
+		return nil, fmt.Errorf("asking git which units are shipped under %s: %w", dir, err)
+	}
+	units := map[string]bool{}
+	for _, path := range strings.Split(strings.TrimRight(string(out), "\x00"), "\x00") {
+		if path == "" {
+			continue
+		}
+		rest, ok := strings.CutPrefix(filepath.ToSlash(path), filepath.ToSlash(dir)+"/")
+		if !ok {
+			continue
+		}
+		if name, _, found := strings.Cut(rest, "/"); found {
+			units[name] = true
+		}
+	}
+	if len(units) == 0 {
+		return nil, fmt.Errorf("git tracks no unit under %s — a page generated from an empty "+
+			"extension tier would report the shipped units as adding nothing", dir)
+	}
+	return units, nil
+}
+
 func extensionTools(dir string) ([]unitTool, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("reading the extension tier at %s: %w", dir, err)
 	}
+	shipped, err := shippedUnits(dir)
+	if err != nil {
+		return nil, err
+	}
 	var tools []unitTool
 	for _, entry := range entries {
 		if !entry.IsDir() {
+			continue
+		}
+		// SHIPPED units only, which is what this page is about. A unit that is
+		// merely PRESENT is not necessarily one the product ships: the
+		// extension-reference lane copies fixtures/extensions/crm-hello into
+		// extensions/ before running this suite, and counting it made the
+		// published page depend on which lane generated it — 7 tools locally, 8
+		// there, and a drift gate that could not be green in both.
+		if !shipped[entry.Name()] {
 			continue
 		}
 		path := filepath.Join(dir, entry.Name(), manifestName)
