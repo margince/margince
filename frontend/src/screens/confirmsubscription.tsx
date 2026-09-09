@@ -27,10 +27,15 @@ export function SubscriptionConfirmBody({
   card,
   onConfirm,
   submitting,
+  error,
 }: Readonly<{
   card: SubscriptionPage;
   onConfirm: () => void;
   submitting: boolean;
+  /** A refused submit, already translated. Rendered beside the button: this
+   *  page returns before the record page's own error line, so a rejection
+   *  passed nowhere is a rejection nobody sees. */
+  error?: string;
 }>) {
   const t = useT();
 
@@ -67,6 +72,11 @@ export function SubscriptionConfirmBody({
         <Button onClick={onConfirm} disabled={submitting}>
           {t("confirm.subscription.confirm")}
         </Button>
+        {error && (
+          <p className="t-caption confirm-error" role="status">
+            {error}
+          </p>
+        )}
       </Card>
     </div>
   );

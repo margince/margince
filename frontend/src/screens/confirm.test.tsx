@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -105,6 +106,43 @@ describe("the confirm page branches on what the link was for", () => {
 
     expect(await screen.findByDisplayValue("Anna Müller")).toBeInTheDocument();
     expect(screen.getByDisplayValue("anna@example.test")).toBeInTheDocument();
+  });
+
+  // AN EMPTY 5xx IS NOT A CONFIRMATION.
+  //
+  // openapi-fetch returns `{error: undefined}` for a non-2xx whose body is
+  // empty — a proxy 502, a 500 that wrote no problem document. A guard that
+  // asks only whether `error` is truthy reads those as success, and this page's
+  // success state tells somebody their consent was recorded when the request
+  // never reached the writer. Gated on response.ok instead.
+  it("does not report a subscription as confirmed when the write failed with an empty body", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      // openapi-fetch builds a Request object, so the method can live on the
+      // input rather than on init — reading only init.method sent the POST
+      // down the GET arm and the page never saw the failure at all.
+      const method =
+        (input instanceof Request ? input.method : init?.method) ?? "GET";
+      if (method === "GET") {
+        return Promise.resolve(jsonResponse(SUBSCRIPTION));
+      }
+      // The shape that fooled the old guard: failed, and no body to parse.
+      return Promise.resolve(
+        new Response(null, { status: 502, headers: { "Content-Length": "0" } }),
+      );
+    });
+
+    render(<ConfirmDetailsScreen token="tok-flaky" />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Yes, subscribe me" }),
+    );
+
+    // Never the confirmed state, and the refusal is on screen rather than the
+    // button simply re-enabling itself. The copy is the honest fallback: a 502
+    // with no body genuinely reports no cause.
+    await screen.findByText(/the request failed/i);
+    expect(screen.queryByText("You are subscribed")).not.toBeInTheDocument();
   });
 
   // A token that names nothing reads the same as one that expired or was

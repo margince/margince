@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // GetConfirmDetails implements (GET /public/confirm/{token}): one contact's own
@@ -38,6 +39,17 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 			return
 		}
 		httperr.WriteJSON(w, http.StatusOK, wireSubscriptionCard(card))
+		return
+	}
+	// EVERY OTHER KIND IS REFUSED, rather than falling through to the record.
+	//
+	// The record card is the widest thing this endpoint can disclose — name,
+	// employer, address, phone, provenance — so it must be reached by a kind
+	// that asked for it, never by not matching the other arm. A link kind added
+	// to the table tomorrow would otherwise serve the record to whoever holds
+	// it, silently, and the handler that needed updating would look untouched.
+	if ref.Kind != LinkRecordConfirmation {
+		writeConsentErr(w, r, apperrors.ErrNotFound)
 		return
 	}
 	card, err := h.store.confirmCardFor(r.Context(), ref.PersonID)
