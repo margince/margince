@@ -540,7 +540,7 @@ export function ContactsScreen() {
             // no employer key, and a header that looked sortable and refused
             // would be worse than one that never offered.
             key: "company",
-            header: t("create.company"),
+            header: t("create.relatedCompany"),
             cell: (person: Person) =>
               person.employer ? (
                 // A real link to the COMPANY, in a cell that is not the row's

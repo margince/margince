@@ -64,7 +64,7 @@ async function openRecordMenu(
 describe("CompanyScreen — a live record that is not the viewer's to change", () => {
   it("names why edit/merge/archive/share are refused, from an id the page actually renders", async () => {
     const user = userEvent.setup();
-    const notMine = { ...org, owner_id: "u-someone-else", writable: false };
+    const notMine = { ...company, owner_id: "u-someone-else", writable: false };
     stubFetch(async (url) => {
       if (url.includes("/me")) {
         return jsonResponse(meFixture({ allow: { company: ["read"] } }));

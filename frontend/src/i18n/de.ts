@@ -393,7 +393,7 @@ export const de = {
     "Dieser Datensatz hat sich geändert, seit du ihn geöffnet hast — neu laden und erneut versuchen.",
 
   "merge.contact": "Kontakt zusammenführen",
-  "merge.org": "Firma zusammenführen",
+  "merge.company": "Firma zusammenführen",
   "merge.searchPlaceholder": "Suchen…",
   "merge.pickTarget": "Überlebenden Datensatz auswählen",
   "merge.confirm":
@@ -1415,7 +1415,7 @@ export const de = {
   "approval.kind.linkedin_match": "LinkedIn-Zuordnung",
   "approval.kind.site_lead": "Kontakt von der Website aufnehmen",
   "approval.kind.capture_counterparty": "Person aus deiner Mail aufnehmen",
-  "approval.kind.org_name_promotion": "Account umbenennen",
+  "approval.kind.company_name_promotion": "Account umbenennen",
   "approval.kind.vcard_create": "Kontakt aus einer Visitenkarte anlegen",
   "approval.kind.lifecycle_change": "Account-Phase",
   "approval.kind.stage_progression": "Deal in die nächste Phase bewegen",
@@ -3060,7 +3060,7 @@ export const de = {
   "create.amount": "Wert",
   "create.currency": "Währung",
   "create.stage": "Phase",
-  "create.company": "Firma",
+  "create.relatedCompany": "Firma",
   "create.expectedClose": "Erwarteter Abschluss",
 
   "field.unset": "Nicht gesetzt",
@@ -6598,7 +6598,7 @@ export const de = {
   "license.over.body":
     "{used} Sitzplätze sind belegt, die Lizenz gewährt {granted}. Niemand verliert den Zugang und kein Sitzplatz wird entzogen — aber es kann kein neues Mitglied eingeladen werden, solange die Grenze überschritten ist. Deaktivieren Sie ein Mitglied oder erhöhen Sie die Grenze.",
   "license.holder.title": "Lizenziert für",
-  "license.holder.org": "Firma",
+  "license.holder.company": "Firma",
   "license.holder.contact": "Kontakt",
   "license.holder.installation": "Installation",
   "license.holder.validUntil": "Gültig bis",
@@ -7426,8 +7426,8 @@ export const de = {
   "autonomy.kind.close_date_correction.label": "Abschlussdaten",
   "autonomy.kind.close_date_correction.help":
     "Das Abschlussdatum eines Deals verschiebt sich durch das, was in einem Gespräch gesagt oder in einer Mail geschrieben wurde.",
-  "autonomy.kind.org_name_promotion.label": "Firmennamen",
-  "autonomy.kind.org_name_promotion.help":
+  "autonomy.kind.company_name_promotion.label": "Firmennamen",
+  "autonomy.kind.company_name_promotion.help":
     "Ein unter seiner Domain erfasstes Unternehmen übernimmt den Namen, den seine eigene Website nennt.",
   "autonomy.kind.lifecycle_change.label": "Lebenszyklus-Phasen",
   "autonomy.kind.lifecycle_change.help":
@@ -7651,7 +7651,7 @@ export const de = {
   "person.enriched.field.phone": "Telefon",
   "person.enriched.field.role": "Rolle",
   "person.enriched.field.linkedin": "LinkedIn",
-  "person.enriched.field.org_name": "Unternehmen",
+  "person.enriched.field.company_name": "Unternehmen",
   "person.enriched.field.address": "Adresse",
   "person.enriched.field.website": "Website",
   "person.enriched.readFrom": "Gelesen aus {source} am {when}",

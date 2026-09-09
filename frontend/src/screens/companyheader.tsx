@@ -731,7 +731,7 @@ export function CompanyActionBadges({
         {!overlay && (
           <MergeAction
             disabledReasonId={refusedByState}
-            label={t("merge.org")}
+            label={t("merge.company")}
             sourceId={company.id}
             sourceName={company.display_name}
             searchTargets={searchCompanyTargets}

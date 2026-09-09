@@ -26,7 +26,7 @@ package compose
 // those are two different legal entities and picking either would be a guess. The
 // comparison here folds case and spacing and nothing else.
 //
-// `company` has no unique index on its name (dedupeorg.go says so in as many
+// `company` has no unique index on its name (dedupecompany.go says so in as many
 // words: "two companies may legitimately share a name"), so an ambiguous name
 // is a real state and the honest answer is to link nothing and say which name was
 // ambiguous.

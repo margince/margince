@@ -188,7 +188,7 @@ describe("CompanyRail", () => {
   it("still draws every known row when the record carries no value for it", () => {
     stub();
     const bare = {
-      ...org,
+      ...company,
       legal_name: null,
       industry: null,
       size_band: null,
@@ -232,7 +232,7 @@ describe("CompanyRail", () => {
       "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
-          return jsonResponse({ ...org, version: 2 });
+          return jsonResponse({ ...company, version: 2 });
         }
         return jsonResponse(company);
       },
@@ -283,7 +283,7 @@ describe("CompanyRail", () => {
       "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
-          return jsonResponse({ ...org, version: 2 });
+          return jsonResponse({ ...company, version: 2 });
         }
         return jsonResponse(company);
       },
@@ -378,7 +378,7 @@ describe("CompanyRail", () => {
       "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
-          return jsonResponse({ ...org, version: 2 });
+          return jsonResponse({ ...company, version: 2 });
         }
         return jsonResponse(company);
       },
@@ -398,7 +398,7 @@ describe("CompanyRail", () => {
   it("renames the primary domain while preserving every other domain on the account", async () => {
     let patchBody: unknown;
     const threeDomains = {
-      ...org,
+      ...company,
       domains: [
         { domain: "brandt.example", is_primary: true, source: "manual" },
         { domain: "brandt.de", is_primary: false, source: "manual" },
@@ -506,7 +506,7 @@ describe("CompanyRail", () => {
       "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
-          return jsonResponse({ ...org, version: 2 });
+          return jsonResponse({ ...company, version: 2 });
         }
         return jsonResponse(company);
       },
@@ -1088,7 +1088,7 @@ describe("CompanyRail", () => {
     stub();
     renderRail({
       view: view({
-        company: { ...org, archived_at: "2026-06-02T00:00:00Z" },
+        company: { ...company, archived_at: "2026-06-02T00:00:00Z" },
       }),
     });
     // The values themselves still draw (this suite's own empty-badges test

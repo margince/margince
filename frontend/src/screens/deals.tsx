@@ -1109,19 +1109,19 @@ function companyEditField(
   if (opts.masked.includes("company_id")) {
     return {
       key: "company_id",
-      label: "create.company",
+      label: "create.relatedCompany",
       type: "select",
       options: [{ value: "", label: t("deal.companyWithheld") }],
     };
   }
-  const options = opts.orgs.map((company) => ({
+  const options = opts.companies.map((company) => ({
     value: company.id,
     label: company.display_name,
   }));
   const current = opts.currentCompany;
   return {
     key: "company_id",
-    label: "create.company",
+    label: "create.relatedCompany",
     type: "select",
     options:
       current && !options.some((option) => option.value === current.id)
@@ -1484,7 +1484,7 @@ function dealColumns(
       // looked sortable and refused would be worse than one that never
       // offered.
       key: "company",
-      header: t("create.company"),
+      header: t("create.relatedCompany"),
       cell: (deal) => <CompanyCell deal={deal} field="company_id" />,
     },
     {
@@ -1796,7 +1796,7 @@ function dealFilterChips(
     },
     {
       key: "company_id",
-      label: t("create.company"),
+      label: t("create.relatedCompany"),
       allLabel: t("deals.filterCompanyAll"),
       options: [],
       search: searchCompanies,
@@ -2358,7 +2358,7 @@ function DealCreateAction({
         },
         {
           key: "company_id",
-          label: "create.company",
+          label: "create.relatedCompany",
           type: "select",
           options: companies.map((company) => ({
             value: company.id,

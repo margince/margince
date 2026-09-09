@@ -269,7 +269,10 @@ describe("CompanyScreen — the Tasks tab", () => {
     stubFetch(
       async (url) => {
         if (url.endsWith("/companies/o-1")) {
-          return jsonResponse({ ...org, archived_at: "2026-07-13T00:00:00Z" });
+          return jsonResponse({
+            ...company,
+            archived_at: "2026-07-13T00:00:00Z",
+          });
         }
         return companyBackstop(url);
       },
@@ -318,7 +321,10 @@ describe("CompanyScreen — the Tasks tab", () => {
     stubFetch(
       async (url) => {
         if (url.endsWith("/companies/o-1")) {
-          return jsonResponse({ ...org, archived_at: "2026-07-13T00:00:00Z" });
+          return jsonResponse({
+            ...company,
+            archived_at: "2026-07-13T00:00:00Z",
+          });
         }
         if (url.endsWith("/activities/a-1")) {
           return jsonResponse(openTaskActivity);

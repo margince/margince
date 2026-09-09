@@ -161,7 +161,10 @@ export const Loading: Story = {
 // "typed by you" for the reader's own writing.
 export const AuthorNamed: Story = {
   render: () => (
-    <Header view={withWayIn} record={{ ...org, captured_by: "human:u-2" }} />
+    <Header
+      view={withWayIn}
+      record={{ ...company, captured_by: "human:u-2" }}
+    />
   ),
 };
 
@@ -176,7 +179,7 @@ export const CustomerAndPartner: Story = {
   render: () => (
     <Header
       view={withWayIn}
-      record={{ ...org, relationship_types: ["customer", "partner"] }}
+      record={{ ...company, relationship_types: ["customer", "partner"] }}
     />
   ),
 };
@@ -190,7 +193,7 @@ export const ArchivedAccount: Story = {
   render: () => (
     <Header
       view={withWayIn}
-      record={{ ...org, archived_at: "2026-07-13T00:00:00Z" }}
+      record={{ ...company, archived_at: "2026-07-13T00:00:00Z" }}
     />
   ),
   play: async () => {

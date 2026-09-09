@@ -128,7 +128,7 @@ let briefBody: unknown = EMPTY_BRIEF;
 // two are equivalent, since the store enforces the invariant both ways.
 // The bare fixture deliberately carries neither: a Partner tab on an account
 // with no programme is the thing the tab gate removed.
-const partnerCompany = { ...org, relationship_types: ["partner"] };
+const partnerCompany = { ...company, relationship_types: ["partner"] };
 
 function stub(
   three60: unknown,
@@ -1283,7 +1283,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // control, a fixture that only overrode one would fail for the same
     // reason two real reads of one row never disagree: there is only one row.
     const withLifecycle: Company = {
-      ...org,
+      ...company,
       lifecycle: "former_customer",
       relationship_types: ["customer", "supplier"],
     };
@@ -1319,7 +1319,11 @@ describe("company view — where the account stands, and what it is to us", () =
   });
 
   it("offers the lifecycle control on an account nobody has assessed yet", async () => {
-    stub(view(), 200, { ...org, lifecycle: "unknown", relationship_types: [] });
+    stub(view(), 200, {
+      ...company,
+      lifecycle: "unknown",
+      relationship_types: [],
+    });
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
@@ -1344,7 +1348,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // a save through EITHER control reaches the server exactly once, and the
     // OTHER control reflects the new value once the record refetches — not a
     // second write, and not one control left showing the stale value.
-    let currentCompany: Company = { ...org, lifecycle: "unknown" };
+    let currentCompany: Company = { ...company, lifecycle: "unknown" };
     let patchCount = 0;
     let lastIfMatch: string | null = null;
     vi.stubGlobal(
@@ -1794,7 +1798,7 @@ describe("company view — where the record came from", () => {
   // OWN hand-typed entry — the one case that reports nothing they do not
   // already know — must not suppress the rest.
   it("names an agent that wrote the record", async () => {
-    stub(view(), 200, { ...org, captured_by: "agent:enricher" });
+    stub(view(), 200, { ...company, captured_by: "agent:enricher" });
     renderCompany();
     await screen.findByText("Brandt Automotive GmbH");
 
@@ -1898,7 +1902,7 @@ describe("company view — the account's primary actions", () => {
   });
 
   it("refuses both on an archived company, over one stated reason", async () => {
-    stub(view(), 200, { ...org, archived_at: "2026-07-01T09:00:00Z" });
+    stub(view(), 200, { ...company, archived_at: "2026-07-01T09:00:00Z" });
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 

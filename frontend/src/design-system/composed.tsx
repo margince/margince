@@ -229,12 +229,12 @@ function DealCardCompany({
       </span>
     );
   }
-  if (!deal.org) {
+  if (!deal.company) {
     return null;
   }
   return (
     <span className="deal-company">
-      <Avatar name={deal.org} src={deal.companyLogoUrl} shape="company" />
+      <Avatar name={deal.company} src={deal.companyLogoUrl} shape="company" />
       {/* The name needs a box of its own to be truncated in: a bare text node
           has nothing for the ellipsis to apply to, and wraps under its own
           mark instead. */}
@@ -255,10 +255,10 @@ function DealCardCompany({
             onOpen?.(deal, event);
           }}
         >
-          {deal.org}
+          {deal.company}
         </a>
       ) : (
-        <span className="deal-company-name">{deal.org}</span>
+        <span className="deal-company-name">{deal.company}</span>
       )}
     </span>
   );

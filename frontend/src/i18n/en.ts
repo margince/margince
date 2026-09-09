@@ -416,7 +416,7 @@ export const en = {
     "This record changed since you opened it — reload and try again.",
 
   "merge.contact": "Merge contact",
-  "merge.org": "Merge company",
+  "merge.company": "Merge company",
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select the surviving record",
   "merge.confirm": "Merge {source} into {target}? {source} will be archived.",
@@ -1498,7 +1498,7 @@ export const en = {
   "approval.kind.linkedin_match": "LinkedIn match",
   "approval.kind.site_lead": "Add a contact found on the site",
   "approval.kind.capture_counterparty": "Add someone from your mail",
-  "approval.kind.org_name_promotion": "Rename an account",
+  "approval.kind.company_name_promotion": "Rename an account",
   "approval.kind.vcard_create": "Create a contact from a card",
   "approval.kind.lifecycle_change": "Account stage",
   "approval.kind.stage_progression": "Move a deal to the next stage",
@@ -3156,7 +3156,7 @@ export const en = {
   "create.amount": "Value",
   "create.currency": "Currency",
   "create.stage": "Stage",
-  "create.company": "Company",
+  "create.relatedCompany": "Company",
   "create.expectedClose": "Expected close",
 
   "field.unset": "Not set",
@@ -6723,7 +6723,7 @@ export const en = {
   "license.over.body":
     "{used} seats are in use and the license grants {granted}. Nobody loses access and no seat is taken away — but no new member can be invited until you are back inside the entitlement. Deactivate a member, or raise the entitlement.",
   "license.holder.title": "Licensed to",
-  "license.holder.org": "Company",
+  "license.holder.company": "Company",
   "license.holder.contact": "Contact",
   "license.holder.installation": "Installation",
   "license.holder.validUntil": "Valid until",
@@ -7534,8 +7534,8 @@ export const en = {
   "autonomy.kind.close_date_correction.label": "Close dates",
   "autonomy.kind.close_date_correction.help":
     "A deal's close date moved by what was said on a call or written in a mail.",
-  "autonomy.kind.org_name_promotion.label": "Company names",
-  "autonomy.kind.org_name_promotion.help":
+  "autonomy.kind.company_name_promotion.label": "Company names",
+  "autonomy.kind.company_name_promotion.help":
     "A company recorded under its domain takes the name its own website gives.",
   "autonomy.kind.lifecycle_change.label": "Lifecycle stages",
   "autonomy.kind.lifecycle_change.help":
@@ -7754,7 +7754,7 @@ export const en = {
   "person.enriched.field.phone": "Phone",
   "person.enriched.field.role": "Role",
   "person.enriched.field.linkedin": "LinkedIn",
-  "person.enriched.field.org_name": "Company",
+  "person.enriched.field.company_name": "Company",
   "person.enriched.field.address": "Address",
   "person.enriched.field.website": "Website",
   "person.enriched.readFrom": "Read from {source} on {when}",

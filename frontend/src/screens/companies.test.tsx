@@ -359,7 +359,7 @@ describe("CompaniesScreen — search/sort/pagination (P-14)", () => {
     const { urls } = stubFetch(async (url) => {
       if (url.includes("cursor=c1")) {
         return jsonResponse({
-          data: [{ ...org, id: "o-2", display_name: "Nordwind Logistik" }],
+          data: [{ ...company, id: "o-2", display_name: "Nordwind Logistik" }],
           page: { next_cursor: null, has_more: false },
         });
       }
@@ -390,7 +390,7 @@ describe("CompaniesScreen — what an account is to us", () => {
       jsonResponse({
         data: [
           {
-            ...org,
+            ...company,
             lifecycle: "prospect",
             relationship_types: ["partner", "supplier"],
           },
@@ -418,7 +418,7 @@ describe("CompaniesScreen — what an account is to us", () => {
   it("leaves the cell empty when the account carries none", async () => {
     stubFetch(async () =>
       jsonResponse({
-        data: [{ ...org, relationship_types: [] }],
+        data: [{ ...company, relationship_types: [] }],
         page: { next_cursor: null, has_more: false },
       }),
     );
@@ -435,9 +435,9 @@ describe("CompaniesScreen — how many work here, how many deals are open", () =
     stubFetch(async () =>
       jsonResponse({
         data: [
-          { ...org, contact_count: 4, open_deal_count: 2 },
+          { ...company, contact_count: 4, open_deal_count: 2 },
           {
-            ...org,
+            ...company,
             id: "o-2",
             display_name: "Quiet Ltd",
             contact_count: 0,
@@ -467,7 +467,7 @@ describe("CompaniesScreen — how many work here, how many deals are open", () =
     // the column must not turn that absence into a confident 0.
     stubFetch(async () =>
       jsonResponse({
-        data: [{ ...org, contact_count: 3 }],
+        data: [{ ...company, contact_count: 3 }],
         page: { next_cursor: null, has_more: false },
       }),
     );
@@ -508,7 +508,7 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     const user = userEvent.setup();
     const { urls } = stubFetch(async () =>
       jsonResponse({
-        data: [{ ...org, last_activity_at: "2026-08-10T12:00:00Z" }],
+        data: [{ ...company, last_activity_at: "2026-08-10T12:00:00Z" }],
         page: { next_cursor: null, has_more: false },
       }),
     );
@@ -617,7 +617,7 @@ describe("CompaniesScreen — rich create (P-15)", () => {
     stubFetch(async (url, method, request) => {
       if (method === "POST" && url.includes("/companies")) {
         posted = JSON.parse(await request.text());
-        return jsonResponse({ ...org, id: "o-new" }, 201);
+        return jsonResponse({ ...company, id: "o-new" }, 201);
       }
       return emptyPage();
     });
@@ -650,7 +650,11 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
       if (method === "PATCH") {
         patchHeader = request.headers.get("If-Match");
         patchBody = JSON.parse(await request.text());
-        return jsonResponse({ ...org, industry: "Manufacturing", version: 2 });
+        return jsonResponse({
+          ...company,
+          industry: "Manufacturing",
+          version: 2,
+        });
       }
       if (url.includes("/activities")) {
         return jsonResponse({ data: [] });
@@ -680,7 +684,7 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
   it("preserves the account's relationship types when an unrelated field is edited", async () => {
     let patchBody: unknown = null;
     const partner = {
-      ...org,
+      ...company,
       lifecycle: "customer",
       relationship_types: ["partner", "supplier"],
     };
@@ -723,7 +727,7 @@ describe("CompanyScreen — edit domains round-trip (B7)", () => {
     stubFetch(async (url, method, request) => {
       if (method === "PATCH") {
         patchBody = JSON.parse(await request.text());
-        return jsonResponse({ ...org, version: 2 });
+        return jsonResponse({ ...company, version: 2 });
       }
       if (url.includes("/activities")) {
         return jsonResponse({ data: [] });
@@ -967,7 +971,10 @@ describe("CompanyScreen — archive (P-3)", () => {
     stubFetch(async (url, method) => {
       if (method === "DELETE" && url.includes("/companies/o-1")) {
         deleted = true;
-        return jsonResponse({ ...org, archived_at: "2026-07-13T00:00:00Z" });
+        return jsonResponse({
+          ...company,
+          archived_at: "2026-07-13T00:00:00Z",
+        });
       }
       if (url.includes("/activities")) {
         return jsonResponse({ data: [] });
@@ -1081,7 +1088,7 @@ describe("CompaniesScreen — archived marking (P-3)", () => {
   it("shows an Archived badge on a row with archived_at set", async () => {
     stubFetch(async () =>
       jsonResponse({
-        data: [{ ...org, archived_at: "2026-07-01T00:00:00Z" }],
+        data: [{ ...company, archived_at: "2026-07-01T00:00:00Z" }],
         page: { next_cursor: null, has_more: false },
       }),
     );
@@ -1129,7 +1136,7 @@ describe("CompaniesScreen — dedupe view-existing link (P-16)", () => {
 });
 
 describe("CompanyScreen — merge into target (P-2)", () => {
-  const acme = { ...org, id: "o-2", display_name: "Acme Corp" };
+  const acme = { ...company, id: "o-2", display_name: "Acme Corp" };
 
   it("searches, excludes the source row, and merges into the picked target", async () => {
     let mergeBody: unknown = null;
@@ -1366,7 +1373,11 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
           return jsonResponse({ data: [] });
         }
         if (url.includes("/people/p-1")) {
-          return jsonResponse({ ...org, id: "p-1", full_name: "Dana Buyer" });
+          return jsonResponse({
+            ...company,
+            id: "p-1",
+            full_name: "Dana Buyer",
+          });
         }
         return jsonResponse(company);
       },
@@ -1429,7 +1440,7 @@ describe("CompanyScreen — archived is read-only (P-3)", () => {
       if (url.includes("/activities")) {
         return jsonResponse({ data: [] });
       }
-      return jsonResponse({ ...org, archived_at: "2026-07-13T00:00:00Z" });
+      return jsonResponse({ ...company, archived_at: "2026-07-13T00:00:00Z" });
     });
     render(<CompanyScreen id="o-1" />);
 
@@ -2357,7 +2368,7 @@ describe("CompanyScreen — the timeline filter does not follow you", () => {
       defaultOptions: { queries: { retry: false } },
     });
     client.setQueryData(["company", "o-1"], company);
-    client.setQueryData(["company", "o-2"], { ...org, id: "o-2" });
+    client.setQueryData(["company", "o-2"], { ...company, id: "o-2" });
     const page = (id: string) => (
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
@@ -2400,7 +2411,7 @@ describe("CompanyScreen — the active tab is scoped to the account being read",
       defaultOptions: { queries: { retry: false } },
     });
     client.setQueryData(["company", "o-1"], company);
-    client.setQueryData(["company", "o-2"], { ...org, id: "o-2" });
+    client.setQueryData(["company", "o-2"], { ...company, id: "o-2" });
     const page = (id: string) => (
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
@@ -2428,8 +2439,11 @@ describe("CompanyScreen — the Partner tab is scoped to the account being read"
   // A company with a programme carries "partner" in relationship_types
   // (ADR-0079); one without it must never offer the tab, and must never
   // inherit it from whichever account was open before.
-  const partnerCompany = { ...org, relationship_types: ["partner"] as const };
-  const nonPartnerCompany = { ...org, id: "o-2" };
+  const partnerCompany = {
+    ...company,
+    relationship_types: ["partner"] as const,
+  };
+  const nonPartnerCompany = { ...company, id: "o-2" };
 
   function stubTwoCompanies() {
     stubFetch(async (url) => {

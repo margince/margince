@@ -96,7 +96,7 @@ export function DealIdentityLine({
       <IdentityLine>
         {masked.includes("company_id") ? (
           <IdentityFact>
-            {t("create.company")} <FieldGuard mode="masked" />
+            {t("create.relatedCompany")} <FieldGuard mode="masked" />
           </IdentityFact>
         ) : (
           deal.company_id && (

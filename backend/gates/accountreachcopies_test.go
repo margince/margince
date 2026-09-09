@@ -37,7 +37,7 @@ import (
 // accountReachFiles are the two files that spell the walk.
 var accountReachFiles = []string{
 	"internal/modules/activities/companyscope.go",
-	"internal/modules/search/graphorgreach.go",
+	"internal/modules/search/graphcompanyreach.go",
 }
 
 // accountReachArms are the constants each of those files must spell, and spell

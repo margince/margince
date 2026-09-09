@@ -118,7 +118,7 @@ export const AddressAbsent: Story = {
   render: () => (
     <Details
       company={{
-        ...org,
+        ...company,
         address: {
           line1: null,
           line2: null,
@@ -139,7 +139,9 @@ export const AddressAbsent: Story = {
 // (Editable above is the same state with all six filled.)
 export const AddressPartlyFilled: Story = {
   render: () => (
-    <Details company={{ ...org, address: { city: "Munich", country: "DE" } }} />
+    <Details
+      company={{ ...company, address: { city: "Munich", country: "DE" } }}
+    />
   ),
 };
 
@@ -148,7 +150,7 @@ export const AddressPartlyFilled: Story = {
 // amount of RBAC grant in the Editable story above can reach.
 export const Archived: Story = {
   render: () => (
-    <Details company={{ ...org, archived_at: "2026-07-15T00:00:00Z" }} />
+    <Details company={{ ...company, archived_at: "2026-07-15T00:00:00Z" }} />
   ),
 };
 
@@ -175,7 +177,7 @@ export const EmptyFields: Story = {
     <Details
       profileFields={[]}
       company={{
-        ...org,
+        ...company,
         legal_name: null,
         industry: null,
         size_band: null,

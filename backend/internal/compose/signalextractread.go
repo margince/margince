@@ -260,7 +260,7 @@ var dueThreadsQuery = `
 		       NULLIF(s.last_activity_at, '-infinity'), s.scanned_from, s.scanned_from_id
 		  FROM conversation c
 		  LEFT JOIN signal_thread_scan s ON s.thread_key = c.thread_key
-		 WHERE c.org_count = 1
+		 WHERE c.company_count = 1
 		   -- At MOST one, where the company must be exactly one: most mail
 		   -- carries no project at all, and a thread about no particular body of
 		   -- work is still a thread worth reading. Two is the refusal.

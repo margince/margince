@@ -74,7 +74,7 @@ func recheckCompanyNameForDuplicates(ctx context.Context, tx pgx.Tx, companyID i
 	// refuses every merge — so a pair naming it can only ever be dismissed as
 	// not-a-duplicate, and would sit in the queue forever asking a question
 	// nobody can answer (ADR-0082/A127). The candidate set already leaves it
-	// out as a rival (dedupeorg.go); this is the same rule for the subject.
+	// out as a rival (dedupecompany.go); this is the same rule for the subject.
 	if anchor {
 		return nil
 	}
