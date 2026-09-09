@@ -21,8 +21,11 @@ import (
 )
 
 // The report that carries a threshold, which is the case the two resolvers
-// disagree about. Named once so a spec rename fails here rather than silently
-// testing a report with no thresholds and proving nothing.
+// disagree about.
+//
+// Resolved rather than indexed, and asserted to still carry a threshold, so a
+// catalog rename fails here instead of quietly handing every case below a report
+// with no thresholds — which would leave them green while proving nothing.
 func quietProjectsSpec(t *testing.T) reportSpec {
 	t.Helper()
 	spec, ok := prebuiltReports["projects-gone-quiet"]
