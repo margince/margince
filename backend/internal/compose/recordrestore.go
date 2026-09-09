@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -49,6 +50,14 @@ type RestoreSeam struct {
 	// edges performs a LINK's inverse. It is a port because `relationship` is the
 	// people module's table, and the rules an edge write obeys are that module's.
 	edges EdgeReverser
+	// corrections answers whether an audit row is a machine correction with its
+	// own reversal, and performs that reversal — the SAME store magicUndoJudge
+	// asks the identical question of, so the line offering an Undo and the
+	// write performing it can never name different rows undoable. Nil is a
+	// real state: an installation wired without it simply has no corrections
+	// to offer, and every row falls through to the generic evaluator below,
+	// exactly as it always has.
+	corrections *deals.Store
 	// afterEdgeDecision is entered between the binding edge decision and the edge
 	// write — the ONE window in which a second reverser of the same link can
 	// overtake this one. It exists so a test can hold the path open there, and it
@@ -78,6 +87,14 @@ func (s RestoreSeam) Restore(ctx context.Context, entityType string, id, auditID
 	if row.EntityType == edgeEntityType {
 		return s.reverseEdge(ctx, entityType, id, row, ifVersion)
 	}
+	// THE CORRECTION PATH FIRST, the same order magicUndoJudge.judgeOne reads
+	// the receipt by: a machine correction has its own reversal, and the
+	// generic evaluator refuses exactly those rows (they write a field the
+	// ordinary update shape cannot spell), so asking it first would refuse
+	// every change the receipt just told the caller it could undo.
+	if entry, decided, err := s.reverseCorrection(ctx, entityType, id, row); err != nil || decided {
+		return entry, err
+	}
 	patch, err := s.decide(ctx, row)
 	if err != nil {
 		return privacy.RecordHistoryEntry{}, err
@@ -86,6 +103,48 @@ func (s RestoreSeam) Restore(ctx context.Context, entityType string, id, auditID
 		return privacy.RecordHistoryEntry{}, err
 	}
 	return s.readRestoreEntry(ctx, entityType, id, auditID)
+}
+
+// reverseCorrection answers for an audit row that is a machine correction's
+// own entry, and reports whether it decided at all — false for every entry
+// this branch does not serve, so Restore falls through to the generic
+// evaluator exactly as it always has.
+//
+// The lookup asks the SAME question magicUndoJudge.judgeCorrection asks of
+// the SAME store: a deal-scoped row with a live deal_correction naming it.
+// Anything else — a person, an organization, a deal edit a human made — is
+// answered false here and decided by the generic evaluator below, same as
+// before this branch existed.
+func (s RestoreSeam) reverseCorrection(
+	ctx context.Context, entityType string, id ids.UUID, row AuditRow,
+) (privacy.RecordHistoryEntry, bool, error) {
+	if s.corrections == nil || row.EntityType != entityTypeDeal {
+		return privacy.RecordHistoryEntry{}, false, nil
+	}
+	var correction deals.DealCorrection
+	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		var err error
+		correction, err = s.corrections.CorrectionForAudit(ctx, tx, row.ID)
+		return err
+	})
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return privacy.RecordHistoryEntry{}, false, nil
+	}
+	if err != nil {
+		return privacy.RecordHistoryEntry{}, true, err
+	}
+	// The correction's own reversal path decides and writes in one
+	// transaction — its own row lock, not ifVersion, is what closes its
+	// decide/write gap, so ifVersion plays no part here. The evidence is what
+	// lets readRestoreEntry below find this write the same way it finds any
+	// other restore's: by the row it names as undone, not by which mechanism
+	// undid it.
+	if _, err := s.corrections.RevertCorrection(ctx, correction.ID,
+		map[string]any{undidAuditLogID: row.ID.String()}); err != nil {
+		return privacy.RecordHistoryEntry{}, true, err
+	}
+	entry, err := s.readRestoreEntry(ctx, entityType, id, row.ID)
+	return entry, true, err
 }
 
 // readRow loads the target entry — an entry of the path record's HISTORY, which

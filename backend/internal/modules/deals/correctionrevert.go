@@ -77,8 +77,14 @@ func (e *CorrectionReversalError) Error() string { return e.Reason }
 // apart, a failure between them leaves the deal restored while the correction
 // still reads live, and the next sweep would take the reversal for a fresh
 // correction to repeat.
+//
+// evidence rides straight into the reversal's own audit row (nil is fine — it
+// is operational context ABOUT the write, not a fact this store has an opinion
+// on). A caller reversing this on a reader's behalf, rather than redoing the
+// module's own record of what it did, is what lets that reader's read and this
+// write agree on which audit row the result belongs to.
 func (s *Store) RevertCorrection(
-	ctx context.Context, correctionID ids.UUID,
+	ctx context.Context, correctionID ids.UUID, evidence map[string]any,
 ) (crmcontracts.Deal, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return crmcontracts.Deal{}, err
@@ -108,7 +114,7 @@ func (s *Store) RevertCorrection(
 		if correction.Reversed() {
 			return &CorrectionReversalError{Reason: alreadyTakenBack}
 		}
-		if err := s.restoreCorrectedFields(ctx, tx, correction); err != nil {
+		if err := s.restoreCorrectedFields(ctx, tx, correction, evidence); err != nil {
 			return err
 		}
 		// Read inside the transaction that just took write authority on this
@@ -126,7 +132,7 @@ func (s *Store) RevertCorrection(
 //
 // Split from RevertCorrection so each function holds one question: that one
 // decides WHETHER this correction may be taken back, this one performs it.
-func (s *Store) restoreCorrectedFields(ctx context.Context, tx pgx.Tx, correction DealCorrection) error {
+func (s *Store) restoreCorrectedFields(ctx context.Context, tx pgx.Tx, correction DealCorrection, evidence map[string]any) error {
 	before, err := priorImage(ctx, tx, correction)
 	if err != nil {
 		return err
@@ -148,8 +154,8 @@ func (s *Store) restoreCorrectedFields(ctx context.Context, tx pgx.Tx, correctio
 	if err := applyDealPatchLocked(ctx, tx, patch, lock); err != nil {
 		return fmt.Errorf("restore the corrected fields: %w", err)
 	}
-	auditID, err := storekit.Audit(ctx, tx, "update", "deal",
-		correction.DealID.UUID, patch.Before(), patch.After())
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "deal",
+		correction.DealID.UUID, patch.Before(), patch.After(), evidence)
 	if err != nil {
 		return fmt.Errorf("audit the reversal: %w", err)
 	}

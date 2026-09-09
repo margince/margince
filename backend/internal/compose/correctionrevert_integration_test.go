@@ -37,6 +37,21 @@ func (e *closeDateEnv) correctionFor(t *testing.T, dealID ids.UUID) ids.UUID {
 	return id
 }
 
+// correctionAuditIDFor reads the AUDIT ROW a correction records — the id the
+// receipt names on its Undo control and the id a real client's restore
+// request carries, as opposed to correctionFor's deal_correction.id, which
+// never reaches the wire.
+func (e *closeDateEnv) correctionAuditIDFor(t *testing.T, dealID ids.UUID) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT audit_log_id FROM deal_correction WHERE deal_id = $1 AND reversed_at IS NULL
+		  ORDER BY applied_at DESC LIMIT 1`, dealID).Scan(&id); err != nil {
+		t.Fatalf("no live correction recorded for the deal: %v", err)
+	}
+	return id
+}
+
 // The undo the generic restore path could not perform.
 //
 // Two walls stop it there: rejectPastCloseDate refuses any past close date on an
@@ -60,7 +75,7 @@ func TestACorrectionIsTakenBackWithEveryFieldItMoved(t *testing.T) {
 		t.Fatal("the rolled date should be provisional")
 	}
 
-	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal)); err != nil {
+	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil); err != nil {
 		t.Fatalf("taking the correction back: %v", err)
 	}
 
@@ -103,7 +118,7 @@ func TestAReversedCorrectionIsNotReappliedTomorrow(t *testing.T) {
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal)); err != nil {
+	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -140,7 +155,7 @@ func TestATakenBackCorrectionRefusesToOverwriteALaterEdit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := e.Deals.RevertCorrection(e.Admin(), correction)
+	_, err := e.Deals.RevertCorrection(e.Admin(), correction, nil)
 	var conflict *deals.CorrectionReversalError
 	if !errors.As(err, &conflict) {
 		t.Fatalf("undo after a human edit → %v, want a conflict that names the field", err)
@@ -160,10 +175,10 @@ func TestTakingACorrectionBackTwiceIsOneReversal(t *testing.T) {
 		t.Fatal(err)
 	}
 	correction := e.correctionFor(t, deal)
-	if _, err := e.Deals.RevertCorrection(e.Admin(), correction); err != nil {
+	if _, err := e.Deals.RevertCorrection(e.Admin(), correction, nil); err != nil {
 		t.Fatal(err)
 	}
-	_, err := e.Deals.RevertCorrection(e.Admin(), correction)
+	_, err := e.Deals.RevertCorrection(e.Admin(), correction, nil)
 	var conflict *deals.CorrectionReversalError
 	if !errors.As(err, &conflict) {
 		t.Errorf("second undo → %v, want a refusal saying it is already taken back", err)
@@ -210,7 +225,7 @@ func TestConfirmingACardAfterAnUndoDoesNotReapplyIt(t *testing.T) {
 		   AND target_entity_id = $1 AND status = 'pending'`, deal).Scan(&approvalID); err != nil {
 		t.Fatalf("the sweep staged no confirm: %v", err)
 	}
-	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal)); err != nil {
+	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -277,7 +292,7 @@ func TestTheReceiptOffersUndoOnARealCorrection(t *testing.T) {
 
 	// And once taken back, the same line stops offering it: a second Undo on a
 	// reversed correction is a control that can only refuse.
-	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, e.firstDealID(t))); err != nil {
+	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, e.firstDealID(t)), nil); err != nil {
 		t.Fatal(err)
 	}
 	after, err := e.magicReceipt(t, since)
@@ -290,6 +305,49 @@ func TestTheReceiptOffersUndoOnARealCorrection(t *testing.T) {
 	}
 	if reversed.Undo == nil || reversed.Undo.Undoable {
 		t.Error("a correction already taken back still offers an Undo")
+	}
+}
+
+// The write-side half of TestTheReceiptOffersUndoOnARealCorrection: the
+// receipt's AuditId is what a real client's Undo control sends to the
+// generic restore ROUTE, never to RevertCorrection directly, so this is the
+// path that must actually put the deal back. Before this path knew about
+// corrections, the receipt read a line as undoable and pressing Undo
+// refused it every time — the generic evaluator refuses exactly what a
+// correction writes.
+func TestTheGenericRestoreRouteHonorsACorrectionTheReceiptOffersUndoOn(t *testing.T) {
+	e := setupCloseDate(t)
+	deal := e.seedSweepDeal(t, "Corrected overnight, undone through the real route", e.early, nil, intp(-12), 3)
+	wasClosing := today().AddDate(0, 0, -12)
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	auditID := e.correctionAuditIDFor(t, deal)
+
+	seam := NewRestoreSeam(e.Pool, NewDispatcher(NewProvider(e.Pool),
+		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool),
+		deals.NewStore(e.DB(), DealsInstallation()))
+	entry, err := seam.Restore(e.Admin(), "deal", deal, auditID, currentVersion(t, e.Env, "deal", deal))
+	if err != nil {
+		t.Fatalf("putting a correction back through the generic restore route: %v — the receipt "+
+			"said this line was undoable, and pressing Undo must not disagree", err)
+	}
+	if entry.UndidAuditLogID == nil || *entry.UndidAuditLogID != auditID {
+		t.Errorf("the restore entry names %v as undone, want the correction's own audit row %s",
+			entry.UndidAuditLogID, auditID)
+	}
+
+	restored := e.readSwept(t, deal)
+	if restored.expectedClose == nil || !restored.expectedClose.Equal(wasClosing) {
+		t.Errorf("restored close date = %v, want the original %s",
+			restored.expectedClose, wasClosing.Format(time.DateOnly))
+	}
+
+	// A second Undo on the same route now finds the correction already
+	// reversed rather than falling into the generic evaluator a second time.
+	if _, err := seam.Restore(e.Admin(), "deal", deal, auditID, currentVersion(t, e.Env, "deal", deal)); err == nil {
+		t.Error("a second restore of an already-reversed correction succeeded")
 	}
 }
 
