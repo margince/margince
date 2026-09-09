@@ -388,10 +388,19 @@
    It draws at the same size and in the same ink as the sentence `SurfaceState`
    shows for the same absence: the two stand in the same place for the same
    reason, and a reader who met one at 13px and the other at 14px read two
-   kinds of statement where there is one. */
+   kinds of statement where there is one.
+
+   The inline half is the CARD's, named by its role rather than by a rung: this
+   plate IS a `Card` (the recessed variant), so the sentence stands off the
+   plate's own edge by the same measure as any other card body, and it retunes
+   when that surface does. Only the block half is this component's to raise.
+   Spelling the whole shorthand and leaving the inline half at `0` overrode the
+   card's padding on the axis the ground is visible on, and every bare empty
+   state in the product printed its sentence hard against the left edge of the
+   grey plate holding it. */
 .empty {
   text-align: start;
-  padding: var(--space-5) 0;
+  padding: var(--space-5) var(--padCard);
   color: var(--textMeta);
   font-size: var(--fs-body);
 }
@@ -404,7 +413,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-6) 0;
+  padding: var(--space-6) var(--padCard);
 }
 .empty-title {
   color: var(--textPrimary);
