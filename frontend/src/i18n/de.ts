@@ -3325,6 +3325,8 @@ export const de = {
   "log.body": "Details",
   "log.dueAt": "Fällig am",
   "log.date": "Datum",
+  "log.assignee": "Zuständig",
+  "log.unassigned": "Nicht zugewiesen",
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
 

@@ -508,6 +508,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "lead.scoreOverridden",
     "lead.trigger.humanQualify",
     "list.filterOwnerAll",
+    "log.assignee",
     "log.transcriptHint",
     "ob.fieldHint.buying_center",
     "ob.fieldHint.common_objections",
