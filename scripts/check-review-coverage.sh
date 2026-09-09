@@ -161,8 +161,16 @@ while read -r reviewer sha at; do
 	count="$(grep -c . <<<"$after")"
 	echo "BEHIND: ${count} commit(s) landed after ${reviewer} read ${sha}:"
 	printf '%s\n' "$after"
-	echo "       Re-review the range, or say on the pull request why it does not need it:"
+	echo "       Ask ${reviewer} to read the range:"
 	echo "         ${sha}..${head}"
+	# NAMED, because the obvious remedy is not always the one that works. A
+	# review records the commit id it was made against and a rebase rewrites
+	# those ids, so a reviewer that tracks CONTENT has read everything while
+	# this reads BEHIND — and it then declines an incremental re-review,
+	# leaving a finding whose stated remedy does nothing. A refusal that names
+	# an unreachable remedy is worse than one that names none.
+	echo "       After a rebase, an incremental re-review may decline as already done;"
+	echo "       \`@coderabbitai full review\` re-reads the whole changeset."
 	findings=$((findings + 1))
 done < <(jq -r '.[] | "\(.reviewer) \(.sha) \(.at)"' <<<"$latest")
 

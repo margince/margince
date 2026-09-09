@@ -196,4 +196,30 @@ if [[ "$failures" -ne 0 ]]; then
 	echo "FAIL: $failures case(s)" >&2
 	exit 1
 fi
+# The workflow around the report, not the report itself.
+#
+# The job must SUCCEED on a finding. A red check of any kind leaves a pull
+# request blocked with administrator override as the only way past, so a job
+# that failed here would be a gate — and, because a rebase rewrites the commit
+# ids a review names, one that ordinary work cannot clear. The name says
+# "reports, never blocks" and this is what keeps that true.
+workflow="$root/.github/workflows/review-coverage.yml"
+if grep -qE '^\s*exit "\$status"' "$workflow"; then
+	echo "FAIL: the workflow exits with the report's status, so a finding fails the job."
+	echo "      That makes it a gate no matter what the check is named, and a rebase alone"
+	echo "      is enough to leave a pull request unclearable without an administrator."
+	exit 1
+fi
+echo "ok: a finding is reported without failing the job"
+
+# And it has somewhere to be seen. A green job whose finding lives only in a
+# step summary is the report nobody reads, which is the failure the previous
+# shape was avoiding — so dropping the comment is not a free simplification.
+if ! grep -q 'review-coverage-report' "$workflow"; then
+	echo "FAIL: the workflow posts no sticky comment, so a finding on a green job has"
+	echo "      nowhere a reader would find it."
+	exit 1
+fi
+echo "ok: the finding is published where the reader already is"
+
 echo "OK: test-review-coverage — every arm of the report, including the quiet ones"
