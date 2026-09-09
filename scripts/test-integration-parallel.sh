@@ -268,7 +268,7 @@ while IFS='|' read -r d rel; do
         '!integration') skip_file=1 ;;
         e2e_llm|livesmoke|voicelive) skip_file=1 ;;
         # `integration && bench` is the benchmark lane (make bench-record,
-        # bench-capture, bench-perf, bench-perf-check). It keeps those suites out
+        # bench-capture, bench-dispatch, bench-perf, bench-perf-check). It keeps those suites out
         # of every MERGE gate, which is what matters here — one of them,
         # bench-perf-check, is run weekly by the scheduled workflow, so "the tag
         # keeps them out of all automation" would be false.

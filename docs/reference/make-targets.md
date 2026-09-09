@@ -1,10 +1,8 @@
 # Make targets
 
-The real Makefile is `backend/Makefile`; the root Makefile delegates the
-backend targets and adds the frontend lane. In `backend/`, `make` (or `make
-help`) lists targets with descriptions. Every target that listing advertises
-also runs as `make <name>` from the repo root, which `make-target-parity`
-enforces — so a command copied out of here works from either directory.
+The real Makefile is `backend/Makefile`; the root one delegates its targets and
+adds the frontend lane. `make help` in `backend/` lists them with descriptions, and
+every one it advertises also runs from the root — `make-target-parity` enforces it.
 
 ## Everyday
 
@@ -153,18 +151,18 @@ deriving it the first time.
 | `bench-perf-check` | The same budgets on the **SMB** tier, writing nothing — what the weekly scheduled workflow runs (needs `db-up`) |
 | `bench-record` | PERF-1/PERF-4: record open and save p50/p95/p99, measured over HTTP against the booted app (needs `db-up`) |
 | `bench-capture` | CAP-PARAM-1: capture-to-timeline latency, 60 s p95, over the auto-create path (needs `db-up`) |
+| `bench-dispatch` | AC-W2: workflow trigger→dispatch p95 against the 200 ms budget (needs `db-up`). Writes no record, AC-W2 having no published budget row, so it is the one `bench-*` target that re-renders nothing |
 | `perfdoc` | Re-render `docs/reference/performance-budgets.md` from the committed benchmark records. Every `bench-*` target runs it as its last step, so the page updates on every measurement; run it alone after editing the published-budget table in `backend/tools/gen-perfdoc` |
 | `tidy` | `go mod tidy` |
 
 ### The `bench` lane — measurements, run by hand
 
-`bench-perf`, `bench-perf-check`, `bench-record` and `bench-capture` all carry
-`//go:build integration && bench`, so **no MERGE gate runs them**: not `make
-check`, not the integration lane. They report
-the numbers behind the budgets `acceptance-standards.md` publishes rather than
-gating a merge on them, which is why each prints p50/p95/p99 beside its budget
-instead of only passing or failing. `bench-mobile` below is the frontend half of
-the same posture.
+`bench-perf`, `bench-perf-check`, `bench-record`, `bench-capture` and
+`bench-dispatch` carry `//go:build integration && bench`, so **no MERGE gate runs
+them**: not `make check`, not the integration lane. They report the numbers behind
+the budgets `acceptance-standards.md` publishes rather than gating on them, which
+is why each prints p50/p95/p99 beside its budget. `bench-mobile` below is the
+frontend half of the same posture.
 
 They are still **type-checked** on every `make check`: both golangci passes carry
 the tag, and `gates/lintbuildtagreach_test.go` fails if either stops. That is load-bearing rather than
@@ -172,7 +170,7 @@ tidiness — nothing scheduled compiles these files, so without it a renamed hel
 would break them silently and nobody would find out until the next person ran a
 benchmark by hand and had to debug the harness instead of reading a number.
 
-Each target's last step re-renders `docs/reference/performance-budgets.md` from
+Each target that publishes a budget re-renders `performance-budgets.md` from
 **every** committed record, not just the one it wrote — so a partial run still
 leaves a complete page, with the rows it did not measure keeping their own dates
 and their own machines. A budget no record covers renders as `not measured`
@@ -199,6 +197,8 @@ number stays a human's act — a machine must never write its own numbers into t
 tree. The write-path regression the standing canary once caught by TIMING OUT
 rather than by measuring is held deterministically now, by the `seq_scan` count
 in `lastactivity_integration_test.go`.
+
+`bench-dispatch` arrived on a `main-health` p95 of 201.63 ms against 200 ms.
 
 ## Root-only (frontend lane)
 
