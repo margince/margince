@@ -1,35 +1,50 @@
 /* Callout — what the surface says about itself.
  *
- * A ROW on the recessed ground with a dot in the tone's colour before its
- * first words, never a filled coloured box: colour on this page means one
- * thing at a time, and a tinted plate shouts over the record it sits in. The
- * words carry the meaning; the dot and the icon slot double it for a reader
- * who reads colour, and the title in the tone's ink for one who does not. */
+ * A bordered card on the pane's ground carrying the tone's ICON before its
+ * first words, never a filled coloured box: colour on this page means one thing
+ * at a time, and a tinted plate shouts over the record it sits in. The words
+ * carry the meaning; the icon's SHAPE doubles it for a reader who does not read
+ * colour, which the dot this replaced could not — four dots differing only in
+ * hue are one signal wearing four coats. Tone reaches the ink of the icon and
+ * of the heading, and nothing else.
+ *
+ * Two faces, and a heading picks between them. TITLED is the card: the icon on
+ * the heading's first line, the heading in the tone's ink, the description
+ * under it, the verbs in a column at the end. COMPACT is one row about a
+ * control tall, which is what a dialog footer and a setting row need to keep
+ * their density. */
 
 .callout {
-  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-md);
   background: var(--pane);
   color: var(--textContent);
 }
 
-/* The tone's dot, before the first words. Neutral for a plain notice, so the
- * shape is the same whatever the tone and only the colour changes. */
-.callout::before {
-  content: "";
-  position: absolute;
-  inset-block-start: calc(var(--space-3) + 5px);
-  inset-inline-start: var(--space-3);
-  inline-size: 7px;
-  block-size: 7px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--textTertiary);
+.callout-titled {
+  padding: var(--space-3) var(--space-4);
+}
+
+/* One line of a compact callout is exactly a control tall, so a notice beside
+ * controls sits on their line. The block padding is DERIVED from that height
+ * rather than typed as a rung: `--control-h` lifts to 44px on a coarse pointer,
+ * and a rung would leave this row at 36px while everything around it grew. The
+ * two hairlines come off it because they are part of the box the reader sees. */
+.callout-compact {
+  --callout-line: calc(var(--fs-sm) * var(--lh-normal));
+  padding-inline: var(--space-4);
+  padding-block: calc((var(--control-h) - var(--callout-line)) / 2 - 1px);
+}
+
+/* A compact row carrying a CONTROL is as tall as that control, so its words and
+ * its icon centre on it. A row with no control is one line, where centring and
+ * first-line alignment are the same place — which is why only the taller row
+ * has to say anything, and the icon lands on the first line either way. */
+.callout-compact:has(.callout-actions, .callout-dismiss) {
+  align-items: center;
 }
 
 .callout-icon {
@@ -41,11 +56,43 @@
   color: var(--textMeta);
 }
 
+/* Everything between the icon and the dismiss: the words, then the verbs. */
 .callout-body {
   display: flex;
+  flex: 1;
+  min-inline-size: 0;
+}
+
+/* The verbs in a column at the END, on the heading's own line — a card's shape
+ * rather than a paragraph's. */
+.callout-titled > .callout-body {
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+/* At phone width they drop BELOW the words instead: a column at the end of a
+ * 390px row leaves neither half a measure anybody can read. */
+@media (max-width: 640px) {
+  .callout-titled > .callout-body {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+}
+
+/* One row, the verbs inline with the words. It wraps rather than squeezing a
+ * button below its width floor, and what gives way is the sentence. */
+.callout-compact > .callout-body {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.callout-copy {
+  display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: var(--space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .callout-title {
@@ -71,36 +118,47 @@
   margin-top: var(--space-2);
 }
 
+/* The prose may be a LIST — a refusal naming the fields it would not write, a
+ * warning naming what it will stop. It reads as sentences with a marker rather
+ * than as a nested document, so it keeps the paragraph's rhythm and gives the
+ * marker its width instead of the browser's 40px indent. `list-style` is named
+ * because the reset in front of every sheet here removes it, which is what
+ * `.richtext-input` says again for the same reason: a list with no marker is a
+ * stack of sentences pretending to be one thing. */
+.callout-text > ul {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  list-style: disc;
+}
+
+.callout-text > p + ul {
+  margin-top: var(--space-2);
+}
+
 .callout-actions {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--gapActions);
   align-items: center;
 }
 
-.callout-warn::before,
+.callout-dismiss {
+  display: flex;
+  flex: none;
+}
+
 .callout-warn .callout-icon,
 .callout-warn .callout-title {
   color: var(--warn);
 }
-.callout-warn::before {
-  background: var(--warn);
-}
 
-.callout-danger::before,
 .callout-danger .callout-icon,
 .callout-danger .callout-title {
   color: var(--dangerText);
 }
-.callout-danger::before {
-  background: var(--danger);
-}
 
-.callout-success::before,
 .callout-success .callout-icon,
 .callout-success .callout-title {
   color: var(--success);
-}
-.callout-success::before {
-  background: var(--success);
 }

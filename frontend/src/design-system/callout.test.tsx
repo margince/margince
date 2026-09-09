@@ -4,11 +4,40 @@
 /** @vitest-environment jsdom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
-import { Callout } from "./callout";
+import userEvent from "@testing-library/user-event";
+import { MailX } from "lucide-react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { Callout, type CalloutKind, type CalloutTone } from "./callout";
 import { FactList } from "./factlist";
 
 afterEach(cleanup);
+
+/** The tone's glyph, named by the class lucide draws it under. */
+const TONE_GLYPHS: ReadonlyArray<readonly [CalloutTone, string]> = [
+  ["info", "lucide-info"],
+  ["warn", "lucide-triangle-alert"],
+  ["danger", "lucide-circle-x"],
+  ["success", "lucide-circle-check"],
+];
+
+/**
+ * The whole derivation as a table: what the notice IS, how bad the news is, and
+ * how loudly a screen reader is told. `null` is the silent case — a notice
+ * rendered with the page has nothing to interrupt for.
+ */
+const DERIVATIONS: ReadonlyArray<
+  readonly [CalloutKind | undefined, CalloutTone, string | null]
+> = [
+  ["outcome", "danger", "alert"],
+  ["outcome", "warn", "status"],
+  ["outcome", "info", "status"],
+  ["outcome", "success", "status"],
+  ["event", "danger", "status"],
+  ["event", "info", "status"],
+  ["standing", "danger", null],
+  ["standing", "info", null],
+  [undefined, "danger", null],
+];
 
 describe("Callout", () => {
   it("stays silent unless the caller says it appeared for a reason", () => {
@@ -49,6 +78,99 @@ describe("Callout", () => {
     rerender(<Callout>The index is behind.</Callout>);
     expect(container.querySelector(".callout-title")).toBeNull();
     expect(container.querySelector(".callout-actions")).toBeNull();
+  });
+
+  it.each(TONE_GLYPHS)("draws the %s tone's own glyph", (tone, glyph) => {
+    // Four dots differing only in hue are one signal wearing four coats. A
+    // shape per tone is what reaches a reader who does not read colour.
+    const { container } = render(<Callout tone={tone}>Something.</Callout>);
+    expect(container.querySelector(`.callout-icon .${glyph}`)).toBeTruthy();
+  });
+
+  it("takes the caller's glyph instead where the notice names a thing", () => {
+    const { container } = render(
+      <Callout tone="warn" icon={MailX}>
+        Nobody has written back.
+      </Callout>,
+    );
+    expect(
+      container.querySelector(".callout-icon .lucide-mail-x"),
+    ).toBeTruthy();
+    expect(container.querySelector(".lucide-triangle-alert")).toBeNull();
+  });
+
+  it.each(DERIVATIONS)(
+    "announces a %s notice in %s as %s",
+    (kind, tone, role) => {
+      const { container } = render(
+        <Callout kind={kind} tone={tone}>
+          Something happened.
+        </Callout>,
+      );
+      // `getAttribute` rather than `toHaveAttribute`, because the silent case
+      // is the ABSENCE of the attribute and this reads both cases the same way.
+      expect(container.querySelector(".callout")?.getAttribute("role")).toBe(
+        role,
+      );
+    },
+  );
+
+  it("lets an explicit loudness win over the derived one", () => {
+    // The caller knows something the kind does not: a standing notice this
+    // screen has decided must interrupt, and a failure it has decided must not.
+    const { container, rerender } = render(
+      <Callout kind="standing" live="alert">
+        The licence expires tonight.
+      </Callout>,
+    );
+    expect(container.querySelector(".callout")).toHaveAttribute(
+      "role",
+      "alert",
+    );
+
+    rerender(
+      <Callout kind="outcome" tone="danger" live="status">
+        One of eleven rows was refused.
+      </Callout>,
+    );
+    expect(container.querySelector(".callout")).toHaveAttribute(
+      "role",
+      "status",
+    );
+  });
+
+  it("puts the notice away from a control that has a name", async () => {
+    const onDismiss = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Callout tone="success" dismiss={{ label: "Dismiss", onDismiss }}>
+        HubSpot is connected.
+      </Callout>,
+    );
+    await user.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers no dismiss control unless the caller handles it", () => {
+    const { container } = render(
+      <Callout tone="success">HubSpot is connected.</Callout>,
+    );
+    expect(container.querySelector(".callout-dismiss")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("wears the face its heading asks for", () => {
+    // The two faces are two densities, and CSS picks between them by class: a
+    // titled card, or the single row a dialog footer can afford.
+    const { container, rerender } = render(
+      <Callout title="Reindex needed">The index is behind.</Callout>,
+    );
+    expect(container.querySelector(".callout-titled")).toBeTruthy();
+    expect(container.querySelector(".callout-compact")).toBeNull();
+
+    rerender(<Callout>The index is behind.</Callout>);
+    expect(container.querySelector(".callout-compact")).toBeTruthy();
+    expect(container.querySelector(".callout-titled")).toBeNull();
   });
 });
 

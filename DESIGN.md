@@ -863,7 +863,7 @@ looks now.
 | `SegmentedControl` | `--bg3` track, white pressed segment with a faint shadow, 12px. |
 | `Modal` | White, 8px radius, the one shadow, a scrim of `rgba(24,24,27,.4)`. The drawer form slides from the right with the same surface. |
 | `EmptyState` | Left-aligned in the zone it belongs to, `--ink3`, one sentence and one verb. |
-| `Callout` | A row on `--bg2` with a dot in the tone's colour before its first words. Never a filled coloured box. |
+| `Callout` | An alert's anatomy on the pane's ground: the tone's own glyph before the first words, the heading in the tone's ink, the words in ordinary ink, the verbs at the end and the dismiss after them. Tone reaches the glyph and the heading and nothing else — never a filled coloured box. The dot it replaced was four dots differing only in hue; the shape is what says which tone it is. Titled it is a card; untitled it is one row a control tall, for a dialog footer or a setting row. |
 | `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the indigo mark on its own tile (no label beside it: the tile is the claim), the verdict word at 15px 600 (amber when warn, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
 | `Kbd` | 10.5px in `--ink4` with a `--line` outline, 4px radius. On the search field and the ask field. |
 | `Spine` | The product's own spine: per stop a date, a 2px accent rule with a 9px dot at its start, a title, a detail; the gap stop at 1.5× width as a 26px amber day count over a dashed amber rule with no dot; today as a 2px black bar with TODAY and the date under it; dotted grey and hollow dots ahead of it. |
