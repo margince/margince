@@ -1766,6 +1766,9 @@ export function useSuggestionsBody({
   // "no advice" or "we cannot advise you" are not things a rep acts on.
   ready: boolean;
   rows: ReactNode;
+  // How many rows `rows` draws: one node carries several, so a caller weighing
+  // what the list holds cannot count them for itself.
+  count: number;
   // Whether any row this section DRAWS offers to answer a specific message.
   //
   // Computed from the post-filter list rather than from the raw advice: a
@@ -1847,7 +1850,7 @@ export function useSuggestionsBody({
   // section gives.
   const suggestions = keep ? all.filter(keep) : all;
   if (state !== "ready" || suggestions.length === 0) {
-    return { ready: false, rows: null, hasDraftReply: false };
+    return { ready: false, rows: null, count: 0, hasDraftReply: false };
   }
   // How many the cap dropped that THIS caller should report. The count
   // describes the whole list, so a narrowed caller reports none: "2 more" under
@@ -1934,6 +1937,7 @@ export function useSuggestionsBody({
   return {
     ready: true,
     rows,
+    count: suggestions.length,
     hasDraftReply: suggestions.some(
       (suggestion) => suggestion.action?.kind === "draft_reply",
     ),
@@ -1992,11 +1996,11 @@ export function ProposedNextSteps({
 
 /**
  * SuggestionsSection is the advice rows on their own, in their own Panel —
- * used standalone where nothing else on the page carries this chrome (the
- * stories file, and the suites that exercise the rows without the rest of
- * the daily brief). The live record page mounts the merged brief instead
- * (`TodayOnThisAccount`, companytoday.tsx), which composes the same rows
- * body via `useSuggestionsBody` alongside its own context band.
+ * indigo, because a rule wrote every row under that head. Used standalone
+ * where nothing else carries this chrome (the stories file, and the suites
+ * that exercise the rows without the daily brief); the live record page mounts
+ * the merged brief instead (`TodayOnThisAccount`, companytoday.tsx), which
+ * composes the same body via `useSuggestionsBody` beside its context band.
  */
 export function SuggestionsSection({
   orgId,
@@ -2048,9 +2052,6 @@ export function SuggestionsSection({
     <Panel
       title={t("co.suggest.title")}
       footer={footer}
-      // Indigo rather than accent: every row under this head was written by a
-      // rule, so the panel's tint is a claim about who wrote it and not about
-      // how the account is doing.
       tone="ai"
       titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
       className="co-lead"
