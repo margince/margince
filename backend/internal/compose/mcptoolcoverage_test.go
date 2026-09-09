@@ -384,8 +384,19 @@ var (
 	// same way: the page published a smaller "permitted" set and nothing failed.
 	e2eMustCallBlock = regexp.MustCompile(`(?ms)^must_call:\n((?:[ \t]*(?:#[^\n]*|-[ \t]*\S+)?\n)+)`)
 	e2eMayCallBlock  = regexp.MustCompile(`(?ms)^may_call:\n((?:[ \t]*(?:#[^\n]*|-[ \t]*\S+)?\n)+)`)
-	e2eToolItem      = regexp.MustCompile(`(?m)^\s*-\s*(\S+)\s*$`)
-	e2eCriterion     = regexp.MustCompile(`\d+`)
+	// The inline form of the same key. e2e/llm/check.py accepts both shapes, and
+	// a reader here that knew only the block form answered "requires nothing" for
+	// a case whose tools the lane was enforcing — a census failing short in the
+	// page whose subject is a census.
+	e2eMustCallInline = regexp.MustCompile(`(?m)^must_call:[ \t]*\[([^\]]*)\]`)
+	e2eMayCallInline  = regexp.MustCompile(`(?m)^may_call:[ \t]*\[([^\]]*)\]`)
+	e2eInlineItem     = regexp.MustCompile(`[^,\s\[\]]+`)
+	// Whether a scenario DECLARES the key at all, in either shape. The gate below
+	// compares this against what was parsed: a key that is present and yields no
+	// tool is the shape that cannot be seen in the output.
+	e2eMustCallDeclared = regexp.MustCompile(`(?m)^must_call:`)
+	e2eToolItem         = regexp.MustCompile(`(?m)^\s*-\s*(\S+)\s*$`)
+	e2eCriterion        = regexp.MustCompile(`\d+`)
 )
 
 // verdictKey is what a committed verdict is filed under. The model is half of
@@ -440,7 +451,7 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 				row.Criteria = append(row.Criteria, atoiOrZero(n))
 			}
 		}
-		row.Requires = sortedCopy(toolsInBlock(e2eMustCallBlock, text))
+		row.Requires = sortedCopy(toolsInBlock(e2eMustCallBlock, e2eMustCallInline, text))
 		row.ByModel = runsFor(verdicts, row.Name)
 		cases = append(cases, row)
 	}
@@ -526,7 +537,7 @@ func readCriteria(path string) (map[string]map[int]criterionRow, error) {
 	return out, nil
 }
 
-// runsFor is every model's result on one scenario, ordered by model name.
+// runsFor collects each model's result on one scenario, ordered by model name.
 //
 // It replaced a chooser that returned ONE verdict per scenario, picking the
 // lowest model name. That was correct while one model had run and silently
@@ -550,7 +561,14 @@ func runsFor(verdicts map[verdictKey]e2eVerdict, scenario string) []caseModelRun
 	return out
 }
 
-func toolsInBlock(block *regexp.Regexp, text string) []string {
+// toolsInBlock reads one tool key in EITHER shape the lane accepts — the block
+// list and the inline `[a, b]` — because check.py accepts both and a page that
+// knew one of them would report a case as requiring nothing while the lane
+// enforced its tools.
+func toolsInBlock(block, inline *regexp.Regexp, text string) []string {
+	if got := inline.FindStringSubmatch(text); len(got) == 2 {
+		return e2eInlineItem.FindAllString(got[1], -1)
+	}
 	got := block.FindStringSubmatch(text)
 	if len(got) != 2 {
 		return nil
@@ -573,7 +591,7 @@ func permittedCases(cases []caseRow, tool string) []string {
 		if err != nil {
 			continue
 		}
-		if listHas(toolsInBlock(e2eMayCallBlock, string(body)), tool) {
+		if listHas(toolsInBlock(e2eMayCallBlock, e2eMayCallInline, string(body)), tool) {
 			out = append(out, c.Name)
 		}
 	}
@@ -612,7 +630,7 @@ func measureCases(cases []caseRow, names []string, model string) *toolMeasuremen
 	return &m
 }
 
-// modelsThatRan is every model name appearing in the committed verdicts, sorted.
+// modelsThatRan reads the model names out of the committed verdicts, sorted.
 // Derived from the records rather than kept as a list here: a page that carried
 // its own roster would keep publishing a model whose records were deleted, and
 // would silently omit one somebody added.

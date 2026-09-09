@@ -1019,6 +1019,24 @@ usage_is "usage/a short read says so out loud" 2 "1 run(s) unmeasured" \
 usage_is "usage/an unmeasurable sweep reports no cost, not a free one" 1 "cost unreported" \
 	"$work/usage.truncated.jsonl"
 
+# A run that reported usage but no price. The cost is real for the runs that
+# carried one and silent about the rest unless the line says so — a total over
+# part of a sweep printed as the whole sweep's bill is the same misreading as a
+# short measurement printed as a complete one.
+cat >"$work/usage.nocost.jsonl" <<'JSONL'
+{"type":"result","subtype":"success","is_error":false,"result":"done","usage":{"input_tokens":10,"output_tokens":20,"cache_creation_input_tokens":0,"cache_read_input_tokens":5000}}
+JSONL
+usage_is "usage/a cost over fewer runs than were measured says so" 2 "over 1 of 2" \
+	"$work/usage.good.jsonl" "$work/usage.nocost.jsonl"
+
+# A usage block whose fields were renamed or dropped. Summing the absent ones as
+# zero would report the run as measured and its tokens as nothing.
+cat >"$work/usage.renamed.jsonl" <<'JSONL'
+{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":0.25,"usage":{"in_tokens":10,"out_tokens":20}}
+JSONL
+usage_is "usage/a renamed token field is unmeasured, not zero" 1 "0/1 runs measured" \
+	"$work/usage.renamed.jsonl"
+
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures e2e-llm checker case(s) did not hold" >&2
 	exit 1

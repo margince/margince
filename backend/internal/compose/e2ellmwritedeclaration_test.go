@@ -77,7 +77,7 @@ func TestEveryWritingScenarioDeclaresThatItWrites(t *testing.T) {
 		}
 		read++
 		text := string(body)
-		reached := append(toolsInBlock(e2eMustCallBlock, text), toolsInBlock(e2eMayCallBlock, text)...)
+		reached := append(toolsInBlock(e2eMustCallBlock, e2eMustCallInline, text), toolsInBlock(e2eMayCallBlock, e2eMayCallInline, text)...)
 		var writes []string
 		for _, tool := range reached {
 			if writers[tool] {

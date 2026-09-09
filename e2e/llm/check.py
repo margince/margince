@@ -221,9 +221,12 @@ def read_usage(path):
         usage = event.get("usage")
         if not isinstance(usage, dict):
             return None
-        counted = {field: usage.get(field, 0) for field in _USAGE_FIELDS}
-        if not all(isinstance(value, int) for value in counted.values()):
+        # A FIELD THAT IS NOT THERE IS NOT A ZERO. A renamed or dropped usage
+        # field would otherwise be summed as nothing and reported as measured,
+        # which is the same silent shortfall a missing transcript would be.
+        if not all(isinstance(usage.get(field), int) for field in _USAGE_FIELDS):
             return None
+        counted = {field: usage[field] for field in _USAGE_FIELDS}
         cost = event.get("total_cost_usd")
         return counted, (cost if isinstance(cost, (int, float)) else None)
     return None
@@ -255,6 +258,11 @@ def total_usage(paths):
     return {
         **totals,
         "runs_measured": measured,
+        # The cost carries its OWN denominator. It is summed over the runs that
+        # reported one, which is not always the runs that reported usage, and a
+        # total quoted without saying how many runs are behind it is the shape
+        # runs_measured already exists to refuse.
+        "runs_costed": costed,
         "cost_usd": round(cost, 4) if costed else None,
     }
 
@@ -268,13 +276,23 @@ def usage_line(expected, usage):
     agreed while its sets did not.
     """
     measured = usage["runs_measured"]
+    costed = usage["runs_costed"]
     cost = usage["cost_usd"]
+    if cost is None:
+        priced = "unreported"
+    elif costed == measured:
+        priced = f"${cost:.2f}"
+    else:
+        # A total over fewer runs than were measured says so where it is read,
+        # not only in the JSON. Silently pricing part of a sweep as all of it is
+        # this lane's own defect in miniature.
+        priced = f"${cost:.2f} over {costed} of {measured}"
     short = "" if measured == expected else f"  <-- {expected - measured} run(s) unmeasured"
     return (
         f"  usage: {measured}/{expected} runs measured, "
         f"{usage['input_tokens']:,} in, {usage['output_tokens']:,} out, "
         f"{usage['cache_read_input_tokens']:,} cache-read, "
-        f"cost {'unreported' if cost is None else f'${cost:.2f}'}{short}"
+        f"cost {priced}{short}"
     )
 
 

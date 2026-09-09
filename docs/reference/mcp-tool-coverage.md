@@ -368,13 +368,15 @@ Driven, and not every run passed. Open the case to see what was asked.
 
 The semantic half of each criterion is decided by a model rather than a regex, so the judge is part of the apparatus and its accuracy belongs on the same page as the results it produced. A judge wrong in the quiet direction — passing an answer the criterion fails — turns a missed defect into a green run.
 
+Reproduce a row with `python3 e2e/llm/judge-eval.py <model>` — it drives the offline suite with that model as a live judge and rewrites its record. Scored over the JUDGED fixtures only: the suite also exercises the usage reader, the probe and the regex half, which no judge decides.
+
 Scored against **human-authored fixtures** under `e2e/llm/testdata/<case>/`, labelled by `scripts/test-e2e-llm-check.sh`. The recorded verdicts under `e2e/llm/testdata/judge/` are deliberately not the reference: they were written by one model, so scoring against them measures resemblance to that model and hands it a free hundred per cent.
 
 | Judge | Accuracy | Scored | Passed | Its own errors |
 |---|---:|---:|---:|---:|
-| `claude-opus-5` | 98.6% | 138 | 136 | 2 |
-| `claude-haiku-4-5-20251001` | 96.4% | 138 | 133 | 5 |
-| `claude-sonnet-5` | 95.7% | 138 | 132 | 6 |
+| `claude-opus-5` | 98.2% | 113 | 111 | 2 |
+| `claude-haiku-4-5-20251001` | 95.6% | 113 | 108 | 5 |
+| `claude-sonnet-5` | 94.7% | 113 | 107 | 6 |
 
 > `claude-opus-5` misread: case22/claims-everything-is-synced, case30/announces-the-coinage-as-a-list
 

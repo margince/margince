@@ -76,6 +76,15 @@ type judgeEvalRow struct {
 // A missing directory is not an error, for the reason the verdict reader gives:
 // it means nobody has put a judge on trial on this checkout, which the page says
 // outright rather than publishing an empty comparison as a finished one.
+// rateOf is the row's accuracy as a number, for ordering. A row nothing scored
+// sorts last rather than first, which a zero-valued division would invert.
+func rateOf(row judgeEvalRow) float64 {
+	if row.Scored == 0 {
+		return -1
+	}
+	return float64(row.Passed) / float64(row.Scored)
+}
+
 func readJudgeEvals(t *testing.T, dir string) ([]judgeEvalRow, error) {
 	entries, err := os.ReadDir(dir)
 	if os.IsNotExist(err) {
@@ -105,22 +114,39 @@ func readJudgeEvals(t *testing.T, dir string) ([]judgeEvalRow, error) {
 			}
 			row.Errors = append(row.Errors, failure)
 		}
-		row.Failed = len(row.Errors)
-		// The denominator excludes the artifacts, because a case no model can
-		// pass measures nothing about any of them.
-		row.Scored = record.CasesPassed + record.CasesFailed - row.Artifacts
-		row.Passed = row.Scored - row.Failed
+		// THE DENOMINATOR IS THE JUDGED FIXTURES, not the suite. A run of
+		// scripts/test-e2e-llm-check.sh also exercises the usage reader, the
+		// probe, the refused-credential paths and the regex half — cases no judge
+		// model decides. Scoring over all of them answers "what fraction of this
+		// suite passed while that judge was configured", printed under a heading
+		// that says the judge was scored against human-authored fixtures. That is
+		// this branch's own defect: a number describing something other than what
+		// it names.
+		row.Scored = record.JudgedFixturesPassed + record.JudgedFixturesFailed
+		row.Passed = record.JudgedFixturesPassed
+		row.Failed = record.JudgedFixturesFailed
+		// The record states the count and the names separately, so they can
+		// disagree — a truncated failures list would otherwise read as a better
+		// judge. Nothing else would notice.
+		if len(row.Errors) != row.Failed {
+			t.Errorf("%s reports %d judged fixtures failed but names %d of them (%v): the record "+
+				"disagrees with itself, and the shorter list is the one that flatters the judge",
+				entry.Name(), row.Failed, len(row.Errors), row.Errors)
+		}
 		if row.Scored > 0 {
 			row.Accuracy = fmt.Sprintf("%.1f%%", 100*float64(row.Passed)/float64(row.Scored))
 		}
 		sort.Strings(row.Errors)
 		out = append(out, row)
 	}
-	// Most accurate first, then by name, so the page does not reorder itself
-	// between runs over a directory listing.
+	// Most accurate FIRST, by rate rather than by error count: two judges scored
+	// over different numbers of fixtures are not ranked by whose failure list is
+	// shorter. Ties break on the name so the page does not reorder itself between
+	// runs over a directory listing.
 	sort.Slice(out, func(i, j int) bool {
-		if out[i].Failed != out[j].Failed {
-			return out[i].Failed < out[j].Failed
+		left, right := rateOf(out[i]), rateOf(out[j])
+		if left != right {
+			return left > right
 		}
 		return out[i].Model < out[j].Model
 	})
@@ -140,6 +166,10 @@ func writeCoverageJudges(p *strings.Builder, r mcpToolCoverage) {
 		"so the judge is part of the apparatus and its accuracy belongs on the same page as the " +
 		"results it produced. A judge wrong in the quiet direction — passing an answer the " +
 		"criterion fails — turns a missed defect into a green run.\n\n")
+	p.WriteString("Reproduce a row with `python3 e2e/llm/judge-eval.py <model>` — it drives the " +
+		"offline suite with that model as a live judge and rewrites its record. Scored over the " +
+		"JUDGED fixtures only: the suite also exercises the usage reader, the probe and the regex " +
+		"half, which no judge decides.\n\n")
 	p.WriteString("Scored against **human-authored fixtures** under `e2e/llm/testdata/<case>/`, " +
 		"labelled by `scripts/test-e2e-llm-check.sh`. The recorded verdicts under " +
 		"`e2e/llm/testdata/judge/` are deliberately not the reference: they were written by one " +

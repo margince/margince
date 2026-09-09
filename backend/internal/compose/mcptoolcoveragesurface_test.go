@@ -480,8 +480,8 @@ may_call:
   # an interleaved one
   - delta
 `
-	must := toolsInBlock(e2eMustCallBlock, scenario)
-	may := toolsInBlock(e2eMayCallBlock, scenario)
+	must := toolsInBlock(e2eMustCallBlock, e2eMustCallInline, scenario)
+	may := toolsInBlock(e2eMayCallBlock, e2eMayCallInline, scenario)
 
 	if want := []string{"alpha", "beta"}; !equalStrings(must, want) {
 		t.Errorf("must_call read as %v, want %v — a comment above an item hides the items after it", must, want)

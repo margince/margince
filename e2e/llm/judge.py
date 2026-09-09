@@ -58,8 +58,9 @@ import tempfile
 # THE MODEL IS PINNED, for the reason scripts/e2e-llm.sh pins the candidate's:
 # left unset the CLI picks whatever it defaults to in the environment it finds
 # itself in, and a pass rate that moves with the CLI's default answers nothing
-# about the product. Opus because this is the harder half of the judging — the
-# criteria it decides are the ones five rounds of human review got wrong.
+# about the product. This is the harder half of the judging — the criteria it
+# decides are the ones five rounds of human review got wrong — so which model
+# reads them is a measured question, answered below rather than assumed.
 #
 # It is the same family as the candidate the lane drives, which is a weaker
 # signal than an independent grader (backend/internal/compose/aicert names that
@@ -194,9 +195,22 @@ def _replay(directory, criterion, answer, model):
 
 
 def _record(directory, criterion, answer, model):
+    """Reuse a verdict THIS model already gave, and re-ask when it did not.
+
+    A recorded verdict belongs to the model that gave it, so a file under a
+    different model is not this model's answer and must not be replayed as one.
+    It is also not an error here: `record:` is the mode whose whole job is to
+    obtain the missing verdict. Deferring to _replay made the advice it prints —
+    "re-record with E2E_LLM_JUDGE=record:<dir>" — name the mode already running,
+    so switching the pinned model stopped every criterion with instructions to do
+    what was being done, and the only way through was deleting the corpus by hand.
+    """
     path = os.path.join(directory, _digest(criterion, answer) + ".json")
     if os.path.exists(path):
-        return _replay(directory, criterion, answer, model)
+        with open(path, encoding="utf-8") as handle:
+            stored = json.load(handle)
+        if stored.get("model") == model and stored.get("verdict") in ("yes", "no"):
+            return stored["verdict"] == "yes", stored.get("reason", "")
     held, reason = _live(criterion, answer, model)
     os.makedirs(directory, exist_ok=True)
     with open(path, "w", encoding="utf-8") as handle:

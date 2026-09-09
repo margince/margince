@@ -308,8 +308,10 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     true|false) ;;
     *)
       echo "$(basename "$scenario") declares writes=${declared:-<absent>}; it must be exactly" >&2
-      echo "true or false. An absent field arrives as the value that SKIPS the database reset," >&2
-      echo "and a wrong-world run is a run rather than an error." >&2
+      echo "true or false. It is the case author's statement that this case changes the world," >&2
+      echo "and TestEveryWritingScenarioDeclaresThatItWrites derives the same fact from the tools" >&2
+      echo "the case names and fails when the two disagree — an absent or misspelled value would" >&2
+      echo "leave that gate comparing against nothing." >&2
       exit 1
       ;;
   esac
@@ -317,6 +319,10 @@ done
 
 PASSED=0
 FAILED=0
+# The runs the lane INTENDED, summed as it goes. The sweep total's denominator
+# cannot come from the transcripts it is counting: a run that wrote none would
+# then be missing from both halves and the total would report itself complete.
+EXPECTED_RUNS=0
 mkdir -p "$RECORD_DIR"
 REPORT="$WORK/report.txt"
 : > "$REPORT"
@@ -327,27 +333,11 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
 
   runs="$(python3 "$ROOT/e2e/llm/check.py" --field runs "$scenario")"
   pass_at="$(python3 "$ROOT/e2e/llm/check.py" --field pass_at "$scenario")"
-  # Whether this case WRITES, declared by the scenario itself rather than kept
-  # here as a list of names. The list this replaced read `case1_*|case2_*|case3_*`
-  # and could only fail one way: a writing case nobody added ran its second and
-  # third attempts against its first one's world, silently, because a wrong-world
-  # run is a run and not an error. The declaration sits in the file whose author
-  # knows the answer, and TestEveryWritingScenarioDeclaresThatItWrites derives the
-  # same fact from the tools the case names and fails when the two disagree.
-  writes="$(python3 "$ROOT/e2e/llm/check.py" --field writes "$scenario")"
-  # AN ABSENT FIELD MUST NOT READ AS "does not write". `--field` answers an
-  # unknown key with an empty line and exit 0, so a scenario that forgot the
-  # declaration, or spelled it `write:`, or wrote `yes`/`True`/`1`, would all
-  # arrive here as the value that skips the reset — and a wrong-world run is a
-  # run, not an error. That is the one direction this must not fail in, so the
-  # value is checked rather than compared.
-  case "$writes" in
-    true|false) ;;
-    *)
-      echo "$name declares writes=${writes:-<absent>}; it must be exactly true or false" >&2
-      exit 1
-      ;;
-  esac
+  # `writes:` is validated once, over the whole corpus, in the pre-flight above —
+  # not again here. It does not decide the reset: WORLD_DIRTY does, because the
+  # assistant is offered the whole server and can write whatever it likes
+  # whatever its scenario declared. Reading it a second time here to validate it
+  # a second time and then discard it read as though it steered something.
   python3 "$ROOT/e2e/llm/check.py" --field prompt "$scenario" > "$WORK/prompt.txt"
 
   echo "==> $name ($runs runs, passes at $pass_at)"
@@ -470,6 +460,8 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # what mcp-tool-coverage.md publishes, so the current answer has to be at a
   # stable path. Git carries what it replaced.
   mkdir -p "$VERDICT_DIR"
+  EXPECTED_RUNS=$((EXPECTED_RUNS + runs))
+
   # The transcripts of this scenario's runs, as an array so an absent glob is an
   # empty list rather than the literal pattern. A run that died without writing
   # one is exactly the case runs_measured exists to make visible, so the list is
@@ -480,12 +472,13 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
 
   # The verdict carries what the answer cost as well as whether it held.
   python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$runs" \
-    "${transcripts[@]}" > "$VERDICT_DIR/${name}.json"
+    ${transcripts[@]+"${transcripts[@]}"} > "$VERDICT_DIR/${name}.json"
 
   # And the same total in prose while the reason for it is still on screen. The
   # line is formatted by check.py, which owns what a usage total means, rather
   # than assembled here out of JSON the shell would have to parse.
-  python3 "$ROOT/e2e/llm/check.py" --usage "$runs" "${transcripts[@]}" | tee -a "$REPORT"
+  python3 "$ROOT/e2e/llm/check.py" --usage "$runs" \
+    ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
 
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
 done
@@ -494,14 +487,15 @@ echo
 echo "================ e2e-llm ================"
 cat "$REPORT"
 echo "scenarios: $PASSED passed, $FAILED failed"
-# The whole sweep's bill, over every transcript the lane wrote. The denominator
-# is the number of transcripts rather than a run count re-summed here: this is a
-# total over what exists, and a second count of what was expected would be a
-# second answer to a question the per-scenario lines above already ask.
+# The whole sweep's bill. The denominator is EXPECTED_RUNS — what the scenarios
+# asked for — and never the number of transcripts found: counting the files it is
+# summing would let a run that wrote nothing vanish from both halves and report a
+# short sweep as a complete one, which is the defect this whole branch is about.
 shopt -s nullglob
 all_transcripts=("$WORK"/*.run*.jsonl)
 shopt -u nullglob
-python3 "$ROOT/e2e/llm/check.py" --usage "${#all_transcripts[@]}" "${all_transcripts[@]}" \
+python3 "$ROOT/e2e/llm/check.py" --usage "$EXPECTED_RUNS" \
+  ${all_transcripts[@]+"${all_transcripts[@]}"} \
   | sed 's/^  usage:/sweep total:/'
 echo "records:   $RECORD_DIR"
 [[ "$FAILED" -eq 0 ]]
