@@ -433,6 +433,19 @@ func waitAttempted(t *testing.T, g *gatedBlobstore, op, key string) {
 	}
 }
 
+// drainAttempted discards signals a setup write already queued (seedLoggedOrg's
+// own Put, most often), so a later waitAttempted cannot return on a stale
+// match and pass without the call under test ever running.
+func drainAttempted(g *gatedBlobstore) {
+	for {
+		select {
+		case <-g.attempted:
+		default:
+			return
+		}
+	}
+}
+
 // hold arms the gate: the next Put(s) to key block after entering (signalling
 // on entered) until releaseHeld is called.
 func (g *gatedBlobstore) hold(key string) {
@@ -685,6 +698,10 @@ func TestOrganizationLogoWriteBackLogsRatherThanFailsWhenThePutErrors(t *testing
 	}
 	url := "/v1/organizations/" + orgID.String() + "/logo"
 
+	// Discards seedLoggedOrg's own "put key" signal above: waitAttempted below
+	// must observe the write-back's failing attempt, not the write that set
+	// this object up, or a write-back that never ran would pass just as well.
+	drainAttempted(blob)
 	blob.failPut(key)
 	rec := httptest.NewRecorder()
 	handlers.GetOrganizationLogo(rec, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(orgID.UUID))
