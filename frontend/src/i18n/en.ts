@@ -3542,6 +3542,7 @@ export const en = {
   "compose.fileUploading": "Filing the file…",
   "compose.fileStoredUnnamed":
     "The file is on the record, but we could not read back which one it is. Attach it from the list above.",
+  "compose.carriageTitle": "This message cannot go on {channel}",
   "compose.carriageCarries":
     "{channel} cannot carry files, so this message and its {count} attached cannot go on it. Send the text on {channel}, or the files another way.",
   "compose.carriageCount":

@@ -3457,6 +3457,8 @@ export const de = {
   "compose.fileUploading": "Datei wird abgelegt…",
   "compose.fileStoredUnnamed":
     "Die Datei liegt am Datensatz, aber wir konnten nicht zurücklesen, welche es ist. Hängen Sie sie über die Liste oben an.",
+  "compose.carriageTitle":
+    "Diese Nachricht kann nicht über {channel} gesendet werden",
   "compose.carriageCarries":
     "{channel} kann keine Dateien übertragen, daher können diese Nachricht und ihre {count} Anhänge dort nicht gesendet werden. Senden Sie den Text über {channel} oder die Dateien auf anderem Weg.",
   "compose.carriageCount":

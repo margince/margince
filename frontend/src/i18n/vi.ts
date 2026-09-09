@@ -3416,6 +3416,7 @@ export const vi = {
   "compose.fileUploading": "Đang lưu tệp…",
   "compose.fileStoredUnnamed":
     "Tệp đã ở trên hồ sơ, nhưng chúng tôi không đọc lại được đó là tệp nào. Hãy đính kèm nó từ danh sách phía trên.",
+  "compose.carriageTitle": "Tin nhắn này không thể gửi trên {channel}",
   "compose.carriageCarries":
     "{channel} không mang được tệp, nên tin nhắn này cùng {count} tệp đính kèm không thể gửi trên đó. Hãy gửi phần chữ qua {channel}, hoặc gửi tệp bằng cách khác.",
   "compose.carriageCount":
