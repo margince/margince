@@ -11,20 +11,22 @@ package compose
 // refused against by naming the whole set, and each grew independently of that
 // bound — so the two agree only while somebody checks.
 //
-// TWO DEFECTS THIS HOLDS, both of which shipped:
+// A truncated set is worse than an absent one: it reads as complete, so a caller
+// stops looking for the entry that was removed.
 //
-// The bound was the figure sized for a bad-args echo, and the sets were measured
-// against it and lost. A report's block grammar never reached a caller at all,
-// and the analytics populations arrived cut mid-name — worse than absent,
-// because a truncated list reads as a complete one and a caller stops looking
-// for the entry that was removed.
+// WHAT IS DERIVED AND WHAT IS NOT, said plainly, because the first pass of this
+// file claimed the whole of it and was wrong. Every set's MEMBERS come from the
+// producer that owns them, so a member added or removed moves this test. The
+// SUBJECT LIST is hand-built and cannot be otherwise: provoking a refusal means
+// composing a call that earns it, and no reflection writes that. What guards the
+// list instead is that every subject asserts its members are non-empty, so a
+// vocabulary that silently empties fails here rather than passing vacuously.
 //
-// And the first pass of this census was itself hand-listed while claiming to be
-// derived. It named four subjects and there were more, so it reported PASS over
-// the aggregates, the comparison operators and the report field vocabularies —
-// three of which were still echoing an unbounded caller token in front of their
-// set. A census that can fail short has already failed, so the subjects are
-// enumerated from the exported producers and each one asserts it is non-empty.
+// AND IT ONLY SEES compose's OWN vocabularies. It cannot reach the ones in
+// modules/agents, modules/search or shared/ports/datasource — compose is
+// downstream of all three, so importing them here is legal but provoking their
+// refusals from this package is not the same test. Those carry the same
+// obligation and are held where they live; this file does not speak for them.
 //
 // IT ASSERTS ON THE CLASSIFIED FAULT, not on err.Error(). The renderer is not
 // the only ceiling: httperr bounds a module-declared fault at MaxFaultText
@@ -59,8 +61,12 @@ type setBearingRefusal struct {
 	refuse  func(token string) error
 }
 
-// closedSetRefusals enumerates every set-bearing refusal this surface can answer
-// with, taking each vocabulary from the producer that owns it.
+// closedSetRefusals is compose's set-bearing refusals, each vocabulary taken
+// from the producer that owns it.
+//
+// It fatals on an empty or unresolvable subject rather than leaving that to the
+// callers: two of the three tests below loop over members and would be green
+// over an empty list, which is the vacuous pass this file exists to prevent.
 func closedSetRefusals(t *testing.T) []setBearingRefusal {
 	t.Helper()
 
@@ -78,7 +84,15 @@ func closedSetRefusals(t *testing.T) []setBearingRefusal {
 	}
 	measure := analyticsquery.Measure{Fn: analyticsquery.Sum, Field: "amount_base_minor"}
 
-	return []setBearingRefusal{
+	// A named report, resolved rather than indexed: a renamed key would
+	// otherwise hand two of the tests below an empty vocabulary and pass.
+	const namedReport = "deals-by-stage"
+	reportSpec, ok := prebuiltReports[namedReport]
+	if !ok {
+		t.Fatalf("%s is absent from the report catalog; this census needs a real report", namedReport)
+	}
+
+	subjects := []setBearingRefusal{
 		{
 			what:    "report block kinds",
 			members: reportdoc.KindNames(),
@@ -175,17 +189,26 @@ func closedSetRefusals(t *testing.T) []setBearingRefusal {
 			// A MessageFault, so httperr caps it at MaxFaultText before the
 			// renderer is reached. This is the subject the first census could not
 			// see, and the one whose set was being destroyed outright.
+			// The catalog read here, the refusal built by the ENGINE — so this
+			// asserts the engine hands over the right vocabulary rather than
+			// replaying one the test supplied. Hand-building the error would
+			// have tested the renderer and nothing else.
 			what:    "the dimensions of one prebuilt report",
-			members: allowedReportNames(prebuiltReports["deals-by-stage"].dimensions),
+			members: allowedReportNames(reportSpec.dimensions),
 			refuse: func(token string) error {
-				return &FieldNotAllowedError{
-					Field:   token,
-					Slot:    slotGroupBy,
-					Allowed: allowedReportNames(prebuiltReports["deals-by-stage"].dimensions),
-				}
+				_, err := (&reportEngine{}).Derive(seatWith("deal"), namedReport,
+					derivationQuery{GroupBy: []string{token}})
+				return err
 			},
 		},
 	}
+
+	for _, subject := range subjects {
+		if len(subject.members) == 0 {
+			t.Fatalf("%s came back empty, so every case over it would pass vacuously", subject.what)
+		}
+	}
+	return subjects
 }
 
 // TestEveryClosedSetSurvivesTheToolSurface is the census: each vocabulary,
@@ -195,10 +218,6 @@ func TestEveryClosedSetSurvivesTheToolSurface(t *testing.T) {
 	for _, subject := range closedSetRefusals(t) {
 		t.Run(subject.what, func(t *testing.T) {
 			t.Parallel()
-			if len(subject.members) == 0 {
-				t.Fatalf("%s came back empty, so this case measures nothing", subject.what)
-			}
-
 			detail := classifiedDetail(t, subject, "a-name-nothing-serves")
 
 			if len(detail) > agents.MaxFaultDetail {

@@ -222,8 +222,7 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 // and borrows httperr.MaxFaultText, the same number that package applies on
 // the module-declared path. The flattened field:code fallthrough is the
 // caller's own list, as long as they chose to make it, so it keeps
-// maxBadArgsDetail. They agreed on one number until a closed set was measured
-// against a budget sized for an argument-name echo and lost.
+// maxBadArgsDetail.
 //
 // The field and the code get the same treatment because nothing in the taxonomy
 // PROMISES they are ours either. A field slot fed from a caller-chosen key is
