@@ -9,7 +9,6 @@ reviews:
   path_filters:
     - "!backend/internal/contracts/**"
     - "!**/*_gen.go"
-    - "!cli/craft/**"
     - "!.claude/**"
     - "!dev/**"
     - "!frontend/src/api/schema.d.ts"

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package wiring
+//gate:kind census H1
+
+//go:build !integration
+
+package gates
 
 import (
 	"os"
@@ -26,6 +30,7 @@ var communityHealthFiles = []string{
 }
 
 func TestCommunityHealthFilesArePresent(t *testing.T) {
+	t.Parallel()
 	for _, rel := range communityHealthFiles {
 		if _, err := os.Stat(filepath.Join(repoRoot, rel)); err != nil {
 			t.Errorf("community-health file %s is not readable: %v", rel, err)
@@ -44,8 +49,9 @@ var issueForms = []string{
 }
 
 func TestIssueFormsCarryThePublicRepositoryWarning(t *testing.T) {
+	t.Parallel()
 	for _, form := range issueForms {
-		doc := readRepoFile(t, filepath.Join(".github/ISSUE_TEMPLATE", form))
+		doc := readRepoFile(t, filepath.Join(repoRoot, ".github/ISSUE_TEMPLATE", form))
 		// Every form makes the reporter confirm this before submitting, because
 		// an issue body is public permanently — including in its edit history.
 		for _, want := range []string{"public", "secrets", "required: true"} {
@@ -57,7 +63,8 @@ func TestIssueFormsCarryThePublicRepositoryWarning(t *testing.T) {
 }
 
 func TestBlankIssuesAreOffAndSecurityIsRoutedPrivately(t *testing.T) {
-	cfg := readRepoFile(t, ".github/ISSUE_TEMPLATE/config.yml")
+	t.Parallel()
+	cfg := readRepoFile(t, filepath.Join(repoRoot, ".github/ISSUE_TEMPLATE/config.yml"))
 	if !strings.Contains(cfg, "blank_issues_enabled: false") {
 		t.Error("config.yml must disable blank issues so every report arrives through a form")
 	}
@@ -69,7 +76,8 @@ func TestBlankIssuesAreOffAndSecurityIsRoutedPrivately(t *testing.T) {
 }
 
 func TestCodeOfConductNamesAReachableEnforcementContact(t *testing.T) {
-	doc := readRepoFile(t, "CODE_OF_CONDUCT.md")
+	t.Parallel()
+	doc := readRepoFile(t, filepath.Join(repoRoot, "CODE_OF_CONDUCT.md"))
 	// The Contributor Covenant ships with a bracketed placeholder here. Shipping
 	// that placeholder is worse than shipping no policy: it invites a report and
 	// then drops it.
@@ -89,7 +97,8 @@ func TestCodeOfConductNamesAReachableEnforcementContact(t *testing.T) {
 }
 
 func TestSecurityPolicyOffersAPrivateRouteAndATimeframe(t *testing.T) {
-	doc := readRepoFile(t, "SECURITY.md")
+	t.Parallel()
+	doc := readRepoFile(t, filepath.Join(repoRoot, "SECURITY.md"))
 	if !strings.Contains(doc, "/security/advisories/new") {
 		t.Error("SECURITY.md must link the advisory form directly; naming the tab alone assumes the reporter finds it")
 	}
@@ -101,7 +110,8 @@ func TestSecurityPolicyOffersAPrivateRouteAndATimeframe(t *testing.T) {
 }
 
 func TestCodeownersHasACatchAllOwner(t *testing.T) {
-	doc := readRepoFile(t, "CODEOWNERS")
+	t.Parallel()
+	doc := readRepoFile(t, filepath.Join(repoRoot, "CODEOWNERS"))
 	for _, line := range strings.Split(doc, "\n") {
 		if fields := strings.Fields(line); len(fields) >= 2 && fields[0] == "*" {
 			return

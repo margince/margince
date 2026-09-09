@@ -187,7 +187,7 @@ func TestEveryWaiversDeclarationIsSweptForStalenessExactlyOnce(t *testing.T) {
 //
 // The walk covers every non-test Go file in the backend tree — internal/, cmd/,
 // pkg/, migrations/ and the tools module — which is the whole population able to
-// reach gatekit at all. The workspace's other modules (composition, cli/craft,
+// reach gatekit at all. The workspace's other modules (composition,
 // extensions/*) sit outside the github.com/margince/margince/backend/ prefix,
 // so the toolchain's internal-package rule refuses them the import before this
 // walk would have to.
@@ -485,7 +485,7 @@ func importPath(t *testing.T, file string, imported *ast.ImportSpec) string {
 // on, mapped to the text after it, alongside the line of every comment so a
 // marker can be tied to the declaration below it.
 //
-// Text is read raw off each comment, as cli/craft reads its own //craft:ignore
+// Text is read raw off each comment, as the craftsmanship gate reads //craft:ignore
 // directives. Go treats any comment matching //<word>:<word> as a directive and
 // CommentGroup.Text() drops directives, so a marker read through Text() is
 // invisible to the census that requires it — the space after the slashes keeps

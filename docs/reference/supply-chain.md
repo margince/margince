@@ -62,7 +62,7 @@ Scan policy lives in [`.syft.yaml`](../../.syft.yaml); the Makefile owns the
   a release unless the SBOM attests every file the release patch adds or
   modifies, and that patch is a full committed-tree diff with no excludes — so
   the SBOM file set must equal the whole committed tree. Excluding any committed
-  tree here (CI workflows, `cli/craft`, `fixtures`, `sbom-schemas`, …) would make
+  tree here (CI workflows, `fixtures`, `sbom-schemas`, …) would make
   a commit touching it fail that gate. Uncommitted host state is already absent
   because the scan runs on `git archive HEAD`, so there is nothing left to
   exclude.

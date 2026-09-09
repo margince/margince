@@ -13,8 +13,8 @@ package gates
 //
 // Keeping the shim empty is the whole rule, and it is stricter than it looks
 // because the alternative fails silently. A rule written into a CLAUDE.md binds
-// Claude Code and no other harness: `cli/craft` walks up for the nearest
-// AGENTS.md and never opens CLAUDE.md, so that rule cannot reach the gate, and
+// Claude Code and no other harness: the craftsmanship gate walks up for the
+// nearest AGENTS.md and never opens CLAUDE.md, so that rule cannot reach it, and
 // neither file looks wrong. An empty shim cannot hold a rule at all, which is
 // why the assertion is "nothing but the import" rather than a heading census or
 // a size ceiling — those admit the paragraph that is not quite a rule yet, and
@@ -124,7 +124,8 @@ func TestEveryClaudeShimIsNothingButTheImport(t *testing.T) {
 			default:
 				t.Errorf("%s:%d holds content other than the import:\n  %s\n"+
 					"A CLAUDE.md is one line, @AGENTS.md, and nothing else. Anything written here binds Claude Code "+
-					"alone — Codex does not read it, and `cli/craft` feeds the nearest AGENTS.md into its gate prompt "+
+					"alone — Codex does not read it, and the craftsmanship gate feeds the nearest AGENTS.md into its gate "+
+					"prompt "+
 					"and never opens this file. Put it in %s/AGENTS.md, or in a skill or a `.claude/rules/` file with "+
 					"a `paths:` glob if it is a procedure rather than a rule.", path, i+1, trimmed, dir)
 			}

@@ -31,8 +31,6 @@
 # is whatever this file holds, and a second copy of it drifts.
 #
 # Sorted, one key per line: <path>#<declaration>.
-../cli/craft/gate/anthropic.go#func NewAnthropicClient
-../cli/craft/main.go#func pinnedModel
 ../desktop/launcher/console.go#func say
 ../desktop/launcher/main.go#type stack
 ../desktop/launcher/postgres.go#type cluster.connArgs

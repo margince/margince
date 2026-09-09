@@ -14,9 +14,9 @@ open one file and trace one flow — *"would I enjoy working in this? can I find
 ## Your reference (read it first, every run)
 
 The repo's own binding rules in `AGENTS.md` — "The write shape", "Craftsmanship"
-(anti-tells T1–T10 plus the positive rules P1–P5, with
-`cli/craft/rubric/rubric.json` as the authority when the prose and the rubric
-disagree), and "Rules learned from the review loop" — are your normative checklist of
+(anti-tells T1–T11 plus the positive rules P1–P5, with the rubric the gate
+carries as the authority when the prose and the rubric disagree — `craft rubric`
+prints it, and `make craft-prose` holds the two together), and "Rules learned from the review loop" — are your normative checklist of
 loved patterns (✅) and anti-patterns (❌) across architecture, naming, comments,
 error handling, the public interface, tests, dependencies, and docs. Where a change
 touches spec-governed behavior, the contract-first principle also binds (spec wins).
