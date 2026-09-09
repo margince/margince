@@ -19888,8 +19888,11 @@ type CaptureConnection struct {
 	Status CaptureConnectionStatus `json:"status"`
 
 	// SyncCursor Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture — read-only.
-	SyncCursor *string    `json:"sync_cursor,omitempty"`
-	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
+	SyncCursor *string `json:"sync_cursor,omitempty"`
+
+	// SyncFailingSince When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage's — last_synced_at moves on every postponed tick and dates the newest attempt instead.
+	SyncFailingSince *time.Time `json:"sync_failing_since,omitempty"`
+	UpdatedAt        *time.Time `json:"updated_at,omitempty"`
 
 	// WatchExpiresAt Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null.
 	WatchExpiresAt *time.Time `json:"watch_expires_at,omitempty"`

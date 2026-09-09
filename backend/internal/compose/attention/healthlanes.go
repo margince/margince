@@ -66,6 +66,15 @@ type CaptureConcern struct {
 	Provider     string
 	// AccountLabel is the display-only mailbox address when one was recorded.
 	AccountLabel string
+
+	// FailingSince is when this concern's failure streak began, nil for a
+	// condition that is a state rather than a streak — a disconnected mailbox
+	// is not failing, it is off. It is what makes this lane answer "has
+	// anything been wrong for a while" rather than only "is anything wrong":
+	// a sync that postpones itself is never late by any age reading, so an
+	// hour-old outage and a mailbox idling between ticks reach here identically
+	// without it.
+	FailingSince *time.Time
 }
 
 // AIWork is the reader's own AI runs that went wrong — failed inside the

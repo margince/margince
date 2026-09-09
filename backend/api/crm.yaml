@@ -23080,6 +23080,7 @@ components:
         scopes: { type: array, items: { type: string }, description: The granted provider scopes. }
         last_synced_at: { type: [string, 'null'], format: date-time, description: 'Last sync attempt (CAP-DDL-5); null before the first.' }
         last_sync_error_class: { type: [string, 'null'], description: 'rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.' }
+        sync_failing_since: { type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.' }
         next_sync_due_at: { type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).' }
         backfill: { allOf: [ { $ref: '#/components/schemas/BackfillStatus' } ], description: 'Summary of the connection''s backfill run; state `none` when never run.' }
         signature_enrich_enabled:

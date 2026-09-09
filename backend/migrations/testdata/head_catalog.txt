@@ -1426,6 +1426,7 @@ public.capture_sync_state.capture_sync_state_pkey PRIMARY KEY (connection_id)
 public.capture_sync_state.connection_id uuid NOT NULL gen=- def=-
 public.capture_sync_state.consecutive_failures integer NOT NULL gen=- def=0
 public.capture_sync_state.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_sync_state.failing_since timestamp with time zone gen=- def=-
 public.capture_sync_state.last_error_class text gen=- def=-
 public.capture_sync_state.last_success_at timestamp with time zone gen=- def=-
 public.capture_sync_state.last_synced_at timestamp with time zone gen=- def=-

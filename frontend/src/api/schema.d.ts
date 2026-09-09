@@ -15725,6 +15725,11 @@ export interface components {
             last_sync_error_class?: string | null;
             /**
              * Format: date-time
+             * @description When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage's — last_synced_at moves on every postponed tick and dates the newest attempt instead.
+             */
+            sync_failing_since?: string | null;
+            /**
+             * Format: date-time
              * @description When the sweep will next pick this connection up (backoff-aware).
              */
             next_sync_due_at?: string | null;

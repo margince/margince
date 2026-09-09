@@ -74,6 +74,17 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 		label := mailbox
 		item.CauseLabel = &label
 	}
+	// WHEN the condition started, for the conditions that have a start. The
+	// reader's question about a failing mailbox is how long, not whether — a
+	// class alone is the same sentence at one minute and at six hours — and
+	// this is the field every other lane already answers it in. Absent for a
+	// condition that is a state rather than a streak, because a disconnected
+	// mailbox has no duration to report and inventing one from the row's
+	// timestamps would date the newest attempt rather than the outage.
+	if concern.FailingSince != nil {
+		started := *concern.FailingSince
+		item.OccurredAt = &started
+	}
 	return item
 }
 
