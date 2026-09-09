@@ -360,7 +360,7 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	})
 	undoCtx = principal.WithCorrelationID(undoCtx, ids.NewV7())
 	seam := compose.NewRestoreSeam(e.Pool, compose.NewDispatcher(
-		compose.NewProvider(e.Pool), nil, e.Pool))
+		compose.NewProvider(e.Pool), nil, e.Pool), nil)
 	if _, err := seam.Restore(undoCtx, "organization", org, auditID, version); err != nil {
 		t.Fatalf("undoing what the product applied on its own: %v", err)
 	}
