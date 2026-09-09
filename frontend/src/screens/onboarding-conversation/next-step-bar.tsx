@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Button } from "../../design-system/atoms";
 import "./conversation.css";
 
 // The pinned next-step bar between the thread and the composer: whenever
@@ -75,9 +76,13 @@ export function NextStepBar({
   }
   return (
     <div role="status" className="ob-conv-nextstep">
-      <button type="button" onClick={() => scrollToTarget(target)}>
+      {/* Outlined, not indigo. The step it points at is often the agent's, but
+          this control only scrolls to it — no model does any work behind the
+          press, and the AI colour is a claim about authorship rather than a
+          way to draw attention. */}
+      <Button variant="ghost" small onClick={() => scrollToTarget(target)}>
         {label}
-      </button>
+      </Button>
     </div>
   );
 }

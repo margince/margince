@@ -294,7 +294,7 @@ function DeckCardFace({
   const guidance = fieldGuidance(card.field);
   const placeholder = guidance === undefined ? undefined : t(guidance.example);
   return (
-    <div className="rdeck-card" data-required={card.required}>
+    <div className="rdeck-card staging-card" data-required={card.required}>
       <div className="rdeck-head">
         <span className="rdeck-tag t-eyebrow" data-required={card.required}>
           {t(card.required ? "ob.deck.needed" : "ob.deck.optional")}

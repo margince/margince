@@ -672,7 +672,7 @@ func bootstrapInstallation(t *testing.T, e *apptest.AppEnv) {
 		t.Fatalf("writing the bootstrap password: %v", err)
 	}
 	cfg, err := deployconfig.Parse([]byte(`version: 1
-organization:
+workspace:
   name: RBAC Seed Parity
 bootstrap_admin:
   email: admin@rbacparity.test

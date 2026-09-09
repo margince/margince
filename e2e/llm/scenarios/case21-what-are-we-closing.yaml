@@ -14,10 +14,17 @@
 # gets one of them or both. Nothing deterministic can ask this, because every
 # field arrives correctly either way.
 #
-# The seed makes the gap real rather than hypothetical: seven open deals in the
-# current period, six of them priced and one with no amount at all. A deal with
-# no number on it is not a fixture contrivance — it is the single commonest
-# state of a deal somebody created in a hurry after a call.
+# The seed makes the gap real rather than hypothetical: twelve deals fall in the
+# current period — seven still open and five already won — and eleven of them
+# carry an amount. The twelfth does not. A deal with no number on it is not a
+# fixture contrivance — it is the single commonest state of a deal somebody
+# created in a hurry after a call.
+#
+# THE GAP IS ONE DEAL WIDE and the counts around it are the fixture's, not this
+# case's. What is asserted below is the FINDING — that the unpriced deal is named
+# as absent from the money — so nothing here spells the totals: a pattern that
+# hard-coded "six of seven" went stale the moment the fixture grew the won deals
+# case 20 needs, and read as a passing case that had stopped asking anything.
 #
 # THE PROMPT NAMES NO TOOL and no period boundary. "This quarter" is the
 # installation's own financial quarter, which need not start in January, and
@@ -74,7 +81,7 @@ must_mention:
   # satisfied by a sentence about the per-rep split nobody asked for. The anchor
   # is a word the observation cannot be made without: a deal, an amount, a
   # value, a price, or the total the deal is absent from.
-  - "unpriced|(deal|deals|opportunit\w+|one|1|Weserbund)[^.]{0,60}(no|without|missing|lacks?|not)[^.]{0,25}(amount|value|price|figure|number|priced)|(amount|value|price)[^.]{0,40}(is |are |)(missing|absent|blank|empty|not (set|recorded|entered|filled))|(has|have|had|with|carries) no (amount|value|price|figure|number)|(not|never|n['’]t) (been )?priced|(excluded|left out|not counted|not included|does not (count|include)|outside)[^.]{0,45}(total|forecast|figure|number|sum)|(eligible|counted)[^.]{0,30}(vs\.?|versus|against|but only)[^.]{0,30}priced|(six|6) of (the |)(seven|7)|(seven|7)[^.]{0,40}(six|6)[^.]{0,30}(priced|amount|value)"
+  - "unpriced|(deal|deals|opportunit\w+|one|1|Weserbund)[^.]{0,60}(no|without|missing|lacks?|not)[^.]{0,25}(amount|value|price|figure|number|priced)|(amount|value|price)[^.]{0,40}(is |are |)(missing|absent|blank|empty|not (set|recorded|entered|filled))|(has|have|had|with|carries) no (amount|value|price|figure|number)|(not|never|n['’]t) (been )?priced|(excluded|left out|not counted|not included|does not (count|include)|outside)[^.]{0,45}(total|forecast|figure|number|sum)|(eligible|counted)[^.]{0,30}(vs\.?|versus|against|but only)[^.]{0,30}priced|(?i:(?:[0-9]+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)) of (?:the )?(?i:(?:[0-9]+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve))\b[^.]{0,45}(priced|amount|value|figure|deals?)|(eligible|counted)[^.]{0,25}(?i:(?:[0-9]+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve))\b[^.]{0,35}(?i:(?:[0-9]+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve))\b[^.]{0,35}(priced|amount|value)"
 
 must_not_mention:
   # `(?:not |un)` AND NOT `(not|un)`, which is what this said and is a false

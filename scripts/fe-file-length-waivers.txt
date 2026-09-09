@@ -50,7 +50,7 @@
 2062 frontend/src/screens/company360.tsx
 579 frontend/src/screens/companycontracts.tsx
 587 frontend/src/screens/companyfinance.tsx
-975 frontend/src/screens/companyheader.tsx
+974 frontend/src/screens/companyheader.tsx
 790 frontend/src/screens/companypeople/summary.tsx
 1135 frontend/src/screens/companyrail.test.tsx
 697 frontend/src/screens/companyrail.tsx
@@ -102,7 +102,7 @@
 856 frontend/src/screens/onboarding-gate.tsx
 995 frontend/src/screens/onboarding-read.tsx
 2534 frontend/src/screens/organizations.test.tsx
-2925 frontend/src/screens/organizations.tsx
+2589 frontend/src/screens/organizations.tsx
 984 frontend/src/screens/overlay-usermap.tsx
 648 frontend/src/screens/partners.tsx
 513 frontend/src/screens/person360.tsx
@@ -113,7 +113,6 @@
 1208 frontend/src/screens/personprovider.test.tsx
 941 frontend/src/screens/personprovider.tsx
 1575 frontend/src/screens/personrail.tsx
-531 frontend/src/screens/persontoday.tsx
 1200 frontend/src/screens/privacy.test.tsx
 1245 frontend/src/screens/privacy.tsx
 571 frontend/src/screens/project360.tsx

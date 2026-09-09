@@ -169,8 +169,8 @@ func TestTheScanReadsTheAccountForTheReaderAndTheReaderCanPutAFindingOff(t *test
 
 // The content gate. A message whose audience excludes the reader is not in
 // the input, so the model — handed no such id — cannot cite it; and a reply
-// that cites it anyway is refused whole. The account settles degraded with
-// no finding rather than with a quote the reader may not read.
+// that cites it anyway is refused whole. The account settles with no finding
+// rather than with a quote the reader may not read.
 func TestAMessageOutsideTheReadersAudienceIsNeverQuoted(t *testing.T) {
 	e := integration.Setup(t)
 	org := ids.From[ids.OrganizationKind](e.SeedOrg(t, "Nordlicht", &e.Rep1))
@@ -191,8 +191,11 @@ func TestAMessageOutsideTheReadersAudienceIsNeverQuoted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
-	if got.State != crmcontracts.OrganizationScanStateDegraded || lane.calls != 0 {
-		t.Fatalf("state %q after %d model calls; want degraded with no call — the reader may read no exchange, so there was nothing to ask about", got.State, lane.calls)
+	if got.State != crmcontracts.OrganizationScanStateDone || lane.calls != 0 {
+		t.Fatalf("state %q after %d model calls; want done with no call — the reader may read no exchange, so there was nothing to ask about and nothing was missed", got.State, lane.calls)
+	}
+	if got.DegradeReason != nil {
+		t.Errorf("degrade reason = %q, want none: a read over nothing is not a shortfall", *got.DegradeReason)
 	}
 	if len(got.Findings) != 0 {
 		t.Errorf("findings = %v, want none", kindsOf(got.Findings))

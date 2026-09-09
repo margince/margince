@@ -58,7 +58,7 @@ func TestAnAmountRestoreIsRefusedWhenTheCurrencyMovedUnderIt(t *testing.T) {
 	}
 
 	seam := NewRestoreSeam(e.Pool, NewDispatcher(NewProvider(e.Pool),
-		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool))
+		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool), nil)
 	_, err = seam.Restore(ctx, "deal", id, entry, currentVersion(t, e, "deal", id))
 
 	var refusal RefusedRestore

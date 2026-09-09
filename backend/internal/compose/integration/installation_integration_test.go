@@ -52,8 +52,8 @@ func TestBootstrapSeedsFollowTheDeploymentConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := deployconfig.Config{
-		Version:      1,
-		Organization: deployconfig.Organization{Name: "Configured Org", BaseCurrency: "USD", Timezone: "Europe/Berlin"},
+		Version:   1,
+		Workspace: deployconfig.Workspace{Name: "Configured Org", BaseCurrency: "USD", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: "ops@configured.test", DisplayName: "Ops", PasswordFile: pwFile,
 		},
@@ -214,8 +214,8 @@ func TestBootBindsWithoutReadingASpentBootstrapSecret(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := deployconfig.Config{
-		Version:      1,
-		Organization: deployconfig.Organization{Name: "Spent Secret Org", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
+		Version:   1,
+		Workspace: deployconfig.Workspace{Name: "Spent Secret Org", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: "ops@spent.test", DisplayName: "Ops", PasswordFile: pwFile,
 		},
@@ -242,8 +242,8 @@ func TestBootBindsWithoutReadingASpentBootstrapSecret(t *testing.T) {
 func TestFirstBootStillFailsLoudlyOnAnUnreadableSecret(t *testing.T) {
 	e := apptest.SetupApp(t)
 	cfg := deployconfig.Config{
-		Version:      1,
-		Organization: deployconfig.Organization{Name: "No Secret Org", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
+		Version:   1,
+		Workspace: deployconfig.Workspace{Name: "No Secret Org", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: "ops@nosecret.test", DisplayName: "Ops",
 			PasswordFile: filepath.Join(t.TempDir(), "never-written"),

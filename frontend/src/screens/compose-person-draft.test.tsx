@@ -201,7 +201,9 @@ describe("drafting to a person", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    expect(await screen.findByTestId("ai-disclosure-banner")).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "AI-assisted draft" }),
+    ).toBeTruthy();
   });
 
   // The sentence a deployment with no model earns, and the one this page used

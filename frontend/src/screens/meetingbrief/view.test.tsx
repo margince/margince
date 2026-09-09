@@ -6,6 +6,7 @@ import { StoryProviders } from "../story-utils";
 import {
   briefManager,
   briefModel,
+  briefModelPlan,
   briefOmitted,
   briefReady,
   briefWithPlan,
@@ -81,6 +82,7 @@ describe("the prepared brief", () => {
     // wear the indigo band that means "Margince wrote this".
     expect(container.querySelector(".panel-ai")).toBeNull();
     expect(container.querySelector(".panel-accent")).toBeTruthy();
+    expect(screen.queryByText("AI-assisted")).toBeNull();
     cleanup();
 
     const model = render(
@@ -93,7 +95,16 @@ describe("the prepared brief", () => {
         />
       </StoryProviders>,
     );
-    expect(model.container.querySelector(".panel-ai")).toBeTruthy();
+    // Indigo THROUGHOUT, not just on the lead: the sections under it are the
+    // same writer's work, and one tinted card among five plain ones reads as
+    // one machine-written section rather than a machine-written brief.
+    expect(model.container.querySelectorAll(".panel-ai").length).toBe(
+      model.container.querySelectorAll(".panel").length,
+    );
+    expect(model.container.querySelector(".panel-accent")).toBeNull();
+    // The disclosure is said ONCE, on the lead. Six badges saying the same
+    // thing is how a reader learns to stop reading them.
+    expect(screen.getAllByText("AI-assisted")).toHaveLength(1);
   });
 
   it("opens the record behind a cited deal", async () => {
@@ -227,6 +238,33 @@ describe("the preparation plan", () => {
     // The plan says a composition wrote it, so the objective must not wear the
     // band that means Margince did.
     expect(container.querySelector(".panel-ai")).toBeNull();
+    cleanup();
+
+    // The mirror, on the same plan with a model behind it: every panel of the
+    // preparation goes indigo, and the disclosure is said once on the
+    // objective. Without this the tint could have been dropped from the arc,
+    // the close and the asks and the case above would still be green.
+    const model = render(
+      <StoryProviders>
+        <MeetingBriefView
+          state={{ kind: "ready", brief: briefModelPlan }}
+          onOpenRecord={vi.fn()}
+          titleId="t"
+          onClose={() => {}}
+        />
+      </StoryProviders>,
+    );
+    expect(model.container.querySelectorAll(".panel-ai").length).toBe(
+      model.container.querySelectorAll(".panel").length,
+    );
+    expect(model.container.querySelector(".panel-accent")).toBeNull();
+    // TWO badges, and no more. The wire names a writer for the SECTIONS and a
+    // writer for the PREPARATION, and each of those two leads discloses its
+    // own half; one per panel would be the same sentence said ten times.
+    expect(screen.getAllByText("AI-assisted")).toHaveLength(2);
+    expect(model.container.querySelectorAll(".panel").length).toBeGreaterThan(
+      2,
+    );
   });
 });
 

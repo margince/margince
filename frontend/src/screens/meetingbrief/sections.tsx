@@ -14,7 +14,7 @@
 
 import { AlertTriangle } from "lucide-react";
 import type { components } from "../../api/schema";
-import { Disclosure } from "../../design-system/atoms";
+import { Badge, Disclosure } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
@@ -95,11 +95,18 @@ export function GoalPanel({
   if (!goal) {
     return null;
   }
+  const byModel = brief.generated_by === "model";
   return (
     <Panel
       title={t("person.meeting.goal")}
       titleLevel={3}
-      tone={brief.generated_by === "model" ? "ai" : "accent"}
+      tone={byModel ? "ai" : "accent"}
+      // The disclosure rides the LEAD's band and nowhere else. The panels under
+      // it are the same writer's work and take the same tint, but a badge on
+      // each of them would be the same sentence said six times.
+      titleAction={
+        byModel ? <Badge tone="ai">{t("co.assistant.aiTag")}</Badge> : undefined
+      }
     >
       <PanelBody>
         <SentenceList
@@ -168,7 +175,16 @@ export function BodyPanels({
           return null;
         }
         return (
-          <Panel key={kind} title={t(`person.meeting.${kind}`)} titleLevel={3}>
+          <Panel
+            key={kind}
+            title={t(`person.meeting.${kind}`)}
+            titleLevel={3}
+            // The same writer wrote these as wrote the lead above, so they
+            // carry the same claim. Untinted rather than accent-tinted for a
+            // composition: the lead is the one card on the surface that asks
+            // for a move, and five more tinted panels is no lead at all.
+            tone={brief.generated_by === "model" ? "ai" : undefined}
+          >
             <PanelBody>
               <SentenceList
                 sentences={section.sentences}
