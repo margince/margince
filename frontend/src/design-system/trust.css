@@ -152,15 +152,11 @@ button.evidence-chip:hover {
   font-style: italic;
 }
 
-/* The agent's row: a staged proposal is visibly NOT yet real — the agent's
-   tint for ground, a dashed indigo edge until a person accepts it, the
-   card's corner. Indigo is a fact about who wrote it, never a mood. */
-.staging-card {
-  background: var(--aiLight);
-  border: 1.5px dashed var(--aiMed);
-  border-radius: var(--r-md);
-  padding: var(--space-4) var(--space-5);
-}
+/* The agent's row: a staged proposal is visibly NOT yet real. Its ground, its
+   dashed indigo edge and its corner are the panel-ai family's and are declared
+   once in panel.css, beside the panel a machine wrote — indigo is a fact about
+   who wrote something, never a mood, and one claim is one declaration. What
+   follows is only what the ROW puts on that box. */
 .staging-card .staged-value {
   color: var(--aiText);
   font-weight: 600;

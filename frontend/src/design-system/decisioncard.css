@@ -4,9 +4,10 @@
  * The ground is the staged one: an AI-tinted, dashed edge, because what is on
  * this card is NOT real yet and the reader has to be able to tell it apart from
  * a card of persisted facts before reading a word of it (design-language §5c).
- * `.staging-card` in trust.css already draws exactly that, so this sheet does
- * not redraw it — it declares only what a DECISION adds to a staged surface:
- * the deadline's pressure, the proposal's own content, and the two layouts.
+ * `.staging-card`, the panel-ai family's staged member in panel.css, already
+ * draws exactly that, so this sheet does not redraw it — it declares only what
+ * a DECISION adds to a staged surface: the deadline's pressure, the proposal's
+ * own content, and the two layouts.
  *
  * Every colour is a token or a `color-mix()` over one. The urgency band is a
  * mix rather than three new tokens on purpose: amber-at-6-hours and red-at-one
@@ -15,7 +16,7 @@
  */
 
 /* The ground, the dashed edge and the radius come from `.staging-card`
-   (trust.css), which every one of these carries. What is declared here is only
+   (panel.css), which every one of these carries. What is declared here is only
    what a DECISION adds to a staged surface. */
 .dcard {
   position: relative;
@@ -238,7 +239,12 @@
    negative inline margins are how a band inside a padded card reaches the
    card's edges — the same distinction `panel.css` draws, where a rule dividing
    the CARD from its content runs edge to edge and a rule inside the content
-   stops at the padding. */
+   stops at the padding.
+
+   The band's two tokens are `.panel-ai > .panel-head`'s, spelled here because
+   this is a band the CARD carves out of its own padding rather than a panel's
+   header element — and because a lapsed card takes both of them back, which is
+   the pair of rules below. */
 .dcard[data-layout="deck"] > .dcard-meta {
   margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) var(--space-4);
   padding: var(--space-3) var(--space-5);
