@@ -155,7 +155,7 @@ func TestConfiguredAdminEmailReadsTheInstallationsOwnAddress(t *testing.T) {
 		// The block test is what stops an `email:` belonging to some other
 		// section being reported as the sign-in address.
 		"an email under another key first": "" +
-			"organization:\n  email: billing@example.com\n\nbootstrap_admin:\n  email: admin@demo.test\n",
+			"workspace:\n  email: billing@example.com\n\nbootstrap_admin:\n  email: admin@demo.test\n",
 		// '#' is legal in the local part of an address (RFC 5322 atext), so a
 		// reader that cut at every one would announce a truncated address —
 		// the failure this whole function exists to prevent.
@@ -187,7 +187,7 @@ func TestConfiguredAdminEmailReadsTheInstallationsOwnAddress(t *testing.T) {
 func TestConfiguredAdminEmailFallsBackRatherThanFailing(t *testing.T) {
 	for name, yaml := range map[string]*string{
 		"no file at all":             nil,
-		"no bootstrap_admin block":   ptr("version: 1\n\norganization:\n  name: Margince\n"),
+		"no bootstrap_admin block":   ptr("version: 1\n\nworkspace:\n  name: Margince\n"),
 		"the block names no email":   ptr("bootstrap_admin:\n  display_name: Owner\n"),
 		"the email is commented out": ptr("bootstrap_admin:\n  # email: admin@demo.test\n"),
 		"the value is empty":         ptr("bootstrap_admin:\n  email:\n"),
