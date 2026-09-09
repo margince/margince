@@ -36,5 +36,5 @@ func LeadStopSubject(id ids.LeadID) StopSubject     { return StopSubject{LeadID:
 // IsZero reports a subject naming nobody, which is a caller bug rather than an
 // empty case: every carry has two real sides.
 func (s StopSubject) IsZero() bool {
-	return s.PersonID.UUID.IsZero() && s.LeadID.UUID.IsZero()
+	return s.PersonID.IsZero() && s.LeadID.IsZero()
 }

@@ -16,6 +16,13 @@
 -- predecessor must not take the survivor's stop with it. The survivor's own
 -- objection outlives the record it was carried from, which is the entire point
 -- of copying rather than moving.
+-- Bounded, because this takes a lock that blocks writers on a table the send
+-- path reads on every message. An open transaction holding a conflicting lock
+-- would otherwise stall every write to it for as long as this is willing to
+-- queue, which is forever. Failing the deploy is the better outcome: it is
+-- visible, and it is retryable a minute later.
+SET LOCAL lock_timeout = '3s';
+
 ALTER TABLE communication_suppression
   ADD COLUMN carried_from uuid
     REFERENCES communication_suppression (id) ON DELETE SET NULL;
