@@ -27,10 +27,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // slimPDF is an attachment worth removing: large enough that the stanza costs
@@ -341,4 +343,109 @@ func TestASlimmedOriginalRestoresToWhatTheProviderSent(t *testing.T) {
 		t.Errorf("the restored original is not what the provider sent: %d bytes vs %d",
 			len(restored), len(original))
 	}
+}
+
+// The export hands the subject the MESSAGE, not the reference to it.
+//
+// After the sweep the column holds a stanza naming an object. Art. 15 owes the
+// message, so the assembly restores before disclosing — and when the object is
+// gone it withholds that one payload while still LISTING the row, because the
+// fact that an original is held is itself owed.
+func TestTheExportRestoresASlimmedOriginal(t *testing.T) {
+	e := Setup(t)
+	ctx := context.Background()
+	blob := blobstore.NewMemory()
+	pdf := slimPDF(6)
+	const sourceID, key = "sar-msg", "ws/attachment/sar"
+	const subject = "restore@slim.test"
+
+	if err := blob.Put(ctx, key, bytes.NewReader(pdf), int64(len(pdf)), "application/pdf"); err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+
+	// The original has to name the subject for the export's raw_capture arm to
+	// match it, and carry an open activity for its content to be disclosable.
+	original := bytes.Replace(slimMessage(pdf),
+		[]byte("Subject: Quarterly figures"),
+		[]byte("To: "+subject+"\r\nSubject: Quarterly figures"), 1)
+
+	var person string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx,
+			`INSERT INTO person (full_name, source, captured_by)
+			 VALUES ('Restore Subject', 'manual', 'human:seed') RETURNING id`).Scan(&person); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO person_email (person_id, email, source, captured_by)
+			 VALUES ($1, $2, 'manual', 'human:seed')`, person, subject); err != nil {
+			return err
+		}
+		if err := seedSlimOriginal(ctx, tx, sourceID, original); err != nil {
+			return err
+		}
+		if err := seedSlimAttachment(ctx, tx, sourceID, key,
+			int64(len(pdf)), slimDigest(pdf)); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity (kind, subject, occurred_at, source, captured_by,
+			                      source_system, source_id, audience)
+			VALUES ('email', 'Quarterly figures', now(), 'capture', 'connector:test',
+			        'email', $1, 'workspace')`, sourceID)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	swept, err := capture.NewPartSlimStore(e.DB(), blob).SlimBatch(ctx, 50)
+	if err != nil {
+		t.Fatalf("sweeping: %v", err)
+	}
+	if swept.Slimmed != 1 {
+		t.Fatalf("slimmed %d rows, want 1; the assertions below would pass vacuously", swept.Slimmed)
+	}
+
+	payloads, err := compose.ExportedRawCapturePayloadsForTest(
+		e.Admin(), e.DB(), blob, personUUID(t, person))
+	if err != nil {
+		t.Fatalf("assembling the export: %v", err)
+	}
+	if len(payloads) != 1 {
+		t.Fatalf("the export listed %d raw originals, want 1", len(payloads))
+	}
+	if strings.Contains(payloads[0], partslim.PartStoredHeader) {
+		t.Errorf("the export disclosed the stanza rather than the message")
+	}
+	if !strings.Contains(payloads[0], slimWrap76(pdf)) {
+		t.Errorf("the export did not restore the attachment's octets")
+	}
+
+	// The same export with the object GONE. The row must still be listed --
+	// Art. 15 owes the fact that an original is held -- and its payload
+	// withheld rather than handed over as a reference the subject cannot use.
+	if err := blob.Delete(ctx, key); err != nil {
+		t.Fatalf("removing the object: %v", err)
+	}
+	withheld, err := compose.ExportedRawCapturePayloadsForTest(
+		e.Admin(), e.DB(), blob, personUUID(t, person))
+	if err != nil {
+		t.Fatalf("assembling the export with the object gone: %v", err)
+	}
+	if len(withheld) != 1 {
+		t.Fatalf("the export listed %d raw originals with the object gone, want 1", len(withheld))
+	}
+	if withheld[0] != "" {
+		t.Errorf("an unrestorable original was disclosed anyway: %.120s", withheld[0])
+	}
+}
+
+// personUUID parses the id the seeding scanned as text.
+func personUUID(t *testing.T, id string) ids.UUID {
+	t.Helper()
+	parsed, err := ids.Parse(id)
+	if err != nil {
+		t.Fatalf("parsing the seeded person id %q: %v", id, err)
+	}
+	return parsed
 }

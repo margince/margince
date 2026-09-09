@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -30,7 +31,19 @@ import (
 // mirrored in consent would be a second declaration of what Art. 15 owes, and it
 // would drift one release behind the one piicoverage_test.go checks.
 type subjectAccessSeam struct {
-	db *database.DB
+	db   *database.DB
+	blob blobstore.Store
+}
+
+// withBlobstore returns a copy that can rebuild a slimmed provider original.
+//
+// Not optional on any deployment that runs the part sweep: without it the
+// export discloses whatever the column holds, which after the sweep is a
+// stanza naming an object rather than the message Art. 15 owes.
+func (s *subjectAccessSeam) withBlobstore(blob blobstore.Store) *subjectAccessSeam {
+	c := *s
+	c.blob = blob
+	return &c
 }
 
 // newSubjectAccessAssembler binds the Art. 15 export over one database.
@@ -51,6 +64,9 @@ func (s *subjectAccessSeam) AssemblePackage(ctx context.Context, personID ids.UU
 	if err != nil {
 		return nil, err
 	}
+	// Before serialization, because what goes in the package is the message and
+	// not the reference to it.
+	restoreSAROriginals(ctx, s.blob, &pkg)
 	body, err := json.Marshal(pkg)
 	if err != nil {
 		return nil, fmt.Errorf("compose: serializing a subject-access package: %w", err)
