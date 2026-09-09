@@ -6,31 +6,34 @@ package compose
 import (
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/modules/people"
 )
 
-// categoryGuidance's "offering" and "market" prompt text is the only defense
-// against a case study, testimonial or customer story getting attributed to
-// this company instead of the customer it is about (margince#3403) — no
-// deterministic code path enforces it, only the model reading the prompt. The
-// aicert corpus (site_fact_extract/customer_story_01.yaml) pins the resulting
-// MODEL OUTCOME, but nothing pinned the guard TEXT itself: deleting these
-// sentences would fail no Go test, only degrade a probabilistic cert score
-// over time. This test is that missing deterministic layer.
-func TestCategoryGuidanceGuardsAgainstAttributingACustomersStoryToThisCompany(t *testing.T) {
+// The offering and market guidance is the only thing that stops a customer
+// story's facts being filed under this company instead of the customer it is
+// about — no code path enforces it, only the model reading the prompt. The
+// aicert corpus pins the model's resulting outcome on a live run; this pins
+// the sentences themselves, through the same menuGuidance seam the real
+// prompt assembles from (menuGuidance has its own history of silently
+// dropping a whole category from its hardcoded list, per its own comment),
+// so both the guard text AND its routing into the prompt are held.
+func TestMenuGuidanceKeepsTheCustomerStoryGuardOutOfThisCompanysOwnFacts(t *testing.T) {
 	tests := map[string]struct {
-		category    string
+		fields      []string
 		mustContain []string
 	}{
 		"offering": {
-			category: "offering",
+			fields: []string{people.FactService},
 			mustContain: []string{
 				"case study, testimonial or customer story",
 				"NAMED CUSTOMER, not this company",
 				"never this company's offering",
+				"is still this company's offering",
 			},
 		},
 		"market": {
-			category: "market",
+			fields: []string{people.FactServedIndustry},
 			mustContain: []string{
 				"case study, testimonial or customer story names a customer's own",
 				"never a market this company serves",
@@ -40,13 +43,10 @@ func TestCategoryGuidanceGuardsAgainstAttributingACustomersStoryToThisCompany(t 
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			guidance, ok := categoryGuidance[tt.category]
-			if !ok {
-				t.Fatalf("categoryGuidance has no entry for %q", tt.category)
-			}
+			guidance := menuGuidance(tt.fields)
 			for _, want := range tt.mustContain {
 				if !strings.Contains(guidance, want) {
-					t.Errorf("categoryGuidance[%q] lost its customer-story guard: missing %q", tt.category, want)
+					t.Errorf("menuGuidance(%v) lost its customer-story guard: missing %q", tt.fields, want)
 				}
 			}
 		})
