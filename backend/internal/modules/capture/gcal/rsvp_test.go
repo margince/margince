@@ -69,6 +69,20 @@ func TestTheOwnersDeclineIsReadOffTheAttendeeList(t *testing.T) {
 			},
 			want: true,
 		},
+		// The `self` entry is the AUTHORITY, so its answer settles the question
+		// and the address is not consulted afterwards. An event can carry the
+		// owner's address twice — a room or delegate entry, a duplicated
+		// invitation — and reading the two signals as a pair of equals would let
+		// the second entry's decline overrule the account's own acceptance,
+		// taking a meeting the rep is going to off their schedule.
+		"self accepted, a second entry on the owner's address declined": {
+			attendees: []map[string]any{
+				{"email": rsvpOwner, "responseStatus": "accepted", "self": true},
+				{"email": rsvpOwner, "responseStatus": "declined"},
+				{"email": "client@acme.test", "responseStatus": "accepted"},
+			},
+			want: false,
+		},
 		// SOMEBODY ELSE declining is not the owner declining. The meeting is
 		// still on this rep's calendar and still theirs to prepare.
 		"a guest declined": {

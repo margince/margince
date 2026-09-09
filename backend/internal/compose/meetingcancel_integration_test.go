@@ -245,6 +245,48 @@ func TestAnArchivedMeetingIsNotReopenedByASync(t *testing.T) {
 	}
 }
 
+// A meeting somebody ANSWERED FOR keeps their answer.
+//
+// `held` and `no_show` are recorded by a person who knows what happened. A
+// calendar disagreeing afterwards — the organizer tidying up a past event, a
+// late deletion — does not un-happen a meeting that took place, and overwriting
+// the answer would delete the only record that it did: silently, on a sync
+// schedule nobody is watching, and against the person who took the trouble to
+// record it.
+func TestAnAnsweredMeetingKeepsItsOutcome(t *testing.T) {
+	e := integration.Setup(t)
+	for _, answered := range []string{"held", "no_show"} {
+		t.Run(answered, func(t *testing.T) {
+			id := captureMeeting(t, e, e.AdminUser)
+			t.Cleanup(func() {
+				// The natural key is one per workspace, so each arm clears the
+				// row it captured rather than colliding with the next.
+				if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+					_, err := tx.Exec(context.Background(), `DELETE FROM activity WHERE id = $1`, id)
+					return err
+				}); err != nil {
+					t.Fatalf("clearing the seeded meeting: %v", err)
+				}
+			})
+			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				_, err := tx.Exec(context.Background(),
+					`UPDATE activity SET meeting_status = $2 WHERE id = $1`, id, answered)
+				return err
+			}); err != nil {
+				t.Fatalf("recording the outcome: %v", err)
+			}
+
+			if err := calendarSink(e).CancelMeeting(calendarOwnerCtx(e, e.AdminUser), meetingKey, meetingStart); err != nil {
+				t.Fatalf("cancelling an answered meeting: %v — a sync must survive one", err)
+			}
+			if status, _ := readMeetingStatus(t, e, id); status != answered {
+				t.Errorf("meeting_status = %q, want the recorded %q kept — a sync must not "+
+					"overwrite what somebody reported about a meeting that happened", status, answered)
+			}
+		})
+	}
+}
+
 // A Sink composed WITHOUT the seam captures meetings and cancels none — what
 // every fixture is, and what a deployment composing capture without the timeline
 // gets. It must not fail either.

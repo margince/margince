@@ -41,8 +41,9 @@ const auditFieldMeetingStatus = "meeting_status"
 // events were never worth capturing — an internal meeting, a solo block — so
 // there is nothing under the key, and a calendar pull must not fail over it.
 //
-// Idempotent. A meeting already cancelled is left alone and reported as
-// unchanged, so a resynced calendar writes no second audit row, no second event
+// Only an UNANSWERED meeting is closed — see cancellableFrom. A meeting somebody
+// recorded as held or a no-show keeps that answer, and one already cancelled is
+// left alone, so a resynced calendar writes no second audit row, no second event
 // and no second transition. The status is compared under the row's own lock
 // rather than before it, because a decision taken before the lock is a decision
 // about a state that can move.
@@ -89,13 +90,34 @@ func CancelCapturedMeetingTx(
 		return ids.ActivityID{}, false, fmt.Errorf("activities: reading the meeting being cancelled: %w", err)
 	}
 	cancelled := string(crmcontracts.ActivityMeetingStatusCanceled)
-	if status != nil && *status == cancelled {
+	if !cancellableFrom(status) {
 		return id, false, nil
 	}
 	if err := writeMeetingCancellationTx(ctx, tx, id, status, cancelled, at, key); err != nil {
 		return ids.ActivityID{}, false, err
 	}
 	return id, true, nil
+}
+
+// cancellableFrom reports whether a meeting in this state is still a calendar
+// sync's to close.
+//
+// Only an unanswered meeting is: NULL, which is what capture writes, and
+// `booked`, which is what a human or the booking path writes. The other three
+// are ANSWERS, and a sync must not overwrite one.
+//
+//   - `held` and `no_show` were recorded by somebody who knows what happened.
+//     The calendar disagreeing later does not un-happen a meeting that took
+//     place, and letting it win would delete the only record that it did —
+//     silently, and on a schedule nobody is watching.
+//   - `canceled` is already the answer this write would produce, so writing it
+//     again would cost a second audit row and a second event saying nothing new.
+//     This is what makes a resynced calendar free.
+func cancellableFrom(status *string) bool {
+	if status == nil {
+		return true
+	}
+	return *status == string(crmcontracts.ActivityMeetingStatusBooked)
 }
 
 // writeMeetingCancellationTx performs the write shape: the column, its audit
