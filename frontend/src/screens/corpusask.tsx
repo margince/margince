@@ -211,7 +211,9 @@ export function CorpusAskCard({
           </Button>
         </div>
         {ask.isError ? (
-          <Callout tone="danger">{problemMessageOf(ask.error, t)}</Callout>
+          <Callout tone="danger" kind="outcome" title={t("corpusAsk.failed")}>
+            {problemMessageOf(ask.error, t)}
+          </Callout>
         ) : null}
         {/* Only while it still belongs to the set on screen. useMutation keeps
             its last result across a change of selection, so without this a
@@ -243,7 +245,13 @@ function AnswerView({ answer }: Readonly<{ answer: Answer }>) {
           read the nearest passage as the answer. It leads the panel rather
           than sitting under it for that reason. */}
       {answer.outcome === "unreviewed" ? (
-        <Callout tone="warn">{t("corpusAsk.unreviewed")}</Callout>
+        <Callout
+          tone="warn"
+          kind="outcome"
+          title={t("corpusAsk.unreviewedTitle")}
+        >
+          {t("corpusAsk.unreviewed")}
+        </Callout>
       ) : null}
       {/* WHO WROTE THIS. Never omitted, and never inferred from whether the
           claims carry sentences: a reader deciding how much to trust a line
@@ -294,16 +302,25 @@ function Refusal({ answer }: Readonly<{ answer: Answer }>) {
   const { locale } = useLocale();
   if (answer.outcome === "not_ready") {
     return (
-      <Callout tone="info">
-        {t("corpusAsk.notReady", {
-          embedded: formatNumber(answer.coverage.chunks_embedded, locale),
-          total: formatNumber(answer.coverage.chunks_total, locale),
-        })}
-      </Callout>
+      // The same plate the not_covered branch below draws: all three refusals
+      // stand where the answer would have been, so a reader who pressed Ask
+      // and got none reads one shape rather than three.
+      <EmptyState title={t("corpusAsk.notReadyTitle")}>
+        <p>
+          {t("corpusAsk.notReady", {
+            embedded: formatNumber(answer.coverage.chunks_embedded, locale),
+            total: formatNumber(answer.coverage.chunks_total, locale),
+          })}
+        </p>
+      </EmptyState>
     );
   }
   if (answer.outcome === "retrieval_unavailable") {
-    return <Callout tone="warn">{t("corpusAsk.retrievalUnavailable")}</Callout>;
+    return (
+      <EmptyState title={t("corpusAsk.retrievalUnavailableTitle")}>
+        <p>{t("corpusAsk.retrievalUnavailable")}</p>
+      </EmptyState>
+    );
   }
   // not_covered: the set WAS searched, in full. The topic statement is quoted
   // back because it is the only thing on screen that tells the reader what this

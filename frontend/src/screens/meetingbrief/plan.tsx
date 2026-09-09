@@ -5,10 +5,9 @@
 // objective and its arc on top of the sections a reader already had, so a
 // half-built plan can never displace what was already working.
 
-import { AlertTriangle, Target } from "lucide-react";
+import { Target } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { FactList } from "../../design-system/factlist";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
@@ -260,7 +259,15 @@ export function LikelyAsks({
   );
 }
 
-// The one watch-out, with what to say, show and not promise.
+// The one watch-out, with what to say, show and not promise. A tinted panel for
+// the same reason the sections' risk panel is one: this is the section whose
+// FINDING is the bad news, and the tint follows the WRITER first — indigo is
+// claimed for every panel of a model-written plan, so a warn tint here would be
+// the one card of that plan not saying who wrote it.
+//
+// It was a `Callout` holding a claim and a FactList, which is content rather
+// than something the surface says about itself — a notice's body is prose, and
+// a document's section is a panel.
 export function TopRisk({
   plan,
   onOpenRecord,
@@ -276,9 +283,12 @@ export function TopRisk({
   }
   const { response_plan: response } = plan.top_risk;
   return (
-    <section className="mb-risks">
-      <h3 className="mb-section-title">{t("person.meeting.beReady")}</h3>
-      <Callout tone="warn" icon={AlertTriangle}>
+    <Panel
+      title={t("person.meeting.beReady")}
+      titleLevel={3}
+      tone={plan.generated_by === "model" ? "ai" : "warn"}
+    >
+      <PanelBody>
         <Claim
           sentence={plan.top_risk.text}
           onOpenRecord={onOpenRecord}
@@ -299,8 +309,8 @@ export function TopRisk({
             },
           ]}
         />
-      </Callout>
-    </section>
+      </PanelBody>
+    </Panel>
   );
 }
 

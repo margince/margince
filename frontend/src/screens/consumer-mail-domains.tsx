@@ -322,7 +322,11 @@ export function ConsumerMailDomainsCard() {
           </p>
         )}
         {remove.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("consumerMail.removeFailed")}
+          >
             {problemMessageOf(remove.error, t)}
           </Callout>
         )}
@@ -406,7 +410,11 @@ function AddConsumerMailDialog({
           </p>
         )}
         {add.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("consumerMail.addFailed")}
+          >
             {problemMessageOf(add.error, t)}
           </Callout>
         )}

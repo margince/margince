@@ -397,9 +397,10 @@ function carriageReason(
 /**
  * Why the attached files cannot go as they are, beside the shelf they are on.
  *
- * `status`, not `alert`: it answers what the reader just attached rather than
- * reporting a failure they must drop everything for. Null when nothing is
- * wrong, or when there is no resolved channel to name — mail warns nowhere
+ * `standing`: the bounds are re-read from the draft's own files and text on
+ * every render, so this is true AS the shelf renders rather than an answer to
+ * one press, and there is nothing to interrupt a reader for. Null when nothing
+ * is wrong, or when there is no resolved channel to name — mail warns nowhere
  * here, holding to its own path's limits.
  */
 export function CarriageNotice({
@@ -412,7 +413,11 @@ export function CarriageNotice({
     return null;
   }
   return (
-    <Callout tone="warn" live="status">
+    <Callout
+      tone="warn"
+      kind="standing"
+      title={t("compose.carriageTitle", { channel })}
+    >
       <ul className="compose-carriage">
         {blocks.map((violation) => (
           <li

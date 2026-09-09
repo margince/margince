@@ -215,11 +215,13 @@ describe("reading a transcript for its next steps", () => {
     stubReads({ stored: report({ status: "failed" }) });
     render(<TranscriptReadCard activityId="a-1" />);
 
+    // The claim is the heading and what it cost is the body, so both halves are
+    // asserted: a heading alone would pass on a notice that never says nothing
+    // was staged.
     expect(
-      await screen.findByText(
-        "This transcript could not be read. Nothing was staged.",
-      ),
+      await screen.findByText("This transcript could not be read"),
     ).toBeTruthy();
+    expect(screen.getByText("Nothing was staged.")).toBeTruthy();
   });
 
   it("says a reading is still going, and claims no outcome while it is", async () => {

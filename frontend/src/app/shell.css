@@ -1208,11 +1208,8 @@
   corner-shape: round;
   padding: 1px var(--space-2); /* ds:ignore a cap-height band on a 10.5px label, not spaced content */
 }
-/* The two things the list says that are not a row. Both sit on the list's own
+/* The one thing the list says that is not a row. It sits on the list's own
    inset so the sentence starts on the same text column the results do. */
-.palette-notice {
-  margin: var(--space-1);
-}
 .palette-list .pending {
   /* ds:ignore the palette draws its rows on the list's own inset */
   padding: var(--space-2);
@@ -1732,16 +1729,14 @@
   min-height: 0;
 }
 
-/* An app banner spans the content column edge to edge: it is chrome the shell
- * mounts above every screen, not a card inside one, so it drops the radius the
- * Callout carries elsewhere. */
-.appbanner {
-  border-radius: 0;
-  border-inline: none;
-}
+/* `.appbanner` paints nothing and has no rule here on purpose: it is the
+ * shell's MARKER on the wrapper a banner mounts in, read by
+ * `.main:not(:has(> .appbanner)) > .scroll` above so the content column stops
+ * reserving the top bar's height while a banner stands in it. The notice inside
+ * the wrapper draws itself, and a wrapper is not a surface. */
 
 /* The resume-connect banner is the one that sits INSIDE the content column,
- * above the screen it interrupts, so it keeps its radius and earns a gap. */
+ * above the screen it interrupts, so it earns a gap under it. */
 .resumebanner {
   margin-bottom: var(--space-4);
 }

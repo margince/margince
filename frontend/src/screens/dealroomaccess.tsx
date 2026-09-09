@@ -11,7 +11,6 @@ import {
   OverflowMenu,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
@@ -19,6 +18,7 @@ import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { IssuedNotice } from "./dealroomaccess.notices";
 import "./dealroomaccess.css";
 import { SurfaceState } from "../design-system/surfacestate";
 
@@ -311,11 +311,7 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
   };
   return (
     <div className="access-issued">
-      <Callout tone={issued.queued ? "success" : "info"}>
-        {issued.queued
-          ? t("access.issued.mailed", { email: issued.participant.email })
-          : t("access.issued.notMailed")}
-      </Callout>
+      <IssuedNotice queued={issued.queued} email={issued.participant.email} />
       <Field label={t("access.issued.linkLabel")}>
         {(control) => <TextInput {...control} readOnly value={link} />}
       </Field>

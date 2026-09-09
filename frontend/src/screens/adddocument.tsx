@@ -399,12 +399,12 @@ export function AddDocumentDialog({
       <h2 id={titleId}>{t("docs.add.title")}</h2>
 
       {partial && (
-        <Callout tone="warn" live="alert" title={t("docs.add.partialTitle")}>
+        <Callout tone="warn" kind="outcome" title={t("docs.add.partialTitle")}>
           {t("docs.add.partial")}
         </Callout>
       )}
       {upload.isError && (
-        <Callout tone="danger" live="alert" title={t("docs.add.failedTitle")}>
+        <Callout tone="danger" kind="outcome" title={t("docs.add.failedTitle")}>
           {/* The SERVER's own sentence when it gave one. An oversize file and a
               permission denial are different problems with different next
               moves, and one fixed "try again" is wrong advice for the second

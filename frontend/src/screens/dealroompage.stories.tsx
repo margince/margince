@@ -17,8 +17,8 @@ import {
 // The three states below are the three the page's own query has — still asking,
 // answered with nothing, answered with a room — and the reason all three are
 // stories is the page gutter. `.wrap` sits OUTSIDE the query states, so the
-// skeleton, the "no room" callout and a loaded room have to be judged against
-// the same left edge; two of them are invisible to any story that only renders
+// skeleton, the "no room" empty state and a loaded room have to be judged
+// against the same left edge; two are invisible to any story that only renders
 // the happy one.
 
 type DealRoom = components["schemas"]["DealRoom"];

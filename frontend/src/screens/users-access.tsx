@@ -227,9 +227,7 @@ export function TeamsCard() {
   });
   return (
     // The create verb sits on the title's own line, which is where a card-level
-    // create verb goes. It used to be the LAST ROW of the team list, labelled
-    // "New team" beside a button reading "Create team" — a row that was not a
-    // team, inside a list of teams, saying its own name twice.
+    // create verb goes — never as a row of a team list that is not a team.
     <Panel
       title={t("users.teamsTitle")}
       titleAction={canCreateTeam ? <NewTeamAction /> : undefined}
@@ -242,12 +240,10 @@ export function TeamsCard() {
             ` ${t("users.teamsAdminOnly")}`}
         </p>
         {/* A refused archive belongs to the card, not to the row: the roster
-            below is refetched on success, so the only thing left to say is that
-            the write did not land. Callout's `danger` tone is what the rest of
-            this tab says that with — a bare `role="alert"` span took its
-            emphasis from nothing at all. */}
+            below is refetched on success, so the only thing left to say is
+            that the write did not land. */}
         {archive.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout tone="danger" kind="outcome" title={t("users.notArchived")}>
             {problemMessageOf(archive.error, t)}
           </Callout>
         )}
@@ -438,7 +434,7 @@ function TeamMembers({
         return (
           <>
             {setMember.isError && (
-              <Callout tone="danger" live="alert">
+              <Callout tone="danger" kind="outcome" title={t("users.notSaved")}>
                 {problemMessageOf(setMember.error, t)}
               </Callout>
             )}
@@ -541,6 +537,12 @@ function NewTeamAction() {
               />
             )}
           </Field>
+          {/* ABOVE the submit row, where the sibling dialogs put a refusal. */}
+          {create.isError && (
+            <Callout tone="danger" kind="outcome" title={t("users.notCreated")}>
+              {problemMessageOf(create.error, t)}
+            </Callout>
+          )}
           {/* `.form-stack` stretches its children, so the submit takes its own
               trailing row rather than filling the dialog's width. */}
           <div className="form-actions">
@@ -548,11 +550,6 @@ function NewTeamAction() {
               {t("users.createTeam")}
             </Button>
           </div>
-          {create.isError && (
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(create.error, t)}
-            </Callout>
-          )}
         </form>
       </Modal>
     </>

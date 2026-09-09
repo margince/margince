@@ -42,16 +42,21 @@ export function WalkNotice({
     return null;
   }
   return (
-    <Callout tone="info">
-      {noticeText(arrived, gone, t, locale)}{" "}
-      {/* The way to act on it. Refreshing starts a new walk, which is what
-          brings the arrived work in — the notice without it would name a
-          problem and leave the reader to find the remedy. */}
-      {arrived > 0 && (
-        <Button small onClick={onRefresh}>
-          {t("worklist.walk.refresh")}
-        </Button>
-      )}
+    <Callout
+      kind="event"
+      title={t("worklist.walk.title")}
+      /* The way to act on it. Refreshing starts a new walk, which is what
+         brings the arrived work in — the notice without it would name a
+         problem and leave the reader to find the remedy. */
+      actions={
+        arrived > 0 ? (
+          <Button small onClick={onRefresh}>
+            {t("worklist.walk.refresh")}
+          </Button>
+        ) : undefined
+      }
+    >
+      {noticeText(arrived, gone, t, locale)}
     </Callout>
   );
 }

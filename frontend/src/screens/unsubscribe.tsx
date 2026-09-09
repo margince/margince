@@ -33,9 +33,15 @@ export function UnsubscribeScreen({
 }: Readonly<{ token?: string; purpose?: string }>) {
   const t = useT();
   if (!token || !purpose) {
+    // A dead end IS the page rather than a notice on it, so it takes the shape
+    // the locked purpose below takes: the answer as the heading, the reason
+    // under it.
     return (
       <PublicPage>
-        <Callout tone="warn">{t("prefs.invalidLink")}</Callout>
+        <h1 className="t-display">{t("prefs.unsub.deadLinkTitle")}</h1>
+        <Card>
+          <p>{t("prefs.unsub.deadLinkBody")}</p>
+        </Card>
       </PublicPage>
     );
   }
@@ -125,6 +131,8 @@ function UnsubscribeBody({
       <PublicPage>
         <Callout
           tone={center.error instanceof RateLimitedError ? "warn" : "danger"}
+          kind="outcome"
+          title={t("prefs.unsub.errorTitle")}
           actions={
             retryable ? (
               <Button onClick={() => center.refetch()}>
@@ -145,7 +153,10 @@ function UnsubscribeBody({
   if (!target) {
     return (
       <PublicPage>
-        <Callout tone="warn">{t("prefs.unsub.unknownPurpose")}</Callout>
+        <h1 className="t-display">{t("prefs.unsub.unknownPurposeTitle")}</h1>
+        <Card>
+          <p>{t("prefs.unsub.unknownPurpose")}</p>
+        </Card>
         <ManageLink token={token} label={t("prefs.unsub.seeAll")} />
       </PublicPage>
     );
@@ -199,7 +210,11 @@ function UnsubscribeBody({
         <p className="unsub-kind">
           <Mail size={16} aria-hidden="true" /> {labelOf(t, target)}
         </p>
-        <Callout tone="info" title={t("prefs.unsub.afterTitle")}>
+        <Callout
+          tone="info"
+          kind="standing"
+          title={t("prefs.unsub.afterTitle")}
+        >
           {t("prefs.unsub.afterBody")}
         </Callout>
         <div className="unsub-actions">
@@ -220,6 +235,8 @@ function UnsubscribeBody({
             tone={
               unsubscribe.error instanceof RateLimitedError ? "warn" : "danger"
             }
+            kind="outcome"
+            title={t("prefs.unsub.failedTitle")}
           >
             {explainPublicError(unsubscribe.error, t)}
           </Callout>

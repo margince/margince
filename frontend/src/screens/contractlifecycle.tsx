@@ -228,7 +228,7 @@ export function ContractRenewModal({
           renewal with no deal, and a picker that refused to submit without
           one would refuse an agreement the server has always allowed. */}
       {anchor == null ? (
-        <Callout tone="info">
+        <Callout kind="standing" title={t("contracts.renew.dealWithheldTitle")}>
           {t("contracts.renew.dealWithheldCompany")}
         </Callout>
       ) : (

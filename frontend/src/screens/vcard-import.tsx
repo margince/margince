@@ -139,7 +139,11 @@ export function VCardImport() {
           </div>
           {importer.isError && (
             <div data-testid="vcard-import-error">
-              <Callout tone="danger" live="alert">
+              <Callout
+                tone="danger"
+                kind="outcome"
+                title={t("vcardImport.failed")}
+              >
                 {problemMessageOf(importer.error, t)}
               </Callout>
             </div>

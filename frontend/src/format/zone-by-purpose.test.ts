@@ -154,12 +154,12 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The stub answers /me/working-hours with the SERVER's answer, and a person who has chosen no zone is answered with the installation's — so the fixture has to name one, exactly as settings.testkit.tsx below does. The card renders the name it is given and no case asserts a rendered instant; reading the runner's zone would make the fixture describe whichever machine ran it.",
   },
   {
-    file: "screens/settings.testkit.tsx",
-    why: "The stub answers /me/working-hours with the SERVER's answer, and a person who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
+    file: "screens/working-hours.stories.tsx",
+    why: "Same fixture, same reason as the suite above: the story answers /me/working-hours the way the SERVER does, and a person who has chosen no zone is answered with the installation's — so the fixture names one. The card draws the name it is handed and the story asserts no instant, while a zone read off the runner would make the catalog frame describe whichever machine built it.",
   },
   {
-    file: "screens/settings.stories.tsx",
-    why: "The catalog's own copy of the answer above, for the same reason and with the same constraint: every settings tab story routes /me/working-hours, because the bookability card indexes that answer and an unrouted one takes the whole screen down. It cannot import the testkit beside it — that module is built on `vi`, which no Storybook build has — so the zone is named here too. A zone read off the runner would draw a different card on every machine the catalog builds on.",
+    file: "screens/settings.testkit.tsx",
+    why: "The stub answers /me/working-hours with the SERVER's answer, and a person who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
   },
   {
     file: "screens/worklist.when.test.tsx",

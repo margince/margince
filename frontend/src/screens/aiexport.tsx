@@ -9,7 +9,6 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import "./aiexport.css";
 import { downloadBytes } from "./download";
 
 export type AiCallDetail = Pick<
@@ -146,19 +145,17 @@ export function ExportScenarioDialog({
             />
           )}
         </Field>
-        {/* The PII gate before copy or download: `warn` says something will go
-            wrong if you do nothing, which is exactly what this step is for. It
-            was a class literally named "callout" carrying its own border,
-            radius and padding — a second Callout with a second set of numbers.
-            The tick is the design system's own, so the words are half the
-            click target rather than a label threaded to a hand-written id. */}
-        <Callout tone="warn">
-          <Checkbox
-            label={t("aiexport.checklist")}
-            checked={acknowledged}
-            onChange={(event) => setAcknowledged(event.target.checked)}
-          />
-        </Callout>
+        {/* The PII gate before copy or download. It stands as the CONTROL it
+            is: a Callout around it was the primitive doing a fieldset's job —
+            a notice says something about the surface, and a tick the reader
+            must set is not that. The tick is the design system's own, so the
+            words are half the click target rather than a label threaded to a
+            hand-written id, and they carry the consequence themselves. */}
+        <Checkbox
+          label={t("aiexport.checklist")}
+          checked={acknowledged}
+          onChange={(event) => setAcknowledged(event.target.checked)}
+        />
         <div className="field">
           <span className="code-label t-eyebrow">
             {t("aiexport.previewLabel")}
@@ -172,9 +169,13 @@ export function ExportScenarioDialog({
           <pre className="code-block">{responseText}</pre>
         </div>
         {copyFailed && (
-          <p role="alert" className="aiexport-error">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("aiexport.copyFailedTitle")}
+          >
             {t("aiexport.copyFailed")}
-          </p>
+          </Callout>
         )}
       </div>
       <div className="actions">

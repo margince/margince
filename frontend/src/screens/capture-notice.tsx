@@ -23,7 +23,7 @@ import { useT } from "../i18n";
 export function CaptureNotice() {
   const t = useT();
   return (
-    <Callout tone="info">
+    <Callout tone="info" kind="standing" title={t("captureNotice.title")}>
       <p>{t("captureNotice.whatHappens")}</p>
       <p>{t("captureNotice.whoReads")}</p>
       <p>{t("captureNotice.yourControl")}</p>

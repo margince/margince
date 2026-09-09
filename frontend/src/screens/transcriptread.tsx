@@ -8,7 +8,13 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
-import { Badge, Button, Card, Skeleton } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Skeleton,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { AutonomyDot } from "../design-system/trust";
 import { formatNumber } from "../format/format";
@@ -47,16 +53,23 @@ function TranscriptReadOutcome({
   const t = useT();
   if (report.status === "failed") {
     return (
-      <Callout tone="danger" live="status">
+      <Callout
+        tone="danger"
+        kind="event"
+        title={t("transcriptread.failedTitle")}
+      >
         {report.status_detail ?? t("transcriptread.failedFallback")}
       </Callout>
     );
   }
   if (report.proposal_ids.length === 0) {
+    // A reading that stated nothing is the EMPTY arm of the same switch whose
+    // other arm lists the proposals — a fact about the transcript, not
+    // something the card says about itself.
     return (
-      <Callout tone="info" live="status">
+      <EmptyState>
         {report.status_detail ?? t("transcriptread.nothingStated")}
-      </Callout>
+      </EmptyState>
     );
   }
   return <TranscriptReadProposals ids={report.proposal_ids} />;
@@ -123,65 +136,73 @@ function TranscriptReadProposals({ ids }: Readonly<{ ids: string[] }>) {
   const loading = settled.length < ids.length;
 
   return (
-    <p
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-2)",
-        flexWrap: "wrap",
-        margin: "var(--space-3) 0 0",
-      }}
-    >
-      <AutonomyDot tier="confirm" />
-      <span className="t-caption">
-        {loading
-          ? plural("transcriptread.staged", ids.length, {
-              count: formatNumber(ids.length, locale),
-            })
-          : pending > 0
-            ? plural("transcriptread.proposals", pending, {
-                count: formatNumber(pending, locale),
+    <>
+      <p
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-2)",
+          flexWrap: "wrap",
+          margin: "var(--space-3) 0 0",
+        }}
+      >
+        <AutonomyDot tier="confirm" />
+        <span className="t-caption">
+          {loading
+            ? plural("transcriptread.staged", ids.length, {
+                count: formatNumber(ids.length, locale),
               })
-            : plural("transcriptread.decided", reviewed, {
-                count: formatNumber(reviewed, locale),
-              })}
-      </span>
-      {!loading && pending === 0 && (approved > 0 || rejected > 0) && (
-        <span className="t-caption">
-          {t("transcriptread.decidedDetail", {
-            accepted: formatNumber(approved, locale),
-            rejected: formatNumber(rejected, locale),
-          })}
+            : pending > 0
+              ? plural("transcriptread.proposals", pending, {
+                  count: formatNumber(pending, locale),
+                })
+              : plural("transcriptread.decided", reviewed, {
+                  count: formatNumber(reviewed, locale),
+                })}
         </span>
-      )}
-      {!loading && expired > 0 && (
-        <span className="t-caption">
-          {plural("transcriptread.expired", expired, {
-            count: formatNumber(expired, locale),
-          })}
-        </span>
-      )}
+        {!loading && pending === 0 && (approved > 0 || rejected > 0) && (
+          <span className="t-caption">
+            {t("transcriptread.decidedDetail", {
+              accepted: formatNumber(approved, locale),
+              rejected: formatNumber(rejected, locale),
+            })}
+          </span>
+        )}
+        {!loading && expired > 0 && (
+          <span className="t-caption">
+            {plural("transcriptread.expired", expired, {
+              count: formatNumber(expired, locale),
+            })}
+          </span>
+        )}
+        {unreadable > 0 && (
+          <span className="t-caption">
+            {plural("transcriptread.statusUnknown", unreadable, {
+              count: formatNumber(unreadable, locale),
+            })}
+          </span>
+        )}
+        {/* The worklist is where a pending suggestion is decided. Once none is,
+            it is still where the decided ones are listed, so the button keeps
+            leading somewhere real rather than disappearing. */}
+        <Button small onClick={() => navigate({ screen: "worklist" })}>
+          {t("enrich.toInbox")}
+        </Button>
+      </p>
+      {/* AFTER the line, never inside it: a notice is a div, and the line above
+          is a paragraph of spans. */}
       {effectFailed > 0 && (
-        <Callout tone="danger" live="status">
+        <Callout
+          tone="danger"
+          kind="event"
+          title={t("transcriptread.effectFailedTitle")}
+        >
           {plural("transcriptread.effectFailed", effectFailed, {
             count: formatNumber(effectFailed, locale),
           })}
         </Callout>
       )}
-      {unreadable > 0 && (
-        <span className="t-caption">
-          {plural("transcriptread.statusUnknown", unreadable, {
-            count: formatNumber(unreadable, locale),
-          })}
-        </span>
-      )}
-      {/* The worklist is where a pending suggestion is decided. Once none is,
-          it is still where the decided ones are listed, so the button keeps
-          leading somewhere real rather than disappearing. */}
-      <Button small onClick={() => navigate({ screen: "worklist" })}>
-        {t("enrich.toInbox")}
-      </Button>
-    </p>
+    </>
   );
 }
 

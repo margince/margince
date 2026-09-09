@@ -361,7 +361,10 @@ describe("the connected-inboxes card", () => {
   it("surfaces a load failure without crashing the card", async () => {
     stubApi([], { listStatus: 500 });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/Couldn't load|boom/)).toBeTruthy();
+    // The card's own claim as the heading, the server's cause under it: both,
+    // because the heading alone says nothing about why.
+    expect(await screen.findByText(/Couldn't load/)).toBeTruthy();
+    expect(await screen.findByText(/boom/)).toBeTruthy();
   });
 
   it("reconnect re-mints the consent URL and redirects", async () => {
@@ -419,16 +422,18 @@ describe("the connected-inboxes card", () => {
       expect(requestsTo(calls, "/connect", "POST").length).toBe(1),
     );
     expect(await screen.findByText(/connect failed/)).toBeTruthy();
-    // Announced, and attached to the button that produced it: the reason
-    // renders inside the same roster row as the Reconnect that was pressed,
-    // never in a band of its own under an unrelated heading.
+    // Announced, and attached to the row whose Reconnect produced it: directly
+    // under that row at its full width, never in a band of its own under an
+    // unrelated heading — and never squeezed into the control column, where a
+    // sentence sharing a flex line with two buttons is a sentence nobody reads.
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toMatch(/connect failed/);
     const row = screen
       .getByRole("button", { name: /Reconnect/ })
       .closest(".settingrow");
     expect(row).not.toBeNull();
-    expect(row?.contains(alert)).toBe(true);
+    expect(row?.contains(alert)).toBe(false);
+    expect(row?.nextElementSibling).toBe(alert);
   });
 
   it("disconnects only after an explicit confirm", async () => {

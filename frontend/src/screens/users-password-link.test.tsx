@@ -285,10 +285,12 @@ describe("admin-issued set-password link", () => {
     await clickLinkAction();
     await screen.findByLabelText("Set-password link");
     await userEvent.click(screen.getByRole("button", { name: /copy link/i }));
-    // The admin is told to copy by hand rather than left with a dead button.
+    // The admin is told to copy by hand rather than left with a dead button:
+    // the heading says the copy did not happen, the body says what to do.
     expect(
-      await screen.findByText(/could not copy automatically/i),
+      await screen.findByText(/the link could not be copied/i),
     ).toBeTruthy();
+    expect(screen.getByText(/copy it by hand/i)).toBeTruthy();
   });
 
   it("recovers from a transport failure instead of hanging on pending", async () => {

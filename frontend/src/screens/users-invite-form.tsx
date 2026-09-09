@@ -234,6 +234,14 @@ export function InviteUserForm({
         <RosterPartialNote partial={teamsPartial} />
       </fieldset>
       <AccessPreviewPanel role={role} teamIds={teamIds} />
+      {/* ABOVE the submit row, where the sibling dialogs in this family put a
+          refusal: under the button it reads as a footnote to the form rather
+          than as the answer to the press. */}
+      {error && (
+        <Callout tone="danger" kind="outcome" title={t("users.inviteFailed")}>
+          {error}
+        </Callout>
+      )}
       {/* `.form-actions` rather than a bare button: `.form-stack` stretches
           its children, and a submit that fills the dialog reads as a banner
           rather than as the move the form is for. */}
@@ -242,14 +250,6 @@ export function InviteUserForm({
           <UserPlus aria-hidden /> {t("users.invite")}
         </Button>
       </div>
-      {/* A refused invite is the surface saying something is wrong, which is
-          what Callout's `danger` tone is. `alert` because the reader pressed
-          the button and has to act on the answer. */}
-      {error && (
-        <Callout tone="danger" live="alert">
-          {error}
-        </Callout>
-      )}
     </form>
   );
 }

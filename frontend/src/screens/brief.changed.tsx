@@ -59,22 +59,44 @@ export function ChangedSinceBrief({ day }: Readonly<{ day: Worklist }>) {
   const named = changed.slice(0, NAMED);
   const rest = changed.length - named.length;
   return (
-    <Callout tone="info" className="brief-notice">
-      {t("brief.changed.lead")}{" "}
-      {named.map((item) => itemTitle(item, t, locale)).join(" · ")}
-      {rest > 0
-        ? ` · ${t("brief.changed.more", {
-            count: formatNumber(rest, locale),
-          })}`
-        : ""}{" "}
-      {/* The SAME cut this strip counted. A bare `#/worklist` named three rows
-          and opened a queue of forty with no way to tell which three, so the
-          count and its door shared nothing at all. The server applies the same
-          freshness test that stamped the flags read above, which is why this is
-          one rule rather than a browser-side narrowing that could disagree. */}
-      <a className="entity-link" href={worklistLaneHref("changed_since_brief")}>
-        {t("brief.changed.open")}
-      </a>
-    </Callout>
+    // `.brief-notice` is the BRIEF PAGE's rhythm — `.brief-wrap > .brief-notice
+    // + .brief-notice` spaces this strip against the coverage strip beside it
+    // (brief.css) — so it stays on a wrapper the page owns.
+    //
+    // A LIST rather than a sentence of names joined by interpuncts: three row
+    // titles run together read as one long title, and a reader scanning for
+    // theirs had to parse the separators to find where one ended.
+    <div className="brief-notice">
+      <Callout
+        tone="info"
+        kind="event"
+        title={t("brief.changed.lead")}
+        actions={
+          /* The SAME cut this strip counted. A bare `#/worklist` named three
+             rows and opened a queue of forty with no way to tell which three,
+             so the count and its door shared nothing at all. The server
+             applies the same freshness test that stamped the flags read above,
+             which is why this is one rule rather than a browser-side narrowing
+             that could disagree. */
+          <a
+            className="entity-link"
+            href={worklistLaneHref("changed_since_brief")}
+          >
+            {t("brief.changed.open")}
+          </a>
+        }
+      >
+        <ul>
+          {named.map((item) => (
+            <li key={item.id}>{itemTitle(item, t, locale)}</li>
+          ))}
+          {rest > 0 && (
+            <li>
+              {t("brief.changed.more", { count: formatNumber(rest, locale) })}
+            </li>
+          )}
+        </ul>
+      </Callout>
+    </div>
   );
 }

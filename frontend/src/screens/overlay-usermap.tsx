@@ -19,7 +19,6 @@ import {
   Modal,
   SegmentedControl,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 // The rows here stay a real <ul>/<li>: they are a LIST of workspace users, and
 // PanelRow draws a <div>. A full-bleed row that costs a screen reader the list
@@ -42,7 +41,9 @@ import {
   throwProblem,
   useMe,
   useSorMode,
+  WriteRefused,
 } from "./common";
+import { ReadCostNotice } from "./overlay-usermap.notices";
 import "./overlay-usermap.css";
 
 // The mirror user-map card (Settings → Integrations): who, in the
@@ -250,9 +251,10 @@ function OwnerPickerModal({
         {t("overlay.userMap.pickTitle", { principal })}
       </h2>
       {failure ? (
-        <Callout tone="danger" live="alert">
-          {failure}
-        </Callout>
+        <WriteRefused
+          titleKey="overlay.userMap.directoryFailedTitle"
+          message={failure}
+        />
       ) : (
         <RecordPicker
           label={t("overlay.userMap.pickerLabel", { principal })}
@@ -268,11 +270,10 @@ function OwnerPickerModal({
           {t("overlay.userMap.truncated", { principal })}
         </p>
       )}
-      {actions.saveError && (
-        <Callout tone="danger" live="alert">
-          {actions.saveError}
-        </Callout>
-      )}
+      <WriteRefused
+        titleKey="overlay.userMap.saveFailedTitle"
+        message={actions.saveError}
+      />
       {/* Cancel alone: picking a candidate IS the commit, so there is no second
           confirm to draw beside it. `.actions` is the shared dialog action band
           every other modal in this tree ends with. */}
@@ -564,13 +565,7 @@ function UserMapBody({
   }
   return (
     <>
-      {/* The cost of the read this card performs, at the weight a standing
-          advisory earns. It was the quietest type on the card — 12px meta grey,
-          under everything else — which is the one thing a disclosure about
-          somebody else's money must not be.
-          Outside the list on purpose: it is not a decision, and a row with no
-          answer on its right reads as a setting nobody has set. */}
-      <Callout tone="info">{t("overlay.userMap.cost")}</Callout>
+      <ReadCostNotice />
       <SettingList>
         {/* Which census, on the row language's own line: one control, one
             answer, in the right column with every other answer on the page.
@@ -924,9 +919,10 @@ function UserMapNotice({
   }
   if (failed) {
     return (
-      <Callout tone="danger" live="alert">
-        {problemMessageOf(error, t, t("overlay.userMap.loadFailed"))}
-      </Callout>
+      <WriteRefused
+        titleKey="overlay.userMap.loadFailedTitle"
+        message={problemMessageOf(error, t, t("overlay.userMap.loadFailed"))}
+      />
     );
   }
   if (pending) {

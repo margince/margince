@@ -202,6 +202,7 @@ export const de = {
   "shell.license.none": "Keine Lizenz",
   "shell.license.refused": "Lizenz abgelehnt",
   "shell.signOutAria": "Abmelden",
+  "shell.signOutErr": "Abmeldung fehlgeschlagen",
   "shell.collapse": "Seitenleiste einklappen",
   "shell.expand": "Seitenleiste ausklappen",
   "shell.accountAria": "Konto",
@@ -279,8 +280,8 @@ export const de = {
   "palette.typeRecord": "Datensatz",
   "palette.seeAll": "Alle Ergebnisse für „{query}“ anzeigen",
   "palette.searching": "Datensätze werden durchsucht…",
-  "palette.searchFailed":
-    "Datensätze konnten gerade nicht durchsucht werden. Die Befehle oben funktionieren weiterhin.",
+  "palette.searchFailedTitle": "Datensätze konnten nicht durchsucht werden",
+  "palette.searchFailed": "Die Befehle oben funktionieren weiterhin.",
   "action.newDeal": "Neuer Deal",
   "action.readCompany": "Firma einlesen",
   "action.booking": "Buchungsseite",
@@ -660,6 +661,7 @@ export const de = {
     "Kein führendes System verbunden. Verbinde HubSpot, um Datensätze aus dessen Spiegel zu lesen.",
   "overlay.adminOnly":
     "Du hast keine Berechtigung, die HubSpot-Verbindung zu ändern.",
+  "overlay.loadFailedTitle": "Die Verbindung konnte nicht gelesen werden",
   "overlay.region": "Region",
   "overlay.regionEu1": "EU",
   "overlay.connectionLabel": "Verbindung",
@@ -681,6 +683,7 @@ export const de = {
   "overlay.connectedAt": "Verbunden {at}",
   "overlay.syncTitle": "Spiegel-Synchronisierung",
   "overlay.syncLoadFailed": "Sync-Status konnte nicht geladen werden.",
+  "overlay.syncLoadFailedTitle": "Sync-Status konnte nicht gelesen werden",
   "overlay.syncEmpty": "Noch nichts synchronisiert.",
   "overlay.syncStateFresh": "Aktuell",
   "overlay.syncStatePending": "Sync ausstehend",
@@ -691,9 +694,13 @@ export const de = {
   "overlay.neverSynced": "Noch nie synchronisiert",
   "overlay.budgetTitle": "API-Budget",
   "overlay.budgetLoadFailed": "Das Budget-Fenster konnte nicht geladen werden.",
+  "overlay.budgetLoadFailedTitle":
+    "Das Budget-Fenster konnte nicht gelesen werden",
   "overlay.budgetHeadroom": "Spielraum: {headroom}",
   "overlay.budgetUnmeasured":
-    "Das Aufrufbudget kann gerade nicht gemessen werden, Live-Aufrufe pausieren vorsorglich. Das ist kein HubSpot-Quotendruck — der Zähler selbst liefert keine Werte.",
+    "Live-Aufrufe pausieren vorsorglich. Das ist kein HubSpot-Quotendruck — der Zähler selbst liefert keine Werte.",
+  "overlay.budgetUnmeasuredTitle":
+    "Das Aufrufbudget kann nicht gemessen werden",
   "overlay.budgetEmpty":
     "Das Altsystem hat für diesen Zeitraum kein Budgetfenster gemeldet.",
   "overlay.budgetSources":
@@ -705,6 +712,7 @@ export const de = {
   "overlay.reconcile": "Jetzt synchronisieren",
   "overlay.reconcileQueued":
     "Abgleich eingereiht — der Worker holt ihn beim nächsten Poll ab (etwa alle 2 Minuten).",
+  "overlay.reconcileFailedTitle": "Der Abgleich wurde nicht eingeplant",
   "overlay.disconnect": "Trennen",
   "overlay.disconnectTitle": "HubSpot trennen?",
   "overlay.disconnectBody":
@@ -715,9 +723,12 @@ export const de = {
     "Wer jede Person in dieser Organisation als {principal}-Nutzer ist. Diese Zuordnung entscheidet allein darüber, was sie im Spiegel sieht.",
   "overlay.userMap.cost":
     "Wer nicht zugeordnet ist, sieht überhaupt keine gespiegelten Datensätze — alle Listen bleiben leer.",
+  "overlay.userMap.costTitle": "Ohne Zuordnung sieht ein Nutzer nichts",
   "overlay.userMap.loading": "Lade die Nutzerzuordnung…",
   "overlay.userMap.loadFailed":
     "Die Nutzerzuordnung konnte nicht geladen werden.",
+  "overlay.userMap.loadFailedTitle":
+    "Die Nutzerzuordnung konnte nicht gelesen werden",
   "overlay.userMap.adminOnly":
     "Du hast keine Berechtigung, die Zuordnung zu prüfen.",
   "overlay.userMap.notOverlay":
@@ -743,6 +754,9 @@ export const de = {
     "Das {principal}-Verzeichnis ist länger als diese Liste — wen du hier nicht findest, liegt vielleicht hinter der Grenze.",
   "overlay.userMap.directoryFailed":
     "Das {principal}-Verzeichnis konnte nicht gelesen werden, deshalb lässt sich gerade niemand auswählen.",
+  "overlay.userMap.directoryFailedTitle":
+    "Das Verzeichnis konnte nicht gelesen werden",
+  "overlay.userMap.saveFailedTitle": "Die Zuordnung wurde nicht gespeichert",
   "overlay.userMap.notMapped": "Nicht zugeordnet",
   "overlay.userMap.chip.noEmailMatch": "Keine E-Mail-Übereinstimmung",
   "overlay.userMap.chip.ambiguousEmail": "Mehrdeutige E-Mail",
@@ -1107,6 +1121,8 @@ export const de = {
     "An {email} gesendet. Sie können ihn unten auch kopieren.",
   "access.issued.notMailed":
     "Der Link wurde nicht per Mail versendet. Kopieren Sie ihn und senden Sie ihn selbst.",
+  "access.issued.mailedTitle": "Die Einladung ist unterwegs",
+  "access.issued.notMailedTitle": "Es wurde nichts versandt",
   "access.issued.linkLabel": "Der Link",
   "access.issued.copy": "Link kopieren",
   "access.issued.copied": "Kopiert",
@@ -1245,6 +1261,7 @@ export const de = {
   "contracts.renew.dealNone": "Kein Deal",
   "contracts.renew.dealWithheldCompany":
     "Du kannst das Unternehmen dieser Vereinbarung nicht öffnen, deshalb lassen sich seine Deals nicht auflisten. Die Verlängerung behält denselben Vertragspartner und hält keinen Deal fest.",
+  "contracts.renew.dealWithheldTitle": "Hier ist kein Deal wählbar",
   "contracts.renew.submit": "Verlängern",
   "contracts.deal": "Deal",
   "contracts.statusChange.title": "Status ändern",
@@ -1552,6 +1569,10 @@ export const de = {
   "linkedinImport.profileLabel": "Deine LinkedIn-Profil-URL",
   "linkedinImport.profilePlaceholder": "https://www.linkedin.com/in/…",
   "linkedinImport.saveProfile": "Profil speichern",
+  "linkedinImport.saveFailed": "Die Profil-URL wurde nicht gespeichert",
+  "linkedinImport.profileReadFailed":
+    "Die Profil-URL konnte nicht gelesen werden",
+  "linkedinImport.importFailed": "Der Export wurde nicht importiert",
   "linkedinImport.editProfile": "\u00c4ndern",
   "linkedinImport.editProfileTitle": "Ihr LinkedIn-Profil",
   "linkedinImport.profileNotSet": "Noch nicht erfasst",
@@ -1574,6 +1595,7 @@ export const de = {
   "linkedinReach.title": "Wohin dein Netzwerk reicht",
   "linkedinReach.sub":
     "Firmen im CRM, bei denen du bereits jemanden kennst — die meisten Verbindungen zuerst.",
+  "linkedinReach.readFailed": "Diese Auswertung konnte nicht gelesen werden",
   "linkedinReach.empty":
     "Noch keine deiner Verbindungen arbeitet bei einer erfassten Firma.",
   "linkedinReach.allUnresolved":
@@ -1964,14 +1986,16 @@ export const de = {
   "tagAdmin.restore": "Wiederherstellen",
   "tagAdmin.usage": "{count} Datensätze",
   "tagAdmin.usagePending": "Wird gezählt…",
+  "tagAdmin.nearMatchTitle": "Ähnlich einem Wort, das es schon gibt",
   "tagAdmin.nearMatch":
-    "Ähnlich einem vorhandenen Wort: {names}. Verwenden Sie dieses, sofern nicht wirklich etwas anderes gemeint ist.",
+    "{names} — verwenden Sie dieses, sofern nicht wirklich etwas anderes gemeint ist.",
   "tagAdmin.mergeTitle": "{name} in ein anderes Tag zusammenführen",
   "tagAdmin.mergeIntoLabel": "Dieses Tag behalten",
   "tagAdmin.mergeIntoNone": "Tag wählen",
   "tagAdmin.mergeConfirm": "Zusammenführen",
+  "tagAdmin.mergeWarningTitle": "Nicht widerrufbar",
   "tagAdmin.mergeWarning":
-    "Nicht widerrufbar. Datensätze mit {name} tragen danach das andere Tag, und der Name wird wieder freigegeben.",
+    "Datensätze mit {name} tragen danach das andere Tag, und der Name wird wieder freigegeben.",
   "tagAdmin.mergedTitle": "Zusammengeführt",
   "tagAdmin.mergedBody":
     "{moved} Datensätze übernommen. {collapsed} trugen bereits beide; das doppelte Tag wurde entfernt.",
@@ -1980,9 +2004,11 @@ export const de = {
     "Dieses Tag wurde ohne Version gelesen und kann nicht gespeichert werden. Seite neu laden und erneut versuchen.",
   "tagAdmin.withheld":
     "Sie haben keinen Zugriff auf das Tag-Vokabular dieser Organisation.",
+  "tagAdmin.truncatedTitle": "Diese Liste ist gekürzt",
   "tagAdmin.truncated":
-    "Diese Liste ist gekürzt. Wörter jenseits der Grenze erscheinen hier nicht und lassen sich nicht bearbeiten.",
+    "Wörter jenseits der Grenze erscheinen hier nicht und lassen sich nicht bearbeiten.",
   "tagAdmin.usageFailed": "Zählung nicht verfügbar",
+  "tagAdmin.changeFailed": "Dieses Tag wurde nicht geändert",
   "tagAdmin.done": "Fertig",
   "tags.archived": "archiviert",
   "tags.columnHeader": "Tags",
@@ -2008,8 +2034,9 @@ export const de = {
     "Fügen Sie dauerhaften Kontext hinzu, etwa eine Veranstaltung, eine Beziehung oder eine Kohorte.",
   "tags.pickerLabel": "Tag suchen",
   "tags.alreadyAdded": "Bereits hinzugefügt",
+  "tags.catalogTruncatedTitle": "Diese Liste ist gekürzt",
   "tags.catalogTruncated":
-    "Diese Liste ist gekürzt, ein Wort kann also fehlen. Suchen Sie danach, bevor Sie ein neues anfragen.",
+    "Ein Wort kann also fehlen. Suchen Sie danach, bevor Sie ein neues anfragen.",
   "tags.noMatch":
     "Kein Tag mit diesem Namen. Ein Admin- oder Ops-Platz kann eines zum Vokabular hinzufügen.",
   "tagResult.gone":
@@ -2058,6 +2085,10 @@ export const de = {
   "leadSources.sub":
     "Woher Leads kommen. Wird im Formular „Neuer Lead“, als Filter und vom Score verwendet.",
   "leadSources.readOnly": "Nur ein Admin- oder Ops-Sitz ändert diese Liste.",
+  "leadSources.readOnlyTitle":
+    "Nur ein Admin- oder Ops-Sitz ändert diese Liste",
+  "leadSources.notSaved": "Die Änderung wurde nicht gespeichert",
+  "leadSources.notAdded": "Die Quelle wurde nicht hinzugefügt",
   "leadSources.labelFor": "Bezeichnung der Quelle {key}",
   "leadSources.intentFor": "Gewichtung von {label}",
   "leadSources.intent": "Gewichtung",
@@ -2186,6 +2217,7 @@ export const de = {
   "lead.demoteReasonRequired": "Bitte zuerst begr\u00fcnden.",
   "lead.demoteConfirm": "Rückgängig machen",
   "lead.reopen": "Wieder öffnen",
+  "lead.writeRefused": "Diese Änderung wurde nicht gespeichert",
   "lead.reopenDialog": "Diesen Lead wieder öffnen?",
   "lead.reopenExplain":
     "Der Lead kommt mit dem Status zurück, den er beim Disqualifizieren hatte, und der Grund wird gelöscht. Verlauf und Score bleiben erhalten.",
@@ -2302,9 +2334,10 @@ export const de = {
   "lead.trigger.meetingHeld": "Termin stattgefunden",
   "lead.trigger.humanQualify": "Manuell qualifiziert",
   "lead.evidenceNote": "Beleg-Notiz (optional)",
+  "lead.segregationTitle": "Leads bleiben von Kontakten getrennt",
   "lead.segregation":
-    "Leads bleiben von Kontakten getrennt. Ein Lead wird erst zum Kontakt, wenn du ihn qualifizierst.",
-  "lead.segregationDismiss": "Verstanden",
+    "Ein Lead wird erst zum Kontakt, wenn du ihn qualifizierst.",
+  "lead.segregationDismiss": "Hinweis ausblenden",
   "list.emptyMine": "Dir sind keine {unit} zugewiesen.",
   "list.showAll": "Alle anzeigen",
   "lead.assignedAway":
@@ -2650,7 +2683,7 @@ export const de = {
   "brief.week.quiet":
     "Eine ruhige Woche — nichts abgeschlossen, nichts bewegt.",
 
-  "brief.changed.lead": "Seit dem Briefing geändert:",
+  "brief.changed.lead": "Seit dem Briefing geändert",
   "brief.changed.more": "+{count} weitere",
   "brief.changed.open": "Arbeitsliste öffnen",
   "brief.feed.title": "Heute",
@@ -2714,8 +2747,9 @@ export const de = {
     "{count} Themen für Montag, beginnend mit {first}.",
   "teamweekly.agenda.copy": "Agenda kopieren",
   "teamweekly.agenda.copied": "Kopiert",
-  "teamweekly.agenda.copyFailed":
-    "Dieser Browser gibt die Zwischenablage nicht frei. Markier die Liste und kopier sie.",
+  "teamweekly.agenda.copyFailedTitle":
+    "Dieser Browser gibt die Zwischenablage nicht frei",
+  "teamweekly.agenda.copyFailed": "Markier die Liste und kopier sie von Hand.",
   "teamweekly.focus.help_requested": "Hat um Hilfe gebeten",
   "teamweekly.focus.leads_breached": "Leads blieben unbeantwortet",
   "teamweekly.focus.commitments_missed": "Planzusagen verpasst",
@@ -2732,6 +2766,7 @@ export const de = {
   "plan.readOnly":
     "Nur-Lese-Ansicht \u2014 eine Woche zu planen und eine Zusage abzuschlie\u00dfen ist hier nicht deine Aufgabe.",
   "plan.add": "Vorhaben hinzufügen",
+  "plan.refusedTitle": "Nicht alles wurde gespeichert",
   "plan.saveRefused_one":
     "Eine Zusage konnte nicht gespeichert werden. Sie ist weiterhin angehakt — bitte erneut versuchen.",
   "plan.saveRefused_other":
@@ -2876,6 +2911,7 @@ export const de = {
   "brief.promises.untracked":
     "Zusagen aus Gesprächen werden noch nicht erfasst — hier stehen nur Aufgaben.",
   "brief.panel.watch": "Still geworden",
+  "brief.overnight.connectorsUnhealthy": "Verbindungen brauchen Aufmerksamkeit",
   "brief.overnight.fixConnector": "Verbindung prüfen",
   "brief.watch.clear": "Nichts ist still geworden.",
   "brief.readings.label": "Dein Morgen in fünf Kennzahlen",
@@ -3013,8 +3049,10 @@ export const de = {
     "Status für {count} Vorschläge nicht abrufbar",
   "transcriptread.nothingStated":
     "Vollständig gelesen. Dieses Gespräch nennt keine nächsten Schritte.",
-  "transcriptread.failedFallback":
-    "Dieses Transkript konnte nicht gelesen werden. Es wurde nichts vorgemerkt.",
+  "transcriptread.failedTitle": "Dieses Transkript konnte nicht gelesen werden",
+  "transcriptread.failedFallback": "Es wurde nichts vorgemerkt.",
+  "transcriptread.effectFailedTitle":
+    "Angenommen, aber die Aufgabe entstand nie",
 
   "create.cancel": "Abbrechen",
   "create.multiselect.required":
@@ -3031,6 +3069,7 @@ export const de = {
   "vcardImport.working": "Karten werden gelesen…",
   "vcardImport.done": "Schließen",
   "vcardImport.noCards": "In der Datei war keine Karte.",
+  "vcardImport.failed": "Diese Karten wurden nicht importiert",
   "vcardImport.outcome.created": "Angelegt",
   "vcardImport.outcome.updated": "Lücken gefüllt",
   "vcardImport.outcome.needsReview": "Sieht aus wie jemand, den ihr schon habt",
@@ -3354,6 +3393,7 @@ export const de = {
   "compose.voiceVersion": "Aus Ihrem Korpus gebaut · v{n}",
   "compose.voiceDegraded":
     "Ihr Stimmprofil konnte nicht geladen werden – dieser Entwurf ist nicht in Ihrer Stimme geschrieben. Erstellen Sie den Entwurf neu oder überarbeiten Sie ihn vor dem Senden.",
+  "compose.voiceDegradedTitle": "Dieser Entwurf ist nicht in deiner Stimme",
   "compose.provisional": "Vorläufige Stimme",
   "compose.provisionalHint":
     "Ihre Voice DNA wird noch aufgebaut. Sie prägt diesen Entwurf schon genauso wie eine fertige — es wird nichts zurückgehalten.",
@@ -3399,6 +3439,10 @@ export const de = {
   "compose.colleagueMailbox_other":
     "Diese Nachricht ging in den Postfächern von {names} ein. Ihre Antwort geht aus Ihrem eigenen Postfach und unter Ihrem Namen raus.",
   "compose.colleagueUnnamed": "eine Kollegin oder ein Kollege",
+  "compose.threadGoneTitle": "Dieser Thread lässt sich nicht beantworten",
+  "compose.colleagueMailboxTitle":
+    "Das ist die Mail einer Kollegin oder eines Kollegen",
+  "compose.deadRecipientsTitle": "Mails an diese Adressen kommen nicht an",
   "compose.attach": "Anhängen",
   "compose.filesOnRecord": "Auf diesem Datensatz",
   "compose.filesLoading": "Dateien des Datensatzes werden gelesen…",
@@ -3413,6 +3457,8 @@ export const de = {
   "compose.fileUploading": "Datei wird abgelegt…",
   "compose.fileStoredUnnamed":
     "Die Datei liegt am Datensatz, aber wir konnten nicht zurücklesen, welche es ist. Hängen Sie sie über die Liste oben an.",
+  "compose.carriageTitle":
+    "Diese Nachricht kann nicht über {channel} gesendet werden",
   "compose.carriageCarries":
     "{channel} kann keine Dateien übertragen, daher können diese Nachricht und ihre {count} Anhänge dort nicht gesendet werden. Senden Sie den Text über {channel} oder die Dateien auf anderem Weg.",
   "compose.carriageCount":
@@ -3457,10 +3503,10 @@ export const de = {
   "compose.why.contract": "Zu ihrem Vertrag",
   "compose.why.account": "Zu ihrem Konto",
   "compose.why.marketing": "Werbung",
-  "sendPermission.refused": "Sie können diese Nachricht nicht senden.",
+  "sendPermission.refused": "Sie können diese Nachricht nicht senden",
   "sendPermission.sayWhy": "Begründung angeben",
   "sendPermission.unproven":
-    "Margince hat keinen Nachweis, warum Sie schreiben dürfen.",
+    "Margince hat keinen Nachweis, warum Sie schreiben dürfen",
   "sendPermission.unprovenHint":
     "Wenn Sie den Grund kennen — man hat Sie darum gebeten, Sie hatten ein Treffen, es ist ein Kunde —, halten Sie ihn fest. Er wird unter Ihrem Namen gespeichert.",
   "sendPermission.unprovenRefuses":
@@ -3647,8 +3693,9 @@ export const de = {
     "Wenn Sie ohne Kopieren schließen, ist der Link verloren. Sie müssten einen neuen erstellen.",
   "analytics.share.copy": "Link kopieren",
   "analytics.share.copied": "Kopiert",
+  "analytics.share.copyFailedTitle": "Der Link konnte nicht kopiert werden",
   "analytics.share.copyFailed":
-    "Der Link konnte nicht kopiert werden. Markieren Sie ihn oben und kopieren Sie ihn von Hand.",
+    "Markieren Sie ihn oben und kopieren Sie ihn von Hand.",
   "analytics.share.done": "Fertig",
   "analytics.frame": "Stand {asOf} · {zone}",
   "review.title": "Was sollte vor dem Call geprüft werden?",
@@ -3730,6 +3777,7 @@ export const de = {
   "forecast.fxMissing": "Wechselkurs fehlt",
   "analytics.reportForecast": "Forecast-Kategorien",
   "analytics.reportOpenByCompany": "Offene Deals pro Firma",
+  "analytics.forecastBannerTitle": "So liest du diese Kacheln",
   "analytics.forecastBanner":
     "Jede Kachel zeigt die Rohsumme und darunter die gewichtete Summe — pro Deal gerundet, sodass sie immer mit „Diese Zahl erklären“ übereinstimmt.",
   "analytics.company": "Firma",
@@ -3776,6 +3824,7 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel gesetzt",
   "settings.signatureCancel": "Abbrechen",
+  "brief.coverage.unavailable": "Nicht jede Quelle hat geantwortet",
   "brief.coverage.summary": "Welche Quellen mehr hatten",
   "brief.coverage.bounded":
     "{shown} von mindestens {considered} gelesenen angezeigt",
@@ -4093,6 +4142,14 @@ export const de = {
   "import.failed":
     "Der Import hat nach {checkpoint} Zeilen gestoppt. Fortsetzen macht dort weiter, statt neu zu beginnen.",
   "import.resume": "Import fortsetzen",
+  "import.uploadFailed": "Die Datei wurde nicht gelesen",
+  "import.resumedRunTitle": "Ein Lauf aus einem früheren Besuch",
+  "import.failedTitle": "Der Import ist unterwegs stehen geblieben",
+  "import.commitFailed": "Der Import wurde nicht ausgeführt",
+  "import.undoInterruptedTitle":
+    "Das Rückgängigmachen ist unterwegs stehen geblieben",
+  "import.undoFailed": "Das Rückgängigmachen wurde nicht ausgeführt",
+  "import.validateFailed": "Die Prüfung wurde nicht ausgeführt",
   "import.another": "Weitere Datei importieren",
   "import.undo_one": "Diesen Import rückgängig machen (1 Zeile)",
   "import.undo_other": "Diesen Import rückgängig machen ({rows} Zeilen)",
@@ -4242,8 +4299,9 @@ export const de = {
     "Dies löscht den Kontakt dauerhaft im gesamten System — Datensatz, erfasste Aktivität und abgeleitete Werte. Das kann nicht rückgängig gemacht werden. Die Löschung selbst wird protokolliert.",
   "privacy.typeErase": "Zum Bestätigen ERASE eingeben",
   "privacy.erasureConfirm": "Löschen + sperren",
+  "privacy.legalHoldTitle": "Blockiert — gesetzliche Aufbewahrungspflicht",
   "privacy.legalHold":
-    "Blockiert — gesetzliche Aufbewahrungspflicht. Dieser Kontakt befindet sich innerhalb einer gesetzlichen Aufbewahrungsfrist, daher setzt sich die Löschung hier nicht durch (Art. 17 Abs. 3 lit. b). Die Sperre gilt für jede Rolle, einschließlich Admin — es gibt kein Umgehen davon. Der Versuch wurde protokolliert.",
+    "Dieser Kontakt befindet sich innerhalb einer gesetzlichen Aufbewahrungsfrist, daher setzt sich die Löschung hier nicht durch (Art. 17 Abs. 3 lit. b). Die Sperre gilt für jede Rolle, einschließlich Admin — es gibt kein Umgehen davon. Der Versuch wurde protokolliert.",
 
   "restricted.title": "Zurückgehaltene Datensätze",
   "restricted.sub":
@@ -4369,10 +4427,12 @@ export const de = {
   "stage.criteria.title": "Austrittskriterien",
   "stage.criteria.sub":
     "Was zutreffen muss, bevor ein Deal diese Phase verlässt.",
+  "stage.criteria.buyerCalloutTitle": "Belege müssen vom Käufer kommen",
   "stage.criteria.buyerCallout":
-    "Belege müssen vom Käufer kommen. Eine Nachricht Ihres Teams erfüllt nie ein Kriterium darüber, was der Käufer getan hat.",
+    "Eine Nachricht Ihres Teams erfüllt nie ein Kriterium darüber, was der Käufer getan hat.",
+  "stage.criteria.unreadableTitle": "Ich konnte diese Kriterien nicht lesen",
   "stage.criteria.unreadable":
-    "Ich konnte die Kriterien dieser Phase gerade nicht lesen. Laden Sie neu, bevor Sie sie ändern — die Anzeige ist möglicherweise unvollständig.",
+    "Laden Sie neu, bevor Sie sie ändern — die Anzeige ist möglicherweise unvollständig.",
   "stage.criteria.none": "Diese Phase verlangt noch nichts.",
   "stage.criteria.terminal":
     "In einer gewonnenen oder verlorenen Phase endet ein Deal, sie verlangt also nichts für den Austritt.",
@@ -4792,14 +4852,20 @@ export const de = {
     "Margince darf meinen Morgen-Überblick über Nacht vorbereiten",
   "overnightGrant.help":
     "Es liest deine Deals und E-Mails, um zu ordnen, was heute wichtig ist, und schreibt Notizen zurück. Senden kann es nicht: die Erlaubnis hier deckt Lesen und Schreiben ab, niemals Senden.",
+  "overnightGrant.dangerTitle": "Der Nacht-Agent läuft nicht",
   "overnightGrant.danger":
-    "Ohne diese Berechtigung kann der Agent Ihren Brief über Nacht weder lesen noch kommentieren. Ihre Datensätze, Arbeitsliste und der geplante Wochenrückblick bleiben verfügbar.",
+    "Er kann Ihren Brief über Nacht weder lesen noch kommentieren. Ihre Datensätze, Arbeitsliste und der geplante Wochenrückblick bleiben verfügbar.",
+  "overnightGrant.saveFailedTitle": "Deine Antwort wurde nicht gespeichert",
   "overnightGrant.saveFailed":
-    "Deine Antwort auf die Nacht-Frage konnte nicht gespeichert werden. Alles andere ist verbunden — stelle es unter Einstellungen → Verbindungen ein, sobald du drin bist.",
+    "Alles andere ist verbunden — stelle es unter Einstellungen → Verbindungen ein, sobald du drin bist.",
+  "overnightGrant.renewTitle": "Die Nacht-Vollmacht ist abgelaufen",
   "overnightGrant.renew":
-    "Du hast zugestimmt, aber die Vollmacht, unter der Margince gearbeitet hat, ist abgelaufen. Schalte die Option aus und wieder ein, um sie zu erneuern — bis dahin wird dein Überblick nicht vorbereitet.",
+    "Schalte die Option aus und wieder ein, um sie zu erneuern. Bis dahin wird dein Überblick nicht vorbereitet.",
+  "overnightGrant.renewScopeTitle":
+    "Die Vollmacht deckt die Arbeit nicht mehr ab",
+  "overnightGrant.writeFailedTitle": "Die Änderung wurde nicht gespeichert",
   "overnightGrant.renewScope":
-    "Du hast zugestimmt, aber Margince kann inzwischen mehr, und die erteilte Vollmacht deckt die neue Arbeit nicht ab. Schalte die Option aus und wieder ein, um sie zu erweitern — bis dahin wird dein Überblick nicht vorbereitet.",
+    "Margince kann inzwischen mehr als bei deiner Zustimmung. Schalte die Option aus und wieder ein, um sie zu erweitern — bis dahin wird dein Überblick nicht vorbereitet.",
   "aiHealth.title": "Modell-Lanes",
   "aiHealth.sub":
     "Ob jede Modellstufe antwortet. Eine ausgefallene Lane und eine, die nur vorsichtig ist, sehen überall sonst gleich aus — erfasste Post bleibt in beiden Fällen zurückgehalten.",
@@ -4833,6 +4899,9 @@ export const de = {
     "Zu {count} Threads wurde mehrfach angefragt, ohne Antwort. Solange das anhält, bleibt Post zurückgehalten — nichts geht verloren, und es löst sich von selbst, sobald die Klassifikation wieder antwortet.",
   "heldThreads.heldByOthers":
     "Weiterhin zurückgehalten: {count} weiteres Postfach hat diese Nachricht ebenfalls importiert und nicht freigegeben. Eine Konversation wird erst geöffnet, wenn alle Empfänger zustimmen.",
+  "heldThreads.releaseFailed": "Der Thread wurde nicht geteilt",
+  "heldThreads.stillHeldTitle": "Warten auf andere Postfächer",
+  "heldThreads.backlogStalledTitle": "Die Klassifizierung antwortet nicht mehr",
   "heldThreads.kind.legal": "Rechtliches",
   "heldThreads.kind.financialCorporate": "Unternehmensfinanzen",
   "heldThreads.kind.personnel": "Personal",
@@ -4878,7 +4947,7 @@ export const de = {
   "mailSharing.help":
     "Einzelne Nachrichten lassen sich nachträglich einschränken, Adressen und Domains vorab ausschließen.",
   "mailSharing.danger":
-    "ACHTUNG: E-Mail-Freigabe ausschalten macht die Nutzung des CRM schwierig. Neue E-Mails sind dann nur noch für die Beteiligten der jeweiligen Nachricht sichtbar.",
+    "E-Mail-Freigabe ausschalten macht die Nutzung des CRM schwierig. Neue E-Mails sind dann nur noch für die Beteiligten der jeweiligen Nachricht sichtbar.",
   "mailSharing.posture.shared":
     "Neu erfasste Post ist für Kolleginnen und Kollegen lesbar, die den Kontakt sehen.",
   "mailSharing.posture.private":
@@ -4889,6 +4958,10 @@ export const de = {
     "Erlaubt Kolleginnen und Kollegen, das eigene Postfach auf „geteilt“ zu stellen — eine erfasste Nachricht ist dann für das Team lesbar, sobald sie ankommt, bevor sie eingestuft wurde. Standardmäßig aus.",
   "mailSharing.sharedPosture.warning":
     "Das Postfach von Beschäftigten in ein gemeinsames CRM einzulesen, ist in Deutschland und Österreich Gegenstand einer Betriebsvereinbarung. Wer dies einschaltet, erklärt, dass Ihre Organisation eine solche hat. Margince prüft das nicht.",
+  "mailSharing.dangerTitle": "Die E-Mail-Freigabe ist aus",
+  "mailSharing.sharedPosture.warningTitle":
+    "Damit erklären Sie eine Rechtsgrundlage",
+  "mailSharing.saveFailed": "Die Einstellung wurde nicht gespeichert",
   "mailSharing.save": "Speichern",
   "connectors.originLabel": "Adresse in versendeten Links",
   "connectors.originReachable": "Antwortet",
@@ -4953,6 +5026,7 @@ export const de = {
     "E-Mails mit allen bei {domain}, einschließlich Subdomains, bleiben bei den Beteiligten. Sie werden weiterhin erfasst und sind für Sie lesbar — Kolleginnen und Kollegen sehen sie nicht.",
   "hold.confirmHistoryNote":
     "Das gilt ab jetzt. Bereits erfasste E-Mails behalten ihre bisherige Sichtbarkeit.",
+  "captureNotice.title": "Was das Verbinden eines Postfachs bedeutet",
   "captureNotice.whatHappens":
     "Margince liest dieses Postfach und legt ab, was es findet: die Nachrichten, wer daran beteiligt war, sowie die Kontakte und Firmen hinter den Adressen. Anhänge werden mit ihrer Nachricht gespeichert.",
   "captureNotice.whoReads":
@@ -5015,6 +5089,10 @@ export const de = {
   "connectors.oauthBadClient":
     "Der Anbieter hat die App-Zugangsdaten dieser Installation abgelehnt. Ein Administrator sollte Client-ID und Secret unter Einstellungen → Allgemein prüfen; ein erneuter Verbindungsversuch behebt es nicht von selbst.",
   "connectors.dismissOutcome": "Schließen",
+  "connectors.oauthConnected": "Verbindung hergestellt",
+  "connectors.oauthNotConnected": "Es wurde nichts verbunden",
+  "connectors.connectFailed": "Verbindung nicht möglich",
+  "connectors.imapConnectFailed": "Postfach nicht verbunden",
 
   // Das "Verbindung hinzufügen"-Element (Task 1): ein Button in der Kopfzeile
   // der Karte öffnet einen Dialog mit allen noch verfügbaren Anbietern, jeder
@@ -5083,6 +5161,7 @@ export const de = {
   "connectors.telegramSubmitCta": "Verbinden",
   "connectors.telegramReplaceCta": "Token ersetzen",
   "connectors.telegramConnectedAs": "Verbunden als @{username}.",
+  "connectors.telegramConnectFailed": "Es wurde keine Verbindung hergestellt",
 
   // Die Consumer-Mail-Liste des Workspace (CAP-PARAM-5).
   "consumerMail.title": "Consumer-Mail-Domains",
@@ -5111,6 +5190,8 @@ export const de = {
   "consumerMail.baselineSearchLabel": "Mitgelieferte Liste durchsuchen",
   "consumerMail.baselinePlaceholder": "gmail.com",
   "consumerMail.baselineNone": "Keine mitgelieferte Domain passt.",
+  "consumerMail.removeFailed": "Domain nicht entfernt",
+  "consumerMail.addFailed": "Domain nicht hinzugefügt",
   "consumerMail.baselineMore": "Die ersten {shown} von {matched} Treffern.",
 
   "blockedDomains.title": "Abgelehnte Domains",
@@ -5130,7 +5211,9 @@ export const de = {
   "blockedDomains.reasonPlaceholder":
     "ein Werkzeug, das wir nutzen — kein Kunde",
   "blockedDomains.save": "Entscheidung speichern",
-  "blockedDomains.stored": "Gespeichert: {domain} — {admission}.",
+  "blockedDomains.stored": "Gespeichert: {domain} — {admission}",
+  "blockedDomains.saveFailed":
+    "Diese Entscheidung konnte nicht gespeichert werden",
   "blockedDomains.adminOnly":
     "Nur Admin- oder Ops-Plätze dürfen eine Domain-Entscheidung ändern. Die Liste selbst darfst du lesen.",
   "blockedDomains.none":
@@ -5443,6 +5526,7 @@ export const de = {
     "Deine Prüfung hat gerade neuere Daten bekommen. Schau nach und drück erneut Weiter.",
   "ob.conv.review.confirmVersionSkewStuck":
     "Es hat sich noch nichts geändert, Weiter würde erneut scheitern. Schau nach oder prüf gleich.",
+  "ob.conv.review.refusalTitle": "Weiter wurde nicht abgeschlossen",
   "ob.conv.review.confirmNotReady":
     "Dieser Read hat noch keinen Entwurf. Prüf erneut, wenn er fertig ist, oder starte neu.",
   "ob.conv.review.confirmCheckFailed":
@@ -5763,9 +5847,10 @@ export const de = {
   "password.open": "Passwort ändern",
   "password.cancel": "Abbrechen",
   "password.submit": "Neues Passwort speichern",
-  "password.done": "Passwort geändert. Alle anderen Geräte wurden abgemeldet.",
-  "password.errorGeneric":
-    "Das Passwort konnte nicht geändert werden. Versuche es erneut.",
+  "password.doneTitle": "Passwort geändert",
+  "password.done": "Alle anderen Geräte wurden abgemeldet.",
+  "password.changeFailedTitle": "Das Passwort wurde nicht geändert",
+  "password.errorGeneric": "Es wurde kein Grund gemeldet. Versuche es erneut.",
   "setup.pageTitle": "Margince einrichten",
   "setup.title": "Diese Installation übernehmen",
   "setup.body":
@@ -5905,8 +5990,14 @@ export const de = {
   "prefs.unsub.lockedBody":
     "Sie geh\u00f6ren zu einem von dir angeforderten Vorgang \u2014 etwa ein neues Passwort oder eine Best\u00e4tigung, um die du gebeten hast.",
   "prefs.unsub.retry": "Erneut versuchen",
+  "prefs.unsub.unknownPurposeTitle": "Dieser Link nennt nichts, was wir senden",
   "prefs.unsub.unknownPurpose":
-    "Dieser Link nennt keine Art von E-Mail, die wir versenden. \u00d6ffne deine Einstellungen, um alles zu sehen.",
+    "Öffne deine Einstellungen, um alle Arten von E-Mails zu sehen.",
+  "prefs.unsub.deadLinkTitle": "Dieser Link ist nicht mehr gültig",
+  "prefs.unsub.deadLinkBody":
+    "Einstellungslinks laufen ab und können zurückgezogen werden. Fordere einen neuen aus einer aktuellen E-Mail an.",
+  "prefs.unsub.errorTitle": "Wir konnten deine Einstellungen nicht öffnen",
+  "prefs.unsub.failedTitle": "Wir konnten diese E-Mails nicht stoppen",
   "prefs.purpose.business_correspondence": "Persönliche Nachrichten",
   "prefs.purpose.marketing_email": "Produktneuigkeiten",
   "prefs.purpose.transactional": "Sicherheit & laufende Vorgänge",
@@ -5926,6 +6017,7 @@ export const de = {
   "buyer.emailLabel": "Ihre E-Mail-Adresse",
   "buyer.emailHint": "Die Adresse, an die die Einladung ging.",
   "buyer.requestLink": "Neuen Link schicken",
+  "buyer.linkRequestedTitle": "Sieh in dein Postfach",
   "buyer.linkRequested":
     "Falls diese Adresse eingeladen wurde, ist ein neuer Link unterwegs.",
   "buyer.pausedTitle": "Zugang pausiert",
@@ -5938,8 +6030,9 @@ export const de = {
   "buyer.contact": "Ihr Ansprechpartner: {steward}.",
   "buyer.closed":
     "Dieser Raum ist geschlossen; das Geteilte ist jetzt ein Protokoll.",
+  "buyer.previewBannerTitle": "Sie sehen diesen Raum als Vorschau",
   "buyer.previewBanner":
-    "Sie sehen diesen Raum als Vorschau, so wie ein Käufer ihn sieht. Sie können alles lesen und nichts ändern.",
+    "So sieht ein Käufer ihn. Sie können alles lesen und nichts ändern.",
   "buyer.previewReadOnly":
     "Eine Vorschau kann nicht schreiben. Schließen Sie diesen Tab, um zur Deal-Room-Seite zurückzukehren.",
   "buyer.closedNote": "Dieser Raum ist jetzt schreibgeschützt.",
@@ -6351,8 +6444,11 @@ export const de = {
   "settings.scopeAria": "Wen diese Seite betrifft: {scope}",
   "settings.scopeAriaMixed":
     "Diese Seite enth\u00e4lt Einstellungen, die unterschiedliche Personen betreffen \u2014 jede sagt es selbst.",
-  "settings.readOnlyPage":
-    "Sie k\u00f6nnen diese Einstellungen sehen, aber nicht \u00e4ndern \u2014 das \u00c4ndern geh\u00f6rt nicht zu Ihrer Rolle.",
+  "settings.readOnlyPageTitle":
+    "Diese Einstellungen k\u00f6nnen Sie nicht \u00e4ndern",
+  "settings.readOnlyPage": "Das \u00c4ndern geh\u00f6rt nicht zu Ihrer Rolle.",
+  "settings.saveFailed": "Das wurde nicht gespeichert",
+  "settings.mintFailed": "Dieser Passport wurde nicht erstellt",
   "settings.search.label": "Einstellungen durchsuchen",
   "settings.search.placeholder": "Einstellungen suchen",
   "settings.search.none": "Keine Einstellungsseite passt dazu.",
@@ -6411,6 +6507,10 @@ export const de = {
     "Es wurde nichts durchsucht: in dieser Installation ist kein Suchindex eingerichtet, die Dokumente konnten also nicht angesehen werden. Das ist eine Frage der Einrichtung und liegt nicht an Ihrer Frage.",
   "corpusAsk.unreviewed":
     "Die Suche hat diese Textstellen als die zu Ihrer Frage passendsten gefunden. Gelesen hat sie niemand, also hat auch niemand beurteilt, ob sie die Frage beantworten.",
+  "corpusAsk.failed": "Diese Frage wurde nicht beantwortet",
+  "corpusAsk.unreviewedTitle": "Niemand hat diese Passagen gelesen",
+  "corpusAsk.notReadyTitle": "Diese Sammlung wird noch gelesen",
+  "corpusAsk.retrievalUnavailableTitle": "Kein Suchindex konfiguriert",
   "corpusAsk.notCovered.title": "Von dieser Sammlung nicht abgedeckt",
   "corpusAsk.notCovered.body":
     "{name} wurde vollständig durchsucht und enthält nichts, was nah genug daran wäre. Die Sammlung deckt ab:",
@@ -6421,17 +6521,20 @@ export const de = {
     "Welche Dokumentensammlungen es gibt, dürfen Sie nicht sehen.",
   "knowledge.coverage":
     "{documents} Dokumente · {embedded} von {total} Abschnitten durchsuchbar",
+  "knowledge.reindexingTitle": "Diese Sammlung wird neu gelesen",
   "knowledge.reindexing":
-    "Diese Sammlung wird nach einer Änderung der Textindizierung neu gelesen. Eine Frage meldet bis dahin, dass sie nicht bereit ist; verloren ist nichts.",
+    "Ausgelöst hat es eine Änderung der Textindizierung. Eine Frage meldet bis dahin, dass sie nicht bereit ist; verloren ist nichts.",
   "knowledge.showDocuments": "Dokumente anzeigen",
   "knowledge.hideDocuments": "Dokumente ausblenden",
   "knowledge.documents": "Dokumente",
   "knowledge.noDocuments": "Hier ist noch nichts abgelegt.",
   "knowledge.archive": "Sammlung archivieren",
+  "knowledge.archiveFailed": "Die Sammlung wurde nicht archiviert",
   "knowledge.archiveConfirm.title": "Diese Dokumentensammlung archivieren?",
   "knowledge.archiveConfirm.body":
     "Die Sammlung und alles darin sind nicht mehr durchsuchbar. Zerstört wird nichts.",
   "knowledge.deleteDocument": "Löschen",
+  "knowledge.deleteFailed": "Das Dokument wurde nicht gelöscht",
   "knowledge.deleteConfirm.title": "Dieses Dokument löschen?",
   "knowledge.deleteConfirm.body":
     "Die Datei, der daraus gewonnene Text und der darauf aufgebaute Suchindex werden zerstört. Das lässt sich nicht rückgängig machen.",
@@ -6439,12 +6542,17 @@ export const de = {
   "knowledge.ingest.running": "Wird gelesen",
   "knowledge.ingest.done": "Durchsuchbar",
   "knowledge.ingest.failed": "Konnte nicht gelesen werden",
+  "knowledge.ingestDetailTitle":
+    "Warum diese Datei nicht gelesen werden konnte",
   "knowledge.upload.label": "Dokument hinzufügen",
   "knowledge.upload.hint":
     "Reiner Text, Markdown, CSV oder JSON. Für PDFs oder Word-Dateien gibt es hier keinen Leser; sie werden abgelehnt statt leer abgelegt.",
   "knowledge.upload.empty": "Textdatei hierher ziehen oder auswählen",
   "knowledge.upload.submit_other": "{count} Dokumente hinzufügen",
-  "knowledge.upload.refused": "{filename} wurde nicht hinzugefügt: {message}",
+  "knowledge.upload.refusedTitle_one": "Eine Datei wurde nicht hinzugefügt",
+  "knowledge.upload.refusedTitle_other":
+    "{count} Dateien wurden nicht hinzugefügt",
+  "knowledge.upload.refused": "{filename}: {message}",
   "knowledge.upload.submit_one": "Dokument hinzufügen",
   "knowledge.new.title": "Neue Dokumentensammlung",
   "knowledge.new.name": "Name",
@@ -6452,6 +6560,7 @@ export const de = {
   "knowledge.new.topicHint":
     "Schreiben Sie einen Satz, kein Schlagwort. Er wird demjenigen zitiert, dessen Frage diese Sammlung nicht abdeckt — also im ungeduldigsten Moment gelesen.",
   "knowledge.new.submit": "Sammlung anlegen",
+  "knowledge.new.failed": "Die Sammlung wurde nicht angelegt",
   "settings.tab.privacy": "Datenschutz & Aufbewahrung",
   "settings.tab.capture-activity": "Erfassungsaktivität",
   "verdictPass.subject.senders": "Absender",
@@ -6670,6 +6779,7 @@ export const de = {
   "settings.rates.modelAdd": "Modellpreis hinzufügen",
   "settings.rates.modelEmpty": "Noch keine Modellpreise.",
   "settings.rates.modelModalTitle": "Modellpreis setzen",
+  "settings.rates.notSaved": "Der Satz wurde nicht gespeichert",
   "settings.rates.setRate": "Speichern",
   "settings.rates.refresh": "Von Quellen aktualisieren",
   "settings.rates.refreshEnqueued":
@@ -6884,6 +6994,9 @@ export const de = {
   "extAccess.versionSkew":
     "Jemand anderes hat diese Rolle geändert, während Sie sie ansahen — Ihre Änderung wurde nicht übernommen. Oben stehen jetzt die aktuellen Berechtigungen; nehmen Sie die Änderung erneut vor, wenn Sie sie weiterhin wollen.",
   "extAccess.systemRole": "Eingebaute Rolle",
+  "extAccess.readOnlyTitle": "Nur Lesezugriff für diesen Sitzplatz",
+  "extAccess.nobodyReadsTitle": "Niemand kann diese Erweiterung lesen",
+  "extAccess.grantFailed": "Die Berechtigung wurde nicht geändert",
   "extAccess.nobodyReads":
     "Keine Rolle darf {object} lesen — jedes Mitglied sieht dort eine leere Seite, wo diese Erweiterung stehen sollte. Vergeben Sie unten mindestens einer Rolle das Leserecht.",
   "users.empty": "Noch keine Benutzer.",
@@ -6910,6 +7023,10 @@ export const de = {
   "users.teamNameLabel": "Teamname",
   "users.newTeamPlaceholder": "z. B. DACH Sales",
   "users.createTeam": "Team anlegen",
+  "users.notArchived": "Dieses Team wurde nicht archiviert",
+  "users.notSaved": "Diese Änderung wurde nicht gespeichert",
+  "users.notCreated": "Dieses Team wurde nicht angelegt",
+  "users.inviteFailed": "Diese Einladung wurde nicht gesendet",
   "users.access.title": "Das sieht dieser Benutzer",
   "users.access.identity":
     "Liest alle Kontakte, Firmen, Leads und Deals der Organisation.",
@@ -6973,11 +7090,12 @@ export const de = {
   "users.link.urlLabel": "Passwort-Link",
   "users.link.copy": "Link kopieren",
   "users.link.copied": "Kopiert",
-  "users.link.copyFailed":
-    "Automatisches Kopieren nicht möglich. Markiere den Link und kopiere ihn.",
+  "users.link.copyFailedTitle": "Der Link konnte nicht kopiert werden",
+  "users.link.copyFailed": "Markiere ihn im Feld und kopiere ihn von Hand.",
   "users.link.expires": "Gültig bis {when}.",
+  "users.link.failedTitle": "Der Link konnte nicht erstellt werden",
   "users.link.failed":
-    "Das Mitglied wurde angelegt, der Link jedoch nicht. Ohne Link kann es sich nicht anmelden.",
+    "Das Mitglied existiert, kann sich aber erst anmelden, wenn du ihm einen Link sendest.",
   "users.link.offline":
     "Server nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
   "users.link.retry": "Erneut versuchen",
@@ -7006,6 +7124,8 @@ export const de = {
   "settings.companyMarkAdd": "Hinzufügen",
   "settings.companyMarkReplace": "Ersetzen",
   "settings.companyMarkRemove": "Entfernen",
+  "settings.companyMarkUploadFailed": "Logo nicht hochgeladen",
+  "settings.companyMarkRemoveFailed": "Logo nicht entfernt",
   "settings.companyMarkAddWide": "Breites Logo hinzufügen",
   "settings.companyMarkReplaceWide": "Breites Logo ersetzen",
   "settings.companyMarkRemoveWide": "Breites Logo entfernen",
@@ -7035,6 +7155,11 @@ export const de = {
   "settings.companyIdentity": "Identität und rechtliche Angaben",
   "settings.companySave": "Firmenkontext speichern",
   "settings.companySaved": "Gespeichert",
+  "settings.companySaveFailed": "Unternehmenskontext nicht gespeichert",
+  "settings.companyRefreshFailed":
+    "Das Lesen der Website wurde nicht abgeschlossen",
+  "settings.companyApplyFailed": "Änderungen nicht übernommen",
+  "settings.companyRefreshWarnings": "Hinweise aus diesem Lesevorgang",
   "settings.companyRefreshUnreadable":
     "Wir haben den Stand dieses Website-Lesevorgangs verloren. Starte die Aktualisierung erneut.",
   "settings.companyRefreshStale":
@@ -7140,9 +7265,9 @@ export const de = {
   "aiusage.prevMonth": "Vorheriger Monat",
   "aiusage.nextMonth": "Nächster Monat",
 
-  "aibanner.degraded": "KI läuft im Sparmodus.",
-  "aibanner.queued": "KI-Budget erreicht — Hintergrund-KI wartet.",
-  "aibanner.unknown": "Der KI-Budgetstatus ist unbekannt.",
+  "aibanner.degraded": "KI läuft im Sparmodus",
+  "aibanner.queued": "KI-Budget erreicht — Hintergrund-KI wartet",
+  "aibanner.unknown": "Der KI-Budgetstatus ist unbekannt",
   "aibanner.link": "Nutzung anzeigen",
   "aibanner.dismiss": "Schließen",
 
@@ -7188,8 +7313,8 @@ export const de = {
   "aiexport.copy": "YAML kopieren",
   "aiexport.copied": "Kopiert",
   "aiexport.download": ".yaml herunterladen",
-  "aiexport.copyFailed":
-    "Kopieren fehlgeschlagen — Vorschau verwenden oder Datei herunterladen.",
+  "aiexport.copyFailedTitle": "Kopieren fehlgeschlagen",
+  "aiexport.copyFailed": "Vorschau verwenden oder Datei herunterladen.",
   "aiexport.close": "Schließen",
   "aiexport.previewLabel": "Szenariovorschau",
   "aiexport.responseLabel": "Modellantwort",
@@ -7229,6 +7354,7 @@ export const de = {
     "{won} bereits gewonnen zuzüglich {remaining} noch ausstehend.",
   "forecast.landingFromCall":
     "Die Einschätzung für diese Periode. Sie ersetzt die Prognose, statt zu den bereits gewonnenen {won} zu addieren.",
+  "forecast.landingCaveat": "Diese Prognose hat einen Vorbehalt",
   "forecast.landing.caveat.call_absent":
     "Für diese Periode liegt keine Einschätzung vor, daher steht hier der Commit-Nachweis.",
   "forecast.landing.caveat.call_below_actual":
@@ -7254,12 +7380,14 @@ export const de = {
   "installationSettings.baseLanguage": "Basissprache",
   "installationSettings.baseLanguageHint":
     "Die Sprache, in der die KI schreibt, wenn das ganze Team mitliest. Ihre eigene Anzeigesprache ist davon getrennt, und Antworten an Kunden folgen weiterhin der Sprache des Gesprächs.",
+  "installationSettings.saveFailed": "Es wurde nichts gespeichert",
   "installationSettings.readOnly":
     "Nur ein Admin oder Ops kann diese Einstellungen ändern.",
   "installationSettings.edit": "Ändern",
   "installationSettings.editField": "{field} ändern",
   "installationSettings.save": "Speichern",
   "signInMethods.title": "Anmeldemethoden",
+  "signInMethods.saveFailed": "Diese Änderung wurde nicht gespeichert",
   "signInMethods.sub":
     "Wie sich Personen hier anmelden können. Die Liste zeigt, wofür diese Installation Zugangsdaten hat — eine Methode lässt sich abschalten, aber keine hinzufügen.",
   "signInMethods.password": "E-Mail und Passwort",
@@ -7303,6 +7431,7 @@ export const de = {
     "Ein neues Paar ersetzt das hinterlegte. Bereits bestehende Verbindungen laufen weiter, bis sie neu verbunden werden.",
   "oauthApp.store": "App hinterlegen",
   "oauthApp.replace": "App ersetzen",
+  "oauthApp.writeFailed": "Die Änderung wurde nicht gespeichert",
   "oauthApp.remove": "App entfernen",
   "oauthApp.redirectCopied": "Kopiert",
   "oauthApp.redirectCopy": "URI für {purpose} kopieren",
@@ -7316,6 +7445,7 @@ export const de = {
   "oauthApp.tenantHint":
     "Optional. Bindet die App an ein einzelnes Entra-Verzeichnis: Nur dessen Mitglieder können ein Postfach verbinden, und die Microsoft-Anmeldung läuft darüber. Leer lassen, damit jede Organisation verbinden kann; die Anmeldung wartet dann darauf, dass der Server Ihre Verzeichnisse benennt.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
+  "oauthApp.saveFailed": "Die App wurde nicht gespeichert",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
   "firstRun.ai.sub":
@@ -7328,6 +7458,8 @@ export const de = {
   "firstRun.ai.modelHint":
     "Ein Ausgangspunkt. Jedes Modell, das Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
+  "firstRun.ai.keyFailed": "Der Schlüssel wurde nicht verwahrt",
+  "firstRun.ai.bindFailed": "Der Anbieter wurde nicht gebunden",
   "aiSettings.withheld": "Nicht für Sie einsehbar",
   "aiSettings.unread": "Konnte nicht gelesen werden",
   "aiSettings.pending": "Wird gelesen…",
@@ -7369,6 +7501,8 @@ export const de = {
   "aiProviderKeys.save": "Schlüssel speichern",
   "aiProviderKeys.adminOnly":
     "Nur Admin oder Ops können Anbieter-Zugangsdaten ändern.",
+  "aiProviderKeys.saveFailed":
+    "Dieser Anbieter konnte nicht aktualisiert werden",
   "aiProviderKeys.configured": "eingerichtet",
   "aiProviderKeys.absent": "nicht gesetzt",
   "aiProviderKeys.configuredHint":
@@ -7394,6 +7528,7 @@ export const de = {
     "Die Modelllisten stammen aus der Preisliste, die Sie nicht einsehen dürfen. Jede ID, die Ihr Anbieter bedient, funktioniert — einfach eintippen.",
   "aiRouting.sub":
     "Welches Modell welche Stufe bedient. Änderungen wirken ohne Neustart; jeder Prozess übernimmt sie innerhalb einer Minute.",
+  "aiRouting.unboundTitle": "Noch sind keine Modelle gebunden",
   "aiRouting.unboundUnkeyed":
     "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Hinterlegen Sie unten einen Modellanbieter-Schlüssel und binden Sie die Stufen anschließend hier. Eine Bereitstellung kann die erste Bindung auch unter seeds.ai_routing in margince.yaml deklarieren; diese wird einmalig beim Anlegen der Organisation gelesen.",
   "aiRouting.unboundKeyed":
@@ -7428,22 +7563,26 @@ export const de = {
     "Aufgeführt sind die Modelle, für die diese Installation Preise kennt — je Million Token, Eingabe → Ausgabe. Jede andere ID, die Ihr Anbieter bedient, funktioniert ebenfalls — einfach eintippen.",
   "aiRouting.save": "Routing speichern",
   "aiRouting.saving": "Bindung wird gespeichert…",
-  "aiRouting.saved": "Routing gespeichert. Jeder Prozess bedient es jetzt.",
+  "aiRouting.savedTitle": "Routing gespeichert",
+  "aiRouting.saved": "Jeder Prozess bedient es jetzt.",
+  "aiRouting.saveFailed": "Routing konnte nicht gespeichert werden",
   "aiRouting.adminOnly": "Nur Admin oder Ops können das Modell-Routing ändern.",
   "workingHours.title": "Wann du buchbar bist",
   "workingHours.sub":
     "Nur deine Sache. Niemand stellt das für dich ein, und du stellst es für niemanden ein.",
+  "workingHours.unsetTitle": "Du hast noch nichts gewählt",
   "workingHours.unset":
-    "Du hast noch nichts gewählt, deshalb bekommen Kundinnen und Kunden 09:00–17:00 Uhr, Montag bis Freitag, auf der Uhr der Installation angeboten.",
+    "Kundinnen und Kunden bekommen 09:00–17:00 Uhr, Montag bis Freitag, auf der Uhr der Installation angeboten.",
   "workingHours.start": "Tag beginnt",
   "workingHours.end": "Tag endet",
   "workingHours.days": "Tage, an denen du arbeitest",
   "workingHours.timezone": "Deine Zeitzone",
   "workingHours.timezoneHelp":
     "Die Uhr, auf der diese beiden Zeiten gelesen werden. Aus diesem Browser vorausgefüllt.",
+  "workingHours.narrowedTitle": "Du bist für weniger von der Woche buchbar",
   "workingHours.narrowed":
-    "Du bist jetzt für weniger von der Woche buchbar als vorher, also finden weniger Kundinnen und Kunden einen Termin. Das ist die Änderung, kein Fehler.",
-  "workingHours.saveFailed": "Diese Zeiten wurden nicht gespeichert.",
+    "Weniger Kundinnen und Kunden finden einen Termin. Das ist die Änderung, kein Fehler.",
+  "workingHours.saveFailed": "Diese Zeiten wurden nicht gespeichert",
   "workingHours.save": "Arbeitszeiten speichern",
   "workingHours.day.1": "Montag",
   "workingHours.day.2": "Dienstag",
@@ -7455,6 +7594,8 @@ export const de = {
   "autonomy.title": "Was sich von selbst erledigt",
   "autonomy.sub":
     "Kleine Korrekturen, die du bisher von Hand bestätigt hast. Schalte eine ein, und sie wird sofort übernommen – die Änderung und ein Rückgängig warten auf deinem Tag.",
+  "autonomy.noneDecidedYetTitle": "Noch nichts entschieden",
+  "autonomy.updateFailed": "Dieser Schalter konnte nicht gespeichert werden",
   "autonomy.noneDecidedYet":
     "Darüber hast du noch nichts entschieden. Was in dieser Liste landet, hängt von den Datensätzen ab, die dir gehören, und von der Arbeit, die dein Team an dich weiterleitet. Ohne beides bleibt sie leer. Die Schalter entscheiden trotzdem, was passiert, sobald etwas auftaucht.",
   "autonomy.noRecord": "Darüber hast du noch nicht entschieden.",
@@ -7479,6 +7620,11 @@ export const de = {
   "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails auswerten",
   "captureSettings.signatureEnrich.help":
     "Wenn aktiv, übernimmt Margince, was eine Person in E-Mails an Sie unter ihrem eigenen Namen angibt — in der Signatur und auf einer angehängten Visitenkarte. Position, Telefonnummer, Adresse, Firma. Das geschieht innerhalb von Minuten nach Eingang der E-Mail. Nichts wird erschlossen: Was die E-Mail nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Organisation; ein Postfach mit eigener Einstellung behält sie.",
+  "captureSettings.removeFailed":
+    "Dieser Ausschluss konnte nicht entfernt werden",
+  "captureSettings.addFailed":
+    "Dieser Ausschluss konnte nicht hinzugefügt werden",
+  "captureSettings.updateFailed": "Einstellung nicht geändert",
   "captureSettings.adminOnly":
     "Nur ein Administrator oder Ops kann dies ändern.",
 
@@ -7513,6 +7659,8 @@ export const de = {
   "ownerIdentities.kind.domain": "Eine ganze Domain",
   "ownerIdentities.valueLabel": "Adresse oder Domain",
   "ownerIdentities.addressPlaceholder": "sie@beispiel.de",
+  "ownerIdentities.removeFailed": "Adresse nicht zurückgezogen",
+  "ownerIdentities.addFailed": "Adresse nicht hinzugefügt",
   "ownerIdentities.domainPlaceholder": "beispiel.de",
   "captureExclusions.scope.user": "Nur ich",
   "captureExclusions.scope.workspace": "Ganze Organisation",
@@ -7544,6 +7692,8 @@ export const de = {
   "ownDomains.addOpen": "Domain hinzufügen",
   "ownDomains.addLabel": "Eigene Domain hinzufügen",
   "ownDomains.placeholder": "beispiel.de",
+  "ownDomains.removeFailed": "Die Domain wurde nicht entfernt",
+  "ownDomains.addFailed": "Die Domain wurde nicht hinzugefügt",
   "ownDomains.remove": "{domain} entfernen",
 
   "webhooks.title": "Webhooks",
@@ -7575,8 +7725,9 @@ export const de = {
     "Dieser Schlüssel wird nur einmal angezeigt und kann danach nicht erneut abgerufen werden. Speichere ihn jetzt — Zustellungen werden damit signiert.",
   "webhooks.secret.copy": "Kopieren",
   "webhooks.secret.copied": "Kopiert",
-  "webhooks.secret.copyFailed":
-    "Automatisches Kopieren fehlgeschlagen — bitte den Schlüssel manuell auswählen und kopieren.",
+  "webhooks.secret.copyFailedTitle":
+    "Der Schlüssel konnte nicht kopiert werden",
+  "webhooks.secret.copyFailed": "Wähle ihn oben aus und kopiere ihn von Hand.",
   "webhooks.secret.done": "Fertig",
   "webhooks.secret.leaveWarning":
     "Beim Verlassen wird die einzige Kopie dieses Secrets vernichtet. Kopieren Sie es zuerst.",
@@ -7633,6 +7784,7 @@ export const de = {
   "embedreindex.confirmCta": "Neuindizierung starten",
   "embedreindex.rebuildConfirmCta": "Jetzt neu aufbauen",
   "embedreindex.previewLoading": "Umfang wird geschätzt…",
+  "embedreindex.previewFailed": "Die Schätzung ließ sich nicht lesen",
   "embedreindex.estimateEntities": "Neu einzubettende Einträge:",
   "embedreindex.estimateTokens": "Geschätzte KI-Tokens:",
   "embedreindex.estimateCost": "Geschätzte Kosten:",
@@ -8255,6 +8407,9 @@ export const de = {
   "provider.automaticLookupJurisdiction":
     "Schalt das aus, wenn die Kontakte in deinem CRM einem Recht unterliegen, das den Handel mit Personendaten verbietet, etwa dem vietnamesischen. Der Knopf auf dem einzelnen Kontakt funktioniert weiterhin, damit die Entscheidung bei dem bleibt, der sie trifft.",
   "provider.buyable": "Kauf von {category} erlauben",
+  "provider.buyableWriteFailed": "Diese Kategorie wurde nicht geändert",
+  "provider.postureReadFailed": "Die aktuelle Einstellung ist unbekannt",
+  "provider.postureWriteFailed": "Die automatische Suche wurde nicht geändert",
   "provider.buyableHint_one":
     "Dieser Schalter kauft nichts. Er stellt bei jedem Kontakt eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für einen einzelnen Kontakt kaufen kann.",
   "provider.buyableHint_other":
@@ -8298,10 +8453,11 @@ export const de = {
     "Diesen Kontakt hat noch niemand nachgeschlagen.",
   "provider.profile.queued": "In der Warteschlange",
   "provider.profile.inProgress": "Wird nachgeschlagen …",
-  "provider.profile.working":
-    "{provider} wird gefragt. Das dauert bis zu einer Minute.",
-  "provider.profile.landing":
-    "Antwort da. Sie wird in den Datensatz übernommen.",
+  "provider.profile.workingTitle": "{provider} wird gefragt",
+  "provider.profile.working": "Das dauert bis zu einer Minute.",
+  "provider.profile.landingTitle": "Antwort da",
+  "provider.profile.landing": "Sie wird in den Datensatz übernommen.",
+  "provider.profile.lookupRefused": "Die Abfrage wurde nicht ausgeführt",
   "provider.profile.completed": "Gefunden",
   "provider.profile.noMatch": "Der Anbieter hatte nichts zu diesem Kontakt.",
   "provider.profile.stale":
@@ -8477,8 +8633,10 @@ export const de = {
   "sched.withdrawBody":
     "„{subject}“ wird nicht gesendet, und nichts erscheint in der Chronik. Sie erneut zu schreiben heißt, sie von vorn zu verfassen.",
   "sched.withdrawConfirm": "Zurückziehen",
+  "sched.skewTitle": "Diese Liste ist nicht mehr aktuell",
   "sched.skew":
-    "Diese Liste ist nicht mehr aktuell: die Nachricht, auf die Sie eingewirkt haben, war schon hinausgegangen, zurückgezogen oder auf einen anderen Zeitpunkt verschoben. Lesen Sie die Liste erneut.",
+    "Die Nachricht, auf die Sie eingewirkt haben, war schon hinausgegangen, zurückgezogen oder auf einen anderen Zeitpunkt verschoben. Lesen Sie die Liste erneut.",
+  "sched.writeFailed": "Die Änderung ist nicht durchgegangen",
   "sched.reload": "Erneut lesen",
   "nav.projects": "Projekte",
   "unit.projects": "Projekte",
@@ -8617,6 +8775,7 @@ export const de = {
   "deal.projectUnnamed": "Projekt",
   "deal.startDeliveryTitle": "Umsetzung starten",
   "deal.startDelivery": "Umsetzung starten",
+  "deal.startDeliveryFailed": "Umsetzung nicht gestartet",
   "deal.startDeliveryAttached":
     "Dieser Deal hängt an {project}, das Projekt ist aber noch nicht in der Umsetzung. Jetzt wechseln?",
   "deal.startDeliveryBody":
@@ -8646,7 +8805,8 @@ export const de = {
     "Heute ist keine Aufgabe fällig und nichts ist überfällig. Spätere Aufgaben stehen im Tab „Aufgaben“ des jeweiligen Datensatzes.",
   "worklist.clearOfWhatWasRead":
     "Unter den Quellen, die geantwortet haben, wartet nichts.",
-  "worklist.partial": "{sources} — das ist nicht der ganze Tag.",
+  "worklist.partialTitle": "Das ist nicht der ganze Tag",
+  "worklist.partial": "{sources}.",
   "worklist.overdue": "Überfällig",
   "worklist.pair.ask": "Welcher Datensatz soll bleiben?",
   "worklist.pair.keep": "{name} behalten",
@@ -8744,6 +8904,7 @@ export const de = {
   "worklist.walk.gone": "{gone} davon wurden seit Ihrem Start erledigt.",
   "worklist.walk.both":
     "{arrived} weitere seit Ihrem Start, und {gone} bereits erledigt.",
+  "worklist.walk.title": "Diese Liste hat sich verändert",
   "worklist.walk.refresh": "Aktualisieren",
   "worklist.handled.empty": "Heute wurde nichts für Sie erledigt.",
   "worklist.handled.loading": "Erledigtes wird gelesen",
@@ -9292,6 +9453,7 @@ export const de = {
     "Margince hat auf dieser Pipeline noch keinen Phasenwechsel vorgeschlagen.",
   "stageAutomation.noPipelines":
     "Es gibt noch keine Pipeline, \u00fcber die berichtet werden k\u00f6nnte.",
+  "stageAutomation.unreadable": "Dieser Bericht wurde nicht geladen",
   "stageAutomation.readOnly":
     "Sie sehen, was jeder Übergang verdient hat. Um zu ändern, was einer darf, brauchen Sie das Recht, Pipelines zu bearbeiten.",
   "stageAutomation.rules": "Was jeder Übergang darf",
@@ -9309,6 +9471,8 @@ export const de = {
   "stageAutomation.noRules":
     "Über keinen Übergang dieser Pipeline wurde bisher entschieden, also wird jede Bewegung einer Person vorgeschlagen.",
   "stageAutomation.undoWindow": "Rückgängig für {hours} h",
+  "stageAutomation.rulesLoading": "Lade, was jeder Übergang darf …",
+  "stageAutomation.saveFailed": "Diese Änderung wurde nicht gespeichert",
   "stageAutomation.nothingReviewed":
     "Vorgeschlagen, aber noch nicht beantwortet.",
 } as const satisfies Record<MessageKey, string>;
