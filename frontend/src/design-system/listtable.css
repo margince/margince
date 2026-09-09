@@ -57,7 +57,7 @@
   flex-shrink: 0;
   border: 0;
   background: transparent;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font: inherit;
   font-size: var(--fs-sm);
   font-weight: 500;
@@ -86,9 +86,20 @@
   white-space: nowrap;
 }
 
-.lt-caption {
+/* Any sentence laid straight onto the surface's ground takes the surface's own
+   inset: the caption above the toolbar, and equally a sentence handed to the
+   body slot with no element of its own around it — a board's caveat about a
+   read that failed, standing above the rows it qualifies. One rule for both,
+   because the reason is the same and two of them drift; without it the second
+   kind printed against the card's border, which is the obligation
+   `.panel > .surfacestate-empty` meets for a state sentence dropped straight
+   into a pane. */
+.lt-caption,
+.lt > p {
   margin: 0;
   padding: var(--space-2) var(--space-4);
+}
+.lt-caption {
   border-bottom: 1px solid var(--borderSubtle);
   font-size: var(--fs-sm);
   color: var(--textMeta);
@@ -173,7 +184,7 @@
   align-items: center;
   gap: var(--space-2);
   font-size: var(--fs-meta);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   cursor: pointer;
 }
 /* Sized like every other tick in the product. Its box sits outside a
@@ -207,7 +218,7 @@
   corner-shape: round;
   font: inherit;
   font-size: var(--fs-sm);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -276,7 +287,7 @@
   background: transparent;
   font: inherit;
   font-size: var(--fs-sm);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -306,7 +317,7 @@
   border: 0;
   border-left: 1px solid var(--borderSubtle);
   background: transparent;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   cursor: pointer;
 }
 .lt-frow-more:hover {
@@ -420,7 +431,7 @@
 .lt-mi-dir {
   display: inline-flex;
   align-items: center;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* WHICH ORDER IS IN FORCE, on the right edge where a reader checks it. Always
@@ -548,7 +559,10 @@
    * scrolls under it. Zero spacing keeps the grid looking the same. */
   border-collapse: separate;
   border-spacing: 0;
-  font-size: var(--fs-body);
+  /* A cell is a scanned fact, not a read sentence: the rung the headers, the
+   * count line and the badges already sit on, so a row reads as one register
+   * rather than a body line with meta-sized pills stuck to it. */
+  font-size: var(--fs-meta);
 }
 
 /* With explicit widths in play a cell clips rather than growing a row: the row
@@ -560,6 +574,32 @@
 .lt-table td {
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* `CellStrip` — several pills in one cell, on one line. A strip that grew a
+ * second line would push every row below it down; clipped at the column edge
+ * the reader widens the column instead, which is the answer this table already
+ * gives for a value too long for its share. */
+.lt-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: nowrap;
+  max-inline-size: 100%;
+  overflow: hidden;
+}
+
+/* The floor under a cell's strip. The `nowrap` above governs TEXT, not the
+ * layout of a flex container inside the cell: `.badge` and `.chip` are nowrap
+ * only by flexbox's own default, and a strip that took a second line here would
+ * cost every row below it its place. Stated on the TABLE as well as on
+ * `.rowtags` and `.lt-strip`, so an edit to one of those sheets cannot give it
+ * up in a cell without saying so. */
+.lt-table td .badge,
+.lt-table td .chip,
+.lt-table td .rowtags,
+.lt-table td .lt-strip {
+  flex-wrap: nowrap;
 }
 
 /* The header is a quiet label row in sentence case: a table's headers are
@@ -848,7 +888,7 @@
 .lt-empty td {
   padding: var(--space-6);
   text-align: center;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .lt-linkish {
@@ -871,7 +911,7 @@
   border-top: 1px solid var(--borderSubtle);
   background: var(--bgPage);
   font-size: var(--fs-sm);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* The paging slot the caller fills with its keyset "Load more". */
@@ -908,7 +948,7 @@
   background: none;
   font: inherit;
   font-size: var(--fs-sm);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   border-radius: var(--r-sm);
   cursor: pointer;
 }
@@ -957,7 +997,7 @@
 .lt-perpage .select-control {
   font: inherit;
   font-size: var(--fs-meta);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
@@ -1046,9 +1086,16 @@
   }
 
   /* The identity cell is the card's heading: no label, full width, and it reads
-   * as the thing you tapped rather than as one field among several. */
+   * as the thing you tapped rather than as one field among several.
+   *
+   * Nothing is frozen in a stack — there is no sideways scroll for a cell to
+   * slide under — so the desktop column's chrome comes off here. Its opaque
+   * ground was still being painted over the card's translucent one, which put a
+   * patch of a slightly different white behind every card's title. */
   .lt-table td.lt-identity {
     display: block;
+    position: static;
+    background: none;
     padding-bottom: var(--space-2);
     font-size: var(--fs-lead);
     font-weight: 600;
@@ -1139,9 +1186,13 @@
     width: 100%;
   }
 
+  /* `.lt > p` is carried here beside `.lt-caption` for specificity as much as
+     for rhythm: it is the selector that sets the inset above, and left out, it
+     would go on winning over this narrower one. */
   .lt-head,
   .lt-tools,
   .lt-caption,
+  .lt > p,
   .lt-agg,
   .lt-foot {
     padding-left: var(--space-3);

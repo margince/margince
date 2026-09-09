@@ -13,16 +13,17 @@ import { Button } from "../design-system/atoms";
 import { formatDate, formatNumber } from "../format/format";
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { useRoster } from "./entityref";
 import { interactionIcon } from "./interactionchrome";
 import {
   CallCard,
   FoundMove,
-  type Grounding,
+  MOMENT_RULE_LABEL,
+  momentGrounding,
+  momentIsARow,
   RecordSpine,
   type SpineSource,
-  type StandingTone,
+  standingTone,
   TodayPanel,
   TodoRow,
   WithheldNotice,
@@ -55,89 +56,6 @@ type Person360 = components["schemas"]["Person360"];
 type PersonMoment = components["schemas"]["PersonMoment"];
 type PersonMomentAction = components["schemas"]["PersonMomentAction"];
 type Activity = components["schemas"]["Activity"];
-
-// The rule that fired, in one word over the sentence it produced.
-//
-// The server picks exactly one rule from a fixed ladder, so the word is the
-// server's judgement rather than this page's reading of a headline. Named
-// rather than left implicit: "Gone quiet" and "Promise overdue" lead to
-// different moves, and a reader who sees only the sentence has to infer which
-// kind of thing they are looking at.
-export const MOMENT_RULE_LABEL = {
-  meeting_prep: "person.moment.rule.meeting_prep",
-  re_engaged: "person.moment.rule.re_engaged",
-  job_change: "person.moment.rule.job_change",
-  overdue_promise: "person.moment.rule.overdue_promise",
-  gone_quiet: "person.moment.rule.gone_quiet",
-  open_promise: "person.moment.rule.open_promise",
-  role_change: "person.moment.rule.role_change",
-  public_signal: "person.moment.rule.public_signal",
-  missing_next_step: "person.moment.rule.missing_next_step",
-  thin_relationship: "person.moment.rule.thin_relationship",
-  nothing_needed: "person.moment.rule.nothing_needed",
-} as const satisfies Record<PersonMoment["rule"], MessageKey>;
-
-export const MOMENT_EVIDENCE_LABEL = {
-  activity: "person.moment.evidence.activity",
-  task: "person.moment.evidence.task",
-  relationship_change: "person.moment.evidence.relationship_change",
-} as const satisfies Record<
-  components["schemas"]["PersonMomentEvidence"]["type"],
-  MessageKey
->;
-
-type PersonMomentEvidence = components["schemas"]["PersonMomentEvidence"];
-
-/**
- * What one piece of a moment's evidence says, in the shape every claim on a
- * record states it. The QUOTE is the verbatim excerpt when the server has
- * one — the words that were actually written — and the label otherwise; the
- * origin line names the kind of record it came from and when. A label put
- * where the quote goes, over a kind word, read "record" twice and quoted
- * nothing.
- */
-export function momentGrounding(
-  evidence: readonly PersonMomentEvidence[],
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-  recordZone: string,
-): Grounding[] {
-  return evidence.map((item) => {
-    const observed = item.observed_at
-      ? formatDate(item.observed_at, locale, recordZone)
-      : undefined;
-    return {
-      key: `${item.type}-${item.id ?? item.label}`,
-      quote: item.snippet ?? item.label,
-      from: [
-        item.snippet ? item.label : undefined,
-        t(MOMENT_EVIDENCE_LABEL[item.type]),
-        observed,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-    };
-  });
-}
-
-// The standing's colour. Two rules mean somebody is being kept waiting and
-// read as warnings; the quiet success state reads as settled rather than as
-// something nobody has judged. Everything else is a live thread — a fact about
-// the relationship that wants a move rather than a verdict on it.
-export function standingTone(rule: PersonMoment["rule"]): StandingTone {
-  if (isLate(rule)) {
-    return "warn";
-  }
-  return rule === "nothing_needed" ? "calm" : "accent";
-}
-
-// The two rules that mean somebody is being kept waiting. A promise past its
-// date is late whether it was read out of an email or filed as a task — one
-// rung covers both — while a promise not yet due is a live thread, not a
-// warning.
-export function isLate(rule: PersonMoment["rule"]): boolean {
-  return rule === "gone_quiet" || rule === "overdue_promise";
-}
 
 export function PersonToday({
   moment,
@@ -208,7 +126,7 @@ export function PersonToday({
   // nothing a machine says here is unsourced.
   const restsOn = momentGrounding(moment.evidence, t, locale, recordZone);
   const footer = (
-    <div className="pe-today-foot">
+    <div className="pe-today-foot t-caption">
       <span>
         {plural("person.today.source", moment.evidence.length, {
           count: formatNumber(moment.evidence.length, locale),
@@ -247,10 +165,17 @@ export function PersonToday({
         />
       </CallCard>
       <TodayPanel onOpenTasks={onOpenTasks} notice={withheld}>
-        {/* Rung 10 is a moment like any other: "nothing needs you today" is
-            the answer a reader came for, and the verb the ladder still names
-            on it — log what happened — rides the row like every other. */}
-        <MomentMove key="moment" moment={moment} onAction={onAction} />
+        {/* Rung 10 is a moment like any other while it is the only thing in
+            the list: "nothing needs you today" is the answer a reader came
+            for, and the verb the ladder names on it — log what happened —
+            rides the row like every other. Over an open task it is not an
+            answer but a contradiction, and the task is the half a reader can
+            check. The ladder reaches rung 10 with work still listed whenever
+            the reader dismissed the card that spoke for it: a dismissal
+            silences a card, never the record. */}
+        {momentIsARow(moment, taskRows.length > 0) && (
+          <MomentMove key="moment" moment={moment} onAction={onAction} />
+        )}
         {taskRows}
       </TodayPanel>
     </>

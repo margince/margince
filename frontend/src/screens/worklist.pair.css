@@ -1,0 +1,102 @@
+/* THE DUPLICATE PAIR, REVIEWED INSIDE THE ROW.
+   Its own sheet beside its own component, for the reason worklist.row.css gives:
+   the pair is drawn by every host that draws a row — the Worklist and the
+   Brief's feed — so its rules travel with the component rather than with either
+   page's stylesheet, and its story draws the shape a reader meets.
+
+   The block reads as one thought in three parts: the question, the two records
+   it is about, and the one answer that is about neither of them. */
+.worklist-pair-review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block-start: var(--space-3);
+}
+
+/* The question, as the block's LEAD LINE rather than a caption under the row.
+   It is what the reader is being asked, in the row's own reading register: at
+   the meta size it read as one more fact about the pair, which is the one thing
+   it is not. */
+.worklist-pair-ask {
+  margin: 0;
+}
+
+/* THE TWO CANDIDATES, SIDE BY SIDE so a reader compares them rather than
+   scrolling between them — the comparison IS the decision here.
+   Two columns of equal width, because neither side is the default: a wider
+   column would say which record the product expects to survive. `minmax(0,
+   1fr)` rather than `1fr`, so a long domain wraps inside its own card instead
+   of setting the column's width.
+   `--gapCards` is the role for two sibling surfaces, which is what these are. */
+.worklist-pair-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gapCards);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* One candidate, on the catalog's recessed card: what IS, set apart from the
+   verbs under it. The card's ground and padding are `Card inset`'s own — this
+   says only how its lines stack, and that a name or an address too long for the
+   column breaks inside it rather than pushing the other card narrow. */
+.worklist-pair-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.worklist-pair-name {
+  font-weight: var(--fw-semibold);
+}
+
+/* THE KEEP VERB AT ITS CARD'S FOOT, on the card's trailing edge and on the same
+   baseline as the other card's.
+   `auto` rather than an interval: the two records rarely carry the same number
+   of facts — one side has a link count, a person's side has none — and left to
+   flow the two verbs sat at two heights, which reads as two different controls
+   over what is one choice between two. The air above them is `.card-actions`'s
+   own and is not this screen's to restate. */
+.worklist-pair-card > .card-actions {
+  justify-content: flex-end;
+  margin-block-start: auto;
+}
+
+/* THE ONE ANSWER ABOUT NEITHER RECORD, under both cards and on the row's own
+   trailing edge, where every other line of verbs in the queue stands.
+   Nothing here is filled: the two Keep verbs are the answers to the question
+   above, and a fill on this line would offer "not the same" as the expected one
+   of three. */
+.worklist-pair-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
+/* Where the verbs would have been, for a reader who may not settle the pair.
+   It stands in their place so the block still reads as one thought: here are
+   two records, and here is why nothing is being asked of you. */
+.worklist-pair-steward {
+  margin: 0;
+}
+
+/* THE PHONE. Two records at half a phone's width are two records nobody can
+   read, so the cards stack — and the block takes a line of its own in the row,
+   which below this width is a wrapping flex line rather than a grid.
+   Named without the row in front of it for the reason worklist.row.css gives:
+   below 720px the swipe gesture's own box stands between the row and its
+   children, so a child selector would miss every row that carries one. */
+@media (max-width: 720px) {
+  .worklist-pair-review {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .worklist-pair-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

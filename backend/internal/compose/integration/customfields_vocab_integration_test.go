@@ -269,11 +269,21 @@ func assertFullNameAndDefaultSort(t *testing.T, f cfvFixture) {
 }
 
 // TestCustomFieldVocab_CoreVocabulary: each list's core sortable
-// vocabulary is exactly its data-model §13.5 DM-VOCAB table — every
-// spec-listed field sorts in both directions (full_name ordering proves
-// the ORDER BY), the documented default spelling stays accepted, and a
-// real column the tables do not list — or a multi-field spec — is
-// refused.
+// vocabulary covers the DM-VOCAB set it was drawn from — every field in
+// it sorts in both directions (full_name ordering proves the ORDER BY),
+// the documented default spelling stays accepted, and a real column the
+// list does not publish — or a multi-field spec — is refused.
+//
+// COVERS rather than EQUALS, and the difference is a ruling rather than
+// drift. The vocabulary is now the columns a list publishes: a header a
+// reader can see is one they can order by, so a list that draws a column
+// the DM-VOCAB set omits accepts it anyway. `deal.name` is the first —
+// it sorted in poc-1, the spec table dropped it, and the deals list drew
+// it as an unsortable header until the rule put it back.
+//
+// So the refusal below has to be a column the list does NOT draw.
+// Otherwise this test pins the old rule and the new one cannot land
+// without it looking like a regression.
 func TestCustomFieldVocab_CoreVocabulary(t *testing.T) {
 	f := setupCFV(t)
 	// The deal list shares f's Env (Setup rebuilds the schema, so one
@@ -285,12 +295,20 @@ func TestCustomFieldVocab_CoreVocabulary(t *testing.T) {
 	assertSpecFieldsSortable(t, resources)
 	assertFullNameAndDefaultSort(t, f)
 
-	// A real column DM-VOCAB-3 does not list stays outside the vocabulary:
-	// deal name sorted in poc-1, and the spec table dropped it.
-	dealName := "name"
+	// A real column of `deal` the deals list does not draw stays outside the
+	// vocabulary. Chosen for that reason: refusing a name no table has would
+	// pass against a vocabulary that had become "any column", which is the way
+	// widening one goes wrong.
+	notDrawn := "captured_by"
 	var sortErr *storekit.SortError
-	if err := resources["deals (DM-VOCAB-3)"].list(dealName); !errors.As(err, &sortErr) || sortErr.Code != storekit.CodeSortFieldNotAllowed {
-		t.Fatalf("deals sort=name err = %v, want SortError %s", err, storekit.CodeSortFieldNotAllowed)
+	if err := resources["deals (DM-VOCAB-3)"].list(notDrawn); !errors.As(err, &sortErr) || sortErr.Code != storekit.CodeSortFieldNotAllowed {
+		t.Fatalf("deals sort=%s err = %v, want SortError %s", notDrawn, err, storekit.CodeSortFieldNotAllowed)
+	}
+
+	// And the column the ruling put back does sort, so this test cannot go on
+	// passing if the widening is reverted somewhere else.
+	if err := resources["deals (DM-VOCAB-3)"].list("name"); err != nil {
+		t.Fatalf("deals sort=name: %v — a column the list draws must be one it orders by", err)
 	}
 
 	multi := "-created_at,full_name"

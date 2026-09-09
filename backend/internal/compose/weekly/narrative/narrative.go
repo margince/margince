@@ -59,6 +59,15 @@ type Counts struct {
 	ProposalsRejected   int `json:"proposals_rejected"`
 	BriefItemsActed     int `json:"brief_items_acted"`
 	BriefItemsDismissed int `json:"brief_items_dismissed"`
+	// The lead and meeting outcomes the scorecard already reports. Without
+	// them a week spent answering new business and sitting in meetings — real
+	// work, and often the whole of an SDR's week — reached the narrator as a
+	// row of zeros, and it wrote that nothing happened.
+	LeadsRouted           int `json:"leads_routed"`
+	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
+	LeadsBreached         int `json:"leads_breached"`
+	MeetingsHeld          int `json:"meetings_held"`
+	MeetingsWithNextStep  int `json:"meetings_with_next_step"`
 }
 
 // quiet reports whether the week did nothing worth a sentence.
@@ -72,7 +81,15 @@ func (c Counts) quiet() bool {
 	return c.TasksDue == 0 && c.TasksDone == 0 && c.TasksCarriedOver == 0 &&
 		c.DealsMoved == 0 && c.DealsWon == 0 && c.DealsLost == 0 &&
 		c.ProposalsAccepted == 0 && c.ProposalsRejected == 0 &&
-		c.BriefItemsActed == 0 && c.BriefItemsDismissed == 0
+		c.BriefItemsActed == 0 && c.BriefItemsDismissed == 0 &&
+		c.LeadsRouted == 0 && c.LeadsAnsweredInTarget == 0 && c.LeadsBreached == 0 &&
+		c.MeetingsHeld == 0 && c.MeetingsWithNextStep == 0
+}
+
+// dealsQuiet reports whether no deal did anything this week — the fact that
+// settles a claim about deals, as against one about the whole week.
+func (c Counts) dealsQuiet() bool {
+	return c.DealsMoved == 0 && c.DealsWon == 0 && c.DealsLost == 0
 }
 
 // Deal is one line from the week, by the name it carried then.
@@ -217,13 +234,22 @@ func Parse(reply string, in Input) (string, error) {
 // against the one fact that settles it. English only, matching the corpus this
 // prompt is certified against — a sentence written in another language is not
 // caught here, which is why the prompt states the rule as well.
-var quietClaims = []string{
+// wholeWeekClaims say the WEEK held nothing. Any count settles them.
+var wholeWeekClaims = []string{
 	"quiet week",
 	"a quiet one",
+	"nothing happened",
+}
+
+// dealClaims say no DEAL did anything, which lead and meeting work does not
+// contradict. Split from the whole-week claims because the counts widened: a
+// week of nothing but answered leads is genuinely one where nothing closed,
+// and refusing that sentence would reject the truth for agreeing with the
+// numbers beside it.
+var dealClaims = []string{
 	"nothing closed",
 	"nothing moved",
 	"nothing slipped",
-	"nothing happened",
 }
 
 // refuseContradiction rejects a sentence that says the week held nothing when
@@ -240,14 +266,23 @@ var quietClaims = []string{
 // wrote about; a week whose prose contradicts its own numbers reads as a
 // product that does not know what happened.
 func refuseContradiction(sentence string, in Input) error {
-	if in.Counts.quiet() {
-		return nil
-	}
 	folded := strings.ToLower(sentence)
-	for _, claim := range quietClaims {
-		if strings.Contains(folded, claim) {
-			return fmt.Errorf(
-				"weekly narrative: the sentence says %q about a week that was not quiet", claim)
+	if !in.Counts.quiet() {
+		for _, claim := range wholeWeekClaims {
+			if strings.Contains(folded, claim) {
+				return fmt.Errorf(
+					"weekly narrative: the sentence says %q about a week that was not quiet", claim)
+			}
+		}
+	}
+	// Checked against the DEALS alone. A rep whose week was four routed leads
+	// and no pipeline movement is owed a sentence that can say so.
+	if !in.Counts.dealsQuiet() {
+		for _, claim := range dealClaims {
+			if strings.Contains(folded, claim) {
+				return fmt.Errorf(
+					"weekly narrative: the sentence says %q about a week whose deals moved", claim)
+			}
 		}
 	}
 	return nil

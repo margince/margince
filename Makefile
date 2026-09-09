@@ -15,17 +15,19 @@ GO ?= go
 # The deterministic script gates `check-backend` fans out. One list, one
 # consumer — see the comment on check-backend for why they are not that
 # target's prerequisites.
-ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
+ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation \
   test-dev-cleanup \
   test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict \
+  test-review-coverage \
   test-laneorder check-image-pins check-host-ports ci-doc-parity \
   make-target-parity contract-breaking-check contract-frontend-drift \
   test-contract-frontend-drift migration-versions test-migration-versions \
-  test-lanes env-reads gofmt lint-modules go-file-length rls-store-path \
+  test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path \
   check-extension-modules \
   no-jurisdiction test-no-jurisdiction \
   pkg-freeze test-desktop-launcher changelog-sections \
-  test-changelog-sections test-dev-postgres-container test-e2e-llm-check
+  test-changelog-sections test-dev-postgres-container test-e2e-llm-check \
+  test-craft-review
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
 # CI runner and an 18-core laptop each get the width they have without anybody
@@ -61,7 +63,7 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -250,6 +252,21 @@ dev-fresh:
 dev-stop:
 	@bash scripts/dev.sh stop "$(DEV_SLUG)" $(if $(filter 1,$(DROP)),--drop,)
 
+## dev-snapshot — copy THIS stack's database to `<db>_tmpl`, so `dev-restore`
+## can put the world back in about a second instead of a migrate and a reseed.
+## The stack must be STOPPED: Postgres will not copy a database a session is
+## connected to, and the api's pool redials the moment it is terminated.
+## DEV_SLUG=<slug> names another stack in this worktree.
+dev-snapshot:
+	@bash scripts/dev.sh snapshot "$(DEV_SLUG)"
+
+## dev-restore — put THIS stack's database back exactly as `dev-snapshot` left
+## it, with the stack still RUNNING: the clone closes the api's connections and
+## its pool redials on the next query. Cheaper AND safer for a long-lived api
+## than a reseed, which mints new ids for every record.
+dev-restore:
+	@bash scripts/dev.sh restore "$(DEV_SLUG)"
+
 ## dev-sweep — clear EVERY margince dev stack on this machine: kill every
 ## api/worker/vite (recorded, orphaned, or belonging to another worktree) and
 ## forget their claims. `DROP=1` also drops every per-slug margince_dev_*
@@ -266,7 +283,7 @@ dev-sweep:
 dev-logs:
 	@bash scripts/dev-logs.sh
 
-build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln tools tools-go infra-logs infra-reset:
+build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln tools tools-go infra-logs infra-reset:
 	$(MAKE) -C backend $@
 
 ## check-fe — the frontend half of the gate (part of `make check`). Fails loudly
@@ -453,6 +470,7 @@ verify-boot:
 frontend-check:
 	$(MAKE) fe-ds-gates
 	$(MAKE) fe-drift
+	$(MAKE) fe-file-length
 	$(MAKE) fe-lint
 	$(MAKE) fe-unit
 	$(MAKE) fe-build
@@ -537,6 +555,7 @@ fe-clock-drift:
 fe-quality: fe-typecheck-composed
 	$(MAKE) fe-ds-gates
 	$(MAKE) fe-drift
+	$(MAKE) fe-file-length
 	$(MAKE) fe-lint
 	$(MAKE) fe-test-ext
 
@@ -670,9 +689,37 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## bad run is the weather and two is a defect. Never touches :8080; it boots,
 ## seeds and tears down its own DEV_SLUG stack.
 ## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
+##
+## HALF THE JUDGING IS A MODEL. A scenario's mechanical assertions are regexes —
+## does the answer carry this name, this date, this count; its `judge:` criteria
+## are sentences a person can read, decided per run by a pinned model, because
+## the regexes that used to carry them scored 15% and 20% of CORRECT answers as
+## failures on two paid sweeps. That costs a few extra calls per run, and a lane
+## whose judge cannot be reached STOPS rather than scoring: E2E_LLM_JUDGE
+## defaults to `live` here and has no default anywhere else.
 e2e-llm: SHELL := /bin/bash
 e2e-llm:
 	@bash scripts/e2e-llm.sh
+
+## e2e-llm-guards — put the SCENARIOS' regex guards on trial rather than the
+## product. A real model writes answers a good assistant would give and answers
+## carrying the defect the scenario forbids, and e2e/llm/probe.py judges every
+## one of them through check.check itself — so a pattern that reds a correct
+## answer, or misses the defect it exists for, is named instead of waiting for
+## the next reviewer to construct the sentence by hand.
+##
+## COSTS MONEY and is opt-in: MARGINCE_E2E_LLM_GUARDS=1 make e2e-llm-guards.
+## Needs no stack. SCENARIO=<name> audits one, E2E_LLM_GUARDS_COUNT=<n> asks for
+## more answers, E2E_LLM_GUARDS_OUT=<dir> keeps the candidates.
+## The findings are for a HUMAN to judge: a model asked for a correct answer can
+## write an incorrect one, so nothing here ever rewrites a pattern.
+## To judge sentences you wrote yourself, no model and no opt-in are needed:
+##   python3 e2e/llm/probe.py <scenario.yaml> --expect correct "<answer>"
+## A scenario's judged criteria are audited too, at one model call each per
+## candidate; E2E_LLM_JUDGE=replay:<dir> audits only the patterns.
+e2e-llm-guards: SHELL := /bin/bash
+e2e-llm-guards:
+	@bash scripts/e2e-llm-guards.sh
 
 e2e-company: SHELL := /bin/bash
 e2e-company:
@@ -726,6 +773,35 @@ fe-uat:
 		pnpm exec playwright install chromium >/dev/null 2>&1 && \
 		node scripts/fe-uat.mjs $(ARGS)
 
+## test-craft-pin — prove the pinned craftsmanship gate is actually pinned: four
+## real digests, a resolver that yields the gate and nothing else, and a cached
+## binary still matching its digest. A resolver that quietly fell back to PATH
+## would turn every craft lane green against an unknown rubric, and nothing
+## downstream could tell.
+##
+## A prerequisite of craft-static rather than a member of ROOT_SCRIPT_GATES, so
+## it runs wherever the gate runs and nowhere it does not: enrolling it in the
+## root gates would put a network fetch inside `make check-backend`, whose CI job
+## has no other reason to reach the network and should not start failing on a
+## download flake.
+test-craft-pin:
+	@./scripts/test-craft-pin.sh
+
+## fe-edge-padding — no text printed against the edge of the box holding it.
+## Renders the WHOLE story catalog in headless Chromium at 1280px and 420px and
+## fails on a box that draws a visible edge with no inline padding between that
+## edge and its text — the defect `.card` + a caller class that re-declares
+## `padding` with a zero inline half produces, which no stylesheet reader can
+## see because the two rules are correct apart and wrong together. A browser is
+## the only instrument that answers it: jsdom does not resolve var(), so the
+## fixed rule reads back identical to the broken one. A story it could not read
+## fails the run rather than passing quietly. WHOLE-TREE and minutes long, so
+## like fe-clock-drift it is not in `make check`. Optional: ARGS="--filter <id>".
+fe-edge-padding:
+	cd frontend && pnpm install --frozen-lockfile && \
+		pnpm exec playwright install chromium >/dev/null 2>&1 && \
+		node scripts/check-edge-padding.mjs $(ARGS)
+
 ## craft-static — the deterministic code-craftsmanship gate (ADR-0045) over
 ## every hand-written Go tree, strict: BLOCKER and MAJOR findings both fail it.
 ## The pre-push hook (.githooks/pre-push) runs the same bar diff-scoped; this
@@ -733,24 +809,48 @@ fe-uat:
 ## to arm it. extensions/ and fixtures/ are their own Go modules, so `./...`
 ## never reaches them and the bar has to name them: a first-party unit ships
 ## the same product, and the fixture is the worked example a unit author copies.
-craft-static:
-	go run -C cli/craft . static --strict --root ../../backend
-	go run -C cli/craft . static --strict --root ../../extensions
-	go run -C cli/craft . static --strict --root ../../fixtures
-	go run -C cli/craft . static --strict --root ../../desktop
+##
+## The gate is a pinned binary (scripts/craft-pin.sh), not source in this tree.
+## Roots are written from the REPOSITORY ROOT, which is where the binary runs —
+## they used to lead with ../../ because the gate was built and run from its own
+## directory, which changed the working directory first. A leftover ../../
+## resolves outside the repository and reports a clean sweep of nothing, which
+## reads exactly like a pass.
+craft-static: test-craft-pin
+	@bin="$$(./scripts/craft-pin.sh)" && \
+		"$$bin" static --strict --root backend && \
+		"$$bin" static --strict --root extensions && \
+		"$$bin" static --strict --root fixtures && \
+		"$$bin" static --strict --root desktop
 
-## craft-test — cli/craft's own suite, including the `wiring` package that
-## asserts the repo-level obligations no Go package can express: the CI job
-## ordering, the contributor rulebook, and the community-health files. It needs
-## its own target because every other test lane runs `./...` inside the backend
-## module, which cannot reach a separate module — a test nothing runs is a test
-## that proves nothing.
-craft-test:
-	go test -C cli/craft -count=1 ./...
+## craft-review — the OPT-IN model-driven arm of the craftsmanship gate: send
+## this branch's diff to an external model API and get a reading of what a
+## syntax tree cannot see. It calls a paid API, so nothing calls it for you —
+## no hook, no CI job, no prerequisite. `make craft-static` is the arm that is
+## enforced and it is the one that blocks a push.
+##
+##   ANTHROPIC_API_KEY=... make craft-review              # vs origin/main
+##   ANTHROPIC_API_KEY=... BASE=<ref> make craft-review
+##
+## It refuses rather than reporting a pass it did not earn: with no key, and
+## again when the reviewer comes back having skipped, because that answer is
+## `verdict: PASS` with no findings and is otherwise indistinguishable from a
+## clean diff. test-craft-review holds both refusals.
+craft-review: test-craft-pin
+	@./scripts/craft-review.sh
 
-## test-desktop-launcher — the launcher's own suite. It exists for the reason
-## craft-test does, and the reason is worth repeating because this module hid it
-## longer: desktop/launcher is its own module and deliberately OUTSIDE go.work,
+## test-craft-review — prove craft-review refuses a reading that did not happen:
+## no key, a result the reviewer skipped, and a blocking verdict it must not
+## swallow, against a real reading it must not refuse. The reviewer is stubbed —
+## it is an external HTTP boundary, and a test that called it would spend a paid
+## request to assert on a refusal that never gets that far.
+test-craft-review:
+	@./scripts/test-craft-review.sh
+
+## test-desktop-launcher — the launcher's own suite. It exists because a test
+## lane that cannot reach a module is a test lane that proves nothing about it,
+## and this module hid that longer than any other: desktop/launcher is its own
+## module and deliberately OUTSIDE go.work,
 ## since it supervises the shipped binaries as child processes rather than
 ## importing them. So `./...` inside backend cannot reach it, the workspace
 ## cannot reach it, and the seven test files it already carried ran nowhere —
@@ -772,7 +872,24 @@ test-desktop-launcher:
 ## left in the backend tree (the review-loop residue check, ADR-0045). The CI
 ## `craft-residue` job runs this so a marker can never ride to main.
 craft-residue:
-	go run -C cli/craft . residue --root ../../backend
+	@"$$(./scripts/craft-pin.sh)" residue --root backend
+
+## craft-prose — the rulebook's ## Craftsmanship section agrees with the standard
+## the gate applies: every T- or P-id the prose names is a real rule, and the
+## range it advertises reaches the highest rule there is.
+##
+## Both directions, because they fail differently. Prose naming a rule that does
+## not exist is survivable — a reader looks for it and finds nothing. A range
+## that falls SHORT is not: the reader is told the standard is smaller than it
+## is, has no reason to look further, and nothing else in the tree corrects them.
+## The prose once advertised "T1-P3" over a rubric of T1-T10 plus P1-P5.
+##
+## The check lives in the gate rather than here because both directions need its
+## section scanner, which survives a fenced example and a fence opener behind a
+## list marker. A second copy of that scanner in this tree would be the untested
+## one. check-craft-doc stays beside this as the cheap floor: the section exists.
+craft-prose:
+	@"$$(./scripts/craft-pin.sh)" prose --rulebook AGENTS.md
 
 ## check-craft-doc — assert AGENTS.md still carries the `## Craftsmanship`
 ## section (the craft gate's operating contract, ADR-0045). A cheap doc floor
@@ -880,6 +997,14 @@ test-ci-verdict:
 test-merge-verdict:
 	@./scripts/test-check-merge-verdict.sh
 
+## test-review-coverage — prove the review-coverage report still tells a review
+## of the tip from a review of something older. It is quiet when it is working,
+## so "no complaint" is the signal that cannot be trusted on its own; and the
+## arm with no natural symptom is a force-push, where the approval goes on
+## standing against a tree nobody compared it to.
+test-review-coverage:
+	@./scripts/test-check-review-coverage.sh
+
 ## test-laneorder — prove the integration lane still dispatches its long pole
 ## first. The order is only a scheduling hint, so a regression here never turns
 ## a lane red: it makes the run longer and says nothing, which is why it needs a
@@ -977,7 +1102,7 @@ gofmt:
 	@./scripts/check-gofmt.sh
 
 ## lint-modules — golangci-lint over the Go modules `./...` from backend/ cannot
-## reach: backend/tools, cli/craft, composition and the units under extensions/
+## reach: backend/tools, composition and the units under extensions/
 ## are each their own module, so the backend lint lane never saw them. Same
 ## config as the product module; the list derives from tracked go.mod files.
 lint-modules: composition
@@ -996,6 +1121,12 @@ test-golangci-guard:
 go-file-length:
 	@./scripts/check-go-file-length.sh
 
+## fe-file-length — the same cap on frontend sources (1000 for a test or a
+## story), ratcheted via scripts/fe-file-length-waivers.txt. Its counterpart
+## above held one half of the product while the other could grow without limit.
+fe-file-length:
+	@./scripts/check-fe-file-length.sh
+
 ## rls-store-path — DB-free floor under the row-scope runtime proof: no
 ## internal/modules statement may address the superuser pool directly, where
 ## the database applies no per-workspace filter of its own; per-workspace work
@@ -1006,7 +1137,10 @@ rls-store-path:
 
 ## test-e2e-llm-check — prove the e2e-llm checker tells a failed use case apart
 ## from a run that never reached the model: a refused credential is named as
-## one, and a genuinely bad answer is still a finding.
+## one, and a genuinely bad answer is still a finding. It also holds the judged
+## half offline, against verdicts a real judge gave the committed fixtures: a
+## judge that agreed with everything fails 22 of these cases, and a judge that
+## cannot be reached is a stop rather than a pass.
 test-e2e-llm-check:
 	@./scripts/test-e2e-llm-check.sh
 

@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -154,12 +155,32 @@ func unservedPlanArguments(planArgs json.RawMessage) []string {
 	var unserved []string
 	for key := range keys {
 		if !servedPlanArguments[key] {
-			unserved = append(unserved, "`"+key+"`")
+			// The key is the CALLER's, quoted and bounded where it enters: raw,
+			// it carried both an unbounded write and a character the transcript
+			// reads as a line ending.
+			unserved = append(unserved, httperr.QuoteCaller(key))
 		}
 	}
 	slices.Sort(unserved)
+
+	// AND THE LENGTH OF THE LIST IS ALSO THE CALLER'S. Bounding each key left
+	// the count unbounded, which crowds the served set out of the same refusal
+	// just as effectively: twenty unknown keys pushed `group_by` and
+	// `aggregates` off the end of a sentence that exists to name them. Naming a
+	// few and counting the rest keeps the answer's size ours — a caller with
+	// twenty wrong keys has the grammar wrong, not twenty separate mistakes.
+	if len(unserved) > maxUnservedNamed {
+		rest := len(unserved) - maxUnservedNamed
+		unserved = append(unserved[:maxUnservedNamed:maxUnservedNamed],
+			fmt.Sprintf("and %d more", rest))
+	}
 	return unserved
 }
+
+// maxUnservedNamed bounds how many of a caller's unknown plan-argument keys one
+// refusal names. Enough that a caller fixing a typo or two sees their own key
+// quoted back; few enough that the served vocabulary beside it always fits.
+const maxUnservedNamed = 4
 
 // reportPlanVocabulary is what the engine accepts from a plan beyond the
 // per-report names: the aggregate functions.

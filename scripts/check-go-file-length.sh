@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # Go file-length gate with a ratchet (plus a waiver list). A hand-written Go
 # file above the cap is a god-file split candidate; generated (*_gen.go /
-# *.gen.go) and test (*_test.go) files are exempt, as is cli/craft (the
-# craftsmanship gate tooling, not product code).
+# *.gen.go) and test (*_test.go) files are exempt. The search root is backend/,
+# so only product Go is in scope.
 #
 # The ratchet: scripts/go-file-length-waivers.txt records each pre-existing
 # offender with its frozen line count. A waived file may shrink but never
 # grow past its recorded count; once it drops to the cap or below, its entry
 # must be REMOVED so the file is back under the hard cap for good.
 #
-# THE COUNT IS `wc -l`. craft static's large-file check holds this same cap over
-# these same files, and countLines in cli/craft/static/runner.go is written to
-# answer the number this awk reads. Two gates over one cap that cannot share a
+# THE COUNT IS `wc -l`. The craftsmanship gate's large-file check holds this same
+# cap over these same files, and its own line counter is written to answer the
+# number this awk reads. Two gates over one cap that cannot share a
 # helper across bash and Go, so each names the other: a file at exactly the cap
 # must pass BOTH, which holds only while both count alike.
 set -euo pipefail

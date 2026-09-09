@@ -10,22 +10,26 @@ import {
 } from "./surfacestate";
 import "./panel.css";
 
-// Panel is the titled-card shape Card does not offer: a fixed-height header
-// row (a title alone, a title with a badge, or a title with a button all read
-// the same height), full-bleed rows under it, and an optional footer for a
-// figure that belongs to the whole panel rather than to any one row.
+// Panel is the titled-card shape Card does not offer: a header band, full-bleed
+// rows under it, and an optional footer for a figure that belongs to the whole
+// panel rather than to any one row.
 //
-// That height is a FLOOR rather than a fixed measure, and a description under
-// the title is the one thing that raises it: type on two lines wedged into the
-// band would sit against the hairline above and the border below. Everything
-// that shares the title's own line — a badge, a button, a count — reads at the
-// one height, which is the promise the band exists to make.
+// ONE band, and its height is fixed at `--panel-head-h` whatever the head
+// carries: a title alone, a title over a `sub`, a title beside a badge or a
+// button all draw the same measure, so a page of panels reads as a column of
+// titles at one interval. A floor is what this used to be, and a floor is an
+// invitation — a description raised the band here, a screen re-spaced it
+// there, and the same card stood at three heights on one page. So whatever
+// does not fit on one band is not header content: it goes in the body, as a
+// toolbar row or a `PanelBody`. What overruns INSIDE the band ends in an
+// ellipsis, and only the title block gives way — a badge squeezed to buy the
+// title room reads as a different control, or loses its label outright.
 //
-// The header and the body are two different rhythms living in one box — the
-// header's own 48px band versus the body's padded content versus a row that
-// wants to touch the panel's own edges — which is why the padded content is a
-// separate `PanelBody` rather than a prop: a caller who needs both padded text
-// and full-bleed rows in the same panel nests `PanelBody` and `PanelRow` as
+// The header and the body are two different rhythms living in one box — that
+// band versus the body's padded content versus a row that wants to touch the
+// panel's own edges — which is why the padded content is a separate
+// `PanelBody` rather than a prop: a caller who needs both padded text and
+// full-bleed rows in the same panel nests `PanelBody` and `PanelRow` as
 // siblings instead of fighting one slot that tries to be both.
 export function Panel({
   title,

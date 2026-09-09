@@ -44,9 +44,18 @@ const ANSWERED_BY = {
   // Network tab through decideDestination.
   decide: { how: "inline", file: "worklist.row.tsx" },
   merge: { how: "inline", file: "worklist.pair.tsx" },
+  // The BRIEF's three verbs live in worklist.briefverbs.tsx: they post to the
+  // brief's endpoints rather than to an activity's, and that distinction is why
+  // they were split out of the row when it hit the length ceiling.
+  //
+  // `act` is named against the ROW, not that file, and the difference is where
+  // each verb's OFFER is decided. Set-aside and dismiss are drawn and guarded
+  // together inside BriefSetAsides; act is guarded at its placement, because it
+  // is the row's primary slot and the row decides what fills it. This census
+  // reads the guard, so each verb points at the file holding its own.
   act: { how: "inline", file: "worklist.row.tsx" },
-  set_aside: { how: "inline", file: "worklist.row.tsx" },
-  dismiss: { how: "inline", file: "worklist.row.tsx" },
+  set_aside: { how: "inline", file: "worklist.briefverbs.tsx" },
+  dismiss: { how: "inline", file: "worklist.briefverbs.tsx" },
   acknowledge: { how: "inline", file: "worklist.row.tsx" },
   // Running a failed rule again acts where the reader is standing. Routing it
   // would open the automations page, which is where the RULE is fixed — a
@@ -63,7 +72,10 @@ const ANSWERED_BY = {
 >;
 
 describe("a row claims no verb it cannot perform", () => {
-  const row = readFileSync(join(SCREENS, "worklist.row.tsx"), "utf8");
+  // The row's VERBS, which are their own module: the row decides how a piece
+  // of work reads and worklist.rowverbs.tsx decides what can be done about it,
+  // so the destination map lives there.
+  const verbs = readFileSync(join(SCREENS, "worklist.rowverbs.tsx"), "utf8");
 
   // The routed verbs, read from VERB_DESTINATION's own body. Read as source
   // rather than imported, because the map is not exported and exporting it to
@@ -73,7 +85,7 @@ describe("a row claims no verb it cannot perform", () => {
   // arrow-valued map from another: VERB_LABEL sits beside it with the same
   // shape, and a census that told them apart by their parameter name would gain
   // members the day somebody renamed one.
-  const map = row.match(/const VERB_DESTINATION\b[\s\S]*?\n};/)?.[0] ?? "";
+  const map = verbs.match(/const VERB_DESTINATION\b[\s\S]*?\n};/)?.[0] ?? "";
   const routed = new Set(
     [...map.matchAll(/^ {2}(\w+): /gm)].map(([, verb]) => verb),
   );

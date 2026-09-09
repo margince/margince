@@ -170,6 +170,12 @@ func (seamProbeReportVocabulary) ReportVocabularyDocument(context.Context) (json
 	return nil, errSeamReached
 }
 
+type seamProbeAnalyticsVocabulary struct{}
+
+func (seamProbeAnalyticsVocabulary) AnalyticsVocabularyDocument(context.Context) (string, error) {
+	return "", errSeamReached
+}
+
 type seamProbeRetriever struct{}
 
 func (seamProbeRetriever) Search(context.Context, retrieval.Query) (retrieval.Result, error) {
@@ -197,7 +203,7 @@ func (seamProbeLifecycle) RelinkActivities(context.Context, []ids.UUID, string, 
 	return nil, errSeamReached
 }
 
-func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID) (json.RawMessage, error) {
+func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.RawMessage, error) {
 	return nil, errSeamReached
 }
 
@@ -303,6 +309,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	}, nil)
 	RegisterVocabularyTool(r, seamProbeVocabulary{})
 	RegisterReportVocabularyTool(r, seamProbeReportVocabulary{})
+	RegisterAnalyticsVocabularyTool(r, seamProbeAnalyticsVocabulary{})
 	RegisterContextSearchTool(r, seamProbeProvider{}, seamProbeRetriever{})
 	RegisterResolveTool(r, seamProbeProvider{}, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {
 		return nil, errSeamReached

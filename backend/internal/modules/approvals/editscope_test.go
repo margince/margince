@@ -71,6 +71,18 @@ func TestAssertSameEntityRefsPinsEveryRecordTheProposalNames(t *testing.T) {
 		// path as one flat key and have the two read as the same location.
 		// They must not: the reference would move out of where the effect
 		// reads it while this check saw nothing change.
+		// THE PREMISE assertSameCallIdentity EXISTS FOR, asserted rather than
+		// assumed. entityRefs collects only strings that parse WHOLLY as a
+		// UUID, so a record id inside a request path is invisible to it and a
+		// re-aimed call reads here as no change at all. If this ever started
+		// failing — entityRefs widened to find ids inside strings — the second
+		// assertion beside it would look redundant and become a candidate for
+		// deletion, with nothing left to say why it is not.
+		{
+			name:     "a record named inside a REST path is invisible here, which is why the call identity is pinned separately",
+			original: `{"operation":"advanceDeal","path":"/v1/deals/` + mine + `/advance","body":{}}`,
+			edited:   `{"operation":"advanceDeal","path":"/v1/deals/` + theirs + `/advance","body":{}}`,
+		},
 		{
 			name:        "a flat key spelling a nested path does not collide with it",
 			original:    `{"link":{"activity_id":"` + alice + `"}}`,
@@ -116,9 +128,9 @@ func TestAnEditMayNotRepointTheRecordNamedInARestPath(t *testing.T) {
 	other := ids.NewV7()
 	// toStageID is fixed across both calls so the ONLY thing that differs
 	// between the staged and edited payload is the record named in the path.
-	// A body id that varied too would let assertSameEntityRefs reject the
-	// edit for catching THAT change, which would prove nothing about
-	// whether it can see the one hidden inside the path.
+	// A body id that varied too would be refused as a changed `/body`, and the
+	// case would pass without ever showing that the PATH is pinned — which is
+	// the whole claim, since the path is where a REST staging keeps its record.
 	toStageID := ids.NewV7().String()
 	rest := func(id ids.UUID) json.RawMessage {
 		return json.RawMessage(`{"operation":"advanceDeal","path":"/v1/deals/` + id.String() +
@@ -246,5 +258,83 @@ func TestRetargetedEditErrorNamesTheOffendingPaths(t *testing.T) {
 		if !strings.Contains(msg, want) {
 			t.Errorf("message %q does not name %q", msg, want)
 		}
+	}
+}
+
+// A body-only edit survives a staged path carrying an HTML-significant
+// character.
+//
+// The two sides of the comparison are spelled differently by construction:
+// `before` comes back from a jsonb column, which emits `&`, `<` and `>` raw,
+// and `after` comes from diffhash.Canonical through json.Marshal, which escapes
+// them. Compared as bytes they never matched, so every later correction to the
+// body was refused as a retarget — a legitimate edit the human is entitled to
+// make, refused for a reason nothing in the message could explain.
+//
+// It failed CLOSED, so nothing was admitted that should not have been; what it
+// cost was the edit.
+func TestABodyEditSurvivesAPathPostgresAndGoSpellDifferently(t *testing.T) {
+	// As jsonb hands it back: the ampersand RAW.
+	staged := json.RawMessage(`{"operation":"listDeals","path":"/v1/deals?q=a&b","body":{"note":"first"}}`)
+	// As json.Marshal writes it: the same path, the ampersand ESCAPED. This is
+	// the difference — written raw on both sides the case passes against a
+	// byte comparison and proves nothing.
+	edited := json.RawMessage(`{"operation":"listDeals","path":"/v1/deals?q=a\u0026b","body":{"note":"corrected"}}`)
+
+	if err := assertSameCallIdentity(staged, edited); err != nil {
+		t.Fatalf("a body-only edit was refused as %v — the path is the SAME path, spelled by two encoders", err)
+	}
+}
+
+// And the control, one character apart: a path that genuinely differs is still
+// refused. Without it the case above would pass against a comparison that had
+// stopped comparing.
+func TestAPathThatGenuinelyDiffersIsStillRefused(t *testing.T) {
+	staged := json.RawMessage(`{"operation":"listDeals","path":"/v1/deals?q=a&b","body":{}}`)
+	edited := json.RawMessage(`{"operation":"listDeals","path":"/v1/deals?q=a&c","body":{}}`)
+
+	retargeted := requireRetargeted(t, assertSameCallIdentity(staged, edited),
+		"an edit that changed the path was accepted")
+	if strings.Join(retargeted.Paths, ",") != "/path" {
+		t.Errorf("refused paths = %v, want [/path]", retargeted.Paths)
+	}
+}
+
+// A staged payload that is not an object is the approval's problem, not the
+// server's.
+//
+// `proposed_change` is jsonb, which permits an array or a scalar. No producer
+// stages one today — the column is what makes it reachable — and answering a
+// bare error made it a 500, which tells a human their approval hit a server
+// fault when what happened is that the staging is unusable.
+func TestANonObjectStagedChangeIsRefusedAsAnInvalidEditNotAServerFault(t *testing.T) {
+	for _, tc := range []struct {
+		name             string
+		staged, editedTo string
+	}{
+		{"an array", `[1,2,3]`, `{"body":{}}`},
+		{"a scalar", `"just a string"`, `{"body":{}}`},
+		{"an edit that is not an object", `{"operation":"x","path":"/v1/y","body":{}}`, `[1,2,3]`},
+		// The null cases are the ones a decode-only check cannot see: `null`
+		// unmarshals into a NIL map and returns no error, so a decode alone
+		// answers "object" for it. Both wrong answers it produced are here.
+		// Against a REST staging the empty side made every member read as
+		// removed, so an unreadable payload came back as a retarget — a
+		// refusal that names a cause the human cannot act on.
+		{"a null staging", `null`, `{"operation":"x","path":"/v1/y","body":{}}`},
+		{"a null edit", `{"operation":"x","path":"/v1/y","body":{}}`, `null`},
+		// And null on both sides is the silent one: two empty member sets,
+		// isRESTStaging false for each, so the guard returned nil and let the
+		// edit through untouched.
+		{"null on both sides", `null`, `null`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := assertSameCallIdentity(json.RawMessage(tc.staged), json.RawMessage(tc.editedTo))
+			var invalid *InvalidEditError
+			if !errors.As(err, &invalid) {
+				t.Fatalf("err = %v (%T), want an *InvalidEditError — anything else reaches writeErr as "+
+					"neither refusal type and answers 500", err, err)
+			}
+		})
 	}
 }

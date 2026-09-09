@@ -95,6 +95,10 @@ type replayCandidate struct {
 	ourHeaderIsTrusted bool
 }
 
+// activity names the row this candidate is about, satisfying
+// storedOriginalCandidate.
+func (c replayCandidate) activity() ids.ActivityID { return c.activityID }
+
 // partyListIsAttested is this candidate's answer to the question
 // capture.ParticipantListAttested asks of a live record: did the PROVIDER state
 // this party list?
@@ -117,7 +121,7 @@ func (c replayCandidate) partyListIsAttested() bool {
 // many activities it settled — written, empty or refused alike, because every
 // one of them is progress the next pass will not repeat.
 func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger) (int, error) {
-	return drainStoredOriginals(ctx, pool, limit, log, storedOriginalPass{
+	return drainStoredOriginals(ctx, pool, limit, log, storedOriginalPass[replayCandidate]{
 		name:   "participant replay",
 		unit:   "activities",
 		offer:  selectReplayCandidates,
@@ -136,22 +140,37 @@ func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int,
 // refused without one, which would fail the batch and re-select the same rows
 // forever), and a marker written for every row the pass touched so a settled row
 // is never offered twice.
-type storedOriginalPass struct {
+// It is generic in the CANDIDATE because each pass needs a different set of
+// facts about the row it is judging, and reading the extra ones back per row
+// would be another read of `activity` per pass — another place to gate, and
+// another chance to forget one. The harness itself needs only the id, which is
+// what storedOriginalCandidate asks for.
+type storedOriginalPass[C storedOriginalCandidate] struct {
 	// name and unit are what the debug line says: which pass ran, and what its
 	// count is counting.
 	name string
 	unit string
 	// offer answers which rows this pass still owes work on.
-	offer  func(ctx context.Context, tx pgx.Tx, limit int) ([]replayCandidate, error)
-	settle func(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error)
+	offer  func(ctx context.Context, tx pgx.Tx, limit int) ([]C, error)
+	settle func(ctx context.Context, tx pgx.Tx, c C) (string, error)
 	mark   func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, outcome string) error
 }
+
+// storedOriginalCandidate is the one thing every pass's candidate must answer:
+// which activity this is. The marker is written against it, so a candidate that
+// could not name its row could not be settled.
+type storedOriginalCandidate interface{ activity() ids.ActivityID }
+
+// unitMeetings is what a meeting-shaped pass counts. Both meeting passes report
+// through it, so their debug lines describe the same kind of work in the same
+// word.
+const unitMeetings = "meetings"
 
 // drainStoredOriginals runs one bounded batch of a stored-original pass and
 // answers how many rows it settled — written, empty or refused alike, because
 // every one of them is progress the next pass will not repeat.
-func drainStoredOriginals(
-	ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger, pass storedOriginalPass,
+func drainStoredOriginals[C storedOriginalCandidate](
+	ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger, pass storedOriginalPass[C],
 ) (int, error) {
 	if limit <= 0 {
 		return 0, fmt.Errorf("compose: the %s needs a positive batch limit, got %d", pass.name, limit)
@@ -171,7 +190,7 @@ func drainStoredOriginals(
 			if err != nil {
 				return err
 			}
-			if err := pass.mark(ctx, tx, c.activityID, outcome); err != nil {
+			if err := pass.mark(ctx, tx, c.activity(), outcome); err != nil {
 				return err
 			}
 			settled++

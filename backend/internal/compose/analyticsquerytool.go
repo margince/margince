@@ -151,11 +151,29 @@ func (analyticsSchemaResource) ReadResource(ctx context.Context, uri string) (mc
 	if uri != AnalyticsSchemaURI {
 		return mcp.ResourceContents{}, fmt.Errorf("compose: resource %q: %w", uri, apperrors.ErrNotFound)
 	}
+	return mcp.ResourceContents{URI: uri, MIMEType: mimeTextPlain, Text: analyticsVocabularyText(ctx)}, nil
+}
+
+// analyticsVocabularyText is the vocabulary document, composed for this
+// caller. ONE writer: the resource above and the vocabulary tool's reader
+// below both serve it, so the two doors cannot drift.
+//
+// Held by: TestTheAnalyticsResourceAndTheToolReaderServeOneDocument
+// (internal/compose/analyticsqueryseam_test.go)
+func analyticsVocabularyText(ctx context.Context) string {
 	schema := AnalyticsSchemaFor(ctx)
 	var out strings.Builder
 	out.WriteString("schema version " + schema.Version + "\n")
 	out.WriteString("aggregates: " + strings.Join(analyticsquery.AggregateNames(), ", ") + "\n")
 	out.WriteString("filter ops: " + strings.Join(analyticsquery.FilterOpNames(), ", ") + "\n\n")
 	out.WriteString(DescribeAnalyticsSchema(schema))
-	return mcp.ResourceContents{URI: uri, MIMEType: mimeTextPlain, Text: out.String()}, nil
+	return out.String()
+}
+
+// analyticsVocabularyReader satisfies the agents port with the resource's own
+// composition, which is what keeps the tool and the resource one document.
+type analyticsVocabularyReader struct{}
+
+func (analyticsVocabularyReader) AnalyticsVocabularyDocument(ctx context.Context) (string, error) {
+	return analyticsVocabularyText(ctx), nil
 }

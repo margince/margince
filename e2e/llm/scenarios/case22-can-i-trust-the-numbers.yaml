@@ -1,0 +1,75 @@
+# CASE 22 — Can I trust the numbers.
+#
+# The one question a reporting surface is never asked and always should be:
+# what did the machine fail to read before it produced this?
+#
+# data_coverage answers it. Every source the nightly check tried carries the
+# state it reached, and ONLY a `checked` source carries a date — because a date
+# on an unread source would claim coverage that did not happen. That distinction
+# is the whole tool: a quiet week and a broken connector look identical from
+# inside the numbers, and stay identical until somebody looks at the sources.
+#
+# THIS WORKSPACE HAS NOTHING CONNECTED. That is not a gap in the fixture, it is
+# the fixture: a fresh installation with no mail, no calendar and no incumbent
+# mirror is the state every installation passes through, and it is the state in
+# which a confident "everything is current" does the most damage. The honest
+# answer is that the figures cover what people typed into Margince and nothing
+# else, and that nobody can currently tell a silent customer from a source that
+# was never wired up.
+#
+# THE GRANT IS PART OF THE SUBJECT. data_coverage is gated on a grant operators
+# hold and sellers do not, deliberately: a rep shown connector health has been
+# handed somebody else's job. This lane's passport is the admin's, so the tool
+# answers rather than refusing — a scenario driven by a rep seat would be
+# measuring the seat boundary, which is a different and deterministic question
+# the Go suite already owns.
+name: case22_can_i_trust_the_numbers
+criteria: [1, 2]
+
+# WRITES: nothing — this case only reads. Said out loud because a scenario that
+# does not say is refused: an absent or misspelled field used to arrive as the
+# value that skips work, so a forgotten declaration and a deliberate one were the
+# same silence.
+writes: false
+
+prompt: |
+  I am about to send the quarterly numbers out of here to the board. Before I
+  do — how much of what is going on is this system actually seeing? I do not
+  want to find out afterwards that half of it never reached us.
+
+# Nothing else answers source health. The forecast tools report what the checks
+# FOUND; this reports what the check could READ, and the two are different
+# questions — a clean set of findings over a source nobody opened is the exact
+# pairing that reads as good news and is not.
+must_call:
+  - data_coverage
+
+may_call:
+  # The nightly run's own record and its open findings, both legitimate
+  # neighbours of this question and neither a substitute for it.
+  - forecast_input_checks
+  - list_input_checks
+  - forecast_readings
+  - run_report
+  - query_workspace
+
+# NOTHING MECHANICAL IS LEFT TO ASSERT HERE. Both of this case's criteria are
+# about what the answer UNDERSTOOD — that the sources were never read, and that
+# it did not then claim coverage anyway — and neither is a name, a date or a
+# count. So this case carries no must_mention and no must_not_mention at all,
+# and both criteria are judged.
+#
+# The two regexes that used to stand here CONTRADICTED EACH OTHER, which is the
+# clearest evidence that they were the wrong instrument: "none of the sources
+# were checked" is the finding criterion 2 requires, in the very words criterion
+# 1's forbidden half fired on, so the better the answer the surer the case
+# failed. Three review rounds and a paid sweep each widened one half and broke
+# the other — "the sources are not checked", "every source is unchecked", "every
+# source shows not_connected, so none is current" — and the last round was still
+# adding a negation guard on both sides of a subject.
+judge:
+  - "Criterion 2. The answer reports that this workspace's external sources were never read: it says the connectors or feeds are not connected, unchecked or stale, or that nothing behind the figures came from outside what people typed into Margince. Answer no if the answer says nothing at all about the state of the sources — reporting only the findings the checks produced is the failure this criterion exists for. Any wording or language will do, and stating it as a denial ('none of the sources were checked') is a yes."
+  - "Criterion 1. The answer never claims that the coverage is complete, or that the sources, connectors or feeds are current, healthy, up to date or synced. Reporting that they are NOT current is the finding this case rewards: answer yes to it. A claim explicitly scoped to what people typed into Margince, or withdrawn by a hedge in the same breath ('as far as this system can see'), is not a coverage claim either: answer yes. Answer no where the assistant tells the reader the picture is complete."
+
+runs: 3
+pass_at: 2

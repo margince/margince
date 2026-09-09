@@ -18,7 +18,7 @@
 #     not this one — is a file it cannot associate with the run, so every
 #     in-source waiver stops applying and the findings under it come back.
 #   - `.golangci.yml`'s exclusion rules match the path as reported, anchored to
-#     the config file's own directory (`^tools/`, `^\.\./cli/craft/`). A foreign
+#     the config file's own directory (`^tools/`, `^\.\./extensions/`). A foreign
 #     path matches neither, so the path-scoped exemptions stop applying too.
 #
 # The run then prints findings this tree has waived, in files it does not

@@ -109,7 +109,7 @@
   align-self: flex-end;
   max-width: 80%;
   width: fit-content;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .ob-conv-user p {
@@ -223,7 +223,7 @@
 /* The subordinate escape under the options: present, never competing. */
 .ob-conv-question .ob-conv-question-dismiss {
   margin-block-start: var(--space-2);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .ob-conv-confirm-skipped {
@@ -235,7 +235,7 @@
 
 .ob-conv-confirm-skipped p {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font: var(--fw-regular) var(--fs-body) / var(--lh-normal) var(--f-body);
 }
 
@@ -491,7 +491,7 @@
   border: 1px dashed var(--borderSubtle);
   border-radius: var(--r-lg);
   background: var(--bgElevated);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font: var(--fw-regular) var(--fs-lead) / var(--lh-normal) var(--f-body);
   text-align: center;
 }
@@ -751,7 +751,7 @@
   border: 1px dashed var(--borderStrong);
   border-radius: var(--r-md);
   background: none;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   cursor: pointer;
   font: var(--fw-regular) var(--fs-body) / var(--lh-normal) var(--f-body);
   text-align: start;
@@ -939,7 +939,7 @@
 
 .ob-distill-evidence {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
   font-style: italic;
   line-height: var(--lh-relaxed);
@@ -992,7 +992,7 @@
    the disclosure draws the row. */
 .ob-voice-hero-body {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
 }
@@ -1078,8 +1078,6 @@
 
 .ob-voice-meter-line {
   margin: 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
 }
 
 /* What the server actually kept, one row per source. */
@@ -1153,7 +1151,7 @@
 
 .ob-scene-foot p {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
 }
 
@@ -1365,8 +1363,6 @@
 
 .ob-voice-dims-meta {
   margin: 0 0 var(--space-3);
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
 }
 
 .ob-voice-dims-list {
@@ -1387,11 +1383,6 @@
   color: var(--textPrimary);
   font-size: var(--fs-body);
   font-weight: var(--fw-semibold);
-}
-
-.ob-voice-dim-value {
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
 }
 
 .ob-voice-dim-track {
@@ -1451,7 +1442,7 @@
   margin: var(--space-1) 0 0;
   padding-left: var(--space-3);
   border-left: 2px solid var(--borderStrong);
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
   font-style: italic;
 }
@@ -1463,7 +1454,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
 }
 
@@ -1472,7 +1463,7 @@
   padding: var(--space-4);
   border-radius: var(--r-md);
   background: var(--bgElevated);
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
 }
 
@@ -1554,7 +1545,7 @@
 
 .ob-voice-building-meta {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-body);
 }
 
@@ -1847,7 +1838,7 @@
 
 .ob-connect-dialog-intro {
   margin: var(--space-2) 0 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-body);
   line-height: var(--lh-relaxed);
   text-align: center;
@@ -1892,7 +1883,7 @@
 
 .ob-connect-dialog-notnow:hover {
   background: var(--bgHover);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* The authorization form itself keeps left-aligned labels — a form reads
@@ -1923,7 +1914,7 @@
   border: 0;
   border-radius: var(--r-sm);
   background: none;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   cursor: pointer;
   font: var(--fw-regular) var(--fs-meta) / var(--lh-normal) var(--f-body);
   text-align: start;
@@ -2284,8 +2275,6 @@
   flex: 1 1 12rem;
   min-width: 0;
   margin: 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
 }
 
 /* Narrow: the three pieces stack rather than wrap mid-sentence — a status
@@ -2782,14 +2771,15 @@
 
 .ob-triage-omitted p {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
 }
 
 .ob-triage-omitted .ob-triage-omitted-label {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-family: var(--f-body);
+  /* ds:ignore .t-eyebrow loses to `.ob-triage-omitted p` on the same element */
   font-size: var(--fs-eyebrow);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-eyebrow);
@@ -2865,8 +2855,6 @@
 .ob-triage-people-empty {
   margin: 0;
   padding: var(--space-3);
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
 }
 
 .ob-triage-people-rows {
@@ -2902,12 +2890,10 @@
   font-weight: var(--fw-semibold);
 }
 
-.ob-triage-person-role {
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
-}
-
-.ob-triage-person-meta {
+/* The URL alone takes the mono face. A profile address is a machine string and
+   reads as one; the person's e-mail beside it is words somebody wrote down, and
+   set in mono a name and a domain read as an identifier. */
+.ob-triage-person-url {
   font-family: var(--f-mono);
 }
 
@@ -3167,7 +3153,7 @@
 }
 
 .ob-conv-manifest small {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .ob-conv-meter {
@@ -3202,7 +3188,7 @@
 }
 
 .ob-conv-meter small {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .ob-conv-stages {
@@ -3218,7 +3204,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font: var(--fw-regular) var(--fs-body) / var(--lh-normal) var(--f-body);
 }
 
@@ -3250,26 +3236,13 @@
 }
 
 /* The pinned next-step line between the thread and the composer: one slim
-   button naming the blocking affordance that is scrolled out of view. */
+   button naming the blocking affordance that is scrolled out of view. The
+   button is a `Button` — the fill, the edge and the hover are the variant's,
+   so this line owns only where it sits. */
 .ob-conv-nextstep {
   display: flex;
   justify-content: center;
   padding: var(--space-1) var(--space-4);
-}
-
-.ob-conv-nextstep button {
-  border: 1px solid var(--aiMed);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--aiLight);
-  color: var(--aiText);
-  padding: var(--space-1) var(--space-3);
-  font: var(--fw-medium) var(--fs-sm) / var(--lh-normal) var(--f-body);
-  cursor: pointer;
-}
-
-.ob-conv-nextstep button:hover {
-  background: var(--aiMed);
 }
 
 /* The rail's composer, one size smaller than the split variant's: a single
@@ -3339,7 +3312,7 @@
   margin: 0;
   /* Secondary, not Muted: this is the name of the field under it, and at 13px
      Muted was quieter than the placeholder it labels. */
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font: var(--fw-medium) var(--fs-sm) / var(--lh-normal) var(--f-body);
 }
 
@@ -3383,7 +3356,7 @@
 
 .ob-basis-lead {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
 }

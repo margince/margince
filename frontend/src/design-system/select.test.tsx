@@ -303,8 +303,55 @@ describe("the popup", () => {
     expect(box?.dataset.above).toBe("true");
     expect(box?.style.bottom).not.toBe("");
     expect(box?.style.top).toBe("");
-    // Matches the trigger's width so the popup reads as the same control.
-    expect(box?.style.width).toBe("200px");
+    // The trigger's width is the list's FLOOR, not its width: the two read as
+    // one control, and the list may still stand out past a short trigger to
+    // show the options behind it whole (select.css caps how far).
+    expect(box?.style.minWidth).toBe("200px");
+    expect(box?.style.width).toBe("");
+  });
+
+  // THE ROOM THE LIST MAY GROW INTO, measured rather than guessed.
+  //
+  // A list sized by its own content can be wider than the trigger it hangs off,
+  // and by the time it renders its leading edge is already fixed — so the cap
+  // in select.css needs the distance from that edge to the viewport's own
+  // margin. Left to a viewport fraction, a control at the trailing end of a
+  // header (the Worklist's whose-day dial) drew a list that ran off the screen
+  // with its last options unreachable.
+  it("hands the stylesheet the room left beside the popup", async () => {
+    const user = userEvent.setup();
+    const { trigger } = renderSelect();
+    // Near the trailing edge, which is where the room actually runs out.
+    const width = 120;
+    const left = globalThis.innerWidth - width - 8;
+    vi.spyOn(trigger, "getBoundingClientRect").mockReturnValue(
+      rectAt(left, 40, width, 34),
+    );
+
+    await user.click(trigger);
+
+    const box = screen.getByRole("listbox").parentElement;
+    // The popup opens at the trigger, so the room is the trigger's own width
+    // plus nothing: everything past it is off the screen.
+    expect(box?.style.getPropertyValue("--popupRoom")).toBe(`${width}px`);
+  });
+
+  // And the same measurement is generous where there IS room, so the property
+  // is a reading of the page rather than a constant that happens to fit one
+  // case. A control at the leading edge may grow across the whole viewport.
+  it("leaves the room open for a popup with the page in front of it", async () => {
+    const user = userEvent.setup();
+    const { trigger } = renderSelect();
+    vi.spyOn(trigger, "getBoundingClientRect").mockReturnValue(
+      rectAt(8, 40, 120, 34),
+    );
+
+    await user.click(trigger);
+
+    const box = screen.getByRole("listbox").parentElement;
+    expect(box?.style.getPropertyValue("--popupRoom")).toBe(
+      `${globalThis.innerWidth - 16}px`,
+    );
   });
 
   // A viewport with less than the 96px flip threshold on EITHER side of the

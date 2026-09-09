@@ -139,7 +139,10 @@ export function MeetingBriefView({
                       coaching={brief.plan.manager_coaching}
                       writtenByModel={brief.plan.generated_by === "model"}
                     />
-                    <MeetingPaths coaching={brief.plan.manager_coaching} />
+                    <MeetingPaths
+                      coaching={brief.plan.manager_coaching}
+                      writtenByModel={brief.plan.generated_by === "model"}
+                    />
                   </>
                 )}
                 {brief.plan && (
@@ -218,7 +221,7 @@ export function MeetingBriefView({
         </div>
       </div>
       <div className="drawer-foot">
-        <span className="pe-disclosure">
+        <span className="pe-disclosure t-caption">
           {t("person.meeting.assembledNow")}
         </span>
         <Button onClick={onClose}>{t("person.drawer.close")}</Button>

@@ -171,8 +171,11 @@ describe("what the page says about what it is not showing", () => {
     );
     renderWorklist();
 
+    // ONE bounded source, so the sentence is the singular arm. Waited on the
+    // caveat rather than on the page, so the absence below is asserted over a
+    // sentence that has actually been drawn.
     await waitFor(() => {
-      expect(screen.getByText(/sources have more/)).toBeTruthy();
+      expect(screen.getByText(/1 source has more/)).toBeTruthy();
     });
     // "200 of 200 shown - 1 source has more" contradicts itself in one
     // sentence: the number it divides by is a floor, not a total.
@@ -192,8 +195,39 @@ describe("what the page says about what it is not showing", () => {
     );
     renderWorklist();
 
+    // Exactly the singular. The wording used to be hedged here because one
+    // bounded source drew "1 sources have more" — the count picked no form at
+    // all — and a regexp that accepts both is a test that cannot fail on the
+    // half of the pair that was wrong.
     await waitFor(() => {
-      expect(screen.getByText(/1 source(s)? ha(s|ve) more/)).toBeTruthy();
+      expect(screen.getByText(/1 source has more/)).toBeTruthy();
+    });
+    expect(screen.queryByText(/1 sources/)).toBeNull();
+  });
+
+  // The other arm, which nothing held: the singular alone passes just as well
+  // over a sentence that says "source" whatever the figure is.
+  it("says sources have more where several are bounded", async () => {
+    stub(
+      day([
+        {
+          category: "decisions",
+          considered: 200,
+          shown: 1,
+          more_available: true,
+        },
+        {
+          category: "tasks",
+          considered: 40,
+          shown: 2,
+          more_available: true,
+        },
+      ]),
+    );
+    renderWorklist();
+
+    await waitFor(() => {
+      expect(screen.getByText(/2 sources have more/)).toBeTruthy();
     });
   });
 
@@ -226,5 +260,33 @@ describe("what the page says about what it is not showing", () => {
     }
     // Unfiltered, the same day genuinely IS hiding the thirty tasks.
     expect(unfiltered).toContain("5/35");
+  });
+
+  // The two link-only narrowings say NOTHING, and for one reason each.
+  //
+  // `changed_since_brief` cuts across every category on a per-row freshness the
+  // counts do not carry. `except_decisions` excludes by SOURCE — the approvals a
+  // brief draws as cards — and these figures are keyed by category, so the
+  // near-miss complement of the `decisions` category would undercount: it drops
+  // an introduction request, which is a decision and is not an approval, that
+  // the server keeps.
+  //
+  // Silence is the honest answer. The danger is silence arrived at by accident,
+  // which is what the per-category lookup produced before — it found nothing,
+  // summed zero considered, and reported a truncated page as complete.
+  it("says nothing where the counts cannot describe the narrowing", () => {
+    const page = day([
+      { category: "tasks", considered: 30, shown: 5, more_available: true },
+      { category: "decisions", considered: 4, shown: 4, more_available: false },
+    ]);
+    const t = ((key: string, vars?: Record<string, string>) =>
+      `${key}:${vars?.shown}/${vars?.considered}`) as never;
+
+    expect(completenessText(page, "changed_since_brief", t, "en")).toBeNull();
+    // Not "5/30" either: that is the category complement, which is a DIFFERENT
+    // population from the one the server returns.
+    expect(completenessText(page, "except_decisions", t, "en")).toBeNull();
+    // The control: the same day, asked a question the counts DO answer, speaks.
+    expect(completenessText(page, "tasks", t, "en")).not.toBeNull();
   });
 });

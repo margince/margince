@@ -117,26 +117,28 @@ func TestAllDayEventIsAnchoredAtNoon(t *testing.T) {
 }
 
 // A delta round reports a deletion as a tombstone carrying little but the id.
-// It is a cancellation to a calendar, and the shared rules drop those.
-func TestARemovedEventIsDropped(t *testing.T) {
+// It is a cancellation to a calendar, and the shared rules CLOSE the meeting
+// captured under that id rather than discarding the news of it.
+func TestARemovedEventCancelsTheCapturedMeeting(t *testing.T) {
 	raw := eventJSONWith(t, map[string]any{
 		"id": "evt-gone", "@removed": map[string]string{"reason": "deleted"},
 	})
-	reason, skip := mustParse(t, raw).SkipReason()
-	if !skip || reason != "cancelled" {
-		t.Fatalf("a removed event: got (%q, skip=%v), want it dropped as cancelled", reason, skip)
+	reason, settlement := mustParse(t, raw).Settle()
+	if settlement != meetingmap.SettleCancel || reason != "cancelled" {
+		t.Fatalf("a removed event: got (%q, %v), want it cancelled", reason, settlement)
 	}
 }
 
-func TestACancelledEventIsDropped(t *testing.T) {
+func TestACancelledEventCancelsTheCapturedMeeting(t *testing.T) {
 	raw := eventJSONWith(t, map[string]any{
 		"id": "evt-cx", "subject": "Cancelled call", "isCancelled": true,
 		"start":     map[string]string{"dateTime": "2026-07-16T09:00:00.0000000", "timeZone": "UTC"},
 		"organizer": actorJSON(owner),
 		"attendees": attendeesJSON("client@acme.com"),
 	})
-	if reason, skip := mustParse(t, raw).SkipReason(); !skip || reason != "cancelled" {
-		t.Fatalf("cancelled event: got (%q, skip=%v), want cancelled skip", reason, skip)
+	reason, settlement := mustParse(t, raw).Settle()
+	if settlement != meetingmap.SettleCancel || reason != "cancelled" {
+		t.Fatalf("cancelled event: got (%q, %v), want it cancelled", reason, settlement)
 	}
 }
 
@@ -235,7 +237,7 @@ func activityFields(t *testing.T, rec connector.NormalizedRecord) capture.Activi
 // bytes, then apply the shared meeting rules — so a fixture asserts on the
 // result rather than on either half.
 func classifyRaw(raw []byte, owner string) (meetingmap.Meeting, error) {
-	ev, err := decodeEvent(raw)
+	ev, err := decodeEvent(raw, owner)
 	if err != nil {
 		return meetingmap.Meeting{}, err
 	}

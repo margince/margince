@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
+import { middayInstant } from "../format/calendarday";
 import {
+  formatDateAbbrev,
   formatDateTime,
   formatMoneyCompact,
   formatMoneyOrAbsent,
@@ -100,7 +103,9 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // zero already reads as "none"; a line under it repeating that says
           // the same thing twice and drops the one fact it could add.
           detail={t("brief.readings.urgentBasis")}
-          openLabel={t("brief.readings.openLane")}
+          openLabel={t("brief.readings.openLaneNamed", {
+            reading: t("brief.readings.urgent"),
+          })}
           onOpen={() => openLane("all")}
         />
         <MeetingsStat
@@ -124,7 +129,9 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           value={formatNumber(readings.review, locale)}
           tone={readings.review > 0 ? "warn" : undefined}
           detail={t("brief.readings.decisionsBasis")}
-          openLabel={t("brief.readings.openLane")}
+          openLabel={t("brief.readings.openLaneNamed", {
+            reading: t("brief.readings.decisions"),
+          })}
           onOpen={() => openLane("decisions")}
         />
       </StatStrip>
@@ -161,7 +168,9 @@ function MeetingsStat({
       value={formatNumber(meetings, locale)}
       tone={unready !== null && unready > 0 ? "warn" : undefined}
       detail={meetingsDetail(meetings, unready, locale, t, plural)}
-      openLabel={t("brief.readings.openLane")}
+      openLabel={t("brief.readings.openLaneNamed", {
+        reading: t("brief.readings.meetings"),
+      })}
       onOpen={onOpen}
     />
   );
@@ -224,7 +233,9 @@ function LeadsStat({
               value: formatDateTime(soonest, locale, viewerZone()),
             })
       }
-      openLabel={t("brief.readings.openLane")}
+      openLabel={t("brief.readings.openLaneNamed", {
+        reading: t("brief.readings.leads"),
+      })}
       onOpen={onOpen}
     />
   );
@@ -337,6 +348,7 @@ function meetingsReading(day: Worklist): {
 function PipelineOutlook() {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // The reader's OWN pipeline, under the scope the SERVER names for them.
   //
   // `/analytics/context` answers `default_scope`, which is what Analytics starts
@@ -403,7 +415,22 @@ function PipelineOutlook() {
       // The weighted figure and the completeness in one line, because they are
       // read together: a weighted number over a partly priced population is a
       // floor, and a reader who cannot see the second cannot judge the first.
+      // The PERIOD first, because the money means nothing without it. The
+      // headline reads a quarter's open pipeline, and a reader who cannot see
+      // which quarter cannot reconcile it against the currency totals beside
+      // it — one is a window, the other is everything open.
+      //
+      // The RECORD's zone, and midday rather than midnight. These are date-only
+      // wire values: there is no instant in "2026-07-01" to localize, and read
+      // in the viewer's clock west of UTC they print the day before — a quarter
+      // labelled 30 Jun – 29 Sept. The period is a property of the
+      // installation's calendar, the same for every colleague reading it.
       detail={t("brief.readings.pipelineBasis", {
+        period: `${formatDateAbbrev(
+          middayInstant(data.period_start, recordZone),
+          locale,
+          recordZone,
+        )} – ${formatDateAbbrev(middayInstant(data.period_end, recordZone), locale, recordZone)}`,
         weighted: formatMoneyOrAbsent(
           data.weighted_minor,
           data.base_currency,

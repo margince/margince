@@ -283,6 +283,13 @@ func (w *weeklyGenerateWorker) narrate(ctx context.Context, review weekly.Review
 			ProposalsRejected:   review.Counts.ProposalsRejected,
 			BriefItemsActed:     review.Counts.BriefItemsActed,
 			BriefItemsDismissed: review.Counts.BriefItemsDismissed,
+			// The scorecard reports these; without them a week of answering
+			// leads and holding meetings reaches the narrator as zeros.
+			LeadsRouted:           review.Counts.LeadsRouted,
+			LeadsAnsweredInTarget: review.Counts.LeadsAnsweredInTarget,
+			LeadsBreached:         review.Counts.LeadsBreached,
+			MeetingsHeld:          review.Counts.MeetingsHeld,
+			MeetingsWithNextStep:  review.Counts.MeetingsWithNextStep,
 		},
 	}
 	for _, line := range review.Deals {

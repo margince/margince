@@ -6,6 +6,7 @@ package ai
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -122,8 +123,25 @@ func KnownProviders() []string {
 // "offline fake ↔ API key ↔ local, one line" — swapping providers is a
 // config change, never a code change.
 //
+// Held by: TestSelectBrainIsTheOnlyBuilderOfAnOutboundClient (backend/internal/modules/ai/outboundegress_test.go)
+//
 //nolint:ireturn // one call returns whichever of seven adapters the binding names; the port interface IS the return type
 func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
+	// The client is built once, from the binding, and handed to whichever
+	// adapter the switch names: the egress guard it carries is chosen by the
+	// same value the switch dispatches on, so a lane cannot end up guarded as
+	// another. It is the only call to newOutboundClient in the package, which
+	// is what makes the guard cover every adapter rather than most of them.
+	return selectBrainOn(cfg, keys, newOutboundClient(cfg.Provider))
+}
+
+// selectBrainOn is SelectBrain with the transport supplied, which is the seam
+// an in-package test binds an adapter to an httptest server through — the
+// production guard refuses the 127.0.0.1 such a server listens on, by design.
+// TestSelectBrainWiresTheEgressGuard holds the production wiring itself.
+//
+//nolint:ireturn // one call returns whichever of seven adapters the binding names; the port interface IS the return type
+func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (model.Client, error) {
 	switch cfg.Provider {
 	case ProviderFake:
 		// The stub narrows like any other adapter: `input:` on a fake binding
@@ -136,7 +154,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			return nil, byokKeyRequired(providerAnthropic)
 		}
 		return &anthropicClient{
-			http:            newOutboundClient(),
+			http:            httpc,
 			baseURL:         defaulted(cfg.BaseURL, defaultAnthropicBaseURL),
 			apiKey:          key,
 			defaultModel:    cfg.Model,
@@ -144,14 +162,14 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 		}, nil
 	case providerOllama:
 		return &ollamaClient{
-			http:            newOutboundClient(),
+			http:            httpc,
 			baseURL:         defaulted(cfg.BaseURL, defaultOllamaBaseURL),
 			defaultModel:    defaulted(cfg.Model, defaultOllamaModel),
 			attachmentMIMEs: narrowedCarriage(carriesImages, cfg.Input),
 		}, nil
 	case providerVLLM:
 		return &openAICompatClient{
-			http:            newOutboundClient(),
+			http:            httpc,
 			baseURL:         defaulted(cfg.BaseURL, defaultVLLMBaseURL),
 			apiKey:          "", // local vLLM: no auth
 			localOnly:       true,
@@ -167,7 +185,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			return nil, fmt.Errorf("%w: openai_compatible (the vendor host root — no version segment, the adapter adds /v1; e.g. https://api.mistral.ai)", errNoBaseURL)
 		}
 		return &openAICompatClient{
-			http:            newOutboundClient(),
+			http:            httpc,
 			baseURL:         cfg.BaseURL,
 			apiKey:          key,
 			localOnly:       false,
@@ -184,7 +202,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			return nil, byokKeyRequired(providerOpenAI)
 		}
 		return &openaiClient{
-			http:            newOutboundClient(),
+			http:            httpc,
 			baseURL:         defaulted(cfg.BaseURL, defaultOpenAIBaseURL),
 			apiKey:          key,
 			defaultModel:    cfg.Model,
@@ -196,7 +214,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			return nil, byokKeyRequired(providerGemini)
 		}
 		return &geminiClient{
-			http:            newOutboundClient(),
+			http:            httpc,
 			baseURL:         defaulted(cfg.BaseURL, defaultGeminiBaseURL),
 			apiKey:          key,
 			defaultModel:    cfg.Model,

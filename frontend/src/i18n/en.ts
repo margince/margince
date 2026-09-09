@@ -216,6 +216,12 @@ export const en = {
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.closeMenu": "Close",
+  // The agent panel's one promise, as opposed to its readings: what the agent
+  // can REACH. Row scope bounds it on the server, and a guarantee nobody is
+  // told about is one nobody can rely on — "what can this thing see" is the
+  // question a person most reasonably has about an agent working over their
+  // data. Held by AC-shell-8.
+  "shell.agent.scope": "Your agent reads only what you can see.",
   "shell.capture.importing": "Importing mail history",
   "shell.capture.share": "{percent} · {scanned} of {total} messages",
   "shell.capture.count": "{scanned} messages so far",
@@ -2211,6 +2217,9 @@ export const en = {
     "Closed with the reason \u201c{reason}\u201d. Each lead keeps its own record, and there is no one step that puts them back.",
   "lead.bulkFailed": "{count} not applied —",
   "lead.bulkFailedRow": "could not be saved",
+  "lead.bulkOutcomeConflict": "somebody changed it while you were choosing",
+  "lead.bulkOutcomeForbidden": "not yours to hand on",
+  "lead.bulkOutcomeNotFound": "no longer in your list",
   "lead.bulkSelectRow": "Select {name}",
   "lead.unnamed": "Unnamed lead",
   "lead.sla.breached": "Overdue",
@@ -2227,7 +2236,6 @@ export const en = {
   "lead.filterScoreCool": "40 and up",
   "lead.details": "Details",
   "lead.ladder.title": "Where this lead stands",
-  "lead.railTitle": "Owner",
   "lead.detailsUnset": "Not set",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.notYoursToChange":
@@ -2379,6 +2387,8 @@ export const en = {
   "list.showAll": "Show all",
   "lead.assignedAway": "{names} assigned to {owner} — no longer in Mine.",
   "lead.viewNew": "New",
+  "lead.viewNewUnassigned": "New & unassigned",
+  "lead.viewUnassigned": "Unassigned queue",
   "lead.viewNeedsFollowUp": "Needs follow-up",
   "lead.viewEngaged": "Engaged",
   "lead.ladder": "Lead status",
@@ -2697,12 +2707,15 @@ export const en = {
   "brief.weekly.scorecard.multiThreaded": "More than one contact",
   "brief.weekly.scorecard.multiThreadedBasis":
     "of {total} open deals, in the last 30 days",
-  "brief.weekly.scorecard.closeDateSound": "Close date holds up",
+  "brief.weekly.scorecard.closeDateSound": "Firm close date recorded",
   "brief.weekly.scorecard.forecastMoves": "Forecast upgrades",
   "brief.weekly.scorecard.forecastMovesBasis": "{down} downgraded",
+  "brief.weekly.scorecard.unreconstructible": "Deals we could not rebuild",
+  "brief.weekly.scorecard.unreconstructibleBasis":
+    "Their week sits behind an erasure, so the counts above are a floor",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
-  "plan.title": "Plan next week",
+  "plan.title": "Plan your week",
   // The head of the ranked queue, on the page a rep opens first. The same rows
   // the Worklist draws, in the order the server decided.
   // The Brief's opening sentence, composed from the rows the page is showing —
@@ -2843,8 +2856,8 @@ export const en = {
   "plan.contract.save": "Save",
   "plan.contract.cancel": "Cancel",
   "plan.contract.capacityLine":
-    "Next week already holds {meetings} meetings and {tasks} tasks.",
-  "plan.contract.crowded": "Next week is already full",
+    "That week already holds {meetings} meetings and {tasks} tasks.",
+  "plan.contract.crowded": "That week is already full",
   "plan.contract.crowdedBody":
     "{committed} things are already booked and you have written {commitments} commitments. Something will have to give.",
   "plan.help.ask": "Ask for help",
@@ -2971,10 +2984,12 @@ export const en = {
   "brief.readings.pipeline": "Pipeline outlook",
   "brief.readings.pipelineWorkspace": "Pipeline outlook · whole organization",
   "brief.readings.pipelineBasis":
-    "{weighted} weighted · {priced} of {eligible} priced",
+    "{period} · {weighted} weighted · {priced} of {eligible} priced",
   "brief.readings.pipelineUnread": "the pipeline could not be read",
   "brief.readings.pipelineReading": "reading the pipeline",
-  "brief.readings.openLane": "Open these",
+  "brief.readings.openLaneNamed": "Open {reading}",
+  "brief.snooze.done": "Set aside until {at}",
+  "brief.snooze.undo": "Undo",
   "brief.readings.meetings": "Meetings ahead",
   "brief.readings.meetingsBasis": "on today's calendar",
   "brief.readings.needsPrep_one": "1 needs prep",
@@ -3402,6 +3417,8 @@ export const en = {
     "Could not read that file — try pasting the text instead.",
   "log.dueAt": "Due date",
   "log.date": "Date",
+  "log.assignee": "Assignee",
+  "log.unassigned": "Unassigned",
   "log.save": "Log",
   "log.saving": "Logging…",
 
@@ -3491,6 +3508,16 @@ export const en = {
   "compose.fileUploading": "Filing the file…",
   "compose.fileStoredUnnamed":
     "The file is on the record, but we could not read back which one it is. Attach it from the list above.",
+  "compose.carriageCarries":
+    "{channel} cannot carry files, so this message and its {count} attached cannot go on it. Send the text on {channel}, or the files another way.",
+  "compose.carriageCount":
+    "{channel} carries at most {limit} files in one message, and this has {named}. Send the rest as a second message.",
+  "compose.carriagePerFile":
+    "{filename} is larger than the {limit} {channel} accepts for one file. Send a smaller version, or share it another way.",
+  "compose.carriageAggregate":
+    "These {count} files come to {total} together, and {channel} carries at most {limit} in one message. Send them across several messages.",
+  "compose.carriageCaption":
+    "{channel} carries the text of a message with files as a caption, at most {limit} characters, and this has {length}. Shorten it, or send the files separately.",
   "calendar.previousMonth": "Previous month",
   "calendar.nextMonth": "Next month",
   "compose.schedulePick": "Pick date and time",
@@ -3968,6 +3995,16 @@ export const en = {
   "agent.activity.documentExtractNamed.failed": "I couldn't read {name}.",
   // A company's website being read. The same shape as the document lines: the
   // unnamed pair says which kind of thing, the named one says which company.
+  "agent.activity.transcriptRead.queued":
+    "The meeting transcript is queued to be read.",
+  "agent.activity.transcriptRead.running":
+    "I'm reading the transcript for next steps.",
+  "agent.activity.transcriptRead.stalled":
+    "Reading the transcript has taken unusually long. It may have stopped.",
+  "agent.activity.transcriptRead.done": "I've read the transcript.",
+  "agent.activity.transcriptRead.degraded":
+    "I stopped before finishing the transcript.",
+  "agent.activity.transcriptRead.failed": "I couldn't read the transcript.",
   "agent.activity.siteRead.queued": "The company website is queued to be read.",
   "agent.activity.siteRead.running": "I'm reading the company website.",
   "agent.activity.siteRead.stalled":
@@ -4975,6 +5012,7 @@ export const en = {
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook Calendar",
   "connectors.provImap": "IMAP mailbox",
+  "connectors.provTestMailbox": "Test mailbox",
   "connectors.statusConnected": "Capturing",
   "connectors.statusPending": "Pending — not yet confirmed live",
   "connectors.statusReauth": "Needs reconnect",
@@ -5103,6 +5141,8 @@ export const en = {
     "Your Outlook calendar. It connects separately from your Outlook mail.",
   "connectors.addImapBrings":
     "Any other mail host, with an app password. Capture only.",
+  "connectors.addTestMailboxBrings":
+    "A QC-only fake mailbox — no real mail is ever sent or received.",
   "connectors.providerNotConfigured":
     "{provider} isn't configured in this deployment.",
 
@@ -8733,9 +8773,12 @@ export const en = {
   "worklist.completeness": "{shown} of {considered} shown",
   "worklist.review.partial":
     "{loaded} of {total} shown — page the day to reach the rest",
-  "worklist.completeness.bounded":
+  "worklist.completeness.bounded_one":
+    "{shown} shown · {sources} source has more",
+  "worklist.completeness.bounded_other":
     "{shown} shown · {sources} sources have more",
   "worklist.clear": "Nothing is waiting on you.",
+  "worklist.clearFor": "Nothing is waiting on {name}.",
   "worklist.clearOfTasksToday":
     "No tasks are due today or overdue. Later work is on each record's own Tasks tab.",
   "worklist.clearOfWhatWasRead":
@@ -8761,6 +8804,8 @@ export const en = {
   "worklist.pane.lastInbound": "They last wrote",
   "worklist.pane.lastOutbound": "We last wrote",
   "worklist.pane.never": "Never",
+  "worklist.pane.company": "Works for",
+  "worklist.pane.role": "Their role",
   "worklist.band.now": "Now",
   "worklist.band.build_pipeline": "Build pipeline",
   "worklist.band.keep_momentum": "Keep momentum",
@@ -8798,7 +8843,7 @@ export const en = {
   "worklist.scope.unassigned": "Unassigned",
   "worklist.scope.team": "My team",
   "worklist.scope.all": "All",
-  "worklist.owner.label": "Whose queue",
+  "worklist.owner.visibleLabel": "Viewing",
   "worklist.manager.cancel": "Cancel",
   "worklist.owner.mine": "My own day",
   "worklist.owner.backToMine": "Back to my own day",
@@ -8814,11 +8859,15 @@ export const en = {
     "That could not be handed over. It is still theirs.",
   "worklist.manager.reassigned": "Handed over.",
   "worklist.manager.reassignFailed": "That could not be handed over.",
-  "worklist.manager.coach": "Leave a note",
+  "worklist.manager.coach": "Add note",
+  "worklist.manager.coachTitle": "A note for {name}",
+  "worklist.manager.coachTitleUnnamed": "A note",
+  "worklist.manager.coachIntro": "A short note that lands in their Worklist.",
   "worklist.manager.coachAbout": "About",
-  "worklist.manager.coachConfirm": "Leave the note",
+  "worklist.manager.coachConfirm": "Add note",
   "worklist.manager.coached": "Your note is on their queue.",
   "worklist.manager.coachFailed": "That note could not be left.",
+  "worklist.manager.coachRefused": "You may not coach {name}.",
   "worklist.manager.note": "Your note (optional)",
   "worklist.manager.kind.reply_aging": "An aging reply",
   "worklist.manager.kind.next_step": "A deal's next step",
@@ -8836,6 +8885,7 @@ export const en = {
   "worklist.walk.refresh": "Refresh",
   "worklist.handled.empty": "Nothing was done on your behalf today.",
   "worklist.handled.loading": "Reading what was done",
+  "worklist.handled.count": "{count} done for you",
   "worklist.handled.what": "What happened",
   "worklist.handled.about": "About",
   "worklist.handled.when": "When",
@@ -8844,6 +8894,7 @@ export const en = {
     "More than this. The list stops at what one sitting can hold.",
   "worklist.exceptions.empty": "Nothing on the team needs you right now.",
   "worklist.exceptions.loading": "Reading the team",
+  "worklist.exceptions.count": "{count} needing you",
   "worklist.exceptions.condition": "What",
   "worklist.exceptions.subject": "About",
   "worklist.exceptions.owner": "Who answers",
@@ -8882,7 +8933,7 @@ export const en = {
   "worklist.readings.prospecting": "Prospecting",
   "worklist.readings.prospecting.detail": "New business owed a first reply",
   "worklist.readings.review": "Review",
-  "worklist.readings.review.detail": "Routine work queued behind a decision",
+  "worklist.readings.review.detail": "Decisions only you can settle",
   "worklist.readings.truncated":
     "There is more work than this could count. These are floors, not totals.",
   "worklist.hidden.title": "What the queue is not showing",
@@ -8917,8 +8968,17 @@ export const en = {
   "worklist.filter.tasks": "Tasks",
   "worklist.filter.decisions": "Decisions",
   "worklist.filter.system": "System",
+  "worklist.filter.linked.except_decisions":
+    "Showing everything except the decisions your brief already asked you about.",
+  "worklist.filter.linked.changed_since_brief":
+    "Showing only what changed since last night's run.",
+  "worklist.filter.linked.clear": "Show the whole queue",
   "worklist.category.customer_waiting": "Customer waiting",
   "worklist.category.leads": "Lead",
+  "worklist.signal.closing_soon": "Closing soon",
+  "worklist.signal.stalled": "Deal at risk",
+  "worklist.signal.opportunity": "Worth a push",
+  "worklist.signal.moved": "Just moved",
   "worklist.category.deals_at_risk": "Deal at risk",
   "worklist.category.meetings": "Meeting",
   "worklist.category.tasks": "Task",
@@ -8927,8 +8987,8 @@ export const en = {
   "worklist.because.pinned": "You pinned this",
   "worklist.because.buyer_wrote_last": "They wrote last",
   "worklist.because.waiting_days": "waiting",
-  "worklist.because.more_one": "+{count} more reason",
-  "worklist.because.more_other": "+{count} more reasons",
+  "worklist.because.more_one": "+{count} more",
+  "worklist.because.more_other": "+{count} more",
   "worklist.because.waiting_days.value_one": "waiting {value} day",
   "worklist.because.waiting_days.value_other": "waiting {value} days",
   "worklist.because.overdue": "overdue",

@@ -218,7 +218,7 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 // approval it already spent. Redemption comes second, so a refused redemption
 // gives the key straight back — nothing ran.
 func (r *Registry) runClaimed(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved) (json.RawMessage, int, error) {
-	fresh, answered, records, err := r.claimFor(ctx, spec, res)
+	fresh, attempt, answered, records, err := r.claimFor(ctx, spec, res)
 	if !fresh {
 		// A replay hands over the records the ORIGINAL call was charged for, and
 		// claimFor has already re-proven and re-charged them. The COUNT still
@@ -229,10 +229,10 @@ func (r *Registry) runClaimed(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	}
 	redeemed, err := r.redeemPresented(ctx, spec, res)
 	if err != nil {
-		r.releaseUnrunKey(ctx, spec, res)
+		r.releaseUnrunKey(ctx, spec, res, attempt)
 		return nil, 0, err
 	}
-	return r.handle(redeemed, t, spec, res)
+	return r.handle(redeemed, t, spec, res, attempt)
 }
 
 // redeemPresented consumes the approval a retry asserts, and answers the
@@ -261,9 +261,9 @@ func (r *Registry) redeemPresented(ctx context.Context, spec mcp.ToolSpec, res r
 // handle runs an admitted call, seals its answer, and records what a claimed
 // retry key produced — this is the one place that knows both that the tool RAN
 // and what it answered with.
-func (r *Registry) handle(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved) (json.RawMessage, int, error) {
+func (r *Registry) handle(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved, attempt string) (json.RawMessage, int, error) {
 	sealed, records, err := r.runAndSeal(ctx, t, spec, res.Args)
-	r.settleRun(ctx, spec, res, sealed, records, err)
+	r.settleRun(ctx, spec, res, attempt, sealed, records, err)
 	return sealed, records, err
 }
 

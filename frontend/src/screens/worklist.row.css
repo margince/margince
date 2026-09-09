@@ -1,0 +1,330 @@
+/* One row of the queue, and the list that holds it.
+   The row is drawn by two screens — the Worklist and the Brief's feed — so its
+   rules travel with the component rather than with either page's sheet. */
+/* The selected row, marked on its edge rather than by a fill. The first row is
+   selected on arrival, so a fill would paint a block of colour across the top of
+   every day rather than answering which row is in hand. */
+.worklist-row-selected {
+  box-shadow: inset 3px 0 0 0 var(--accent);
+}
+
+/* Three columns a reader runs down as three lists: the rank, the KIND of work,
+   and the work itself — which takes the whole rest of the row. The kind column
+   is fixed so the titles beside it start at one x whatever the kind says, which
+   is what lets the eye read the kinds alone and then the titles alone. The
+   verbs are NOT a fourth column here: seven controls beside the work took the
+   width and left the subject, the snippet and the reasons a strip that wrapped
+   every line. They sit under the work, one wrapping line, and so does anything
+   else the row carries after it — a decision drawn inside the row, an answer. */
+.worklist-row {
+  align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto var(--worklist-kind-w, 7.5rem) minmax(0, 1fr);
+  column-gap: var(--space-4);
+  row-gap: var(--space-2);
+}
+/* The verbs and anything the row carries after them — a duplicate pair drawn
+   inside it — take the full width under the work. Spelled as two selectors
+   rather than one `:nth-child`, because the wide shape below moves ONLY the
+   verbs and needs a selector of equal weight to do it. */
+.worklist-row > .worklist-row-acts,
+.worklist-row > :nth-child(n + 5) {
+  grid-column: 3 / -1;
+}
+
+/* THE RULE BETWEEN TWO ROWS, put back at the boundary it belongs to.
+   `PanelRow` draws the panel's own hairline against whatever precedes it and
+   drops it on a panel's FIRST row. Wrapping each row in its own <li> handed
+   that reset to every row, so a queue of ten drew no rule between rows at all
+   — ten blocks of captions and verbs running into each other with only their
+   own interval to tell them apart.
+   This restores the panel's rule rather than declaring a border of this
+   screen's: the ::before is already drawn at the panel's own inset, in the
+   panel's own ink, and only its `content` was being cancelled.
+   Scoped to THIS list, because the other host answers the same question
+   differently and has to: the Brief's feed puts a run-length section label
+   inside the item, so its first row is not its item's first child and a rule
+   drawn there would fall between a label and the row it labels — the one place
+   panel.css says a rule must never fall. Its own two lines live in
+   brief.feed.css beside the label that causes them. */
+.worklist-list > li + li > .worklist-row::before {
+  content: "";
+}
+
+/* A CARD WITH ROOM PUTS THE VERBS BESIDE THE WORK.
+   Under it, they left the card's right-hand half empty — measured at 812px of
+   nothing on a 1358px card, which is what a full-bleed row with all its ink on
+   the left reads as. Beside it, the work is bracketed by what can be done
+   about it and the card is used end to end.
+   The column is CAPPED: a row can carry seven verbs, and uncapped they took
+   the width and squeezed the subject and its reasons into a strip that wrapped
+   every line — which is what put them under the work in the first place. At
+   the cap they wrap among themselves instead, and the work keeps the rest. The
+   cap survives them getting NARROWER: the pin and the hand-off are glyphs now,
+   so 20rem holds more of them than it did.
+   60rem is measured rather than picked: the Brief's work column is narrower
+   than that, and there the verbs stay under the work so the subject and its
+   reasons keep the whole width. Only a queue on a page of its own is wide
+   enough to spend on both.
+   THE ANSWER KEEPS THE TRAILING EDGE at both widths. The line is right-aligned
+   wherever it is drawn (see `.worklist-row-acts` below) and the answer is its
+   last control, so it lands on one x down the whole queue whatever quiet verbs
+   the row ahead of it carries — beside the work in this column, and under the
+   work at the widths that have no column for it. */
+@container (min-width: 60rem) {
+  .worklist-row {
+    grid-template-columns:
+      auto
+      var(--worklist-kind-w, 7.5rem)
+      minmax(0, 1fr)
+      minmax(min-content, var(--worklist-acts-w, 20rem));
+  }
+  .worklist-row > .worklist-row-acts {
+    grid-column: 4;
+  }
+}
+
+/* WHAT KIND of work, as the catalog's quiet badge: a dot in the tone's colour
+   and the label as plain text. This span is the CELL and not the mark, so it
+   declares nothing the badge already owns — only that a kind may be narrower
+   than its own words. Without that floor an unbreakable one sets the column's
+   width and pushes every title on the page to the right.
+   No interval above it: the badge's own 20px box and the title's 21px line box
+   put the two texts on the same centre, which is what "beside the title" means
+   to a reader running down the column. */
+.worklist-row-kind {
+  min-width: 0;
+}
+
+.worklist-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* WHEN, WHAT IT IS WORTH, and WHY, as ONE dot-separated line at every width.
+   Each is a fragment — "due 15:00", "€40k", "waiting 4 days · nobody owns it"
+   — and stacked they took three 19px lines under every title on the page, of
+   which a reader scanning a queue reads the first and skips the rest. They stay
+   separate elements, so a screen reader still meets three facts and only the
+   line breaks between them go.
+   They wrap when they do not fit, so a long reason still gets its own line
+   rather than being cut, and the separator is what makes the join read as three
+   facts rather than one run-on sentence. */
+.worklist-row-facts-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+  min-width: 0;
+}
+
+.worklist-row-facts-line > * + *::before {
+  color: var(--textMeta);
+  content: "·";
+  margin-inline-end: var(--space-2);
+}
+
+.worklist-row-title {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.worklist-row-detail,
+.worklist-row-verdict,
+.worklist-row-when,
+.worklist-row-facts,
+.worklist-row-sample,
+.worklist-row-because,
+.worklist-row-consequence,
+.worklist-row-above {
+  color: var(--textMeta);
+  margin: 0;
+}
+
+/* EVERY VERB ON ONE RIGHT-ALIGNED LINE, the lane's answer LAST.
+   One flow rather than two groups, and `flex-end` rather than `space-between`:
+   the verbs on a row do not divide — every one of them is about this row — and
+   two groups pushed to opposite edges say which is which only while both edges
+   are on screen. Right-aligned, the answer is at the end of the sentence a
+   reader has just read, at one x down the whole queue. See the note at the top
+   of worklist.rowverbs.tsx.
+   The catalog's `ActionRow` is the DIVIDED row and is deliberately not reached
+   for here: its `space-between` holds a leading group against the trailing one,
+   which is the shape this row is not.
+   `--gapActions` is the role for two buttons side by side, so retuning it moves
+   this row with every other row of verbs in the product. */
+.worklist-row-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
+/* ROOM FOR AN INLINE FORM, AFTER THE VERBS IT BELONGS TO.
+   The hand-off opens a picker and two verbs inside this line
+   (`worklist.manager.tsx`), which is a control and a sentence rather than one
+   more verb: sharing the line, it pushes the answer off the trailing edge and
+   reads as four peers. So it takes a line of its own, on the same edge the
+   verbs stand on.
+   AN OPEN FORM MUST NOT SPLIT THE VERBS IT BELONGS TO. Left in source order the
+   form's line falls where the hand-off glyph sat — mid-line — and everything
+   after it, the lane's answer included, is pushed to a THIRD line: the reader
+   opens a picker and the row's `Done` moves under it, alone. `order: 1` is the
+   only value in this container, so the form is last however many verbs the row
+   carries and the verbs above it stay one line. */
+.worklist-row-acts > .worklist-manager-control {
+  flex: 1 1 100%;
+  justify-content: flex-end;
+  order: 1;
+}
+
+/* The standing line: a badge, who is speaking, and the sentence.
+
+   Laid out as a row rather than as prose so the badge reads as a label on the
+   sentence beside it, and wrapping so a long line falls under the badge rather
+   than pushing the row wide. The "Margince believes" half is dimmed against the
+   sentence itself: it is attribution, and the reader is here for the claim. */
+.worklist-row-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.worklist-row-verdict-source,
+.worklist-row-verdict-when {
+  color: var(--textTertiary, var(--textMeta));
+}
+
+.worklist-row-verdict-line {
+  color: var(--textPrimary);
+}
+
+/* Why this row is where it is, past what fits on the line: the reasons the fold
+   cuts off, and the comparison with the row below it.
+
+   A native <details>, so the toggle is the summary itself and keyboard and
+   screen-reader behaviour come for free. It carries no chevron and no box: a
+   row is not a section, and furniture around one caption line would cost more
+   height than the fold saves.
+
+   The marker is removed on both spellings — ::marker is the standard one and
+   ::-webkit-details-marker is what Safari still uses — because the "+N more"
+   text IS the affordance, and a triangle beside it says the same thing twice.
+   `display: inline` on the summary is what makes the reasons and the "+N more"
+   read as one sentence rather than a line with a control under it. */
+.worklist-row-because-fold > summary {
+  cursor: pointer;
+  display: inline;
+  list-style: none;
+}
+
+/* Closed, the fold is one more fragment of the meta line and shares it with
+   the moment and the figures. OPENED, it takes a line of its own, because what
+   it reveals is prose: left inline it would start at whatever x the fragments
+   before it happened to end on, in whatever width was left, and a sentence
+   about a deadline would arrive as four words per line. */
+.worklist-row-because-fold {
+  min-width: 0;
+}
+
+.worklist-row-because-fold[open] {
+  flex: 1 1 100%;
+}
+
+.worklist-row-because-fold > summary::marker,
+.worklist-row-because-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The count reads as the control, so it takes the accent the rest of the line
+   does not. Underlined on hover rather than always: a caption line that is
+   permanently underlined mid-sentence reads as a broken link. */
+.worklist-row-because-more {
+  color: var(--accentText);
+}
+
+.worklist-row-because-fold > summary:hover .worklist-row-because-more {
+  text-decoration: underline;
+}
+
+/* The opened remainder sits under the line it belongs to, not indented: it is
+   more of the same sentence rather than a nested thing. It is also two lines on
+   the rows that carry both, so the interval rides on every one of them. */
+.worklist-row-because-fold[open] > .worklist-row-because,
+.worklist-row-because-fold[open] > .worklist-row-above {
+  margin-block-start: var(--space-1);
+}
+
+/* The queue is an ordered list for assistive technology and a plain stack on
+   screen: the rank number is already drawn in the row.
+   It is also the CONTAINER the row measures itself against — see the row's own
+   wide shape above. A media query would read the window, and this same queue is
+   drawn in the Brief's work column and on a page of its own, which are two
+   widths on one screen. */
+.worklist-list {
+  container-type: inline-size;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* THE NARROW ARRANGEMENT, and one engine for both ways the row is drawn.
+   720px is the tree's own fold (app/viewport.ts, FOLD_MAX_WIDTH), and here it
+   is load-bearing rather than conventional: below it the row is wrapped in
+   `SwipeRow` so a thumb can answer it, and that wrapper is a flex box of its
+   own that the row's grid columns cannot reach through. A grid at this width
+   therefore laid the row out one way with the gesture mounted and another way
+   without it — on the same phone, one disposition apart. Flex here is the
+   arrangement BOTH paths draw: the rank and the kind lead the first line, the
+   work takes the next, the verbs the one after. */
+@media (max-width: 720px) {
+  .worklist-row {
+    display: flex;
+    flex-wrap: wrap;
+    /* The rank and its kind read as ONE pair on the first line, so they take
+       the tighter step: at the row's own --space-4 the digit and the kind's dot
+       sat far enough apart to read as two columns of a grid that is not there
+       at this width. It reaches the gesture's box too — `.swipe-row` takes
+       `gap: inherit` — so both ways the row is drawn keep the one rhythm. */
+    column-gap: var(--space-2);
+  }
+
+  /* Named without the row in front of them on purpose: below this width the
+     gesture's own box stands between the row and its children, so a child
+     selector would reach them on the rows that carry no judgement and miss
+     every row that does. These two classes exist nowhere else. */
+  .worklist-row-text,
+  .worklist-row-acts {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* The touch floor. `--control-h-sm` rises only to 36px for a coarse pointer,
+     which is the size these verbs take — short of the 44px the sign-in door
+     and the list rows already keep. A queue worked with a thumb owes the same
+     target: a mis-hit here files somebody else's judgement on a customer's
+     message.
+     Every pressable thing INSIDE a row, not a list of the verb groups: a row
+     also carries the approval's own three decisions, and those were the
+     smallest targets on the page at 32px. A selector naming today's groups is
+     a claim about which controls exist, and it goes stale the day a row grows
+     another one.
+     THE RANK IS NOT ONE OF THEM. It is a marker that happens to be pressable —
+     it opens the pane beside the queue and files nothing — and it keeps the
+     24px target its own rule gives it. At 44px it set the height of the row's
+     FIRST LINE, which a button centres its content in: the digit sat a dozen
+     pixels below the kind beside it, and the title started under a dead band
+     of the same height. A hit area is worth widening a control for; it is not
+     worth moving the row's own baseline. */
+  .worklist-row button:not(.worklist-rank-select),
+  .worklist-row a.btn,
+  .worklist-row .link-button {
+    min-block-size: 44px;
+  }
+}

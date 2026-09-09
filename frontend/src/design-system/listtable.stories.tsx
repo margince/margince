@@ -2,9 +2,9 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { formatMoney, formatNumber, ordinalNumber } from "../format/format";
 import { useLocale } from "../i18n";
-import { Button } from "./atoms";
+import { Badge, Button } from "./atoms";
 import type { ListChip } from "./listsurface";
-import { type ListColumn, ListTable } from "./listtable";
+import { CellStrip, type ListColumn, ListTable } from "./listtable";
 
 // The list surface every record screen renders into: header, controls, rows and
 // footer as one block. The query dials are CONTROLLED and server-backed in the
@@ -400,6 +400,62 @@ export const InASettingsColumn: Story = {
                 </Button>
               </div>
             ),
+          },
+        ]}
+      />
+    </div>
+  ),
+};
+
+// Several pills in ONE cell, and what happens when they do not fit. Both cells
+// are the ones `CellStrip` was taken from: a relationship column carrying three
+// badges at once, and a score badge with the reason beside it. Neither fits the
+// share its column gets at this width, and both CLIP at the column edge rather
+// than taking a second line — a cell that wrapped would push every row below it
+// down, so the reader's answer is to widen the column (drag a header's trailing
+// edge) and nobody else's row moves.
+export const CellStrips: Story = {
+  name: "Cell strips",
+  render: () => (
+    <div style={{ maxWidth: "720px" }}>
+      <Surface
+        rows={companies(4)}
+        columns={[
+          {
+            key: "name",
+            header: "Company",
+            fixed: true,
+            cell: (row: Company) => <strong>{row.name}</strong>,
+          },
+          {
+            key: "relationship",
+            header: "Relationship",
+            // Multi-valued: an account can be a partner AND a customer, and a
+            // column showing only the first would make the second look untrue.
+            cell: () => (
+              <CellStrip>
+                {["Customer", "Partner", "Supplier"].map((kind) => (
+                  <Badge key={kind}>{kind}</Badge>
+                ))}
+              </CellStrip>
+            ),
+          },
+          {
+            key: "score",
+            header: "Score",
+            cell: (row: Company) => {
+              const warm = row.owner === "Lars";
+              return (
+                <CellStrip>
+                  <Badge tone={warm ? "success" : "warn"}>
+                    {warm ? "Warm" : "Cooling"}
+                  </Badge>
+                  <span className="t-caption">
+                    {warm ? "Replied inside a day" : "Quiet for three weeks"}
+                  </span>
+                </CellStrip>
+              );
+            },
           },
         ]}
       />

@@ -340,6 +340,11 @@ func SetChannelProviders(providers []string) {
 var mailSendScopes = map[string]string{
 	"gmail": "https://www.googleapis.com/auth/gmail.send",
 	"graph": "Mail.Send",
+	// test_mailbox has no real OAuth grant — the connector always reports
+	// holding this scope (testmailbox.GrantedScopes) — so mailAppConfigured
+	// (the deployment flag) is the one gate that decides whether it can
+	// transmit at all.
+	"test_mailbox": "urn:margince:test_mailbox:send",
 }
 
 // MailSendProviders names every provider this module hands a send scope to.

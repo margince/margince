@@ -16,7 +16,7 @@ import {
   customPaletteScreens,
   resolveCustomLabel,
 } from "./custom";
-import { NAV } from "./nav";
+import { CREATE_ID, NAV } from "./nav";
 import { navigate, type Route } from "./router";
 import {
   SEARCH_HIT_KIND_KEY,
@@ -24,10 +24,9 @@ import {
   searchHitDestination,
 } from "./searchkinds";
 
-// ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a
-// type tag (screen / action / record); record entries are fed by the search
-// seam once the data layer lands — the tagging and ranking mechanics are
-// already here. The "Ask AI: …" run-as-NL row is always appended last.
+// ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a type
+// tag (screen / action / record); record entries are fed by the search seam
+// once the data layer lands — the ranking mechanics are already here.
 
 export type Command = {
   id: string;
@@ -125,7 +124,7 @@ export function useBuiltinCommands(): Command[] {
         id: "action:new-deal",
         label: t("action.newDeal"),
         type: "action",
-        route: { screen: "deals", id: "new" },
+        route: { screen: "deals", id: CREATE_ID },
       },
       {
         id: "action:read-company",
@@ -354,7 +353,9 @@ const TYPE_KEY: Record<Command["type"], MessageKey> = {
   record: "palette.typeRecord",
 };
 
-export const ASK_QUERY_KEY = "margince.askQuery";
+// `#/ai?q=<question>`: the row's question travels in the ADDRESS, because a
+// reader already on the AI surface changes no path and so remounts nothing.
+export const ASK_QUESTION_PARAM = "q";
 
 export function CommandPalette({
   open,
@@ -415,7 +416,6 @@ export function CommandPalette({
       }
     : null;
 
-  // The run-as-NL row (AC-shell-4): appended last whenever there is a query.
   const askRow: Command | null = query.trim()
     ? {
         id: "ask-ai",
@@ -434,12 +434,12 @@ export function CommandPalette({
     Math.max(0, Math.min(index, rows.length - 1));
 
   const run = (command: Command) => {
-    if (command.id === "ask-ai") {
-      // NOSONAR: persisted value is a trimmed plain string from a controlled input, consumed as text (never eval'd or rendered as HTML)
-      sessionStorage.setItem(ASK_QUERY_KEY, query.trim());
-    }
     onClose();
-    navigate(command.route);
+    const asking = command.id === "ask-ai";
+    navigate(
+      command.route,
+      asking ? new Map([[ASK_QUESTION_PARAM, query.trim()]]) : undefined,
+    );
   };
 
   if (!open) {

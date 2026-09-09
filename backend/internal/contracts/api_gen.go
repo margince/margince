@@ -1111,6 +1111,30 @@ func (e ApprovalEvidenceSourceType) Valid() bool {
 	}
 }
 
+// Defines values for AssignLeadOutcomeKind.
+const (
+	AssignLeadOutcomeKindAssigned  AssignLeadOutcomeKind = "assigned"
+	AssignLeadOutcomeKindConflict  AssignLeadOutcomeKind = "conflict"
+	AssignLeadOutcomeKindForbidden AssignLeadOutcomeKind = "forbidden"
+	AssignLeadOutcomeKindNotFound  AssignLeadOutcomeKind = "not_found"
+)
+
+// Valid indicates whether the value is a known member of the AssignLeadOutcomeKind enum.
+func (e AssignLeadOutcomeKind) Valid() bool {
+	switch e {
+	case AssignLeadOutcomeKindAssigned:
+		return true
+	case AssignLeadOutcomeKindConflict:
+		return true
+	case AssignLeadOutcomeKindForbidden:
+		return true
+	case AssignLeadOutcomeKindNotFound:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssistantConfiguredModelProvider.
 const (
 	AssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
@@ -2367,11 +2391,12 @@ func (e CaptureConnectionMailPosture) Valid() bool {
 
 // Defines values for CaptureConnectionProvider.
 const (
-	CaptureConnectionProviderGcal     CaptureConnectionProvider = "gcal"
-	CaptureConnectionProviderGmail    CaptureConnectionProvider = "gmail"
-	CaptureConnectionProviderGraph    CaptureConnectionProvider = "graph"
-	CaptureConnectionProviderGraphcal CaptureConnectionProvider = "graphcal"
-	CaptureConnectionProviderImap     CaptureConnectionProvider = "imap"
+	CaptureConnectionProviderGcal        CaptureConnectionProvider = "gcal"
+	CaptureConnectionProviderGmail       CaptureConnectionProvider = "gmail"
+	CaptureConnectionProviderGraph       CaptureConnectionProvider = "graph"
+	CaptureConnectionProviderGraphcal    CaptureConnectionProvider = "graphcal"
+	CaptureConnectionProviderImap        CaptureConnectionProvider = "imap"
+	CaptureConnectionProviderTestMailbox CaptureConnectionProvider = "test_mailbox"
 )
 
 // Valid indicates whether the value is a known member of the CaptureConnectionProvider enum.
@@ -2386,6 +2411,8 @@ func (e CaptureConnectionProvider) Valid() bool {
 	case CaptureConnectionProviderGraphcal:
 		return true
 	case CaptureConnectionProviderImap:
+		return true
+	case CaptureConnectionProviderTestMailbox:
 		return true
 	default:
 		return false
@@ -7326,11 +7353,12 @@ func (e MorningBriefItemState) Valid() bool {
 
 // Defines values for MorningDigestConnectorsProvider.
 const (
-	MorningDigestConnectorsProviderGcal     MorningDigestConnectorsProvider = "gcal"
-	MorningDigestConnectorsProviderGmail    MorningDigestConnectorsProvider = "gmail"
-	MorningDigestConnectorsProviderGraph    MorningDigestConnectorsProvider = "graph"
-	MorningDigestConnectorsProviderGraphcal MorningDigestConnectorsProvider = "graphcal"
-	MorningDigestConnectorsProviderImap     MorningDigestConnectorsProvider = "imap"
+	MorningDigestConnectorsProviderGcal        MorningDigestConnectorsProvider = "gcal"
+	MorningDigestConnectorsProviderGmail       MorningDigestConnectorsProvider = "gmail"
+	MorningDigestConnectorsProviderGraph       MorningDigestConnectorsProvider = "graph"
+	MorningDigestConnectorsProviderGraphcal    MorningDigestConnectorsProvider = "graphcal"
+	MorningDigestConnectorsProviderImap        MorningDigestConnectorsProvider = "imap"
+	MorningDigestConnectorsProviderTestMailbox MorningDigestConnectorsProvider = "test_mailbox"
 )
 
 // Valid indicates whether the value is a known member of the MorningDigestConnectorsProvider enum.
@@ -7345,6 +7373,8 @@ func (e MorningDigestConnectorsProvider) Valid() bool {
 	case MorningDigestConnectorsProviderGraphcal:
 		return true
 	case MorningDigestConnectorsProviderImap:
+		return true
+	case MorningDigestConnectorsProviderTestMailbox:
 		return true
 	default:
 		return false
@@ -14043,14 +14073,16 @@ func (e WeeklyReviewOutlookPeriodKind) Valid() bool {
 
 // Defines values for WorklistFilter.
 const (
-	WorklistFilterAll             WorklistFilter = "all"
-	WorklistFilterCustomerWaiting WorklistFilter = "customer_waiting"
-	WorklistFilterDealsAtRisk     WorklistFilter = "deals_at_risk"
-	WorklistFilterDecisions       WorklistFilter = "decisions"
-	WorklistFilterLeads           WorklistFilter = "leads"
-	WorklistFilterMeetings        WorklistFilter = "meetings"
-	WorklistFilterSystem          WorklistFilter = "system"
-	WorklistFilterTasks           WorklistFilter = "tasks"
+	WorklistFilterAll               WorklistFilter = "all"
+	WorklistFilterChangedSinceBrief WorklistFilter = "changed_since_brief"
+	WorklistFilterCustomerWaiting   WorklistFilter = "customer_waiting"
+	WorklistFilterDealsAtRisk       WorklistFilter = "deals_at_risk"
+	WorklistFilterDecisions         WorklistFilter = "decisions"
+	WorklistFilterExceptDecisions   WorklistFilter = "except_decisions"
+	WorklistFilterLeads             WorklistFilter = "leads"
+	WorklistFilterMeetings          WorklistFilter = "meetings"
+	WorklistFilterSystem            WorklistFilter = "system"
+	WorklistFilterTasks             WorklistFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the WorklistFilter enum.
@@ -14058,11 +14090,15 @@ func (e WorklistFilter) Valid() bool {
 	switch e {
 	case WorklistFilterAll:
 		return true
+	case WorklistFilterChangedSinceBrief:
+		return true
 	case WorklistFilterCustomerWaiting:
 		return true
 	case WorklistFilterDealsAtRisk:
 		return true
 	case WorklistFilterDecisions:
+		return true
+	case WorklistFilterExceptDecisions:
 		return true
 	case WorklistFilterLeads:
 		return true
@@ -14946,11 +14982,12 @@ func (e WrittenBy) Valid() bool {
 
 // Defines values for CaptureProvider.
 const (
-	CaptureProviderGcal     CaptureProvider = "gcal"
-	CaptureProviderGmail    CaptureProvider = "gmail"
-	CaptureProviderGraph    CaptureProvider = "graph"
-	CaptureProviderGraphcal CaptureProvider = "graphcal"
-	CaptureProviderImap     CaptureProvider = "imap"
+	CaptureProviderGcal        CaptureProvider = "gcal"
+	CaptureProviderGmail       CaptureProvider = "gmail"
+	CaptureProviderGraph       CaptureProvider = "graph"
+	CaptureProviderGraphcal    CaptureProvider = "graphcal"
+	CaptureProviderImap        CaptureProvider = "imap"
+	CaptureProviderTestMailbox CaptureProvider = "test_mailbox"
 )
 
 // Valid indicates whether the value is a known member of the CaptureProvider enum.
@@ -14965,6 +15002,8 @@ func (e CaptureProvider) Valid() bool {
 	case CaptureProviderGraphcal:
 		return true
 	case CaptureProviderImap:
+		return true
+	case CaptureProviderTestMailbox:
 		return true
 	default:
 		return false
@@ -16293,12 +16332,15 @@ func (e ListPeopleParamsTagMode) Valid() bool {
 
 // Defines values for SuppressPersonJSONBodyKind.
 const (
-	SubjectRequest SuppressPersonJSONBodyKind = "subject_request"
+	MarketingObjection SuppressPersonJSONBodyKind = "marketing_objection"
+	SubjectRequest     SuppressPersonJSONBodyKind = "subject_request"
 )
 
 // Valid indicates whether the value is a known member of the SuppressPersonJSONBodyKind enum.
 func (e SuppressPersonJSONBodyKind) Valid() bool {
 	switch e {
+	case MarketingObjection:
+		return true
 	case SubjectRequest:
 		return true
 	default:
@@ -16737,14 +16779,16 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	All             GetWorklistParamsFilter = "all"
-	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	Decisions       GetWorklistParamsFilter = "decisions"
-	Leads           GetWorklistParamsFilter = "leads"
-	Meetings        GetWorklistParamsFilter = "meetings"
-	System          GetWorklistParamsFilter = "system"
-	Tasks           GetWorklistParamsFilter = "tasks"
+	All               GetWorklistParamsFilter = "all"
+	ChangedSinceBrief GetWorklistParamsFilter = "changed_since_brief"
+	CustomerWaiting   GetWorklistParamsFilter = "customer_waiting"
+	DealsAtRisk       GetWorklistParamsFilter = "deals_at_risk"
+	Decisions         GetWorklistParamsFilter = "decisions"
+	ExceptDecisions   GetWorklistParamsFilter = "except_decisions"
+	Leads             GetWorklistParamsFilter = "leads"
+	Meetings          GetWorklistParamsFilter = "meetings"
+	System            GetWorklistParamsFilter = "system"
+	Tasks             GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
@@ -16752,11 +16796,15 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
 	case All:
 		return true
+	case ChangedSinceBrief:
+		return true
 	case CustomerWaiting:
 		return true
 	case DealsAtRisk:
 		return true
 	case Decisions:
+		return true
+	case ExceptDecisions:
 		return true
 	case Leads:
 		return true
@@ -17208,6 +17256,11 @@ type AdvanceDealRequest struct {
 	ToStageId openapi_types.UUID `json:"to_stage_id"`
 
 	// WonWithoutContractDetail What the reason was. Required when it is `other`, which explains nothing alone.
+	//
+	// Bounded because it is free text that a record page shows back beside the deal's
+	// status: an unbounded value reaches every reader of that deal, and the header it
+	// lands in is a line of short facts. 500 is a few sentences — long enough to say
+	// what happened, short enough that the line stays readable.
 	WonWithoutContractDetail *string `json:"won_without_contract_detail,omitempty"`
 
 	// WonWithoutContractReason Why this win has no agreement behind it (ADR-0109 §6). Omit when the deal has a signed contract with its paper attached — the server looks for one, and refuses a win that offers neither. Both answers are legitimate; recording which is what makes the gap countable.
@@ -18112,6 +18165,64 @@ type ApprovalListResponse struct {
 type ApproveRequest struct {
 	// EditedPayload Optional edits — the edited payload is re-admitted, then it executes (edit-then-send).
 	EditedPayload *map[string]interface{} `json:"edited_payload,omitempty"`
+}
+
+// AssignLeadOutcome What happened to one named lead.
+type AssignLeadOutcome struct {
+	LeadId openapi_types.UUID `json:"lead_id"`
+
+	// Outcome `assigned` moved the lead — including one already owned by the destination, which still
+	// takes a version and an audit row rather than being quietly skipped: the writer records
+	// the assignment as an act, so a re-run says what it did rather than claiming it did
+	// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+	// no longer holds.
+	//
+	// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+	// write resolves live rows only and a promoted or disqualified lead is no longer among
+	// them. The two deliberately read alike: which of them it was is a fact about a record the
+	// caller was not shown, and separating them would answer that a lead exists.
+	Outcome AssignLeadOutcomeKind `json:"outcome"`
+
+	// Version The lead's version after the write. Present on `assigned`.
+	Version *int64 `json:"version,omitempty"`
+}
+
+// AssignLeadOutcomeKind `assigned` moved the lead — including one already owned by the destination, which still
+// takes a version and an audit row rather than being quietly skipped: the writer records
+// the assignment as an act, so a re-run says what it did rather than claiming it did
+// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+// no longer holds.
+//
+// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+// write resolves live rows only and a promoted or disqualified lead is no longer among
+// them. The two deliberately read alike: which of them it was is a fact about a record the
+// caller was not shown, and separating them would answer that a lead exists.
+type AssignLeadOutcomeKind string
+
+// AssignLeadsItem defines model for AssignLeadsItem.
+type AssignLeadsItem struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Version The version the caller read. Optional; supplying it makes the row's write conditional
+	// exactly as `If-Match` does on `updateLead`, so a lead somebody else moved answers
+	// `conflict` instead of losing their change.
+	Version *int64 `json:"version,omitempty"`
+}
+
+// AssignLeadsRequest One destination owner, and the leads to hand to them. The owner is checked before any
+// lead is touched; the leads answer one at a time.
+type AssignLeadsRequest struct {
+	Leads []AssignLeadsItem `json:"leads"`
+
+	// OwnerId The seat to hand them to. Must be one that can be handed work — an active, unarchived
+	// human seat that is not read-only, inside the caller's own row scope — else
+	// `422 owner_not_assignable` and nothing moves.
+	OwnerId openapi_types.UUID `json:"owner_id"`
+}
+
+// AssignLeadsResult defines model for AssignLeadsResult.
+type AssignLeadsResult struct {
+	Results []AssignLeadOutcome `json:"results"`
 }
 
 // AssistantConfiguredModel defines model for AssistantConfiguredModel.
@@ -20284,6 +20395,13 @@ type ChannelProviderEntry struct {
 	// default, so a connector that never declared carriage reports false rather than
 	// being mistaken for capable. A zero bound means "no limit beyond the contract's
 	// own", never "zero allowed".
+	//
+	// `max_total_bytes` is the exception to that rule and is never zero: every
+	// transport has an aggregate, because the product has one whether or not the
+	// provider declares its own. It is the bound a composer must warn against
+	// FIRST — `max_files` and `max_bytes_per_file` cannot express it between them,
+	// so a message of ten files each under the per-file cap can pass both and still
+	// be ten times what a send may carry.
 	Attachments struct {
 		Carries bool `json:"carries"`
 
@@ -20297,6 +20415,11 @@ type ChannelProviderEntry struct {
 
 		// MaxFiles Most files in one message. Never more than the contract's own `attachment_ids` cap of 10.
 		MaxFiles int `json:"max_files"`
+
+		// MaxTotalBytes Largest total across every file on one message, in bytes — the smaller of
+		// this transport's own aggregate and the product's send budget. Always
+		// present and always positive.
+		MaxTotalBytes int64 `json:"max_total_bytes"`
 	} `json:"attachments"`
 
 	// CredentialModel How a connection to this transport is credentialed — one shared bot for the
@@ -25724,6 +25847,12 @@ type LeadSettings struct {
 
 	// FirstResponseTargetMinutes How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080.
 	FirstResponseTargetMinutes int `json:"first_response_target_minutes"`
+
+	// UnassignedEscalationUserId Who answers when a lead nobody owns misses its target. Null means nobody is
+	// configured, and an unowned breach is recorded without being addressed. Also reads
+	// null once the named seat can no longer work the queue — suspended, archived, an
+	// agent, a read seat — because a desk nobody reads is the same silence as none.
+	UnassignedEscalationUserId *openapi_types.UUID `json:"unassigned_escalation_user_id,omitempty"`
 }
 
 // LeadSource One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.
@@ -29007,12 +29136,17 @@ type OrganizationScan struct {
 	Stale *bool `json:"stale,omitempty"`
 
 	// State Where this reader's scan of the account stands. `never` — this reader has not asked
-	// for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
-	// model read the account and its findings are stored. `degraded` — the read finished
-	// on the deterministic floor (no model lane, the AI budget deferred past the job's
-	// patience, or a reply the grounding filter refused whole); the rules' own advice is
-	// what stands. `failed` — the read could not run at all; the rules' advice still
-	// answers, and `degrade_reason` says what stopped it.
+	// for one. `queued` / `running` — a read is in flight, on the rail. `done` — the read
+	// covered everything this reader may read and its findings are stored; that is the
+	// model's reading of the account's exchanges, or — on an account with no exchange
+	// this reader may read, which is every account before its first — the rules' own
+	// advice over nothing, with `read` saying nought exchanges and `generated_by` saying
+	// which wrote it. An empty account is not a shortfall and never degrades: `degraded`
+	// is the DEPLOYMENT falling short of the read it was asked for, so the answer
+	// finished on the deterministic floor (no model lane, the AI budget deferred past the
+	// job's patience, or a reply the grounding filter refused whole) and the rules' own
+	// advice is what stands. `failed` — the read could not run at all; the rules' advice
+	// still answers, and `degrade_reason` says what stopped it.
 	State OrganizationScanState `json:"state"`
 }
 
@@ -29025,12 +29159,17 @@ type OrganizationScanRequest struct {
 }
 
 // OrganizationScanState Where this reader's scan of the account stands. `never` — this reader has not asked
-// for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
-// model read the account and its findings are stored. `degraded` — the read finished
-// on the deterministic floor (no model lane, the AI budget deferred past the job's
-// patience, or a reply the grounding filter refused whole); the rules' own advice is
-// what stands. `failed` — the read could not run at all; the rules' advice still
-// answers, and `degrade_reason` says what stopped it.
+// for one. `queued` / `running` — a read is in flight, on the rail. `done` — the read
+// covered everything this reader may read and its findings are stored; that is the
+// model's reading of the account's exchanges, or — on an account with no exchange
+// this reader may read, which is every account before its first — the rules' own
+// advice over nothing, with `read` saying nought exchanges and `generated_by` saying
+// which wrote it. An empty account is not a shortfall and never degrades: `degraded`
+// is the DEPLOYMENT falling short of the read it was asked for, so the answer
+// finished on the deterministic floor (no model lane, the AI budget deferred past the
+// job's patience, or a reply the grounding filter refused whole) and the rules' own
+// advice is what stands. `failed` — the read could not run at all; the rules' advice
+// still answers, and `degrade_reason` says what stopped it.
 type OrganizationScanState string
 
 // OrganizationStrength defines model for OrganizationStrength.
@@ -34756,6 +34895,17 @@ type UpdateLeadRequestStatus string
 type UpdateLeadSettingsRequest struct {
 	FirstResponseEnabled       *bool `json:"first_response_enabled,omitempty"`
 	FirstResponseTargetMinutes *int  `json:"first_response_target_minutes,omitempty"`
+
+	// UnassignedEscalationUserId Who answers when a lead NOBODY owns misses its first-response target. An owned
+	// lead's breach escalates to its owner; without this, an unowned one escalated to
+	// nobody at all.
+	//
+	// Must name a seat that can be handed work AND may read leads, else `422` — an
+	// escalation carries the lead it is about, so a desk that cannot open the record is
+	// not a desk to send it to. Null clears it, which is the honest default: the breach
+	// is recorded and left in the unassigned queue rather than addressed to somebody who
+	// never agreed to answer for it.
+	UnassignedEscalationUserId *openapi_types.UUID `json:"unassigned_escalation_user_id,omitempty"`
 }
 
 // UpdateLeadSourceRequest defines model for UpdateLeadSourceRequest.
@@ -35553,7 +35703,9 @@ type WeeklyLearningCitationSubjectType string
 // WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
 // WeeklyReview beside it.
 type WeeklyPlan struct {
-	// Capacity What next week's calendar already holds, counted rather than authored.
+	// Capacity What the PLANNED week's calendar already holds, counted rather than authored —
+	// the same seven days `local_week_start` names, so the figure and the plan cannot
+	// describe different weeks.
 	//
 	// ABSENT when the installation composed no calendar reader. Absent is NOT zero: a
 	// week nobody has looked at is unknown, and drawing it as "nothing booked" would
@@ -36039,6 +36191,18 @@ type WeeklyScorecardDealBlock struct {
 	Open        int `json:"open"`
 	Regressions int `json:"regressions"`
 
+	// Unreconstructible Deals left OUT of the four population counts above because their state at the week's
+	// closing instant could not be rebuilt: the audit images describing their week sit
+	// behind an erasure, and the append-only spine means reading them would put back
+	// exactly what a scrub certified destroyed.
+	//
+	// Nonzero means `open` and the three coverage counts are a floor rather than a total,
+	// and a reader must be told so. Zero is the ordinary answer. ABSENT means the week was
+	// scored before this reconstruction existed, which is a third fact again: those counts
+	// are the current-state figures they always were, and nothing can retroactively make
+	// them week-end facts.
+	Unreconstructible *int `json:"unreconstructible,omitempty"`
+
 	// WithNextStep Open deals carrying an open task. A count beside `open`, never a rate.
 	WithNextStep int `json:"with_next_step"`
 }
@@ -36129,7 +36293,7 @@ type Worklist struct {
 	// not drawing.
 	Counts []WorklistCount `json:"counts"`
 
-	// Filter The narrowing this read applied.
+	// Filter The narrowing this read applied. The same vocabulary the query parameter takes.
 	Filter *WorklistFilter `json:"filter,omitempty"`
 
 	// NextCursor Send this back as `cursor` to continue past the last row of this page. See that
@@ -36229,7 +36393,7 @@ type Worklist struct {
 	Walk *WorklistWalk `json:"walk,omitempty"`
 }
 
-// WorklistFilter The narrowing this read applied.
+// WorklistFilter The narrowing this read applied. The same vocabulary the query parameter takes.
 type WorklistFilter string
 
 // WorklistScope Whose work this read answered for.
@@ -37125,10 +37289,15 @@ type WorklistReadings struct {
 	// error the conversion seam exists to prevent.
 	RevenueCurrency *string `json:"revenue_currency,omitempty"`
 
-	// Review How much routine work is queued behind a decision. Counted before the fold, so
-	// a hundred alike approvals read as a hundred here even where the queue draws
+	// Review How many decisions THIS reader can settle. Counted before the fold, so a
+	// hundred alike approvals read as a hundred here even where the queue draws
 	// them as one row — the strip says how much work there is, and the queue says
 	// how much reading it costs.
+	//
+	// Only rows carrying a verb the reader may press. A duplicate pair whose two
+	// records the reader cannot both write is somebody else's decision, and
+	// counting it here tells them a person is blocked on an answer they are not
+	// able to give.
 	Review int `json:"review"`
 }
 
@@ -37449,10 +37618,14 @@ type ListActivitiesParams struct {
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
+	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+	// its pipeline or a partner by its organization's name, needs a sort the server cannot express
+	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
+	// `422 code: sort_field_not_allowed`.
 	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -38198,22 +38371,6 @@ type ConnectorOAuthCallbackParams struct {
 	Error *string `form:"error,omitempty" json:"error,omitempty"`
 }
 
-// ListConsentPurposesParams defines parameters for ListConsentPurposes.
-type ListConsentPurposesParams struct {
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
 // CreateContractParams defines parameters for CreateContract.
 type CreateContractParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -38292,10 +38449,14 @@ type ListCustomFieldsParams struct {
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
+	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+	// its pipeline or a partner by its organization's name, needs a sort the server cannot express
+	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
+	// `422 code: sort_field_not_allowed`.
 	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// Object Target core object (CUSTOM-FIELDS-PARAM-2).
@@ -38480,10 +38641,14 @@ type ListDealRoomsParams struct {
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
+	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+	// its pipeline or a partner by its organization's name, needs a sort the server cannot express
+	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
+	// `422 code: sort_field_not_allowed`.
 	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -38596,10 +38761,14 @@ type ListDealsParams struct {
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
+	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+	// its pipeline or a partner by its organization's name, needs a sort the server cannot express
+	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
+	// `422 code: sort_field_not_allowed`.
 	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -39140,10 +39309,14 @@ type ListLeadsParams struct {
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
+	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+	// its pipeline or a partner by its organization's name, needs a sort the server cannot express
+	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
+	// `422 code: sort_field_not_allowed`.
 	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -39435,10 +39608,14 @@ type ListOfferTemplatesParams struct {
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
+	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+	// its pipeline or a partner by its organization's name, needs a sort the server cannot express
+	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
+	// `422 code: sort_field_not_allowed`.
 	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -39634,10 +39811,14 @@ type ListOrganizationsParams struct {
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
+	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+	// its pipeline or a partner by its organization's name, needs a sort the server cannot express
+	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
+	// `422 code: sort_field_not_allowed`.
 	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -40314,10 +40495,14 @@ type ListPartnersParams struct {
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
+	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+	// its pipeline or a partner by its organization's name, needs a sort the server cannot express
+	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
+	// `422 code: sort_field_not_allowed`.
 	Sort        *Sort                          `form:"sort,omitempty" json:"sort,omitempty"`
 	PartnerRole *ListPartnersParamsPartnerRole `form:"partner_role,omitempty" json:"partner_role,omitempty"`
 	CertStatus  *ListPartnersParamsCertStatus  `form:"cert_status,omitempty" json:"cert_status,omitempty"`
@@ -40348,10 +40533,14 @@ type ListPeopleParams struct {
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
+	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+	// its pipeline or a partner by its organization's name, needs a sort the server cannot express
+	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
+	// `422 code: sort_field_not_allowed`.
 	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -40566,7 +40755,10 @@ type IssueDoubleOptInJSONBody struct {
 
 // SuppressPersonJSONBody defines parameters for SuppressPerson.
 type SuppressPersonJSONBody struct {
-	// Kind Which stop this is. Only the subject's own request is recordable by hand.
+	// Kind Which stop this is. `subject_request` is "stop contacting me" and reaches every
+	// category but the three the controller owes anyway. `marketing_objection` is
+	// Art. 21(2), reaches marketing only, and is recorded at the subject's own
+	// authority so no seat can lift it.
 	Kind SuppressPersonJSONBodyKind `json:"kind"`
 
 	// Reason What the person was told, in their words. Stored because a suppression somebody
@@ -40721,10 +40913,14 @@ type ListProductsParams struct {
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
+	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+	// its pipeline or a partner by its organization's name, needs a sort the server cannot express
+	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
+	// `422 code: sort_field_not_allowed`.
 	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -40783,10 +40979,14 @@ type ListProjectsParams struct {
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
+	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+	// its pipeline or a partner by its organization's name, needs a sort the server cannot express
+	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
+	// `422 code: sort_field_not_allowed`.
 	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -41861,22 +42061,6 @@ type RejectVoiceDraftParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
-// ListVoiceCorpusSourcesParams defines parameters for ListVoiceCorpusSources.
-type ListVoiceCorpusSourcesParams struct {
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
 // IngestVoiceCorpusSourceParams defines parameters for IngestVoiceCorpusSource.
 type IngestVoiceCorpusSourceParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -42121,7 +42305,26 @@ type GetWorklistParams struct {
 	// licence to read a colleague's inbox.
 	Scope *GetWorklistParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
 
-	// Filter Narrow the queue to one kind of work. Omitted means everything, which is the default view.
+	// Filter Narrow the queue. Omitted means everything, which is the default view.
+	//
+	// Most values name ONE kind of work. Two do not, and exist because a surface
+	// counted a population this vocabulary could not then ask for — a count whose
+	// link lands on a different population is a number that lies about where it goes.
+	//
+	// `except_decisions` is everything a decisions-drawing surface has NOT already
+	// answered: every row whose SOURCE is not `approval`. Not a kind of work, and
+	// deliberately not the complement of the `decisions` CATEGORY, which is a wider
+	// set — an introduction request classifies as a decision and is not an approval,
+	// so a category reading would drop a row the counting surface kept. A folded
+	// group's source is `batch` and it is kept, like any other row that is not
+	// itself an approval.
+	//
+	// `changed_since_brief` is the rows whose material moment falls after the
+	// overnight run's data cutoff — the same test that stamps each row's
+	// `changed_since_brief` flag — and, like the value above, not the rows a brief
+	// already draws as cards. With no run to compare against it answers empty rather
+	// than everything: absent is not false, and a reader asking what changed since a
+	// night that never happened is owed nothing, not the whole queue.
 	Filter *GetWorklistParamsFilter `form:"filter,omitempty" json:"filter,omitempty"`
 
 	// Limit How many ranked items to return.
@@ -42586,6 +42789,9 @@ type UpdateLeadSourceJSONRequestBody = UpdateLeadSourceRequest
 
 // CreateLeadJSONRequestBody defines body for CreateLead for application/json ContentType.
 type CreateLeadJSONRequestBody = CreateLeadRequest
+
+// AssignLeadsJSONRequestBody defines body for AssignLeads for application/json ContentType.
+type AssignLeadsJSONRequestBody = AssignLeadsRequest
 
 // UpdateLeadSettingsJSONRequestBody defines body for UpdateLeadSettings for application/json ContentType.
 type UpdateLeadSettingsJSONRequestBody = UpdateLeadSettingsRequest
@@ -51082,6 +51288,9 @@ type ServerInterface interface {
 	// Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
 	// (POST /brief/items/{itemId}/snooze)
 	SnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
+	// Take back a snooze — the item returns to the queue immediately.
+	// (POST /brief/items/{itemId}/unsnooze)
+	UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
 	// What the capture pipeline did with your messages in the last 24 hours.
 	// (GET /capture/activity)
 	ListMyCaptureActivity(w http.ResponseWriter, r *http.Request, params ListMyCaptureActivityParams)
@@ -51279,7 +51488,7 @@ type ServerInterface interface {
 	SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 	// (GET /consent-purposes)
-	ListConsentPurposes(w http.ResponseWriter, r *http.Request, params ListConsentPurposesParams)
+	ListConsentPurposes(w http.ResponseWriter, r *http.Request)
 	// Define a consent purpose. 🟢 admin write.
 	// (POST /consent-purposes)
 	CreateConsentPurpose(w http.ResponseWriter, r *http.Request)
@@ -51658,6 +51867,9 @@ type ServerInterface interface {
 	// Create a lead.
 	// (POST /leads)
 	CreateLead(w http.ResponseWriter, r *http.Request, params CreateLeadParams)
+	// Hand a named set of leads to one owner.
+	// (POST /leads/assign-bulk)
+	AssignLeads(w http.ResponseWriter, r *http.Request)
 	// How this installation handles leads.
 	// (GET /leads/settings)
 	GetLeadSettings(w http.ResponseWriter, r *http.Request)
@@ -52542,7 +52754,7 @@ type ServerInterface interface {
 	GetVoiceLearningSummary(w http.ResponseWriter, r *http.Request, id Id)
 	// List the owner's corpus manifest and live meter; source text is never returned.
 	// (GET /voice-profiles/{id}/sources)
-	ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id Id, params ListVoiceCorpusSourcesParams)
+	ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id Id)
 	// Ingest or replace one manual own-authored text source.
 	// (POST /voice-profiles/{id}/sources)
 	IngestVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id, params IngestVoiceCorpusSourceParams)
@@ -53227,6 +53439,12 @@ func (_ Unimplemented) SnoozeBriefItem(w http.ResponseWriter, r *http.Request, i
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Take back a snooze — the item returns to the queue immediately.
+// (POST /brief/items/{itemId}/unsnooze)
+func (_ Unimplemented) UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What the capture pipeline did with your messages in the last 24 hours.
 // (GET /capture/activity)
 func (_ Unimplemented) ListMyCaptureActivity(w http.ResponseWriter, r *http.Request, params ListMyCaptureActivityParams) {
@@ -53619,7 +53837,7 @@ func (_ Unimplemented) SetConnectorSignatureEnrichment(w http.ResponseWriter, r 
 
 // List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 // (GET /consent-purposes)
-func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Request, params ListConsentPurposesParams) {
+func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -54376,6 +54594,12 @@ func (_ Unimplemented) ListLeads(w http.ResponseWriter, r *http.Request, params 
 // Create a lead.
 // (POST /leads)
 func (_ Unimplemented) CreateLead(w http.ResponseWriter, r *http.Request, params CreateLeadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Hand a named set of leads to one owner.
+// (POST /leads/assign-bulk)
+func (_ Unimplemented) AssignLeads(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -56145,7 +56369,7 @@ func (_ Unimplemented) GetVoiceLearningSummary(w http.ResponseWriter, r *http.Re
 
 // List the owner's corpus manifest and live meter; source text is never returned.
 // (GET /voice-profiles/{id}/sources)
-func (_ Unimplemented) ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id Id, params ListVoiceCorpusSourcesParams) {
+func (_ Unimplemented) ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -60124,6 +60348,40 @@ func (siw *ServerInterfaceWrapper) SnoozeBriefItem(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// UnsnoozeBriefItem operation middleware
+func (siw *ServerInterfaceWrapper) UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "itemId" -------------
+	var itemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "itemId", chi.URLParam(r, "itemId"), &itemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "itemId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnsnoozeBriefItem(w, r, itemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMyCaptureActivity operation middleware
 func (siw *ServerInterfaceWrapper) ListMyCaptureActivity(w http.ResponseWriter, r *http.Request) {
 
@@ -62075,9 +62333,6 @@ func (siw *ServerInterfaceWrapper) SetConnectorSignatureEnrichment(w http.Respon
 // ListConsentPurposes operation middleware
 func (siw *ServerInterfaceWrapper) ListConsentPurposes(w http.ResponseWriter, r *http.Request) {
 
-	var err error
-	_ = err
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -62086,37 +62341,8 @@ func (siw *ServerInterfaceWrapper) ListConsentPurposes(w http.ResponseWriter, r 
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListConsentPurposesParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListConsentPurposes(w, r, params)
+		siw.Handler.ListConsentPurposes(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -67747,6 +67973,26 @@ func (siw *ServerInterfaceWrapper) CreateLead(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateLead(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssignLeads operation middleware
+func (siw *ServerInterfaceWrapper) AssignLeads(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignLeads(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -81161,37 +81407,8 @@ func (siw *ServerInterfaceWrapper) ListVoiceCorpusSources(w http.ResponseWriter,
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListVoiceCorpusSourcesParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListVoiceCorpusSources(w, r, id, params)
+		siw.Handler.ListVoiceCorpusSources(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -83131,6 +83348,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/brief/items/{itemId}/snooze", wrapper.SnoozeBriefItem)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/brief/items/{itemId}/unsnooze", wrapper.UnsnoozeBriefItem)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/activity", wrapper.ListMyCaptureActivity)
 	})
 	r.Group(func(r chi.Router) {
@@ -83705,6 +83925,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads", wrapper.CreateLead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/assign-bulk", wrapper.AssignLeads)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/settings", wrapper.GetLeadSettings)

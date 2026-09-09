@@ -159,6 +159,22 @@ const VENDOR_CATALOGUE = {
   ],
 };
 
+// Choosing the vendor whose catalogue is public — the two presses both live-list
+// stories start from.
+//
+// The vendor is asked with a `Select`, and its listbox is portalled to
+// document.body: reaching for the option through `canvasElement` finds nothing.
+// (The radios in this file belong to the platform step's plates.)
+async function pickOpenRouter(canvasElement: HTMLElement): Promise<void> {
+  const canvas = within(canvasElement);
+  await userEvent.click(
+    await canvas.findByRole("combobox", { name: "Provider" }),
+  );
+  await userEvent.click(
+    await within(document.body).findByRole("option", { name: "OpenRouter" }),
+  );
+}
+
 // THE LIVE LIST. Press the chat field open: the sheet's own rows come first,
 // then what the vendor is serving today, and the field's hint names the measure
 // that put them in that order rather than claiming a bare "top ten".
@@ -183,10 +199,14 @@ export const TheLiveList: Story = {
     );
   },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("radio", { name: /OpenRouter/ }),
-    );
+    await pickOpenRouter(canvasElement);
+    // The list exists only while the chat field is open, and the field offers
+    // what it can MATCH on what it holds — the preset id matches no row of this
+    // vendor's catalogue, so the box is cleared the way a reader browsing it
+    // would. The wait is on a row of the catalogue rather than on the press:
+    // that row is the only proof the vendor read landed and got ranked in.
+    await userEvent.clear(await within(canvasElement).findByLabelText("Model"));
+    await within(document.body).findByRole("option", { name: /claude-opus-5/ });
   },
 };
 
@@ -194,7 +214,6 @@ export const TheLiveList: Story = {
 // The field falls back to the sheet and the hint says so, rather than the step
 // failing because somebody else's service is down.
 export const TheLiveListUnavailable: Story = {
-  ...TheLiveList,
   render: () => {
     installFetchStub({
       ...setup([
@@ -213,6 +232,14 @@ export const TheLiveListUnavailable: Story = {
         <InstallationSetup />
       </StoryProviders>
     );
+  },
+  // Its own play rather than `TheLiveList`'s: there is no catalogue to open
+  // here, so waiting for a row would wait for the very thing this story is
+  // named for the absence of. What it waits for is the sentence the field says
+  // instead, which is the whole difference between the two stories.
+  play: async ({ canvasElement }) => {
+    await pickOpenRouter(canvasElement);
+    await within(canvasElement).findByText(/live model list could not be read/);
   },
 };
 

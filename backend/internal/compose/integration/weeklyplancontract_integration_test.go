@@ -117,9 +117,20 @@ func TestAnAbsentCapacitySeamLeavesCapacityAbsentNotZero(t *testing.T) {
 
 // stubCapacity answers a fixed load, so the test above and this one differ in
 // exactly one thing: whether a reader is composed at all.
-type stubCapacity struct{ committed weeklyplan.Committed }
+//
+// It RECORDS the week it was asked about. A stub that ignored the argument
+// would answer the same figure whichever week the store named, so a call site
+// passing the wrong one — the defect this seam was reshaped to end — would run
+// green through every test here.
+type stubCapacity struct {
+	committed weeklyplan.Committed
+	askedFor  *time.Time
+}
 
-func (s stubCapacity) NextWeek(_ context.Context, _ ids.UUID, _ time.Time) (weeklyplan.Committed, error) {
+func (s stubCapacity) ForWeek(_ context.Context, _ ids.UUID, weekStart time.Time) (weeklyplan.Committed, error) {
+	if s.askedFor != nil {
+		*s.askedFor = weekStart
+	}
 	return s.committed, nil
 }
 
@@ -202,8 +213,10 @@ func TestAClearedRiskIsTellableFromOneNeverWritten(t *testing.T) {
 // told it otherwise.
 func TestASavedContractStillCarriesTheCountedCapacity(t *testing.T) {
 	e := setupPlan(t)
+	var priced time.Time
 	e.store = e.store.WithCapacity(stubCapacity{
 		committed: weeklyplan.Committed{Meetings: 3, Tasks: 2},
+		askedFor:  &priced,
 	})
 
 	plan, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
@@ -211,6 +224,12 @@ func TestASavedContractStillCarriesTheCountedCapacity(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	// The week PRICED is the week STORED. Read from the clock instead, the
+	// capacity line described a different seven days from the plan it sat on.
+	if !priced.Equal(plan.LocalWeekStart) {
+		t.Errorf("capacity priced the week of %s for a plan stored against %s",
+			priced.Format(time.DateOnly), plan.LocalWeekStart.Format(time.DateOnly))
 	}
 	if plan.Capacity == nil {
 		t.Fatal("a save must answer with the capacity a read would give, not omit it")

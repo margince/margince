@@ -38,6 +38,15 @@ func withKind(kind string) func(*crmcontracts.AttentionItem) {
 	return func(i *crmcontracts.AttentionItem) { i.Kind = &kind }
 }
 
+// decidable gives a row the verb its producer offers only to a reader who could
+// press it. A decision fixture without one models a row somebody else has to
+// settle, which is a real case but not the one most tests mean.
+func decidable() func(*crmcontracts.AttentionItem) {
+	return func(i *crmcontracts.AttentionItem) {
+		i.Actions = []crmcontracts.AttentionItemActions{"decide"}
+	}
+}
+
 func withDue(at time.Time) func(*crmcontracts.AttentionItem) {
 	return func(i *crmcontracts.AttentionItem) { i.DueAt = &at }
 }
@@ -251,7 +260,7 @@ func TestAFilteredQueueCarriesOnlyThatKindOfWork(t *testing.T) {
 		AtRisk:   lane(item("r1", "deal_at_risk")),
 	}
 
-	kept := keepCategory(classifyDay(day, rankInstant, dayMoney{}), "deals_at_risk")
+	kept := keepFiltered(classifyDay(day, rankInstant, dayMoney{}), "deals_at_risk")
 
 	if len(kept) != 1 || kept[0].item.Id != "r1" {
 		t.Fatalf("filtering for deals kept %d rows, wanted just the deal", len(kept))

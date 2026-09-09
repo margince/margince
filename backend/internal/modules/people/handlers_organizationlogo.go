@@ -24,6 +24,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// logoCacheControl is the private, short-lived cache every logo response
+// carries — 200 and 304 alike, so a client revalidating gets the same
+// freshness window as one that fetched fresh bytes.
+const logoCacheControl = "private, max-age=300"
+
 // GetOrganizationLogo streams the organization's wide mark — the lockup a
 // record page and an expanded sidebar draw.
 func (h Handlers) GetOrganizationLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -49,6 +54,19 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 	}
 	if h.blob == nil {
 		httperr.NotImplemented(w, r, operation)
+		return
+	}
+	// The object key is minted fresh per upload (organizationLogoKey /
+	// siteReadLogoKey, compose/sitelogo.go), so it already names these exact
+	// bytes — the same digest LogoURL bakes into its cache-busting query
+	// token doubles as the ETag. A match means the client already holds
+	// today's picture: answer before touching blob storage or spending a
+	// decode and a per-pixel scan on bytes it will throw away.
+	etag := `"` + logoRevisionDigest(key) + `"`
+	if httperr.IfNoneMatchHit(r, etag) {
+		w.Header().Set("ETag", etag)
+		w.Header().Set("Cache-Control", logoCacheControl)
+		w.WriteHeader(http.StatusNotModified)
 		return
 	}
 	rc, _, err := h.blob.Get(r.Context(), key)
@@ -87,8 +105,10 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
 	// The URL carries a revision token derived from the stored object key, so a
 	// replacement takes a fresh cache entry. A company list asks for one image
-	// per row, and this short private cache saves the repeated reads of each.
-	w.Header().Set("Cache-Control", "private, max-age=300")
+	// per row, and this short private cache saves the repeated reads of each —
+	// the ETag above extends that saving past the cache's own expiry too.
+	w.Header().Set("Cache-Control", logoCacheControl)
+	w.Header().Set("ETag", etag)
 	httperr.StreamObject(w, r, httperr.StreamedObject{
 		Download: httperr.Download{ContentType: imagenorm.ContentType, Inline: true, Size: int64(len(logo))},
 		Body:     io.NopCloser(bytes.NewReader(logo)),

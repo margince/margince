@@ -4,7 +4,7 @@
 
 .confirm-intro {
   margin: var(--space-2) 0 var(--space-6);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .confirm-fields {
@@ -23,7 +23,7 @@
 }
 
 .confirm-readonly {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   padding: var(--space-2) 0;
 }
 
@@ -55,7 +55,7 @@
 
 .confirm-provenance {
   margin: var(--space-6) 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .confirm-provenance ul {

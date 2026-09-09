@@ -403,6 +403,10 @@ func (stubs) SnoozeBriefItem(w nethttp.ResponseWriter, r *nethttp.Request, itemI
 	httperr.NotImplemented(w, r, "SnoozeBriefItem")
 }
 
+func (stubs) UnsnoozeBriefItem(w nethttp.ResponseWriter, r *nethttp.Request, itemId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "UnsnoozeBriefItem")
+}
+
 func (stubs) ListMyCaptureActivity(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListMyCaptureActivityParams) {
 	httperr.NotImplemented(w, r, "ListMyCaptureActivity")
 }
@@ -663,7 +667,7 @@ func (stubs) SetConnectorSignatureEnrichment(w nethttp.ResponseWriter, r *nethtt
 	httperr.NotImplemented(w, r, "SetConnectorSignatureEnrichment")
 }
 
-func (stubs) ListConsentPurposes(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListConsentPurposesParams) {
+func (stubs) ListConsentPurposes(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListConsentPurposes")
 }
 
@@ -1169,6 +1173,10 @@ func (stubs) ListLeads(w nethttp.ResponseWriter, r *nethttp.Request, params crmc
 
 func (stubs) CreateLead(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateLeadParams) {
 	httperr.NotImplemented(w, r, "CreateLead")
+}
+
+func (stubs) AssignLeads(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AssignLeads")
 }
 
 func (stubs) GetLeadSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -2347,7 +2355,7 @@ func (stubs) GetVoiceLearningSummary(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "GetVoiceLearningSummary")
 }
 
-func (stubs) ListVoiceCorpusSources(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListVoiceCorpusSourcesParams) {
+func (stubs) ListVoiceCorpusSources(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListVoiceCorpusSources")
 }
 

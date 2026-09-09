@@ -171,6 +171,9 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		h.connectIMAP(w, r)
 		return
 	}
+	if h.dispatchTestMailboxConnect(w, r, string(provider)) {
+		return
+	}
 	if !isOAuthProvider(string(provider)) {
 		if h.registry == nil {
 			httperr.NotImplemented(w, r, "ConnectConnector")
@@ -178,7 +181,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		}
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnprocessableEntity,
-			Code:   "connector_unsupported",
+			Code:   codeConnectorUnsupported,
 			Detail: "Only the " + strings.Join(oauthProviders, ", ") + " and imap connectors can be connected here.",
 		})
 		return

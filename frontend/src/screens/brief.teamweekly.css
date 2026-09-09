@@ -2,7 +2,7 @@
    were measured by; everything under it is the figures those readings came from. */
 .teamweekly-headline {
   margin: 0 0 var(--space-2);
-  color: var(--textContent);
+  color: var(--textPrimary);
 }
 
 .teamweekly-subhead {

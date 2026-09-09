@@ -9,6 +9,18 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Pins the deployment target before any compiler runs, so every binary here is
+# stamped with the bundle's declared floor instead of the build machine's OS.
+#
+# Go needs this as much as the C halves do, and far less obviously. With no cgo
+# anywhere in the graph Go links internally and stamps its own supported floor,
+# which is the same number this file declares — so omitting it produced a
+# correct bundle by coincidence rather than by decision. The coincidence ended
+# when one dependency arrived carrying a darwin-only cgo file: that hands the
+# link to clang, clang defaults the target to the builder's OS, and every
+# binary in the bundle then demanded the macOS the runner happened to be on.
+# shellcheck source=desktop/build/macos-target.sh
+. "$HERE/macos-target.sh"
 ROOT="$(cd "$HERE/../.." && pwd)"
 OUT="$ROOT/build/desktop/.stage"
 
@@ -33,6 +45,9 @@ build_server_binaries() {
   done
 }
 
+# The signed binaries, in build order. Read by verify_runnable_os below.
+BUILT=()
+
 # sign_binary ad-hoc signs one executable, HERE in the staging directory
 # rather than after assembly.
 #
@@ -42,8 +57,14 @@ build_server_binaries() {
 # starter script it cannot sign as a subcomponent. Staging paths cannot
 # collide that way. Signatures are embedded in the Mach-O, so they survive
 # the copy into the folder.
+#
+# It also records what it signed, in BUILT. Every executable this script ships
+# is signed, so this is the one place that already knows the whole list —
+# assembling a second one, by globbing the staging directory or by naming the
+# roles again, is how a census comes to check fewer binaries than were built.
 sign_binary() {
   codesign --force --sign - --timestamp=none "$1"
+  BUILT+=("$1")
 }
 
 # build_frontend builds the COMPOSED SPA, for the same reason the server
@@ -125,12 +146,39 @@ build_launcher() {
   sign_binary "$OUT/bin/margince"
 }
 
+# verify_runnable_os holds THIS step's output to the bundle's floor, the way the
+# Postgres and bus steps hold theirs.
+#
+# build-dist.sh checks the assembled folder too, and that check is the one that
+# constrains what a user copies. This one names the step that stamped a binary
+# wrong while the build log still shows which compiler ran, and main() calls it
+# before the frontend so the answer does not wait on a build that cannot change
+# it.
+verify_runnable_os() {
+  # An empty census would pass while examining nothing, which is how a
+  # verification step most often fails.
+  if [[ ${#BUILT[@]} -eq 0 ]]; then
+    echo "FAIL: no binaries were built, so there is nothing to hold to the macOS floor" >&2
+    exit 1
+  fi
+  if ! assert_min_os "${BUILT[@]}"; then
+    exit 1
+  fi
+  log "every binary runs on macOS $MACOS_MIN or newer"
+}
+
 main() {
+  # Every binary, then the floor, then the frontend. The frontend is the
+  # expensive half — a dependency install and two vite builds — and it produces
+  # no Mach-O, so nothing in it can affect the answer. Paying for it before
+  # asking is how the earlier order reported a stamped binary several minutes
+  # after it could have.
   build_server_binaries
+  build_launcher
+  verify_runnable_os
   if [[ "${SKIP_FRONTEND:-0}" != "1" ]]; then
     build_frontend
   fi
-  build_launcher
   log "binaries in $OUT/bin"
 }
 

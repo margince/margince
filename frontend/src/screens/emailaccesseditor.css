@@ -14,7 +14,7 @@
 
 .emailaccess__sentence {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
 }
 

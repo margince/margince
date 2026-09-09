@@ -30,11 +30,14 @@
 .rdeck-stack {
   position: relative;
 }
+/* Each peek stops at the live card's own bottom edge rather than reaching
+   under it: the staged card's ground is a TINT, so an opaque sheet left
+   beneath it reads as a lighter band across the card's foot. */
 .rdeck-peek {
   position: absolute;
   inset-inline: var(--space-4);
   bottom: calc(var(--space-3) * -1);
-  height: var(--space-5);
+  height: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background: var(--bgElevated);
@@ -44,9 +47,10 @@
   bottom: calc(var(--space-5) * -1);
 }
 
-/* The live card sits above its own stack. A left rail in the agent's colour,
-   because everything on this card was proposed by the read rather than by a
-   person: see the provenance rule in the design system README. */
+/* The live card sits above its own stack. The staged ground, the dashed indigo
+   edge and the corner are `.staging-card`'s, worn by the card itself: every
+   value on it was proposed by the read and none of it is on the record until
+   the reader answers. */
 .rdeck-card {
   position: relative;
   z-index: 1;
@@ -56,23 +60,29 @@
      rather than a stack of paragraphs: what this is, what it asks, what you
      do about it. `overflow` is what keeps the bands inside the corners. */
   overflow: hidden;
-  border: 1.5px dashed var(--aiMed);
-  border-inline-start: 3px solid var(--ai);
-  border-radius: var(--r-md);
-  /* The sheet is the paper the question is written on, so it is the lightest
-     ground the theme has rather than the card grey. The only tint on it is the
-     band, which is tinted because of what it says and not to separate it. */
-  background: var(--bgElevated);
+  /* The rail as a stripe INSIDE the edge rather than a border, for the reason
+     DecisionCard draws its deadline the same way: a border here would replace
+     one side of the staged dashes with a solid line and trade "nobody has
+     accepted this" for whatever the rail wanted to say. At rest it is the
+     agent's own colour, because the read is what put the card there. */
+  box-shadow: inset 3px 0 0 0 var(--ai);
+}
+/* What is left here is the MEASURE — three bands, each carrying its own
+   padding, where the staged card's reading padding would inset all three and
+   leave a tinted frame around each. Two classes, so that measure wins wherever
+   the two sheets land in the bundle. */
+.rdeck-card.staging-card {
+  padding: 0;
 }
 /* A card the flow will not continue without is marked as such on its own edge,
    not only in the tray's count: the reason a Continue refuses should be visible
    on the thing that is refusing it. */
 .rdeck-card[data-required="true"] {
-  border-inline-start-color: var(--danger);
+  box-shadow: inset 3px 0 0 0 var(--danger);
 }
 
-/* What this card is, on the agent's own ground: everything the band states
-   was decided by the read rather than by a person. */
+/* What this card is. The rule alone separates the band: the tint under it is
+   the card's own, and a second ground here would read as a second card. */
 .rdeck-head {
   display: flex;
   align-items: center;
@@ -80,7 +90,6 @@
   gap: var(--space-4);
   padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--borderSubtle);
-  background: var(--aiLight);
 }
 
 .rdeck-body {
@@ -90,6 +99,9 @@
   padding: var(--space-5);
 }
 
+/* Whether this card is needed, named on the card. The chip's own fill is
+   translucent, so its ink sits over the staged tint and takes `--aiText`:
+   `--ai` fails AA on the ground its own family paints. */
 .rdeck-tag {
   padding: var(--space-1) var(--space-3);
   border-radius: var(--r-full);
@@ -118,7 +130,7 @@
 
 .rdeck-evidence {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textContent);
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
 }
@@ -204,6 +216,6 @@
 }
 .rdeck-clear {
   margin: 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-size: var(--fs-lead);
 }

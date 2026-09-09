@@ -302,7 +302,7 @@ type disqualifierGuard struct {
 	inner agents.LeadDisqualifier
 }
 
-func (g disqualifierGuard) DisqualifyLead(ctx context.Context, id ids.UUID) (json.RawMessage, error) {
+func (g disqualifierGuard) DisqualifyLead(ctx context.Context, id ids.UUID, ifVersion *int64) (json.RawMessage, error) {
 	overlay, err := g.mode.isOverlayUncached(ctx)
 	if err != nil {
 		return nil, err
@@ -310,7 +310,7 @@ func (g disqualifierGuard) DisqualifyLead(ctx context.Context, id ids.UUID) (jso
 	if overlay {
 		return nil, apperrors.ErrUnsupportedBySoR
 	}
-	return g.inner.DisqualifyLead(ctx, id)
+	return g.inner.DisqualifyLead(ctx, id, ifVersion)
 }
 
 // nativeOnlyDemoter guards demote_lead, for the reason nativeOnlyDisqualifier
@@ -437,6 +437,28 @@ func (v nativeOnlyReportVocabularyReader) ReportVocabularyDocument(ctx context.C
 		return nil, apperrors.ErrUnsupportedBySoR
 	}
 	return v.inner.ReportVocabularyDocument(ctx)
+}
+
+// nativeOnlyAnalyticsVocabularyReader guards describe_analytics_vocabulary,
+// for the reason the two vocabulary guards above give: the typed analytics
+// runner is refused in an overlay workspace, so a vocabulary served there
+// teaches a caller a field list nothing here can execute. One refusal is the
+// honest shape — "not available here", once, rather than a working
+// description of an unavailable capability.
+type nativeOnlyAnalyticsVocabularyReader struct {
+	mode  overlayModeChecker
+	inner agents.AnalyticsVocabularyReader
+}
+
+func (v nativeOnlyAnalyticsVocabularyReader) AnalyticsVocabularyDocument(ctx context.Context) (string, error) {
+	overlay, err := v.mode.isOverlayUncached(ctx)
+	if err != nil {
+		return "", err
+	}
+	if overlay {
+		return "", apperrors.ErrUnsupportedBySoR
+	}
+	return v.inner.AnalyticsVocabularyDocument(ctx)
 }
 
 // nativeOnlyBriefReader guards read_brief. The brief ranks the rep's own open

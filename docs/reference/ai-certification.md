@@ -29,7 +29,7 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | … best state `partial` | 0 |
 | … best state `stale` | 41 |
 | … `absent` on every binding | 1 |
-| Scenarios in the corpus | 157 |
+| Scenarios in the corpus | 158 |
 | Committed records | 74 |
 | Bindings measured | 10 |
 
@@ -40,8 +40,8 @@ Counted per record — one (task, binding) pair — over the 55 stale record(s) 
 | What moved | Records | What it means |
 |---|---:|---|
 | the case | 55 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
-| **the prompt this build sends** | 12 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| the grader | 0 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
+| **the prompt this build sends** | 14 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
+| the grader | 2 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -132,7 +132,7 @@ Which model to run each site on, and what that choice rests on.
 | [`voice_build/eval_draft`](#voice_buildeval_draft) | - | - | - | `stale` | 1 | 3 |
 | [`voice_build/eval_scores`](#voice_buildeval_scores) | - | - | - | `stale` | 1 | 3 |
 | [`weekly_learnings/learn`](#weekly_learningslearn) | - | - | - | `stale` | 3 | 2 |
-| [`weekly_review/narrative`](#weekly_reviewnarrative) | - | - | - | `stale` | 3 | 2 |
+| [`weekly_review/narrative`](#weekly_reviewnarrative) | - | - | - | `stale` | 4 | 2 |
 
 **Best model tested** is the strongest result that still describes what ships.
 Only a `current` or `partial` record is eligible; among those the pick is the
@@ -299,8 +299,8 @@ model, real network).
 | `voice_build/eval_scores` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it |
 | `weekly_learnings/learn` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
 | `weekly_learnings/learn` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
-| `weekly_review/narrative` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count |
-| `weekly_review/narrative` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count |
+| `weekly_review/narrative` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count |
+| `weekly_review/narrative` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count |
 
 ## Sites, their scenarios and their records
 
@@ -1238,18 +1238,19 @@ Records (2):
 
 Scope a run of it can claim: `full_invocation`.
 
-Scenarios (3):
+Scenarios (4):
 
 | Scenario | Expects | Case |
 |---|---|---|
 | `a_deal_named_like_an_instruction_is_read_as_a_name` | `accepted` | [a_deal_name_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_deal_name_is_not_an_instruction.yaml) |
 | `a_quiet_week_is_reported_as_quiet_rather_than_dressed_up` | `accepted` | [a_quiet_week_is_said_to_be_quiet.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_quiet_week_is_said_to_be_quiet.yaml) |
+| `a_week_of_leads_and_meetings_is_described_rather_than_called_quiet` | `accepted` | [a_week_of_leads_is_not_an_empty_week.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_of_leads_is_not_an_empty_week.yaml) |
 | `the_sentence_leads_with_what_changed_not_with_a_count` | `accepted` | [a_week_with_one_thing_worth_saying.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_with_one_thing_worth_saying.yaml) |
 
 Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 | 997ms | 1239ms | 6 | 3 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 | 879ms | 1619ms | 6 | 3 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/4 | `not_supported` | 9 | 6 | 0.67 | 997ms | 1239ms | 6 | 3 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/4 | `not_supported` | 9 | 6 | 0.67 | 879ms | 1619ms | 6 | 3 | 0 | 0 |
 

@@ -7587,6 +7587,60 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /leads/assign-bulk:
+    post:
+      tags: [Leads]
+      operationId: assignLeads
+      summary: Hand a named set of leads to one owner.
+      description: |
+        The explicit-id twin of `updateLead.owner_id`, for a queue a manager works a screenful at
+        a time. The caller names up to 500 leads and one destination; each lead is assigned
+        exactly as a single `updateLead` would assign it, with its own `audit_log` row and
+        `lead.updated` event.
+
+        PER ROW, not one transaction, and the result says so. A bulk verb over a work queue is a
+        selection of independent records, and refusing forty because the fortieth moved under the
+        reader would make the screen unworkable — so each lead answers for itself and the result
+        names every one that did not move. That is the opposite of `relinkActivities`, which is
+        all-or-nothing because its rows are one conversation.
+
+        The destination is checked ONCE before anything is written, because it is a fact about a
+        seat rather than about any lead: an ineligible owner answers `422 owner_not_assignable`
+        and nothing moves. It is then re-checked inside each row's transaction, since a seat can
+        be suspended midway through a long run.
+
+        Each `version` is optional and behaves as `If-Match` does on the single write: supply it
+        and a lead that moved since the caller read it answers `conflict` rather than overwriting
+        somebody's work.
+      x-agent-access: human-only
+      # Session cookie only, matching auth.RequireHuman: putting somebody's name on a customer
+      # record is a human's act, in bulk exactly as it is one at a time.
+      security: [{ cookieAuth: [] }]
+      # NO IdempotencyKey, deliberately. A replay pays the recorded response back without
+      # re-running the write, so the key's holder must be re-probed against the records that
+      # response describes — and the replay probe reads ONE record id from a body, while this
+      # body names up to five hundred. A probe that checked the first lead would gate a
+      # hundredth of the answer while reading as a gate on all of it, so a caller whose row
+      # scope was revoked after the run could replay the key and read every verdict.
+      #
+      # A retry costs nothing to be safe about instead: assignment is idempotent in effect
+      # (assigning a lead to the owner it already has is the same lead with a new version), and
+      # each row carries its own `version`, so a retried request with the versions the caller
+      # still holds answers `conflict` for exactly the rows that moved.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignLeadsRequest' }
+      responses:
+        '200':
+          description: What happened to each named lead.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssignLeadsResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /leads/settings:
     get:
       tags: [Leads]
@@ -11188,8 +11242,28 @@ paths:
             licence to read a colleague's inbox.
         - name: filter
           in: query
-          schema: { type: string, enum: [all, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system] }
-          description: 'Narrow the queue to one kind of work. Omitted means everything, which is the default view.'
+          schema: { type: string, enum: [all, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system, except_decisions, changed_since_brief] }
+          description: |
+            Narrow the queue. Omitted means everything, which is the default view.
+
+            Most values name ONE kind of work. Two do not, and exist because a surface
+            counted a population this vocabulary could not then ask for — a count whose
+            link lands on a different population is a number that lies about where it goes.
+
+            `except_decisions` is everything a decisions-drawing surface has NOT already
+            answered: every row whose SOURCE is not `approval`. Not a kind of work, and
+            deliberately not the complement of the `decisions` CATEGORY, which is a wider
+            set — an introduction request classifies as a decision and is not an approval,
+            so a category reading would drop a row the counting surface kept. A folded
+            group's source is `batch` and it is kept, like any other row that is not
+            itself an approval.
+
+            `changed_since_brief` is the rows whose material moment falls after the
+            overnight run's data cutoff — the same test that stamps each row's
+            `changed_since_brief` flag — and, like the value above, not the rows a brief
+            already draws as cards. With no run to compare against it answers empty rather
+            than everything: absent is not false, and a reader asking what changed since a
+            night that never happened is owed nothing, not the whole queue.
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
@@ -13891,9 +13965,14 @@ paths:
       tags: [Compliance]
       operationId: listConsentPurposes
       summary: List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
+      description: |
+        UNPAGED, deliberately. A workspace's consent purposes are configuration — a handful of
+        them, set up once — so the answer is the whole set and `page` reports `has_more: false`.
+
+        It used to declare `cursor` and `limit` and honour neither: `?limit=5` returned the
+        catalog, and a caller who sized a page got everything. Nothing was hidden, and nothing
+        was kept either. Removing the dial makes the surface true rather than adding paging
+        machinery with no user.
       responses:
         '200':
           description: A page of consent purposes.
@@ -14252,13 +14331,27 @@ paths:
         to stop stays stopped until somebody with the authority to lift it says otherwise.
 
         **Who may lift it is part of the record.** The row carries the authority of whoever wrote
-        it, taken from the session and never from this body. A rep's row is liftable by an admin
-        and not by another rep; nothing an installation can do lifts the subject's own Art. 21
-        objection, which is a different kind this door cannot write.
+        it, taken from the session and never from this body. A rep's `subject_request` row is
+        liftable by an admin and not by another rep.
 
-        The only kind recordable here is `subject_request`. An objection and a processing
-        restriction carry legal consequences a relayed phone call does not establish, and a hard
-        bounce is a fact about a mailbox only the mail path observes.
+        A `marketing_objection` is different: it is recorded at the SUBJECT'S authority whoever
+        types it, because Art. 21 gives the right to the data subject and a rep relaying the call
+        is a courier rather than its author.
+
+        **Nothing lifts it today.** No seat outranks the subject, and the subject-initiated
+        reversal that would let them take it back is not built yet — the preference centre writes
+        consent state and never touches a suppression. Record one only when the person actually
+        asked for it: a mistake currently needs a database correction, not a product action.
+
+        Two kinds are recordable here. `subject_request` is "stop contacting me", and it stops
+        every category except the three the controller owes regardless of what the subject wants
+        sent: a privacy notice, a security warning, and the confirmation that an opt-out was
+        recorded. `marketing_objection` is Art. 21(2) and stops marketing only, so the invoice the
+        same person is owed still goes.
+
+        A processing restriction and a hard bounce are not recordable by hand: the first is an
+        Art. 18 legal state with its own workflow, the second a fact about a mailbox only the mail
+        path observes.
       requestBody:
         required: true
         content:
@@ -14269,8 +14362,12 @@ paths:
               properties:
                 kind:
                   type: string
-                  enum: [subject_request]
-                  description: Which stop this is. Only the subject's own request is recordable by hand.
+                  enum: [subject_request, marketing_objection]
+                  description: |
+                    Which stop this is. `subject_request` is "stop contacting me" and reaches every
+                    category but the three the controller owes anyway. `marketing_objection` is
+                    Art. 21(2), reaches marketing only, and is recorded at the subject's own
+                    authority so no seat can lift it.
                 reason:
                   type: string
                   maxLength: 500
@@ -15413,9 +15510,13 @@ paths:
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       summary: List the owner's corpus manifest and live meter; source text is never returned.
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
+      description: |
+        UNPAGED, deliberately, and for the same reason listConsentPurposes is: one voice
+        profile's corpus sources are configuration rather than accumulated data, so the answer
+        is the whole manifest.
+
+        It declared `cursor` and `limit` and honoured neither. Removing the dial is free now
+        and stops being free once a client depends on the parameter being accepted.
       responses:
         '200':
           description: Manifest and meter.
@@ -18765,6 +18866,47 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /brief/items/{itemId}/unsnooze:
+    parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        description: A brief_item id belonging to one of the acting rep's runs.
+    post:
+      tags: [Brief]
+      operationId: unsnoozeBriefItem
+      summary: Take back a snooze — the item returns to the queue immediately.
+      description: |
+        Clears `snoozed_until`, `reopen_on` and `reopen_ref` and returns the item to `state=new`,
+        which is the only state a snooze can be taken back TO: an item may be snoozed only while it
+        is actionable, so `new` is where it came from.
+
+        Idempotent by refusal rather than by silence. An item that is not snoozed answers 409 —
+        there is nothing to take back, and reporting success would tell a rep their click landed
+        when the state they were looking at had already moved. A snooze whose condition has already
+        lifted is still snoozed as far as this is concerned: taking it back is the same write and
+        leaves the same state.
+
+        Per-rep queue state, like snooze itself. Another rep's item reads as not-found.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The updated brief item, back in the queue.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MorningBriefItem' }
+        '404':
+          description: No such item in one of the acting rep's runs (another rep's item reads as not-found).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: The item is not snoozed, so there is no snooze to take back.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # =========================================================================
   # =========================================================================
   # NET-NEW V1 RESOURCES (data-model.md §12.5) — first-class, but specified by
@@ -21323,11 +21465,14 @@ components:
       name: provider
       in: path
       required: true
-      schema: { type: string, enum: [gmail, gcal, graph, graphcal, imap] }
+      schema: { type: string, enum: [gmail, gcal, graph, graphcal, imap, test_mailbox] }
       description: |
         The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-        the same operation; every provider but imap authorizes by OAuth redirect, imap by
-        credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+        the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+        credential submission, and test_mailbox connects immediately with neither (a QC-only
+        connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+        real deployment answers connector_unsupported for it, the same as for an unrecognized
+        provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
         Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
         engine. Mail and calendar are always SEPARATE connections on either vendor: one
         consent each, so a person can bring one without the other and disconnect either.
@@ -21380,10 +21525,14 @@ components:
         `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
         cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
         accepted multi-field spelling; any other comma-separated multi-field spec returns
-        `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-        enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-        columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-        an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+        `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+        resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+        index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+        they can order by: a header that cannot be clicked is a dead control. Some columns are not
+        yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+        its pipeline or a partner by its organization's name, needs a sort the server cannot express
+        yet — and a resource's own list documents which. An out-of-vocabulary field returns
+        `422 code: sort_field_not_allowed`.
     IncludeArchived:
       name: include_archived
       in: query
@@ -22932,7 +23081,7 @@ components:
       required: [id, provider, status, scopes]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap], description: The mail/calendar provider (A51 email+calendar parity). }
+        provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap, test_mailbox], description: The mail/calendar provider (A51 email+calendar parity). }
         account_label: { type: [string, 'null'], description: 'Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one.' }
         status: { type: string, enum: [connected, disconnected, error, reauth_required], description: 'Connection state; `reauth_required` when the stored token expired/was revoked upstream.' }
         sync_cursor: { type: [string, 'null'], description: 'Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture — read-only.' }
@@ -23845,7 +23994,7 @@ components:
           items:
             type: object
             properties:
-              provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap] }
+              provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap, test_mailbox] }
               status: { type: string, enum: [connected, disconnected, error, reauth_required] }
               last_synced_at: { type: [string, 'null'], format: date-time }
               last_sync_error_class: { type: [string, 'null'] }
@@ -26247,12 +26396,17 @@ components:
       enum: [never, queued, running, done, degraded, failed]
       description: |
         Where this reader's scan of the account stands. `never` — this reader has not asked
-        for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
-        model read the account and its findings are stored. `degraded` — the read finished
-        on the deterministic floor (no model lane, the AI budget deferred past the job's
-        patience, or a reply the grounding filter refused whole); the rules' own advice is
-        what stands. `failed` — the read could not run at all; the rules' advice still
-        answers, and `degrade_reason` says what stopped it.
+        for one. `queued` / `running` — a read is in flight, on the rail. `done` — the read
+        covered everything this reader may read and its findings are stored; that is the
+        model's reading of the account's exchanges, or — on an account with no exchange
+        this reader may read, which is every account before its first — the rules' own
+        advice over nothing, with `read` saying nought exchanges and `generated_by` saying
+        which wrote it. An empty account is not a shortfall and never degrades: `degraded`
+        is the DEPLOYMENT falling short of the read it was asked for, so the answer
+        finished on the deterministic floor (no model lane, the AI budget deferred past the
+        job's patience, or a reply the grounding filter refused whole) and the rules' own
+        advice is what stands. `failed` — the read could not run at all; the rules' advice
+        still answers, and `degrade_reason` says what stopped it.
 
     OrganizationScan:
       type: object
@@ -30579,7 +30733,14 @@ components:
             makes the gap countable.
         won_without_contract_detail:
           type: [string, 'null']
-          description: What the reason was. Required when it is `other`, which explains nothing alone.
+          maxLength: 500
+          description: |
+            What the reason was. Required when it is `other`, which explains nothing alone.
+
+            Bounded because it is free text that a record page shows back beside the deal's
+            status: an unbounded value reaches every reader of that deal, and the header it
+            lands in is a line of short facts. 500 is a few sentences — long enough to say
+            what happened, short enough that the line stays readable.
 
     DealListResponse:
       type: object
@@ -31745,6 +31906,74 @@ components:
           default: false
           description: When true, replaces each activity's existing link of the same entity_type (move) rather than adding (associate).
 
+    AssignLeadsRequest:
+      type: object
+      description: |
+        One destination owner, and the leads to hand to them. The owner is checked before any
+        lead is touched; the leads answer one at a time.
+      required: [leads, owner_id]
+      properties:
+        owner_id:
+          type: string
+          format: uuid
+          description: |
+            The seat to hand them to. Must be one that can be handed work — an active, unarchived
+            human seat that is not read-only, inside the caller's own row scope — else
+            `422 owner_not_assignable` and nothing moves.
+        leads:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: '#/components/schemas/AssignLeadsItem' }
+
+    AssignLeadsItem:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+        version:
+          type: integer
+          format: int64
+          description: |
+            The version the caller read. Optional; supplying it makes the row's write conditional
+            exactly as `If-Match` does on `updateLead`, so a lead somebody else moved answers
+            `conflict` instead of losing their change.
+
+    AssignLeadsResult:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items: { $ref: '#/components/schemas/AssignLeadOutcome' }
+
+    AssignLeadOutcome:
+      type: object
+      description: What happened to one named lead.
+      required: [lead_id, outcome]
+      properties:
+        lead_id: { type: string, format: uuid }
+        outcome: { $ref: '#/components/schemas/AssignLeadOutcomeKind' }
+        version:
+          type: integer
+          format: int64
+          description: The lead's version after the write. Present on `assigned`.
+
+    AssignLeadOutcomeKind:
+      type: string
+      description: |
+        `assigned` moved the lead — including one already owned by the destination, which still
+        takes a version and an audit row rather than being quietly skipped: the writer records
+        the assignment as an act, so a re-run says what it did rather than claiming it did
+        nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+        no longer holds.
+
+        `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+        write resolves live rows only and a promoted or disqualified lead is no longer among
+        them. The two deliberately read alike: which of them it was is a fact about a record the
+        caller was not shown, and separating them would answer that a lead exists.
+      enum: [assigned, not_found, forbidden, conflict]
+
     RelinkActivitiesRequest:
       type: object
       description: |
@@ -32036,7 +32265,7 @@ components:
             re-conflate a deployment fact with a tenant one.
         attachments:
           type: object
-          required: [carries, max_files, max_bytes_per_file, max_body_with_files]
+          required: [carries, max_files, max_bytes_per_file, max_total_bytes, max_body_with_files]
           description: |
             What this transport can carry alongside a message. Published because the
             composer must warn BEFORE a human presses send: a mismatch discovered at
@@ -32046,8 +32275,23 @@ components:
             default, so a connector that never declared carriage reports false rather than
             being mistaken for capable. A zero bound means "no limit beyond the contract's
             own", never "zero allowed".
+
+            `max_total_bytes` is the exception to that rule and is never zero: every
+            transport has an aggregate, because the product has one whether or not the
+            provider declares its own. It is the bound a composer must warn against
+            FIRST — `max_files` and `max_bytes_per_file` cannot express it between them,
+            so a message of ten files each under the per-file cap can pass both and still
+            be ten times what a send may carry.
           properties:
             carries: { type: boolean }
+            max_total_bytes:
+              type: integer
+              format: int64
+              minimum: 1
+              description: |
+                Largest total across every file on one message, in bytes — the smaller of
+                this transport's own aggregate and the product's send budget. Always
+                present and always positive.
             max_files:
               type: integer
               description: Most files in one message. Never more than the contract's own `attachment_ids` cap of 10.
@@ -33750,12 +33994,33 @@ components:
       properties:
         first_response_enabled: { type: boolean, description: 'Whether the first-response target is tracked at all. Off by default.' }
         first_response_target_minutes: { type: integer, description: 'How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080.' }
+        unassigned_escalation_user_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            Who answers when a lead nobody owns misses its target. Null means nobody is
+            configured, and an unowned breach is recorded without being addressed. Also reads
+            null once the named seat can no longer work the queue — suspended, archived, an
+            agent, a read seat — because a desk nobody reads is the same silence as none.
 
     UpdateLeadSettingsRequest:
       type: object
       properties:
         first_response_enabled: { type: boolean }
         first_response_target_minutes: { type: integer, minimum: 15, maximum: 10080 }
+        unassigned_escalation_user_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            Who answers when a lead NOBODY owns misses its first-response target. An owned
+            lead's breach escalates to its owner; without this, an unowned one escalated to
+            nobody at all.
+
+            Must name a seat that can be handed work AND may read leads, else `422` — an
+            escalation carries the lead it is about, so a desk that cannot open the record is
+            not a desk to send it to. Null clears it, which is the honest default: the breach
+            is recorded and left in the unassigned queue rather than addressed to somebody who
+            never agreed to answer for it.
 
     DisqualifyLeadRequest:
       type: object
@@ -35968,7 +36233,9 @@ components:
             Null and empty carry the same distinction as `risks`.
         capacity:
           description: |
-            What next week's calendar already holds, counted rather than authored.
+            What the PLANNED week's calendar already holds, counted rather than authored —
+            the same seven days `local_week_start` names, so the figure and the plan cannot
+            describe different weeks.
 
             ABSENT when the installation composed no calendar reader. Absent is NOT zero: a
             week nobody has looked at is unknown, and drawing it as "nothing booked" would
@@ -41152,6 +41419,20 @@ components:
             deal however many times it was edited — a rep who corrected a typo three times did not
             upgrade three times.
         forecast_down: { type: integer, minimum: 0 }
+        unreconstructible:
+          type: integer
+          minimum: 0
+          description: |
+            Deals left OUT of the four population counts above because their state at the week's
+            closing instant could not be rebuilt: the audit images describing their week sit
+            behind an erasure, and the append-only spine means reading them would put back
+            exactly what a scrub certified destroyed.
+
+            Nonzero means `open` and the three coverage counts are a floor rather than a total,
+            and a reader must be told so. Zero is the ordinary answer. ABSENT means the week was
+            scored before this reconstruction existed, which is a third fact again: those counts
+            are the current-state figures they always were, and nothing can retroactively make
+            them week-end facts.
 
     WeeklyReview:
       type: object
@@ -42387,7 +42668,7 @@ components:
             The scopes this reader may ask for, narrowest first — derived from their own
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
-        filter: { type: string, enum: [all, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system], description: 'The narrowing this read applied.' }
+        filter: { type: string, enum: [all, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system, except_decisions, changed_since_brief], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
         queue:
           type: array
@@ -42997,10 +43278,15 @@ components:
           type: integer
           minimum: 0
           description: |
-            How much routine work is queued behind a decision. Counted before the fold, so
-            a hundred alike approvals read as a hundred here even where the queue draws
+            How many decisions THIS reader can settle. Counted before the fold, so a
+            hundred alike approvals read as a hundred here even where the queue draws
             them as one row — the strip says how much work there is, and the queue says
             how much reading it costs.
+
+            Only rows carrying a verb the reader may press. A duplicate pair whose two
+            records the reader cannot both write is somebody else's decision, and
+            counting it here tells them a person is blocked on an answer they are not
+            able to give.
         more_available:
           type: boolean
           description: |

@@ -89,7 +89,7 @@ func TestANarrowedBindingRefusesWhatItNoLongerAdvertises(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	narrowed, err := SelectBrain(ProviderConfig{
+	narrowed, err := selectLocalBrain(ProviderConfig{
 		Provider: providerGemini, BaseURL: srv.URL, Model: "m", Input: []string{"text", "image"},
 	}, allCloudKeys())
 	if err != nil {

@@ -71,17 +71,75 @@ func TestABookedRoomIsNeitherAPartyNorAParticipant(t *testing.T) {
 	}
 }
 
-func TestACancelledEventAndOneWithNoIDAreDropped(t *testing.T) {
+func TestACancelledEventAndOneWithNoIDAreNotWrittenAsBooked(t *testing.T) {
 	external := []Actor{{Email: "client@acme.test"}}
 	for name, ev := range map[string]Event{
 		"cancelled": {ID: "evt-1", Cancelled: true, Organizer: Actor{Email: owner}, Attendees: external},
+		"declined":  {ID: "evt-2", OwnerDeclined: true, Organizer: Actor{Email: owner}, Attendees: external},
 		"no id":     {Organizer: Actor{Email: owner}, Attendees: external},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, skip := Classify(ev, owner).SkipReason(); !skip {
-				t.Fatalf("a %s event must be dropped", name)
+				t.Fatalf("a %s event must not be written as a booked meeting", name)
 			}
 		})
+	}
+}
+
+// The two answers a non-capture has to be told apart by. Dropping is right for
+// an event never captured; a meeting already on the timeline must be CLOSED
+// instead, because the provider stops listing an event once it is off and no
+// later pull mentions it again.
+func TestACancelledOrDeclinedEventSettlesAsACancellationRatherThanADrop(t *testing.T) {
+	external := []Actor{{Email: "client@acme.test"}}
+	for name, tc := range map[string]struct {
+		event Event
+		want  Settlement
+	}{
+		"organizer called it off": {
+			event: Event{ID: "evt-1", Cancelled: true, Organizer: Actor{Email: owner}, Attendees: external},
+			want:  SettleCancel,
+		},
+		"the owner declined it": {
+			event: Event{ID: "evt-2", OwnerDeclined: true, Organizer: Actor{Email: owner}, Attendees: external},
+			want:  SettleCancel,
+		},
+		"no id to find it by": {
+			event: Event{Cancelled: true, Organizer: Actor{Email: owner}, Attendees: external},
+			want:  SettleDrop,
+		},
+		"nobody but the owner": {
+			event: Event{ID: "evt-3", Organizer: Actor{Email: owner}, Attendees: []Actor{{Email: owner}}},
+			want:  SettleDrop,
+		},
+		"still on": {
+			event: Event{ID: "evt-4", Organizer: Actor{Email: owner}, Attendees: external},
+			want:  SettleCapture,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, got := Classify(tc.event, owner).Settle(); got != tc.want {
+				t.Fatalf("Settle() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// A meeting that became internal after it was booked must still be cancellable.
+//
+// The party rules decide whether an event is worth capturing, which is a
+// question about an event nothing has written yet. A meeting already on the
+// timeline is past them. Asking them ahead of the cancellation would drop the
+// pull that closes it and leave exactly the stale booked row this path exists
+// to clear.
+func TestACancellationOutranksThePartyRules(t *testing.T) {
+	internalNow := Event{
+		ID: "evt-shrunk", Cancelled: true,
+		Organizer: Actor{Email: owner},
+		Attendees: []Actor{{Email: owner}, {Email: "peer@myco.com"}},
+	}
+	if _, got := Classify(internalNow, owner).Settle(); got != SettleCancel {
+		t.Fatalf("Settle() = %v, want the cancellation to outrank the owner-domain floor", got)
 	}
 }
 

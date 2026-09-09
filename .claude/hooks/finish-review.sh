@@ -277,7 +277,7 @@ request_review() {
 # --- phase 1: the deterministic craft gate --------------------------------
 if [[ "$phase" = "craft" ]]; then
 	args=(); for f in "${files[@]}"; do [[ -n "$f" ]] && args+=("$root/$f"); done
-	if craft_out="$(go run -C "$root/cli/craft" . static "${args[@]}" 2>&1)"; then
+	if craft_out="$("$("$root/scripts/craft-pin.sh")" static "${args[@]}" 2>&1)"; then
 		request_review "This branch has an open PR and craft static is green, so the one end-of-work review round for it runs now — scoped to the ${#args[@]} backend file(s) THIS session changed.
 
 Step 1 — craft static (the deterministic ADR-0045 gate): PASSED.

@@ -10,6 +10,10 @@
 // in a colleague's queue under their own name — so what has to be held is the
 // WRITE: which endpoint, and what body. A control that renamed the promise and
 // posted nothing looks identical on screen.
+//
+// The dial that chooses whose queue is open is held here too, for the same
+// reason from the other side: what it OFFERS is a promise about where a press
+// lands, and a choice that leads nowhere draws exactly like one that works.
 
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -19,7 +23,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { CoachControl, ReassignControl } from "./worklist.manager";
+import { CoachControl, OwnerPicker, ReassignControl } from "./worklist.manager";
 import { WorklistRow } from "./worklist.row";
 import { jsonResponse, row } from "./worklist.testkit";
 
@@ -119,6 +123,28 @@ async function wrote(
   return undefined;
 }
 
+// A refusal in the shape the server sends it: RFC-7807, with the `code`
+// discriminator the screens branch on. A 403 with no code is a different fact
+// — a proxy or a bug rather than a stated refusal — so the two are spelled
+// apart here for the same reason the screen tells them apart.
+function refusal(code?: string) {
+  return new Response(
+    JSON.stringify({
+      title: "Forbidden",
+      status: 403,
+      ...(code ? { code } : {}),
+    }),
+    { status: 403, headers: { "content-type": "application/problem+json" } },
+  );
+}
+
+// The green dot is the toast region's way of saying "that worked". A failure
+// wearing it tells the reader the opposite of what the sentence beside it
+// says, which is why every failure arm on this page passes `{ mark: false }`.
+function completionMark(container: HTMLElement) {
+  return container.ownerDocument.body.querySelector(".dot-auto");
+}
+
 describe("handing a task to somebody else", () => {
   it("AC-WORKLIST-MGR-03: writes the new assignee to the task the row names", async () => {
     const fetched = stubRosterAnd(() => jsonResponse({}));
@@ -176,16 +202,10 @@ describe("handing a task to somebody else", () => {
 
   // A refused handover leaves the work where it was, which looks exactly like a
   // press that did nothing.
-  it("says so when the handover is refused", async () => {
-    stubRosterAnd(
-      () =>
-        new Response(JSON.stringify({ title: "Forbidden", status: 403 }), {
-          status: 403,
-          headers: { "content-type": "application/problem+json" },
-        }),
-    );
+  it("says so when the handover is refused, and does not mark it done", async () => {
+    stubRosterAnd(() => refusal());
     const user = userEvent.setup();
-    renderUnderAToastRegion(
+    const { container } = renderUnderAToastRegion(
       <ReassignControl item={row({ id: "task-1" })} owner={LENA} />,
     );
 
@@ -205,6 +225,7 @@ describe("handing a task to somebody else", () => {
     expect(
       await screen.findByText(en["worklist.manager.reassignFailed"]),
     ).toBeTruthy();
+    expect(completionMark(container)).toBeNull();
   });
 });
 
@@ -235,6 +256,57 @@ describe("leaving a note on somebody's queue", () => {
     });
     expect(
       await screen.findByText(en["worklist.manager.coached"]),
+    ).toBeTruthy();
+  });
+
+  // A NOTE THE READER MAY NOT SEND says why, and never wears the mark that
+  // means it worked.
+  //
+  // The server answers 403 `permission_denied` where the caller may not coach
+  // this person at all. "That note could not be left" invited a retry, and
+  // every press earned the same refusal — a reader pressing four times learnt
+  // nothing the first press could have told them.
+  it("names the refusal a 403 states, with no completion mark", async () => {
+    stubRosterAnd(() => refusal("permission_denied"));
+    const user = userEvent.setup();
+    const { container } = renderUnderAToastRegion(
+      <CoachControl owner={LENA} name="Lena Fischer" />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.manager.coachConfirm"],
+      }),
+    );
+
+    expect(
+      await screen.findByText("You may not coach Lena Fischer."),
+    ).toBeTruthy();
+    expect(completionMark(container)).toBeNull();
+  });
+
+  // And the branch is on the SENTINEL, not on the status: a 403 the server sent
+  // with no code is a proxy or a bug rather than a stated refusal, and claiming
+  // "you may not coach her" over one would name a rule nobody wrote.
+  it("falls back to the shared line where no code was stated", async () => {
+    stubRosterAnd(() => refusal());
+    const user = userEvent.setup();
+    renderUnderAToastRegion(<CoachControl owner={LENA} name="Lena Fischer" />);
+
+    await user.click(
+      await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.manager.coachConfirm"],
+      }),
+    );
+
+    expect(
+      await screen.findByText(en["worklist.manager.coachFailed"]),
     ).toBeTruthy();
   });
 
@@ -358,5 +430,75 @@ describe("the row a rep is standing on", () => {
         name: en["worklist.manager.reassign"],
       }),
     ).toBeTruthy();
+  });
+});
+
+// The roster as the owner picker reads it. `page.next_cursor` is what decides
+// whether the walk reached the end of the workspace, so it is the one thing the
+// two frames below differ in — and each page answers a fresh colleague, because
+// a walk that met the same id ten times would say nothing about a long roster.
+function stubRosterWalk(
+  seats: readonly Record<string, unknown>[],
+  options: { endless?: boolean } = {},
+) {
+  let page = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (!url.includes("/users")) {
+        return jsonResponse({ data: [] });
+      }
+      page += 1;
+      return options.endless
+        ? jsonResponse({
+            data: [{ id: `u-${page}`, display_name: `Colleague ${page}` }],
+            page: { next_cursor: `after-${page}` },
+          })
+        : jsonResponse({ data: seats, page: { next_cursor: null } });
+    }),
+  );
+}
+
+describe("whose queue the page is answering", () => {
+  // An agent seat is an Agent Runner identity rather than a person: it opens no
+  // Worklist of its own, so a lead who chose one would land on a day that comes
+  // back with nothing in it and nothing saying why.
+  it("offers no agent seat as an owner", async () => {
+    stubRosterWalk([
+      { id: MINH, display_name: "Minh Tran" },
+      { id: "u-runner", display_name: "Overnight Runner", is_agent: true },
+    ]);
+    const user = userEvent.setup();
+    renderUnderAToastRegion(<OwnerPicker owner="" onOwner={() => {}} />);
+
+    await user.click(await screen.findByRole("combobox"));
+    expect(screen.getByRole("option", { name: "Minh Tran" })).toBeTruthy();
+    expect(
+      screen.queryByRole("option", { name: "Overnight Runner" }),
+    ).toBeNull();
+  });
+
+  // The walk is bounded, so past its reach this list is part of the workspace
+  // rather than the workspace. Unsaid, a picker missing colleagues reads as a
+  // workspace that has none — on the one control a lead uses to reach somebody.
+  it("admits it when the roster walk stopped short", async () => {
+    stubRosterWalk([], { endless: true });
+    renderUnderAToastRegion(<OwnerPicker owner="" onOwner={() => {}} />);
+
+    expect(await screen.findByText(en["state.partial"])).toBeTruthy();
+  });
+
+  // And says nothing of the kind over a roster it read to the end: a caveat
+  // about a complete list is simply untrue, and one drawn always is one nobody
+  // reads when it matters.
+  it("says nothing about the list when the walk reached the end", async () => {
+    stubRosterWalk([{ id: MINH, display_name: "Minh Tran" }]);
+    const user = userEvent.setup();
+    renderUnderAToastRegion(<OwnerPicker owner="" onOwner={() => {}} />);
+
+    await user.click(await screen.findByRole("combobox"));
+    await screen.findByRole("option", { name: "Minh Tran" });
+    expect(screen.queryByText(en["state.partial"])).toBeNull();
   });
 });

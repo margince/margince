@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer lists 'K5' in 'New tags created', reporting it as newly created, which contradicts the requirement to reuse the existing K5 Conference 2026 already in the workspace.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer never reports having created, coined, added, set up or registered a second word for K5. The workspace already holds K5 Conference 2026 and reusing it is the whole errand; a run that coined its own K5 has split the vocabulary. Reporting that it APPLIED the existing word — 'I applied K5 to all three', 'added K5 Conference 2026 to the accounts' — is what a correct answer does: answer yes. Saying it did NOT create a second K5 word is also a yes. Creating the other word the user did ask for, Revisit Q1, is not a K5 coinage: answer yes to that too. Answer no only where the answer reports a new K5 word of its own, in prose or in a list of what it created.",
+  "answer": "Back from K5: Dom Digital, Rheinufer and Vorort Systeme are all marked, and Dom Digital and Rheinufer carry Revisit Q1 as well. K5 Conference 2026 is the word the workspace already had.\n\nNew tags created: K5, Revisit Q1."
+}

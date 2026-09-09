@@ -22,7 +22,7 @@
 .surfacestate-empty {
   margin-top: 6px;
   font-size: var(--fs-body);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 /* What would be here, under the line saying there is none. Not italic: it is a
    fact about the RECORD — what puts a row here — where the italic voice below

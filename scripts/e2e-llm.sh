@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 #
-# e2e-llm.sh — drive the six use cases with a REAL assistant and check what it
-# said.
+# e2e-llm.sh — drive every use case in e2e/llm/scenarios with a REAL assistant
+# and check what it said.
+#
+# The scenario directory is the list; nothing here counts them. It stood at six
+# when this was written and is several times that now, and a number in this
+# sentence would only ever be the number on the day somebody last read it.
 #
 # This is the half the Go suite cannot answer. Those tests pin what is
 # deterministic — the payloads, the refusals, the legibility fields. This asks
@@ -45,10 +49,10 @@ ONLY="${SCENARIO:-}"
 # the model a real user gets.
 #
 # NOTE for anyone comparing numbers: every result recorded before 2026-08-27 —
-# the 5-of-6 sweep and the case 6 finding in MCP Testing/findings/
-# ACCEPTANCE-CRITERIA.md — was measured on claude-fable-5, because nothing
-# pinned this then. Those numbers describe a different model and are not a
-# baseline for these. The first Opus sweep sets the new one.
+# the sweep that stood at five of six, and the case 6 finding written up with
+# it — was measured on claude-fable-5, because nothing pinned this then. Those
+# numbers describe a different model and are not a baseline for these. The first
+# Opus sweep sets the new one.
 #
 # Override to measure a different model deliberately — that is a different
 # question, honestly asked.
@@ -61,6 +65,17 @@ E2E_LLM_MODEL="${E2E_LLM_MODEL:-claude-opus-5}"
 # result survives being read as another model's.
 VERDICT_DIR="${E2E_LLM_VERDICTS:-$ROOT/backend/internal/compose/aicert/records/mcp_e2e/$E2E_LLM_MODEL}"
 KEEP="${E2E_LLM_KEEP:-0}"
+
+# THE SEMANTIC HALF OF THE JUDGING IS A MODEL, and this lane spends it live.
+#
+# A scenario's `judge:` entries are criteria in plain words — "did the answer
+# notice that the note and the record disagree" — because the regexes that used
+# to carry them scored 15% and 20% of CORRECT answers as failures on two paid
+# sweeps, which at pass_at 2 of 3 is two cases a sweep failing for a reason that
+# is not the product's. e2e/llm/judge.py has no default backend on purpose: a
+# criterion nobody judged must never read as one that passed, so the value is
+# set here rather than defaulted there.
+export E2E_LLM_JUDGE="${E2E_LLM_JUDGE:-live}"
 
 if [[ "${MARGINCE_E2E_LLM:-0}" != "1" ]]; then
   cat >&2 <<'MSG'
@@ -76,31 +91,13 @@ fi
 command -v claude >/dev/null || { echo "the claude CLI is not on PATH" >&2; exit 1; }
 command -v python3 >/dev/null || { echo "python3 is required to read the scenarios" >&2; exit 1; }
 
-# The credential. Three variables can carry one, and the CLI ranks them:
-# ANTHROPIC_AUTH_TOKEN (a gateway bearer) over ANTHROPIC_API_KEY (a Console key)
-# over CLAUDE_CODE_OAUTH_TOKEN (a subscription token from `claude setup-token`).
-# A subscription token is the one credential with no second home: presented as
-# either of the others it arrives without the OAuth beta header the API requires
-# and is refused, and a refused credential reads downstream as a model that
-# chose to call nothing.
-#
-# The CLI never says which variable it passed over, so a lane with two set
-# measures an account nobody chose. Resolve it here, in the CLI's own order, and
-# print the name — a transcript that ends in a 401 has to say which credential
-# was on trial. What must not happen either way is a run that silently falls
-# back to whatever the operator's own shell is logged into, because then the
-# lane is measuring a different account's model.
-if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
-  CREDENTIAL=ANTHROPIC_AUTH_TOKEN
-elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-  CREDENTIAL=ANTHROPIC_API_KEY
-elif [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
-  CREDENTIAL=CLAUDE_CODE_OAUTH_TOKEN
-else
-  echo "no credential is set: CLAUDE_CODE_OAUTH_TOKEN (a subscription token from" >&2
-  echo "\`claude setup-token\`), ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN" >&2
-  exit 1
-fi
+# The credential, resolved in the CLI's own order and named out loud. Both paid
+# lanes ask this same question, so the answer lives in one file rather than
+# twice — scripts/lib-llm-credential.sh, whose comment carries why the order and
+# the naming are load-bearing.
+# shellcheck source=scripts/lib-llm-credential.sh
+. "$ROOT/scripts/lib-llm-credential.sh"
+CREDENTIAL="$(llm_credential)"
 
 WORK="$(mktemp -d)"
 cleanup() {
@@ -115,11 +112,20 @@ trap cleanup EXIT
 
 # --- the stack ---------------------------------------------------------------
 #
-# --fresh per RUN would be the cleanest isolation, but a boot is tens of seconds
-# and six scenarios times three runs is eighteen of them. The compromise: one
-# fresh boot for the lane, and the write scenarios (1, 2, 3) get a fresh
-# database between their own runs — they are the only ones whose second run
-# would see the first one's records.
+# One boot here, one seed, one passport — and then a restored DATABASE before
+# every run that follows a run, the WORLD_DIRTY loop below, whose own comment
+# says why the cheaper rules that preceded it were wrong.
+#
+# The stack comes up ONCE and stays up. This section used to promise that and
+# not keep it: the loop called `dev-fresh`, which rebuilds the composition,
+# relinks the api binary and boots three processes — none of which can have
+# changed while a sweep is running. Only the database ever needed to go back.
+#
+# So every scenario is measured against the same world: the one this seeding
+# produces and nothing a previous run added to it. That is what makes a case
+# free to assert the absence of something — which the ordering could not
+# otherwise support, since scenarios are driven in the order the glob below
+# yields, filename order and not case number, with case10 second and case9 last.
 echo "==> booting the $SLUG stack (never :8080)"
 # A previous run that was interrupted leaves its api holding :18081, and
 # dev-fresh refuses rather than attaching to the wrong stack. Stopping this
@@ -133,6 +139,7 @@ APP_BASE="$(DEV_SLUG="$SLUG" dev_app_base_url)"
 echo "==> app at $APP_BASE"
 echo "==> model $E2E_LLM_MODEL"
 echo "==> credential $CREDENTIAL"
+echo "==> judge $E2E_LLM_JUDGE"
 
 seed_everything() {
   (cd "$ROOT" && API_BASE="$APP_BASE" bash e2e/llm/seed-llm-fixtures.sh >/dev/null)
@@ -167,13 +174,17 @@ MCP_SERVER=margince_e2e_llm
 
 # mint_passport signs in and writes the MCP config.
 #
-# It is a FUNCTION and not a one-time step because dev-fresh drops and
-# recreates the database, which destroys the passport row with everything
-# else. Minting once at startup left every run after the first re-seed
-# presenting a token that no longer existed: the CLI reported
-# {"name":"margince","status":"failed"}, the assistant saw no tools at all,
-# and the checker read that as "the answer was not drawn from Margince" —
-# six scenarios failing for one expired credential.
+# It runs ONCE, and what makes that safe is that the snapshot below is taken
+# after it: the passport row is inside the template, so every restore hands the
+# assistant back the same working credential.
+#
+# It could not be once while the reset was a `dev-fresh`, and the failure was
+# expensive to read. That rebuild dropped the database and the passport row with
+# it, so a token minted only at startup was gone by the second run: the CLI
+# reported {"name":"margince","status":"failed"}, the assistant was offered no
+# tools at all, and the checker scored that as "the answer was not drawn from
+# Margince" — six scenarios blamed on the product for one dead credential. The
+# guard in run_once now catches that shape whatever causes it.
 #
 # It also runs AFTER seeding, because the seed lifts the admin's first-login
 # hold, and a passport cannot be minted by an account that is still held.
@@ -209,6 +220,28 @@ open(sys.argv[3], "w").write(json.dumps(cfg))' \
   }
 }
 mint_passport
+
+# --- the snapshot every later run is restored from --------------------------
+#
+# THE EXPENSIVE PART OF ISOLATION WAS NEVER THE ISOLATION. Every run needs the
+# world the seed built and nothing a previous run wrote, and this lane used to
+# buy that with a full `dev-fresh` plus a reseed plus a re-mint before each one:
+# measured at 33s + 10s on a warm machine, 62 times over a full sweep, to
+# produce a world identical to the one it had just thrown away.
+#
+# A snapshot makes the same guarantee a file copy. `dev-snapshot` copies this
+# stack's database to a template and `dev-restore` clones it back — about a
+# second — which is the shape the integration lanes have used all along
+# (scripts/lib-testdb.sh). What is different here is that the snapshot is taken
+# AFTER the seed and after the passport is minted, so a restore returns the
+# records and the credential together and neither has to be rebuilt.
+#
+# The stack comes down for the copy and straight back up, because Postgres will
+# not copy a database a session is connected to. That is the one time it stops.
+echo "==> snapshotting the seeded world"
+(cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
+(cd "$ROOT" && make dev-snapshot DEV_SLUG="$SLUG" >/dev/null)
+(cd "$ROOT" && make dev DEV_SLUG="$SLUG" >/dev/null)
 
 # --- run one scenario once ---------------------------------------------------
 #
@@ -282,8 +315,44 @@ else:
   fi
 }
 
+# WORLD_DIRTY says whether any run has written since the last fresh database.
+# It starts clean: the lane boots a fresh stack and seeds it before the first
+# scenario, so the first run of the first case has the world the seed built.
+WORLD_DIRTY=0
+
+# EVERY DECLARATION IS CHECKED BEFORE THE FIRST TOKEN IS SPENT.
+#
+# The per-scenario check below runs inside the loop, which is the right place to
+# USE the value and the wrong place to discover it is missing: a typo in the last
+# scenario would abort the lane after every earlier case had been paid for. This
+# lane bills real money, so the whole corpus is validated while it is still free.
+# The judge is one of those declarations. A lane that drives twenty-one cases
+# and then cannot score the judged half of them has spent the whole budget to
+# learn one environment variable was unset, so it is asked before the first
+# token — and only for the scenarios that actually carry a judged criterion.
+python3 "$ROOT/e2e/llm/check.py" --judge-ready "$SCENARIO_DIR"/*.yaml
+
+for scenario in "$SCENARIO_DIR"/*.yaml; do
+  declared="$(python3 "$ROOT/e2e/llm/check.py" --field writes "$scenario")"
+  case "$declared" in
+    true|false) ;;
+    *)
+      echo "$(basename "$scenario") declares writes=${declared:-<absent>}; it must be exactly" >&2
+      echo "true or false. It is the case author's statement that this case changes the world," >&2
+      echo "and TestEveryWritingScenarioDeclaresThatItWrites derives the same fact from the tools" >&2
+      echo "the case names and fails when the two disagree — an absent or misspelled value would" >&2
+      echo "leave that gate comparing against nothing." >&2
+      exit 1
+      ;;
+  esac
+done
+
 PASSED=0
 FAILED=0
+# The runs the lane INTENDED, summed as it goes. The sweep total's denominator
+# cannot come from the transcripts it is counting: a run that wrote none would
+# then be missing from both halves and the total would report itself complete.
+EXPECTED_RUNS=0
 mkdir -p "$RECORD_DIR"
 REPORT="$WORK/report.txt"
 : > "$REPORT"
@@ -294,6 +363,11 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
 
   runs="$(python3 "$ROOT/e2e/llm/check.py" --field runs "$scenario")"
   pass_at="$(python3 "$ROOT/e2e/llm/check.py" --field pass_at "$scenario")"
+  # `writes:` is validated once, over the whole corpus, in the pre-flight above —
+  # not again here. It does not decide the reset: WORLD_DIRTY does, because the
+  # assistant is offered the whole server and can write whatever it likes
+  # whatever its scenario declared. Reading it a second time here to validate it
+  # a second time and then discard it read as though it steered something.
   python3 "$ROOT/e2e/llm/check.py" --field prompt "$scenario" > "$WORK/prompt.txt"
 
   echo "==> $name ($runs runs, passes at $pass_at)"
@@ -302,23 +376,43 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   : > "$results"
 
   for i in $(seq 1 "$runs"); do
-    # The write scenarios see their own earlier runs otherwise. Cases 1, 2 and 3
-    # create records; a second run against them is testing a different world.
-    case "$name" in
-      case1_*|case2_*|case3_*)
-        if [[ "$i" -gt 1 ]]; then
-          # dev-stop FIRST. dev-fresh refuses to boot over a port its own
-          # stack is already holding — "port :18081 already in use" — so
-          # calling it on the running stack killed the lane after case 1
-          # run 1 on the first real outing of this script.
-          (cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
-          (cd "$ROOT" && make dev-fresh DEV_SLUG="$SLUG" >/dev/null)
-          seed_everything
-          # The rebuild took the passport row with the old database.
-          mint_passport
-        fi
-        ;;
-    esac
+    # RESET WHEN THE WORLD IS DIRTY, not when this case is the one that dirtied
+    # it. Two things were wrong with keying the reset on `$i -gt 1`.
+    #
+    # The scenarios run in one shared installation, in filename order, and only a
+    # case's OWN later runs were reset. So run 1 of every case was measured
+    # against everything the preceding cases wrote, and a read-only case was
+    # never reset at all — with fourteen writers interleaved through twenty-one
+    # files, cases 5, 6 and 7 sit downstream of eleven of them and not one of
+    # their runs was clean. A pass_at of 2-of-3 then quietly means "2 of the 2
+    # comparable runs", which nobody reading the verdict can see.
+    #
+    # And the surface the assistant is offered is the WHOLE server
+    # (--allowedTools below), not the tools its scenario names, so any run can
+    # write whatever it likes. `writes:` is the case author's statement of
+    # intent and the right thing to hold a declaration against; it is not a
+    # bound on what a model actually did. Trusting it to decide the reset would
+    # be trusting the wrong half.
+    #
+    # So: a run dirties the world, and the next run starts from a fresh one.
+    # More boots, and the number they buy is one a reader can trust.
+    if [[ "$WORLD_DIRTY" = "1" ]]; then
+      # The stack STAYS UP. A restore closes the api's connections and clones
+      # the snapshot back underneath it, and the pool redials on its next query
+      # — so there is no boot, no migrate, no reseed and no re-mint here.
+      #
+      # It is also safer for the api's own memory than the reseed it replaces,
+      # which is the opposite of what one expects: a fresh seed mints new uuids
+      # for every record, so anything the process had cached by id went stale,
+      # while a clone is byte-identical to the world it was already looking at.
+      (cd "$ROOT" && make dev-restore DEV_SLUG="$SLUG" >/dev/null)
+      WORLD_DIRTY=0
+    fi
+
+    # Dirty BEFORE the run rather than after it. A run that dies mid-way has
+    # still written whatever it wrote up to that point, and a failure path that
+    # left the flag clean would hand the next run that debris.
+    WORLD_DIRTY=1
 
     transcript="$WORK/$name.run$i.jsonl"
     if ! run_once "$WORK/prompt.txt" "$transcript"; then
@@ -354,12 +448,30 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       fi
       exit 2
     fi
-    if python3 "$ROOT/e2e/llm/check.py" --check "$scenario" "$transcript" >> "$results" 2>&1; then
-      ok=$((ok + 1))
-      echo "  run $i: pass"
-    else
-      echo "  run $i: fail"
-    fi
+    # EXIT 2 IS NOT A FAILED RUN. `--check` answers 1 for a scenario the answer
+    # did badly and 2 for a judge it could not reach, and reading the second as
+    # the first is the shape that once reported an expired credential as six
+    # broken use cases: every remaining run would be unscorable the same way,
+    # each costs a fresh stack, and the answer is the same after eighteen of
+    # them as after one.
+    scored=0
+    python3 "$ROOT/e2e/llm/check.py" --check "$scenario" "$transcript" >> "$results" 2>&1 || scored=$?
+    case "$scored" in
+      0)
+        ok=$((ok + 1))
+        echo "  run $i: pass"
+        ;;
+      1)
+        echo "  run $i: fail"
+        ;;
+      *)
+        echo
+        echo "HARNESS: $name run $i could not be scored:"
+        tail -3 "$results" | sed 's/^/  /'
+        echo "  This is not a use-case failure. Nothing was scored."
+        exit 2
+        ;;
+    esac
   done
 
   if [[ "$ok" -ge "$pass_at" ]]; then
@@ -378,8 +490,26 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # what mcp-tool-coverage.md publishes, so the current answer has to be at a
   # stable path. Git carries what it replaced.
   mkdir -p "$VERDICT_DIR"
+  EXPECTED_RUNS=$((EXPECTED_RUNS + runs))
+
+  # The transcripts of this scenario's runs, as an array so an absent glob is an
+  # empty list rather than the literal pattern. A run that died without writing
+  # one is exactly the case runs_measured exists to make visible, so the list is
+  # whatever is actually there and never a name asserted here.
+  shopt -s nullglob
+  transcripts=("$WORK/$name".run*.jsonl)
+  shopt -u nullglob
+
+  # The verdict carries what the answer cost as well as whether it held.
   python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$runs" \
-    > "$VERDICT_DIR/${name}.json"
+    ${transcripts[@]+"${transcripts[@]}"} > "$VERDICT_DIR/${name}.json"
+
+  # And the same total in prose while the reason for it is still on screen. The
+  # line is formatted by check.py, which owns what a usage total means, rather
+  # than assembled here out of JSON the shell would have to parse.
+  python3 "$ROOT/e2e/llm/check.py" --usage "$runs" \
+    ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
+
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
 done
 
@@ -387,5 +517,15 @@ echo
 echo "================ e2e-llm ================"
 cat "$REPORT"
 echo "scenarios: $PASSED passed, $FAILED failed"
+# The whole sweep's bill. The denominator is EXPECTED_RUNS — what the scenarios
+# asked for — and never the number of transcripts found: counting the files it is
+# summing would let a run that wrote nothing vanish from both halves and report a
+# short sweep as a complete one, which is the defect this whole branch is about.
+shopt -s nullglob
+all_transcripts=("$WORK"/*.run*.jsonl)
+shopt -u nullglob
+python3 "$ROOT/e2e/llm/check.py" --usage "$EXPECTED_RUNS" \
+  ${all_transcripts[@]+"${all_transcripts[@]}"} \
+  | sed 's/^  usage:/sweep total:/'
 echo "records:   $RECORD_DIR"
 [[ "$FAILED" -eq 0 ]]

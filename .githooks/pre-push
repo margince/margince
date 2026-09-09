@@ -42,14 +42,14 @@ if [[ -z "$files" ]]; then
 	exit 0
 fi
 
-# Absolute paths, because `go run -C cli/craft` changes the working directory.
+# Absolute paths, so the gate does not depend on this hook's working directory.
 args=()
 while IFS= read -r f; do
 	[[ -n "$f" ]] && args+=("$root/$f")
 done <<< "$files"
 
 echo "craft static: checking ${#args[@]} changed Go file(s)…"
-if ! go run -C "$root/cli/craft" . static --strict "${args[@]}"; then
+if ! "$("$root/scripts/craft-pin.sh")" static --strict "${args[@]}"; then
 	echo ""
 	echo "craft static BLOCKED the push. Fix the findings above, or waive a"
 	echo "genuine false positive in-source:  //craft:ignore <check> <reason>"

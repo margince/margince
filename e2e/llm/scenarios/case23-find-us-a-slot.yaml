@@ -1,0 +1,77 @@
+# CASE 23 — Find us a slot.
+#
+# check_availability answers for ONE host — the acting user unless another is
+# named — and it does not answer for the invitees. It reads free/busy for that
+# host and books nothing.
+#
+# The prompt asks the question that boundary is invisible from: "when are we
+# both free". Half of that is answerable and half of it is not, and the two
+# halves come back looking identical, because the tool returns slots either way
+# and never says whose calendar it could not see. An assistant that reports the
+# slots as times WE ARE BOTH FREE has produced a sentence the product never
+# said, about a person whose diary this installation has never had access to —
+# and the rep finds out by proposing a time the customer was already booked in.
+#
+# This is the case 6 shape once more: both facts are available, and the answer
+# either carries the second one or quietly drops it.
+#
+# UNTIL A CALENDAR CONNECTOR IS CONNECTED, free/busy derives from the CRM's own
+# record — the host's meeting activities in the window. That is why the fixture
+# books real meetings onto the admin's own calendar rather than leaving the week
+# empty: an answer of "you are free the entire week" is what a model produces
+# both when it looked and when it did not, and a case whose evidence is
+# indistinguishable from its absence measures nothing.
+name: case23_find_us_a_slot
+criteria: [1, 2]
+
+# WRITES: nothing — this case only reads. Said out loud because a scenario that
+# does not say is refused: an absent or misspelled field used to arrive as the
+# value that skips work, so a forgotten declaration and a deliberate one were the
+# same silence.
+writes: false
+
+prompt: |
+  I need 45 minutes with Mai Nguyen at Vietnam Partner sometime next week to go
+  through the appendix. When are we both free? Give me two or three options I
+  can offer her.
+
+# The only free/busy read. prep_for_meeting prepares for a meeting that already
+# exists and book_meeting commits one; neither answers when a host is open, and
+# an answer assembled from the timeline instead is a second implementation of
+# the availability walk.
+must_call:
+  - check_availability
+
+may_call:
+  # Finding Mai and her company is a legitimate first step — the prompt names
+  # her, not a record id — and so is reading what the appendix conversation was.
+  - search_records
+  - read_record
+  - query_workspace
+  - resolve_entities
+  - catch_me_up_on
+  - prep_for_meeting
+
+must_mention:
+  # CRITERION 1, MECHANICAL — real openings came back, as times a person can
+  # offer. A clock time in any of the shapes an answer writes one in. An answer
+  # naming only weekdays has not given the rep something to send. This half has
+  # never leaked: a clock time is a mechanical fact and a regex reads it.
+  - "[0-9]{1,2}[:.][0-9]{2}|[0-9]{1,2} ?(a\.?m\.?|p\.?m\.?)"
+
+# CRITERION 2 IS SEMANTIC AND IS JUDGED. Its two regex halves contradicted each
+# other outright: the required half accepted "I cannot see her calendar" and the
+# forbidden half fired on the "she is free" inside it, so the case required and
+# forbade one sentence. Four rounds of widening followed — the handoff written
+# with the slots as the object ("run these past her"), the limit as a fact about
+# the installation ("I have no view of hers"), the deferral in the flat present
+# ("whichever she picks"), a hedge BEHIND the claim ("both of you are free only
+# if Mai confirms") — and the file's own comment ends by naming what a regex
+# cannot reach: a negation earlier in the same sentence, about something else,
+# spares the claim behind it. That is now the judge's to see.
+judge:
+  - "Criterion 2. The answer tells the reader that Mai Nguyen's own availability is not known here — by saying it can only see the host's calendar, by naming the limit, or by handing the slots over for her to confirm, pick or be asked. Answer no if the answer offers times and says nothing at all about her side, which is the defect this criterion exists for."
+  - "Criterion 2, the other direction. The answer never states as a fact that Mai, or 'both of you', are free at a particular time — this installation has never had access to her diary. Saying it cannot tell whether she is free, or that both are free only if she confirms, is the finding this case rewards: answer yes. Offering her a time is what a correct answer does: answer yes. Answer no only where the assistant asserts her availability."
+
+runs: 3
+pass_at: 2

@@ -9,11 +9,13 @@ import { useRecordZone } from "../app/recordzone";
 import { currentParams, useUrlParams } from "../app/urlstate";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CellStrip } from "../design-system/listtable";
 import { useToast } from "../design-system/toast";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useAssignableUserOptions } from "./assigneepicker";
 import {
   ProblemError,
   QueryGate,
@@ -23,7 +25,6 @@ import {
 } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
-import { useRoster } from "./entityref";
 import { LeadBulkBar } from "./leadbulk";
 import {
   LEAD_STATUS_FILTER_OPTIONS,
@@ -240,7 +241,7 @@ function LeadsWorkbench({
   const ownerChips = useOwnerChips();
   const pageName = usePageName("leads");
   const savedViews = useSavedViewTabs("leads");
-  const roster = useRoster("user", true);
+  const assignable = useAssignableUserOptions();
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -298,14 +299,7 @@ function LeadsWorkbench({
   const ownerOptions = [
     { value: viewerId, label: t("lead.assignToMe") },
     { value: UNASSIGNED_OWNER, label: t("lead.unassigned") },
-    ...(roster.data ?? [])
-      .filter((entry) => !("is_agent" in entry && entry.is_agent))
-      .filter((entry) => entry.id !== viewerId)
-      .map((entry) => ({
-        value: entry.id,
-        label:
-          ("display_name" in entry ? entry.display_name : null) ?? entry.id,
-      })),
+    ...assignable.filter((option) => option.value !== viewerId),
   ];
 
   return (
@@ -406,13 +400,7 @@ function LeadsWorkbench({
             key: "score",
             header: t("lead.score"),
             cell: (lead: Lead) => (
-              <span
-                style={{
-                  display: "flex",
-                  gap: "var(--space-1)",
-                  flexWrap: "wrap",
-                }}
-              >
+              <CellStrip>
                 <Badge tone={scoreTone(lead.score)}>
                   {formatNumber(lead.score, locale)}
                 </Badge>
@@ -421,7 +409,7 @@ function LeadsWorkbench({
                     ? scoreFactorLabel(lead.score_reason, t)
                     : t("lead.scoreNoSignals")}
                 </span>
-              </span>
+              </CellStrip>
             ),
             sort: "score",
             numeric: true,
@@ -575,6 +563,25 @@ function LeadsWorkbench({
         dataChips={ownerChips}
         views={[
           ...standardViews(viewerId, { sort: "", mineFirst: !opensOnAll }),
+          // The unassigned queue as a VIEW, not only a chip. It was reachable
+          // by opening the owner dial and picking a value, which is a thing
+          // you find if you already know it is there; a lead nobody owns is
+          // the one a queue exists to surface.
+          //
+          // Oldest first, deliberately against the other views' work-queue
+          // order: what makes an unassigned lead urgent is how long it has sat
+          // there with nobody answering it, and the newest arrival is the one
+          // that can wait.
+          {
+            label: "lead.viewUnassigned",
+            sort: "created_at",
+            filters: { unassigned: "true" },
+          },
+          {
+            label: "lead.viewNewUnassigned",
+            sort: "created_at",
+            filters: { status: "new", unassigned: "true" },
+          },
           { label: "lead.viewNew", sort: "", filters: { status: "new" } },
           {
             label: "lead.viewNeedsFollowUp",

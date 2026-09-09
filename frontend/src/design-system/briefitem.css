@@ -30,11 +30,7 @@
      a measurement, mixed far enough into the recessed ground that a closed card
      stops competing with the live ones above it. Derived, so it follows the
      theme rather than being declared twice. */
-  --brief-bar-quiet: color-mix(
-    in oklab,
-    var(--textSecondary) 55%,
-    var(--bgCard)
-  );
+  --brief-bar-quiet: color-mix(in oklab, var(--textMeta) 55%, var(--bgCard));
   /* What a FACTOR's fill takes, against the composite's full-strength accent.
      Three cards on one screen carry eighteen bars, and at one fill weight the
      whole column reads as a block of green with no first row — the ink
@@ -64,7 +60,7 @@
 
 .brief-item-rank {
   font-size: var(--fs-meta);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   flex: none;
 }
 
@@ -117,7 +113,7 @@
 
 .brief-item-amount {
   margin-left: auto;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-variant-numeric: tabular-nums;
   flex: none;
 }
@@ -145,7 +141,7 @@
 
 .brief-item-bar-label {
   font-size: var(--fs-meta);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   max-width: 18ch;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -154,7 +150,7 @@
 
 .brief-item-bar-value {
   font-size: var(--fs-meta);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -204,7 +200,7 @@
 
 .brief-item-when {
   font-size: var(--fs-meta);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -240,13 +236,13 @@
 /* ----- settled: receded, never dimmed ----- */
 
 .brief-item-quiet {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .brief-item-quiet .brief-item-name,
 .brief-item-quiet .brief-item-bar-headline .brief-item-bar-label,
 .brief-item-quiet .brief-item-bar-headline .brief-item-bar-value {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* The fills go quiet with the card. Reaching into `Meter`'s fill from here is

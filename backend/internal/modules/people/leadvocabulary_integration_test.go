@@ -371,3 +371,54 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 		t.Errorf("lead_disqualify_reason.changed = %v, want %v", got, wantReasons)
 	}
 }
+
+// The version pin an agent's approval was released against is applied HERE, in
+// the transaction that writes, under the row lock the write already takes.
+//
+// Not decoration: redemption commits its own transaction and the caller then
+// opens a fresh one, so a check anywhere earlier proves the row was right when
+// the approval was consumed, not when the disqualify lands. A lead edited in
+// that window must lose to the compare rather than to timing.
+func TestDisqualifyRefusesAVersionThePinNoLongerNames(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "pinned@example.test")
+
+	born, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if born.Version == nil {
+		t.Fatal("the seeded lead carries no version, so this case can pin nothing")
+	}
+	at := *born.Version
+
+	// The pin the write was authorised at still names the row: it lands.
+	stale := at - 1
+	if _, err := e.store.DisqualifyLead(e.ctx, lead, DisqualifyLeadInput{}, OnlyAtVersion(&stale)); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Fatalf("a stale pin err = %v, want ErrVersionSkew — the write ran on a row the approval "+
+			"does not describe", err)
+	}
+	closed, err := e.store.DisqualifyLead(e.ctx, lead, DisqualifyLeadInput{}, OnlyAtVersion(&at))
+	if err != nil {
+		t.Fatalf("the current version was refused: %v", err)
+	}
+	if closed.Status != crmcontracts.LeadStatusDisqualified {
+		t.Errorf("status = %v, want disqualified", closed.Status)
+	}
+}
+
+// No pin attaches no precondition, so a caller that has one and a caller that
+// does not spell the call the same way — which is what lets the unapproved
+// static-tier path keep working unchanged.
+func TestDisqualifyWithNoPinIsUnconditioned(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "unpinned@example.test")
+
+	closed, err := e.store.DisqualifyLead(e.ctx, lead, DisqualifyLeadInput{}, OnlyAtVersion(nil))
+	if err != nil {
+		t.Fatalf("a nil pin refused the write: %v", err)
+	}
+	if closed.Status != crmcontracts.LeadStatusDisqualified {
+		t.Errorf("status = %v, want disqualified", closed.Status)
+	}
+}

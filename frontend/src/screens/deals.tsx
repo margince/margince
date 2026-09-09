@@ -50,11 +50,6 @@ import {
   RecordView,
 } from "../design-system/composed";
 import { IconAction } from "../design-system/iconaction";
-import {
-  IdentityFact,
-  IdentityLine,
-  IdentityMeta,
-} from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";
 import type { ListColumn, ListSelection } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
@@ -115,6 +110,7 @@ import { useDealRecipientAddress } from "./deal360/usedealrecipient";
 import { DealBulkBar } from "./dealbulk";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
+import { DealIdentityLine } from "./dealidentity";
 import {
   DealProjectChip,
   dealProjectFields,
@@ -128,11 +124,9 @@ import { EditAction } from "./edit";
 import {
   EntityRef,
   type OwnerNaming,
-  rosterOwnerName,
   rosterOwnerNaming,
   useEntityName,
   useRoster,
-  useRosterPartial,
 } from "./entityref";
 import { RecordHistoryTab } from "./history";
 import {
@@ -1471,6 +1465,9 @@ function dealColumns(
       key: "name",
       header: t("people.name"),
       cell: (deal) => deal.name,
+      // Alphabetical, which a list of deals had no way to offer until the
+      // API's sort vocabulary took the columns this list draws.
+      sort: "name",
       fixed: true,
     },
     tagsColumn<Deal>(t),
@@ -1481,7 +1478,8 @@ function dealColumns(
       // apart from a deal nobody has linked.
       //
       // No `sort`, for the reason the partner column below carries none: the
-      // API's sortable vocabulary does not include it, and a header that
+      // company is a JOINED column and the list machinery orders by one column
+      // of the row's own table, so the API cannot offer it yet. A header that
       // looked sortable and refused would be worse than one that never
       // offered.
       key: "company",
@@ -1494,9 +1492,10 @@ function dealColumns(
       // per-row is worse in a list than an empty cell — a column that comes
       // and goes cannot be scanned down.
       //
-      // It carries no `sort`, because the API's sortable vocabulary is a fixed
-      // five-field set that does not include it. That limitation is not this
-      // column's to fix (see the sorting issue), and a header that looked
+      // It carries no `sort` because the partner is a JOINED column: ordering
+      // by it means ordering by the organization's name, and the list
+      // machinery renders one quoted identifier of the row's own table. That
+      // limitation is not this column's to fix, and a header that looked
       // sortable and refused would be worse than one that never offered.
       key: "partner",
       header: t("deal.partnerOrg"),
@@ -1558,6 +1557,12 @@ function dealColumns(
       cell: (deal) => (
         <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
       ),
+      // By the stored value, so the three groups sit together. Alphabetical
+      // rather than by lifecycle — `lost` before `open` before `won` — because
+      // `deal.status` is a text column and the machinery orders by the column
+      // rather than by a vocabulary this side would have to keep a second copy
+      // of.
+      sort: "status",
     },
   ];
 }
@@ -3712,140 +3717,6 @@ function dealStageSteps({
 // doesn't push the render-prop closure over the cognitive-complexity budget.
 // Every prop here is a value already resolved by DealScreen — no new
 // fetches, no behavior change from the pre-tab layout.
-// What the identity line reads off a deal. Every field is optional because
-// every one of them is a fact a deal can lack or a reader can be refused.
-type DealIdentity = Pick<
-  Deal,
-  | "amount_minor"
-  | "currency"
-  | "stage_id"
-  | "owner_id"
-  | "organization_id"
-  | "partner_org_id"
-  | "partner_attribution"
-  | "masked_fields"
->;
-
-/**
- * The one line of facts under a deal's name: what it is worth, where it sits
- * on the board, whose deal it is, and — when one brought it — which partner.
- *
- * It is the design system's `IdentityLine`, the same row the account and the
- * contact draw under their own names, so the three records read the same way.
- * These facts used to stand in a labelled box beside the verbs instead
- * (`DealFacts`), which made the deal the only record whose head answered "what
- * is this" in a different shape from every other — and cost the verbs the room
- * they need beside a name at the record rung.
- *
- * The partner was editable in the form and rendered nowhere, so a deal that a
- * partner sourced looked identical to one we won alone. That is the fact the
- * commission is computed from, and a figure a partner is paid on has to be
- * visible on the record it came from.
- *
- * Each reference goes through EntityRef, which resolves the name and links to
- * the record — and withholds both when the reader may not open it, which is
- * why the ids are not printed as a fallback. A withheld fact NAMES the field
- * it withholds: on a line of joined facts a bare mask says only "something
- * here is hidden", and the amount, the company and the partner are three
- * different things to be refused.
- */
-export function DealIdentityLine({
-  deal,
-  stages,
-  locale,
-}: Readonly<{
-  // The facts this line draws and no more. A presentational row does not need
-  // a whole `Deal` to say what one is worth, and asking for one makes every
-  // story and test that draws the line assemble a record it does not read.
-  deal: DealIdentity;
-  // The stages the PAGE already sorted for the board, not a second read.
-  stages: readonly { id: string; name: string }[];
-  locale: Locale;
-}>) {
-  const t = useT();
-  // Only asked for when there is an owner to name: an unowned deal needs no
-  // roster read to say so.
-  const roster = useRoster("user", Boolean(deal.owner_id));
-  const partial = useRosterPartial("user", Boolean(deal.owner_id));
-  const masked = deal.masked_fields ?? [];
-  // An em dash rather than the stage id: a deal in overlay mode carries no
-  // native pipeline row, and printing a UUID where a stage name goes reads as
-  // a fault.
-  const stage = stages.find((candidate) => candidate.id === deal.stage_id);
-  return (
-    <IdentityMeta>
-      <IdentityLine>
-        {masked.includes("organization_id") ? (
-          <IdentityFact>
-            {t("create.organization")} <FieldGuard mode="masked" />
-          </IdentityFact>
-        ) : (
-          deal.organization_id && (
-            <IdentityFact>
-              <EntityRef kind="organization" id={deal.organization_id} />
-            </IdentityFact>
-          )
-        )}
-        <IdentityFact>
-          {/* A masked amount NAMES the field, like every other refusal on this
-              line: a lone lock among joined facts says only that something
-              here is hidden, and "no value recorded" and "you may not see the
-              value" are different statements about a deal. */}
-          {masked.includes("amount_minor") ? (
-            <>
-              {t("deals.amount")} <FieldGuard mode="masked" />
-            </>
-          ) : (
-            dealAmount(deal, locale)
-          )}
-        </IdentityFact>
-        <IdentityFact>{stage?.name ?? "—"}</IdentityFact>
-        <IdentityFact quiet>
-          {t("list.owner")}:{" "}
-          {rosterOwnerName(
-            deal.owner_id,
-            roster,
-            partial,
-            t,
-            t("co.pulse.unowned"),
-          )}
-        </IdentityFact>
-        {masked.includes("partner_org_id") ? (
-          // No attribution word here: what the partner did is withheld WITH
-          // the partner, so naming one would decide what a partner nobody
-          // could see is owed.
-          <IdentityFact>
-            {t("deal.partnerOrg")} <FieldGuard mode="masked" />
-          </IdentityFact>
-        ) : (
-          deal.partner_org_id && (
-            <IdentityFact>
-              {/* Sourced and influenced are paid differently, so the line says
-                  which one rather than a neutral "partner: X" that hides the
-                  distinction the commission turns on. */}
-              {t(
-                deal.partner_attribution === "influenced"
-                  ? "deal.partnerInfluenced"
-                  : "deal.partnerSourced",
-              )}{" "}
-              <EntityRef kind="organization" id={deal.partner_org_id} />
-            </IdentityFact>
-          )
-        )}
-      </IdentityLine>
-    </IdentityMeta>
-  );
-}
-
-// The value, or an em dash when the deal carries none. The masked case is the
-// caller's, because a refusal on this line is written as the field's name
-// beside the mark rather than as the mark alone.
-function dealAmount(deal: DealIdentity, locale: Locale): ReactNode {
-  if (deal.amount_minor == null || !deal.currency) {
-    return "—";
-  }
-  return formatMoney(deal.amount_minor, deal.currency, locale);
-}
 
 // Deal360 leads the page. It is absent on an overlay-backed deal: the briefing
 // is written from records this installation holds, and a mirrored deal's
@@ -4101,6 +3972,30 @@ function dealBand({
   );
 }
 
+/**
+ * useDeal is the deal page's read of the deal record itself.
+ *
+ * A hook rather than a query inline in the screen, so the four record reads
+ * are mounted the same way — which is what lets one suite prove the live
+ * cadence over all of them (FE-PARAM-5, app/queryclient.ts). The cadence
+ * itself is the client's, keyed on the read: nothing is spread in here to
+ * forget.
+ */
+export function useDeal(id: string) {
+  return useQuery({
+    queryKey: ["deal", id],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/deals/{id}", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
 export function DealScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const details = usePageAside();
@@ -4113,18 +4008,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const [tab, setTab] = useState<DealTab>("overview");
   const [pending, setPending] = useState<PendingAdvance | null>(null);
   const advance = useAdvanceDeal();
-  const dealQuery = useQuery({
-    queryKey: ["deal", id],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const dealQuery = useDeal(id);
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
   // Every write affordance on this page answers ONE question, asked once: an
   // archived deal takes no changes, and one this caller cannot write takes
@@ -4297,6 +4181,27 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 reason: readOnlyReason,
                 reasonId: readOnlyReasonId,
               })}
+              // The strip frames the whole record rather than the work alone:
+              // it runs across both columns, and the details pane opens under
+              // it, so choosing a body and choosing what stands beside it read
+              // as two controls on one page instead of one nested in the other.
+              tabs={
+                <RecordTabs
+                  options={DEAL_TABS}
+                  value={tab}
+                  onChange={setTab}
+                  labels={{
+                    overview: t("tab.overview"),
+                    files: t("tab.documents"),
+                    history: t("tab.history"),
+                  }}
+                  // The switch for the deal's details column, at the end of the
+                  // tab row: it chooses what the page shows BESIDE the work, so
+                  // it stands with the controls that choose what the work
+                  // column shows, and never in the head among the deal's verbs.
+                  trailing={<PageAsideToggle />}
+                />
+              }
               timeline={timelineEntries}
               timelineGroups={groupChronology(
                 timelineEntries,
@@ -4327,25 +4232,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 t,
               )}
             >
-              {/* The same strip every record carries: a place a reader
-                  navigates, drawn as a rule with the open body underlined. */}
-              <RecordTabs
-                options={DEAL_TABS}
-                value={tab}
-                onChange={setTab}
-                labels={{
-                  overview: t("tab.overview"),
-                  files: t("tab.documents"),
-                  history: t("tab.history"),
-                }}
-                // The switch for the deal's details column, at the end of the
-                // tab row: it chooses what the page shows BESIDE the work, so
-                // it stands with the controls that choose what the work column
-                // shows. In the head it sat among the deal's own verbs — write,
-                // edit, the overflow — and read as one more thing to do to the
-                // record rather than as a way to see more of it.
-                trailing={<PageAsideToggle />}
-              />
               {/* One stack for the whole overview: the work column draws its
                   children with no interval of its own, so the reading and the
                   people under it take the record's rhythm from here rather

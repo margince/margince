@@ -25,6 +25,7 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Eyebrow } from "../design-system/eyebrow";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { Panel, PanelBody } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
 import {
   liveProjects,
@@ -38,7 +39,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { paragraphsFrom, RichText } from "../design-system/richtext";
-import { Select, type SelectOption } from "../design-system/select";
+import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import type { TokenSuggestion } from "../design-system/tokeninput";
 import {
@@ -64,11 +65,14 @@ import {
   asksWhy,
   type CommunicationContext,
   contextFor,
+  contextOptions,
 } from "./compose-context";
 import {
   AttachAction,
   AttachedFiles,
+  CarriageNotice,
   type ChosenFile,
+  useCarriageBlocks,
 } from "./composeattachments";
 import {
   AddressBlock,
@@ -1393,29 +1397,6 @@ function sharedUnsubscribeAhead(
   return addressees.size > 1;
 }
 
-// The categories a rep may claim, in the order a first message is usually
-// about. The unset entry is a real OPTION rather than the select's placeholder:
-// a placeholder is only a face for an unset value, and a rep who picked one has
-// to be able to come back to none before sending.
-//
-// The five subject-serving categories are absent, and not by omission — the
-// contract's enum excludes them, because a caller who could claim one could
-// dress marketing as a security warning and reach somebody who has objected.
-// They are the installation's own controller mail and nothing a rep composes.
-function contextOptions(t: ReturnType<typeof useT>): SelectOption[] {
-  return [
-    { value: "", label: "—" },
-    { value: "requested_followup", label: t("compose.why.requestedFollowup") },
-    { value: "active_deal_followup", label: t("compose.why.activeDeal") },
-    { value: "precontract_quote", label: t("compose.why.quote") },
-    { value: "customer_service", label: t("compose.why.service") },
-    { value: "invoice_or_payment", label: t("compose.why.invoice") },
-    { value: "contract_notice", label: t("compose.why.contract") },
-    { value: "account_notice", label: t("compose.why.account") },
-    { value: "marketing", label: t("compose.why.marketing") },
-  ];
-}
-
 // Send preconditions differ by wire shape: mail needs an addressee and a
 // subject on top of a body; a channel reply carries neither (design §9.3 —
 // the recipient is resolved server-side, and a channel has no subject line),
@@ -1553,27 +1534,23 @@ export function missingToSend(
   return missing;
 }
 
-// The band that says a MACHINE wrote the words below, and what it wrote them
-// from. It is the Art. 50 disclosure and the draft's reasoning in one block,
-// because to a reader they are one statement: this is not your colleague's
-// message, and here is what it stands on.
+// The card that says a MACHINE wrote the words below, and what it wrote them
+// from: to a reader the Art. 50 disclosure and the draft's reasoning are one
+// statement — not your colleague's message, and here is what it stands on.
 //
-// Indigo, like every other place a machine did the work. It is the loudest
-// thing in the drawer on purpose — a rep who misses it sends a model's words
-// under their own name.
+// `Panel tone="ai"` draws it, in the colour every other machine-authored
+// surface wears, its title at h3 under the drawer's own h2. Loudest thing in
+// the drawer on purpose: miss it and a model's words go out in a rep's name.
 //
 // The server's disclosure line is a compliance string rendered verbatim, never
 // reworded; a response that omits it still discloses, because a missing line
 // may not silently become a missing disclosure.
 //
-// The voice tag names the PROFILE version that styled the draft, and the
+// The voice tag names the PROFILE version that styled the draft; the
 // provisional label reports what that profile is today. Neither implies a
-// weaker draft: nothing gates drafting on maturity, so a provisional profile
-// styles this text exactly as a fuller one would. Both hang off the served
-// version, because maturity is a corpus-word band that reaches `provisional`
-// while the profile is still only collecting — and reporting a voice's
-// maturity over a draft no voice touched would overstate this surface's own
-// provenance, which Art. 50 does not permit.
+// weaker draft — nothing gates drafting on maturity. Both hang off the SERVED
+// version, because reporting a maturity over a draft no voice touched would
+// overstate this surface's own provenance, which Art. 50 does not permit.
 function DraftBand({
   provenance,
   maturity,
@@ -1583,63 +1560,66 @@ function DraftBand({
   provenance: DraftProvenance;
   maturity: VoiceProfile["maturity"] | undefined;
   reasons: components["schemas"]["AccountDraftReason"][];
-  // The steer and the verb that asks for another draft. They belong INSIDE
-  // the band once one exists: the band is the machine's own block, and asking
-  // it to write again is the same conversation rather than a control that
-  // happens to sit nearby.
+  // The steer and the verb that asks for another draft: the card is the
+  // machine's own block, so asking it to write again belongs inside it.
   children: ReactNode;
 }>) {
   const t = useT();
-  // The band's own drawer, mounted beside the reasons that open it. One per
-  // band rather than one per reason: a drawer per row would be several
-  // dialogs racing to be the one on top.
+  // One drawer per CARD rather than per reason: a drawer per row would be
+  // several dialogs racing to be the one on top.
   const [openEmail, setOpenEmail] = useOpenEmail();
   const zone = useRecordZone();
   if (!provenance.ai_generated) {
     return null;
   }
   return (
-    <section className="compose-band" data-testid="ai-disclosure-banner">
-      <Eyebrow>{t("compose.aiDisclosureTitle")}</Eyebrow>
-      <p className="t-body">
-        {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
-      </p>
-      <DraftReasons
-        reasons={reasons}
-        onOpenRecord={openCited}
-        onOpenEmail={setOpenEmail}
-      />
-      <OpenEmailDrawer
-        activityId={openEmail}
-        zone={zone}
-        onClose={() => setOpenEmail(null)}
-      />
-      {provenance.voice_degraded && (
-        // The one loss a sender cannot see in the text: their own voice is
-        // the register nobody proofreads for.
-        <Callout tone="warn" live="status">
-          {t("compose.voiceDegraded")}
-        </Callout>
-      )}
-      {provenance.voice_profile_version != null && (
-        <>
-          <p className="t-caption">
-            {/* A profile VERSION, never grouped: version 1234 is one
-                identifier, and "1.234" reads as a different one. */}
-            {t("compose.voiceVersion", {
-              n: identifierNumber(provenance.voice_profile_version),
-            })}
-          </p>
-          {maturity === "provisional" && (
+    <Panel
+      tone="ai"
+      title={t("compose.aiDisclosureTitle")}
+      titleLevel={3}
+      className="compose-band"
+    >
+      <PanelBody className="compose-band-body">
+        <p className="t-body">
+          {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
+        </p>
+        <DraftReasons
+          reasons={reasons}
+          onOpenRecord={openCited}
+          onOpenEmail={setOpenEmail}
+        />
+        <OpenEmailDrawer
+          activityId={openEmail}
+          zone={zone}
+          onClose={() => setOpenEmail(null)}
+        />
+        {provenance.voice_degraded && (
+          // The one loss a sender cannot see in the text: their own voice is
+          // the register nobody proofreads for.
+          <Callout tone="warn" live="status">
+            {t("compose.voiceDegraded")}
+          </Callout>
+        )}
+        {provenance.voice_profile_version != null && (
+          <>
             <p className="t-caption">
-              <Badge>{t("compose.provisional")}</Badge>{" "}
-              {t("compose.provisionalHint")}
+              {/* A profile VERSION, never grouped: version 1234 is one
+                  identifier, and "1.234" reads as a different one. */}
+              {t("compose.voiceVersion", {
+                n: identifierNumber(provenance.voice_profile_version),
+              })}
             </p>
-          )}
-        </>
-      )}
-      {children}
-    </section>
+            {maturity === "provisional" && (
+              <p className="t-caption">
+                <Badge>{t("compose.provisional")}</Badge>{" "}
+                {t("compose.provisionalHint")}
+              </p>
+            )}
+          </>
+        )}
+        {children}
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -2441,6 +2421,10 @@ export function ComposeModal({
   // The files this message will carry, as references to paper already on the
   // record — see composeattachments.tsx for why an upload files it first.
   const [files, setFiles] = useState<readonly ChosenFile[]>([]);
+  // Where this message breaks the channel's carriage bounds (empty for mail):
+  // the shelf warns and the send refuses here, ahead of the park comms/gates.go
+  // carriageRefusal raises after staging.
+  const carriageBlocks = useCarriageBlocks(channel?.id, files, body);
   const [intent, setIntent] = useState(askedIntent ?? "");
   // Keyed on what the CALLER asked for, so a second moment action opening the
   // same composer replaces the first one's reason instead of leaving the reader
@@ -3269,9 +3253,10 @@ export function ComposeModal({
         // rejection is in flight, which is a genuine "not now".
         confirmDisabled={rejectionInFlight}
         onConfirm={() => {
-          if (missing.length > 0) {
+          // A missing field or a carriage block keeps the press from sending;
+          // marking and focusing is harmless when only the latter is present.
+          if (missing.length > 0 || carriageBlocks.length > 0) {
             setAttempted(true);
-            // After the paint that marks them, or there is nothing to find.
             globalThis.requestAnimationFrame(focusFirstMissing);
             return;
           }
@@ -3437,8 +3422,6 @@ export function ComposeModal({
                 linkPrompt: t("richtext.linkPrompt"),
               }}
               hint={t("compose.bodyHint")}
-              // The paperclip sits with bold and italic because it is the same
-              // kind of thing: something you do to the message you are writing.
               actions={
                 <AttachAction
                   entityType={entityType}
@@ -3464,6 +3447,8 @@ export function ComposeModal({
               onChange={setFiles}
               disabled={rejectionInFlight}
             />
+            {/* Why it cannot go as attached, beside the files it is about. */}
+            <CarriageNotice channel={channel?.label} blocks={carriageBlocks} />
             {/* Only over the machine's OWN untouched words: a rewrite replaces the
             body, and once the rep has edited it there is no model draft left
             to rewrite — only their work to throw away. */}

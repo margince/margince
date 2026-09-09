@@ -26,13 +26,9 @@ import {
   stubFetch,
 } from "./company.fixtures";
 import { SuggestionsSection } from "./company360";
+import { companyEditFields, mapOrgUpdate } from "./companyform";
 import { listFetchLimit } from "./listquery";
-import {
-  CompaniesScreen,
-  CompanyScreen,
-  companyEditFields,
-  mapOrgUpdate,
-} from "./organizations";
+import { CompaniesScreen, CompanyScreen } from "./organizations";
 import { WriteToHost } from "./writeto";
 
 // The same P-14/15/16/1 shared-block wiring as contacts

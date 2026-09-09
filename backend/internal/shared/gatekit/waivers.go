@@ -146,6 +146,26 @@ func (w *Waivers[K]) Subjects() []K {
 	return subjects
 }
 
+// Reasons returns each ratified subject with the reason it carries, for a
+// waiver whose entries are PUBLISHED rather than only applied — a generated
+// page naming what it excluded and why. Like Subjects it marks nothing matched:
+// printing an exemption is not relying on it.
+//
+// The copy is deliberate. The map behind a waiver is its own, and a caller that
+// could write to it would be editing the reasons the gate holds to a standard.
+func (w *Waivers[K]) Reasons() map[K]string {
+	if w == nil {
+		return nil
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	out := make(map[K]string, len(w.reasons))
+	for subject, reason := range w.reasons {
+		out[subject] = reason
+	}
+	return out
+}
+
 // AssertAllMatched reports every entry no subject reached. Such an entry
 // certifies nothing while reading as though it does, which is worse than no
 // waiver at all.

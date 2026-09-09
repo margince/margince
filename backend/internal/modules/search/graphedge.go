@@ -204,10 +204,10 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		           max(a.occurred_at) AS last_at,
 		           max(a.occurred_at) FILTER (WHERE a.direction = 'inbound')  AS last_inbound_at,
 		           max(a.occurred_at) FILTER (WHERE a.direction = 'outbound') AS last_outbound_at,
-		           count(DISTINCT a.id) FILTER (WHERE a.occurred_at >= `+window+`) AS count_90d,
-		           count(DISTINCT a.id) FILTER (WHERE a.occurred_at >= `+window+` AND a.direction = 'inbound')  AS in_90d,
-		           count(DISTINCT a.id) FILTER (WHERE a.occurred_at >= `+window+` AND a.direction = 'outbound') AS out_90d,
-		           count(DISTINCT a.id) AS count_total
+		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`) AS count_90d,
+		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+` AND a.direction = 'inbound')  AS in_90d,
+		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+` AND a.direction = 'outbound') AS out_90d,
+		           count(DISTINCT `+graphInteractionUnit+`) AS count_total
 		      FROM target t
 		      JOIN activity_participant up
 		        ON up.user_id = t.user_id AND up.role IN `+interactionRoles+`
@@ -402,6 +402,16 @@ func scanEdges(rows pgx.Rows) ([]InteractionEdge, error) {
 // It is also the determinism fixture: a rebuild and a stream of incremental
 // recomputes over the same history must agree, and a test that says so is
 // what keeps the two paths from drifting apart.
+// graphInteractionUnit is what ONE interaction is when these projections count
+// them, from the same shared definition the workspace score reads — see
+// relstrength.InteractionUnitSQL. Every fold in this file and its contact half
+// aliases activity as `a`, so one rendering serves them all.
+//
+// It matters most here: these folds carry no kind filter, so a channel message
+// reaches them through activity_participant, and per-row counting would let a
+// day of chat outweigh a quarter of meetings on the colleague edge alone.
+var graphInteractionUnit = relstrength.InteractionUnitSQL("a")
+
 func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
 	// Replace wholesale rather than diff: the table is derived, the workspace
@@ -418,10 +428,10 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		       max(a.occurred_at),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
-		       count(DISTINCT a.id) FILTER (WHERE a.occurred_at >= `+window+`),
-		       count(DISTINCT a.id) FILTER (WHERE a.occurred_at >= `+window+` AND a.direction = 'inbound'),
-		       count(DISTINCT a.id) FILTER (WHERE a.occurred_at >= `+window+` AND a.direction = 'outbound'),
-		       count(DISTINCT a.id),
+		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`),
+		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+` AND a.direction = 'inbound'),
+		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+` AND a.direction = 'outbound'),
+		       count(DISTINCT `+graphInteractionUnit+`),
 		       now()
 		  FROM activity_participant up
 		  JOIN activity_participant pp ON pp.activity_id = up.activity_id
@@ -447,8 +457,8 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 		    (person_a, person_b, last_at, count_90d, count_total, computed_at)
 		SELECT pa.person_id, pb.person_id,
 		       max(a.occurred_at),
-		       count(DISTINCT a.id) FILTER (WHERE a.occurred_at >= `+window+`),
-		       count(DISTINCT a.id),
+		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`),
+		       count(DISTINCT `+graphInteractionUnit+`),
 		       now()
 		  FROM activity_participant pa
 		  JOIN activity_participant pb

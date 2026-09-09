@@ -60,7 +60,6 @@ const canonical: Record<string, string> = {
   "--accentMed": "rgba(11,122,83,.17)",
   "--textPrimary": "#15201B",
   "--textContent": "#36433D",
-  "--textSecondary": "#5f6a64",
   "--textTertiary": "#9AA6A0",
   "--textMuted": "#CBD2CD",
   "--textMeta": "#5E6C65",
@@ -351,7 +350,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // Only TEXT roles, and only against grounds they can actually sit on.
     // --textTertiary is deliberately not in the list: it is a decorative tone
     // that never carries prose, and holding it to 4.5:1 would make it
-    // --textSecondary.
+    // --textMeta.
     it("every text role clears AA on every ground it sits on, both themes", () => {
       const dark = {
         ...light,
@@ -360,7 +359,6 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       const prose = [
         "--textPrimary",
         "--textContent",
-        "--textSecondary",
         "--textMeta",
         "--accentText",
         "--tealText",

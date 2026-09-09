@@ -215,6 +215,7 @@ export const vi = {
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
   "shell.closeMenu": "Đóng",
+  "shell.agent.scope": "Trợ lý của bạn chỉ đọc những gì bạn xem được.",
   "shell.capture.importing": "Đang nhập lịch sử thư",
   "shell.capture.share": "{percent} · {scanned} trên {total} thư",
   "shell.capture.count": "{scanned} thư cho đến nay",
@@ -2114,6 +2115,9 @@ export const vi = {
     "\u0110\u00f3ng v\u1edbi l\u00fd do \u201c{reason}\u201d. M\u1ed7i kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng v\u1eabn gi\u1eef h\u1ed3 s\u01a1 ri\u00eang, v\u00e0 kh\u00f4ng c\u00f3 m\u1ed9t b\u01b0\u1edbc n\u00e0o ho\u00e0n t\u00e1c t\u1ea5t c\u1ea3.",
   "lead.bulkFailed": "{count} không áp dụng được —",
   "lead.bulkFailedRow": "không lưu được",
+  "lead.bulkOutcomeConflict": "đã thay đổi trong lúc bạn chọn",
+  "lead.bulkOutcomeForbidden": "không phải của bạn để giao lại",
+  "lead.bulkOutcomeNotFound": "không còn trong danh sách của bạn",
   "lead.bulkSelectRow": "Chọn {name}",
   "lead.unnamed": "Khách hàng tiềm năng chưa có tên",
   "lead.sla.breached": "Quá hạn",
@@ -2131,7 +2135,6 @@ export const vi = {
   "lead.details": "Chi ti\u1ebft",
   "lead.ladder.title":
     "Kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng n\u00e0y \u0111ang \u1edf \u0111\u00e2u",
-  "lead.railTitle": "Người phụ trách",
   "lead.detailsUnset": "Chưa đặt",
   "lead.terminalReadOnly":
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
@@ -2287,6 +2290,8 @@ export const vi = {
   "lead.assignedAway":
     "{names} đã được giao cho {owner} — không còn trong “Của tôi”.",
   "lead.viewNew": "Mới",
+  "lead.viewNewUnassigned": "Mới & chưa giao",
+  "lead.viewUnassigned": "Hàng chờ chưa giao",
   "lead.viewNeedsFollowUp": "Cần theo dõi",
   "lead.viewEngaged": "Đang trao đổi",
   "lead.ladder": "Trạng thái khách hàng tiềm năng",
@@ -2578,12 +2583,15 @@ export const vi = {
   "brief.weekly.scorecard.multiThreaded": "Nhiều hơn một liên hệ",
   "brief.weekly.scorecard.multiThreadedBasis":
     "trên {total} cơ hội đang mở, trong 30 ngày qua",
-  "brief.weekly.scorecard.closeDateSound": "Ngày chốt đáng tin",
+  "brief.weekly.scorecard.closeDateSound": "Đã ghi ngày chốt cố định",
   "brief.weekly.scorecard.forecastMoves": "Nâng dự báo",
   "brief.weekly.scorecard.forecastMovesBasis": "{down} hạ dự báo",
+  "brief.weekly.scorecard.unreconstructible": "Giao dịch không dựng lại được",
+  "brief.weekly.scorecard.unreconstructibleBasis":
+    "Tuần của chúng nằm sau một lần xóa, nên các số trên là mức tối thiểu",
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
-  "plan.title": "Lập kế hoạch tuần tới",
+  "plan.title": "Lập kế hoạch tuần của bạn",
   // Phần đầu của danh sách đã xếp hạng, trên trang mở đầu tiên — cùng những
   // dòng mà Danh sách công việc hiển thị, theo thứ tự máy chủ đã quyết định.
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
@@ -2720,8 +2728,8 @@ export const vi = {
   "plan.contract.save": "Lưu",
   "plan.contract.cancel": "Hủy",
   "plan.contract.capacityLine":
-    "Tuần tới đã có {meetings} cuộc họp và {tasks} công việc.",
-  "plan.contract.crowded": "Tuần tới đã kín",
+    "Tuần đó đã có {meetings} cuộc họp và {tasks} công việc.",
+  "plan.contract.crowded": "Tuần đó đã kín",
   "plan.contract.crowdedBody":
     "{committed} việc đã được đặt và bạn đã ghi {commitments} cam kết. Sẽ phải bỏ bớt điều gì đó.",
   "plan.help.ask": "Nhờ giúp đỡ",
@@ -2849,10 +2857,12 @@ export const vi = {
   "brief.readings.pipeline": "Toàn cảnh pipeline",
   "brief.readings.pipelineWorkspace": "Toàn cảnh pipeline · toàn bộ tổ chức",
   "brief.readings.pipelineBasis":
-    "{weighted} theo trọng số · {priced} trên {eligible} đã định giá",
+    "{period} · {weighted} theo trọng số · {priced} trên {eligible} đã định giá",
   "brief.readings.pipelineUnread": "không đọc được pipeline",
   "brief.readings.pipelineReading": "đang đọc pipeline",
-  "brief.readings.openLane": "Mở những mục này",
+  "brief.readings.openLaneNamed": "Mở {reading}",
+  "brief.snooze.done": "Đã tạm gác đến {at}",
+  "brief.snooze.undo": "Hoàn tác",
   "brief.readings.meetings": "Cuộc họp hôm nay",
   "brief.readings.meetingsBasis": "trong lịch hôm nay",
   "brief.readings.needsPrep_one": "1 chưa chuẩn bị",
@@ -3278,6 +3288,8 @@ export const vi = {
   "log.body": "Nội dung",
   "log.dueAt": "Ngày đến hạn",
   "log.date": "Ngày",
+  "log.assignee": "Người phụ trách",
+  "log.unassigned": "Chưa giao",
   "log.save": "Ghi nhận",
   "log.saving": "Đang ghi nhận…",
 
@@ -3365,6 +3377,16 @@ export const vi = {
   "compose.fileUploading": "Đang lưu tệp…",
   "compose.fileStoredUnnamed":
     "Tệp đã ở trên hồ sơ, nhưng chúng tôi không đọc lại được đó là tệp nào. Hãy đính kèm nó từ danh sách phía trên.",
+  "compose.carriageCarries":
+    "{channel} không mang được tệp, nên tin nhắn này cùng {count} tệp đính kèm không thể gửi trên đó. Hãy gửi phần chữ qua {channel}, hoặc gửi tệp bằng cách khác.",
+  "compose.carriageCount":
+    "{channel} mang tối đa {limit} tệp trong một tin nhắn, mà tin này có {named}. Hãy gửi phần còn lại thành một tin nhắn thứ hai.",
+  "compose.carriagePerFile":
+    "{filename} lớn hơn mức {limit} mà {channel} chấp nhận cho một tệp. Hãy gửi bản nhỏ hơn, hoặc chia sẻ bằng cách khác.",
+  "compose.carriageAggregate":
+    "{count} tệp này cộng lại là {total}, mà {channel} chỉ mang tối đa {limit} trong một tin nhắn. Hãy gửi chúng qua nhiều tin nhắn.",
+  "compose.carriageCaption":
+    "{channel} mang phần chữ của tin nhắn có tệp dưới dạng chú thích, tối đa {limit} ký tự, mà tin này có {length}. Hãy rút ngắn, hoặc gửi tệp riêng.",
   "calendar.previousMonth": "Tháng trước",
   "calendar.nextMonth": "Tháng sau",
   "compose.schedulePick": "Chọn ngày và giờ",
@@ -3844,6 +3866,15 @@ export const vi = {
     "Tôi đã đọc {name} đến mức các bản ghi cho phép rồi dừng.",
   "agent.activity.accountScanNamed.failed":
     "Tôi không hoàn thành được việc đọc {name}.",
+  "agent.activity.transcriptRead.queued": "Bản chép lời đang chờ được đọc.",
+  "agent.activity.transcriptRead.running":
+    "Tôi đang đọc bản chép lời để tìm các bước tiếp theo.",
+  "agent.activity.transcriptRead.stalled":
+    "Việc đọc bản chép lời kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.transcriptRead.done": "Tôi đã đọc xong bản chép lời.",
+  "agent.activity.transcriptRead.degraded":
+    "Tôi đã dừng trước khi đọc hết bản chép lời.",
+  "agent.activity.transcriptRead.failed": "Tôi không đọc được bản chép lời.",
   "agent.activity.siteRead.queued": "Trang web của công ty đang chờ được đọc.",
   "agent.activity.siteRead.running": "Tôi đang đọc trang web của công ty.",
   "agent.activity.siteRead.stalled":
@@ -4811,6 +4842,7 @@ export const vi = {
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Lịch Outlook",
   "connectors.provImap": "Hộp thư IMAP",
+  "connectors.provTestMailbox": "Hộp thư kiểm thử",
   "connectors.statusConnected": "Đang thu thập",
   "connectors.statusPending": "Đang chờ — chưa xác nhận là đã chạy",
   "connectors.statusReauth": "Cần kết nối lại",
@@ -4937,6 +4969,8 @@ export const vi = {
     "Lịch Outlook của bạn. Nó được kết nối riêng với thư Outlook.",
   "connectors.addImapBrings":
     "Bất kỳ máy chủ thư nào khác, bằng mật khẩu ứng dụng. Chỉ thu thập.",
+  "connectors.addTestMailboxBrings":
+    "Hộp thư giả chỉ dành cho QC — không bao giờ gửi hoặc nhận thư thật.",
   "connectors.providerNotConfigured":
     "{provider} chưa được cấu hình trên bản triển khai này.",
 
@@ -8488,8 +8522,12 @@ export const vi = {
   "worklist.completeness": "Hiển thị {shown} trong {considered}",
   "worklist.review.partial":
     "Hiển thị {loaded} trong {total} — xem tiếp trong ngày để thấy phần còn lại",
-  "worklist.completeness.bounded": "Hiển thị {shown} · {sources} nguồn còn nữa",
+  "worklist.completeness.bounded_one":
+    "Hiển thị {shown} · {sources} nguồn còn nữa",
+  "worklist.completeness.bounded_other":
+    "Hiển thị {shown} · {sources} nguồn còn nữa",
   "worklist.clear": "Không có gì đang chờ bạn.",
+  "worklist.clearFor": "Không có gì đang chờ {name}.",
   "worklist.clearOfTasksToday":
     "Hôm nay không có công việc đến hạn và không có việc quá hạn. Công việc về sau nằm ở tab Công việc của từng hồ sơ.",
   "worklist.clearOfWhatWasRead":
@@ -8515,6 +8553,8 @@ export const vi = {
   "worklist.pane.lastInbound": "Họ viết lần cuối",
   "worklist.pane.lastOutbound": "Chúng ta viết lần cuối",
   "worklist.pane.never": "Chưa bao giờ",
+  "worklist.pane.company": "Làm việc cho",
+  "worklist.pane.role": "Vai trò của họ",
   "worklist.band.now": "Bây giờ",
   "worklist.band.build_pipeline": "Xây dựng pipeline",
   "worklist.band.keep_momentum": "Giữ đà",
@@ -8553,7 +8593,7 @@ export const vi = {
   "worklist.scope.unassigned": "Chưa có người phụ trách",
   "worklist.scope.team": "Nhóm của tôi",
   "worklist.scope.all": "Tất cả",
-  "worklist.owner.label": "Hàng việc của ai",
+  "worklist.owner.visibleLabel": "Đang xem",
   "worklist.manager.cancel": "Huỷ",
   "worklist.owner.mine": "Ngày của tôi",
   "worklist.owner.backToMine": "Quay lại ngày của tôi",
@@ -8569,11 +8609,16 @@ export const vi = {
     "Không thể chuyển giao. Bản ghi vẫn thuộc về họ.",
   "worklist.manager.reassigned": "Đã giao lại.",
   "worklist.manager.reassignFailed": "Không thể giao lại việc này.",
-  "worklist.manager.coach": "Để lại ghi chú",
+  "worklist.manager.coach": "Thêm ghi chú",
+  "worklist.manager.coachTitle": "Ghi chú cho {name}",
+  "worklist.manager.coachTitleUnnamed": "Một ghi chú",
+  "worklist.manager.coachIntro":
+    "Một ghi chú ngắn sẽ nằm trên hàng việc của họ.",
   "worklist.manager.coachAbout": "Về việc",
-  "worklist.manager.coachConfirm": "Để lại ghi chú",
+  "worklist.manager.coachConfirm": "Thêm ghi chú",
   "worklist.manager.coached": "Ghi chú đã nằm trên hàng việc của họ.",
   "worklist.manager.coachFailed": "Không thể để lại ghi chú.",
+  "worklist.manager.coachRefused": "Bạn không thể huấn luyện {name}.",
   "worklist.manager.note": "Ghi chú của bạn (không bắt buộc)",
   "worklist.manager.kind.reply_aging": "Một hồi âm đang cũ dần",
   "worklist.manager.kind.next_step": "Bước tiếp theo của một deal",
@@ -8591,6 +8636,7 @@ export const vi = {
   "worklist.walk.refresh": "Làm mới",
   "worklist.handled.empty": "Hôm nay chưa có việc nào được xử lý giúp bạn.",
   "worklist.handled.loading": "Đang đọc những việc đã xử lý",
+  "worklist.handled.count": "{count} đã làm thay bạn",
   "worklist.handled.what": "Điều đã xảy ra",
   "worklist.handled.about": "Về",
   "worklist.handled.when": "Khi nào",
@@ -8599,6 +8645,7 @@ export const vi = {
     "Còn nhiều hơn thế. Danh sách dừng ở mức một lần xem có thể chứa.",
   "worklist.exceptions.empty": "Hiện chưa có việc nào trong nhóm cần đến bạn.",
   "worklist.exceptions.loading": "Đang đọc nhóm",
+  "worklist.exceptions.count": "{count} cần bạn",
   "worklist.exceptions.condition": "Việc gì",
   "worklist.exceptions.subject": "Về",
   "worklist.exceptions.owner": "Ai chịu trách nhiệm",
@@ -8639,8 +8686,7 @@ export const vi = {
   "worklist.readings.prospecting.detail":
     "Cơ hội mới đang chờ phản hồi đầu tiên",
   "worklist.readings.review": "Xem xét",
-  "worklist.readings.review.detail":
-    "Việc thường lệ đang chờ sau một quyết định",
+  "worklist.readings.review.detail": "Quyết định chỉ bạn mới xử lý được",
   "worklist.readings.truncated":
     "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
   "worklist.hidden.title": "Những gì danh sách không hiển thị",
@@ -8674,8 +8720,17 @@ export const vi = {
   "worklist.filter.tasks": "Công việc",
   "worklist.filter.decisions": "Quyết định",
   "worklist.filter.system": "Hệ thống",
+  "worklist.filter.linked.except_decisions":
+    "Hiển thị mọi thứ trừ các quyết định mà bản tóm tắt của bạn đã hỏi.",
+  "worklist.filter.linked.changed_since_brief":
+    "Chỉ hiển thị những gì đã thay đổi kể từ lần chạy đêm qua.",
+  "worklist.filter.linked.clear": "Hiển thị toàn bộ danh sách",
   "worklist.category.customer_waiting": "Khách đang chờ",
   "worklist.category.leads": "Khách tiềm năng",
+  "worklist.signal.closing_soon": "Sắp chốt",
+  "worklist.signal.stalled": "Thương vụ gặp rủi ro",
+  "worklist.signal.opportunity": "Đáng để thúc đẩy",
+  "worklist.signal.moved": "Vừa có chuyển động",
   "worklist.category.deals_at_risk": "Deal rủi ro",
   "worklist.category.meetings": "Cuộc họp",
   "worklist.category.tasks": "Công việc",
@@ -8684,8 +8739,8 @@ export const vi = {
   "worklist.because.pinned": "Bạn đã ghim mục này",
   "worklist.because.buyer_wrote_last": "Họ viết sau cùng",
   "worklist.because.waiting_days": "đang chờ",
-  "worklist.because.more_one": "+{count} lý do khác",
-  "worklist.because.more_other": "+{count} lý do khác",
+  "worklist.because.more_one": "+{count} nữa",
+  "worklist.because.more_other": "+{count} nữa",
   "worklist.because.waiting_days.value_one": "đã chờ {value} ngày",
   "worklist.because.waiting_days.value_other": "đã chờ {value} ngày",
   "worklist.because.overdue": "quá hạn",

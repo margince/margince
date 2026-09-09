@@ -224,8 +224,8 @@ export const ATaskNobodyOwnsBeingPutDown: Story = {
 // The state the old mobile test could not see: above this breakpoint the row is
 // rank, text and verbs on one line, and the verbs never yield width — so at
 // 390px the title column was squeezed to a few characters while three buttons
-// held their full size beside it. Here the text takes the line and the verbs
-// drop below it at a real target height.
+// held their full size beside it. Here the rank and its kind lead the line, the
+// work takes the next, and the verbs the one after, at a real target height.
 //
 // Worth a story of its own rather than a note on the desktop one: this is a
 // different layout, and the two are checked by looking at both.
@@ -235,14 +235,14 @@ export const ATaskOnAPhone: Story = {
   play: undefined,
 };
 
-// EVERY VERB A ROW CAN CARRY, on one line, with the answer at its end.
+// EVERY VERB A ROW CAN CARRY, on one right-aligned line, the answer LAST.
 //
-// The row that has the most of them: a buyer waiting on a reply carries the way
-// into the record, the three judgements the server offers, the reader's pin and
-// the reply itself. Drawn because this is the state the layout was rebuilt for
-// and the one a screenshot has to be checked in — the two groups are what says
-// which verb is the answer, and at this width the leading group is long enough
-// to be a real test of that.
+// The row that has the most of them: a buyer waiting on a reply carries the
+// reply itself, the way into the record, the reader's pin and the three
+// judgements the server offers. Drawn because this is the state the layout was
+// rebuilt for and the one a screenshot has to be checked in — seven controls
+// is where the line WRAPS, so it is the only width at which the order can be
+// seen to hold: the answer on the trailing edge, the glyphs among the words.
 //
 // The snooze's chooser is OPEN, because the split control is the other half of
 // the change: the press means tomorrow, the caret means "not tomorrow", and a
@@ -561,5 +561,218 @@ export const AMeetingWithNoOutcomeRecorded: Story = {
       actions: [],
       subject: { type: "activity", id: "11111111-1111-7111-8111-111111111111" },
     },
+  },
+};
+
+// A waiting message, drawn as the MESSAGE.
+//
+// The row a rep meets most, and the one no story here showed: when the server
+// sends `email_summary` the row's own name is the canonical email row — sender,
+// subject, preview, access badge — rather than a sentence about it, and the
+// facts and verbs sit around it on the same grid. Drawn with the opener,
+// because the row that shows a reader a message and refuses to open it is the
+// defect that mount exists to remove.
+export const AWaitingBuyerAsTheMessage: Story = {
+  args: {
+    ...baseArgs,
+    onOpenEmail: () => undefined,
+    item: {
+      id: "01a05500-0000-7000-8000-0000000000e1",
+      source: "customer_waiting",
+      category: "customer_waiting",
+      level: 1,
+      consequence: "buyer_waits",
+      title: "Re: pricing for the retrofit",
+      because: [{ kind: "waiting_days", value: { kind: "days", days: 7 } }],
+      actions: ["open", "reply"],
+      dispositions: ["snooze", "not_mine"],
+      email_summary: {
+        activity_id: "01a05500-0000-7000-8000-0000000000e1",
+        subject: "Re: pricing for the retrofit",
+        preview: "Can you confirm the lead time before Friday?",
+        occurred_at: "2026-09-01T07:42:00Z",
+        direction: "inbound",
+        counterparty: "Kirsten Vogel",
+        attachment_count: 1,
+        move: "needs_reply",
+        display_status: "team",
+        version: 3,
+      },
+      subject: {
+        type: "deal",
+        id: "01a05500-0000-7000-8000-0000000000bb",
+        label: "Acme Expansion",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// THE WAITING ROW ON A PHONE, which is the row this width breaks.
+//
+// A task's every line wraps, so a task row fits any column. This one draws
+// `EmailEntry`, whose subject and preview are one unwrappable line each — and
+// an unwrappable line is a MINIMUM width, which the gesture's own wrapper
+// carried up to the card and past its edge: the date and the snippet clipped,
+// the meta line drawn on one line instead of wrapping, and the verbs given
+// hundreds of pixels of room nobody could see, so they never wrapped either.
+// Nothing at desktop width shows any of it — the work column's track has a zero
+// floor there — so this arrangement needs the story `ATaskOnAPhone` cannot be.
+export const AWaitingBuyerOnAPhone: Story = {
+  ...AWaitingBuyerAsTheMessage,
+  globals: { viewport: { value: "phone" } },
+};
+
+// The same row where the reader may see LESS of it.
+//
+// Two limits at once, and they are different limits. The message is on a
+// thread limited to named people, which the access badge says and which leaves
+// the words readable; the deal it is filed against arrives with no `label`,
+// because the caller may not read that record — so the row names the message
+// and says nothing about the account, rather than inventing a name for it.
+//
+// A message whose CONTENT is not the reader's produces no waiting row at all
+// (the contract says so), which is why this is the limit a queue can actually
+// draw.
+export const AMessageOnALimitedThread: Story = {
+  args: {
+    ...baseArgs,
+    onOpenEmail: () => undefined,
+    item: {
+      id: "01a05500-0000-7000-8000-0000000000e2",
+      source: "customer_waiting",
+      category: "customer_waiting",
+      level: 1,
+      consequence: "buyer_waits",
+      title: "Re: the amended terms",
+      because: [{ kind: "buyer_wrote_last" }],
+      actions: ["open", "reply"],
+      email_summary: {
+        activity_id: "01a05500-0000-7000-8000-0000000000e2",
+        subject: "Re: the amended terms",
+        preview: "Legal has one more question on clause 4.",
+        occurred_at: "2026-09-01T15:10:00Z",
+        direction: "inbound",
+        counterparty: "Ana Sommer",
+        attachment_count: 0,
+        move: "needs_reply",
+        display_status: "selected",
+        version: 2,
+      },
+      subject: {
+        type: "deal",
+        id: "01a05500-0000-7000-8000-0000000000bc",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A decision, answered from the row that ranked it.
+//
+// The verb is the row's one filled control and it opens a drawer rather than
+// drawing the card inline: the card carries evidence, a draft and three
+// answers, and measured on a phone it stood 440px tall inside a row whose
+// ceiling is 208. Closed, which is this row's own state — the drawer is the
+// approval card's story.
+export const ADecisionToAnswerOnTheRow: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "01a05500-0000-7000-8000-0000000000d2",
+      source: "approval",
+      category: "decisions",
+      level: 5,
+      consequence: "work_blocked",
+      title: "A reply to Kirsten Vogel is waiting for you",
+      kind: "send_email",
+      because: [{ kind: "blocks_customer_work" }],
+      actions: ["decide"],
+      subject: {
+        type: "person",
+        id: "01a05500-0000-7000-8000-0000000000aa",
+        label: "Kirsten Vogel",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// The row in hand: the one the pane beside the queue is about.
+//
+// Marked on its edge rather than by a fill — the first row is selected on
+// arrival, so a fill would paint a block of colour across the top of every day
+// rather than answering which row the reader is working on. The rank is a
+// pressed button here, which is the other half of the same state.
+export const TheRowInHand: Story = {
+  args: { ...baseArgs, selected: true, item: noticeItem() },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A deal going quiet, with its figures and a crowded "why here".
+//
+// Two states no other story here draws. The deal's FIGURES on the meta line,
+// which is the concept's sharpest example: a €160,100 deal was once reduced to
+// "no contact for 83 days" while the money sat on the wire the whole time. And
+// the FOLD, holding the reasons past the third together with why this row beat
+// the one below it — one press for a reader who disagrees with the order, and
+// no line of height for the many who do not.
+export const ADealAtRiskWithItsFigures: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "01a05500-0000-7000-8000-0000000000da",
+      source: "deal_at_risk",
+      category: "deals_at_risk",
+      level: 3,
+      consequence: "deal_slips_past_close",
+      title: "Turbinenbau retrofit is drifting",
+      because: [
+        { kind: "quiet_days", value: { kind: "days", days: 21 } },
+        { kind: "closing_soon" },
+        { kind: "no_champion" },
+        // `minor` is what a REASON's typed value carries. The deal's own facts
+        // below spell the same amount as `amount_minor`: two different objects
+        // on the wire rather than one field under two names.
+        {
+          kind: "expected_revenue",
+          value: { kind: "money", minor: 16010000, currency: "EUR" },
+        },
+      ],
+      above_next: {
+        comparator: "deadline",
+        mine: { kind: "date", date: "2026-09-30T09:00:00Z" },
+        theirs: { kind: "date", date: "2026-11-15T09:00:00Z" },
+      },
+      actions: ["open"],
+      dispositions: ["snooze"],
+      deal: {
+        amount_minor: 16010000,
+        currency: "EUR",
+        expected_close_date: "2026-09-30",
+        quiet_days: 21,
+      },
+      subject: {
+        type: "deal",
+        id: "01a05500-0000-7000-8000-0000000000da",
+        label: "Turbinenbau retrofit",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
   },
 };

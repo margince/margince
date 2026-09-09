@@ -161,16 +161,26 @@ export function Chip({
   icon: Icon,
   children,
   href,
+  dense,
 }: Readonly<{
   icon: LucideIcon;
   children: ReactNode;
   // An external destination. Present → the chip is an anchor and opens in a
   // new tab with `noreferrer`, since these point off our origin.
   href?: string;
+  // The chip at a `Badge`'s geometry, for a chip inside a table row: it shares
+  // a cell with badges there, and a fact drawn a rung larger than the status
+  // beside it outweighs the name the row is actually about.
+  //
+  // A size on the primitive rather than a height each caller sets, for the
+  // reason `Meter`'s dense rung is one: a geometry with two authors drifts the
+  // first time either moves.
+  dense?: boolean;
 }>) {
+  const shape = dense ? "chip chip-dense" : "chip";
   const body = (
     <>
-      <Icon size={14} aria-hidden="true" />
+      <Icon size={dense ? 12 : 14} aria-hidden="true" />
       <span>{children}</span>
     </>
   );
@@ -178,7 +188,7 @@ export function Chip({
   if (destination) {
     return (
       <a
-        className="chip chip-link"
+        className={`${shape} chip-link`}
         href={destination}
         target="_blank"
         rel="noreferrer"
@@ -189,7 +199,7 @@ export function Chip({
   }
   // A chip whose href was refused still shows the FACT — the reader loses the
   // link, not the value.
-  return <span className="chip">{body}</span>;
+  return <span className={shape}>{body}</span>;
 }
 
 // A ranked set of one-dimensional readings: label, bar, formatted amount, one

@@ -8,6 +8,13 @@
 name: case3_spreadsheet
 criteria: [1, 6]
 
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
 prompt: |
   Got this list from the trade fair. Can you get it into the CRM?
 
@@ -20,20 +27,34 @@ prompt: |
 must_call:
   - preview_import
 may_call:
-  - commit_import
+  # NOT commit_import, and its absence is the case. Criterion 1 is that the
+  # numbers are shown BEFORE anything is written, and the prose half now fails a
+  # run that reports the import as done — so permitting the tool that does it
+  # would license the very act the case exists to catch. The commit follow-through
+  # is case 10's subject, with its own goal and its own fixture.
   - read_import_run
   - read_import_report
   - query_workspace
   - search_records
 
 must_mention:
-  # Criterion 1: it says what will happen before it happens.
+  # MECHANICAL, both. Criterion 1 needs the usable count to appear at all, and
+  # criterion 6 needs the unusable row named — a count and a noun are what a
+  # regex reads reliably, and neither of these has leaked.
   - "3|three"
-  # Criterion 6: the unusable row is reported rather than swallowed.
   - "skip|skipped|issue|problem|could not|missing name|blank|row"
 
-must_not_mention:
-  - "all 4 companies were created|imported all four"
+# CRITERION 1's REAL QUESTION IS SEMANTIC and had no guard that could fail.
+# The case is about showing the numbers BEFORE anything is written, and the only
+# guard on it forbade two exact strings — so "Done, the trade-fair list is in the
+# CRM" and "three new companies exist now" both scored as the answer that held
+# off. The round that noticed built a regex for it, and that regex has to tell a
+# forecast from a report ("would create three companies" versus "created three
+# companies") by refusing to cross a list of hedging words, which is a tense
+# distinction inside a sentence rather than a string a pattern can find. The
+# count above says the numbers were reported; this says WHEN.
+judge:
+  - "Criterion 1. The answer reports what the import would do before anything is written, and never tells the reader that the rows were created, imported, added or are now live. A preview stated in the future or the conditional — 'this would create three companies', '3 rows will be created once you confirm', 'nothing has been written yet' — is exactly right: answer yes. Answer no if the answer reports the import as already done."
 
 runs: 3
 pass_at: 2

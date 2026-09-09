@@ -122,17 +122,36 @@
   --accentLight: rgba(11, 122, 83, 0.09);
   --accentMed: rgba(11, 122, 83, 0.17);
 
+  /* Headings, and a record's name where that name IS the title. */
   --textPrimary: #15201b;
+  /* Body text a reader reads — paragraphs, table cells, descriptions, notes.
+   * The document default, and what a surface wears when it names no ink. */
   --textContent: #36433d;
-  /* Darkened with the grounds, not independently of them: this is body text on
-   * every surface in the ladder, and the darkest one it sits on is the rail
-   * (--bgSidebar). At #68756e it measured 4.42:1 on the page and 3.98:1 on the
-   * rail once those stopped being white — under the 4.5:1 AA needs for text this
-   * size, which axe caught on seven elements of the Brief glance alone. 4.64:1 at
-   * its worst ground now. A text tone answers to the ground it is read on, so
-   * moving one without the other is what breaks it. */
-  --textSecondary: #5f6a64;
+  /* Meta information ABOUT the thing on screen rather than the thing itself:
+   * counts, timestamps, provenance, labels, captions, eyebrows. The canonical
+   * AA small-text role (design §2 contrast law, ADR-0040 amendment), so every
+   * 11–13px meta line reads it.
+   *
+   * Darkened with the grounds, not independently of them: the darkest surface
+   * it sits on is the rail (--bgSidebar), and at #68756e it measured 4.42:1 on
+   * the page and 3.98:1 on the rail once those stopped being white — under what
+   * AA needs at this size, which axe caught on seven elements of the Brief
+   * glance alone. 4.54:1 at its worst ground now. A text tone answers to the
+   * ground it is read on, so moving one without the other is what breaks it. */
+  --textMeta: #5e6c65;
+  /* The same role, ON --bgChip, and it exists because a translucent ground eats
+   * the headroom --textMeta does not have. --textMeta measures 4.68:1 on
+   * --bgCard — four per cent over the AA floor — so ANY fill laid under it
+   * fails, and a fill faint enough to be safe is fainter than the step it was
+   * introduced to draw. One meaning: meta text sitting on a chip. Same hue and
+   * chroma as --textMeta, one step along in the direction its theme has room
+   * to move, which is why the two are not one token with a tint applied.
+   * The same split, for the same reason, as --accentText and --tealText. */
+  --textChip: #57645e;
+  /* Decorative only, never prose — which is why it is exempt from the AA sweep:
+   * holding a watermark to 4.5:1 would only make it --textMeta again. */
   --textTertiary: #9aa6a0;
+  /* Withdrawn ink: a disabled control, a value nobody may edit. */
   --textMuted: #cbd2cd;
   --textOnAccent: #fff;
   /* The ink for a control filled with --accent SPECIFICALLY (a primary
@@ -207,19 +226,6 @@
   --railIconActive: #fff;
   --railHover: rgba(255, 255, 255, 0.1);
   --railActive: rgba(255, 255, 255, 0.16);
-  /* textMeta: the canonical AA small-text role (design §2 contrast law,
-   * ADR-0040 amendment) — all 11–13px meta/caption text reads it. */
-  --textMeta: #5e6c65;
-  /* The same role, ON --bgChip, and it exists because a translucent ground eats
-   * the headroom --textMeta does not have. --textMeta measures 4.68:1 on
-   * --bgCard — four per cent over the AA floor — so ANY fill laid under it
-   * fails, and a fill faint enough to be safe is fainter than the step it was
-   * introduced to draw. One meaning: meta text sitting on a chip. Same hue and
-   * chroma as --textMeta, one step along in the direction its theme has room
-   * to move, which is why the two are not one token with a tint applied.
-   * The same split, for the same reason, as --accentText and --tealText. */
-  --textChip: #57645e;
-
   /* The one hue that means a MACHINE did this — wrote the draft, read the
    * record, found the thing, or holds the evidence behind a claim. It marks
    * authorship and reasoning, never status: nothing good, bad or urgent is
@@ -363,6 +369,18 @@
      screen. */
   --control-h-lg: 40px;
 
+  /* The height of a panel's header band, and it is a token for the same reason
+     --control-h is one: every panel on every screen draws the SAME band, so the
+     number belongs to the house rather than to whichever rule reaches for it
+     first. Left to each caller it drifted — a head carrying a description stood
+     taller than a head carrying a button, and two screens re-spaced the band
+     themselves — so the same card was a different object on two pages. Fixed
+     rather than a floor: what does not fit on one band is not header content
+     and goes in the body. One value at every viewport, the touch arm below
+     included, because the band holds no target of its own — the controls inside
+     it take the pointer rungs. */
+  --panel-head-h: 56px;
+
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
    * reaching for ad-hoc (inconsistently spelled 10/12/14/16 before this).
    * Layout rhythm, not part of the §2 Ledger-Green colour identity; a
@@ -458,6 +476,18 @@
   --fs-sm: 13px; /* dense UI: chips, table cells, helper text */
   --fs-body: 13.5px; /* the default reading size */
   --fs-lead: 15px; /* the one paragraph under a heading; inputs */
+  /* A ROLE among the rungs, and the one entry here that is not a rung: it
+     answers "how big is a PANEL TITLE" rather than "how big", which is a
+     question the house settles once for every panel on every screen. It sits
+     in the ramp in its place by size, because a size out of order reads as a
+     scale that was edited rather than designed (type.test.ts holds both).
+
+     16 and not the card rung above it because a title in the 56px band beside
+     a badge crowded that band at 17 — which the tone panels had already
+     answered by dropping their own titles to body size and the glance by
+     taking its panes UP to the section rung, so one title stood at four sizes
+     across the product. Retune it here and every panel head moves together. */
+  --fs-panel-title: 16px;
   --fs-h3: 17px; /* card title */
   --fs-h2: 20px; /* section title */
   --fs-h1: 24px; /* the title of a step */
@@ -710,7 +740,6 @@
 
   --textPrimary: #e8eeeb;
   --textContent: #c3cec8;
-  --textSecondary: #8fa099;
   --textTertiary: #66776f;
   --textMuted: #43524b;
 
@@ -837,7 +866,6 @@
 
     --textPrimary: #e8eeeb;
     --textContent: #c3cec8;
-    --textSecondary: #8fa099;
     --textTertiary: #66776f;
     --textMuted: #43524b;
 

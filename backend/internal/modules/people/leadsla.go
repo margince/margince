@@ -9,6 +9,7 @@ package people
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -67,12 +69,28 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 //
 // With the target switched off no lead is in any SLA state, so the filter
 // matches nothing rather than pretending a default target.
+// leadOwesAReplySQL is the one spelling of "this lead still owes a first
+// reply": live, and nobody has answered it.
+//
+// FOUR readers ask it — the SLA state filter, the breach scan, the work
+// queue's band, and the list's own unanswered dial — and the question is one.
+// Spelled separately they drift, and a queue that disagrees with the filter
+// feeding it reports a count nobody can reconcile.
+//
+// Deliberately NOT a statement about the status ladder. A lead the system moved
+// to `contacted` because a cold outbound went out has had no genuine response,
+// and §18.1 is explicit that an auto-touch does not satisfy first response — so
+// the rung a lead sits on says nothing about whether somebody replied to it.
+//
+// Held by: TestTheOwesAReplyPredicateHasOneSpelling (leadowespelling_test.go)
+const leadOwesAReplySQL = "archived_at IS NULL AND first_response_at IS NULL"
+
 func slaStateClause(policy leadSLAPolicy, state crmcontracts.ListLeadsParamsSlaState, arg func(any) int) string {
 	if !policy.enabled {
 		return "FALSE"
 	}
 	deadline := "COALESCE(routed_at, created_at) + $%d * interval '1 minute'"
-	open := "archived_at IS NULL AND first_response_at IS NULL AND "
+	open := leadOwesAReplySQL + " AND "
 	minutes := policy.targetMinutes()
 	now := leadSLAClock().UTC()
 	switch crmcontracts.LeadSlaState(state) {
@@ -139,7 +157,7 @@ func (s *Store) ScanLeadSLA(ctx context.Context, now time.Time) ([]SLABreach, er
 			SELECT id, owner_id, COALESCE(routed_at, created_at) + $1 * interval '1 minute',
 			       COALESCE(NULLIF(btrim(full_name), ''), email::text, '')
 			FROM lead
-			WHERE archived_at IS NULL AND first_response_at IS NULL AND sla_breached_at IS NULL
+			WHERE `+leadOwesAReplySQL+` AND sla_breached_at IS NULL
 			  AND COALESCE(routed_at, created_at) + $1 * interval '1 minute' < $2
 			ORDER BY created_at
 			FOR UPDATE SKIP LOCKED`,
@@ -231,13 +249,30 @@ func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) erro
 		return fmt.Errorf("audit sla breach: %w", err)
 	}
 	payload := crmcontracts.PublicEventLeadSlaBreached{Deadline: b.Deadline}
-	if b.OwnerID != nil {
+	switch {
+	case b.OwnerID != nil:
 		owner := openapi_types.UUID(b.OwnerID.UUID)
 		payload.OwnerId = &owner
-		// Until a team-lead concept exists to resolve the §18 escalation
-		// target through, the owner IS the target: the breach lands on the
-		// desk that owns the lead rather than nowhere.
+		// An owned lead escalates to its OWNER: the desk that owes the answer
+		// is the desk that hears about the miss.
 		payload.EscalationTarget = &owner
+	default:
+		// A lead NOBODY owns is the queue's worst case — past its response
+		// target with no one who has picked it up — and it was the one case
+		// that reached nobody at all: an unassigned task and no notice.
+		//
+		// The configured intake seat answers for it. Unset means the
+		// installation has not said who runs the queue, and the breach stays
+		// where it was rather than being addressed to somebody who did not
+		// agree to it; the unassigned view is what surfaces those.
+		target, configured, err := unassignedEscalationTarget(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if configured {
+			addressed := openapi_types.UUID(target)
+			payload.EscalationTarget = &addressed
+		}
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, b.LeadID.UUID, payload); err != nil {
 		return fmt.Errorf("emit lead.sla_breached: %w", err)
@@ -400,4 +435,52 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 		out = append(out, t)
 	}
 	return out, rows.Err()
+}
+
+// unassignedEscalationTarget reads the configured intake seat.
+//
+// Answers (id, true) when an installation has named a seat that can still work
+// the queue, and (zero, false) for every way it has not: no setting, an empty
+// one, an unparseable one, or a seat that has since been suspended, archived,
+// turned into an agent or dropped to a read seat. A seat nobody reads is the
+// same silence as no seat at all, wearing a configuration that looks correct.
+//
+// Read through settings.ApplyTx, the ungated seam machinery applies a posture
+// from, the way loadLeadSLAPolicy reads its own pair: this runs inside the SLA
+// sweep under the system principal, and the value is an input to a decision
+// already the sweep's to make. Asking the object gate would be asking a
+// question that cannot answer no — auth.Require returns nil for
+// PrincipalSystem before permissions are consulted.
+//
+// ApplyTx rather than the raw statement this was: it refuses any entry not
+// declared MachineryApplied at Define time, so the licence to read this one
+// ungated is checked rather than agreed. A decode failure is ApplyTx's to
+// report, and it reports it as an error — which is the answer this path needs.
+// The setting is written through a validated entry, so a value that will not
+// decode means somebody wrote the row around it, and answering "nobody is
+// configured" would hide that behind a queue quietly escalating to no one.
+func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
+	configured, err := settings.ApplyTx(ctx, tx, UnassignedEscalationUserID)
+	if err != nil {
+		return ids.UUID{}, false, fmt.Errorf("load the unassigned escalation seat: %w", err)
+	}
+	if configured == "" {
+		// Empty IS the answer: the documented way to say no seat answers.
+		return ids.UUID{}, false, nil
+	}
+	id, err := ids.Parse(configured)
+	if err != nil {
+		return ids.UUID{}, false, fmt.Errorf("the unassigned escalation seat is not a user id: %w", err)
+	}
+	// auth.EnsureAssignee, not a query of our own: "may this seat be handed
+	// work" already has one spelling, and a third reading of it is a third
+	// answer. Its SCOPE half is vacuous here — the sweep runs as the system
+	// principal — and its eligibility half is exactly the question.
+	if err := auth.EnsureAssignee(ctx, tx, id); err != nil {
+		if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+			return ids.UUID{}, false, nil
+		}
+		return ids.UUID{}, false, fmt.Errorf("check the unassigned escalation seat: %w", err)
+	}
+	return id, true, nil
 }

@@ -23,6 +23,7 @@ import {
   type TimelineGroup,
 } from "../design-system/composed";
 import type { ListChip } from "../design-system/listsurface";
+import { CellStrip } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { OverlayFallback } from "../design-system/overlayfallback";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -70,6 +71,11 @@ import { CompanyDocumentsCard } from "./companydocuments";
 import { DossierPanel } from "./companydossier";
 import { type CitedRecord, EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard, hasFinance } from "./companyfinance";
+import {
+  companyCreateFields,
+  createCompany,
+  RELATIONSHIP_TYPE_OPTIONS,
+} from "./companyform";
 import { GrowthFitPanel } from "./companygrowthfit";
 import {
   CompanyActionBadges,
@@ -101,12 +107,7 @@ import { TechnicalProfileCard } from "./companytechnical";
 import { Company360Call, NeedsList, useTodayReading } from "./companytoday";
 import { hasWorkInFlight, sinceLastVisitFooter } from "./companywork";
 import { ComposeModal } from "./compose";
-import {
-  CreateAction,
-  type CreateField,
-  type FormRows,
-  splitMultiselectValue,
-} from "./create";
+import { CreateAction } from "./create";
 import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { useRoster } from "./entityref";
@@ -177,12 +178,8 @@ type Organization = components["schemas"]["Organization"];
 // `customer` is a member of both — and only a module holding both can tell
 // that the header is about to print one word twice. Re-exported for the same
 // reason LIFECYCLE_LABELS is: every existing caller still resolves.
-export { LIFECYCLE_LABELS, RELATIONSHIP_TYPE_LABELS };
+export { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS, RELATIONSHIP_TYPE_LABELS };
 
-type CreateOrganizationRequest =
-  components["schemas"]["CreateOrganizationRequest"];
-type UpdateOrganizationRequest =
-  components["schemas"]["UpdateOrganizationRequest"];
 type Organization360View = components["schemas"]["Organization360"];
 
 // Lives in companylookups.ts, same reason as LIFECYCLE_LABELS above: the
@@ -219,338 +216,6 @@ async function fetchOrganizationsPage(
       has_more: data.page.has_more,
     },
   };
-}
-
-function stringField(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-// Merge-target search (P-2): mirrors searchPeopleTargets (contacts.tsx) — the
-// caller filters out the source row.
-export async function searchOrgTargets(
-  q: string,
-): Promise<{ id: string; name: string }[]> {
-  const { data, error } = await api.GET("/organizations", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data.data.map((candidate) => ({
-    id: candidate.id,
-    name: candidate.display_name,
-  }));
-}
-
-function asSizeBand(
-  value: string | undefined,
-): CreateOrganizationRequest["size_band"] {
-  return (SIZE_BAND_OPTIONS as readonly string[]).includes(value ?? "")
-    ? (value as CreateOrganizationRequest["size_band"])
-    : undefined;
-}
-
-// The repeatable `domains` rows → the wire `domains[]` shape, shared by the
-// create body and the edit patch: blank rows drop out, the domain lowercases,
-// and the row's primary radio (a string "true"/"") becomes the boolean flag.
-// An empty result is `undefined` — on create that means "no domains", on
-// update the field is omitted so the stored set stays untouched (never
-// silently cleared).
-function mapDomainRows(rows: FormRows): CreateOrganizationRequest["domains"] {
-  const domains = mapDomainRowsReplaceSet(rows);
-  return domains.length > 0 ? domains : undefined;
-}
-
-type DomainPatch = NonNullable<UpdateOrganizationRequest["domains"]>;
-
-// The edit-patch form of the repeatable domains field: always the concrete
-// desired set (possibly empty), so a caller can send [] to clear every domain.
-// Blank rows drop; the primary radio ("true"/"") becomes the boolean flag.
-function mapDomainRowsReplaceSet(rows: FormRows): DomainPatch {
-  return (rows.domains ?? [])
-    .filter((row) => (row.domain ?? "").trim().length > 0)
-    .map((row) => ({
-      domain: row.domain.trim().toLowerCase(),
-      is_primary: row.is_primary === "true",
-    }));
-}
-
-// Order-independent set equality: an edit that leaves the domains untouched
-// omits the field (sparse PATCH), while any real change — including clearing
-// to empty — sends the replace-set.
-function sameDomainSet(a: DomainPatch, b: DomainPatch): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  const key = (d: DomainPatch[number]) => `${d.domain}:${d.is_primary ? 1 : 0}`;
-  const seen = new Set(a.map(key));
-  return b.every((d) => seen.has(key(d)));
-}
-
-// Builds the create-company request body: `domains[]` rows carry
-// `{domain, is_primary}` keyed off the repeatable rows channel, scalar
-// fields trim to undefined when blank.
-export function mapOrgBody(
-  values: Record<string, string>,
-  rows: FormRows,
-): CreateOrganizationRequest {
-  return {
-    display_name: values.display_name.trim(),
-    legal_name: values.legal_name?.trim() || undefined,
-    industry: values.industry?.trim() || undefined,
-    size_band: asSizeBand(values.size_band),
-    domains: mapDomainRows(rows),
-    source: "manual",
-  };
-}
-
-// Builds the PATCH body: the scalar UpdateOrganizationRequest fields plus the
-// domains replace-set from the edit modal's repeatable rows. Domains are sent
-// only when the set actually changed from `currentDomains` — an untouched edit
-// omits the field (sparse PATCH), and clearing every row sends [] (clear all),
-// the two cases the contract's "absent = untouched" vs "[] = clear" distinguish.
-export function mapOrgUpdate(
-  values: Record<string, unknown>,
-  rows: FormRows,
-  currentDomains: Organization["domains"] = [],
-): UpdateOrganizationRequest {
-  const desired = mapDomainRowsReplaceSet(rows);
-  const current: DomainPatch = (currentDomains ?? []).map((domain) => ({
-    domain: domain.domain,
-    is_primary: domain.is_primary,
-  }));
-  const body: UpdateOrganizationRequest = {
-    display_name: stringField(values.display_name).trim() || undefined,
-    legal_name: stringField(values.legal_name).trim() || undefined,
-    industry: stringField(values.industry).trim() || undefined,
-    size_band: asSizeBand(stringField(values.size_band)),
-    owner_id: stringField(values.owner_id).trim() || undefined,
-  };
-  if (!sameDomainSet(desired, current)) {
-    body.domains = desired;
-  }
-  const lifecycle = stringField(values.lifecycle).trim();
-  if (lifecycle) {
-    body.lifecycle = lifecycle as NonNullable<
-      UpdateOrganizationRequest["lifecycle"]
-    >;
-  }
-  // Always sent when the field was rendered, even empty: this is a replace-set,
-  // and "the user cleared every type" is an edit, not an absence. The form
-  // channel joins a multiselect into one comma string, so an empty string is
-  // the honest empty set.
-  if (values.relationship_types !== undefined) {
-    body.relationship_types = splitMultiselectValue(
-      stringField(values.relationship_types),
-    ) as NonNullable<UpdateOrganizationRequest["relationship_types"]>;
-  }
-  // Nullable rather than trim-to-undefined, and for the same reason the
-  // relationship set is: clearing a LinkedIn URL is an edit. `|| undefined`
-  // would read a deletion as "the caller did not mention it" and put the old
-  // value straight back.
-  if (values.linkedin_url !== undefined) {
-    body.linkedin_url = stringField(values.linkedin_url).trim() || null;
-  }
-  const address = addressPatch(values);
-  if (address) {
-    body.address = address;
-  }
-  return body;
-}
-
-// The six columns behind Address, flattened into form fields. The wire shape is
-// one nested object; the form channel is flat string values, so the two are
-// mapped at the boundary (addressFrom / addressPatch) rather than teaching the
-// form about nesting for one record type.
-const ADDRESS_FIELDS: CreateField[] = [
-  { key: "address_line1", label: "create.addressLine1" },
-  { key: "address_line2", label: "create.addressLine2" },
-  { key: "address_postal_code", label: "create.postalCode" },
-  { key: "address_city", label: "create.city" },
-  { key: "address_region", label: "create.region" },
-  { key: "address_country", label: "create.country" },
-];
-
-// addressFrom prefills the six flat fields from the record's nested address.
-export function addressFrom(
-  address: Organization["address"],
-): Record<string, string> {
-  return {
-    address_line1: address?.line1 ?? "",
-    address_line2: address?.line2 ?? "",
-    address_postal_code: address?.postal_code ?? "",
-    address_city: address?.city ?? "",
-    address_region: address?.region ?? "",
-    address_country: address?.country ?? "",
-  };
-}
-
-// addressPatch folds the six flat fields back into the wire's nested object.
-//
-// A cleared field is sent as null rather than omitted: the caller had the value
-// on screen and erased it, which is an edit. Omitting it would silently keep
-// what the record held — the failure mode where a user deletes a line, saves,
-// and finds it back on reload.
-//
-// The whole object is omitted only when the form never rendered the fields at
-// all, so a surface that does not offer the address cannot blank one.
-function addressPatch(
-  values: Record<string, unknown>,
-): UpdateOrganizationRequest["address"] | undefined {
-  if (values.address_line1 === undefined) {
-    return undefined;
-  }
-  const field = (key: string) => stringField(values[key]).trim() || null;
-  return {
-    line1: field("address_line1"),
-    line2: field("address_line2"),
-    postal_code: field("address_postal_code"),
-    city: field("address_city"),
-    region: field("address_region"),
-    // ISO-3166 alpha-2, and the server compares on the canonical spelling, so
-    // "de" typed in lower case is the same country as "DE".
-    country: stringField(values.address_country).trim().toUpperCase() || null,
-  };
-}
-
-const companyCreateFields: CreateField[] = [
-  { key: "display_name", label: "create.displayName", required: true },
-  { key: "legal_name", label: "create.legalName" },
-  { key: "industry", label: "create.industry" },
-  {
-    key: "size_band",
-    label: "create.sizeBand",
-    type: "select",
-    options: SIZE_BAND_OPTIONS.map((band) => ({ value: band, label: band })),
-  },
-  {
-    key: "domains",
-    label: "org.domains",
-    type: "repeatable",
-    addLabel: "field.addDomain",
-    rowFields: [{ key: "domain", label: "field.domain", required: true }],
-    primaryKey: "is_primary",
-  },
-];
-
-// The edit form, built per-render because the owner options are the live user
-// roster.
-//
-// Stage and relationship types ARE here now: the retired classification could
-// not be edited from anywhere, because the update contract carried no such
-// field.
-// Where the account stands with us: lives in companylookups.ts, same reason
-// as LIFECYCLE_LABELS and SIZE_BAND_OPTIONS above — the rail's Details grid
-// builds a lifecycle picker off the same wire order, and a second copy here
-// is the value neither screen's TypeScript catches drifting. Re-exported so
-// every existing caller of `LIFECYCLE_OPTIONS` from this module still
-// resolves.
-export { LIFECYCLE_OPTIONS };
-
-// What it is to us has no rail counterpart today, so it stays local.
-export const RELATIONSHIP_TYPE_OPTIONS = [
-  "customer",
-  "partner",
-  "supplier",
-  "investor",
-  "portfolio_company",
-  "competitor",
-  "other",
-] as const;
-
-// t is threaded in because the option LABELS are catalog keys, not words: the
-// field renderer prints option.label as given, so an untranslated key reaches
-// the reader as "org.lifecycle.customer".
-export function companyEditFields(
-  owners: readonly { id: string; display_name: string }[],
-  hasOwner: boolean,
-  t: (key: MessageKey) => string,
-): CreateField[] {
-  return [
-    { key: "display_name", label: "create.displayName", required: true },
-    { key: "legal_name", label: "create.legalName" },
-    { key: "industry", label: "create.industry" },
-    {
-      key: "size_band",
-      label: "create.sizeBand",
-      type: "select",
-      options: SIZE_BAND_OPTIONS.map((band) => ({ value: band, label: band })),
-    },
-    // Who is accountable for this account. It defaults to whoever created the
-    // record and stays there until someone changes it — which, until now,
-    // nothing on this page let them do.
-    //
-    // Required exactly when the account HAS an owner: an optional select
-    // offers a blank option, and `UpdateOrganizationRequest.owner_id` cannot
-    // carry "unassign" — a null is indistinguishable from an omitted field on
-    // the wire. Offering the blank would take the answer and drop it. An
-    // account with no owner yet keeps the blank, because there it is the
-    // truthful current state rather than an edit we cannot make.
-    {
-      key: "owner_id",
-      label: "co.pulse.owner",
-      type: "select",
-      required: hasOwner,
-      options: owners.map((user) => ({
-        value: user.id,
-        label: user.display_name,
-      })),
-    },
-    // Where the account stands, and what it is to us — the two questions the
-    // retired classification tried to answer with one value, and the reason
-    // neither was editable from this page at all.
-    {
-      key: "lifecycle",
-      label: "org.lifecycle",
-      type: "select",
-      options: LIFECYCLE_OPTIONS.map((value) => ({
-        value,
-        label: t(LIFECYCLE_LABELS[value]),
-      })),
-    },
-    {
-      key: "relationship_types",
-      label: "org.relationshipTypes",
-      type: "multiselect",
-      options: RELATIONSHIP_TYPE_OPTIONS.map((value) => ({
-        value,
-        label: t(RELATIONSHIP_TYPE_LABELS[value]),
-      })),
-    },
-    // The company's own LinkedIn page. A canonical column since ADR-0085,
-    // not a custom field, because it carries identity semantics — matching,
-    // dedupe, enrichment — and the person side already treats it that way. The
-    // server normalizes what is pasted, so a URL copied from any tab of the
-    // company page resolves to the one spelling.
-    { key: "linkedin_url", label: "create.linkedinUrl" },
-    // Where the company actually is. It has been in the API since the record
-    // existed and reachable from no form on this page, so a rep who knew the
-    // address had nowhere to put it.
-    ...ADDRESS_FIELDS,
-    {
-      key: "domains",
-      label: "org.domains",
-      type: "repeatable",
-      addLabel: "field.addDomain",
-      rowFields: [{ key: "domain", label: "field.domain", required: true }],
-      primaryKey: "is_primary",
-    },
-  ];
-}
-
-async function createCompany(
-  values: Record<string, string>,
-  rows: FormRows | undefined,
-  customFields: Record<string, unknown>,
-  t: (key: MessageKey) => string,
-): Promise<Organization> {
-  const { data, error } = await api.POST("/organizations", {
-    body: { ...mapOrgBody(values, rows ?? {}), ...customFields },
-  });
-  if (error) {
-    throwProblem(error, t);
-  }
-  return data;
 }
 
 export function CompaniesScreen() {
@@ -700,19 +365,13 @@ export function CompaniesScreen() {
             // first would make the second look untrue.
             cell: (org: Organization) =>
               org.relationship_types?.length ? (
-                <span
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "var(--space-1)",
-                  }}
-                >
+                <CellStrip>
                   {org.relationship_types.map((type) => (
                     <Badge key={type}>
                       {t(RELATIONSHIP_TYPE_LABELS[type])}
                     </Badge>
                   ))}
-                </span>
+                </CellStrip>
               ) : null,
           },
           ownerColumn<Organization>(t),
@@ -1446,46 +1105,46 @@ function CompanyRecord({
   // otherwise keep serving a native-looking company view.
   const overlay = view.data?.state === "overlay" || sorMode === "overlay";
   const visibleTabs = companyTabsFor(org, tab);
-  // One tab is not a choice. A strip with a single tab is a control that does
-  // nothing, so it disappears entirely rather than asking the reader to pick
-  // the page they are already on.
-  const tabs =
-    visibleTabs.length > 1 ? (
-      <div className="co-tabs">
-        <RecordTabs
-          options={visibleTabs}
-          value={tab}
-          onChange={onTab}
-          counts={companyTabCounts(assembled)}
-          // The switch for the account's own details column, at the end of
-          // the tab row: it chooses what the page shows beside the work, so it
-          // stands with the controls that choose what the work column shows,
-          // and never in the head among the record's verbs.
-          trailing={<PageAsideToggle />}
-          labels={{
-            // "360", not the shared "Overview": this tab is the account's
-            // one assembled reading, and the card inside it is named the same
-            // — a tab and the thing it opens calling themselves two different
-            // words is two places to learn. Its own key rather than a re-worded
-            // `tab.overview`, which four other record types render and none of
-            // them is this.
-            overview: t("tab.overview"),
-            contacts: t("tab.contacts"),
-            deals: t("tab.deals"),
-            tasks: t("tab.tasks"),
-            timeline: t("tab.timeline"),
-            // The tab's own key rather than `finance.title`, which the card
-            // inside varies by lifecycle ("Finance (historical)"). A tab label
-            // names a place and does not qualify it; sharing one key would tie
-            // the strip to a title that changes under it.
-            finance: t("tab.finance"),
-            documents: t("tab.documents"),
-            profile: t("tab.profile"),
-            partner: t("tab.partner"),
-          }}
-        />
-      </div>
-    ) : null;
+  // The strip stands whatever it holds: the details switch rides at its end,
+  // so a row that disappeared for an account with one body to read would take
+  // the only way into the pane with it — and one strip on every record page is
+  // what lets a reader learn where the switch is once.
+  const tabs = (
+    <div className="co-tabs">
+      <RecordTabs
+        options={visibleTabs}
+        value={tab}
+        onChange={onTab}
+        counts={companyTabCounts(assembled)}
+        // The switch for the account's own details column, at the end of
+        // the tab row: it chooses what the page shows beside the work, so it
+        // stands with the controls that choose what the work column shows,
+        // and never in the head among the record's verbs.
+        trailing={<PageAsideToggle />}
+        labels={{
+          // "360", not the shared "Overview": this tab is the account's
+          // one assembled reading, and the card inside it is named the same
+          // — a tab and the thing it opens calling themselves two different
+          // words is two places to learn. Its own key rather than a re-worded
+          // `tab.overview`, which four other record types render and none of
+          // them is this.
+          overview: t("tab.overview"),
+          contacts: t("tab.contacts"),
+          deals: t("tab.deals"),
+          tasks: t("tab.tasks"),
+          timeline: t("tab.timeline"),
+          // The tab's own key rather than `finance.title`, which the card
+          // inside varies by lifecycle ("Finance (historical)"). A tab label
+          // names a place and does not qualify it; sharing one key would tie
+          // the strip to a title that changes under it.
+          finance: t("tab.finance"),
+          documents: t("tab.documents"),
+          profile: t("tab.profile"),
+          partner: t("tab.partner"),
+        }}
+      />
+    </div>
+  );
 
   // Both tabs render inside ONE page. Partner used to be a different
   // component tree with no rails, so switching tab unmounted both side

@@ -10,18 +10,24 @@
 }
 
 /* The version badge and the link to the unit's own page, in the unit card's
-   action slot. The design-system slot never shrinks, so the pair carries its
-   own wrapping row — at 390px "Version 0.3.1" and "Open the notes page" cannot
-   share a line with each other, let alone with the unit name. */
+   action slot. The head band is one fixed line, so at 390px the pair shares it
+   with the unit name instead of wrapping under it — a second row is a second
+   height, and the band has none to give. */
 .ext-unit-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   align-items: center;
   gap: var(--gapActions);
   min-width: 0;
 }
 
+/* The one head action in this product that may legitimately be squeezed, so it
+   says so with a class of its own: panel.css holds everything after the title
+   block at its natural width through a zero-specificity `:where()`, which an
+   ordinary class overrides without depending on sheet order. It is squeezable
+   because the LINK inside it can shorten and still name its target — the
+   version beside it cannot, since "Version 0.3.…" is a different version. */
 .ext-unit > .panel-head > .ext-unit-actions {
   flex: 0 1 auto;
   min-width: 0;
@@ -37,7 +43,23 @@
   align-items: center;
   gap: var(--space-1);
   color: var(--accentText);
-  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* The arrow is the link's mark and keeps its size; the words are what shorten.
+   The ellipsis lands on a span of its own rather than on the link, because
+   `text-overflow` reaches the inline content of a BLOCK container and an
+   inline-flex link's text is an anonymous flex item instead — declared on the
+   link it clips mid-letter with nothing to say the words went on, which is the
+   one thing the ellipsis is here to say. */
+.ext-unit-link svg {
+  flex-shrink: 0;
+}
+.ext-unit-link-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* The two matrix notices sit under the grid they are about. */
@@ -86,7 +108,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .ext-brings-def {
@@ -95,7 +117,7 @@
 }
 
 .ext-none {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .ext-chips {
@@ -169,7 +191,7 @@
 }
 
 .ext-matrix thead th {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -186,7 +208,7 @@
 
 .ext-role-note {
   display: block;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* Each cell is one Switch whose label is screen-reader-only, so what the cell
@@ -212,6 +234,6 @@
 }
 
 .ext-note {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin: var(--space-2) 0 0;
 }

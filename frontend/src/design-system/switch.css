@@ -138,7 +138,7 @@
 /* The reason a control is unavailable is not a hint — it is the answer to
  * "why can't I", so it carries more weight than help text. */
 .switchreason {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /* Reduced motion lands on the END state rather than on nothing: the thumb

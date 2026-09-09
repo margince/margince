@@ -459,10 +459,10 @@ describe("base.css draws the federated door without touching the mark", () => {
     const css = readFileSync(join(here, "base.css"), "utf8");
     const rule = /(?:^|\n)\.btn-federated\s*\{([^}]*)\}/.exec(css);
     expect(rule).not.toBeNull();
-    // `--control-h` is 40px for a fine pointer and rises to 44 only for a coarse
-    // one, and `.btn` pins a 1.25 line-height — so leaning on the shared height
-    // alone lands this box at 41px on a mouse. The floor is declared here, and
-    // `max()` keeps the shared height wherever it is the taller of the two.
+    // `--control-h` sits below 44 for a fine pointer and rises to 44 only for a
+    // coarse one, so leaning on the shared height alone lands this box short of
+    // the target on a mouse. The floor is declared here, and `max()` keeps the
+    // shared height wherever it is the taller of the two.
     // The RENDERED height is what actually matters and jsdom cannot compute
     // `max()`; the login spec measures it. This asserts the declaration survives,
     // because a deletion here would only surface in that slower lane.

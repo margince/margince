@@ -26,6 +26,12 @@ import {
   useViewerId,
 } from "./common";
 import { DecisionsChip } from "./companyapprovals";
+import {
+  addressFrom,
+  companyEditFields,
+  mapOrgUpdate,
+  searchOrgTargets,
+} from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
 import { ComposeModal } from "./compose";
@@ -40,14 +46,7 @@ import {
 } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { MergeAction } from "./merge";
-import {
-  addressFrom,
-  companyEditFields,
-  LIFECYCLE_LABELS,
-  LIFECYCLE_OPTIONS,
-  mapOrgUpdate,
-  searchOrgTargets,
-} from "./organizations";
+import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./organizations";
 import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
 

@@ -160,6 +160,16 @@
   border-block-end-color: var(--accent);
 }
 
+/* A record with ONE body draws it as a label rather than a button: the same
+   box and the same underline, because the row reads the same wherever the
+   reader stands, and no affordance to press — a pointer over a word that
+   answers nothing is a promise the strip cannot keep. */
+.recordtabs-tab[aria-current="page"] {
+  color: var(--textPrimary);
+  border-block-end-color: var(--accent);
+  cursor: default;
+}
+
 /* The count is a figure, so it reads in the mono face where digits share one
    width — a strip of counts lines up instead of shifting tab to tab. Quieter
    than the label it follows: the word is what a reader is looking for and the

@@ -20,6 +20,7 @@ import { Sparkles } from "lucide-react";
 import { Children, type ReactNode } from "react";
 import {
   Avatar,
+  Badge,
   Button,
   EmptyState,
   Skeleton,
@@ -36,6 +37,10 @@ import "../company360.css";
  * failed one draws rows — and neither may draw the quiet sentence, which is a
  * claim about the record ("nothing needs you") that a read still in flight
  * has no basis for.
+ *
+ * Indigo in every state, because the pane's answer is a machine's whichever
+ * one it is giving: the moves are what the agent found, and "nothing needs
+ * you" is its reading too.
  */
 export function TodayPanel({
   state = "ready",
@@ -48,7 +53,10 @@ export function TodayPanel({
   // Where the head's link leads. Absent for a record with no task list of its
   // own to open.
   onOpenTasks?: () => void;
-  // The band under the rows: what the day counts down to.
+  // The band under the rows: what the day counts down to, and what the day was
+  // read from. It is a band and not a line in the head — a caller hands in a
+  // commitment badge, a truncation count and the read's own provenance, and
+  // three blocks wedged beside the title left nothing whole.
   footer?: ReactNode;
   // A sentence about what the rows could NOT be assembled from — a withheld
   // section — drawn under them whatever else is there. A brief assembled from
@@ -58,61 +66,66 @@ export function TodayPanel({
   children?: ReactNode;
 }>) {
   const t = useT();
-  // The subhead rides every state, because a skeleton or an error under no
-  // name is a reader unable to tell WHICH reading is missing.
-  const head = (
-    <PanelBody className="co-360-head">
-      {/* The count beside the name, the mock's `h3 small`: "1 overdue" is a
-          fact about the list's head, and as a footer band under the rows it
-          floated alone at the bottom of the pane. */}
-      <div className="co-360-headtext">
-        <h3 className="co-360-title-text t-h3">{t("today.title")}</h3>
-        {footer}
-      </div>
-      {onOpenTasks && (
-        <button type="button" className="link-button" onClick={onOpenTasks}>
-          {t("co.suggest.viewTasks")}
-        </button>
-      )}
-    </PanelBody>
-  );
-  if (state === "loading") {
-    return (
-      <Panel className="co-reading-today">
-        {head}
-        <PanelBody>
-          <Skeleton width="100%" height={64} />
-        </PanelBody>
-      </Panel>
-    );
-  }
-  if (state === "failed") {
-    return (
-      <Panel className="co-reading-today">
-        {head}
-        <PanelBody>
-          <EmptyState>{t("today.failed")}</EmptyState>
-        </PanelBody>
-      </Panel>
-    );
-  }
   // Counted rather than tested for truthiness: a caller hands in arrays, and
   // an empty array is truthy.
   const rows = Children.toArray(children);
+  // Panel's own head, rather than one this pane stacks for itself: the title,
+  // the disclosure beside it, and the way to the list at the far end. A
+  // tone="ai" head is already built for a title that takes two lines
+  // (panel.css), which is what a pane drawn at phone width needs — and the
+  // head this pane used to draw could not have it, because the title, the
+  // badge and the read's three-part line all competed for one row, and a
+  // `.badge` is a shrinkable flex item like any other: "AI-assisted" came out
+  // as "AI-" over "assisted".
+  //
+  // Stated ONCE for all three states rather than per branch: a skeleton or an
+  // error under a different head is a reader unable to tell whether they are
+  // looking at the same pane.
   return (
-    <Panel className="co-reading-today">
-      {head}
-      {rows.length === 0 ? (
-        // Not "nothing to do": the brief read everything it can read and found
-        // nothing that needs a person today. That is a real answer and it is
-        // different from the record being empty.
+    <Panel
+      tone="ai"
+      className="co-reading-today"
+      title={t("today.title")}
+      titleAction={
+        <div className="co-reading-today-actions">
+          {/* The rows under this head are the agent's reading of the record —
+              what it found and what it prepared — so the claim is read before
+              any of them. */}
+          <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+          {onOpenTasks && (
+            <button type="button" className="link-button" onClick={onOpenTasks}>
+              {t("co.suggest.viewTasks")}
+            </button>
+          )}
+        </div>
+      }
+      footer={footer}
+    >
+      {state === "loading" && (
         <PanelBody>
-          <EmptyState>{t("today.quiet")}</EmptyState>
+          <Skeleton width="100%" height={64} />
         </PanelBody>
-      ) : (
-        rows
       )}
-      {notice}
+      {state === "failed" && (
+        <PanelBody>
+          <EmptyState>{t("today.failed")}</EmptyState>
+        </PanelBody>
+      )}
+      {state === "ready" &&
+        (rows.length === 0 ? (
+          // Not "nothing to do": the brief read everything it can read and
+          // found nothing that needs a person today. That is a real answer and
+          // it is different from the record being empty.
+          <PanelBody>
+            <EmptyState>{t("today.quiet")}</EmptyState>
+          </PanelBody>
+        ) : (
+          rows
+        ))}
+      {/* Under whatever the read produced, and only once it has settled: a
+          withheld-sources line over a skeleton describes a reading that does
+          not exist yet. */}
+      {state === "ready" && notice}
     </Panel>
   );
 }
@@ -283,8 +296,10 @@ export function TodoRow({
       {verb && (
         <Button
           small
-          variant="ghost"
-          className={verb.byMargince ? "co-todo-verb" : undefined}
+          // Tinted, not filled: three filled buttons down a column outshout
+          // the one move above them that the pane is actually recommending,
+          // and `aiQuiet` is that volume for an agent's verb among equals.
+          variant={verb.byMargince ? "aiQuiet" : "ghost"}
           onClick={verb.onAct}
         >
           {verb.byMargince && <Sparkles aria-hidden="true" />}

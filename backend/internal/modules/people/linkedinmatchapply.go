@@ -32,6 +32,8 @@ import (
 // the same string are two places for one typo to orphan a link.
 const (
 	matchConfirmed = "confirmed"
+	matchRejected  = "rejected"
+	matchSuggested = "suggested"
 	socialLinkedIn = "linkedin"
 	auditKeySocial = "social"
 )
@@ -40,7 +42,11 @@ const (
 // terms they judge it on: the export's own spelling of the connection, and the
 // contact the matcher thinks it is.
 type PendingLinkedInMatch struct {
-	ConnectionID      ids.UUID
+	ConnectionID ids.UUID
+	// OwnerUserID is the member whose imported network produced this pair. It
+	// travels because the APPLY has to bind the connection it was staged for:
+	// the guards on that path gate the person, and nothing tied the row.
+	OwnerUserID       ids.UUID
 	ConnectionName    string
 	ConnectionCompany string
 	PersonID          ids.UUID
@@ -114,7 +120,7 @@ func (s *Store) suggestedMatches(ctx context.Context, forPerson ids.UUID) ([]Pen
 		// second copy of the row-scope join to keep in step with this one.
 		personPos := arg(optionalPerson(forPerson))
 		rows, err := tx.Query(ctx, storekit.SQLf(`
-			SELECT c.id, c.full_name, coalesce(c.company_name, ''), p.id, p.full_name
+			SELECT c.id, c.owner_user_id, c.full_name, coalesce(c.company_name, ''), p.id, p.full_name
 			  FROM linkedin_connection c
 			  JOIN person p ON p.id = c.matched_person_id AND p.archived_at IS NULL AND (%s)
 			 WHERE c.owner_user_id = $%d
@@ -128,7 +134,7 @@ func (s *Store) suggestedMatches(ctx context.Context, forPerson ids.UUID) ([]Pen
 		defer rows.Close()
 		for rows.Next() {
 			var m PendingLinkedInMatch
-			if err := rows.Scan(&m.ConnectionID, &m.ConnectionName, &m.ConnectionCompany,
+			if err := rows.Scan(&m.ConnectionID, &m.OwnerUserID, &m.ConnectionName, &m.ConnectionCompany,
 				&m.PersonID, &m.PersonName); err != nil {
 				return err
 			}
@@ -144,7 +150,7 @@ func (s *Store) suggestedMatches(ctx context.Context, forPerson ids.UUID) ([]Pen
 //
 // It is the same write the automatic exact-name path performs. The difference
 // is only who released it: a string comparison there, a person here.
-func (s *Store) ApplyLinkedInMatch(ctx context.Context, connectionID, personID ids.UUID) error {
+func (s *Store) ApplyLinkedInMatch(ctx context.Context, connectionID, ownerID, personID ids.UUID) error {
 	// Writing to a contact takes the person update grant. The approvals engine
 	// checked the decider's authority before calling this; taking it again here
 	// keeps the store's own entry point gated rather than trusting a caller.
@@ -152,47 +158,105 @@ func (s *Store) ApplyLinkedInMatch(ctx context.Context, connectionID, personID i
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.HoldWritableLive(ctx, tx, entityPerson, personID); err != nil {
-			return err
-		}
-		// And HELD, before the connection row below. person_social is a declared
-		// PII table Art. 17 erasure deletes, so a handle written after that
-		// commit puts the erased person's public profile straight back.
-		//
-		// Taken HERE rather than beside that write, because the erasure goes
-		// person-then-linkedin_connection and this transaction locks the
-		// connection two statements down. Person second would close a cycle
-		// against it — the same ordering the DOI issuer takes, and for the same
-		// reason.
-		// The prior values come from the write itself, through a pre-write
-		// self-join: a separate read would be a different look at the same row,
-		// and the audit row would attest to something other than what this
-		// statement replaced.
-		var wasStatus string
-		var wasPerson *ids.UUID
-		err := tx.QueryRow(ctx, `
-			UPDATE linkedin_connection c
-			   SET matched_person_id = $2, match_status = 'confirmed', updated_at = now()
-			  FROM linkedin_connection was
-			 WHERE c.id = $1 AND was.id = c.id AND c.tombstoned_at IS NULL
-			 RETURNING was.match_status, was.matched_person_id`,
-			connectionID, personID).Scan(&wasStatus, &wasPerson)
-		if errors.Is(err, pgx.ErrNoRows) {
-			// The connection went away between the proposal and the decision —
-			// a re-import that tombstoned it, or an erasure. Not found is the
-			// honest answer; silently succeeding would report a link that does
-			// not exist.
-			return apperrors.ErrNotFound
-		}
-		if err != nil {
-			return fmt.Errorf("people: applying an approved LinkedIn match: %w", err)
-		}
-		wrote, err := writeLinkedInHandle(ctx, tx, connectionID, personID)
-		if err != nil {
-			return err
-		}
-		return auditLinkedInMatch(ctx, tx, connectionID, personID, matchImages(wasStatus, wasPerson, personID), wrote)
+		return applyLinkedInMatchInTx(ctx, tx, connectionID, ownerID, personID)
 	})
+}
+
+// ApplyLinkedInMatchTx is ApplyLinkedInMatch inside a transaction the CALLER
+// owns, for the accept effect.
+//
+// It exists so redeeming the approval and applying it are ONE transaction. They
+// were two: the redemption committed, and a failure in the apply left the
+// approval consumed and the connection never linked — with no way back through
+// the API, because the row is decided and re-deciding answers 409. Redeem's own
+// doc says callers should use RedeemAndApply and have no window at all, which
+// every other accept effect in compose already does.
+//
+// The object gate is the caller's to apply, as it is for every other Tx-shaped
+// entry point here: the approvals service checks the decider's authority before
+// any effect runs, and ApplyLinkedInMatch applies it above for the direct path.
+func ApplyLinkedInMatchTx(ctx context.Context, tx pgx.Tx, connectionID, ownerID, personID ids.UUID) error {
+	return applyLinkedInMatchInTx(ctx, tx, connectionID, ownerID, personID)
+}
+
+// applyLinkedInMatchInTx is the write both entry points land on.
+//
+// A ZERO ownerID means the proposal predates the field, and it is resolved from
+// the connection row rather than refused. A pending approval staged before this
+// shipped carries no owner_user_id, so binding on the zero value would match no
+// row — and the member could never decide it: the effect fails, and re-deciding
+// a decided row answers 409. Reading the owner off the row is what staging does
+// anyway, so a legacy payload gets exactly the behaviour it had, and a new one
+// gets the guard. The fallback goes when no pending proposal predates the field.
+func applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, connectionID, ownerID, personID ids.UUID) error {
+	if ownerID == ids.Nil {
+		if err := tx.QueryRow(ctx,
+			`SELECT owner_user_id FROM linkedin_connection WHERE id = $1 AND tombstoned_at IS NULL`,
+			connectionID).Scan(&ownerID); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return apperrors.ErrNotFound
+			}
+			return fmt.Errorf("people: reading a legacy proposal's connection owner: %w", err)
+		}
+	}
+	if err := auth.HoldWritableLive(ctx, tx, entityPerson, personID); err != nil {
+		return err
+	}
+	// And HELD, before the connection row below. person_social is a declared
+	// PII table Art. 17 erasure deletes, so a handle written after that
+	// commit puts the erased person's public profile straight back.
+	//
+	// Taken HERE rather than beside that write, because the erasure goes
+	// person-then-linkedin_connection and this transaction locks the
+	// connection two statements down. Person second would close a cycle
+	// against it — the same ordering the DOI issuer takes, and for the same
+	// reason.
+	// The prior values come from the write itself, through a pre-write
+	// self-join: a separate read would be a different look at the same row,
+	// and the audit row would attest to something other than what this
+	// statement replaced.
+	var wasStatus string
+	var wasPerson *ids.UUID
+	// BOUND to the connection this proposal was staged for, on all three
+	// axes the payload names. The guards above gate the PERSON — the update
+	// grant and the target's visibility — and nothing tied the connection:
+	// an apply would re-point an already-confirmed row to a different
+	// contact, and would land on another member's connection, if the payload
+	// said so.
+	//
+	// owner_user_id, because a member decides about their OWN imported
+	// network and nobody else's. match_status = 'suggested', because a
+	// confirmed row is a link somebody already has and this is not the verb
+	// that moves one. matched_person_id, because the pair is the claim: an
+	// approval released against this contact must not apply to whatever the
+	// row points at now if the matcher moved it.
+	err := tx.QueryRow(ctx, `
+		UPDATE linkedin_connection c
+		   SET match_status = 'confirmed', updated_at = now()
+		  FROM linkedin_connection was
+		 WHERE c.id = $1 AND was.id = c.id AND c.tombstoned_at IS NULL
+		   AND c.owner_user_id = $3
+		   AND c.match_status = 'suggested'
+		   AND c.matched_person_id = $2
+		 RETURNING was.match_status, was.matched_person_id`,
+		connectionID, personID, ownerID).Scan(&wasStatus, &wasPerson)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Every way the predicate misses is the same answer, and it is the
+		// honest one: this approval does not describe a suggestion that is
+		// still there to confirm. The connection was tombstoned or erased,
+		// or it belongs to another member, or it has already been confirmed,
+		// or the pair it names has moved. Silently succeeding would report a
+		// link that does not exist.
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("people: applying an approved LinkedIn match: %w", err)
+	}
+	wrote, err := writeLinkedInHandle(ctx, tx, connectionID, personID)
+	if err != nil {
+		return err
+	}
+	return auditLinkedInMatch(ctx, tx, connectionID, ownerID, personID, matchImages(wasStatus, wasPerson, matchConfirmed, &personID), wrote)
 }
 
 // matchImagePair is the connection's own columns on either side of a confirmed
@@ -201,27 +265,47 @@ func (s *Store) ApplyLinkedInMatch(ctx context.Context, connectionID, personID i
 // publish a decision the row did not record.
 type matchImagePair struct{ before, after map[string]any }
 
-func matchImages(wasStatus string, wasPerson *ids.UUID, personID ids.UUID) matchImagePair {
-	// Dereferenced, because the two sides are compared by value: a *ids.UUID and
-	// an ids.UUID never read as equal however they point, so a re-confirm of the
-	// same contact would publish matched_person_id moving to what it already
-	// held — which is the change this narrowing exists to leave out.
-	var wasPersonValue any
-	if wasPerson != nil {
-		wasPersonValue = *wasPerson
-	}
+// matchImages builds the field image for either decision about a suggestion —
+// the confirm and the refusal both call it. They move the same two columns, and
+// a second builder that named those columns its own way would make one decision
+// unreadable beside the other in the same field history.
+func matchImages(wasStatus string, wasPerson *ids.UUID, toStatus string, toPerson *ids.UUID) matchImagePair {
+	// Dereferenced on both sides, because they are compared by value: a
+	// *ids.UUID and an ids.UUID never read as equal however they point, so a
+	// re-confirm of the same contact would publish matched_person_id moving to
+	// what it already held — which is the change this narrowing exists to leave
+	// out. A nil stays nil, which is how a refusal says the row now names
+	// nobody.
 	before, after := storekit.ChangedColumns(
-		map[string]any{"match_status": wasStatus, "matched_person_id": wasPersonValue},
-		map[string]any{"match_status": matchConfirmed, "matched_person_id": personID},
+		map[string]any{matchStatusColumn: wasStatus, matchedPersonColumn: personValue(wasPerson)},
+		map[string]any{matchStatusColumn: toStatus, matchedPersonColumn: personValue(toPerson)},
 	)
 	return matchImagePair{before: before, after: after}
 }
+
+// personValue is a matched_person_id as the image comparison reads it.
+//
+//craft:ignore naked-any the field-image maps are map[string]any, and this feeds one — a typed return would be converted at the call site and say less
+func personValue(id *ids.UUID) any {
+	if id == nil {
+		return nil
+	}
+	return *id
+}
+
+// The two columns a decision about a suggestion moves. They are constants
+// because both decisions write them and a field history is read across the two,
+// so a typo on one side would silently split one column's history in half.
+const (
+	matchStatusColumn   = "match_status"
+	matchedPersonColumn = "matched_person_id"
+)
 
 // auditLinkedInMatch commits the write shape. The connection's own audit row
 // records the link; a handle that reached the contact is a second mutation of a
 // second entity and takes its own audit and its own person.updated, so a trace
 // consumer resolves each event to an audit of the entity it describes.
-func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, personID ids.UUID, images matchImagePair, wroteURL bool) error {
+func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, ownerID, personID ids.UUID, images matchImagePair, wroteURL bool) error {
 	// Whether the profile URL reached the contact is context ABOUT this
 	// decision, not a column on the connection, so it rides the evidence
 	// column rather than the images field history projects.
@@ -230,7 +314,21 @@ func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, personID i
 	if err != nil {
 		return err
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, connectionID,
+	// The event's subject is the MEMBER whose network produced the match; the
+	// audit row above names the connection because that is the row this
+	// statement changed. Two different questions, and they had one answer by
+	// accident: the event carried the CONNECTION id under a declared entity
+	// type of `user`.
+	//
+	// That made it undeliverable, always. linkedin_match.decided is a self-only
+	// event — a colleague's professional network is theirs — so delivery admits
+	// it only when the subscriber IS the user the id names, and a connection
+	// uuid can never equal a user id. The check could not pass for anybody.
+	//
+	// ownerID is the owner the write above already bound on, so the event names
+	// the same member the statement was predicated on rather than a second
+	// read's answer.
+	if err := storekit.EmitEvent(ctx, tx, auditID, ownerID,
 		crmcontracts.PublicEventLinkedinMatchDecided{ProfileUrlWritten: wroteURL}); err != nil {
 		return err
 	}

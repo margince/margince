@@ -16,8 +16,10 @@
 # Each entry is the ONE sentence saying what that case's criterion asks. It is
 # the summary, not the specification: the case is the specification.
 #
-# A criterion a scenario declares and this file does not carry fails
-# TestEveryDeclaredCriterionIsNamed. Add it in the change that declares it.
+# A criterion a scenario declares and this file does not carry — or carries
+# without a statement — fails TestTheMCPToolCoverageIsPublished, in
+# backend/internal/compose/mcptoolcoverage_test.go. Add it in the change that
+# declares it.
 version: 1
 cases:
   case1_log_it:
@@ -41,21 +43,22 @@ cases:
         about is a queue nobody reads.
   case3_spreadsheet:
     1:
-      name: NEEDS A STATEMENT
+      name: The numbers are shown before anything is committed
       statement: >-
-        Not written down in this repository. Case 3's own header describes the
-        case (show the numbers before committing) without naming which criterion
-        that is.
+        What the import will do is reported before it is done — how many rows
+        will land, said out loud rather than discovered after the write.
     6:
-      name: NEEDS A STATEMENT
+      name: The row that could not be used is reported
       statement: >-
-        Not written down in this repository. Case 3 declares it; only case 4
-        states what ITS criterion 6 asks, and the numbering is per case.
+        The file carries a row the import cannot take, and the answer says so;
+        a row dropped without telling anyone is a loss nobody can see.
   case4_use_the_moment:
     1:
-      name: NEEDS A STATEMENT
+      name: Nearby is worked out to be a distance search
       statement: >-
-        Not written down in this repository. Case 4 declares it.
+        The request names no company, no address and no tool, and the assistant
+        has to find that the workspace can be searched by proximity rather than
+        reporting that it cannot.
     6:
       name: Check with the owner before turning up
       statement: >-
@@ -68,9 +71,10 @@ cases:
         The request identifies an account by something other than its name —
         "Vietnam partner" is not the account's name — and finding it is the test.
     2:
-      name: NEEDS A STATEMENT
+      name: The people are named, not their seats
       statement: >-
-        Not written down in this repository. Case 5 declares it.
+        The briefing names the people on the other side of the meeting rather
+        than describing the roles they hold.
     5:
       name: The unkept promise is noticed
       statement: >-
@@ -78,25 +82,239 @@ cases:
         Reading across the timeline to spot the gap is the point.
   case6_ask_the_company:
     1:
-      name: NEEDS A STATEMENT
+      name: The past cases are found without being named
       statement: >-
-        Not written down in this repository. Case 6 declares it.
+        The question describes what happened and names no account, so working
+        out which accounts it happened to is the test.
     3:
-      name: NEEDS A STATEMENT
+      name: The record's date wins over the prose recalling it
       statement: >-
-        Not written down in this repository. Case 6's header describes the case
-        (the record's date is right and the prose recalling it is wrong) without
-        naming which criterion that is.
+        Where a note's prose and the record it recalls disagree about when
+        something happened, the answer carries the date the record holds.
     5:
-      name: NEEDS A STATEMENT
+      name: The disagreement is pointed out, not quietly resolved
       statement: >-
-        Not written down in this repository. Case 6 declares it.
+        The answer says that the note and the record do not agree, rather than
+        picking one and leaving the reader unaware there was a conflict.
   case7_ask_for_a_number:
     1:
-      name: NEEDS A STATEMENT
+      name: The counts asked for come back as counts
       statement: >-
-        Not written down in this repository. Case 7 declares it.
+        The question asks for a breakdown by a dimension whose name the
+        assistant is never told, and the answer is the numbers from the report
+        that holds them.
     3:
-      name: NEEDS A STATEMENT
+      name: A refusal is not reported as a missing capability
       statement: >-
-        Not written down in this repository. Case 7 declares it.
+        Being refused a wrong argument name says nothing about what the
+        workspace can answer, and the assistant must not turn it into a
+        conclusion that the CRM cannot break the question down.
+  case8_whats_waiting:
+    1:
+      name: The staged change is read, not just listed
+      statement: >-
+        The queue's line is a summary with its values cut short, so an answer
+        reporting what a proposal would do has to open the item itself; a report
+        assembled from the listing is a report of half a sentence.
+    2:
+      name: Each verdict lands on the item it was given for
+      statement: >-
+        Two proposals and two opposite instructions, so approving the one that
+        was to be rejected is a write nobody asked for — and the tool names
+        alone cannot tell the two apart.
+    3:
+      name: The decision is taken, not handed back
+      statement: >-
+        The person gave an explicit approve and an explicit reject, and an
+        assistant that returns the queue and sends them to the web app has
+        reported a limitation this surface does not have.
+  case9_filed_in_the_wrong_place:
+    1:
+      name: A misfiled message is moved, not also-linked
+      statement: >-
+        The default is to add the new link beside the old one, and the person
+        asked for the mail to be off the wrong company — an association leaves
+        the wrong timeline still showing it.
+    2:
+      name: A picked set moves as one act
+      statement: >-
+        Three activities named for one destination move all or nothing, rather
+        than as three separate moves of which the second can fail with the first
+        already applied.
+    3:
+      name: History is re-filed, never re-written
+      statement: >-
+        Recording the event again on the right record leaves two events where
+        there was one and the wrong record still holding the first: the
+        association changes and the content does not.
+  case10_finish_the_import:
+    1:
+      name: A pre-authorized import is actually committed
+      statement: >-
+        The person says they have been through the file and asks for it to go
+        in, so stopping at the dry run to ask for permission already given is
+        the work handed back.
+    2:
+      name: What landed is reported from the run's own report
+      statement: >-
+        How many rows landed and whether anything was skipped, taken from the
+        report rather than assumed from a commit that answered without a
+        failure.
+  case20_put_it_in_the_board_pack:
+    1:
+      name: Every figure in the document is the database's
+      statement: >-
+        The report is composed from a saved analytics run and cites the cells
+        holding its numbers, rather than being written around figures the
+        assistant read once and retyped.
+    3:
+      name: A refused literal is not a missing capability
+      statement: >-
+        Being refused a number written into a block says nothing about whether
+        the product can produce a report, and the assistant must not turn that
+        refusal into a conclusion that it cannot.
+  case21_what_are_we_closing:
+    1:
+      name: The forecast is read, not assembled
+      statement: >-
+        The period's expectation comes from the forecast, which applies the
+        installation's fiscal calendar and currency, rather than from a total
+        summed beside it.
+    4:
+      name: The deal with no amount is named
+      statement: >-
+        A deal carrying no amount is real pipeline contributing zero money, and
+        an answer quoting the total without saying so is arithmetically correct
+        and tells the reader something false about what it covers.
+  case22_can_i_trust_the_numbers:
+    1:
+      name: Source health is read rather than assumed
+      statement: >-
+        What the nightly check could actually open is looked up, rather than
+        inferred from an empty findings list.
+    2:
+      name: An unread source is not reported as a quiet one
+      statement: >-
+        A source nothing was read from is reported as unread: a quiet week and a
+        broken connector are indistinguishable from inside the numbers, and only
+        one of them is good news.
+  case23_find_us_a_slot:
+    1:
+      name: Real openings, from the host's own calendar
+      statement: >-
+        Times a person can actually offer come back, worked out from the host's
+        calendar rather than described in general terms.
+    2:
+      name: The other side's calendar is not claimed to be known
+      statement: >-
+        Availability answers for one host and not for the invitee, and the
+        assistant must not report the slots as times both people are free.
+  case30_a_word_for_it:
+    1:
+      name: The word the workspace already has is reused
+      statement: >-
+        The user asks for a tag by a spelling the workspace does not hold while
+        it holds a near one, and applying a tag never coins a word — reading the
+        vocabulary and using what is there, rather than adding a second spelling
+        beside it, is the test.
+    2:
+      name: A word that does not exist is coined before it is applied
+      statement: >-
+        Applying a tag is refused for a name the workspace does not have, so the
+        new word has to be created first; an answer reporting records tagged
+        with a word nobody coined is reporting a write that was refused.
+  case31_wrong_word_on_the_record:
+    1:
+      name: The retired word on the record is reported
+      statement: >-
+        A record's own row omits archived tags, so an answer drawn from the
+        record alone says the retired word is not there — reading the record's
+        tags, where a retired word still shows, is the test.
+    2:
+      name: One record loses the word and the word survives
+      statement: >-
+        The tagging comes off the single account named and the vocabulary is
+        left alone: retiring the word for the whole workspace answers a question
+        nobody asked and takes it from the accounts that hold it honestly.
+  case32_two_words_for_one_thing:
+    1:
+      name: The surviving word is chosen by what carries it
+      statement: >-
+        Which of two duplicate words survives is decided by how many records
+        each is on, and only the tag's own read carries that count — the tag
+        list does not.
+    2:
+      name: A fold nobody has released is reported as waiting
+      statement: >-
+        Folding one word into another is a person's decision, and the answer
+        names that decision rather than describing the vocabulary as already
+        tidied up.
+    3:
+      name: The surviving word is given its meaning
+      statement: >-
+        The description that stops a third spelling being coined is written onto
+        the word that survives, not left as a sentence in the reply.
+  case33_two_cards_for_one_company:
+    1:
+      name: The duplicate is merged, and which record survives is said
+      statement: >-
+        The second card carries correspondence worth keeping, so it is folded
+        into the record that survives rather than archived where that history is
+        stranded — and because the fold cannot be called back the other way
+        round, the survivor is named rather than left for the reader to guess.
+    2:
+      name: The company that shut down is archived, not merged
+      statement: >-
+        The closed account has no twin to fold into and nothing worth moving, so
+        retiring it is what takes it out of day-to-day work; a merge would need
+        a survivor that does not exist.
+    3:
+      name: The account is handed to a named colleague
+      statement: >-
+        Moving the surviving account onto a colleague's book needs that
+        colleague's seat id, which no record carries and no contact search
+        answers.
+  case40_sort_the_queue:
+    1:
+      name: The record decides which verb, not the request
+      statement: >-
+        The request names no lead and no tool and states three policies, so
+        which of the three terminal outcomes each lead gets has to be read off
+        that lead's own record.
+    2:
+      name: What was filled and what is still missing are both reported
+      statement: >-
+        Qualification fills only what the lead's own data implies and names the
+        rest as gaps: an answer reporting the fill without saying a human still
+        has to supply the title has answered half of it.
+    3:
+      name: A terminal verb lands on the lead it belongs to
+      statement: >-
+        Promotion and disqualification are opposite readings of one queue, and
+        the lead that replied and the lead whose address bounced must not be
+        swapped.
+  case41_close_the_project:
+    1:
+      name: How it moved is a different question from where it stands
+      statement: >-
+        The phase history is asked for and only the project's own page carries
+        it; the current phase alone is not an answer to how the project got
+        there.
+    2:
+      name: What is still open is said before the project is closed
+      statement: >-
+        A project closed over an outstanding commitment nobody mentioned is a
+        loss the reader cannot see.
+  case42_can_i_answer_on_whatsapp:
+    1:
+      name: The transport is named as the installation names it
+      statement: >-
+        The conversation is filed as a message on the transport that carried it,
+        carrying the provider value this installation registered rather than a
+        spelling that happens to look right.
+    2:
+      name: Not being able to send is not the same as not being supported
+      statement: >-
+        A transport that can carry no reply still captures, files and reads, and
+        reporting the first as the second tells the reader the product cannot do
+        what it has just done.

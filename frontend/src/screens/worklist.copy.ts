@@ -12,6 +12,7 @@ import type { Locale, useT } from "../i18n";
 import { translatePlural } from "../i18n";
 import { BRIEF_PARAM, COMPOSE_PARAM, THREAD_PARAM } from "./personpage.address";
 import { settingsHref } from "./settingsrouting";
+import { countsUnder } from "./worklist.narrowing";
 import type {
   Worklist,
   WorklistComparison,
@@ -828,10 +829,9 @@ export function completenessText(
   // candidates and call a growing list incomplete for ever.
   loaded?: number,
 ): string | null {
-  const counted =
-    filter === "all"
-      ? day.counts
-      : day.counts.filter((count) => count.category === filter);
+  // Null is a narrowing these figures cannot describe. See countsUnder.
+  const counted = countsUnder(day, filter);
+  if (counted === null) return null;
   const shown =
     loaded ?? counted.reduce((total, count) => total + count.shown, 0);
   const considered = counted.reduce(
@@ -843,9 +843,9 @@ export function completenessText(
     return null;
   }
   if (bounded > 0) {
-    // No fraction: the figure it would divide by is a floor, and "200 of 200
-    // shown · 1 source has more" contradicts itself in one sentence.
-    return t("worklist.completeness.bounded", {
+    // No fraction: its denominator would be a floor, and "200 of 200 shown · 1
+    // source has more" contradicts itself. Pluralised on the reader's own rule.
+    return translatePlural(locale, "worklist.completeness.bounded", bounded, {
       shown: formatNumber(shown, locale),
       sources: formatNumber(bounded, locale),
     });

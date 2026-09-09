@@ -4,9 +4,10 @@
 // Package meetingmap is the pure calendar-event → meeting-activity mapping: no
 // provider handle, no I/O. It is the calendar analogue of capture/mailmap — the
 // test-guarded surface a calendar connector's Sync and Normalize compose, so the
-// classification (all-internal skip, cancelled skip, booked rooms are not
-// guests) and the field mapping are proven by fixtures rather than by a live
-// calendar.
+// classification (all-internal skip, a cancelled meeting CLOSED rather than
+// dropped, booked rooms are not guests) and the field mapping are proven by
+// fixtures rather than by a live calendar. What each event settles as, and why,
+// is settlement.go beside this.
 //
 // It lived inside the gcal package while gcal was the only calendar connector,
 // which is what ADR-0054 §3 asks for — flat by default, grow a subpackage when a
@@ -46,10 +47,15 @@ const MaxBodyLen = 8000
 // the raw original reaches the Sink verbatim as evidence, so a field absent
 // here is not a field lost.
 type Event struct {
-	ID          string
-	Cancelled   bool
-	Subject     string
-	Description string
+	ID        string
+	Cancelled bool
+	// OwnerDeclined says the connected account answered NO to this invitation.
+	// It is a different fact from Cancelled — the organizer's event is alive and
+	// everyone else is still going — but it means the same thing for the seat
+	// whose calendar this is, so Settlement folds the two together.
+	OwnerDeclined bool
+	Subject       string
+	Description   string
 	// StartsAt is the event's start as an instant. The zero value is an
 	// unreadable start, which the Sink then stamps with capture time rather than
 	// sorting the row to the beginning of history — so a decoder that cannot
@@ -78,14 +84,15 @@ type Actor struct {
 // workspace's registered domains (CAP-DDL-1) are the authority and are applied
 // by the writer, over the full party set this reports.
 type Meeting struct {
-	id           string
-	subject      string
-	body         string
-	occurredAt   time.Time
-	cancelled    bool
-	hasExternal  bool // any party outside the OWNER's own domain — the floor, see SkipReason
-	addresses    []string
-	participants []connector.MessageParticipant
+	id            string
+	subject       string
+	body          string
+	occurredAt    time.Time
+	cancelled     bool
+	ownerDeclined bool
+	hasExternal   bool // any party outside the OWNER's own domain — the floor, see Settle
+	addresses     []string
+	participants  []connector.MessageParticipant
 }
 
 // Classify applies the meeting rules to one decoded event against the account
@@ -97,11 +104,12 @@ func Classify(ev Event, owner string) Meeting {
 	organizerDom := domainOf(ev.Organizer.Email)
 
 	return Meeting{
-		id:         strings.TrimSpace(ev.ID),
-		subject:    strings.TrimSpace(ev.Subject),
-		body:       buildBody(ev, attendeeEmails),
-		occurredAt: ev.StartsAt,
-		cancelled:  ev.Cancelled,
+		id:            strings.TrimSpace(ev.ID),
+		subject:       strings.TrimSpace(ev.Subject),
+		body:          buildBody(ev, attendeeEmails),
+		occurredAt:    ev.StartsAt,
+		cancelled:     ev.Cancelled,
+		ownerDeclined: ev.OwnerDeclined,
 		// The organizer counts as a party: an externally-organized meeting is a
 		// customer touch even when the owner is the only listed attendee.
 		//
@@ -156,41 +164,6 @@ func meetingParties(ev Event, ownerLower string) []connector.MessageParticipant 
 	}
 
 	return connector.CapParticipants(out)
-}
-
-// SkipReason names why a meeting is intentionally dropped, or reports that it
-// should be captured: a cancelled event and one with no stable id are dropped
-// (nothing to key on / nothing to log).
-//
-// The owner's domain is a FLOOR here, not the authority. The workspace's
-// registered domains decide internal-vs-external for mail and calendar alike
-// (formulas §20, ADR-0082/A127), and only the capture writer can read them — a
-// connector holds no database handle by design. This drops what the owner's own
-// domain alone proves internal; the writer widens that, never narrows it.
-func (m Meeting) SkipReason() (string, bool) {
-	if m.id == "" {
-		return "no event id", true
-	}
-	if m.cancelled {
-		return "cancelled", true
-	}
-	// An event naming nobody but the owner is a block in their own calendar —
-	// focus time, a reminder, a flight. Nobody was met, so there is no
-	// interaction to log. This asks whether there was a second party at all,
-	// not whose side they were on, so it needs no knowledge of any domain.
-	if len(m.addresses) <= 1 {
-		return "no party besides the owner", true
-	}
-	// The owner-domain floor. The workspace's registered domains are the
-	// authority (formulas §20) and the writer applies them over the full party
-	// set, which is wider than this — but that set can be empty or incomplete,
-	// and an internal meeting stored while it is would be readable by the whole
-	// workspace. This drops what the owner's own domain alone can prove
-	// internal; the writer widens it, never narrows it.
-	if !m.hasExternal {
-		return "no party outside the owner's domain", true
-	}
-	return "", false
 }
 
 // ID is the provider's event id — the idempotency source id a calendar
@@ -350,25 +323,73 @@ func eventAddresses(ev Event, owner string) []string {
 // Decode turns one provider's raw event bytes into the neutral Event. Each
 // calendar connector supplies its own; it is the only part of reading an event
 // that is genuinely the vendor's.
-type Decode func(raw []byte) (Event, error)
-
-// CaptureOne parses, drops, or upserts ONE raw event: the whole of what happens
-// to a single event, for whichever calendar decoded it.
 //
-// A parse failure or a deliberate skip (cancelled, solo, or inside the owner's
-// domain) is a no-op; only a real Sink write fault returns a non-nil error,
-// which stops the pull. A package function rather than a method so a pull holds
-// no shared state.
+// The owner travels in because one field cannot be read without it: the RSVP
+// this event carries belongs to a particular attendee, and which of them is the
+// connected account is a question only the caller can answer.
+type Decode func(raw []byte, owner string) (Event, error)
+
+// CaptureOne parses, drops, cancels, or upserts ONE raw event: the whole of
+// what happens to a single event, for whichever calendar decoded it.
+//
+// A parse failure or a deliberate drop (solo, or inside the owner's domain) is a
+// no-op; only a real Sink write fault returns a non-nil error, which stops the
+// pull. A package function rather than a method so a pull holds no shared state.
+//
+// A cancelled or declined event reaches the sink as a CANCELLATION rather than
+// as nothing. The event was capturable once — that is exactly the case where a
+// meeting is sitting on somebody's schedule — and this is the only pull that
+// will ever mention it again, because the provider stops listing an event once
+// it is off. Dropping it here is what left a cancelled meeting reading as booked
+// for good.
 func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, connectorName string, decode Decode) error {
-	ev, err := decode(raw)
+	ev, err := decode(raw, owner)
 	if err != nil {
 		return nil //nolint:nilerr // a single unparseable event is a skip, not a fatal pull error (mirrors the mail connectors)
 	}
 	m := Classify(ev, owner)
-	if _, drop := m.SkipReason(); drop {
+	// Every settlement is named, and an unnamed one is an ERROR rather than a
+	// write. This type exists to tell "write it" apart from "do not", so falling
+	// through to the upsert is the one wrong direction to fail in: a settlement
+	// added later and not handled here would put the event on the timeline as a
+	// booked meeting, which is precisely the row this path was written to stop.
+	switch _, settlement := m.Settle(); settlement {
+	case SettleDrop:
+		return nil
+	case SettleCancel:
+		return cancelCaptured(ctx, sink, m, connectorName)
+	case SettleCapture:
+		if _, err := sink.Upsert(ctx, m.ToRecord(connectorName, raw)); err != nil {
+			if errors.Is(err, connector.ErrSkip) {
+				return nil
+			}
+			return err
+		}
+		return nil
+	default:
+		return fmt.Errorf("meetingmap: %s settled as %d, which nothing here handles", m.ID(), settlement)
+	}
+}
+
+// cancelCaptured marks a meeting this workspace already captured as cancelled.
+//
+// A Sink that cannot cancel is not a fault. The interface is optional by
+// design (connector.MeetingCanceller), so a fixture or a future sink that
+// implements only Upsert behaves exactly as this package did before: the event
+// is dropped. Silently, because there is nothing for an operator to fix — a
+// sink without the verb was never going to record the cancellation.
+//
+// The cancellation is stamped with the meeting's own START, not with now(). A
+// pull that runs days later would otherwise record the meeting as having been
+// called off at the moment we noticed, and every question about when bookings
+// fell through would answer with the sync schedule instead of the calendar.
+func cancelCaptured(ctx context.Context, sink connector.Sink, m Meeting, connectorName string) error {
+	canceller, ok := sink.(connector.MeetingCanceller)
+	if !ok {
 		return nil
 	}
-	if _, err := sink.Upsert(ctx, m.ToRecord(connectorName, raw)); err != nil {
+	key := connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id}
+	if err := canceller.CancelMeeting(ctx, key, m.occurredAt); err != nil {
 		if errors.Is(err, connector.ErrSkip) {
 			return nil
 		}
@@ -381,7 +402,7 @@ func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, con
 // deliberate drop as an ErrSkip-wrapped refusal. Pure — the test-guarded
 // surface a connector's Normalize composes.
 func NormalizeOne(raw []byte, owner, connectorName string, decode Decode) ([]connector.NormalizedRecord, error) {
-	ev, err := decode(raw)
+	ev, err := decode(raw, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -396,9 +417,26 @@ func NormalizeOne(raw []byte, owner, connectorName string, decode Decode) ([]con
 // resource — the calendar twin of mailmap.ParticipantsOf, for the replay pass
 // that recovers meetings captured before participants were recorded.
 func ParticipantsOf(raw []byte, owner string, decode Decode) ([]connector.MessageParticipant, error) {
-	ev, err := decode(raw)
+	ev, err := decode(raw, owner)
 	if err != nil {
 		return nil, err
 	}
 	return Classify(ev, owner).Participants(), nil
+}
+
+// SettlementOf answers what one STORED event resource settles as, for the
+// backfill that closes meetings captured before the RSVP was read.
+//
+// It is Settle over a stored original rather than a live pull, and it exists so
+// that pass asks the SAME question live capture asks. A backfill that re-derived
+// "is this meeting off" from the payload itself would be a second answer to a
+// question this package already owns, and the two would part company the first
+// time a provider changed how it says no.
+func SettlementOf(raw []byte, owner string, decode Decode) (Settlement, error) {
+	ev, err := decode(raw, owner)
+	if err != nil {
+		return SettleDrop, err
+	}
+	_, settlement := Classify(ev, owner).Settle()
+	return settlement, nil
 }

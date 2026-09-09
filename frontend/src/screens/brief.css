@@ -195,7 +195,7 @@
 .rail-count-label {
   flex: 1;
   min-width: 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 .rail-count-value {
@@ -251,7 +251,7 @@
 /* Tabular figures so 09:30 and 11:00 occupy the same width — a column of times
    that shifts by a digit reads as a ragged edge rather than as a rail. */
 .rail-schedule-when {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -268,7 +268,7 @@
 /* What the panel cannot tell you, under what it can. Quiet like every other
    line where a surface reports on its own limits. */
 .rail-promise-note {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin: 0;
 }
 

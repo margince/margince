@@ -147,6 +147,78 @@ describe("a brief item is answerable from the queue", () => {
     });
   });
 
+  // THE SNOOZE OFFERS A WAY BACK, and the way back is a real write.
+  //
+  // The toast that follows a set-aside used to be nothing: no confirmation, and
+  // no undo behind it, so a rep who set aside the wrong row waited for the
+  // condition to lift. The take-back posts its own endpoint — asserted as an
+  // ADDRESS, like the snooze above it, because the disposition undo next door
+  // targets an activity and would silently do nothing to a brief item.
+  it("offers a take-back from the snooze toast, and it posts unsnooze", async () => {
+    const fetched = stubWrites();
+    renderUnderAToastRegion();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Snooze" }),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
+
+    await waitFor(() => {
+      expect(writes(fetched)).toEqual([
+        "POST /v1/brief/items/01a05500-0000-7000-8000-0000000000b1/snooze",
+        "POST /v1/brief/items/01a05500-0000-7000-8000-0000000000b1/unsnooze",
+      ]);
+    });
+  });
+
+  // The toast says WHEN the item comes back, not merely that it went. "Until
+  // tomorrow" is the button's promise; the hour is the fact a reader can check,
+  // and without it a rep cannot tell a set-aside from a dismissal.
+  it("names the moment the item returns", async () => {
+    stubWrites();
+    renderUnderAToastRegion();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Snooze" }),
+    );
+
+    // The prefix alone: the instant is tomorrow's local morning, and asserting
+    // the formatted time here would pin the suite to the runner's zone.
+    expect(await screen.findByText(/Set aside until /)).toBeTruthy();
+  });
+
+  // AN ITEM BACK IN THE QUEUE IS ANSWERABLE AGAIN.
+  //
+  // The three verbs stand down together once one has been ANSWERED, not merely
+  // while a write is in flight — a rep who acts and then dismisses would
+  // otherwise answer one row twice. `isSuccess` is what makes that unreachable,
+  // and it latches: the snooze sets it and nothing clears it, so the take-back
+  // that shares the mutation left the returned row with three dead buttons.
+  // The row says "set this aside" and the click does nothing.
+  it("leaves the row answerable after the snooze is taken back", async () => {
+    stubWrites();
+    renderUnderAToastRegion();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Snooze" }),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
+
+    // The verbs come back, which is the whole claim. Asserted through the
+    // control a reader would press rather than through a flag: a button that is
+    // present but inert is the defect, not the absence of one.
+    // `aria-disabled`, which is what the design-system Button sets while busy —
+    // it stays focusable and swallows the click rather than going `disabled`,
+    // so toBeDisabled() would pass over exactly the inert control at issue.
+    await waitFor(() => {
+      expect(
+        screen
+          .getByRole("button", { name: "Snooze" })
+          .getAttribute("aria-disabled"),
+      ).not.toBe("true");
+    });
+  });
+
   it("dismisses through the brief's own dismiss endpoint", async () => {
     const fetched = stubWrites();
     renderWorklist();

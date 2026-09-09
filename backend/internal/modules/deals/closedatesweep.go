@@ -28,6 +28,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -108,82 +109,140 @@ type closeDateCandidate struct {
 	remainingOpen  int
 }
 
+// sweepWorkspace walks one pass's FROZEN membership, page by page, from
+// wherever the last attempt durably reached.
+//
+// The old shape re-read the live deal table each night — the oldest 200 rows the
+// pre-filter admitted — and because a corrected deal stays eligible, that was
+// the same 200 rows every time. A workspace with more eligible deals never
+// reached the rest of them, and nothing recorded that it had not.
+//
+// Now membership is decided once (startRun) and the pass drains it: each page
+// asks for the members that are still unsettled, so settling one is what moves
+// the walk forward. Two consequences the old shape could not offer — a pass
+// interrupted by the worker's 5-minute deadline RESUMES rather than restarting
+// at the first row, and a run can say how much of its own set it covered.
 func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
-	var tzName string
-	var candidates []closeDateCandidate
 	now := c.now().UTC()
-	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
+	var tzName string
+	var run *CloseDateRun
+
+	if err := c.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		if tzName, err = c.installation.Timezone(ctx, tx); err != nil {
 			return fmt.Errorf("read the installation's timezone: %w", err)
 		}
-		// The pre-filter is a deliberate superset of the §11 flags — a
-		// date inside the widest (stalled) window, missing, or still
-		// provisional; anything beyond it cannot be flagged today.
-		rows, err := tx.Query(ctx, `
-			SELECT d.id, d.name, d.created_at, d.last_activity_at, d.wait_until,
-			       d.expected_close_date, d.close_date_provisional, d.forecast_category,
-			       d.pipeline_id, s.win_probability,
-			       (SELECT count(*) FROM stage s2
-			         WHERE s2.pipeline_id = d.pipeline_id AND s2.archived_at IS NULL
-			           AND s2.semantic = 'open' AND s2.position >= s.position)
-			FROM deal d
-			JOIN stage s ON s.id = d.stage_id
-			WHERE d.status = 'open' AND d.archived_at IS NULL
-			  AND (d.expected_close_date IS NULL
-			       OR d.expected_close_date <= (timezone($1, now()))::date + $2::int
-			       OR d.close_date_provisional)
-			ORDER BY d.created_at, d.id
-			LIMIT $3`, tzName, StalledThresholdDays, closeDateBatch)
+		loc, err := installationZone(tzName)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var cand closeDateCandidate
-			if err := rows.Scan(&cand.id, &cand.name, &cand.createdAt, &cand.lastActivityAt,
-				&cand.waitUntil, &cand.expectedClose, &cand.provisional, &cand.forecastCat,
-				&cand.pipelineID, &cand.winProbability, &cand.remainingOpen); err != nil {
-				return err
-			}
-			candidates = append(candidates, cand)
+		asOf := now.In(loc)
+		asOf = time.Date(asOf.Year(), asOf.Month(), asOf.Day(), 0, 0, 0, 0, time.UTC)
+
+		// A pass already open for this local day is resumed, not duplicated:
+		// the retry after a worker deadline is the same pass continuing. No
+		// such pass is the ordinary first run of the day, not a fault.
+		run, err = c.openRun(ctx, tx)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			run, err = c.startRun(ctx, tx, asOf, tzName)
 		}
-		return rows.Err()
-	})
-	if err != nil {
+		return err
+	}); err != nil {
 		return err
 	}
+
 	loc, err := installationZone(tzName)
 	if err != nil {
 		return err
 	}
 
 	velocities := map[ids.PipelineID]float64{}
-	for _, cand := range candidates {
-		velocity, known := velocities[cand.pipelineID]
-		if !known {
-			if velocity, err = c.stageVelocityDays(ctx, cand.pipelineID); err != nil {
-				return fmt.Errorf("stage velocity for pipeline %s: %w", cand.pipelineID, err)
-			}
-			velocities[cand.pipelineID] = velocity
+	for {
+		var page []closeDateCandidate
+		var members []closeDateMember
+		if err := c.db.Tx(ctx, func(tx pgx.Tx) error {
+			var err error
+			page, members, err = c.nextMembers(ctx, tx, run.ID, closeDateBatch)
+			return err
+		}); err != nil {
+			return err
 		}
-		category := effectiveForecastCategory(cand.forecastCat, cand.winProbability)
-		hygiene := CloseDateAssessment(CloseDateInput{
-			Status:              "open",
-			ExpectedClose:       cand.expectedClose,
-			CreatedAt:           cand.createdAt,
-			LastActivityAt:      cand.lastActivityAt,
-			WaitUntil:           cand.waitUntil,
-			StageWinProbability: cand.winProbability,
-			RemainingOpenStages: cand.remainingOpen,
-			InForecastCommit:    category == "commit" || category == "best_case",
-			StageVelocityDays:   velocity,
-		}, now, loc)
-		if err := c.correct(ctx, cand, hygiene, category, now, loc); err != nil {
-			return fmt.Errorf("close-date correction on %s: %w", cand.id, err)
+		if len(members) == 0 {
+			break
+		}
+		live := make(map[ids.DealID]closeDateCandidate, len(page))
+		for _, cand := range page {
+			live[cand.id] = cand
+		}
+		for _, m := range members {
+			outcome, settleErr := c.settleMember(ctx, live, m, velocities, now, loc, run.ID)
+			if settleErr != nil {
+				// One deal's failure is that deal's outcome, not the end of the
+				// pass. Recording it and walking on is what keeps a single bad
+				// row from starving every deal behind it — the same starvation
+				// in a different disguise. The run ends incomplete, and the
+				// receipt can name what it could not finish.
+				c.log.WarnContext(ctx, "close-date sweep could not settle a deal",
+					"deal_id", m.dealID, "run_id", run.ID, "error", settleErr)
+				outcome = closeDateMemberFailed
+			}
+			if err := c.db.Tx(ctx, func(tx pgx.Tx) error {
+				return c.settle(ctx, tx, run.ID, m, outcome)
+			}); err != nil {
+				return err
+			}
 		}
 	}
-	return nil
+
+	return c.db.Tx(ctx, func(tx pgx.Tx) error {
+		return c.finishRun(ctx, tx, run.ID)
+	})
+}
+
+// settleMember assesses one frozen member and reports the outcome its row
+// should carry. A member whose deal has closed or been archived since the freeze
+// is skipped — it stays in the ledger with a reason rather than vanishing from
+// the denominator.
+func (c *CloseDateCorrector) settleMember(
+	ctx context.Context, live map[ids.DealID]closeDateCandidate, m closeDateMember,
+	velocities map[ids.PipelineID]float64, now time.Time, loc *time.Location, runID ids.UUID,
+) (string, error) {
+	if m.gone {
+		return closeDateMemberSkipped, nil
+	}
+	cand, ok := live[m.dealID]
+	if !ok {
+		return closeDateMemberSkipped, nil
+	}
+	velocity, known := velocities[cand.pipelineID]
+	if !known {
+		var err error
+		if velocity, err = c.stageVelocityDays(ctx, cand.pipelineID); err != nil {
+			return "", fmt.Errorf("stage velocity for pipeline %s: %w", cand.pipelineID, err)
+		}
+		velocities[cand.pipelineID] = velocity
+	}
+	category := effectiveForecastCategory(cand.forecastCat, cand.winProbability)
+	hygiene := CloseDateAssessment(CloseDateInput{
+		Status:              string(DealOpen),
+		ExpectedClose:       cand.expectedClose,
+		CreatedAt:           cand.createdAt,
+		LastActivityAt:      cand.lastActivityAt,
+		WaitUntil:           cand.waitUntil,
+		StageWinProbability: cand.winProbability,
+		RemainingOpenStages: cand.remainingOpen,
+		InForecastCommit:    category == forecastCommit || category == forecastBestCase,
+		StageVelocityDays:   velocity,
+	}, now, loc)
+	// The outcome is whatever correct actually DID — see closeDateOutcome. A
+	// tier that decided to act and then wrote nothing (the switch off, or the
+	// deal already holding what it proposed) settles as checked, so the run's
+	// counters never claim a correction that did not reach a deal.
+	outcome, err := c.correct(ctx, cand, hygiene, category, now, loc, runID)
+	if err != nil {
+		return "", fmt.Errorf("close-date correction on %s: %w", cand.id, err)
+	}
+	return outcome, nil
 }
 
 // stageVelocityDays is §11's experience-informed pace: the workspace
@@ -215,161 +274,17 @@ func (c *CloseDateCorrector) stageVelocityDays(ctx context.Context, pipelineID i
 	return *medianSeconds / 86400, nil
 }
 
-// effectiveForecastCategory is the §7 reading: the rep's explicit
-// override wins; otherwise the stage probability derives the default
-// (commit ≥ 90, best-case ≥ 50).
-func effectiveForecastCategory(override *string, winProbability int) string {
-	if override != nil {
-		return *override
-	}
-	switch {
-	case winProbability >= forecastCommitMinProb:
-		return "commit"
-	case winProbability >= lateStageMinProb:
-		return "best_case"
-	default:
-		return "pipeline"
-	}
-}
-
-// forecastDowngrade is the 🔻 notch: Commit→Best-case→Pipeline→Omitted,
-// never below Omitted.
-func forecastDowngrade(category string) string {
-	switch category {
-	case "commit":
-		return "best_case"
-	case "best_case":
-		return "pipeline"
-	default:
-		return "omitted"
-	}
-}
-
-// setCloseDate assigns the sweep's proposed date only where it differs from the
-// one the deal already claims.
-//
-// The sweep re-flags a deal every night it stays quiet, and its proposal is
-// derived from stage velocity rather than from the calendar — so it frequently
-// recomputes the date the deal already has. storekit.Patch records an assignment
-// without comparing it, so an unconditional Set would put that date in the audit
-// diff and in deal_forecast_history on every pass, and a reconstruction would
-// read a forecast moving nightly while standing still.
-func setCloseDate(p *storekit.Patch, before *time.Time, proposed time.Time) {
-	if before != nil && before.Equal(proposed) {
-		return
-	}
-	p.SetDate(closeDateField, before, &proposed)
-}
-
-// correct applies one deal's A6 tier. The write runs in its own audited
-// transaction; the 🟡 staging follows it (Stage opens its own) — if the
-// staging fails the provisional row simply re-enters the next sweep.
-func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string, now time.Time, loc *time.Location) error {
-	if !hygiene.Flagged {
-		if cand.provisional {
-			// The date itself is clean (the sweep set it), but the human
-			// has not confirmed it yet: keep the 🟡 surface alive if the
-			// previous staging expired undecided.
-			//
-			return c.ensureStaged(ctx, cand, 0, CloseDateCorrection{
-				DealID:              cand.id,
-				ExpectedCloseDate:   cand.expectedClose.Format(time.DateOnly),
-				PreviousCloseDate:   dateString(cand.expectedClose),
-				RemainingOpenStages: StagesRemaining(cand.remainingOpen),
-				Asking:              AskingIsThisDateRight,
-				Basis:               quietHoldingBasis,
-			})
-		}
-		return nil
-	}
-
-	proposal := CloseDateCorrection{
-		DealID:              cand.id,
-		ExpectedCloseDate:   hygiene.ProposedClose.Format(time.DateOnly),
-		PreviousCloseDate:   dateString(cand.expectedClose),
-		RemainingOpenStages: StagesRemaining(cand.remainingOpen),
-		Asking:              AskingIsThisDateRight,
-		Flags:               hygiene.Flags,
-		Basis:               pacedBasis(StagesToGo(cand.remainingOpen)),
-	}
-
-	switch hygiene.Action {
-	case CloseDateActionAutoApply:
-		_, err := c.apply(ctx, cand, "auto_apply", func(p *storekit.Patch) {
-			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-			if cand.provisional {
-				p.Set("close_date_provisional", true, false)
-			}
-		}, map[string]any{"flags": hygiene.Flags, "basis": proposal.Basis})
-		return err
-
-	case CloseDateActionProvisionalConfirm:
-		version, err := c.apply(ctx, cand, "provisional_confirm", func(p *storekit.Patch) {
-			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-			if !cand.provisional {
-				p.Set("close_date_provisional", false, true)
-			}
-		}, map[string]any{"flags": hygiene.Flags, "basis": proposal.Basis})
-		if err != nil {
-			return err
-		}
-		return c.ensureStaged(ctx, cand, version, proposal)
-
-	case CloseDateActionDowngradeAndReview:
-		notched := forecastDowngrade(category)
-		version, err := c.apply(ctx, cand, "downgrade_and_review", func(p *storekit.Patch) {
-			p.Set("forecast_category", cand.forecastCat, notched)
-			if hygiene.Provisional {
-				// Only the invariant forces a date onto a quiet deal —
-				// never an optimistic re-date on top of the downgrade.
-				setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-				if !cand.provisional {
-					p.Set("close_date_provisional", false, true)
-				}
-			}
-		}, map[string]any{"flags": hygiene.Flags, "at_risk": true})
-		if err != nil {
-			return err
-		}
-		// The 🟡 review: gone quiet — still alive? The proposal keeps the
-		// stage-velocity date the assessment computed, on BOTH branches. It
-		// used to be overwritten here with the deal's CURRENT date whenever the
-		// invariant did not force a re-date, which asked a human to confirm the
-		// date the deal already had — a card with nothing in it to approve.
-		review := proposal
-		// A different question from the 🟡 confirm, and the memory keys on which:
-		// a rep who said this date is fine has not said the deal is still alive.
-		review.Asking = AskingIsThisDealAlive
-		review.Basis = c.quietBasis(ctx, cand.id, now, loc)
-		return c.ensureStaged(ctx, cand, version, review)
-	}
-	return fmt.Errorf("close-date sweep: no executor for action %q", hygiene.Action)
-}
-
-// quietBasis is the reason the quiet review shows: which way the silence runs,
-// who is on the far end of it, and how long it has lasted.
-//
-// A failure to READ the correspondence is not a reason to fail the sweep — the
-// downgrade has already committed and the review is what is left to raise. So a
-// read error degrades to the generic sentence and is logged, rather than
-// aborting a pass over every other deal in the workspace.
-func (c *CloseDateCorrector) quietBasis(ctx context.Context, dealID ids.DealID, now time.Time, loc *time.Location) string {
-	facts, names, err := c.reviewer.ReadForOwner(ctx, dealID)
-	if err != nil {
-		c.log.WarnContext(ctx, "close-date quiet review fell back to a generic reason",
-			"deal_id", dealID, "error", err)
-		return quietFallbackBasis
-	}
-	return quietReason(facts, names, now, loc)
-}
-
 // apply runs one tier's write shape: re-verify the deal is still open
 // and live under a row lock, patch it, audit with the exact before/after
 // diff (the reversibility the 🟢 tier promises), and emit deal.updated —
 // all in one transaction. Returns the row's post-write version so a 🟡
 // staging can bind to exactly what the human will see.
-func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate, correction string, build func(*storekit.Patch), extra map[string]any) (int64, error) {
+// Returns the row's post-write version and whether a domain write actually
+// happened — the caller records the latter in the run's ledger, because a tier
+// that decided to correct and then wrote nothing must not be counted as one.
+func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate, correction string, evidence CorrectionEvidence, runID ids.UUID, build func(*storekit.Patch), extra map[string]any) (int64, bool, error) {
 	var version int64
+	var wrote bool
 	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The candidate scan and this write are separate transactions:
 		// a deal closed or archived in between must not be re-dated.
@@ -386,6 +301,18 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		}
 		if DealStatus(status) != DealOpen {
 			return nil
+		}
+		// The kill switch, read here rather than once per pass: an operator who
+		// switches maintenance off mid-sweep stops the next deal's write, not
+		// the one after it. A halted write is not a failure — the pass carries
+		// on assessing, and the version is still read so a 🟡 staging binds to
+		// the row a human would see.
+		on, err := settings.ApplyTx(ctx, tx, MaintenanceWritesEnabled)
+		if err != nil {
+			return fmt.Errorf("read whether deal maintenance may write: %w", err)
+		}
+		if !on {
+			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version)
 		}
 		patch := storekit.NewPatch()
 		build(patch)
@@ -416,9 +343,26 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		if err := storekit.EmitEvent(ctx, tx, auditID, cand.id.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: changedFields}); err != nil {
 			return fmt.Errorf("emit %s: %w", correction, err)
 		}
+		// The lifecycle row commits WITH the change it describes. Written in a
+		// second transaction it could be lost to a crash, and then the deal has
+		// moved while nothing records that a correction moved it — which is the
+		// state this row exists to make impossible.
+		if _, err := recordCorrection(ctx, tx, DealCorrection{
+			DealID:     cand.id,
+			AuditLogID: auditID,
+			Correction: correction,
+			// Moved, not After: After holds every column the tier SET, and a
+			// reversal that tried to restore a field which never changed would
+			// be putting back a value that is already there.
+			Fields:   movedFields(patch),
+			Evidence: evidence,
+		}, &runID); err != nil {
+			return err
+		}
+		wrote = true
 		return nil
 	})
-	return version, err
+	return version, wrote, err
 }
 
 // ensureStaged stages the 🟡 confirm-the-real-date proposal unless one is
@@ -434,21 +378,40 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 //
 // Per date rather than per deal, so one "no" silences the date it was about
 // rather than ending close-date hygiene on that deal for good.
-func (c *CloseDateCorrector) ensureStaged(ctx context.Context, cand closeDateCandidate, targetVersion int64, proposal CloseDateCorrection) error {
+//
+// Reports whether a card was actually RAISED. An already-pending proposal and a
+// refused one both return false, because neither put a new question in front of
+// anybody — and the run's ledger counts questions asked, not questions
+// considered.
+func (c *CloseDateCorrector) ensureStaged(ctx context.Context, cand closeDateCandidate, targetVersion int64, proposal CloseDateCorrection) (bool, error) {
 	dealID, name := cand.id, cand.name
 	pending, err := c.stager.HasPendingCorrection(ctx, dealID.UUID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if pending {
-		return nil
+		return false, nil
 	}
-	refused, err := c.stager.RefusedCloseDate(ctx, dealID.UUID, ProbeFor(proposal, cand.expectedClose))
+	probe := ProbeFor(proposal, cand.expectedClose)
+	refused, err := c.stager.RefusedCloseDate(ctx, dealID.UUID, probe)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if refused {
-		return nil
+		return false, nil
+	}
+	// A THIRD memory, and the one the other two could not hold. Both of them
+	// read approvals: pending stops a live card multiplying, refused stops a
+	// declined one returning. A reversal writes no approval at all — the rep
+	// undid the change on the record itself — so before this, a correction
+	// somebody took back was re-proposed the very next night and their answer
+	// lasted exactly until the next sweep.
+	reversed, err := c.reversedSameQuestion(ctx, dealID, CorrectionEvidence(probe))
+	if err != nil {
+		return false, err
+	}
+	if reversed {
+		return false, nil
 	}
 	if targetVersion == 0 {
 		// The keep-alive path wrote nothing this pass; bind the staging
@@ -457,11 +420,14 @@ func (c *CloseDateCorrector) ensureStaged(ctx context.Context, cand closeDateCan
 			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, dealID).Scan(&targetVersion)
 		})
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 	summary := fmt.Sprintf("Confirm the real close date for %q (proposed %s)", name, proposal.ExpectedCloseDate)
-	return c.stager.StageCorrection(ctx, dealID.UUID, targetVersion, summary, proposal)
+	if err := c.stager.StageCorrection(ctx, dealID.UUID, targetVersion, summary, proposal); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func dateString(t *time.Time) *string {

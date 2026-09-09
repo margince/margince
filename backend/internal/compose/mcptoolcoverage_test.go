@@ -68,9 +68,19 @@ type toolCoverageRow struct {
 	MustCall []string `json:"required_by_cases"`
 	MayCall  []string `json:"permitted_in_cases"`
 	Driven   bool     `json:"driven"`
-	// Measured is what the lane saw across the cases that require this tool.
-	// Absent when nothing requires it, or when no run has been committed.
-	Measured *toolMeasurement `json:"measured"`
+	// GradedBy are the certification tasks whose corpus names this tool. That
+	// lane grades tool SELECTION — which tool a goal should reach for, and
+	// which plausible neighbour it must avoid — and the use-case lane cannot
+	// express it: check.py sees that a name appeared, never whether it was the
+	// right first reach. So a tool no case REQUIRES may still be graded, and a
+	// page that reported the two as one silence would name work undone that is
+	// done, on a different question.
+	GradedBy []string `json:"graded_by_certification_tasks"`
+	// MeasuredByModel is what the lane saw across the cases that require this
+	// tool, PER MODEL. Empty when nothing requires it, or when no run has been
+	// committed. Keyed by model because reliability is a property of the pair:
+	// one model driving a tool well says nothing about another driving it.
+	MeasuredByModel map[string]*toolMeasurement `json:"measured_by_model"`
 }
 
 // toolMeasurement is how the cases that require one tool actually went.
@@ -112,9 +122,16 @@ type coverageTotals struct {
 	PermittedNotDriven int `json:"permitted_but_never_required"`
 	UndrivenCost       int `json:"tokens_served_but_never_driven"`
 	Cases              int `json:"use_case_cases"`
-	CasesRecorded      int `json:"cases_with_a_committed_run"`
 	CriteriaNamed      int `json:"acceptance_criteria_named"`
-	CriteriaUnnamed    int `json:"acceptance_criteria_without_a_statement"`
+	// UnitTools is what the shipped units add to the SAME registry the core
+	// catalog is served from. They are not in Tools above: this package cannot
+	// import a unit (each is its own module and the DAG forbids the edge), so
+	// they are read from what the composer published and cannot be priced here.
+	UnitTools int `json:"tools_added_by_shipped_units"`
+	// UndrivenButGraded is how many of the never-driven tools the certification
+	// corpus nevertheless names. It is the difference between "untried" and
+	// "untried by this lane".
+	UndrivenButGraded int `json:"never_driven_but_graded_elsewhere"`
 }
 
 type caseRow struct {
@@ -122,19 +139,80 @@ type caseRow struct {
 	File     string   `json:"file"`
 	Criteria []int    `json:"criteria"`
 	Requires []string `json:"requires"`
-	Runs     int      `json:"runs"`
-	Passed   int      `json:"passed"`
-	PassAt   int      `json:"pass_at"`
-	Recorded bool     `json:"recorded"`
-	Model    string   `json:"model"`
+	// ByModel is one entry per model the lane has been run with, because a pass
+	// rate belongs to the model that produced it. It was a scalar while one
+	// model had run, and collapsing several into one would publish whichever
+	// directory sorted first as though it were the answer — a number describing
+	// something other than what it names, which is the defect this page exists
+	// to have stopped doing.
+	ByModel []caseModelRun `json:"by_model"`
+}
+
+// caseModelRun is one model's result on one case.
+type caseModelRun struct {
+	Model  string `json:"model"`
+	Runs   int    `json:"runs"`
+	Passed int    `json:"passed"`
+	PassAt int    `json:"pass_at"`
+	// Held is whether the case reached its own bar for this model. Stated
+	// rather than left to a reader to compute, because pass_at differs per case
+	// and comparing passed/runs across cases without it flatters the easy ones.
+	Held bool `json:"held"`
+}
+
+// modelCoverage is the whole lane as ONE model ran it. Driven/never-driven is
+// not in here on purpose: what a case REQUIRES is a property of the scenario, so
+// the surface a lane exercises is the same whoever drives it. What changes per
+// model is whether the driving SUCCEEDED, and only that is reported per model.
+type modelCoverage struct {
+	Model         string `json:"model"`
+	CasesRecorded int    `json:"cases_with_a_committed_run"`
+	CasesHeld     int    `json:"cases_that_reached_their_bar"`
+	CasesBelowBar int    `json:"cases_below_their_bar"`
+	Runs          int    `json:"runs"`
+	Passed        int    `json:"passed"`
+	// Reliability is Passed/Runs over every committed run. It answers "how often
+	// did this model do the job", which a count of held cases cannot: a case
+	// scraping its bar two runs in three and one passing all three are both held.
+	Reliability float64 `json:"reliability"`
+	// BelowBar names them, because a rate with no names is a number nobody can
+	// act on.
+	BelowBar []string `json:"cases_below_their_bar_named"`
 }
 
 type mcpToolCoverage struct {
-	Note     string            `json:"note"`
-	Totals   coverageTotals    `json:"totals"`
+	Note   string         `json:"note"`
+	Totals coverageTotals `json:"totals"`
+	// Models is the lane per model that has run it. Empty until a paid sweep is
+	// committed, which the page says outright rather than implying nothing works.
+	Models []modelCoverage `json:"models"`
+	// Judges is how well each candidate JUDGE reads the lane's criteria, scored
+	// against human-authored fixtures. It rides on this page rather than its own
+	// because a pass rate and the accuracy of whoever decided it are one fact: a
+	// reader trusting the first without the second is trusting a number whose
+	// error bar nobody showed them.
+	Judges []judgeEvalRow `json:"judges"`
+	// Excluded is what no judge is charged for, carried onto the page so the
+	// exemption is visible beside the scores it changes rather than only in the
+	// source that applies it.
+	Excluded map[string]string `json:"judge_trial_excluded"`
 	Cases    []caseRow         `json:"cases"`
 	Criteria []criterionRow    `json:"criteria"`
 	Tools    []toolCoverageRow `json:"tools"`
+	// UnitTools are the agent tools the shipped units contribute, read from
+	// each unit's published manifest.
+	UnitTools []unitTool `json:"unit_tools"`
+	// Agents is Surface B: the scheduled agents and the allowlist each one is
+	// narrowed to. A scheduled run never sees the whole catalog, so reporting
+	// one coverage number over both surfaces reports a menu nobody is served.
+	Agents []agentSurfaceRow `json:"scheduled_agent_surface"`
+}
+
+// agentSurfaceRow is one scheduled agent's declared allowlist — Surface B as
+// the contract states it, not as a run happened to use it.
+type agentSurfaceRow struct {
+	Name  string   `json:"name"`
+	Tools []string `json:"tools"`
 }
 
 const mcpToolCoverageNote = "Generated by `" + mcpToolCoverageCommand + "`; do not edit by hand. " +
@@ -142,6 +220,49 @@ const mcpToolCoverageNote = "Generated by `" + mcpToolCoverageCommand + "`; do n
 	"lane commits beside them. A tool counts as DRIVEN when at least one case REQUIRES it " +
 	"(must_call); a case that merely permits a tool (may_call) can pass without ever calling it, " +
 	"so permission is not coverage. Token counts are the budget page's own, one tool rendered alone."
+
+// A scenario that DECLARES required tools and reads as requiring none is the
+// shape this page cannot see from its own output: the lane enforces the tools,
+// the page reports the case as driving nothing, and every tool it names drifts
+// into the untried column. It is the same failure the surface census exists for,
+// one level down — a reader that fails short and reports a smaller tree.
+//
+// Held here rather than trusted to review, because the two readers of this
+// schema are in different languages: e2e/llm/check.py is the lane's and this
+// file's regexes are the page's, and nothing makes them agree by construction.
+func TestEveryDeclaredMustCallIsRecognisedByThePage(t *testing.T) {
+	entries, err := os.ReadDir(e2eLLMScenarioDir)
+	if err != nil {
+		t.Fatalf("reading the scenarios at %s: %v", e2eLLMScenarioDir, err)
+	}
+	checked := 0
+	for _, entry := range entries {
+		if !strings.HasSuffix(entry.Name(), ".yaml") {
+			continue
+		}
+		body, readErr := os.ReadFile(filepath.Join(e2eLLMScenarioDir, entry.Name()))
+		if readErr != nil {
+			t.Fatalf("reading %s: %v", entry.Name(), readErr)
+		}
+		text := string(body)
+		if !e2eMustCallDeclared.MatchString(text) {
+			continue
+		}
+		checked++
+		if len(toolsInBlock(e2eMustCallBlock, e2eMustCallInline, text)) == 0 {
+			t.Errorf("%s declares must_call and this page reads no tool from it: the lane will "+
+				"enforce those tools and the page will report the case as requiring none, which "+
+				"moves every one of them into the untried column without anything failing",
+				entry.Name())
+		}
+	}
+	// The scan itself must not fail short: a glob that matched nothing would
+	// report every scenario sound.
+	if checked == 0 {
+		t.Fatalf("no scenario under %s declares must_call — a scan finding nothing here would "+
+			"pass while reading an empty tree", e2eLLMScenarioDir)
+	}
+}
 
 func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 	specs := servedSurface(t).Specs()
@@ -164,18 +285,45 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 	}
 
 	attached := map[string][]string{}
+	var agentSurface []agentSurfaceRow
 	for _, agent := range mustScheduledAgents() {
 		for _, tool := range agent.Tools {
 			attached[tool] = append(attached[tool], agent.Name)
 		}
+		agentSurface = append(agentSurface, agentSurfaceRow{Name: agent.Name, Tools: sortedCopy(agent.Tools)})
+	}
+	sort.Slice(agentSurface, func(i, j int) bool { return agentSurface[i].Name < agentSurface[j].Name })
+
+	units, err := extensionTools(extensionsDir)
+	if err != nil {
+		t.Fatalf("reading the unit manifests under %s: %v", extensionsDir, err)
 	}
 
-	report := mcpToolCoverage{Note: mcpToolCoverageNote, Cases: cases}
+	names := make([]string, 0, len(specs))
+	for _, spec := range specs {
+		names = append(names, spec.Name)
+	}
+	graded, err := corpusGradedTools(corpusDir, names)
+	if err != nil {
+		t.Fatalf("reading the certification corpus at %s: %v", corpusDir, err)
+	}
+
+	report := mcpToolCoverage{Note: mcpToolCoverageNote, Cases: cases, UnitTools: units, Agents: agentSurface}
+	report.Totals.UnitTools = len(units)
 	report.Totals.Cases = len(cases)
+	judges, err := readJudgeEvals(t, judgeEvalRecordDir)
+	if err != nil {
+		t.Fatalf("reading the judge eval records at %s: %v", judgeEvalRecordDir, err)
+	}
+	report.Judges = judges
+	report.Excluded = judgeEvalHarnessArtifacts.Reasons()
+	judgeEvalHarnessArtifacts.AssertAllMatched(t)
+
+	ran := modelsThatRan(cases)
+	for _, model := range ran {
+		report.Models = append(report.Models, summariseModel(cases, model))
+	}
 	for _, c := range cases {
-		if c.Recorded {
-			report.Totals.CasesRecorded++
-		}
 		named, ok := catalog[c.Name]
 		if !ok {
 			t.Errorf("case %s declares criteria and %s names none of them — a grade against a "+
@@ -190,8 +338,13 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 				continue
 			}
 			report.Criteria = append(report.Criteria, row)
+			// A placeholder is worse than a missing entry: it satisfies the
+			// lookup above, so the page publishes a grade against a criterion
+			// whose statement says the criterion is not written down.
 			if strings.Contains(row.Name, "NEEDS A STATEMENT") {
-				report.Totals.CriteriaUnnamed++
+				t.Errorf("case %s criterion %d is a placeholder in %s — write the one sentence "+
+					"saying what it asks, derived from the scenario that tests it",
+					c.Name, n, e2eLLMCriteriaFile)
 				continue
 			}
 			report.Totals.CriteriaNamed++
@@ -218,7 +371,13 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 		row.MayCall = permittedCases(cases, spec.Name)
 		row.MustCall = sortedCopy(row.MustCall)
 		row.Driven = len(row.MustCall) > 0
-		row.Measured = measureCases(cases, row.MustCall)
+		row.GradedBy = graded[spec.Name]
+		row.MeasuredByModel = map[string]*toolMeasurement{}
+		for _, model := range ran {
+			if m := measureCases(cases, row.MustCall, model); m != nil {
+				row.MeasuredByModel[model] = m
+			}
+		}
 		report.Tools = append(report.Tools, row)
 	}
 	sort.Slice(report.Tools, func(i, j int) bool {
@@ -238,6 +397,9 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 		}
 		report.Totals.NeverDriven++
 		report.Totals.UndrivenCost += row.Tokens
+		if len(row.GradedBy) > 0 {
+			report.Totals.UndrivenButGraded++
+		}
 		if len(row.MayCall) > 0 {
 			report.Totals.PermittedNotDriven++
 		}
@@ -253,12 +415,31 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 
 // The scenario file's shape, and the verdict the lane writes beside it.
 var (
-	e2eScenarioName  = regexp.MustCompile(`(?m)^name:\s*(\S+)\s*$`)
-	e2eCriteria      = regexp.MustCompile(`(?m)^criteria:\s*\[([^\]]*)\]`)
-	e2eMustCallBlock = regexp.MustCompile(`(?ms)^must_call:\n((?:\s*-\s*\S+\n)+)`)
-	e2eMayCallBlock  = regexp.MustCompile(`(?ms)^may_call:\n((?:\s*-\s*\S+\n)+)`)
-	e2eToolItem      = regexp.MustCompile(`(?m)^\s*-\s*(\S+)\s*$`)
-	e2eCriterion     = regexp.MustCompile(`\d+`)
+	e2eScenarioName = regexp.MustCompile(`(?m)^name:\s*(\S+)\s*$`)
+	e2eCriteria     = regexp.MustCompile(`(?m)^criteria:\s*\[([^\]]*)\]`)
+	// A LIST ITEM IS NOT THE ONLY LINE A BLOCK HOLDS. These scenarios carry their
+	// reasoning inline — a comment above the tool it explains — and a pattern that
+	// admits only item lines stops at the first one. That is not a partial read:
+	// a block whose FIRST line is a comment matched nothing at all, so eight cases
+	// reported an empty may_call while permitting three to five tools each.
+	//
+	// Under-recognition again, in a reader rather than a gate, and silent in the
+	// same way: the page published a smaller "permitted" set and nothing failed.
+	e2eMustCallBlock = regexp.MustCompile(`(?ms)^must_call:\n((?:[ \t]*(?:#[^\n]*|-[ \t]*\S+)?\n)+)`)
+	e2eMayCallBlock  = regexp.MustCompile(`(?ms)^may_call:\n((?:[ \t]*(?:#[^\n]*|-[ \t]*\S+)?\n)+)`)
+	// The inline form of the same key. e2e/llm/check.py accepts both shapes, and
+	// a reader here that knew only the block form answered "requires nothing" for
+	// a case whose tools the lane was enforcing — a census failing short in the
+	// page whose subject is a census.
+	e2eMustCallInline = regexp.MustCompile(`(?m)^must_call:[ \t]*\[([^\]]*)\]`)
+	e2eMayCallInline  = regexp.MustCompile(`(?m)^may_call:[ \t]*\[([^\]]*)\]`)
+	e2eInlineItem     = regexp.MustCompile(`[^,\s\[\]]+`)
+	// Whether a scenario DECLARES the key at all, in either shape. The gate below
+	// compares this against what was parsed: a key that is present and yields no
+	// tool is the shape that cannot be seen in the output.
+	e2eMustCallDeclared = regexp.MustCompile(`(?m)^must_call:`)
+	e2eToolItem         = regexp.MustCompile(`(?m)^\s*-\s*(\S+)\s*$`)
+	e2eCriterion        = regexp.MustCompile(`\d+`)
 )
 
 // verdictKey is what a committed verdict is filed under. The model is half of
@@ -313,11 +494,8 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 				row.Criteria = append(row.Criteria, atoiOrZero(n))
 			}
 		}
-		row.Requires = sortedCopy(toolsInBlock(e2eMustCallBlock, text))
-		if v, ok := verdictFor(verdicts, row.Name); ok {
-			row.Recorded, row.Runs, row.Passed, row.PassAt = true, v.Runs, v.Passed, v.PassAt
-			row.Model = v.Model
-		}
+		row.Requires = sortedCopy(toolsInBlock(e2eMustCallBlock, e2eMustCallInline, text))
+		row.ByModel = runsFor(verdicts, row.Name)
 		cases = append(cases, row)
 	}
 	sort.Slice(cases, func(i, j int) bool { return cases[i].File < cases[j].File })
@@ -402,29 +580,38 @@ func readCriteria(path string) (map[string]map[int]criterionRow, error) {
 	return out, nil
 }
 
-// verdictFor picks one model's verdict for a case, by model name in order, so
-// the page is byte-stable and every row on it comes from the same model rather
-// than from whichever directory the filesystem listed first.
+// runsFor collects each model's result on one scenario, ordered by model name.
 //
-// It reports the FIRST model alphabetically that ran the case. That is a choice
-// the page states in its own totals, and it is only visible once a second model
-// has run — at which point this wants replacing with a column per model rather
-// than a rule for picking one.
-func verdictFor(verdicts map[verdictKey]e2eVerdict, scenario string) (e2eVerdict, bool) {
-	var chosen e2eVerdict
-	found := false
+// It replaced a chooser that returned ONE verdict per scenario, picking the
+// lowest model name. That was correct while one model had run and silently
+// wrong the moment a second did: the page would have shown one model's pass
+// rate under a heading that named the case, not the model.
+func runsFor(verdicts map[verdictKey]e2eVerdict, scenario string) []caseModelRun {
+	var out []caseModelRun
 	for key, v := range verdicts {
 		if key.scenario != scenario {
 			continue
 		}
-		if !found || key.model < chosen.Model {
-			chosen, found = v, true
-		}
+		out = append(out, caseModelRun{
+			Model:  v.Model,
+			Runs:   v.Runs,
+			Passed: v.Passed,
+			PassAt: v.PassAt,
+			Held:   v.PassAt > 0 && v.Passed >= v.PassAt,
+		})
 	}
-	return chosen, found
+	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
+	return out
 }
 
-func toolsInBlock(block *regexp.Regexp, text string) []string {
+// toolsInBlock reads one tool key in EITHER shape the lane accepts — the block
+// list and the inline `[a, b]` — because check.py accepts both and a page that
+// knew one of them would report a case as requiring nothing while the lane
+// enforced its tools.
+func toolsInBlock(block, inline *regexp.Regexp, text string) []string {
+	if got := inline.FindStringSubmatch(text); len(got) == 2 {
+		return e2eInlineItem.FindAllString(got[1], -1)
+	}
 	got := block.FindStringSubmatch(text)
 	if len(got) != 2 {
 		return nil
@@ -447,27 +634,35 @@ func permittedCases(cases []caseRow, tool string) []string {
 		if err != nil {
 			continue
 		}
-		if listHas(toolsInBlock(e2eMayCallBlock, string(body)), tool) {
+		if listHas(toolsInBlock(e2eMayCallBlock, e2eMayCallInline, string(body)), tool) {
 			out = append(out, c.Name)
 		}
 	}
 	return sortedCopy(out)
 }
 
-// measureCases folds the committed verdicts of the cases requiring one tool.
-func measureCases(cases []caseRow, names []string) *toolMeasurement {
+// measureCases folds the committed verdicts of the cases requiring one tool,
+// for ONE model. A fold across models would average a strong driver with a weak
+// one and call the result the tool's reliability, which is nobody's experience
+// of it.
+func measureCases(cases []caseRow, names []string, model string) *toolMeasurement {
 	if len(names) == 0 {
 		return nil
 	}
 	m := toolMeasurement{BelowBar: []string{}}
 	for _, c := range cases {
-		if !listHas(names, c.Name) || !c.Recorded {
+		if !listHas(names, c.Name) {
 			continue
 		}
-		m.Runs += c.Runs
-		m.Passed += c.Passed
-		if c.Passed < c.PassAt {
-			m.BelowBar = append(m.BelowBar, c.Name)
+		for _, run := range c.ByModel {
+			if run.Model != model {
+				continue
+			}
+			m.Runs += run.Runs
+			m.Passed += run.Passed
+			if !run.Held {
+				m.BelowBar = append(m.BelowBar, c.Name)
+			}
 		}
 	}
 	if m.Runs == 0 {
@@ -476,6 +671,51 @@ func measureCases(cases []caseRow, names []string) *toolMeasurement {
 	m.Reliability = float64(m.Passed) / float64(m.Runs)
 	sort.Strings(m.BelowBar)
 	return &m
+}
+
+// modelsThatRan reads the model names out of the committed verdicts, sorted.
+// Derived from the records rather than kept as a list here: a page that carried
+// its own roster would keep publishing a model whose records were deleted, and
+// would silently omit one somebody added.
+func modelsThatRan(cases []caseRow) []string {
+	seen := map[string]bool{}
+	for _, c := range cases {
+		for _, run := range c.ByModel {
+			seen[run.Model] = true
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for model := range seen {
+		out = append(out, model)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// summariseModel folds one model's whole lane for the page's top table.
+func summariseModel(cases []caseRow, model string) modelCoverage {
+	summary := modelCoverage{Model: model, BelowBar: []string{}}
+	for _, c := range cases {
+		for _, run := range c.ByModel {
+			if run.Model != model {
+				continue
+			}
+			summary.CasesRecorded++
+			summary.Runs += run.Runs
+			summary.Passed += run.Passed
+			if run.Held {
+				summary.CasesHeld++
+				continue
+			}
+			summary.CasesBelowBar++
+			summary.BelowBar = append(summary.BelowBar, c.Name)
+		}
+	}
+	if summary.Runs > 0 {
+		summary.Reliability = float64(summary.Passed) / float64(summary.Runs)
+	}
+	sort.Strings(summary.BelowBar)
+	return summary
 }
 
 // listHas reports whether a name is in a list. Named for the question rather
@@ -535,208 +775,4 @@ func syncMCPToolCoverage(t *testing.T, path string, want []byte) {
 	t.Errorf("%s is stale — it no longer matches the served surface and the use-case lane.\n"+
 		"Regenerate with: %s\nand commit the result with the change that moved it.\n%s",
 		path, mcpToolCoverageCommand, firstMCPInfoDifference(string(got), string(want)))
-}
-
-func renderMCPToolCoveragePage(r mcpToolCoverage) []byte {
-	var p strings.Builder
-	p.WriteString("# What the assistant can be relied on to do\n\n")
-	p.WriteString("<!-- Generated together with mcp-tool-coverage.json; do not edit by hand. -->\n\n")
-	p.WriteString(r.Note + "\n\n")
-	p.WriteString("**This page is generated, and an edit made here is lost.**\n\n")
-	writeCoverageHowToRead(&p)
-	writeCoverageTotals(&p, r)
-	writeCoverageCases(&p, r)
-	writeCoverageCriteria(&p, r)
-	writeCoverageReliable(&p, r)
-	writeCoverageFailing(&p, r)
-	writeCoverageUndriven(&p, r)
-	return []byte(p.String())
-}
-
-// writeCoverageHowToRead says what a row means before any row appears. "Driven"
-// in particular is not what it sounds like, and a reader meeting a 0 in the last
-// section should not have to guess whether it means broken or untried.
-func writeCoverageHowToRead(p *strings.Builder) {
-	p.WriteString("## How to read this page\n\n")
-	p.WriteString("| Word | What it means |\n|---|---|\n")
-	p.WriteString("| Tool | One action the assistant can take, such as `send_email` or `run_report`. |\n")
-	p.WriteString("| Case | One use case, driven end to end by a real assistant against a seeded " +
-		"installation — the shape a user meets, not a single step. |\n")
-	p.WriteString("| Requires | The case FAILS if the assistant never calls this tool. This is what " +
-		"coverage means here. |\n")
-	p.WriteString("| Permitted | The case allows the tool without needing it. A case can pass having " +
-		"never touched a tool it permits, so **permission is not coverage**. |\n")
-	p.WriteString("| Driven | At least one case requires this tool. A tool no case requires is " +
-		"**untried, not broken** — nothing has ever asked an assistant to reach for it. |\n")
-	p.WriteString("| Reliability | Of the runs on the cases that require this tool, the share that " +
-		"passed. Each case is run several times because the lane is not deterministic. |\n")
-	p.WriteString("| Bar | Each case carries its own `pass_at` — how many of its runs must pass. " +
-		"Cases are not equally hard, so one shared number would flatter the easy ones. |\n\n")
-	p.WriteString("This page does not grade single steps or name a best model per site — that is\n")
-	p.WriteString("[ai-certification.md](ai-certification.md), a different lane asking a different " +
-		"question. Read it beside this one.\n\n")
-}
-
-func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
-	p.WriteString("## The short version\n\n")
-	fmt.Fprintf(p, "| | |\n|---|---:|\n")
-	fmt.Fprintf(p, "| Tools the assistant is offered | %d |\n", r.Totals.Tools)
-	fmt.Fprintf(p, "| … some case requires | %d |\n", r.Totals.Driven)
-	fmt.Fprintf(p, "| … **no case requires** | %d |\n", r.Totals.NeverDriven)
-	fmt.Fprintf(p, "| … of those, permitted somewhere but never required | %d |\n", r.Totals.PermittedNotDriven)
-	fmt.Fprintf(p, "| Prompt tokens spent on tools no case requires | %d |\n", r.Totals.UndrivenCost)
-	fmt.Fprintf(p, "| Use cases | %d |\n", r.Totals.Cases)
-	fmt.Fprintf(p, "| … with a committed run | %d |\n", r.Totals.CasesRecorded)
-	fmt.Fprintf(p, "| Acceptance criteria the cases declare | %d |\n", r.Totals.CriteriaNamed+r.Totals.CriteriaUnnamed)
-	fmt.Fprintf(p, "| … with a statement in this repository | %d |\n\n", r.Totals.CriteriaNamed)
-	if r.Totals.CasesRecorded < r.Totals.Cases {
-		fmt.Fprintf(p, "> **%d of %d cases have no committed run.** Their rows below say `not run` "+
-			"rather than a rate — nobody has paid for the answer yet.\n\n",
-			r.Totals.Cases-r.Totals.CasesRecorded, r.Totals.Cases)
-	}
-}
-
-// writeCoverageCases is the lane itself, case by case: what each one is for and
-// how it went. A manager reading only one table should read this one.
-func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
-	p.WriteString("## The use cases\n\n")
-	p.WriteString("| Case | Result | Passed | Bar | Model | Criteria | Requires |\n" +
-		"|---|---|---:|---:|---|---|---|\n")
-	for _, c := range r.Cases {
-		result, passed, bar, model := "not run", "—", "—", "—"
-		if c.Recorded {
-			result = "**FAIL**"
-			if c.Passed >= c.PassAt {
-				result = "pass"
-			}
-			passed = fmt.Sprintf("%d/%d", c.Passed, c.Runs)
-			bar = fmt.Sprintf("%d", c.PassAt)
-			model = "`" + c.Model + "`"
-		}
-		fmt.Fprintf(p, "| [%s](../../e2e/llm/scenarios/%s) | %s | %s | %s | %s | %s | %s |\n",
-			c.Name, c.File, result, passed, bar, model,
-			criteriaNames(c.Name, c.Criteria, r.Criteria), joinOrDash(c.Requires))
-	}
-	p.WriteString("\n")
-}
-
-// writeCoverageCriteria states what each number a case declares actually asks.
-// Without it the case table grades against numbers a reader cannot look up.
-func writeCoverageCriteria(p *strings.Builder, r mcpToolCoverage) {
-	p.WriteString("## What the criteria ask\n\n")
-	p.WriteString("The numbers in the table above, in words. Source: " +
-		"[`e2e/llm/criteria.yaml`](../../e2e/llm/criteria.yaml).\n\n")
-	p.WriteString("**The numbers are per case.** Case 1 criterion 1 and case 2 criterion 1 are " +
-		"different criteria that share a digit, which is why every row below names its case.\n\n")
-	p.WriteString("| Case | # | Criterion | What it asks |\n|---|---:|---|---|\n")
-	for _, c := range r.Criteria {
-		fmt.Fprintf(p, "| `%s` | %d | **%s** | %s |\n", c.Case, c.Number, c.Name, c.Statement)
-	}
-	p.WriteString("\n")
-}
-
-// writeCoverageReliable is the first question: what can I put in front of
-// somebody. Only a tool whose every covering case cleared its own bar with a
-// clean rate qualifies.
-func writeCoverageReliable(p *strings.Builder, r mcpToolCoverage) {
-	p.WriteString("## 1. What you can rely on\n\n")
-	p.WriteString("Every run of every case requiring this tool passed.\n\n")
-	p.WriteString("| Tool | Reliability | Runs | Required by |\n|---|---:|---:|---|\n")
-	rows := 0
-	for _, row := range r.Tools {
-		m := row.Measured
-		if m == nil || m.Reliability < 1 || len(m.BelowBar) > 0 {
-			continue
-		}
-		rows++
-		fmt.Fprintf(p, "| `%s` | %.2f | %d | %s |\n", row.Name, m.Reliability, m.Runs, joinOrDash(row.MustCall))
-	}
-	if rows == 0 {
-		p.WriteString("| _nothing yet_ | - | - | - |\n")
-	}
-	p.WriteString("\n")
-}
-
-// writeCoverageFailing is the second question: what is wrong today. A tool
-// appears here when it was driven and a run did not pass — including a case
-// that cleared its bar while losing a run, which is a rate worth seeing.
-func writeCoverageFailing(p *strings.Builder, r mcpToolCoverage) {
-	p.WriteString("## 2. What is failing now\n\n")
-	p.WriteString("Driven, and not every run passed. Open the case to see what was asked.\n\n")
-	p.WriteString("| Tool | Reliability | Passed | Below its bar | Required by |\n|---|---:|---:|---|---|\n")
-	rows := 0
-	for _, row := range r.Tools {
-		m := row.Measured
-		if m == nil || (m.Reliability >= 1 && len(m.BelowBar) == 0) {
-			continue
-		}
-		rows++
-		fmt.Fprintf(p, "| `%s` | %.2f | %d/%d | %s | %s |\n", row.Name, m.Reliability,
-			m.Passed, m.Runs, joinOrDash(m.BelowBar), joinOrDash(row.MustCall))
-	}
-	if rows == 0 {
-		p.WriteString("| _nothing driven is failing_ | - | - | - | - |\n")
-	}
-	p.WriteString("\n")
-}
-
-// writeCoverageUndriven is the third question, and the one this page exists
-// for: what has nobody written a case for. Ordered by what each costs, because
-// that is the bill being paid for the untried thing.
-func writeCoverageUndriven(p *strings.Builder, r mcpToolCoverage) {
-	p.WriteString("## 3. What no case requires\n\n")
-	p.WriteString("**Untried, not broken.** Each is offered to the assistant on every step of every " +
-		"run that carries it, and no case would notice if a model\n")
-	p.WriteString("stopped being able to call it. A tool in the `permitted` column is worse than one " +
-		"with nothing: a case is allowed to use it and no case checks that it can.\n\n")
-	p.WriteString("| Tool | Tokens | Permitted in | Attached to |\n|---|---:|---|---|\n")
-	rows := 0
-	for _, row := range r.Tools {
-		if row.Driven {
-			continue
-		}
-		rows++
-		fmt.Fprintf(p, "| `%s` | %d | %s | %s |\n",
-			row.Name, row.Tokens, joinOrDash(row.MayCall), joinOrDash(row.Agents))
-	}
-	if rows == 0 {
-		p.WriteString("| _every tool has a case_ | - | - | - |\n")
-	}
-	p.WriteString("\n")
-}
-
-// criteriaNames renders a case's criteria as "8 promises come back as
-// suggestions" rather than "8" — a number is only a reference, and the table it
-// referenced was not in this repository.
-func criteriaNames(caseName string, numbers []int, catalog []criterionRow) string {
-	if len(numbers) == 0 {
-		return "—"
-	}
-	named := map[int]string{}
-	for _, c := range catalog {
-		if c.Case == caseName {
-			named[c.Number] = c.Name
-		}
-	}
-	out := make([]string, 0, len(numbers))
-	for _, n := range numbers {
-		if name, ok := named[n]; ok {
-			out = append(out, fmt.Sprintf("**%d** %s", n, name))
-			continue
-		}
-		out = append(out, fmt.Sprintf("**%d**", n))
-	}
-	return strings.Join(out, "<br>")
-}
-
-// joinOrDash renders a list as backticked names, or a dash when it is empty.
-func joinOrDash(in []string) string {
-	if len(in) == 0 {
-		return "—"
-	}
-	quoted := make([]string, 0, len(in))
-	for _, v := range in {
-		quoted = append(quoted, "`"+v+"`")
-	}
-	return strings.Join(quoted, ", ")
 }

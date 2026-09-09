@@ -37,6 +37,36 @@ Eight workflows sit beside the gate, deliberately outside it:
   fixture (`make test-merge-verdict`); a finding is filed as one issue per
   offending pull request through the same reporter the health check uses.
 
+- **`review-coverage.yml`** — on `opened`, `reopened`, `synchronize` and
+  `ready_for_review`, and on a submitted review. A branch review reads
+  the branch **as it stood when the review was launched**, so the fixes for that
+  review's own findings are always outside it: the normal workflow produces an
+  unreviewed commit by construction, and it is the one carrying changes a
+  reviewer just judged risky enough to flag.
+
+  It reports two things, per reviewer rather than per pull request: commits that
+  landed **after** the newest record that reviewer left, named as a
+  `<reviewed>..<head>` range so re-reviewing is a copyable command; and a record
+  naming a commit **the branch no longer has**, which is what a force-push after
+  a review leaves behind — the verdict goes on standing against a tree nobody
+  compared it to, and nothing else on the pull request says so.
+
+  The review trigger is not decoration: a review is half the comparison, so
+  without it the report would go red on the fix commit and stay red through the
+  re-review that answers it, until somebody happened to push again.
+
+  It says nothing about a pull request **nobody has reviewed yet**. That is
+  every pull request for most of its life, and it is the same reason
+  `merge-attest.yml` stays quiet about an absent verdict.
+
+  **Gates nothing.** `ci` is the required check and this job is not it. It reads
+  what GitHub records — a review carries the commit it was made against — so it
+  speaks only for reviewers that leave one, and **its silence is not coverage**:
+  an in-session review posts no record here at all. Reported by
+  [`scripts/check-review-coverage.sh`](../../scripts/check-review-coverage.sh),
+  which reads its evidence from the environment so every arm is drivable from a
+  fixture (`make test-review-coverage`).
+
 - **`main-health.yml`** — every two hours on `main`: the backend gate, the
   real-Postgres lane, the SPA lane (those two called, not copied — it `uses:`
   `_lane-integration.yml` and `_lane-frontend.yml`), the screen-acceptance UAT,
@@ -131,10 +161,19 @@ Eight workflows sit beside the gate, deliberately outside it:
   Findings become **issues** (`scripts/scheduled-report.sh`), one open issue per
   check keyed on an exact title, because a red scheduled run notifies nobody and
   these checks exist precisely for the case where nothing prompts a human to look.
+  A check that comes back **green closes its own issue** — so the report job runs
+  whatever the lanes said, rather than only when one failed. Without that half a
+  finding outlives its fix until somebody closes it by hand, and the tracker
+  answers "is `main` red, and is anyone on it" wrongly in both directions; it also
+  means each red is its own issue instead of one standing title collecting every
+  breakage a lane has ever had. A `skipped` result is neither: it is the absence
+  of a verdict, and reading it as a pass would close a finding nothing re-examined.
   Two of those checks split one job result into **two** findings — the perf
   budgets and the model lane both distinguish "the thing under test is wrong"
   from "the lane could not run", because filing the former for the latter sends
-  somebody bisecting a regression that was never measured.
+  somebody bisecting a regression that was never measured. The split binds the
+  retraction too: a lane that ran and measured something bad has disproved "could
+  not run", so that finding is withdrawn on the same run the other one is filed.
   The reporting job is the sole holder of `issues: write` and runs no build code —
   the same permission isolation `sbom.yml` uses for signing.
 

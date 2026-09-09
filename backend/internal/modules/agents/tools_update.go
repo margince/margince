@@ -238,11 +238,22 @@ func (t updateRecord) apply(ctx context.Context, args updateRecordArgs, patch js
 // needs the post-write state (server-derived fields, bumped version)
 // whether it answers with the record alone or splices staging info in.
 func (t updateRecord) applyRecord(ctx context.Context, args updateRecordArgs, patch json.RawMessage) (wireRecord, error) {
+	// Through pinForWrite, not the raw argument. A redeemed retry that supplied
+	// no if_version would otherwise write unconditioned: redemption commits its
+	// own transaction and this one opens a fresh one, so the skew check inside
+	// redemption proves the row was right when the approval was CONSUMED, not
+	// when the effect lands — and the agent controls both sides of that window.
+	// The REST door forwards the released pin as If-Match, so every operation
+	// behind it is already carried; this is the same guarantee on this door.
+	pin, err := pinForWrite(ctx, args.IfVersion)
+	if err != nil {
+		return wireRecord{}, err
+	}
 	ref, err := t.p.Update(ctx, datasource.UpdateInput{
 		Ref:       datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID},
 		Patch:     patch,
 		Source:    ToolSource,
-		IfVersion: args.IfVersion,
+		IfVersion: pin,
 	})
 	if err != nil {
 		return wireRecord{}, err

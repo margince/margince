@@ -58,8 +58,14 @@ type ActivityRelinker interface {
 
 // LeadDisqualifier retires a lead: status disqualified + archived_at, the row
 // surviving so it stays fetchable by id.
+//
+// ifVersion carries the version the write must be conditioned on, exactly as
+// ProjectPhaseAdvancer's does. It is a parameter and not an omission because
+// this verb STAGES a target version at approval time: a pin staged and never
+// applied is a guarantee the approvals surface advertises and the write does
+// not keep.
 type LeadDisqualifier interface {
-	DisqualifyLead(ctx context.Context, id ids.UUID) (json.RawMessage, error)
+	DisqualifyLead(ctx context.Context, id ids.UUID, ifVersion *int64) (json.RawMessage, error)
 }
 
 // LeadDemoter reverses a promotion: the lead returns to the open ladder and
@@ -256,8 +262,15 @@ func (t disqualifyLead) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
+	// nil, because this tool takes no if_version of its own: the pin it applies
+	// is the one the approval was released against, or the one the auto-execute
+	// gate read the record at.
+	pin, err := pinForWrite(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
 	noteEvidence(ctx, datasource.EntityLead, args.LeadID)
-	return t.disqualifier.DisqualifyLead(ctx, args.LeadID)
+	return t.disqualifier.DisqualifyLead(ctx, args.LeadID, pin)
 }
 
 // --- demote_lead (🟡 write — reverses a promotion) ---

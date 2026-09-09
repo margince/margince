@@ -234,6 +234,7 @@ func (p *preflightEnv) connectorCtx(t *testing.T) context.Context {
 func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
 	deliveryID, messageID := p.deliveryFor(t, sentActivity)
@@ -378,6 +379,7 @@ func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 func TestDeactivatingTheSenderParksAStagedDelivery(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
 	deliveryID, _ := p.deliveryFor(t, sentActivity)
@@ -406,6 +408,7 @@ func TestDeactivatingTheSenderParksAStagedDelivery(t *testing.T) {
 func TestASenderDowngradedToAReadSeatParksAStagedDelivery(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
 	deliveryID, _ := p.deliveryFor(t, sentActivity)

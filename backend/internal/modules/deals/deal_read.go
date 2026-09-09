@@ -105,20 +105,38 @@ type ListDealsInput struct {
 	CustomFilters map[string]string
 }
 
-// dealNameColumn is the deal's display-name column, the quick-find
-// match expression. Deliberately NOT in the sortable vocabulary: the
-// data-model §13.5 DM-VOCAB-3 set does not list it.
+// dealNameColumn is the deal's display-name column and the quick-find
+// match expression.
 const dealNameColumn = "name"
 
-// dealListFields is the deal list's core sortable vocabulary — exactly
-// the data-model §13.5 DM-VOCAB-3 set; active cf_ columns join it per
-// request.
+// dealListFields is the deal list's sortable vocabulary; active cf_ columns
+// join it per request.
+//
+// A COLUMN THE LIST SHOWS IS A COLUMN THE LIST SORTS BY. It used to be exactly
+// the data-model §13.5 DM-VOCAB-3 set, and the deals list draws seven columns
+// of which that set reached three — so four headers were dead controls a reader
+// had to learn to ignore, and the frontend said so in a comment beside each one
+// rather than being able to fix it. Lars ruled on 2026-08-21 that the rule is
+// the columns, for every list in the product; where that and the older set
+// disagree, this follows the rule.
+//
+// `name` and `status` are the two the ruling reaches today, because they are
+// columns of `deal` and the list machinery orders by a base column. `stage` and
+// the two organization columns are joined — a stage sorts by its POSITION in
+// its pipeline rather than by its name, and a partner sorts by the
+// organization's — and storekit's ORDER BY renders one quoted identifier, so
+// those three need the sort model to take an expression before they can be
+// offered. Named here rather than left as an unexplained gap: the frontend
+// columns cite this vocabulary by name, so a reader who finds two of the four
+// fixed needs to know why the others were not.
 var dealListFields = map[string]string{
 	"created_at":          storekit.KindTimestamp,
 	"updated_at":          storekit.KindTimestamp,
 	"last_activity_at":    storekit.KindTimestamp,
 	"amount_minor":        fieldcatalog.TypeCurrency,
 	"expected_close_date": fieldcatalog.TypeDate,
+	dealNameColumn:        fieldcatalog.TypeText,
+	"status":              fieldcatalog.TypeText,
 }
 
 // wireRowTags renders one deal row's tag chips. A twin of the people module's:

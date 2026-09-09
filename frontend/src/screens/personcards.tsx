@@ -51,9 +51,8 @@ export function PersonBriefCard({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const firstName = view.person.full_name.split(" ")[0];
-  // The timeline the page already read, by id. A citation is resolved from it
-  // rather than fetched, on the same terms as every other card here: a chip
-  // can never name a record the page beside it is withholding.
+  // Resolved from the timeline the page already read rather than fetched: a
+  // chip can never name a record the page beside it is withholding.
   const citedActivities = new Map(
     (view.activities?.data ?? []).map((row) => [row.id, row]),
   );
@@ -61,19 +60,22 @@ export function PersonBriefCard({
   return (
     <Panel
       title={t("person.brief.title")}
-      // Who wrote it, on the band that claims it. A reader weighing a sentence
-      // needs to know whether a model or the deterministic fallback wrote it,
-      // and the two are not interchangeable.
-      titleAction={written ? <WrittenBy by={brief.generated_by} /> : undefined}
-      footer={
-        written ? (
-          <span className="t-caption">
-            {t("co.brief.generatedAt", {
-              when: formatDate(brief.generated_at, locale, recordZone),
-            })}
-          </span>
-        ) : undefined
+      // A machine's reading in EVERY state it can be in, so the tint rides the
+      // panel; which writer answered is sourcing, and sits in the foot band.
+      tone="ai"
+      titleAction={
+        <>
+          {written && (
+            <span className="t-caption">
+              {t("co.brief.generatedAt", {
+                when: formatDate(brief.generated_at, locale, recordZone),
+              })}
+            </span>
+          )}
+          <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+        </>
       }
+      footer={written ? <WrittenBy by={brief.generated_by} /> : undefined}
     >
       <PanelBody>
         {loading && (
@@ -87,13 +89,11 @@ export function PersonBriefCard({
         )}
         {written && (
           <>
-            {/* The kit's prose, judgement first: what the brief ADDS to the
-                cards above it is what the agent makes of them, and every
-                sentence says what kind of claim it is. The sources are drawn
-                below by transport rather than as citation chips, because a
-                chip cannot know whether a cited conversation was mail or a
-                chat message, and this card's reader has been told wrong
-                before. */}
+            {/* Judgement first: what the brief ADDS to the cards above it is
+                what the agent makes of them. The sources are drawn below BY
+                TRANSPORT rather than as citation chips, because a chip cannot
+                know whether a cited conversation was mail or a chat message,
+                and this card's reader has been told wrong before. */}
             <SentenceList
               sentences={brief.sentences}
               leadWithJudgement
@@ -243,7 +243,7 @@ function SourceChip({
       );
     }
     return (
-      <span className="pe-memory-channel">
+      <span className="pe-memory-channel t-caption">
         {interactionIcon(activity?.kind)}
         {activity
           ? interactionLabel(activity.kind, activity.channel_provider)
@@ -252,7 +252,7 @@ function SourceChip({
     );
   }
   return (
-    <span className="pe-memory-channel">
+    <span className="pe-memory-channel t-caption">
       <FileText size={13} aria-hidden="true" />
       {cited.entity_type === "deal"
         ? t("person.brief.sourceDeal")
@@ -396,7 +396,7 @@ export function PersonCommercialCard({ view }: Readonly<{ view: Person360 }>) {
 
         {commercial.committee.length > 0 && (
           <>
-            <div className="pe-committee-label">
+            <div className="pe-committee-label t-sub">
               {t("person.commercial.committee")}
             </div>
             {commercial.committee.map((member) => (
@@ -405,9 +405,7 @@ export function PersonCommercialCard({ view }: Readonly<{ view: Person360 }>) {
                   <Avatar name={member.full_name} src={member.photo_url} />
                   <span>{member.full_name}</span>
                 </span>
-                <span className="pe-committee-role">
-                  {readableRole(member.role)}
-                </span>
+                <span className="t-sub">{readableRole(member.role)}</span>
               </div>
             ))}
           </>

@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly reports that Strategic Account (the surviving word) now carries the meaning 'an account with a named exec sponsor,' which is exactly what the criterion requires.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes.",
+  "answer": "Both spellings are in the tag list, and only each tag's own read carries a usage count: Strategic Account 41, Strategic Accts 3.\n\nSo Strategic Accts loses, and its 3 accounts move onto Strategic Account.\n\nNothing has moved yet. The fold sits with an approval and somebody has to release it before any record changes.\n\nStrategic Account now reads: an account with a named exec sponsor."
+}

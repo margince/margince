@@ -115,6 +115,43 @@ describe("what needs the lead", () => {
     // would tell them a surface exists which is not theirs.
     expect(fetched.mock.calls.length).toBe(0);
   });
+
+  // THE HEALTHY ANSWER, and the one the panel used to draw worst. A clear team
+  // answers with an empty list — the contract says so — and the state derived
+  // from the query's flags alone called it `ready`: five column names over no
+  // rows, where the sentence saying the team is clear is the whole reading a
+  // lead came for.
+  it("says the team is clear rather than drawing an empty table", async () => {
+    stubExceptions({
+      as_of: "2026-09-05T09:00:00Z",
+      exceptions: [],
+      truncated: false,
+    });
+
+    renderPanel();
+
+    expect(
+      await screen.findByText(en["worklist.exceptions.empty"]),
+    ).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
+    // And no figure in the footer band: a count of nothing is chrome saying
+    // zero under a panel that has already said it in words.
+    expect(screen.queryByText(/needing you/)).toBeNull();
+  });
+
+  // An answer carrying no list AT ALL is not a clear team. `exceptions` is
+  // required on the wire, so its absence is version skew — and reading it as
+  // empty would report the refusal as good news to the one reader whose job is
+  // to intervene.
+  it("says it could not be read rather than reporting a clear team", async () => {
+    stubExceptions({ as_of: "2026-09-05T09:00:00Z", truncated: false });
+
+    renderPanel();
+
+    expect(await screen.findByText(/Could not be loaded/)).toBeTruthy();
+    expect(screen.queryByText(en["worklist.exceptions.empty"])).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
 });
 
 function stubExceptions(body: unknown) {

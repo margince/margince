@@ -316,6 +316,77 @@ func TestBeingCopiedOnAThreadIsNotWritingIntoIt(t *testing.T) {
 	}
 }
 
+// A channel counterparty carries no address (connector.Counterparty's own
+// doc explains why), so authorIsTheSubject's account branch is what a
+// customer's own inbound message on a channel is evidence through — the
+// same claim TestAReplyToAThreadTheSubjectStartedIsAReply holds for mail's
+// address branch.
+//
+// Mutation: drop the account-matching OR arm from authorIsTheSubject and
+// this fails — the address arm alone never matches a row with no address.
+func TestAChannelParticipantAnswersTheThreadArm(t *testing.T) {
+	e := setupResolve(t)
+	ctx := context.Background()
+	anchor := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, channel_provider, direction, thread_key, occurred_at, source, captured_by)
+		VALUES ($1, 'message', 'telegram', 'inbound', 'chan-thread-1', now(), 'connector:telegram', 'connector:telegram')`,
+		anchor); err != nil {
+		t.Fatalf("planting the channel activity: %v", err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity_participant (activity_id, channel_user_id, role)
+		VALUES ($1, 'acct-9', 'from')`, anchor); err != nil {
+		t.Fatalf("planting the channel participant: %v", err)
+	}
+
+	subject := subjectRef{Kind: entityPerson, ID: e.person.String(), ChannelProvider: "telegram", ChannelUserID: "acct-9"}
+	var found bool
+	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		found, err = repliesToTheSubject(ctx, tx, anchor, subject)
+		return err
+	}); err != nil {
+		t.Fatalf("asking the thread arm: %v", err)
+	}
+	if !found {
+		t.Fatal("a channel customer's own inbound message did not answer for their own reply")
+	}
+}
+
+// The account branch matches by ACCOUNT, not merely by provider: a different
+// account on the same provider, on the same thread, is a different human and
+// answers for nobody's reply.
+func TestADifferentChannelAccountOnTheSameProviderIsNotTheSubject(t *testing.T) {
+	e := setupResolve(t)
+	ctx := context.Background()
+	anchor := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, channel_provider, direction, thread_key, occurred_at, source, captured_by)
+		VALUES ($1, 'message', 'telegram', 'inbound', 'chan-thread-2', now(), 'connector:telegram', 'connector:telegram')`,
+		anchor); err != nil {
+		t.Fatalf("planting the channel activity: %v", err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity_participant (activity_id, channel_user_id, role)
+		VALUES ($1, 'acct-9', 'from')`, anchor); err != nil {
+		t.Fatalf("planting the channel participant: %v", err)
+	}
+
+	subject := subjectRef{Kind: entityPerson, ID: e.person.String(), ChannelProvider: "telegram", ChannelUserID: "acct-77"}
+	var found bool
+	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		found, err = repliesToTheSubject(ctx, tx, anchor, subject)
+		return err
+	}); err != nil {
+		t.Fatalf("asking the thread arm: %v", err)
+	}
+	if found {
+		t.Fatal("a stranger's account on the same provider answered for this subject's reply")
+	}
+}
+
 // A DIFFERENT thread's inbound does not support this reply. Thread continuity
 // is what the anchor establishes; a message the subject sent about something
 // else is not an invitation to answer on this one.
@@ -468,6 +539,42 @@ func TestTheLegacyTransactionalPurposeNoLongerCarriesItself(t *testing.T) {
 	}
 	if got.Reason != commsauthz.ReasonLegacyTransactionalUnevidenced {
 		t.Errorf("reason = %q, want legacy_transactional_unevidenced", got.Reason)
+	}
+}
+
+// AND THE VERDICT AGREES WITH THE RESOLUTION.
+//
+// The resolution above has said "not supported, and here is why" since the
+// escape hatch was closed, but the DECISION went on allowing: decideResolved
+// handed an unsupported transactional claim to legacyVerdictFor, which asked
+// VerdictForPerson, whose ClassTransactional arm allows unconditionally. So the
+// engine recorded its objection and sent the mail anyway, on nothing but the
+// purpose key — which is the hole the resolution change was supposed to close.
+//
+// The person here has an address, a seeded transactional purpose, and NO
+// invoice, contract, thread or deal. The only thing saying this message is
+// operational is the caller's own purpose key.
+//
+// The lead arm closed this already (TestALeadTakesNoAuthorityFromATransactionalPurpose
+// in leadconsent_integration_test.go); persons were the remaining half.
+func TestTheLegacyTransactionalPurposeDoesNotAllowTheSend(t *testing.T) {
+	e := setupResolve(t)
+	e.seedPurpose(t, "transactional", "transactional")
+
+	got := e.decide(t, commsauthz.Request{LegacyPurposeKey: "transactional"})
+
+	if got.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("verdict = allow (%s): the transactional key authorized a send on its own, "+
+			"with no invoice, contract, thread or deal behind it", got.ReasonCode)
+	}
+	if got.ReasonCode != commsauthz.ReasonLegacyTransactionalUnevidenced {
+		t.Errorf("reason = %q, want legacy_transactional_unevidenced — the refusal should name "+
+			"the missing evidence, not a generic denial", got.ReasonCode)
+	}
+	// Resolved still names what the engine worked out, so the row reads as an
+	// account notice that could not be evidenced rather than as a mystery.
+	if got.Resolved != commsauthz.CategoryAccountNotice {
+		t.Errorf("resolved %q, want account_notice", got.Resolved)
 	}
 }
 
@@ -677,7 +784,7 @@ func TestARecipientWithNoStagedClaimInheritsNothing(t *testing.T) {
 	}
 
 	req := stagedRequestFor(commsauthz.TransmitRequest{PurposeKey: "newsletter"},
-		connector.Recipient{Email: "nobody@corp.test"}, claims, "")
+		connector.Recipient{Email: "nobody@corp.test"}, claims, "", nil)
 	if req.Context != "" {
 		t.Fatalf("an unstaged recipient inherited the claim %q", req.Context)
 	}

@@ -206,3 +206,66 @@ func TestTheQuietWeekExemplarIsOfferedOnlyToAQuietWeek(t *testing.T) {
 		t.Error("a busy week is not told that it was busy")
 	}
 }
+
+// A week of leads and meetings is not a quiet week.
+//
+// The narrative's counts held tasks, deals, proposals and brief interactions —
+// but not the lead and meeting outcomes the scorecard reports on the same page.
+// So a rep who spent the week answering new business and sitting in meetings
+// reached the narrator as a row of zeros, and it wrote that nothing happened,
+// beside a scorecard saying otherwise.
+func TestAWeekOfLeadsAndMeetingsIsNotQuiet(t *testing.T) {
+	cases := []struct {
+		name string
+		in   Counts
+	}{
+		{"leads were routed", Counts{LeadsRouted: 4}},
+		{"leads were answered in time", Counts{LeadsAnsweredInTarget: 2}},
+		{"a lead's target was missed", Counts{LeadsBreached: 1}},
+		{"meetings were held", Counts{MeetingsHeld: 3}},
+		{"a meeting produced a next step", Counts{MeetingsWithNextStep: 1}},
+	}
+	for _, c := range cases {
+		if c.in.quiet() {
+			t.Errorf("%s: the week reads as quiet, so the narrator is told nothing happened", c.name)
+		}
+	}
+	// The genuinely empty week still reads as one — the point is not to make
+	// every week loud, it is to stop calling a busy one silent.
+	if !(Counts{}).quiet() {
+		t.Error("a week with nothing in it no longer reads as quiet")
+	}
+}
+
+// "Nothing closed" is a claim about DEALS, and a week of answered leads does
+// not contradict it.
+//
+// The contradiction guard fires on any non-quiet week. Once lead and meeting
+// work made a week non-quiet, a truthful sentence about a rep who routed four
+// leads and moved no pipeline — "Four leads answered; nothing closed" — was
+// refused by the guard meant to stop the opposite lie. The claim and the fact
+// that settles it have to match.
+func TestASentenceAboutDealsIsJudgedByTheDeals(t *testing.T) {
+	leadsOnly := Input{Counts: Counts{LeadsRouted: 4, LeadsAnsweredInTarget: 4}}
+
+	// TRUE, and it must survive: no deal did anything.
+	if err := refuseContradiction("Four leads answered in time; nothing closed.", leadsOnly); err != nil {
+		t.Errorf("a truthful sentence was refused: %v", err)
+	}
+	// FALSE, and it must still be caught: the week was not empty.
+	if err := refuseContradiction("A quiet week.", leadsOnly); err == nil {
+		t.Error("a week of four routed leads was allowed to call itself quiet")
+	}
+
+	// And the original guard is intact where it belongs: a week that closed
+	// deals may not say nothing closed.
+	won := Input{Counts: Counts{DealsWon: 3}}
+	if err := refuseContradiction("Nothing closed this week.", won); err == nil {
+		t.Error("a week with three won deals was allowed to say nothing closed")
+	}
+
+	// A genuinely empty week may say so.
+	if err := refuseContradiction("A quiet week — nothing closed.", Input{}); err != nil {
+		t.Errorf("an empty week was refused its own description: %v", err)
+	}
+}

@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (99)
+## Parity (104)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -26,6 +26,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `airoutingschema_test.go` | H3 | What the EDITOR accepts, checked against what the parser accepts. |
 | `aitaskparity_test.go` | H3 | Every ai\_task an emitter writes into the AI-activity projection must be a task the AI contract declares. |
 | `aitaskrunenum_test.go` | H3 | The ai\_task.state\_changed payload's closed vocabularies must equal the ai\_task\_run column CHECKs they are projected into. |
+| `appviewfixtures_test.go` | H2 | A view's fixture is the tool's answer, and this is what makes that true. |
 | `auditcoherence_test.go` | H3 | The audit\_log enum-coherence gate as a fitness function. |
 | `authwaitparity_test.go` | H3 | How long an in-flight authentication may be held waiting on somebody else's server. |
 | `authzcategories_test.go` | H2 | The outbound category vocabulary is spelled TWICE — once in Go, once as a CHECK constraint on communication\_decision — and the two must agree. |
@@ -33,6 +34,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `basevaluespelling_test.go` | H2 | One deal's base-currency value is spelled twice, in two packages that cannot import each other, and this is what stops the two from drifting. |
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the SAME variable whether to publish a record, and both answer only to the same value. |
 | `bookinginvite_test.go` | H2 | What booking a meeting CLAIMS and what it DOES, held against each other. |
+| `briefdeckexclusion_test.go` | H3 | A Brief count and the door beneath it must exclude the SAME rows. |
 | `captureledgerstatuses_test.go` | H2 | The disposition ledger's status vocabulary has ONE definition, and it is the column's own constraint. |
 | `coachingroles_test.go` | H2 | The seats that may coach are seats that exist. |
 | `coderabbitpathrules_test.go` | H3 | What .coderabbit.yaml tells the reviewer about backend Go, held against what is true. |
@@ -47,11 +49,13 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractvocabulary_test.go` | H3 | A membership set built from a generated enum's own constants must hold every member of that enum. |
 | `corepicklistcontract_test.go` | H3 | The core picklist value sets against the contract that owns them. |
 | `dealmoveargument_test.go` | H2 | One rule, read on both sides of a compose seam. |
+| `dealmovemirror_test.go` | H2 | One rule, spelled on both sides of a module boundary, held equal in both directions. |
 | `dedupeevidencefields_test.go` | H1 | The dedupe evidence snapshot is stored as free JSON, so nothing about a field name is checked when it is written. |
 | `deexceptionmirror_test.go` | H3 | The engine's test fixture for the German exception is the pack's declaration, or the tests prove nothing about what ships. |
 | `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
 | `emailsplitterparity_test.go` | H3 | The server composes a row's preview and the browser folds the quoted tail in the drawer, from two copies of one vocabulary. |
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
+| `exportedreferences_test.go` | H2 | Every reference an exported row carries to a row-scoped record is one the export withholds from a reader who could not open it. |
 | `filtervocabularyparity_test.go` | H3 | Two surfaces answer a filtered question: the list/segment compiler in `platform/database/storekit`, and the query compiler in `modules/search`. |
 | `forecastperiodparity_test.go` | H3 | Every period the contract offers must be a window the server can resolve. |
 | `forwardmeasureparity_test.go` | H3 | Every forward measure must be spelled the same on all three sides. |
@@ -115,11 +119,12 @@ The eight shapes, what each is for, and how each one silently passes:
 | `shippingloopreachesthelane_test.go` | H2 | The routine the rulebook tells a contributor to run reaches the integration lane. |
 | `teamoutlookmirror_test.go` | H3 | The team's frozen outlook and the rep's are the same fact over different books, so they are the same SHAPE or one of them is lying. |
 | `transcriptmarker_test.go` | H3 | One value, spelled in two modules, because a module never imports a sibling. |
+| `wonreasondetailbound_test.go` | H2 | The paperless-win detail's length bound is ONE number, in three places that each need it. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (131)
+## Census (140)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -142,21 +147,26 @@ The eight shapes, what each is for, and how each one silently passes:
 | `auditbeforeimage_test.go` | H2 | An audited update says what it changed FROM. |
 | `audittraildoor_test.go` | H2 | The audit trail is a SECOND door onto an activity's content, and every reader of it says what it does about a held one. |
 | `basecurrencyguard_test.go` | H2 | The base-currency lock as a fitness function. |
+| `belowtheauthgate_test.go` | H2 | What can be reached without credentials is a declared list, not whatever the routing code happens to allow. |
 | `bootcomposition_test.go` | H2 | The fitness gate on the boot sequence: a process role that composes extensions also records what it composed. |
 | `briefevidencestrip_test.go` | H2 | "Never persist an email summary" is spelled once, and every writer that caches evidence says it that way. |
 | `briefsectioncensus_test.go` | H2 | Every worklist category reaches a section of the morning. |
+| `calendaroccurrenceexpansion_test.go` | H2 | Every calendar pull lists OCCURRENCES, never recurring series masters. |
 | `capturecontainers_test.go` | H2 | Every mail connector tells the sink where the provider FILED a message. |
 | `catalogoptionsreaders_test.go` | H2 | Who may read a custom field's OPTIONS. |
 | `claimedspelling_test.go` | H3 | A constant whose doc comment says it is spelled once is making a checkable statement, and until now nothing checked it. |
 | `clearablefields_test.go` | H2 | The fields a restore says it can clear are the fields the stores clear. |
+| `communityhealth_test.go` | H1 | The community-health files GitHub resolves from the repository root. |
 | `confirmcardfields_test.go` | H2 | The confirm page shows a data subject their own record, and only that. |
 | `consumerlanes_test.go` | H3 | Every consumer group the catalog declares is subscribed by some process role — or is a reserved placeholder that says so. |
 | `consumersubscribed_test.go` | H3 | Every event consumer is actually subscribed. |
 | `contractproducers_test.go` | H2 | A field the contract PROMISES and nobody WRITES is invisible. |
 | `contractrefs_test.go` | H3 | Contract $ref pre-flight as a fitness function. |
+| `contributorwiring_test.go` | H1 | What a contributor arriving from outside is promised, in the files they meet on the way in. |
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
+| `desktopmacosfloor_test.go` | H1 | Every macOS build script pins the bundle's OS floor before it compiles anything. |
 | `directmailbypass_test.go` | H2 | Who may hand a message straight to the SMTP relay, bypassing comms\_outbound. |
 | `docscodepaths_test.go` | H3 | Every source file a prose page names in backticks still exists. |
 | `docslinktargets_test.go` | H3 | Every relative link under docs/ points at a file that exists. |
@@ -180,6 +190,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |
 | `governedkindseams_test.go` | H2 | The two halves of automatic apply agree about which kinds it covers. |
 | `insertattemptcaps_test.go` | H2 | An insert that names no MaxAttempts does not run without a retry ladder — it runs on River's default of 25, on attempt-to-the-fourth backoff, which reaches days. |
+| `interactionunit_test.go` | H3 | Every count that becomes a relationship-strength number counts the shared UNIT, not rows. |
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
 | `jobcensus_test.go` | H3 | The census as a fitness function, in both directions. |
 | `jobrole_test.go` | H2 | Every River job declares its role, and the declaration is the contract: a job either does tenant work for ONE workspace (jobs.WorkspaceScoped, method WorkspaceID) or only scans and enqueues (jobs.FleetWide). |
@@ -187,7 +198,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `leadpersonlockorder_test.go` | H2 | ONE lock order over the lead and the person it was promoted into. |
 | `license_test.go` | H3 | License-notice fitness function (business/12-license.md §5 "honest labeling", §8 "don't strip notices"): every hand-written Go file must carry the BUSL-1.1 SPDX header, and the obligation is derived from the tree rather than a checklist — a new file is enrolled the moment it exists. |
 | `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |
-| `machineryapplied_test.go` | H2 | Every setting read through settings.ApplyTx is declared MachineryApplied. |
+| `machineryapplied_test.go` | H2 | Every setting read through an ungated machinery reader — settings.ApplyTx or settings.ApplyManyTx — is declared MachineryApplied. |
 | `mailboxproofwriters_test.go` | H2 | A MailboxProof is set in exactly one place, and that place spends the token that earns it. |
 | `maillanguagereader_test.go` | H2 | One reader of the installation's base language. |
 | `makefilepaths_test.go` | H1 | Every config file the Makefiles name is a config file that exists. |
@@ -208,6 +219,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `onestringfolder_test.go` | H2 | A census over the censuses: nobody writes a second reader for "what string does this Go expression hold". |
 | `onevoiceversionwriter_test.go` | H2 | voice\_profile\_version and voice\_profile\_delta each have ONE writer. |
 | `outboundanonymity_test.go` | H2 | Every outbound HTTP request either says who is calling, or is registered as deliberately anonymous with the reason. |
+| `overlaywritecoverage_test.go` | H2 | Every field a caller may PATCH either projects onto the incumbent or says why it does not. |
 | `ownerprivatepairing_test.go` | H2 | A table whose visibility admits 'owner' names the owner, or the record it marks most-private is the one nobody can read. |
 | `parallelgates_test.go` | H3 | Every gate here runs in parallel with the others, and this is what keeps that true as gates are added. |
 | `passportlessagents_test.go` | H1 | An agent principal carrying no passport is a principal nobody can revoke. |
@@ -234,11 +246,13 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook — at the root, and in any directory that needs one of its own. |
 | `safetydefects_test.go` | H2 | Every declared stage-automation safety defect can actually stop a rule. |
 | `satellite_lifecycle_test.go` | H2 | Person-satellite lifecycle reach as a fitness function. |
+| `scrubbedentitytypes_test.go` | H2 | Which RECORD TYPES a scrub verb is ever written against. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |
 | `seatfanout_test.go` | H2 | A nightly agent acts FOR A PERSON, and the identity of one night's work has to say which person. |
 | `sendcontext_test.go` | H2 | Every send says WHY it is being sent. |
 | `sendcontextvalidation_test.go` | H3 | Every door that builds a send input runs the claim through the shared validator. |
 | `sendinghumanreaders_test.go` | H2 | principal.SendingHuman has ONE reader, and it answers one question. |
+| `settingreaders_test.go` | H2 | `setting` carries neither row-level security nor a row-scope clause. |
 | `settingscatalog_test.go` | H3 | The settings-catalog fitness gates (ADR-0090/A135 §7). |
 | `sourcecensus_test.go` | H2 | The two source censuses that used to be awk, and the corpus that holds both halves of each of them to the same cases. |
 | `stagingdecision_test.go` | H3 | Every path that stages a delivery records why it was allowed to. |
@@ -255,7 +269,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistdestination_test.go` | H2 | Every source the worklist can emit has one screen it belongs on. |
 | `worklistreasonkinds_test.go` | H2 | Every reason a row gives is one the contract declares and a client can render. |
 
-## Reachability (18)
+## Reachability (19)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -264,6 +278,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `composerowscope_test.go` | H2 | Review-loop rule 3 as a fitness function over the compose tier: anything that returns a record is a read, so a query that hands back a REFERENCE to a row-scoped record applies that record's row scope. |
 | `consentproof_test.go` | H2 | The Art. 7(1) demonstrability invariant as a fitness function: every write that sets a person\_consent STATE appends a consent\_event proof row in the same function (data-model §3.4 — the current state is always backed by an append-only event saying when, how, and by whom). |
 | `dedupespine_test.go` | H2 | The identity-spine fitness functions. |
+| `effectredemption_test.go` | H2 | Every approval effect redeems the approval it ran. |
 | `liveprobelock_test.go` | H2 | A live-probed write of a HELD row locks its subject. |
 | `messagingpackreach_test.go` | H2 | Every messaging rule set a shipped unit declares is one the boot registers. |
 | `moduleaudits_test.go` | H2 | A module that owns tables writes their history. |
@@ -278,7 +293,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthorityreach_test.go` | H2 | Every write of a shareable record reaches a write-authority probe. |
 | `writeshape_test.go` | H2 | The write-shape obligation as a fitness function: every mutation that writes an audit row commits a paired outbox event on the same static call path (data-model §11, events.md §4.2 — spelled once in storekit), across modules AND the composition layer. |
 
-## Shape (24)
+## Shape (25)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -293,6 +308,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobfault_test.go` | H2 | Every River worker returns through jobs.Fault. |
 | `jobfleetwide_test.go` | H2 | A FleetWide declaration is a promise: this job enumerates and enqueues, and does no tenant write of its own (jobs.FleetWide). |
 | `jobwirekey_test.go` | H2 | One workspace arg, one spelling, and only where it means something. |
+| `laneordering_test.go` | H1 | The craftsmanship gate runs only after the deterministic gates are green: a red build must never be judged on style. |
 | `listenvelope_test.go` | H2 | The contract's list envelope has ONE shape, and something depends on that. |
 | `manifestdigest_test.go` | H2 | Manifest-hash encoding fitness function (ADR-0120 §7): every hash a generated unit manifest publishes says which algorithm produced it. |
 | `positionalrowscan_test.go` | H2 | A positional row mapping may only target a struct its own package declares. |
@@ -307,7 +323,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (52)
+## Prohibition (53)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -316,6 +332,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `authzmetriclabels_test.go` | H2 | The outbound decision counter labels only closed vocabularies, and never the recipient. |
 | `backfillledgerlock_test.go` | H2 | A transaction that writes the backfill creation ledger locks the run row first. |
 | `capabilitypathlog_test.go` | H2 | A request path reaches a log line through capabilitypath.Redact, never raw. |
+| `commentnamedtests_test.go` | H1 | A test named in a comment exists. |
 | `connectoractor_test.go` | H1 | A connector's actor id is DERIVED from the work, never written down. |
 | `constraintnameleak_test.go` | H2 | A constraint's name goes in the operator's log, never in the caller's refusal. |
 | `contentionprobe_test.go` | H2 | A contention probe that cannot see the backend it is waiting for. |

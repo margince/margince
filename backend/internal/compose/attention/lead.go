@@ -30,9 +30,9 @@ import (
 // while the queue that claims to be "what should I do next" said nothing about
 // it.
 //
-// `tracked` is the installation's first-response policy, and false is not an
-// empty list: with the target switched off no lead owes a reply at a stated
-// time, so the lane renders ABSENT rather than empty. Saying "no leads are
+// `tracked` is the installation's first-response policy. It decides whether a
+// row can carry a DEADLINE, not whether the row exists: a lead owes a reply
+// either way. Saying "no leads are
 // overdue" where nothing measures overdue would be a claim the product cannot
 // support.
 type LeadResponses interface {
@@ -195,8 +195,10 @@ func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 // row for a source the page never consulted.
 type leadRead struct {
 	rows []OwedLead
-	// read is false when no lead source is bound, when the installation
-	// measures no first response, or when the read was refused or failed.
+	// read is false when no lead source is bound, or when the read was refused
+	// or failed — never because the installation measures no first response,
+	// which is a fact about deadlines rather than about whether leads owe
+	// replies.
 	read bool
 }
 
@@ -209,17 +211,20 @@ func (l leadRead) bounded() bool {
 
 // owedLeads reads the leads still owed a first reply, or names why it could not.
 //
-// An installation with no first-response target has no leads that are LATE, so
-// the source is absent from the page entirely. Reporting zero overdue leads
-// where nothing measures overdue would be a number the product cannot stand
-// behind.
+// A lead owing a reply is a fact about the LEAD; whether that reply is LATE is a
+// fact about the installation's policy. So the lane reports the rows whether or
+// not a first-response target exists, and a row carries a deadline only where
+// one is set.
 func (s *Service) owedLeads(
 	ctx context.Context,
 ) (leadRead, *crmcontracts.WorklistSourceUnavailable) {
 	if s.leads == nil {
 		return leadRead{}, nil
 	}
-	owed, tracked, err := s.leads.Owed(ctx, s.taskScope, s.taskOwner, leadResponseBound)
+	// The policy answer is deliberately unused: a deadline belongs on the row
+	// that has one, and every row already carries its own. Reading it here
+	// would be a second place deciding what the lane may say.
+	owed, _, err := s.leads.Owed(ctx, s.taskScope, s.taskOwner, leadResponseBound)
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return leadRead{}, &crmcontracts.WorklistSourceUnavailable{
@@ -230,8 +235,6 @@ func (s *Service) owedLeads(
 		return leadRead{}, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceLeadResponse, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
-	case !tracked:
-		return leadRead{}, nil
 	default:
 		return leadRead{rows: owed, read: true}, nil
 	}

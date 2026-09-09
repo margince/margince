@@ -1,0 +1,105 @@
+# CASE 32 — Two words for one thing.
+#
+# The vocabulary has split, which is the failure create_tag's description warns
+# about, and this is the errand that puts it back.
+#
+#   list_tags   — both words and their ids. Nothing else enumerates the
+#                 vocabulary, and merge_tags takes ids.
+#
+#   get_tag     — THE COUNTS, and they are the reason this call is required
+#                 rather than merely sensible. list_tags answers a Tag, which
+#                 carries no usage; get_tag answers a TagDetail, which does. The
+#                 user asks for the word on more records to be the one that
+#                 survives, so the choice is arithmetic the tag list cannot do
+#                 and only this read carries.
+#
+#   merge_tags  — the only tool that folds one word into another and moves the
+#                 records with it. Doing it by hand — remove_tag on each record,
+#                 apply_tag with the other word — is a second implementation of
+#                 one capability, and leaves the retired word standing.
+#
+#   update_tag  — the description. Nothing else writes one, and it is what stops
+#                 a third spelling being coined next quarter.
+#
+# merge_tags is CONFIRM-FIRST (🟡): it stages the fold and a person releases it.
+# So the honest report of this errand is "waiting", not "done" — the same
+# distinction case 1's criterion 14 exists for, in the one place where the tool
+# is irreversible once released. An answer that describes the vocabulary as
+# already cleaned up has told the user the thing they will act on is finished.
+name: case32_two_words_for_one_thing
+criteria: [1, 2, 3]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Our tags have gone double. There is a Strategic Account and there is a
+  Strategic Accts, and half the team picks one and half the other. Put them back
+  to one word — keep whichever of the two is on more accounts, and fold the
+  other one into it.
+
+  Then give the one that survives a description so nobody coins a third: it
+  means an account with a named exec sponsor.
+
+must_call:
+  - list_tags
+  - get_tag
+  - merge_tags
+  - update_tag
+
+may_call:
+  - list_records
+  - query_workspace
+  - read_record
+  - get_record_tags
+  - search_records
+  - list_approvals
+  - read_approval
+  - whoami
+  - list_colleagues
+
+# NOTHING IS PINNED WITH must_call_with, deliberately. Every argument these four
+# tools take on this errand is a uuid the fixture mints at seed time, and the
+# one free-text argument — update_tag's description — is prose the user
+# described rather than dictated. Pinning a wording would judge the sentence,
+# which check.py's own contract says it does not.
+
+must_mention:
+  # Criterion 1, MECHANICAL: the choice was made on the counts, and the count is
+  # said out loud. Anchored to what is being counted — a bare digit is satisfied
+  # by the "Q1" in an unrelated sentence. A count is what a regex is reliable
+  # for, and this one has never leaked.
+  - "(?:3|three)[^.]{0,40}(?:account|compan|record)|(?:account|compan|record)\w*[^.]{0,25}(?:3|three)"
+
+# THE SEMANTIC HALF. Each entry is one criterion in plain words, and that
+# sentence is BOTH the question put to the judge and the documentation of what
+# this case asks. A criterion is a statement ABOUT THE ANSWER and "yes" means it
+# holds, the forbidding one included.
+#
+# ALL FOUR WERE REGEXES, and the paid guards sweep measured three correct answers
+# to this prompt scored red by two of them. The losing word gets NAMED with no
+# verb of folding anywhere near it — "Strategic Accts is the one that goes",
+# "its records move onto Strategic Account" — and the predicate list reached
+# none of those; the staged fold gets reported as "staged, not finished", which
+# carries no verb of waiting at all. Each round of widening bought one sentence
+# and left the next, which is what an enumeration does against an unbounded
+# space of phrasings.
+#
+# WHAT CRITERION 3 CAN HONESTLY ASK, said out loud rather than overclaimed: this
+# lane reads the answer, not the database, so no assertion here can tell a
+# description written onto the word from the same sentence merely typed into the
+# reply. What it can ask is that the answer reports the meaning as now carried by
+# the word that SURVIVES, which is the half a run drops when it forgets the
+# second errand or folds the pair the wrong way round.
+judge:
+  - "Criterion 1. The answer names Strategic Accts as the word that goes and Strategic Account as the word that survives — the one on more records. Any form of the decision counts: folded, merged, retired, dropped, absorbed, 'is the one that goes', 'loses', 'its records move onto Strategic Account'. Answer no if the answer reports the fold the other way round, so that Strategic Accts is the survivor, and no if it never says which of the two words goes."
+  - "Criterion 2. The answer reports that the fold has not happened yet: it is staged, queued, waiting, pending, held for approval, or needs a person to release it, and nothing has moved on the records so far. Stating it without any verb of waiting — 'the fold is staged, not finished' — is the same finding: answer yes. Answer no if the answer describes the vocabulary as already back to one word, or reports the records as already moved, with nothing said about a decision anybody still has to take."
+  - "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes."
+  - "Criterion 2, the capability. The answer never tells the reader that Margince cannot fold two tags into one, or that there is no way to merge them, or that the fold had to be done by hand record by record. The product does fold them, with a person releasing the call. Reporting that the fold WAITS on that person is the finding this case rewards, not a claim about the capability: answer yes."
+
+runs: 3
+pass_at: 2

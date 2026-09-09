@@ -122,6 +122,15 @@ var tableOwners = map[string]string{
 	// Kept apart from deal_stage_history rather than folded into it: readers
 	// outside this module count that table's rows as stage movements.
 	"deal_forecast_history": "internal/modules/deals",
+	// The nightly close-date pass and the eligible set it froze at the start of
+	// one. Deals-owned rather than folded into assurance's run tables: a module
+	// never writes a sibling's, and the two sweeps answer to different rules.
+	"close_date_run":        "internal/modules/deals",
+	"close_date_run_member": "internal/modules/deals",
+	// One machine correction's lifecycle: what it changed, and whether somebody
+	// has since taken it back. NOT a second audit ledger — the audit row owns
+	// the before/after images and this row points at it.
+	"deal_correction": "internal/modules/deals",
 	// The project is its own bounded context, superseding ADR-0073 — see
 	// modules/projects/doc.go. This entry is what makes that a rule rather than
 	// a layout: a statement writing either table from any other package fails
@@ -232,6 +241,10 @@ var tableOwners = map[string]string{
 	"capture_auto_enrich_state":    "internal/modules/capture",
 	"capture_pending_counterparty": "internal/modules/capture",
 	"capture_auto_enrich_budget":   "internal/modules/capture",
+	// What the QC-only test_mailbox connector has sent and whether its own
+	// Sync has echoed it back yet — internal bookkeeping, not audited;
+	// rows are retained rather than swept.
+	"capture_test_mailbox_sent": "internal/modules/capture",
 	// What the pipeline decided about each message, for 24 hours. Written by
 	// the sink alone; compose reads it and sweeps it, and the verdict engine
 	// writes nothing here — its answers live in the disposition ledger and are
@@ -419,6 +432,12 @@ var tableOwners = map[string]string{
 	// records a completed PARSE, and every meeting this pass must re-read
 	// already carries one.
 	"activity_meeting_attendee_repair": "internal/compose",
+	// Which captured meetings have had their stored original re-read for the
+	// RSVP nobody looked at when they were captured. The same bookkeeping,
+	// owned here for the same reason — and a marker of its own again, because
+	// this one records a completed JUDGEMENT about whether the meeting is off,
+	// which neither marker above answers.
+	"activity_meeting_rsvp_backfill": "internal/compose",
 	// The rep's own "not this, not now" on a suggestion: per user, keyed on
 	// the evidence it fired on. Same ruling — view state, no audit row.
 	"suggestion_dismissal": "internal/compose/org360",

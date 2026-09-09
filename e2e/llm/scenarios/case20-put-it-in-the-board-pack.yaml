@@ -1,0 +1,141 @@
+# CASE 20 — Put it in the board pack.
+#
+# The analytics pair, and the rule that makes the pair worth having:
+# compose_analytics_report writes NO number of its own. Every figure in the
+# document names a saved run and a cell inside it, and a block carrying a
+# literal figure is refused EVEN WHEN a valid handle sits beside it — because
+# the literal is what renders, the two can disagree, and no reader of the page
+# could tell it shows a number the database never computed.
+#
+# So the chain is not optional and not decorative: run_analytics_query with
+# `save`, then compose_analytics_report citing the run id it answered with.
+# There is no other way to produce this document. An assistant that reads the
+# numbers and types them into block text is refused, and what it does NEXT is
+# the case.
+#
+# THE FAILURE THIS EXISTS FOR is the case 7 failure wearing different clothes.
+# The refusal is honest and specific; the wrong conclusion drawn from it is
+# "this CRM cannot produce a report". A person told that stops asking, and the
+# tool that would have done it sat one correctly-shaped call away.
+#
+# THE PROMPT ASKS FOR HEADLINE TOTALS, NOT A BREAKDOWN, and that is a fixture
+# decision rather than a stylistic one. The analytics engine withholds any group
+# covering fewer than five rows, and withholds the smallest remaining group and
+# the total along with it, so a suppression cannot be undone by subtraction. The
+# seed puts every open deal in ONE stage under ONE owner precisely so a
+# single-dimension grouping clears the floor — but a two-dimension plan over
+# seven deals would legitimately come back withheld, and this case must not be a
+# coin toss on how the model chose to slice it. Asking for the headline is also
+# what a board pack actually asks for.
+#
+# ONE GROUPING IS WITHHELD AND THAT IS CORRECT. The unpriced seventh deal
+# carries no currency — the product refuses a currency without an amount — so
+# grouping the open pipeline BY CURRENCY puts one row in a group of its own,
+# under the floor, and the anti-subtraction rule takes the EUR group and the
+# total with it. An earlier version of this comment claimed the seed had put
+# every deal in one currency and therefore that every grouping cleared; it had
+# not, and the claim is why the withheld answer read as a product fault. A run
+# that meets it and re-slices has done the right thing.
+#
+# WHAT WE HAVE WON IS REAL PIPELINE, not a rhetorical half of the prompt. The
+# seed closes five deals into the won stage in the current quarter, which is
+# both what "so far" means to a board and the five rows the floor needs. Before
+# that the win-loss population answered NO ROWS to every grouping, so the second
+# figure this prompt asks for could not be sourced from a saved run at all —
+# and since a composed block may not carry a figure the assistant typed itself,
+# there was no legal way to answer it. All three models scored zero here, and
+# none of them was wrong to.
+name: case20_put_it_in_the_board_pack
+criteria: [1, 3]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  I need a short written pipeline section for Thursday's board pack — the
+  headline open pipeline and what we have won so far, in a couple of sentences
+  with the figures in it. No per-rep breakdown, they do not want that. Put it
+  together as one document I can paste.
+
+# Both are required and neither substitutes for the other. run_analytics_query
+# alone answers a number and composes nothing; compose_analytics_report alone
+# has nothing to cite and is refused.
+must_call:
+  - run_analytics_query
+  - compose_analytics_report
+
+# `save` is the pin, and it is the honest one available here.
+#
+# Pinning `entity` would be over-recognition dressed as rigour: more than one
+# population answers "open pipeline and what we have won" — pipeline-current,
+# deals-by-stage and win-loss are all defensible, and failing two of the three
+# would measure which report the model happened to like.
+#
+# `save` is different. A document cites a saved run or it does not exist, so a
+# run without it is a query that could not have fed the report — which is
+# exactly the shape of the failure where the model queries, reads the numbers,
+# and composes from its own memory of them.
+must_call_with:
+  - run_analytics_query.save=true
+
+may_call:
+  # The block grammar, for a caller that wants the kinds before composing. NOT
+  # required, and deliberately: the tool's own contract says an unknown block
+  # kind is refused BY NAME with the whole set, so composing straight away and
+  # reading the refusal is the cheaper correct path. Requiring the lookup would
+  # score the better route as a failure.
+  - describe_report_blocks
+  - describe_report_vocabulary
+  - run_report
+  - query_workspace
+  - list_pipelines
+  - search_records
+
+must_mention:
+  # The figures came back and reached the reader. A "report" containing no digit
+  # is the shape a run takes when it described the tool instead of using it.
+  #
+  # A DIGIT ALONE IS NOT A FIGURE: "composed on 3 March 2026" satisfies a bare
+  # [0-9], so a run that described the tool and dated its answer scores this
+  # criterion. What a board number actually looks like is money, a grouped
+  # thousand, or a count of deals — and each of those shapes is spelled out
+  # here, so a date cannot pass for one.
+  - "(?:€|EUR|\$)\s?[0-9]|[0-9][0-9.,]*\s?(?:€|EUR|k\b|m\b|million|Mio)|\b[0-9]+\s+(?:open |won |lost )?deals?\b|\b[0-9]{1,3}(?:[.,][0-9]{3})+\b"
+  # And they are figures about the thing that was asked for, rather than a count
+  # of blocks or a description of the document's structure.
+  - "pipeline|open deals|deal value|won|total"
+
+must_not_mention:
+  # CRITERION 3, and the whole reason this case is worth three runs. Every
+  # alternative is a claim about the PRODUCT's capability, not a hedge about
+  # this particular answer: "I could not fit it into two sentences" is honest
+  # and must stay green, while "this CRM has no way to build a report" is the
+  # false conclusion drawn from a correct refusal.
+  #
+  # Anchored to the report/document being composed, because an unanchored
+  # "cannot produce" is satisfied by "I cannot produce a per-rep split, you said
+  # you did not want one" — a true sentence in a correct answer.
+  #
+  # And the last alternative is `(?:not |un)`, with the space. Written as
+  # `(not|un)(available)` it matched "unavailable" and never "not available",
+  # so the guard read as armed and let the plainest form of the denial through.
+  #
+  # THE DENIAL GETS WRITTEN AROUND THE VERB LIST. "Composing this as a
+  # document is not possible here" and "I could not put the figures into a
+  # document" are the same claim, and neither carries one of the four fixed
+  # phrasings. The verb still has to reach a report or a document, so the
+  # honest caveat a good answer writes — "I could not get it under two
+  # sentences without dropping the deal count" — reaches nothing and stays
+  # green.
+  - "(?:cannot|can not|can'?t|could not|couldn'?t|unable to|not able to|no way to|there is no way to)[^.;!?\n]{0,30}(?:compose|produce|generate|build|create|assemble|put)[^.;!?\n]{0,30}(?:report|document|summary|section|board pack)|no (way|means|tool|support) to (compose|produce|generate|build) (a |the )?(report|document)|(does not|doesn'?t) support (composing|producing|building|generating) (a |)(report|document)|(?:report|document|compos\w+)[^.;!?\n]{0,30}(?:is|are)[^.;!?\n]{0,15}(?:(?:not |un)(?:available|supported|possible)|beyond)"
+  # And it must not report the block grammar instead of the report: a run that
+  # spends its turn on describe_report_blocks and hands back the kinds has
+  # answered a question nobody asked.
+  - "the available block (kinds|types) are|here are the block (kinds|types)"
+
+runs: 3
+pass_at: 2

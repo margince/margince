@@ -314,6 +314,11 @@ type BriefEntry struct {
 	// (briefs.AnnotateCurrentRun refuses one that cites outside the run), which
 	// is what makes it usable as a standing line where no deal card is cached.
 	Finding string
+	// Signal is WHY the night picked this deal — closing_soon, stalled, moved
+	// or opportunity — derived from the same factor vector the composite
+	// folded. Empty from a run stored before the signal existed, which the
+	// classifier reads as the old blanket answer rather than guessing.
+	Signal string
 }
 
 // Commitments is the rep's own outstanding promises, soonest-due first.

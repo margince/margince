@@ -86,10 +86,16 @@ export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
  */
 export function ProjectKeyChip({
   projectKey,
-}: Readonly<{ projectKey: string }>) {
+  dense,
+}: Readonly<{
+  projectKey: string;
+  // The chip's badge geometry, for the list's name column: the key sits beside
+  // the archived badge there. See `Chip`.
+  dense?: boolean;
+}>) {
   const t = useT();
   return (
-    <Chip icon={Hash}>
+    <Chip icon={Hash} dense={dense}>
       {/* What the key is FOR, on the chip rather than as a line of its own.
         A reader learns it once by hovering the code they are already looking
         at; a permanent sentence under the title pays every day for a lesson
@@ -228,7 +234,9 @@ export function ProjectsScreen() {
             cell: (project: Project) => (
               <span className="project-name-cell">
                 <strong>{project.name}</strong>
-                {project.key && <ProjectKeyChip projectKey={project.key} />}
+                {project.key && (
+                  <ProjectKeyChip projectKey={project.key} dense />
+                )}
                 {project.archived_at && (
                   <Badge tone="warn">{t("record.archived")}</Badge>
                 )}

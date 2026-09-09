@@ -123,7 +123,6 @@ export function PersonTimelineTab({
   return (
     <Panel
       title={t("tab.timeline")}
-      titleAction={<ChronologyFilter filter={filter} onFilter={setFilter} />}
       actions={
         hasChronologyFooter(filter, chronology) ? (
           <ChronologyFooter filter={filter} chronology={chronology} />
@@ -131,9 +130,18 @@ export function PersonTimelineTab({
       }
     >
       <PanelBody>
-        {filter !== "changes" && (
-          <TimelineFilterBar value={filters} onChange={setFilters} />
-        )}
+        {/* Both sets of dials under the head, in the one block the account and
+            the project pages already put them in (`timeline-header`): the cuts
+            through the chronology, then the narrowing of whichever cut is open.
+            The pills wrap to as many rows as the column needs, which the head's
+            single band cannot hold — and the two rows of controls read as one
+            block here rather than as a head that grew. */}
+        <div className="timeline-header">
+          <ChronologyFilter filter={filter} onFilter={setFilter} />
+          {filter !== "changes" && (
+            <TimelineFilterBar value={filters} onChange={setFilters} />
+          )}
+        </div>
         {/* The Changes view IS the record's history: one reading of what
             changed on this record, and the one that can put a change back. A
             second rendering of the same audit rows beside it would be two
@@ -442,7 +450,10 @@ export function PersonMeetingsTab({
                     </Eyebrow>
                     <div className="pe-chiprow">
                       {next.participants.map((who) => (
-                        <span className="pe-memory-channel" key={who.person_id}>
+                        <span
+                          className="pe-memory-channel t-caption"
+                          key={who.person_id}
+                        >
                           <Avatar
                             name={who.full_name}
                             identity={who.person_id}

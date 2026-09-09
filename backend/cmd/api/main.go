@@ -101,7 +101,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, compose.CaptureConfigFromDeploy(deployCfg.Capture, logger), pool, vault, logger, stdout, license)
+	// AllowTestMailbox is an operations.* kill switch (deployconfig.Operations),
+	// not a capture.* tuning knob, so it is set here rather than folded into
+	// CaptureConfigFromDeploy's own deployconfig.Capture-scoped contract.
+	captureCfg := compose.CaptureConfigFromDeploy(deployCfg.Capture, logger)
+	captureCfg.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
+	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
 	if err != nil {
 		return err
 	}
@@ -321,6 +326,13 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	// hinge on that).
 	overlayBackfillLimit, err := overlayBackfillLimitFromEnv()
 	if err != nil {
+		return nil, nil, nil, fmt.Errorf("api: %w", err)
+	}
+	// The refusal half of the auto-enrich daily cap: this role spends it too
+	// (an approval accept can queue a domain-triage read), so a typo fails the
+	// boot here; compose resolves the value where it is spent, from the same
+	// process environment, which is fixed at exec.
+	if _, err := compose.AutoEnrichDailyCapFromEnv(config.FromOS); err != nil {
 		return nil, nil, nil, fmt.Errorf("api: %w", err)
 	}
 	kvOpts, err := keyvaultOptions(pool, vault, stdout, overlayBackfillLimit)

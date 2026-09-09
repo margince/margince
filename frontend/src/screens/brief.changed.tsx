@@ -6,6 +6,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { waitingRows } from "./brief.sentence";
 import { itemTitle } from "./worklist.copy";
+import { worklistLaneHref } from "./worklist.header";
 import type { Worklist } from "./worklist.queries";
 
 // What has happened since the night looked.
@@ -66,7 +67,12 @@ export function ChangedSinceBrief({ day }: Readonly<{ day: Worklist }>) {
             count: formatNumber(rest, locale),
           })}`
         : ""}{" "}
-      <a className="entity-link" href="#/worklist">
+      {/* The SAME cut this strip counted. A bare `#/worklist` named three rows
+          and opened a queue of forty with no way to tell which three, so the
+          count and its door shared nothing at all. The server applies the same
+          freshness test that stamped the flags read above, which is why this is
+          one rule rather than a browser-side narrowing that could disagree. */}
+      <a className="entity-link" href={worklistLaneHref("changed_since_brief")}>
         {t("brief.changed.open")}
       </a>
     </Callout>

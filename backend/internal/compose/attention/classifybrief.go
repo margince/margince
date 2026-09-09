@@ -35,7 +35,7 @@ import (
 // identical deal, through the one shared priceDealsAtRiskRow — money is a
 // property of the DEAL, not of which lane put it on the queue today.
 func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time, money dayMoney) ranked {
-	row := base(item, levelAgreed, "deals_at_risk", "deal_drifts")
+	row := base(item, levelAgreed, "deals_at_risk", briefConsequence(item))
 	if item.DueAt != nil {
 		row.Because = append(row.Because, reason("closing_soon", nil))
 	}
@@ -52,5 +52,44 @@ func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time, money da
 		hasExpected:      known,
 		expectedCurrency: money.base,
 		occurredAt:       occurredOf(item, asOf),
+	}
+}
+
+// briefConsequence names what happens if this deal is left alone, from the
+// signal the night's own scoring produced.
+//
+// Every entry used to say "deal_drifts" whatever the ranking found, so an
+// attractive opportunity was announced as a deal going wrong. The formula
+// selects on winnability, value, timing, momentum and warmth — clearing that
+// bar is not evidence of drift, and a reader told twice that a healthy deal is
+// at risk stops believing the label on the one that is.
+//
+// The CATEGORY stays deals_at_risk on every branch, deliberately. It is the
+// queue's grouping rather than a claim about the deal, the sibling risk row for
+// the same deal carries it, and moving an opportunity out of the group the
+// worklist folds against would split one deal across two rows.
+//
+// An entry from a run stored before the signal existed carries none, and gets
+// the answer it always got.
+func briefConsequence(item crmcontracts.AttentionItem) crmcontracts.WorklistItemConsequence {
+	if item.Kind == nil {
+		return "deal_drifts"
+	}
+	switch *item.Kind {
+	case "closing_soon":
+		// The date is the fact: left alone, this one goes past its close.
+		return "deal_slips_past_close"
+	case "opportunity", "moved":
+		// NOTHING IS GOING WRONG, and saying so is the correction. The row
+		// still earns its place — the night ranked it — but a deal that is
+		// winnable, or that just moved, has no failure pending. Naming one
+		// invents a fault out of a good position, and "deal_drifts" beside a
+		// deal that moved yesterday is visibly false to the rep reading it.
+		return valueNone
+	default:
+		// Stalled, and anything a later run learns to say that this build does
+		// not recognise: the deal is drifting, which is what the queue has
+		// always claimed and the one branch where it is true.
+		return "deal_drifts"
 	}
 }

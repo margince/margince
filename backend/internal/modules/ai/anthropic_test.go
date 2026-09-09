@@ -25,7 +25,7 @@ func newAnthropicForTest(t *testing.T, handler http.HandlerFunc) model.Client {
 	t.Helper()
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-	client, err := SelectBrain(ProviderConfig{Provider: "anthropic", Model: "claude-test", BaseURL: srv.URL}, cloudKeyFor("anthropic", testAnthropicKey))
+	client, err := selectLocalBrain(ProviderConfig{Provider: "anthropic", Model: "claude-test", BaseURL: srv.URL}, cloudKeyFor("anthropic", testAnthropicKey))
 	if err != nil {
 		t.Fatal(err)
 	}

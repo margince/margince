@@ -12,6 +12,7 @@ package people
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -433,4 +434,151 @@ func TestALateReplyDoesNotRescueTheLead(t *testing.T) {
 	}
 	t.Fatal("a lead answered a minute LATE was not breached — the re-check must be bounded by the " +
 		"deadline, or the target only ever fires for a lead nobody answered at all")
+}
+
+// seedOwnerlessLeadCreatedAt is seedLeadCreatedAt's unowned twin: the queue
+// state a capture or an unroutable arrival leaves behind.
+func (e *promoteConsentEnv) seedOwnerlessLeadCreatedAt(t *testing.T, email string, createdAt time.Time) ids.LeadID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO lead (id, full_name, email, status, source, captured_by, owner_id, created_at)
+		 VALUES ($1, 'Nobody Lead', lower($2), 'new', 'inbound', 'human:x', NULL, $3)`,
+		id, email, createdAt); err != nil {
+		t.Fatal(err)
+	}
+	return ids.From[ids.LeadKind](id)
+}
+
+func (e *promoteConsentEnv) breachTargetOf(t *testing.T, lead ids.LeadID) *string {
+	t.Helper()
+	var target *string
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT envelope->'payload'->>'escalation_target' FROM event_outbox
+		 WHERE envelope->>'type' = 'lead.sla_breached'
+		   AND envelope->'entity'->>'id' = $1::text`, lead.UUID).Scan(&target); err != nil {
+		t.Fatalf("reading the breach's escalation target: %v", err)
+	}
+	return target
+}
+
+// A lead NOBODY owns is the queue's worst case — past its response target with
+// nobody who has picked it up — and it was the one case the escalation reached
+// nobody at all: the task went out assigned to no one and no notice was
+// addressed. The configured intake seat answers for it.
+func TestAnOwnerlessBreachReachesTheConfiguredIntakeSeat(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	now := time.Now().UTC()
+
+	// Unset: the breach still records, and is addressed to nobody rather than
+	// to somebody who never agreed to answer for it.
+	silent := e.seedOwnerlessLeadCreatedAt(t, "silent@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
+	if _, err := e.store.ScanLeadSLA(e.ctx, now); err != nil {
+		t.Fatalf("scan with no configured seat: %v", err)
+	}
+	if target := e.breachTargetOf(t, silent); target != nil {
+		t.Errorf("an unconfigured installation addressed the breach to %q, want nobody", *target)
+	}
+
+	// Configured: the same breach now names the seat that answers for it.
+	e.nameIntakeSeat(t, e.user)
+	addressed := e.seedOwnerlessLeadCreatedAt(t, "addressed@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
+	if _, err := e.store.ScanLeadSLA(e.ctx, now); err != nil {
+		t.Fatalf("scan with a configured seat: %v", err)
+	}
+	target := e.breachTargetOf(t, addressed)
+	if target == nil || *target != e.user.String() {
+		t.Errorf("escalation target = %v, want the configured intake seat %s", target, e.user)
+	}
+}
+
+// A configured seat that has since been suspended is the same silence as no
+// seat at all, wearing a configuration that looks correct.
+func TestAnIntakeSeatThatCannotWorkIsTreatedAsUnset(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	now := time.Now().UTC()
+
+	e.nameIntakeSeat(t, e.user)
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.user); err != nil {
+		t.Fatal(err)
+	}
+
+	lead := e.seedOwnerlessLeadCreatedAt(t, "suspended@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
+	if _, err := e.store.ScanLeadSLA(e.ctx, now); err != nil {
+		t.Fatalf("scan with a suspended seat: %v", err)
+	}
+	if target := e.breachTargetOf(t, lead); target != nil {
+		t.Errorf("a suspended seat was addressed (%q); nobody reads that desk", *target)
+	}
+}
+
+// grantLeadRead gives a seat the one grant the escalation check asks for. The
+// harness seeds no role assignments — every seat it makes is blind to leads —
+// so a test naming an intake seat has to make it a seat that could answer.
+func (e *promoteConsentEnv) grantLeadRead(t *testing.T, seat ids.UUID) {
+	t.Helper()
+	role := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO role (id, key, name, permissions)
+		 VALUES ($1, $2, 'Lead reader', '{"objects":{"lead":{"read":true}}}'::jsonb)`,
+		role, "lead_reader_"+role.String()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO role_assignment (id, role_id, user_id) VALUES ($1, $2, $3)`,
+		ids.NewV7(), role, seat); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// nameIntakeSeat writes the setting the way an operator does — through the
+// real writer, so the test exercises the gate rather than an INSERT that walks
+// around it.
+func (e *promoteConsentEnv) nameIntakeSeat(t *testing.T, seat ids.UUID) {
+	t.Helper()
+	e.grantLeadRead(t, seat)
+	id := ids.From[ids.UserKind](seat)
+	if _, err := e.store.UpdateLeadSettings(e.ctx, UpdateLeadSettingsInput{
+		UnassignedEscalationUserID: &id,
+	}); err != nil {
+		t.Fatalf("naming the intake seat: %v", err)
+	}
+}
+
+// A seat that cannot READ leads is refused as the escalation target, even
+// though it is a perfectly good seat to hand work to.
+//
+// An escalation carries the lead it is about. A colleague holding activity
+// access and no lead grant would receive a task naming a record they cannot
+// open — useless to them, and a disclosure nobody authorised.
+func TestAnIntakeSeatMustBeAbleToReadTheLeadsItAnswersFor(t *testing.T) {
+	e := setupPromoteConsent(t)
+
+	// A live seat with no role assignment at all: assignable, and blind to
+	// leads.
+	blind := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, 'blind@example.test', 'No Grants')`,
+		blind); err != nil {
+		t.Fatal(err)
+	}
+	id := ids.From[ids.UserKind](blind)
+	_, err := e.store.UpdateLeadSettings(e.ctx, UpdateLeadSettingsInput{
+		UnassignedEscalationUserID: &id,
+	})
+	if !errors.As(err, new(*EscalationSeatError)) {
+		t.Fatalf("naming a seat that cannot read leads → %v, want EscalationSeatError", err)
+	}
+	var stored int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM setting WHERE key = $1`, UnassignedEscalationUserID.Key()).
+		Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored != 0 {
+		t.Errorf("the refused nomination was stored anyway")
+	}
 }

@@ -1,8 +1,14 @@
-import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  type QueryKey,
+} from "@tanstack/react-query";
+import { isRecordRead } from "../screens/activitykeys";
 import { logUnexpectedError, ProblemError } from "../screens/common";
 import { ENTITY_NAME_KEY } from "../screens/entityref";
 
-// The data layer's parameters (architecture/frontend, FE-PARAM-1..4). The
+// The data layer's parameters (architecture/frontend, FE-PARAM-1..5). The
 // library's defaults are not this product's: they hold nothing back from the
 // network, retry a refusal the server has already made final, and drop every
 // failure on the floor. Each value below is chosen, and the ones the reader
@@ -13,6 +19,65 @@ import { ENTITY_NAME_KEY } from "../screens/entityref";
 // its own (the /me probe holds five minutes and refetches on focus, because a
 // grant change must not sit behind a stale snapshot).
 const STALE_TIME_MS = 30_000;
+
+// FE-PARAM-5. How often the record a reader has OPEN re-reads itself.
+//
+// Work reaches a record from places the tab cannot see: an agent files a task,
+// a colleague answers a mail, a promise falls due while the page is on screen.
+// Read once on arrival, the page keeps answering from that instant — and the
+// failure is silent, because a stale "what needs you" looks exactly like a
+// current one.
+//
+// A MINUTE, and the number is a cost decision rather than a feel one. The
+// cadence buys exactly one case: a reader sitting on a record while it changes
+// under them. Every other way a record goes stale — coming back to the tab, a
+// write this app made — is already answered, the first by the focus refetch
+// below and the second by the mutation cache's invalidations, and neither
+// costs a request while nothing is happening.
+//
+// What a tick costs is a whole composite assembly: the 360 endpoints carry no
+// ETag, so a poll that finds nothing new is priced the same as one that finds
+// work, and the assembly runs to a query budget the composite is designed
+// around. Against that, the difference between hearing about a colleague's
+// task in twenty seconds and in sixty is not worth three times the reads.
+//
+// It is a cadence and not a stream: the contract serves no push, so the reader
+// sees new work within one cadence rather than the moment it lands. A shorter
+// one is worth revisiting when a 304 makes an unchanged read cheap, or against
+// a measured p95 for the assembly — neither of which exists today.
+const LIVE_RECORD_MS = 60_000;
+
+// FE-PARAM-5, applied: a read is live because of WHAT IT IS, not because the
+// screen that mounts it remembered to ask.
+//
+// The alternative was per-hook options, and it fails the way lists fail: the
+// fifth record page is written without them, nothing says so, and the page
+// serves a stale answer that looks exactly like a fresh one. Keyed on the read
+// instead, `isRecordRead` derives its corpus from the table that already knows
+// which key carries a record — so a record kind joins by existing rather than
+// by being remembered here.
+//
+// It reaches every surface showing that record and not only its page: the
+// composer anchored on a contact and the worklist's record pane read under the
+// same key, so they see what the page sees, share its one interval, and stop
+// it when the last of them unmounts. What it deliberately does NOT reach is a
+// read whose answer a model writes — the deal briefing is rewritten
+// server-side whenever the deal has moved, and a cadence on that would spend
+// the workspace's AI budget on an open tab. Its key is the status card's, not
+// the deal record's, which is what keeps it out.
+export function liveInterval(query: { queryKey: QueryKey }): number | false {
+  return isRecordRead(query.queryKey) && LIVE_RECORD_MS;
+}
+
+// "always" and not `true`, which is the same word meaning something weaker:
+// `true` refetches on return only if the read is already STALE, so inside
+// FE-PARAM-1's thirty seconds a reader who tabs away and back is served the
+// cache and waits out the interval. That is the case the minute-long cadence
+// above is priced against — the return is what covers the reader who leaves —
+// so the return has to actually read.
+export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
+  return isRecordRead(query.queryKey) && "always";
+}
 
 // FE-PARAM-2. Two retries, and only for a failure the server reported as its
 // own fault.
@@ -139,9 +204,18 @@ export function createQueryClient(): QueryClient {
       queries: {
         staleTime: STALE_TIME_MS,
         retry: retryQuery,
+        // FE-PARAM-5. A record on screen re-reads itself; everything else is
+        // answered from cache exactly as before.
+        refetchInterval: liveInterval,
+        // The library's default, restated because it is the half that keeps a
+        // tab forgotten on a second monitor from re-reading all night: the
+        // interval runs only while the window has focus.
+        refetchIntervalInBackground: false,
         // FE-PARAM-3. Returning to the tab refetches nothing by default; a
-        // query whose freshness matters opts in for itself.
-        refetchOnWindowFocus: false,
+        // query whose freshness matters opts in for itself. A record does:
+        // coming back to one is exactly when the cached answer is wrong, and
+        // exactly when the reader acts on it.
+        refetchOnWindowFocus: liveOnReturn,
       },
     },
     queryCache: new QueryCache({ onError: reportQueryError }),

@@ -143,7 +143,7 @@ func (e *BriefEngine) gather(ctx context.Context, now time.Time, userID ids.UUID
 		if err := briefCandidates(ctx, tx, userID, now, base, out.facts, &out.order); err != nil {
 			return err
 		}
-		out.seatsReadable, err = briefEvidenceRows(ctx, tx, lastView, out.facts, out.order, out.stakeholders)
+		out.seatsReadable, err = briefEvidenceRows(ctx, tx, lastView, now, out.facts, out.order, out.stakeholders)
 		if err != nil {
 			return err
 		}
@@ -343,6 +343,27 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 	if scope != "" {
 		q += " AND " + scope
 	}
+	// RESPONSIBILITY, not merely visibility — and it belongs HERE rather than
+	// after the ranking, which is the whole defect.
+	//
+	// A deal is workspace-readable in this product: auth.ScopeClauseFor renders
+	// no predicate for a rep on `deal`, so every seat that may read one may read
+	// them all. The overnight queue then takes the top seven by score and the
+	// worklist narrows to "mine" afterwards — so a rep whose colleagues carry
+	// larger deals watched all seven slots fill with deals that were never
+	// theirs to act on, and their own work never entered the ranking at all.
+	// One observed morning selected six colleague deals out of seven.
+	//
+	// Applied before the cap, the ranking competes among the deals this person
+	// can actually move. Access to a colleague's deal is not responsibility for
+	// it; the team view is where breadth belongs.
+	q += fmt.Sprintf(`
+		  AND (d.owner_id = $%d
+		       OR EXISTS (
+			SELECT 1 FROM activity a
+			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
+			WHERE a.kind = 'task' AND NOT a.is_done
+			  AND a.archived_at IS NULL AND a.assignee_id = $%d))`, userPos, userPos)
 	q += " ORDER BY d.id"
 
 	rows, err := tx.Query(ctx, q, args...)
@@ -370,7 +391,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 // factor on every deal, which reorders the queue; the caller has to be told, or
 // they read an order that is wrong rather than one that is short.
 func briefEvidenceRows(
-	ctx context.Context, tx pgx.Tx, lastView *time.Time,
+	ctx context.Context, tx pgx.Tx, lastView *time.Time, asOf time.Time,
 	facts map[ids.UUID]briefDealFacts, order []ids.UUID, stakeholders map[ids.UUID][]ids.UUID,
 ) (seatsReadable bool, err error) {
 	// The seat edge's admission is resolved ONCE, ahead of the loop: it is a
@@ -388,8 +409,12 @@ func briefEvidenceRows(
 			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
 			WHERE a.archived_at IS NULL
 			  AND ($2::timestamptz IS NULL OR a.occurred_at > $2)
+			  -- Bounded at the cutoff, the way the dismissal filter above is: a
+			  -- future-dated row has not happened, so counting it as overnight
+			  -- movement claims the deal moved for something still to come.
+			  AND a.occurred_at <= $3
 			ORDER BY a.occurred_at DESC, a.id DESC
-			LIMIT $3`, dealID, lastView, briefOvernightEvidenceCap))
+			LIMIT $4`, dealID, lastView, asOf.UTC(), briefOvernightEvidenceCap))
 		if err != nil {
 			return false, err
 		}

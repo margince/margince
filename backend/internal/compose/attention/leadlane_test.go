@@ -173,12 +173,15 @@ func TestAnAtRiskLeadWithNoDeadlineNamesNoMoment(t *testing.T) {
 	}
 }
 
-// The policy question is not a filter. With no target set nothing is late, so
-// the source is ABSENT — a page reporting zero overdue leads would be stating a
-// number nothing measures.
-func TestWithNoFirstResponseTargetTheLaneClaimsNothing(t *testing.T) {
+// A reply is owed whether or not anything measures when it was owed by.
+//
+// Owed and late are different questions: the policy decides the deadline, the
+// lead decides whether a reply is outstanding. So the rows appear with no
+// first-response target set, carrying no deadline and no state — the lane says
+// a reply is owed without inventing a time it was owed by.
+func TestLeadsOweAReplyEvenWithNoFirstResponseTarget(t *testing.T) {
 	svc := leadLaneService(&stubLeads{tracked: false, rows: []OwedLead{
-		{ID: ids.NewV7(), Name: "a lead", State: "breached", DeadlineAt: readInstant.Add(-time.Hour)},
+		{ID: ids.NewV7(), Name: "a lead"},
 	}})
 
 	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
@@ -186,19 +189,23 @@ func TestWithNoFirstResponseTargetTheLaneClaimsNothing(t *testing.T) {
 		t.Fatalf("worklist: %v", err)
 	}
 
+	var found int
 	for _, row := range day.Queue {
-		if row.Source == sourceLeadResponse {
-			t.Fatalf("a lead row reached the queue with the first-response target switched off")
+		if row.Source != sourceLeadResponse {
+			continue
 		}
+		found++
+		// No invented SLA: the row must not claim a deadline nothing set.
+		if row.DueAt != nil {
+			t.Errorf("the row carries a deadline (%v) with nothing measuring one", *row.DueAt)
+		}
+	}
+	if found != 1 {
+		t.Fatalf("lead rows on the queue = %d, want the one unanswered lead", found)
 	}
 	for _, missing := range day.SourcesUnavailable {
 		if missing.Source == sourceLeadResponse {
 			t.Fatalf("the lane reported itself unavailable; an unmeasured target is not a failed read")
-		}
-	}
-	for _, count := range day.Counts {
-		if count.Category == "leads" && count.Considered > 0 {
-			t.Fatalf("the leads category counted %d rows nothing measured", count.Considered)
 		}
 	}
 }
@@ -241,22 +248,36 @@ func TestANamedOwnersQueueKeepsTheirOwedLeads(t *testing.T) {
 	rowFor(t, day, "their lead")
 }
 
-// With the target switched off the source must be ABSENT, and a reach row is
-// not absence: reachOf emits one for every bounded-source key, so recording the
-// lane unconditionally published a zero-valued entry that reads as "read, and
-// there was nothing".
-func TestAnUntrackedLanePublishesNoReachRow(t *testing.T) {
-	svc := leadLaneService(&stubLeads{tracked: false})
+// A read that happened and found nothing publishes its reach row — and it does
+// so whether or not a first-response target exists.
+//
+// Both positions are asserted because the lane's behaviour must NOT differ
+// between them: a page that suppressed the row when nothing measured deadlines
+// would make "nothing to report" and "nobody looked" the same page. Asserting
+// only the untracked case would pass even with the policy plumbing deleted.
+func TestTheLeadLaneReportsItsReachWithOrWithoutATarget(t *testing.T) {
+	for _, tracked := range []bool{false, true} {
+		svc := leadLaneService(&stubLeads{tracked: tracked})
 
-	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
-	if err != nil {
-		t.Fatalf("worklist: %v", err)
-	}
+		day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
+		if err != nil {
+			t.Fatalf("tracked=%v: worklist: %v", tracked, err)
+		}
 
-	for _, reach := range day.Reach {
-		if reach.Source == sourceLeadResponse {
-			t.Fatalf("the lane published a reach row (considered=%d shown=%d) with nothing measuring first response",
-				reach.Considered, reach.Shown)
+		var found bool
+		for _, reach := range day.Reach {
+			if reach.Source != sourceLeadResponse {
+				continue
+			}
+			found = true
+			if reach.Considered != 0 || reach.Shown != 0 {
+				t.Errorf("tracked=%v: reach = considered %d shown %d, want an honest empty read",
+					tracked, reach.Considered, reach.Shown)
+			}
+		}
+		if !found {
+			t.Errorf("tracked=%v: the lane published no reach row, so the page cannot tell "+
+				"an empty read from an absent one", tracked)
 		}
 	}
 }

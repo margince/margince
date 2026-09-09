@@ -47,6 +47,7 @@ const (
 	sourceAgentRunner          = "agent_runner"
 	sourceAttachmentExtraction = "attachment_extraction"
 	sourceAccountScan          = "account_scan"
+	sourceTranscriptRead       = "transcript_read"
 )
 
 // railOwners answers who reports each task. TOTAL over the contract's task
@@ -62,6 +63,13 @@ var railOwners = map[Task]string{
 	TaskAgentLoop:       sourceAgentRunner,
 	TaskDocumentExtract: sourceAttachmentExtraction,
 	TaskAccountScan:     sourceAccountScan,
+
+	// A reading a rep waits on, with a durable row, a lease and four states
+	// that are exactly the projection's live and terminal pair. The router
+	// would report it settled the moment it appeared, which for work this long
+	// is worse than silence: it looks like nothing happened and then it is
+	// done.
+	TaskTranscriptPropose: sourceTranscriptRead,
 
 	TaskEmbeddings: SourceNoOccurrence,
 
@@ -95,7 +103,6 @@ var railOwners = map[Task]string{
 	TaskSiteTriage:                    SourceRouter,
 	TaskSummarize:                     SourceRouter,
 	TaskTranscript:                    SourceRouter,
-	TaskTranscriptPropose:             SourceRouter,
 	TaskVoiceBuild:                    SourceRouter,
 }
 

@@ -150,9 +150,10 @@
 }
 .pn-reading b small {
   font-family: var(--f-body);
+  /* ds:ignore .t-caption loses to `.pn-reading b`'s display face */
   font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
-  color: var(--textSecondary);
+  color: var(--textMeta);
   margin-left: var(--space-1);
 }
 /* Who sent what: the target's share in full accent, the colleague's in the
@@ -243,7 +244,7 @@
 }
 .pn-hero-who p {
   margin: var(--space-1) 0 0;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 .pn-hero-arrow {
   color: var(--accent);
@@ -298,12 +299,12 @@
   line-height: 26px;
 }
 .pn-relay-waiting strong {
-  color: var(--textSecondary);
+  color: var(--textMeta);
   font-weight: var(--fw-medium);
 }
 .pn-relay-step small {
   display: block;
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 .pn-relay-current small {
   color: var(--accentText);
@@ -320,9 +321,7 @@
   place-items: center;
   border: 2px solid var(--borderStrong);
   background: var(--bgElevated);
-  color: var(--textSecondary);
   font-family: var(--f-mono);
-  font-size: var(--fs-meta);
 }
 .pn-relay-done .pn-relay-num {
   background: var(--accent);

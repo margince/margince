@@ -3,13 +3,15 @@
 
 /** @vitest-environment jsdom */
 import "@testing-library/jest-dom/vitest";
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { DealIdentityLine } from "../deals";
+import { DealIdentityLine } from "../dealidentity";
 import { DealPulse } from "./dealpulse";
 import { DealSeats } from "./dealseats";
 import { DealStrip } from "./dealstrip";
@@ -383,6 +385,151 @@ describe("the identity line says what it is worth, where it is, and whose it is"
     );
     expect(screen.getByText("Value")).toBeInTheDocument();
     expect(screen.queryByText("—")).not.toBeInTheDocument();
+  });
+
+  it("says how a won deal was won when no contract carried it", () => {
+    // The server treats this answer as load-bearing — the whole justification
+    // for letting the deal close without paperwork is that the gap becomes
+    // countable — and nothing read it back, so the rep who answered could not
+    // check their own answer.
+    show(
+      <DealIdentityLine
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          status: "won",
+          won_without_contract_reason: "purchase_order",
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(
+      screen.getByText(en["deals.winReasonPurchaseOrder"]),
+    ).toBeInTheDocument();
+  });
+
+  it("prints the words a person wrote rather than the category they chose", () => {
+    // `other` is the only reason carrying a detail, and the detail is the only
+    // part of this answer somebody typed. "Something else: renewed on a
+    // handshake" says the category twice and buries it.
+    show(
+      <DealIdentityLine
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          status: "won",
+          won_without_contract_reason: "other",
+          won_without_contract_detail: "Renewed on a handshake at the fair",
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(
+      screen.getByText("Renewed on a handshake at the fair"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(en["deals.winReasonOther"]),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps a long hand-written reason readable rather than only hoverable", () => {
+    // The identity line is a row of SHORT facts, so this one is bounded — but
+    // VISUALLY, with the whole string in the DOM. An earlier version trimmed it
+    // in TS and put the rest in a `title`, which reads as solved and is not: a
+    // tooltip wants a mouse, is ignored by most screen readers, and never
+    // appears for a keyboard or touch reader. The person most likely to look is
+    // the one checking the words they just typed.
+    const long =
+      `Renewed on a handshake at the trade fair ${"and again ".repeat(20)}`.trim();
+    show(
+      <DealIdentityLine
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          status: "won",
+          won_without_contract_reason: "other",
+          won_without_contract_detail: long,
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    // Every word of it, reachable by a reader that does not hover.
+    expect(screen.getByText(long)).toBeInTheDocument();
+    // And the stage is still on the line beside it, which is what the bound is
+    // for. What this pins is that the fact carries the class the bound hangs
+    // on, so removing it is a failing test rather than a silently wide line;
+    // that the class does not CLIP is held by the rule itself, below, because
+    // jsdom applies no stylesheet and presence in the DOM proves nothing about
+    // what a reader can see.
+    expect(screen.getByText(long)).toHaveClass("deal-win-detail");
+    expect(screen.getByText("Qualified")).toBeInTheDocument();
+  });
+
+  // The bound is on WIDTH, never on content — asserted against the stylesheet,
+  // because jsdom applies none and a rendered tree cannot tell a wrapped value
+  // from a clipped one.
+  //
+  // This has been wrong twice in opposite directions, which is why it is held
+  // rather than described. Clipped with the rest in a `title` needs a mouse;
+  // clipped with no `title` is unreadable for everyone. Either way the reader
+  // who loses is the person checking the words they just typed, and the value
+  // exists to be audited.
+  it("bounds the won-reason detail's width and never its content", () => {
+    const css = readFileSync(
+      join(resolve(__dirname, ".."), "dealstatus.css"),
+      "utf8",
+    );
+    const rule = /\.deal-win-detail\s*\{([^}]*)\}/.exec(css);
+    expect(rule, ".deal-win-detail is gone from dealstatus.css").not.toBeNull();
+    const body = rule?.[1] ?? "";
+
+    // A width bound, so the identity line stays a line of short facts.
+    expect(body).toMatch(/max-width:/);
+    // And nothing that hides what does not fit inside it.
+    for (const clip of [
+      /overflow\s*:\s*hidden/,
+      /text-overflow\s*:/,
+      /white-space\s*:\s*nowrap/,
+      /line-clamp\s*:/,
+    ]) {
+      expect(
+        body,
+        `.deal-win-detail clips its content (${clip.source}); the value is what a controller is shown`,
+      ).not.toMatch(clip);
+    }
+  });
+
+  it("says nothing about paperwork on a won deal a contract carried", () => {
+    // The ordinary case, and it needs no sentence. A line on every won deal
+    // would bury the ones that need reading — which is the whole point of
+    // showing this at all.
+    show(
+      <DealIdentityLine
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          status: "won",
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    for (const key of [
+      "deals.winReasonPurchaseOrder",
+      "deals.winReasonVerbal",
+      "deals.winReasonRenewalByEmail",
+      "deals.winReasonImported",
+      "deals.winReasonOther",
+    ] as const) {
+      expect(screen.queryByText(en[key])).not.toBeInTheDocument();
+    }
   });
 
   it("never prints a stage id the pipeline cannot name", () => {

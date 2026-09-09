@@ -215,7 +215,7 @@ export function AuditEntryLine({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   return (
-    <div className="audit-line">
+    <div className="audit-line t-sub">
       <ActorTag entry={entry} meUserId={meUserId} />
       <Badge tone="accent">{humanizeToken(entry.action)}</Badge>
       <span className="audit-entity">{humanizeToken(entry.entity_type)}</span>

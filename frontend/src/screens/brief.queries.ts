@@ -223,11 +223,18 @@ export function useBriefRefresh() {
  * be written.
  */
 export type BriefMarkRequest =
-  | { itemId: string; mark: "act" | "dismiss" }
+  | { itemId: string; mark: "act" | "dismiss" | "unsnooze" }
   | { itemId: string; mark: "snooze"; snoozedUntil: string };
 
+/** The bodyless marks and the route each one posts to. */
+const MARK_PATHS = {
+  act: "/brief/items/{itemId}/act",
+  dismiss: "/brief/items/{itemId}/dismiss",
+  unsnooze: "/brief/items/{itemId}/unsnooze",
+} as const;
+
 /**
- * Act on, dismiss or snooze one item.
+ * Act on, dismiss, snooze or un-snooze one item.
  *
  * The item id travels as a mutation VARIABLE rather than in the closure: the
  * click handler belongs to the committed render, so a variable it passes cannot
@@ -248,10 +255,11 @@ export function useBriefItemMark() {
         }
         return data;
       }
-      const path =
-        variables.mark === "act"
-          ? "/brief/items/{itemId}/act"
-          : "/brief/items/{itemId}/dismiss";
+      // The three bodyless verbs share one call. `unsnooze` rides here rather
+      // than in its own mutation because it takes the same cache work as the
+      // others — the item moves between the brief and the worklist lane either
+      // way, and a second mutation would be a second answer to where it goes.
+      const path = MARK_PATHS[variables.mark];
       const { data, error } = await api.POST(path, {
         params: { path: { itemId: variables.itemId } },
       });

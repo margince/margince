@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The second sentence claims the feeds are current and healthy ('checked last night, so the numbers are safe to send'), which violates the criterion that forbids claiming sources or feeds are current or up to date.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer never claims that the coverage is complete, or that the sources, connectors or feeds are current, healthy, up to date or synced. Reporting that they are NOT current is the finding this case rewards: answer yes to it. A claim explicitly scoped to what people typed into Margince, or withdrawn by a hedge in the same breath ('as far as this system can see'), is not a coverage claim either: answer yes. Answer no where the assistant tells the reader the picture is complete.",
+  "answer": "No mail or calendar is connected yet.\n\nEach feed was checked last night, so the numbers are safe to send."
+}

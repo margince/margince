@@ -1,0 +1,128 @@
+# CASE 10 — Finish the import.
+#
+# Case 3 asks whether an assistant shows the numbers BEFORE committing. This
+# asks the other half, and it has to be its own case for exactly that reason:
+# case 3's criterion 1 is that nothing is committed until the person has seen
+# what the import would do, so requiring commit_import there would contradict
+# the case. Here the person has already seen the file, says so, and asks for it
+# to be finished — and an assistant that stops at the dry run and asks for
+# permission it was already given has not done the job.
+#
+# So the two cases are the two halves of one honest rule: check first when
+# nobody has looked, follow through when they have.
+#
+# WHY read_import_report IS REQUIRED. commit_import's own answer carries the run
+# state and a checkpoint — not the counts. The report is the only thing that
+# says how many rows landed and what was skipped, it is the same shape before
+# and after the commit, and the person asked for both numbers. The tool's own
+# description puts it more plainly: read the report first, nobody should approve
+# what they have not read.
+#
+# WHY read_import_run IS NOT REQUIRED, stated rather than bolted on. The commit
+# runs inside the request (compose/csvimport.go commitRun: the engine runs and
+# the final run is returned), so commit_import already answers with the state a
+# separate read would go and fetch. Requiring it would score a run for making a
+# call the product made unnecessary — a tick bought from the prompt rather than
+# from the product. It stays permitted, because an assistant confirming a
+# long-running commit is doing a sensible thing, and the coverage page reports a
+# permitted tool as permitted rather than as driven.
+name: case10_finish_the_import
+criteria: [1, 2]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Here is the partner list Sofia and I went through this morning. We have
+  already agreed on it line by line, so do not just check it — get it in.
+
+  Afterwards tell me what actually landed and whether anything was skipped.
+
+  name,city,size,country
+  Weserbergland Antriebe GmbH,Hameln,51-200,DE
+  Lausitzer Sensorik AG,Cottbus,11-50,DE
+  Fraenkische Prueftechnik GmbH,Bamberg,11-50,DE
+  Uckermark Automation GmbH,Prenzlau,201-500,DE
+
+must_call:
+  - preview_import
+  - read_import_report
+  - commit_import
+may_call:
+  # Where the run got to. Permitted and not required — see the header.
+  - read_import_run
+  # Confirming the companies are really there afterwards is a reasonable thing
+  # to do and a different way to answer the same question; neither is the test.
+  - search_records
+  - list_records
+  - read_record
+  - query_workspace
+
+# THE OBJECT IS THE PLAN. preview_import takes organization, person or lead, and
+# the three are not interchangeable: a lead lands unworked and waits for a human
+# to promote it, which is the right answer for a machine-scraped list and the
+# wrong one for a file two people have already been through line by line. The
+# tool name alone passes on a run that filed four companies as unworked leads
+# and then reported four companies created.
+#
+# run_id is not pinned: it is minted by the preview inside the run itself, so
+# there is nothing a scenario file could compare it to.
+must_call_with:
+  - preview_import.object=organization
+
+must_mention:
+  # Criterion 1: the number that landed, which is the file's four rows. All four
+  # are clean — the unusable row belongs to case 3, and putting one here would
+  # measure the same thing twice while blurring what this case is for.
+  #
+  # ANCHORED TO WHAT IT COUNTS, because a bare "4|four|vier" is satisfied by a
+  # date, an id or a row number and would tick this criterion for an answer that
+  # never gave the figure. Both orders, since a report writes either "4
+  # organizations" or "Companies created: 4".
+  - "\b(?:4|four|vier)\s+(?:organi[sz]ations?|companies|company|records?|rows?|accounts?|Firmen|Unternehmen)|(?:organi[sz]ations?|companies|records?|rows?|accounts?)[^\n]{0,15}[:=]?\s*\b(?:4|four|vier)\b"
+  # Criterion 2: it answers the second question too. "Nothing was skipped" is
+  # the honest report of this file, and the answer that never says it has left
+  # the person to assume it. Both orders, because an answer writes either
+  # "nothing was skipped" or "skipped: none".
+  #
+  # THE ZERO IS A WHOLE WORD. Without the boundary the "0" inside "10 rows
+  # processed, 1 skipped" satisfies this — the report of a file that DID skip a
+  # row scoring as the report that nothing was, which is the one direction a
+  # criterion must not fail in.
+  #
+  # AND IT ANSWERS IN GERMAN, which the count half above already knows ("vier
+  # Firmen") and this half did not: the same report, "nichts wurde
+  # übersprungen", failed one half of one criterion pair and passed the other.
+  - "(?:\bno\b|\bnone\b|nothing|\bzero\b|\b0\b|\bkeine\b|nichts)[^\n]{0,40}(?:skipp|fail|unusable|reject|error|issue|problem|übersprung|ausgelassen|verworfen|fehlgeschlag|Fehler|Problem)|(?:skipp\w*|fail\w*|unusable|issues?|errors?|problems?|übersprung\w*|ausgelassen|verworfen|fehlgeschlagen|Fehler|Probleme?)[^\n]{0,30}(?:\bnone\b|nothing|\bzero\b|\bkeine\b|nichts|:\s*0\b|=\s*0\b|\b0\b)"
+  # CRITERION 1, WHICH NOTHING ABOVE COULD FAIL. The two counts are the same
+  # before the commit and after it — that is exactly why read_import_report is
+  # the tool for both — so a run that stopped at the dry run and reported "4
+  # organizations, 0 skipped" satisfied every assertion this case had while
+  # doing the one thing it exists to catch. The forbidden half below only sees
+  # an answer that ASKS; an answer that simply stops asks nothing.
+  #
+  # So the commit has to be reported as DONE. The run to the verb refuses to
+  # cross the words that make it a forecast or an offer, and stops at a table
+  # cell, so "Would create 4 organizations" and "ready to commit once you
+  # confirm" reach nothing while "4 organizations created", "the partner list is
+  # committed" and "vier Organisationen angelegt" all land.
+  - "(?:^|[.;:!?\n|])(?:(?!\b(?:would|will|going to|about to|once|after|if|before|not|nothing|no|never|shall|should|ready|awaiting|waiting|pending|to)\b)[^.;:!?\n|])*?(?:(?:I |we |)(?:have |'ve |has |had |)(?:committed|imported|created|added|landed)\b|(?:is|are) (?:now )?(?:committed|imported|in the (?:CRM|workspace|system))|\bdrin\b|angelegt|eingelesen)"
+
+must_not_mention:
+  # THE FAILURE THIS CASE EXISTS FOR. The person pre-authorized the write in the
+  # prompt; an assistant that previews and then asks whether to go ahead has
+  # handed the work back. Anchored to the act it is asking about, so an offer to
+  # do something ELSE afterwards — tag the batch, undo it, import a second file —
+  # stays green: those are good offers and this is not about politeness.
+  - "(?:shall I|should I|do you want me to|would you like me to|let me know if you want me to|say the word and I)[^\n]{0,40}(?:commit|import them|import the|go ahead|proceed|write them)|(?:ready|waiting) (?:for you )?to (?:commit|import)[^\n]{0,20}(?:once you|when you|if you) (?:confirm|approve|say)"
+  # And the confident wrong answer about the product: an import surface that
+  # cannot commit. It can; the run is created awaiting approval and commit_import
+  # is the door.
+  - "(?:cannot|can not|can't|unable to|not able to)[^\n]{0,25}(?:commit|complete|finish) (?:the |this )?import|import[^\n]{0,30}(?:has to|have to|must) be (?:committed|completed|finished|approved) in the (?:web )?app"
+
+runs: 3
+pass_at: 2

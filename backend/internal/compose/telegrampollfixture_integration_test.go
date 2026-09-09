@@ -65,6 +65,12 @@ type telegramPollFakeAPI struct {
 	// state rather than counting calls is what lets one fixture serve both the
 	// repairable conflict and the one that survives a clear.
 	webhookRegistered bool
+	// rivalHolds models the OTHER 409 cause, the one no clear repairs: another
+	// consumer holding this bot's updates. It refuses that many polls and then
+	// stops, which is what a transient rival does — and it is the case that
+	// looked identical to a cleared webhook, because deleteWebhook answers ok
+	// whether or not anything was there.
+	rivalHolds int
 	// onGetUpdates runs inside getUpdates, after the batch is chosen and outside
 	// the mutex, so a test can make something else commit WHILE a poll is in
 	// flight — the 25s window a lifecycle change actually lands in.
@@ -73,6 +79,14 @@ type telegramPollFakeAPI struct {
 
 func (f *telegramPollFakeAPI) GetMe(context.Context, string) (telegram.Bot, error) {
 	return f.bot, nil
+}
+
+// WebhookRegistered answers the same field DeleteWebhook clears, so a fixture
+// cannot claim a webhook was cleared that this fake never had.
+func (f *telegramPollFakeAPI) WebhookRegistered(context.Context, string) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.webhookRegistered, nil
 }
 
 func (f *telegramPollFakeAPI) DeleteWebhook(context.Context, string) error {
@@ -89,6 +103,13 @@ func (f *telegramPollFakeAPI) GetUpdates(_ context.Context, _ string, offset int
 	failWith := f.failWith
 	if failWith == nil && f.webhookRegistered {
 		failWith = fmt.Errorf("telegram: getUpdates: Conflict: can't use getUpdates method while webhook is active: %w",
+			telegram.ErrWebhookActive)
+	}
+	if failWith == nil && f.rivalHolds > 0 {
+		f.rivalHolds--
+		// Telegram answers the SAME sentinel for both causes — which is the
+		// whole reason the poller has to establish which one it met.
+		failWith = fmt.Errorf("telegram: getUpdates: Conflict: terminated by other getUpdates request: %w",
 			telegram.ErrWebhookActive)
 	}
 	hook := f.onGetUpdates

@@ -2,9 +2,9 @@
 # golangci-lint over the Go modules the backend lint lane cannot reach.
 #
 # `make -C backend lint` runs `golangci-lint run ./...` from backend/, and
-# `./...` stops at the module boundary. The repo has twelve Go modules; that
-# pattern covers exactly one. The other eleven — backend/tools, cli/craft,
-# composition, the units under extensions/, and the deliberately-broken
+# `./...` stops at the module boundary. The repo has eleven Go modules; that
+# pattern covers exactly one. The other ten — backend/tools, composition, the
+# units under extensions/, desktop/launcher, and the deliberately-broken
 # fixtures/extensions/ — were linted by nothing. Not by CI, not by `make check`,
 # not by the pre-push hook, which only sees the craft gate. That is how an
 # unformatted file reached main with every gate green (extjobs.go), and the
@@ -60,7 +60,7 @@ fi
 # deliberately, because a fixture must not join the real build — so they resolve
 # only inside the temporary workspace the tests compose for them. golangci needs
 # a type-checkable package; it has nothing to say here. They are NOT unchecked
-# code: the craft gate, the license header test and the tree-wide gofmt gate all
+# code: the craftsmanship gate, the license header test and the tree-wide gofmt gate all
 # cover fixtures/, and none of the three needs to typecheck to do its job.
 
 # Two plain substitutions rather than one optional-slash pattern: `\?` is a GNU
@@ -78,8 +78,8 @@ if [[ -z "$modules" ]]; then
 fi
 
 # Which modules the composed workspace actually contains, read out of the
-# generated go.work rather than assumed. A member (backend/tools, cli/craft, the
-# extension units) MUST be linted inside the workspace, because that is what
+# generated go.work rather than assumed. A member (backend/tools, the extension
+# units) MUST be linted inside the workspace, because that is what
 # resolves its dependency on the product module. A non-member (the committed
 # composition stub, the fixtures/extensions/ units, which are standalone by
 # design so a broken fixture cannot break the real build) must be linted with

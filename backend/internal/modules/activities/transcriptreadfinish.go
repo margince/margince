@@ -77,17 +77,21 @@ func finishTranscriptReadTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, out
 	if outcome.Detail != "" {
 		detail = &outcome.Detail
 	}
-	tag, err := tx.Exec(ctx, `
+	// RETURNING because the rail is announced from the SETTLED row rather than
+	// from the outcome the caller handed in: the two could disagree about the
+	// line count, and the row is what every other reader sees.
+	settled, err := scanTranscriptRead(tx.QueryRow(ctx, `
 			UPDATE transcript_read
 			   SET status = $2, status_detail = $3, proposal_ids = $4, finished_at = now(),
 			       line_count = COALESCE($5, line_count)
-			 WHERE id = $1 AND status = 'running'`,
-		readID, outcome.Status, detail, proposals, readLineCount(outcome.LineCount))
+			 WHERE id = $1 AND status = 'running'
+			RETURNING `+transcriptReadColumns,
+		readID, outcome.Status, detail, proposals, readLineCount(outcome.LineCount)))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("%w: transcript read %s is not running", apperrors.ErrConflict, readID)
+	}
 	if err != nil {
 		return fmt.Errorf("finish transcript read: %w", err)
-	}
-	if tag.RowsAffected() != 1 {
-		return fmt.Errorf("%w: transcript read %s is not running", apperrors.ErrConflict, readID)
 	}
 	// AuditEvent, not Audit: the compare-and-set above proves the row was
 	// running, so a prior state exists — it is simply a run record's own
@@ -98,7 +102,7 @@ func finishTranscriptReadTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, out
 	}); err != nil {
 		return fmt.Errorf("audit transcript read finish: %w", err)
 	}
-	return nil
+	return logTranscriptActivity(ctx, tx, settled)
 }
 
 // readLineCount keeps the door's own count when the outcome names none — a

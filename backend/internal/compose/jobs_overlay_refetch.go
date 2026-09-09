@@ -250,7 +250,18 @@ func (w *overlayRefetchWorker) dropFailedRead(ctx context.Context, ms *overlay.M
 	// never the incumbent's own name for it, and the fingerprint recorded is
 	// the one StaleProjections derives its comparison from — so the record and
 	// the skip agree by construction.
-	fingerprint := overlay.Fingerprint(m)
+	fingerprint, fpErr := overlay.Fingerprint(m)
+	if fpErr != nil {
+		// Same bookkeeping posture as the record below, and for a stronger
+		// reason: the read this note is about has already failed, and a
+		// declaration that cannot be fingerprinted is a fault in the mapping
+		// rather than in this row. Failing the job would retry a read that will
+		// not succeed, to report a note that cannot be written either way.
+		w.log.ErrorContext(ctx, "overlay refetch: the declaration cannot be fingerprinted, so the re-projection failure goes unrecorded; the row stays in the stale set",
+			"workspace", args.Workspace, "class", args.IncumbentClass, "id", args.ExternalID,
+			"read_err", readErr, "err", fpErr)
+		return
+	}
 	// Bookkeeping, not the job's purpose: this read has already failed in a way
 	// no retry changes, and failing the job to report that the note could not be
 	// written would turn a bounded waste into a retried one.

@@ -1,0 +1,5 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__commit_import", "mcp__margince__preview_import", "mcp__margince__read_import_report"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__commit_import", "input": {}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__preview_import", "input": {"object": "organization"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_import_report", "input": {}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Die Datei ist eingelesen und der Lauf ist best\u00e4tigt.\n\nDer Bericht meldet vier Organisationen im Import, davon drei angelegt und eine \u00fcbersprungen: bei einer Zeile fehlte der Name, und ohne Namen legt der Import nichts an."}

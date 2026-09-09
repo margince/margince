@@ -280,7 +280,7 @@ func TestWebhookReceiverDropsUnmappedSubscription(t *testing.T) {
 	}
 }
 
-// TestOverlayRefetchWorkerRejectsMalformedWorkspace: a job carrying an
+// TestOverlayRefetchWorkerRejectsArgsNamingNoWorkspace: a job carrying an
 // unparseable workspace id is a permanent defect — the worker returns nil (no
 // retry) rather than looping on an unfixable arg. This exercises the guard
 // before any DB access.

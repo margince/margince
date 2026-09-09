@@ -195,7 +195,24 @@ export const ACTIVITY_LINE: Readonly<
   site_fact_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
   site_triage: SITE_READ_WATCHED_WHERE_IT_RUNS,
   propose_roles: SYSTEM_SWEEP,
-  transcript_propose: SYSTEM_SWEEP,
+  // Reading a meeting transcript for the next steps in it. A rep presses the
+  // button and waits, and the run row can say queued and running — so this is
+  // narrated rather than swept, and it is not SYSTEM_SWEEP's "belongs to nobody
+  // in particular": the row records who asked.
+  //
+  // `degraded` is written and unreachable: the run's four statuses are the
+  // projection's live and terminal pair exactly, with no partial among them. A
+  // transcript that states no next steps settles `done` — a correct answer, not
+  // a degraded one. `stalled` IS reachable, derived by the projection from the
+  // lease rather than announced.
+  transcript_propose: {
+    queued: "agent.activity.transcriptRead.queued",
+    running: "agent.activity.transcriptRead.running",
+    stalled: "agent.activity.transcriptRead.stalled",
+    done: "agent.activity.transcriptRead.done",
+    degraded: "agent.activity.transcriptRead.degraded",
+    failed: "agent.activity.transcriptRead.failed",
+  },
   voice_build: SYSTEM_SWEEP,
 
   cert_judge: notDisplayed(

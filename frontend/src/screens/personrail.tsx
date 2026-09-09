@@ -857,7 +857,9 @@ function EmploymentRow({
             }
           />
         </span>
-        {detail && <span className="pe-colleague-proof">{detail}</span>}
+        {detail && (
+          <span className="pe-colleague-proof t-caption">{detail}</span>
+        )}
       </span>
       {canEdit && (
         <span className="pe-employment-actions">
@@ -878,7 +880,7 @@ function EmploymentRow({
         </span>
       )}
       {endFailed && (
-        <p className="pe-colleague-proof" role="alert">
+        <p className="pe-colleague-proof t-caption" role="alert">
           {problemMessageOf(actions.end.error, t)}
         </p>
       )}
@@ -1211,7 +1213,7 @@ function WhoKnows({
                 <span className="pe-colleague-name">
                   {colleague.display_name}
                 </span>
-                <span className="pe-colleague-proof">
+                <span className="pe-colleague-proof t-caption">
                   {/* The PROOF, never a ranking nobody can check: six unanswered
                     sends must not read as stronger than two real exchanges. */}
                   {t("person.rail.exchanges", {
@@ -1420,7 +1422,9 @@ function ConsentAndChannels({
           verdict no row above shows explains nothing. */}
         {(hasEmail || channels.some((channel) => channel.reachable)) &&
           correspondence?.reason && (
-            <p className="pe-colleague-proof">{correspondence.reason}</p>
+            <p className="pe-colleague-proof t-caption">
+              {correspondence.reason}
+            </p>
           )}
       </PanelBody>
     </Panel>

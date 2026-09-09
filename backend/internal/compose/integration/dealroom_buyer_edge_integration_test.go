@@ -278,6 +278,121 @@ func uploadDealFile(t *testing.T, e *apptest.AppEnv, dealID, filename string, da
 	return id
 }
 
+// Revoking a seat kills the invitation that seat has not spent yet — twice
+// over, and the two halves are separate defences that fail for different
+// reasons.
+//
+// `revokeTx` ends access three ways at once, and one of them retires the
+// outstanding invitation. That is the half a reader would expect, and nothing
+// covered it at this door: the sibling case above revokes a seat holding a live
+// SESSION, which is a different arm of the same function.
+//
+// The exchange ALSO joins the participant and requires `revoked_at IS NULL`.
+// That is the half that matters when the first one did not happen — a
+// participant revoked without its invitation being retired, which is the race
+// the participant row lock exists to prevent. The invitation table carries no
+// participant-state column, so without the join every check on the invitation
+// row would read green for a person the seller had already removed, and the
+// buyer would enter a room they were taken out of.
+//
+// The first assertion holds the OUTCOME rather than either mechanism: through
+// the endpoint both defences are in play, and removing either one alone leaves
+// the credential just as dead — which is what defence in depth means and why
+// the outcome is the honest thing to assert there.
+//
+// The second isolates the join, the only way it can be isolated: leave the
+// invitation live and revoke the participant row alone. Removing
+// `p.revoked_at IS NULL` turns that case into a 200 — a buyer entering a room
+// they were taken out of — and nothing else in the statement notices.
+func TestARevokedSeatCannotSpendTheInvitationItStillHolds(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	room := openRoomWithABuyer(t, e)
+
+	var roster AnyMap
+	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID+"/participants", nil, nil, &roster); status != http.StatusOK {
+		t.Fatalf("roster = %d", status)
+	}
+	seats, _ := roster["data"].([]any)
+	if len(seats) != 1 {
+		t.Fatalf("the room lists %d seats, want the one buyer — the revoke below would otherwise name somebody else", len(seats))
+	}
+	seat, _ := seats[0].(map[string]any)
+	participantID, _ := seat["id"].(string)
+
+	// Revoked BEFORE the credential is ever spent, which is the whole case: the
+	// invitation is untouched — not consumed, not superseded, not expired — so
+	// only the participant join can refuse it.
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/participants/"+participantID+"/revoke", AnyMap{}, nil, nil); status != http.StatusOK {
+		t.Fatalf("revoke = %d", status)
+	}
+
+	var body AnyMap
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/exchange", AnyMap{"credential": room.credential}, nil, &body); status != http.StatusNotFound {
+		t.Fatalf("exchange on a revoked seat's unspent credential = %d, want 404 — the buyer would enter a room they were taken out of", status)
+	}
+
+	// And the peek agrees, so a caller cannot learn from the two answers
+	// disagreeing that the credential was real and the seat was revoked.
+	var peek AnyMap
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/peek", AnyMap{"credential": room.credential}, nil, &peek); status != http.StatusOK || peek["exchangeable"] != false {
+		t.Fatalf("peek on a revoked seat's credential = %d %v, want 200 with exchangeable=false", status, peek)
+	}
+
+	// THE SECOND DEFENCE, with the first one taken away. A fresh seat, revoked
+	// by writing the participant row alone so its invitation stays live — the
+	// state a lost race would leave behind. Every check the invitation carries
+	// still passes; only the join refuses it.
+	second := inviteAnotherBuyer(t, e, room.roomID, "mira@buyer.example")
+	revokeParticipantRowOnly(t, e, second.participantID)
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/exchange", AnyMap{"credential": second.credential}, nil, nil); status != http.StatusNotFound {
+		t.Fatalf("exchange on a revoked participant whose invitation was NOT retired = %d, want 404 — "+
+			"the invitation row alone cannot know the seat is gone, so the participant join is the only thing refusing it", status)
+	}
+}
+
+// invitedSeat is one buyer's seat and the credential issued with it.
+type invitedSeat struct {
+	participantID string
+	credential    string
+}
+
+func inviteAnotherBuyer(t *testing.T, e *apptest.AppEnv, roomID, email string) invitedSeat {
+	t.Helper()
+	var issued AnyMap
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+roomID+"/participants", AnyMap{
+		"full_name": "Mira Buyer", "email": email, "capability": "comment", "source": "ui",
+	}, nil, &issued); status != http.StatusCreated {
+		t.Fatalf("invite = %d %v", status, issued)
+	}
+	// The seat is NESTED: the response carries the credential at the top level
+	// and the participant beside it.
+	participant, _ := issued["participant"].(map[string]any)
+	id, _ := participant["id"].(string)
+	credential, _ := issued["credential"].(string)
+	if id == "" || credential == "" {
+		t.Fatalf("the issued invitation names no seat or no credential: %v", issued)
+	}
+	return invitedSeat{participantID: id, credential: credential}
+}
+
+// revokeParticipantRowOnly writes the one column the revoke writer writes
+// FIRST, and none of the others.
+//
+// Deliberately not the endpoint: revokeTx retires the invitation in the same
+// transaction, which is the defence this is trying to stand behind. Reaching
+// past it is the only way to observe the guard that exists for when it does not
+// land.
+func revokeParticipantRowOnly(t *testing.T, e *apptest.AppEnv, participantID string) {
+	t.Helper()
+	ctx := context.Background()
+	if err := e.DB().Pool().QueryRow(ctx,
+		`UPDATE deal_room_participant SET revoked_at = now() WHERE id = $1 RETURNING id`,
+		participantID).Scan(&participantID); err != nil {
+		t.Fatalf("revoking the participant row: %v", err)
+	}
+}
+
 func TestABuyerReadsAndDownloadsOnlyWhatTheReleaseNames(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
 	e.BootstrapWorkspace(t)

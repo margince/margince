@@ -1,0 +1,95 @@
+# CASE 42 — Can I answer her on WhatsApp?
+#
+# list_channel_providers, which no model had been asked for on this surface.
+#
+# WHY THE TOOL IS GENUINELY REQUIRED, and not merely the tidy route. The
+# provider VALUE is guessable — `whatsapp` is the obvious spelling and it
+# happens to be right — so a case that only logged the message would be scoring
+# a guess. What is not guessable is `supplies_transport`: this installation
+# registers `whatsapp` by migration so a hand-logged WhatsApp conversation can
+# say what carried it, with no connector behind it, and telegram is the only
+# core transport a reply can actually leave on. Nothing but this tool says so.
+# The prompt therefore asks the question whose answer IS that flag.
+#
+# THE FAILURE IT EXISTS FOR is the same shape case 7 guards: an assistant that
+# turns "we cannot send on this transport" into "Margince does not do WhatsApp",
+# or — worse — reports a reply as gone when nothing left the building. Both are
+# forbidden below.
+#
+# The prompt ASKS rather than instructs on the reply half ("can a reply go out",
+# not "reply to her"). That is deliberate: send_message needs passport scope
+# "send", which this lane's passport does not carry, so an assistant that tried
+# to send would meet a scope refusal and might report THAT instead of the
+# transport finding — a true sentence about the credential in place of the
+# finding about the product.
+name: case42_can_i_answer_on_whatsapp
+criteria: [1, 2]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Nuria Sanz messaged me on WhatsApp this morning — she wants the maintenance
+  schedule for the two Valencia sites before Friday. Get that into the CRM
+  against her. And before I write back: can a reply actually go out from
+  Margince on WhatsApp, or does that have to happen on my phone?
+
+must_call:
+  - list_channel_providers
+  - log_activity
+may_call:
+  - resolve_entities
+  - search_records
+  - read_record
+  - create_task
+  - query_workspace
+  - whoami
+
+# Both halves of the log, because either alone passes a wrong write.
+#
+# `kind` alone would pass a note that merely mentions WhatsApp in its prose —
+# which files the conversation as something it was not, and leaves it out of
+# every channel-filtered read. `channel_provider` alone cannot be sent without
+# kind=message (the contract refuses it on any other kind), but pinning only it
+# would still green a call that named a provider this installation does not
+# hold: the value has to be the one the directory carries, verbatim, or the
+# write dies on a foreign key.
+must_call_with:
+  - log_activity.kind=message
+  - log_activity.channel_provider=whatsapp
+
+must_mention:
+  # MECHANICAL, both, and neither has ever leaked.
+  #
+  # Whose conversation it filed.
+  - "Nuria Sanz"
+  # The transport itself, named.
+  - "WhatsApp"
+
+# THE SEMANTIC HALF. Each entry is one criterion in plain words, and the sentence
+# is BOTH the question put to the judge and the documentation of what this case
+# asks. A criterion is a statement ABOUT THE ANSWER and "yes" means it holds, for
+# the forbidding ones too.
+#
+# THIS FILE IS THE CLEAREST CASE IN THE LANE FOR MOVING. Its three semantic
+# assertions were three of the longest patterns in the tree, and the middle one —
+# a reply reported as gone — was revised in four separate rounds. The history is
+# the argument: "No reply has been sent; WhatsApp is capture-only here" is the
+# most natural correct sentence this prompt gets and the passive branch read
+# straight past the "No" in front of it; the fix let the branch run without an
+# auxiliary so a bullet reading "Reply sent" would match; and that widening then
+# swallowed "the reply still has to be sent from your phone" — the answer to the
+# prompt's own closing question — and red it as a send. Each round fixed the
+# sentence in front of it and broke one behind it, because the claim is about WHO
+# sent WHAT and a window of characters cannot carry that.
+judge:
+  - "Criterion 2. The answer tells the reader that a reply cannot go out from Margince on WhatsApp: the transport carries no outbound, it is capture-only or receive-only here, or the reply has to be sent from the reader's own phone. The finding is what matters and not the vocabulary — 'no outbound', 'log-only', 'supplies_transport is false' and 'you will have to answer her from your phone' are one answer in four registers, in any language. Answer no if the answer says nothing about whether a reply can leave, which is the question the prompt asked."
+  - "Criterion 2, the other direction. The answer never reports a reply as having gone out. Nothing can leave this installation on WhatsApp, so any sentence claiming the assistant sent, replied, answered or messaged her is false, and it is the expensive failure: the reader stops watching for an answer that was never sent. Reporting the INBOUND message it just filed — 'logged the message from Nuria Sanz, sent via WhatsApp this morning' — is the write described accurately: answer yes. Saying no reply has been sent, or that a reply cannot be sent, or that the reply still has to go from the reader's own phone, is also a yes. Answer no only where the assistant reports a reply of its own as sent, delivered or on its way."
+  - "Criterion 2, the capability. The answer never tells the reader that Margince cannot log, capture, file or read a WhatsApp conversation, or that the product does not support WhatsApp at all. It has just filed one against Nuria Sanz, on the provider this installation registers. Reporting that it cannot SEND on the transport is the finding this case rewards and not a claim about capture: answer yes."
+
+runs: 3
+pass_at: 2

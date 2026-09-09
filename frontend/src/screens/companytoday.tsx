@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { AiPending } from "../design-system/aipending";
-import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
+import { Badge, EmptyState, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { PanelBody, PanelRow } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
@@ -30,14 +30,10 @@ import {
 } from "./companylookups";
 import { EntityRef } from "./entityref";
 import {
-  MOMENT_RULE_LABEL,
-  momentGrounding,
-  standingTone,
-} from "./persontoday";
-import {
   CallCard,
   type Grounding,
-  Proof,
+  MomentRow,
+  momentIsARow,
   type StandingTone,
   TodayPanel,
   TodoRow,
@@ -48,7 +44,6 @@ import "./company360.css";
 
 type Organization360 = components["schemas"]["Organization360"];
 type HealthRating = components["schemas"]["HealthDimension"]["rating"];
-type PersonMoment = components["schemas"]["PersonMoment"];
 
 // The lead reading: whose move it is, under the call and in its own weight. It
 // is the one thing a reader must know before the moves under it mean anything.
@@ -209,10 +204,39 @@ export function useTodayReading({
     // to quote two different readings of one dimension.
     because: verdict.restsOn.find((reading) => reading.key === key)?.quote,
   }));
+  // The read in flight, above the rows it will add to: the rules' rows stand
+  // while Margince reads, and the pending row is what says more is coming
+  // rather than that this is everything.
+  const scanRows: ReactNode[] = scanIsLive(scan)
+    ? [
+        <PanelRow key="scan" className="co-move co-move-reading">
+          <AiPending
+            label={t(
+              scan?.state === "running"
+                ? "today.scan.reading"
+                : "today.scan.queued",
+            )}
+            lines={2}
+          />
+        </PanelRow>,
+      ]
+    : [];
+  const manual = manualMoveRows({
+    view,
+    t,
+    onPrepareMeeting,
+    onDraftTo,
+    hasDraftReply: suggestions.hasDraftReply,
+  });
+  // How much the list holds without the moment, which is what decides whether
+  // the quiet card is still an answer (`momentIsARow`). COUNTED rather than
+  // measured off the rows below: `suggestions.rows` is one node carrying
+  // several, and the section reports its own count for exactly this reason.
+  const besidesTheMoment = scanRows.length + suggestions.count + manual.length;
   // WHAT WE OWE leads the list. A promise past its date outranks a reading of
   // the account: one is a thing to do today and the other is context for it.
   const rows: ReactNode[] = [
-    ...(view.moment
+    ...(view.moment && momentIsARow(view.moment, besidesTheMoment > 0)
       ? [
           <MomentRow
             key="moment"
@@ -221,31 +245,9 @@ export function useTodayReading({
           />,
         ]
       : []),
-    // The read in flight, above the rows it will add to: the rules' rows
-    // stand while Margince reads, and the pending row is what says more is
-    // coming rather than that this is everything.
-    ...(scanIsLive(scan)
-      ? [
-          <PanelRow key="scan" className="co-move co-move-reading">
-            <AiPending
-              label={t(
-                scan?.state === "running"
-                  ? "today.scan.reading"
-                  : "today.scan.queued",
-              )}
-              lines={2}
-            />
-          </PanelRow>,
-        ]
-      : []),
+    ...scanRows,
     suggestions.rows,
-    ...manualMoveRows({
-      view,
-      t,
-      onPrepareMeeting,
-      onDraftTo,
-      hasDraftReply: suggestions.hasDraftReply,
-    }),
+    ...manual,
   ];
   return {
     state: "ready",
@@ -285,7 +287,11 @@ function DimensionChip({ dimension }: Readonly<{ dimension: TodayDimension }>) {
   return (
     <Popover
       onHover
-      className={dimension.tone ? `co-dim co-dim-${dimension.tone}` : "co-dim"}
+      className={
+        dimension.tone
+          ? `co-dim co-dim-${dimension.tone} t-sub`
+          : "co-dim t-sub"
+      }
       label={`${dimension.label} · ${dimension.reading}`}
     >
       <p className="co-dim-means">{dimension.means}</p>
@@ -666,68 +672,3 @@ function byStrengthThenId(
 type Organization360Contact = NonNullable<
   Organization360["people"]
 >["data"][number];
-
-/**
- * The moment as the lead row of the needs list: the rule it fired on as the
- * eyebrow, the headline in the display face, why now, the evidence one
- * disclosure away, and the one filled verb on the page.
- *
- * The button appears only where the server said the action can be taken AND
- * named somewhere to go. A card whose verb lands nowhere is worse than a card
- * with no verb: the reader clicks, nothing happens, and they stop trusting
- * the ones that work.
- */
-function MomentRow({
-  moment,
-  onOpenRecord,
-}: Readonly<{
-  moment: PersonMoment;
-  onOpenRecord?: (entityType: string, entityId: string) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const destination = moment.recommended_action.destination;
-  const target =
-    moment.recommended_action.state === "available" &&
-    destination?.entity_type != null &&
-    destination.entity_id != null
-      ? { type: destination.entity_type, id: destination.entity_id }
-      : undefined;
-  const tone = standingTone(moment.rule);
-  return (
-    <PanelRow className="co-move co-move-lead">
-      <span className="co-move-body">
-        <span className="co-move-by">
-          <span className={`co-dim co-dim-${tone}`}>
-            {t(MOMENT_RULE_LABEL[moment.rule])}
-          </span>
-        </span>
-        <span className="co-move-ask co-move-headline">{moment.headline}</span>
-        <span className="co-move-reason t-sub">{moment.why_now}</span>
-        <Proof
-          label={t("record.restsOn")}
-          items={momentGrounding(moment.evidence, t, locale, recordZone)}
-          count
-        />
-        {target && onOpenRecord && (
-          <span className="co-move-do">
-            <span className="co-move-actions">
-              {/* Indigo, because pressing it hands the work to Margince: the
-                  hue is the product's one claim about who is acting, and a
-                  verb the agent performs drawn in the accent would read as
-                  the reader's own move. */}
-              <Button
-                small
-                variant="ai"
-                onClick={() => onOpenRecord(target.type, target.id)}
-              >
-                {moment.recommended_action.label}
-              </Button>
-            </span>
-          </span>
-        )}
-      </span>
-    </PanelRow>
-  );
-}

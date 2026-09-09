@@ -14,6 +14,12 @@
 name: case4_use_the_moment
 criteria: [1, 6]
 
+# WRITES: nothing — this case only reads. Said out loud because a scenario that
+# does not say is refused: an absent or misspelled field used to arrive as the
+# value that skips work, so a forgotten declaration and a deliberate one were the
+# same silence.
+writes: false
+
 prompt: |
   hey I am in cologne right now and wanted to visit a client but my appointment
   got canceled. Anyone nearby in our crm I should visit?

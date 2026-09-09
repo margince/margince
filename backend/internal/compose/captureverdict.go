@@ -365,8 +365,15 @@ func (e *CounterpartyVerdictEngine) apply(
 		// would silently start hiding real mail, so there is none.
 		switch kind {
 		case capture.KindPerson:
-			triageDomain, err = e.createCounterparty(ctx, tx, row)
-			return err
+			if triageDomain, err = e.createCounterparty(ctx, tx, row); err != nil {
+				return err
+			}
+			// The mail a `classified` mailbox held while it waited for this
+			// answer. Bounded, and not drained here: this transaction already
+			// carries the ledger resolution and a person record, and a sender
+			// with a thousand held messages would hold it open for all of them.
+			// The reconciling pass finishes what this leaves.
+			return e.widenClearedSender(ctx, tx, row.Email)
 		case capture.KindRoleMailbox, capture.KindOrganizationSender:
 			// Real correspondence with no human to name. The message stays
 			// visible; no contact is invented for a mailbox nobody owns.

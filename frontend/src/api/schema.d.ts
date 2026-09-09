@@ -5052,6 +5052,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/leads/assign-bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hand a named set of leads to one owner.
+         * @description The explicit-id twin of `updateLead.owner_id`, for a queue a manager works a screenful at
+         *     a time. The caller names up to 500 leads and one destination; each lead is assigned
+         *     exactly as a single `updateLead` would assign it, with its own `audit_log` row and
+         *     `lead.updated` event.
+         *
+         *     PER ROW, not one transaction, and the result says so. A bulk verb over a work queue is a
+         *     selection of independent records, and refusing forty because the fortieth moved under the
+         *     reader would make the screen unworkable — so each lead answers for itself and the result
+         *     names every one that did not move. That is the opposite of `relinkActivities`, which is
+         *     all-or-nothing because its rows are one conversation.
+         *
+         *     The destination is checked ONCE before anything is written, because it is a fact about a
+         *     seat rather than about any lead: an ineligible owner answers `422 owner_not_assignable`
+         *     and nothing moves. It is then re-checked inside each row's transaction, since a seat can
+         *     be suspended midway through a long run.
+         *
+         *     Each `version` is optional and behaves as `If-Match` does on the single write: supply it
+         *     and a lead that moved since the caller read it answers `conflict` rather than overwriting
+         *     somebody's work.
+         */
+        post: operations["assignLeads"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads/settings": {
         parameters: {
             query?: never;
@@ -7166,8 +7204,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7202,8 +7243,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7237,8 +7281,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7273,8 +7320,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7310,8 +7360,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7354,8 +7407,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7403,8 +7459,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -7438,8 +7497,11 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -9544,7 +9606,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List the workspace's consent purposes (e.g. transactional, marketing_email, profiling). */
+        /**
+         * List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
+         * @description UNPAGED, deliberately. A workspace's consent purposes are configuration — a handful of
+         *     them, set up once — so the answer is the whole set and `page` reports `has_more: false`.
+         *
+         *     It used to declare `cursor` and `limit` and honour neither: `?limit=5` returned the
+         *     catalog, and a caller who sized a page got everything. Nothing was hidden, and nothing
+         *     was kept either. Removing the dial makes the surface true rather than adding paging
+         *     machinery with no user.
+         */
         get: operations["listConsentPurposes"];
         put?: never;
         /** Define a consent purpose. 🟢 admin write. */
@@ -9779,13 +9850,27 @@ export interface paths {
          *     to stop stays stopped until somebody with the authority to lift it says otherwise.
          *
          *     **Who may lift it is part of the record.** The row carries the authority of whoever wrote
-         *     it, taken from the session and never from this body. A rep's row is liftable by an admin
-         *     and not by another rep; nothing an installation can do lifts the subject's own Art. 21
-         *     objection, which is a different kind this door cannot write.
+         *     it, taken from the session and never from this body. A rep's `subject_request` row is
+         *     liftable by an admin and not by another rep.
          *
-         *     The only kind recordable here is `subject_request`. An objection and a processing
-         *     restriction carry legal consequences a relayed phone call does not establish, and a hard
-         *     bounce is a fact about a mailbox only the mail path observes.
+         *     A `marketing_objection` is different: it is recorded at the SUBJECT'S authority whoever
+         *     types it, because Art. 21 gives the right to the data subject and a rep relaying the call
+         *     is a courier rather than its author.
+         *
+         *     **Nothing lifts it today.** No seat outranks the subject, and the subject-initiated
+         *     reversal that would let them take it back is not built yet — the preference centre writes
+         *     consent state and never touches a suppression. Record one only when the person actually
+         *     asked for it: a mistake currently needs a database correction, not a product action.
+         *
+         *     Two kinds are recordable here. `subject_request` is "stop contacting me", and it stops
+         *     every category except the three the controller owes regardless of what the subject wants
+         *     sent: a privacy notice, a security warning, and the confirmation that an opt-out was
+         *     recorded. `marketing_objection` is Art. 21(2) and stops marketing only, so the invoice the
+         *     same person is owed still goes.
+         *
+         *     A processing restriction and a hard bounce are not recordable by hand: the first is an
+         *     Art. 18 legal state with its own workflow, the second a fact about a mailbox only the mail
+         *     path observes.
          */
         post: operations["suppressPerson"];
         delete?: never;
@@ -10571,7 +10656,15 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List the owner's corpus manifest and live meter; source text is never returned. */
+        /**
+         * List the owner's corpus manifest and live meter; source text is never returned.
+         * @description UNPAGED, deliberately, and for the same reason listConsentPurposes is: one voice
+         *     profile's corpus sources are configuration rather than accumulated data, so the answer
+         *     is the whole manifest.
+         *
+         *     It declared `cursor` and `limit` and honoured neither. Removing the dial is free now
+         *     and stops being free once a client depends on the parameter being accepted.
+         */
         get: operations["listVoiceCorpusSources"];
         put?: never;
         /**
@@ -12928,6 +13021,39 @@ export interface paths {
          *     change). Per-rep queue state, like act/dismiss.
          */
         post: operations["snoozeBriefItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brief/items/{itemId}/unsnooze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A brief_item id belonging to one of the acting rep's runs. */
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a snooze — the item returns to the queue immediately.
+         * @description Clears `snoozed_until`, `reopen_on` and `reopen_ref` and returns the item to `state=new`,
+         *     which is the only state a snooze can be taken back TO: an item may be snoozed only while it
+         *     is actionable, so `new` is where it came from.
+         *
+         *     Idempotent by refusal rather than by silence. An item that is not snoozed answers 409 —
+         *     there is nothing to take back, and reporting success would tell a rep their click landed
+         *     when the state they were looking at had already moved. A snooze whose condition has already
+         *     lifted is still snoozed as far as this is concerned: taking it back is the same write and
+         *     leaves the same state.
+         *
+         *     Per-rep queue state, like snooze itself. Another rep's item reads as not-found.
+         */
+        post: operations["unsnoozeBriefItem"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15590,7 +15716,7 @@ export interface components {
              * @description The mail/calendar provider (A51 email+calendar parity).
              * @enum {string}
              */
-            provider: "gmail" | "gcal" | "graph" | "graphcal" | "imap";
+            provider: "gmail" | "gcal" | "graph" | "graphcal" | "imap" | "test_mailbox";
             /** @description Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one. */
             account_label?: string | null;
             /**
@@ -16446,7 +16572,7 @@ export interface components {
             };
             connectors: {
                 /** @enum {string} */
-                provider?: "gmail" | "gcal" | "graph" | "graphcal" | "imap";
+                provider?: "gmail" | "gcal" | "graph" | "graphcal" | "imap" | "test_mailbox";
                 /** @enum {string} */
                 status?: "connected" | "disconnected" | "error" | "reauth_required";
                 /** Format: date-time */
@@ -18378,12 +18504,17 @@ export interface components {
         };
         /**
          * @description Where this reader's scan of the account stands. `never` — this reader has not asked
-         *     for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
-         *     model read the account and its findings are stored. `degraded` — the read finished
-         *     on the deterministic floor (no model lane, the AI budget deferred past the job's
-         *     patience, or a reply the grounding filter refused whole); the rules' own advice is
-         *     what stands. `failed` — the read could not run at all; the rules' advice still
-         *     answers, and `degrade_reason` says what stopped it.
+         *     for one. `queued` / `running` — a read is in flight, on the rail. `done` — the read
+         *     covered everything this reader may read and its findings are stored; that is the
+         *     model's reading of the account's exchanges, or — on an account with no exchange
+         *     this reader may read, which is every account before its first — the rules' own
+         *     advice over nothing, with `read` saying nought exchanges and `generated_by` saying
+         *     which wrote it. An empty account is not a shortfall and never degrades: `degraded`
+         *     is the DEPLOYMENT falling short of the read it was asked for, so the answer
+         *     finished on the deterministic floor (no model lane, the AI budget deferred past the
+         *     job's patience, or a reply the grounding filter refused whole) and the rules' own
+         *     advice is what stands. `failed` — the read could not run at all; the rules' advice
+         *     still answers, and `degrade_reason` says what stopped it.
          * @enum {string}
          */
         OrganizationScanState: "never" | "queued" | "running" | "done" | "degraded" | "failed";
@@ -21777,7 +21908,14 @@ export interface components {
              * @enum {string|null}
              */
             won_without_contract_reason?: "imported" | "purchase_order" | "verbal" | "renewal_by_email" | "other" | null;
-            /** @description What the reason was. Required when it is `other`, which explains nothing alone. */
+            /**
+             * @description What the reason was. Required when it is `other`, which explains nothing alone.
+             *
+             *     Bounded because it is free text that a record page shows back beside the deal's
+             *     status: an unbounded value reaches every reader of that deal, and the header it
+             *     lands in is a line of short facts. 500 is a few sentences — long enough to say
+             *     what happened, short enough that the line stays readable.
+             */
             won_without_contract_detail?: string | null;
         };
         DealListResponse: {
@@ -22839,6 +22977,59 @@ export interface components {
             replace_existing_of_type: boolean;
         };
         /**
+         * @description One destination owner, and the leads to hand to them. The owner is checked before any
+         *     lead is touched; the leads answer one at a time.
+         */
+        AssignLeadsRequest: {
+            /**
+             * Format: uuid
+             * @description The seat to hand them to. Must be one that can be handed work — an active, unarchived
+             *     human seat that is not read-only, inside the caller's own row scope — else
+             *     `422 owner_not_assignable` and nothing moves.
+             */
+            owner_id: string;
+            leads: components["schemas"]["AssignLeadsItem"][];
+        };
+        AssignLeadsItem: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int64
+             * @description The version the caller read. Optional; supplying it makes the row's write conditional
+             *     exactly as `If-Match` does on `updateLead`, so a lead somebody else moved answers
+             *     `conflict` instead of losing their change.
+             */
+            version?: number;
+        };
+        AssignLeadsResult: {
+            results: components["schemas"]["AssignLeadOutcome"][];
+        };
+        /** @description What happened to one named lead. */
+        AssignLeadOutcome: {
+            /** Format: uuid */
+            lead_id: string;
+            outcome: components["schemas"]["AssignLeadOutcomeKind"];
+            /**
+             * Format: int64
+             * @description The lead's version after the write. Present on `assigned`.
+             */
+            version?: number;
+        };
+        /**
+         * @description `assigned` moved the lead — including one already owned by the destination, which still
+         *     takes a version and an audit row rather than being quietly skipped: the writer records
+         *     the assignment as an act, so a re-run says what it did rather than claiming it did
+         *     nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+         *     no longer holds.
+         *
+         *     `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
+         *     write resolves live rows only and a promoted or disqualified lead is no longer among
+         *     them. The two deliberately read alike: which of them it was is a fact about a record the
+         *     caller was not shown, and separating them would answer that a lead exists.
+         * @enum {string}
+         */
+        AssignLeadOutcomeKind: "assigned" | "not_found" | "forbidden" | "conflict";
+        /**
          * @description The destination for a named set of activities. Every id must be one the caller can see and
          *     write, or the whole request is refused and nothing moves.
          */
@@ -23085,9 +23276,23 @@ export interface components {
              *     default, so a connector that never declared carriage reports false rather than
              *     being mistaken for capable. A zero bound means "no limit beyond the contract's
              *     own", never "zero allowed".
+             *
+             *     `max_total_bytes` is the exception to that rule and is never zero: every
+             *     transport has an aggregate, because the product has one whether or not the
+             *     provider declares its own. It is the bound a composer must warn against
+             *     FIRST — `max_files` and `max_bytes_per_file` cannot express it between them,
+             *     so a message of ten files each under the per-file cap can pass both and still
+             *     be ten times what a send may carry.
              */
             attachments: {
                 carries: boolean;
+                /**
+                 * Format: int64
+                 * @description Largest total across every file on one message, in bytes — the smaller of
+                 *     this transport's own aggregate and the product's send budget. Always
+                 *     present and always positive.
+                 */
+                max_total_bytes: number;
                 /** @description Most files in one message. Never more than the contract's own `attachment_ids` cap of 10. */
                 max_files: number;
                 /**
@@ -24671,10 +24876,31 @@ export interface components {
             first_response_enabled: boolean;
             /** @description How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080. */
             first_response_target_minutes: number;
+            /**
+             * Format: uuid
+             * @description Who answers when a lead nobody owns misses its target. Null means nobody is
+             *     configured, and an unowned breach is recorded without being addressed. Also reads
+             *     null once the named seat can no longer work the queue — suspended, archived, an
+             *     agent, a read seat — because a desk nobody reads is the same silence as none.
+             */
+            unassigned_escalation_user_id?: string | null;
         };
         UpdateLeadSettingsRequest: {
             first_response_enabled?: boolean;
             first_response_target_minutes?: number;
+            /**
+             * Format: uuid
+             * @description Who answers when a lead NOBODY owns misses its first-response target. An owned
+             *     lead's breach escalates to its owner; without this, an unowned one escalated to
+             *     nobody at all.
+             *
+             *     Must name a seat that can be handed work AND may read leads, else `422` — an
+             *     escalation carries the lead it is about, so a desk that cannot open the record is
+             *     not a desk to send it to. Null clears it, which is the honest default: the breach
+             *     is recorded and left in the unassigned queue rather than addressed to somebody who
+             *     never agreed to answer for it.
+             */
+            unassigned_escalation_user_id?: string | null;
         };
         /** @description Why the lead is closed. Both fields are optional on the wire so an agent's governed disqualify still works; the UI always sends a reason. */
         DisqualifyLeadRequest: {
@@ -26336,7 +26562,9 @@ export interface components {
              */
             capacity_note?: string | null;
             /**
-             * @description What next week's calendar already holds, counted rather than authored.
+             * @description What the PLANNED week's calendar already holds, counted rather than authored —
+             *     the same seven days `local_week_start` names, so the figure and the plan cannot
+             *     describe different weeks.
              *
              *     ABSENT when the installation composed no calendar reader. Absent is NOT zero: a
              *     week nobody has looked at is unknown, and drawing it as "nothing booked" would
@@ -30814,6 +31042,19 @@ export interface components {
              */
             forecast_up: number;
             forecast_down: number;
+            /**
+             * @description Deals left OUT of the four population counts above because their state at the week's
+             *     closing instant could not be rebuilt: the audit images describing their week sit
+             *     behind an erasure, and the append-only spine means reading them would put back
+             *     exactly what a scrub certified destroyed.
+             *
+             *     Nonzero means `open` and the three coverage counts are a floor rather than a total,
+             *     and a reader must be told so. Zero is the ordinary answer. ABSENT means the week was
+             *     scored before this reconstruction existed, which is a third fact again: those counts
+             *     are the current-state figures they always were, and nothing can retroactively make
+             *     them week-end facts.
+             */
+            unreconstructible?: number;
         };
         /**
          * @description One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
@@ -31923,10 +32164,10 @@ export interface components {
              */
             scope_options: ("mine" | "unassigned" | "team" | "all")[];
             /**
-             * @description The narrowing this read applied.
+             * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
              */
-            filter?: "all" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            filter?: "all" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system" | "except_decisions" | "changed_since_brief";
             summary: components["schemas"]["WorklistSummary"];
             /** @description Everything actionable, best-first. The order is the product of this endpoint. */
             queue: components["schemas"]["WorklistItem"][];
@@ -32489,10 +32730,15 @@ export interface components {
             /** @description How much new business is in hand and owed a first response. */
             prospecting: number;
             /**
-             * @description How much routine work is queued behind a decision. Counted before the fold, so
-             *     a hundred alike approvals read as a hundred here even where the queue draws
+             * @description How many decisions THIS reader can settle. Counted before the fold, so a
+             *     hundred alike approvals read as a hundred here even where the queue draws
              *     them as one row — the strip says how much work there is, and the queue says
              *     how much reading it costs.
+             *
+             *     Only rows carrying a verb the reader may press. A duplicate pair whose two
+             *     records the reader cannot both write is somebody else's decision, and
+             *     counting it here tells them a person is blocked on an answer they are not
+             *     able to give.
              */
             review: number;
             /**
@@ -33603,14 +33849,17 @@ export interface components {
         FactKey: string;
         /**
          * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-         *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-         *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+         *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+         *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+         *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+         *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+         *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
          *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
          *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
          *     consent each, so a person can bring one without the other and disconnect either.
          *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
          */
-        CaptureProvider: "gmail" | "gcal" | "graph" | "graphcal" | "imap";
+        CaptureProvider: "gmail" | "gcal" | "graph" | "graphcal" | "imap" | "test_mailbox";
         /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
         Id: string;
         /**
@@ -33639,10 +33888,14 @@ export interface components {
          *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
          *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
          *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-         *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-         *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-         *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-         *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+         *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+         *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+         *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+         *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+         *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+         *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+         *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+         *     `422 code: sort_field_not_allowed`.
          */
         Sort: string;
         /** @description Include soft-deleted (archived) rows. Default false. */
@@ -34304,10 +34557,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -35801,10 +36058,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -37478,10 +37739,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 partner_role?: "hosting" | "consulting" | "strategic";
@@ -37657,10 +37922,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -38013,10 +38282,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -39388,10 +39661,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -41637,10 +41914,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -41797,6 +42078,33 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    assignLeads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignLeadsRequest"];
+            };
+        };
+        responses: {
+            /** @description What happened to each named lead. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignLeadsResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -45117,8 +45425,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45161,8 +45472,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45191,8 +45505,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45222,8 +45539,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45260,8 +45580,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45299,8 +45622,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45338,8 +45664,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45385,8 +45714,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45418,8 +45750,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45456,8 +45791,11 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
-                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a person can bring one without the other and disconnect either.
@@ -45568,8 +45906,29 @@ export interface operations {
                  *     licence to read a colleague's inbox.
                  */
                 scope?: "mine" | "unassigned" | "team" | "all";
-                /** @description Narrow the queue to one kind of work. Omitted means everything, which is the default view. */
-                filter?: "all" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+                /**
+                 * @description Narrow the queue. Omitted means everything, which is the default view.
+                 *
+                 *     Most values name ONE kind of work. Two do not, and exist because a surface
+                 *     counted a population this vocabulary could not then ask for — a count whose
+                 *     link lands on a different population is a number that lies about where it goes.
+                 *
+                 *     `except_decisions` is everything a decisions-drawing surface has NOT already
+                 *     answered: every row whose SOURCE is not `approval`. Not a kind of work, and
+                 *     deliberately not the complement of the `decisions` CATEGORY, which is a wider
+                 *     set — an introduction request classifies as a decision and is not an approval,
+                 *     so a category reading would drop a row the counting surface kept. A folded
+                 *     group's source is `batch` and it is kept, like any other row that is not
+                 *     itself an approval.
+                 *
+                 *     `changed_since_brief` is the rows whose material moment falls after the
+                 *     overnight run's data cutoff — the same test that stamps each row's
+                 *     `changed_since_brief` flag — and, like the value above, not the rows a brief
+                 *     already draws as cards. With no run to compare against it answers empty rather
+                 *     than everything: absent is not false, and a reader asking what changed since a
+                 *     night that never happened is owed nothing, not the whole queue.
+                 */
+                filter?: "all" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system" | "except_decisions" | "changed_since_brief";
                 /** @description How many ranked items to return. */
                 limit?: number;
                 /**
@@ -47579,10 +47938,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Target core object (CUSTOM-FIELDS-PARAM-2). */
@@ -47914,21 +48277,7 @@ export interface operations {
     };
     listConsentPurposes: {
         parameters: {
-            query?: {
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
-                limit?: components["parameters"]["Limit"];
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -48364,10 +48713,13 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * @description Which stop this is. Only the subject's own request is recordable by hand.
+                     * @description Which stop this is. `subject_request` is "stop contacting me" and reaches every
+                     *     category but the three the controller owes anyway. `marketing_objection` is
+                     *     Art. 21(2), reaches marketing only, and is recorded at the subject's own
+                     *     authority so no seat can lift it.
                      * @enum {string}
                      */
-                    kind: "subject_request";
+                    kind: "subject_request" | "marketing_objection";
                     /**
                      * @description What the person was told, in their words. Stored because a suppression somebody
                      *     later asks to lift is only reviewable if the record says why it was made.
@@ -49479,21 +49831,7 @@ export interface operations {
     };
     listVoiceCorpusSources: {
         parameters: {
-            query?: {
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
-                limit?: components["parameters"]["Limit"];
-            };
+            query?: never;
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -50151,10 +50489,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -50337,10 +50679,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -51096,10 +51442,14 @@ export interface operations {
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
                  *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
+                 *     resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+                 *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
+                 *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
+                 *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
+                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
+                 *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
@@ -53341,6 +53691,47 @@ export interface operations {
             };
             /** @description `snoozed_until` is missing or not in the future. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    unsnoozeBriefItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A brief_item id belonging to one of the acting rep's runs. */
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The updated brief item, back in the queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MorningBriefItem"];
+                };
+            };
+            /** @description No such item in one of the acting rep's runs (another rep's item reads as not-found). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The item is not snoozed, so there is no snooze to take back. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

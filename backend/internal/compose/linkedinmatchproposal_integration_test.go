@@ -198,14 +198,14 @@ func TestTheSweepStagesALinkedInSuggestionNobodyWasEverAskedAbout(t *testing.T) 
 	onlyPendingLinkedInMatch(t, e)
 }
 
-// Refusing a match leaves the ghost at `suggested` — the reject path writes no
-// row here, by design, because the refusal IS the approval — so the widened
-// enumeration reaches that owner on every sweep from then on. What must not
-// happen is the sweep asking again.
+// Refusing a match must not lead to the question being asked again, and the
+// refusal must land on the GHOST ROW so the sweep stops paying for it.
 //
-// The durable-refusal property is not new, but the widening is what makes it
-// load-bearing: before it, an owner with nothing left but refused suggestions
-// dropped out of the enumeration and was never given the chance to be re-asked.
+// Two properties, and they were not always both true. The durable refusal is
+// the older one: StageUnlessDeclined reads the declined offers and will not
+// re-propose. What is new is the terminal state — the refusal is now recorded
+// on the connection the first time a pass observes it, so the widened
+// enumeration stops reaching a row whose answer can only ever be empty.
 func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -224,8 +224,16 @@ func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 		t.Fatalf("rejecting: %v", err)
 	}
 
-	// The owner is still enumerated — the refusal is not on the ghost row — so
-	// the sweep runs their whole pass again.
+	// The refusal is observed by the pass that would have re-proposed, which is
+	// what writes it to the row.
+	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+		t.Fatalf("re-staging after the refusal: %v", err)
+	}
+	if status := linkedInMatchStatus(t, e); status != "rejected" {
+		t.Errorf("the refused connection is %q, want rejected — nothing reading the row can tell a "+
+			"finished suggestion from a live one, and the sweep goes on paying for it", status)
+	}
+
 	sweep := newLinkedInRematchWorker(e.Pool, store, identity.NewService(e.Pool),
 		slog.New(slog.DiscardHandler))
 	if _, err := sweep.sweepWorkspace(context.Background(), e.WS); err != nil {
@@ -236,6 +244,26 @@ func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 		t.Errorf("%d pending proposals after a refused match was swept, want 0 — the sweep is "+
 			"re-asking a question the member already answered", pending)
 	}
+	// And the terminal state survives the sweep: the enumeration no longer
+	// reaches this row, so nothing moves it back.
+	if status := linkedInMatchStatus(t, e); status != "rejected" {
+		t.Errorf("the connection is %q after a sweep, want it to stay rejected", status)
+	}
+}
+
+// linkedInMatchStatus is the fixture connection's own recorded state — the
+// column the sweep enumerates on, which is what makes it the fact that matters
+// rather than the approval beside it.
+func linkedInMatchStatus(t *testing.T, e *integration.Env) string {
+	t.Helper()
+	var status string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT match_status FROM linkedin_connection`).Scan(&status)
+	}); err != nil {
+		t.Fatalf("reading the connection's match status: %v", err)
+	}
+	return status
 }
 
 // A contact edit must not cancel a LinkedIn match waiting to be decided.
@@ -330,4 +358,266 @@ func onlyPendingLinkedInMatch(t *testing.T, e *integration.Env) ids.ApprovalID {
 		t.Fatalf("%d pending linkedin_match proposals, want exactly 1", len(ids_))
 	}
 	return ids_[0]
+}
+
+// A stale refusal observation leaves a NEWER state alone.
+//
+// The refusal is observed against a snapshot, and between that read and the
+// write the row may have moved: the exact-name matcher confirms a link, or a
+// re-import resets it to unmatched. A refusal is only ever about the suggestion
+// it answered, so a stale observation must not overwrite a link somebody now
+// has — which a predicate of "anything that is not already rejected" would.
+func TestARefusalDoesNotOverwriteAMatchConfirmedSince(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	linkedInMatchFixture(ctx, t, e)
+	grantReadPeopleRole(t, e, e.Rep1, "all")
+
+	store := people.NewStore(e.DB())
+	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+
+	// The row moves on under the observation: confirmed by the other path.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE linkedin_connection SET match_status = 'confirmed'`)
+		return err
+	}); err != nil {
+		t.Fatalf("confirming the connection: %v", err)
+	}
+
+	if err := store.RecordLinkedInMatchRefused(ctx, onlyLinkedInConnection(t, e)); err != nil {
+		t.Fatalf("recording a stale refusal: %v", err)
+	}
+	if status := linkedInMatchStatus(t, e); status != "confirmed" {
+		t.Errorf("the connection is %q, want confirmed — a refusal about a suggestion that no longer "+
+			"exists rejected a link the member now has", status)
+	}
+}
+
+// onlyLinkedInConnection is the fixture's single ghost row.
+func onlyLinkedInConnection(t *testing.T, e *integration.Env) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT id FROM linkedin_connection`).Scan(&id)
+	}); err != nil {
+		t.Fatalf("reading the connection id: %v", err)
+	}
+	return id
+}
+
+// A FAILED APPLY TAKES THE REDEMPTION WITH IT.
+//
+// The effect redeemed the approval and then applied it in a SECOND
+// transaction. A failure in the apply left the approval consumed and the
+// connection never linked — and unrecoverable through the API, because the row
+// is decided and re-deciding answers 409. Redeem's own doc says callers should
+// use RedeemAndApply and have no window at all.
+//
+// The failure is produced by tombstoning the connection between staging and
+// deciding, which is a thing that actually happens: a re-import supersedes the
+// row a proposal is about. The apply then refuses, and what this pins is that
+// the approval is left UNCONSUMED — so a consumed approval implies the write
+// landed, which is the property the two transactions did not have.
+func TestAFailedLinkedInApplyLeavesTheApprovalUnconsumed(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	linkedInMatchFixture(ctx, t, e)
+	grantReadPeopleRole(t, e, e.Rep1, "all")
+
+	store := people.NewStore(e.DB())
+	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+	svc := approvalsServiceWithEffects(e.Pool)
+	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+	approval := onlyPendingLinkedInMatch(t, e)
+
+	// The row the proposal is about goes away, exactly as a re-import would
+	// take it away.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE linkedin_connection SET tombstoned_at = now()`)
+		return err
+	}); err != nil {
+		t.Fatalf("tombstoning the connection: %v", err)
+	}
+
+	if _, err := svc.Decide(ctx, approval, true, nil); err == nil {
+		t.Fatal("approving reported success while the connection it names was gone")
+	}
+
+	var consumed *string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT consumed_at::text FROM approval WHERE id = $1`, approval).Scan(&consumed)
+	}); err != nil {
+		t.Fatalf("reading the approval back: %v", err)
+	}
+	if consumed != nil {
+		t.Errorf("the approval is consumed at %s while its apply failed — the redemption committed "+
+			"on its own, so the member's yes is spent and the connection was never linked", *consumed)
+	}
+}
+
+// linkedInMatchPair reads the connection's status AND the person it points at,
+// because a refusal has to move both: a row left pointing at the contact it was
+// refused for still carries a pair claim nobody released.
+func linkedInMatchPair(t *testing.T, e *integration.Env) (string, *ids.UUID) {
+	t.Helper()
+	var status string
+	var person *ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT match_status, matched_person_id FROM linkedin_connection`).Scan(&status, &person)
+	}); err != nil {
+		t.Fatalf("reading the connection's match pair: %v", err)
+	}
+	return status, person
+}
+
+// Rejecting the card moves the ghost row, in the decision's own transaction.
+//
+// It used to change nothing. The approvals record said declined and the
+// connection still said suggested, and the two disagreed until a sweep happened
+// to observe it — up to an hour, and only because StageUnlessDeclined refused to
+// re-propose. Asserted WITHOUT running a sweep afterwards, which is the whole
+// point: the state has to be right the moment the member answers.
+func TestRejectingALinkedInMatchMarksTheGhostRowAtTheMomentItIsRejected(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	linkedInMatchFixture(ctx, t, e)
+	grantReadPeopleRole(t, e, e.Rep1, "all")
+
+	store := people.NewStore(e.DB())
+	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+	svc := approvalsServiceWithEffects(e.Pool)
+	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+
+	if _, err := svc.Decide(ctx, onlyPendingLinkedInMatch(t, e), false, nil); err != nil {
+		t.Fatalf("rejecting: %v", err)
+	}
+
+	status, person := linkedInMatchPair(t, e)
+	if status != "rejected" {
+		t.Errorf("the connection is %q immediately after the rejection, want rejected — the card says "+
+			"declined and the record still offers the suggestion, and nothing closes the gap until a "+
+			"sweep happens to run", status)
+	}
+	if person != nil {
+		t.Errorf("the refused connection still names person %s — the row's answer was no, and a pair "+
+			"claim nobody released is what matchRankOrder and the pending read must not find", person)
+	}
+}
+
+// The previously dead `<> 'rejected'` predicate now has a row it excludes.
+//
+// Both halves are the assertion. The refused connection is absent from the
+// pending read — which is what the predicate is for — and the ROW is still
+// there, carrying the terminal status. Without the second half an empty result
+// would pass for the wrong reason: a read returning nothing because the table
+// is empty looks identical to one excluding a rejection.
+func TestThePendingReadExcludesARefusedConnectionThatIsStillThere(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	linkedInMatchFixture(ctx, t, e)
+	grantReadPeopleRole(t, e, e.Rep1, "all")
+
+	store := people.NewStore(e.DB())
+	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+	before, err := store.PendingLinkedInMatches(ctx)
+	if err != nil {
+		t.Fatalf("reading the pending matches: %v", err)
+	}
+	if len(before) != 1 {
+		t.Fatalf("the fixture produced %d suggestion(s), want 1 — this test compares the read on either "+
+			"side of one refusal and cannot do that from a different starting point", len(before))
+	}
+	refused := before[0].ConnectionID
+
+	// Through the real reject, which is what a member does.
+	svc := approvalsServiceWithEffects(e.Pool)
+	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+	if _, err := svc.Decide(ctx, onlyPendingLinkedInMatch(t, e), false, nil); err != nil {
+		t.Fatalf("rejecting: %v", err)
+	}
+
+	after, err := store.PendingLinkedInMatches(ctx)
+	if err != nil {
+		t.Fatalf("re-reading the pending matches: %v", err)
+	}
+	for _, m := range after {
+		if m.ConnectionID == refused {
+			t.Errorf("the refused connection is still offered by the pending read — the `<> 'rejected'` " +
+				"predicate had no row to exclude before this, and still has none")
+		}
+	}
+	if status, _ := linkedInMatchPair(t, e); status != "rejected" {
+		t.Fatalf("the connection reads %q, so the empty result above says nothing about the predicate — "+
+			"the row it was supposed to exclude is not in the state that excludes it", status)
+	}
+}
+
+// A refusal answers the SUGGESTION it was staged for, and leaves a suggestion
+// nobody was asked about alone.
+//
+// TestARefusalDoesNotOverwriteAMatchConfirmedSince covers the status half: a
+// row that moved to confirmed is not refused. This is the pair half, and the
+// two are different rows in the same table. Between staging and the member's
+// answer the matcher can re-point a still-suggested connection at a different
+// contact — a re-import, a name correction, a new employment edge — and the
+// card the member is looking at names the OLD one. Refusing whoever the row
+// points at now would discard a suggestion that was never offered.
+func TestARefusalDoesNotDiscardASuggestionStagedForSomebodyElse(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	linkedInMatchFixture(ctx, t, e)
+	grantReadPeopleRole(t, e, e.Rep1, "all")
+
+	store := people.NewStore(e.DB())
+	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+	svc := approvalsServiceWithEffects(e.Pool)
+	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+
+	// The matcher moves the still-suggested row to a different contact after
+	// the card was staged. Written directly because what is under test is the
+	// refusal's predicate, not how the row came to point elsewhere.
+	moved, err := e.People.CreatePerson(ctx, people.CreatePersonInput{FullName: "Andrea Muller", Source: "manual"})
+	if err != nil {
+		t.Fatalf("seeding the contact the row moves to: %v", err)
+	}
+	seedAsAdmin(t, e, func(c context.Context, tx pgx.Tx) error {
+		_, execErr := tx.Exec(c, `UPDATE linkedin_connection SET matched_person_id = $1`, ids.UUID(moved.Id))
+		return execErr
+	}, "re-pointing the suggestion")
+
+	if _, err := svc.Decide(ctx, onlyPendingLinkedInMatch(t, e), false, nil); err != nil {
+		t.Fatalf("rejecting: %v", err)
+	}
+
+	status, person := linkedInMatchPair(t, e)
+	if status != "suggested" {
+		t.Errorf("the connection is %q, want it left at suggested — the member refused a suggestion for "+
+			"somebody else, and this one has never been put to them", status)
+	}
+	if person == nil || *person != ids.UUID(moved.Id) {
+		t.Errorf("the connection names %v, want the contact it was moved to (%s) — a refusal aimed at "+
+			"one pair discarded another", person, ids.UUID(moved.Id))
+	}
 }

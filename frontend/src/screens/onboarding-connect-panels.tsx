@@ -196,7 +196,7 @@ export function OAuthConnectPanel({
       {/* What the grant covers is background: true, and not what the reader is
           deciding at this moment, which is whether to press Connect. */}
       <Disclosure summary={t("ob.s4.accessToggle")}>
-        <p className="spoken-hint">
+        <p className="spoken-hint t-caption">
           <ShieldCheck aria-hidden /> {t(copy.hint)}
         </p>
       </Disclosure>
@@ -582,7 +582,7 @@ export function ImapConnectPanel({
       </div>
 
       <Disclosure summary={t("ob.s4.accessToggle")}>
-        <p className="spoken-hint">
+        <p className="spoken-hint t-caption">
           <ShieldCheck aria-hidden /> {t("ob.s4.imapHint")}
         </p>
       </Disclosure>

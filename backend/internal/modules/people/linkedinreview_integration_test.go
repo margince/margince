@@ -14,10 +14,12 @@ package people
 // that the reach read counts what it says it counts.
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -97,7 +99,7 @@ func TestApplyingAnApprovedMatchPutsTheLinkedInURLOnTheContact(t *testing.T) {
 	e.employ(t, andreas, org)
 	e.importAndMatch(t)
 
-	if err := e.store.ApplyLinkedInMatch(e.as(), e.ghostID(t), andreas.UUID); err != nil {
+	if err := e.store.ApplyLinkedInMatch(e.as(), e.ghostID(t), e.rep, andreas.UUID); err != nil {
 		t.Fatalf("applying the approved match: %v", err)
 	}
 	if status, person := e.ghostStatus(t, suggestedGhost); status != "confirmed" || person == nil || *person != andreas.UUID {
@@ -132,7 +134,7 @@ func TestApplyingAMatchNeverOverwritesAHandleTheContactAlreadyHad(t *testing.T) 
 	}
 	e.importAndMatch(t)
 
-	if err := e.store.ApplyLinkedInMatch(e.as(), e.ghostID(t), andreas.UUID); err != nil {
+	if err := e.store.ApplyLinkedInMatch(e.as(), e.ghostID(t), e.rep, andreas.UUID); err != nil {
 		t.Fatalf("applying the approved match: %v", err)
 	}
 	// The link still stands — only the copy did not happen.
@@ -297,5 +299,144 @@ func TestAConnectionNeverMatchesAContactItsOwnerMayNotSee(t *testing.T) {
 
 	if status, person := e.ghostStatus(t, "Andreas Müller"); status != "unmatched" || person != nil {
 		t.Errorf("a ghost matched a contact its owner may not see: %q → %v", status, person)
+	}
+}
+
+// The apply is BOUND to the connection its proposal was staged for, on every
+// axis the payload names.
+//
+// The guards on this path gate the PERSON — the update grant and the target's
+// visibility — and nothing tied the CONNECTION. So an apply would re-point an
+// already-confirmed row to a different contact, and would land on another
+// member's connection, if the payload said so. Each case here is one of the
+// three predicates, and each must change zero rows and answer not-found rather
+// than reporting a link it did not make.
+func TestApplyingAMatchRefusesAConnectionTheProposalDoesNotDescribe(t *testing.T) {
+	e := setupDedupe(t)
+	org := e.seedOrgNamed(t, "Acme GmbH")
+	andreas := e.seedContact(t, "Andreas Muller")
+	e.employ(t, andreas, org)
+	e.importAndMatch(t)
+	ghost := e.ghostID(t)
+
+	other := e.seedContact(t, "Someone Else")
+
+	for _, tc := range []struct {
+		name          string
+		owner, person ids.UUID
+		what          string
+	}{
+		{
+			name: "another member's connection", owner: ids.NewV7(), person: andreas.UUID,
+			what: "a member decides about their own imported network and nobody else's",
+		},
+		{
+			name: "a pair the row does not name", owner: e.rep, person: other.UUID,
+			what: "the pair IS the claim, so an approval released against one contact must not " +
+				"apply to whoever the row points at now",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := e.store.ApplyLinkedInMatch(e.as(), ghost, tc.owner, tc.person); !errors.Is(err, apperrors.ErrNotFound) {
+				t.Fatalf("err = %v, want ErrNotFound — %s", err, tc.what)
+			}
+			if status, _ := e.ghostStatus(t, suggestedGhost); status != "suggested" {
+				t.Errorf("the connection is %q, want it untouched at suggested", status)
+			}
+		})
+	}
+
+	// The outcome the three clauses exist for, asserted as an outcome: a
+	// confirmed row is never re-pointed.
+	//
+	// NOT claimed as a test of the state clause. I could not build a case where
+	// `match_status = 'suggested'` is the operative refusal through this entry
+	// point — every route to an apply carrying a non-suggested row is turned
+	// away earlier, by the pair clause or by the person lock — and neutralising
+	// the state clause alone fails nothing here. It stays because the ticket
+	// asks for it and because it is true, and it is defence in depth on this
+	// path rather than the guard that holds. The owner and pair clauses ARE
+	// load-bearing, and each fails this case when neutralised.
+	if err := e.store.ApplyLinkedInMatch(e.as(), ghost, e.rep, andreas.UUID); err != nil {
+		t.Fatalf("the correct apply was refused: %v", err)
+	}
+	if err := e.store.ApplyLinkedInMatch(e.as(), ghost, e.rep, other.UUID); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound — a confirmed row is a link somebody already has", err)
+	}
+	if status, person := e.ghostStatus(t, suggestedGhost); status != "confirmed" ||
+		person == nil || *person != andreas.UUID {
+		t.Errorf("the connection is %q → %v, want it left confirmed to the contact it names",
+			status, person)
+	}
+}
+
+// A proposal staged BEFORE owner_user_id existed still applies.
+//
+// The payload gained the field, and a pending approval minted before this
+// shipped carries none — so its OwnerUserID decodes to the zero value. Binding
+// on that would match no row, the effect would fail, and the member could never
+// decide it: re-deciding a decided row answers 409. So a zero owner is resolved
+// from the connection, which is where staging reads it from anyway.
+//
+// The zero id is passed directly rather than through a stored payload: what is
+// under test is the store's handling of a proposal that names no owner, and
+// building a legacy approval row to carry one there would be asserting against
+// a fixture of the old format rather than against the behaviour.
+func TestAProposalWithNoOwnerStillAppliesAgainstItsConnection(t *testing.T) {
+	e := setupDedupe(t)
+	org := e.seedOrgNamed(t, "Acme GmbH")
+	andreas := e.seedContact(t, "Andreas Muller")
+	e.employ(t, andreas, org)
+	e.importAndMatch(t)
+
+	if err := e.store.ApplyLinkedInMatch(e.as(), e.ghostID(t), ids.Nil, andreas.UUID); err != nil {
+		t.Fatalf("a proposal predating owner_user_id was refused: %v", err)
+	}
+	if status, person := e.ghostStatus(t, suggestedGhost); status != "confirmed" ||
+		person == nil || *person != andreas.UUID {
+		t.Errorf("the connection is %q → %v, want it confirmed to the contact the proposal named",
+			status, person)
+	}
+}
+
+// The decided event names the MEMBER, not the connection.
+//
+// linkedin_match.decided is a self-only event — a colleague's professional
+// network is theirs — so delivery admits it only when the subscriber IS the
+// user its entity id names. It was emitted with the CONNECTION id, which can
+// never equal a user id, so the event was silently undeliverable for every
+// subscriber, always.
+//
+// Asserted on the outbox row rather than through the deliverer: what was wrong
+// is the id this write puts on the wire, and that is a fact about this
+// transaction. Whether the visibility rule then admits the right subscriber is
+// the webhooks suite's own subject, and it covers all three self-only events.
+func TestTheDecidedEventCarriesTheMembersOwnID(t *testing.T) {
+	e := setupDedupe(t)
+	org := e.seedOrgNamed(t, "Acme GmbH")
+	andreas := e.seedContact(t, "Andreas Muller")
+	e.employ(t, andreas, org)
+	e.importAndMatch(t)
+	ghost := e.ghostID(t)
+
+	if err := e.store.ApplyLinkedInMatch(e.as(), ghost, e.rep, andreas.UUID); err != nil {
+		t.Fatalf("applying the approved match: %v", err)
+	}
+
+	var entityID ids.UUID
+	if err := e.store.tx(e.as(), func(tx pgx.Tx) error {
+		return tx.QueryRow(e.as(),
+			`SELECT (envelope->'entity'->>'id')::uuid FROM event_outbox
+			  WHERE envelope->>'type' = 'linkedin_match.decided'`).Scan(&entityID)
+	}); err != nil {
+		t.Fatalf("reading the decided event: %v", err)
+	}
+	if entityID == ghost {
+		t.Fatal("the decided event names the CONNECTION — a self-only rule compares its id against a " +
+			"subscriber's own user id, so no subscriber can ever receive it")
+	}
+	if entityID != e.rep {
+		t.Errorf("the decided event names %s, want the member whose network produced the match (%s)",
+			entityID, e.rep)
 	}
 }

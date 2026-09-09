@@ -209,6 +209,7 @@ export const de = {
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
   "shell.closeMenu": "Schließen",
+  "shell.agent.scope": "Ihr Agent liest nur das, was Sie sehen können.",
   "shell.capture.importing": "E-Mail-Verlauf wird importiert",
   "shell.capture.share": "{percent} · {scanned} von {total} Nachrichten",
   "shell.capture.count": "Bisher {scanned} Nachrichten",
@@ -2131,6 +2132,9 @@ export const de = {
     "Geschlossen mit dem Grund \u201e{reason}\u201c. Jeder Lead beh\u00e4lt seinen eigenen Datensatz, und es gibt keinen einzelnen Schritt zur\u00fcck.",
   "lead.bulkFailed": "{count} nicht übernommen –",
   "lead.bulkFailedRow": "konnte nicht gespeichert werden",
+  "lead.bulkOutcomeConflict": "wurde geändert, während Sie ausgewählt haben",
+  "lead.bulkOutcomeForbidden": "nicht Ihrer zu übergeben",
+  "lead.bulkOutcomeNotFound": "nicht mehr in Ihrer Liste",
   "lead.bulkSelectRow": "{name} auswählen",
   "lead.unnamed": "Lead ohne Namen",
   "lead.sla.breached": "Überfällig",
@@ -2147,7 +2151,6 @@ export const de = {
   "lead.filterScoreCool": "Ab 40",
   "lead.details": "Details",
   "lead.ladder.title": "Wo dieser Lead steht",
-  "lead.railTitle": "Verantwortlich",
   "lead.detailsUnset": "Nicht gesetzt",
   "lead.terminalReadOnly":
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
@@ -2307,6 +2310,8 @@ export const de = {
   "lead.assignedAway":
     "{names} an {owner} zugewiesen — nicht mehr unter „Meine“.",
   "lead.viewNew": "Neu",
+  "lead.viewNewUnassigned": "Neu & nicht zugewiesen",
+  "lead.viewUnassigned": "Warteschlange",
   "lead.viewNeedsFollowUp": "Nachfassen",
   "lead.viewEngaged": "Im Gespräch",
   "lead.ladder": "Lead-Status",
@@ -2605,12 +2610,15 @@ export const de = {
   "brief.weekly.scorecard.multiThreaded": "Mehr als ein Kontakt",
   "brief.weekly.scorecard.multiThreadedBasis":
     "von {total} offenen Deals, in den letzten 30 Tagen",
-  "brief.weekly.scorecard.closeDateSound": "Abschlussdatum trägt",
+  "brief.weekly.scorecard.closeDateSound": "Festes Abschlussdatum hinterlegt",
   "brief.weekly.scorecard.forecastMoves": "Forecast hochgestuft",
   "brief.weekly.scorecard.forecastMovesBasis": "{down} herabgestuft",
+  "brief.weekly.scorecard.unreconstructible": "Nicht rekonstruierbare Deals",
+  "brief.weekly.scorecard.unreconstructibleBasis":
+    "Ihre Woche liegt hinter einer Löschung, die Zahlen oben sind daher ein Mindestwert",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
-  "plan.title": "Nächste Woche planen",
+  "plan.title": "Ihre Woche planen",
   // Der Kopf der sortierten Liste, auf der Seite, die zuerst geöffnet wird —
   // dieselben Zeilen wie in der Arbeitsliste, in der Reihenfolge des Servers.
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
@@ -2749,8 +2757,8 @@ export const de = {
   "plan.contract.save": "Speichern",
   "plan.contract.cancel": "Abbrechen",
   "plan.contract.capacityLine":
-    "Nächste Woche hält bereits {meetings} Termine und {tasks} Aufgaben.",
-  "plan.contract.crowded": "Nächste Woche ist schon voll",
+    "Diese Woche hält bereits {meetings} Termine und {tasks} Aufgaben.",
+  "plan.contract.crowded": "Diese Woche ist schon voll",
   "plan.contract.crowdedBody":
     "{committed} Dinge sind bereits gebucht und Sie haben {commitments} Vorhaben notiert. Etwas wird weichen müssen.",
   "plan.help.ask": "Um Hilfe bitten",
@@ -2881,10 +2889,12 @@ export const de = {
   "brief.readings.pipeline": "Pipeline",
   "brief.readings.pipelineWorkspace": "Pipeline · gesamte Organisation",
   "brief.readings.pipelineBasis":
-    "{weighted} gewichtet · {priced} von {eligible} bewertet",
+    "{period} · {weighted} gewichtet · {priced} von {eligible} bewertet",
   "brief.readings.pipelineUnread": "die Pipeline war nicht lesbar",
   "brief.readings.pipelineReading": "Pipeline wird gelesen",
-  "brief.readings.openLane": "Diese öffnen",
+  "brief.readings.openLaneNamed": "{reading} öffnen",
+  "brief.snooze.done": "Zurückgestellt bis {at}",
+  "brief.snooze.undo": "Rückgängig",
   "brief.readings.meetings": "Termine heute",
   "brief.readings.meetingsBasis": "im heutigen Kalender",
   "brief.readings.needsPrep_one": "1 unvorbereitet",
@@ -3316,6 +3326,8 @@ export const de = {
   "log.body": "Details",
   "log.dueAt": "Fällig am",
   "log.date": "Datum",
+  "log.assignee": "Zuständig",
+  "log.unassigned": "Nicht zugewiesen",
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
 
@@ -3401,6 +3413,16 @@ export const de = {
   "compose.fileUploading": "Datei wird abgelegt…",
   "compose.fileStoredUnnamed":
     "Die Datei liegt am Datensatz, aber wir konnten nicht zurücklesen, welche es ist. Hängen Sie sie über die Liste oben an.",
+  "compose.carriageCarries":
+    "{channel} kann keine Dateien übertragen, daher können diese Nachricht und ihre {count} Anhänge dort nicht gesendet werden. Senden Sie den Text über {channel} oder die Dateien auf anderem Weg.",
+  "compose.carriageCount":
+    "{channel} überträgt höchstens {limit} Dateien in einer Nachricht, und diese hat {named}. Senden Sie den Rest als zweite Nachricht.",
+  "compose.carriagePerFile":
+    "{filename} ist größer als die {limit}, die {channel} für eine einzelne Datei zulässt. Senden Sie eine kleinere Fassung oder teilen Sie sie auf anderem Weg.",
+  "compose.carriageAggregate":
+    "Diese {count} Dateien ergeben zusammen {total}, und {channel} überträgt höchstens {limit} in einer Nachricht. Verteilen Sie sie auf mehrere Nachrichten.",
+  "compose.carriageCaption":
+    "{channel} überträgt den Text einer Nachricht mit Dateien als Bildunterschrift, höchstens {limit} Zeichen, und diese hat {length}. Kürzen Sie ihn oder senden Sie die Dateien separat.",
   "calendar.previousMonth": "Voriger Monat",
   "calendar.nextMonth": "Nächster Monat",
   "compose.schedulePick": "Datum und Uhrzeit wählen",
@@ -3891,6 +3913,17 @@ export const de = {
     "Ich habe {name} so weit gelesen, wie die Datensätze es zuließen, und dann aufgehört.",
   "agent.activity.accountScanNamed.failed":
     "Ich konnte das Lesen von {name} nicht abschließen.",
+  "agent.activity.transcriptRead.queued":
+    "Das Transkript steht zum Lesen in der Warteschlange.",
+  "agent.activity.transcriptRead.running":
+    "Ich lese das Transkript auf nächste Schritte durch.",
+  "agent.activity.transcriptRead.stalled":
+    "Das Lesen des Transkripts dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.transcriptRead.done": "Ich habe das Transkript gelesen.",
+  "agent.activity.transcriptRead.degraded":
+    "Ich habe das Transkript nicht zu Ende gelesen.",
+  "agent.activity.transcriptRead.failed":
+    "Ich konnte das Transkript nicht lesen.",
   "agent.activity.siteRead.queued":
     "Die Firmenwebsite steht zum Lesen in der Warteschlange.",
   "agent.activity.siteRead.running": "Ich lese die Firmenwebsite.",
@@ -4871,6 +4904,7 @@ export const de = {
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook-Kalender",
   "connectors.provImap": "IMAP-Postfach",
+  "connectors.provTestMailbox": "Test-Postfach",
   "connectors.statusConnected": "Aktiv",
   "connectors.statusPending": "Ausstehend — noch nicht bestätigt aktiv",
   "connectors.statusReauth": "Neu verbinden nötig",
@@ -5000,6 +5034,8 @@ export const de = {
     "Dein Outlook-Kalender. Er wird getrennt von deiner Outlook-Mail verbunden.",
   "connectors.addImapBrings":
     "Jeder andere Mail-Host, mit einem App-Passwort. Nur Erfassung.",
+  "connectors.addTestMailboxBrings":
+    "Ein reines QC-Testpostfach — es wird nie echte Post gesendet oder empfangen.",
   "connectors.providerNotConfigured":
     "{provider} ist in dieser Installation nicht konfiguriert.",
 
@@ -8593,9 +8629,12 @@ export const de = {
   "worklist.completeness": "{shown} von {considered} angezeigt",
   "worklist.review.partial":
     "{loaded} von {total} angezeigt — blättern Sie den Tag weiter, um den Rest zu erreichen",
-  "worklist.completeness.bounded":
+  "worklist.completeness.bounded_one":
+    "{shown} angezeigt · {sources} Quelle hat mehr",
+  "worklist.completeness.bounded_other":
     "{shown} angezeigt · {sources} Quellen haben mehr",
   "worklist.clear": "Nichts wartet auf dich.",
+  "worklist.clearFor": "Für {name} wartet nichts.",
   "worklist.clearOfTasksToday":
     "Heute ist keine Aufgabe fällig und nichts ist überfällig. Spätere Aufgaben stehen im Tab „Aufgaben“ des jeweiligen Datensatzes.",
   "worklist.clearOfWhatWasRead":
@@ -8622,6 +8661,8 @@ export const de = {
   "worklist.pane.lastInbound": "Zuletzt geschrieben",
   "worklist.pane.lastOutbound": "Wir zuletzt geschrieben",
   "worklist.pane.never": "Nie",
+  "worklist.pane.company": "Arbeitet für",
+  "worklist.pane.role": "Rolle",
   "worklist.band.now": "Jetzt",
   "worklist.band.build_pipeline": "Pipeline aufbauen",
   "worklist.band.keep_momentum": "In Bewegung halten",
@@ -8657,7 +8698,7 @@ export const de = {
   "worklist.scope.unassigned": "Ohne Zuständigkeit",
   "worklist.scope.team": "Mein Team",
   "worklist.scope.all": "Alle",
-  "worklist.owner.label": "Wessen Liste",
+  "worklist.owner.visibleLabel": "Ansicht",
   "worklist.manager.cancel": "Abbrechen",
   "worklist.owner.mine": "Mein eigener Tag",
   "worklist.owner.backToMine": "Zurück zu meinem Tag",
@@ -8673,11 +8714,16 @@ export const de = {
     "Das konnte nicht übernommen werden. Es bleibt bei ihnen.",
   "worklist.manager.reassigned": "Übergeben.",
   "worklist.manager.reassignFailed": "Das konnte nicht übergeben werden.",
-  "worklist.manager.coach": "Notiz hinterlassen",
+  "worklist.manager.coach": "Notiz hinzufügen",
+  "worklist.manager.coachTitle": "Eine Notiz für {name}",
+  "worklist.manager.coachTitleUnnamed": "Eine Notiz",
+  "worklist.manager.coachIntro":
+    "Eine kurze Notiz, die auf ihrer Liste landet.",
   "worklist.manager.coachAbout": "Worum geht es",
-  "worklist.manager.coachConfirm": "Notiz hinterlassen",
+  "worklist.manager.coachConfirm": "Notiz hinzufügen",
   "worklist.manager.coached": "Deine Notiz liegt auf der Liste.",
   "worklist.manager.coachFailed": "Die Notiz konnte nicht hinterlassen werden.",
+  "worklist.manager.coachRefused": "Du darfst {name} nicht coachen.",
   "worklist.manager.note": "Deine Notiz (optional)",
   "worklist.manager.kind.reply_aging": "Eine alternde Antwort",
   "worklist.manager.kind.next_step": "Der nächste Schritt eines Deals",
@@ -8694,6 +8740,7 @@ export const de = {
   "worklist.walk.refresh": "Aktualisieren",
   "worklist.handled.empty": "Heute wurde nichts für Sie erledigt.",
   "worklist.handled.loading": "Erledigtes wird gelesen",
+  "worklist.handled.count": "{count} für Sie erledigt",
   "worklist.handled.what": "Was geschehen ist",
   "worklist.handled.about": "Wozu",
   "worklist.handled.when": "Wann",
@@ -8702,6 +8749,7 @@ export const de = {
     "Mehr als das. Die Liste endet bei dem, was eine Sitzung fasst.",
   "worklist.exceptions.empty": "Im Team braucht Sie gerade nichts.",
   "worklist.exceptions.loading": "Team wird gelesen",
+  "worklist.exceptions.count": "{count} brauchen Sie",
   "worklist.exceptions.condition": "Was",
   "worklist.exceptions.subject": "Wozu",
   "worklist.exceptions.owner": "Wer antwortet",
@@ -8746,7 +8794,7 @@ export const de = {
     "Neugeschäft, das eine erste Antwort schuldet",
   "worklist.readings.review": "Prüfung",
   "worklist.readings.review.detail":
-    "Routinearbeit, die hinter einer Entscheidung wartet",
+    "Entscheidungen, die nur Sie treffen können",
   "worklist.readings.truncated":
     "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
   "worklist.hidden.title": "Was die Liste nicht zeigt",
@@ -8781,8 +8829,17 @@ export const de = {
   "worklist.filter.tasks": "Aufgaben",
   "worklist.filter.decisions": "Entscheidungen",
   "worklist.filter.system": "System",
+  "worklist.filter.linked.except_decisions":
+    "Alles außer den Entscheidungen, nach denen Ihr Briefing bereits gefragt hat.",
+  "worklist.filter.linked.changed_since_brief":
+    "Nur das, was sich seit dem Lauf der letzten Nacht geändert hat.",
+  "worklist.filter.linked.clear": "Ganze Liste anzeigen",
   "worklist.category.customer_waiting": "Kunde wartet",
   "worklist.category.leads": "Lead",
+  "worklist.signal.closing_soon": "Schließt bald",
+  "worklist.signal.stalled": "Deal in Gefahr",
+  "worklist.signal.opportunity": "Einen Vorstoß wert",
+  "worklist.signal.moved": "Gerade bewegt",
   "worklist.category.deals_at_risk": "Deal gefährdet",
   "worklist.category.meetings": "Termin",
   "worklist.category.tasks": "Aufgabe",
@@ -8791,8 +8848,8 @@ export const de = {
   "worklist.because.pinned": "Von dir angeheftet",
   "worklist.because.buyer_wrote_last": "Sie haben zuletzt geschrieben",
   "worklist.because.waiting_days": "wartet",
-  "worklist.because.more_one": "+{count} weiterer Grund",
-  "worklist.because.more_other": "+{count} weitere Gründe",
+  "worklist.because.more_one": "+{count} weitere",
+  "worklist.because.more_other": "+{count} weitere",
   "worklist.because.waiting_days.value_one": "wartet seit {value} Tag",
   "worklist.because.waiting_days.value_other": "wartet seit {value} Tagen",
   "worklist.because.overdue": "überfällig",

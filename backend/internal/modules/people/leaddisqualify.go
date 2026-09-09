@@ -72,6 +72,12 @@ func (s *Store) DisqualifyLead(
 			if err != nil {
 				return out, err
 			}
+			// Under the lock, against the row this transaction will write — the
+			// version an agent's released approval was granted against, which
+			// its redemption verified in a transaction that has since committed.
+			if err := refuseIfVersionMoved(entityLead, current.Version, options); err != nil {
+				return out, err
+			}
 			if err := ensureDisqualifyReasonIfNamed(ctx, tx, in.ReasonID); err != nil {
 				return out, err
 			}

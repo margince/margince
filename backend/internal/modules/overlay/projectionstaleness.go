@@ -169,7 +169,10 @@ func (s *MirrorStore) StaleProjections(ctx context.Context, m ObjectMapping, lim
 	// m.Target: the namespace filter has already narrowed the rows to the
 	// ones m produced, so a sibling declaration's fingerprint cannot appear
 	// among them — and admitting one would spare a row nothing re-projects.
-	fingerprint := Fingerprint(m)
+	fingerprint, err := Fingerprint(m)
+	if err != nil {
+		return nil, err
+	}
 	current, err := encodeFingerprintSets(map[string][]string{m.Target: {fingerprint}})
 	if err != nil {
 		return nil, err

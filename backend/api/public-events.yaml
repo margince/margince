@@ -2597,7 +2597,12 @@ components:
       properties:
         kind:
           type: string
-          description: Which stop this is (subject_request for a hand-recorded one).
+          description: >-
+            Which stop this is. `subject_request` and `marketing_objection` are the two recorded by
+            hand; `processing_restriction` and `hard_bounce` are written by machinery. They differ
+            in reach: a subject request stops everything except the privacy notice, security notice
+            and opt-out confirmation the controller owes regardless, while an objection is
+            Art. 21(2) and stops marketing alone.
         decided_by_level:
           type: string
           description: >-

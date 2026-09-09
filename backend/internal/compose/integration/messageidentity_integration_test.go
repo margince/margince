@@ -137,6 +137,7 @@ func echoAlreadyCaptured(subject, stamped string) []byte {
 func TestAnEchoCapturedBeforeTransmitIsAbsorbedByTheReceiptItself(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	const subject = "Re: Inbound question"
 	sentActivity := p.sendExpectingAcceptance(t, "transactional", subject, "As discussed.")
@@ -196,6 +197,7 @@ func TestAnEchoCapturedBeforeTransmitIsAbsorbedByTheReceiptItself(t *testing.T) 
 func TestAGmailRewrittenIdentityStillYieldsOneActivityAndOneReplyTarget(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
 	deliveryID, mintedIdentity := p.deliveryFor(t, sentActivity)

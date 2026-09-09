@@ -159,8 +159,17 @@ func createPersonInTx(ctx context.Context, tx pgx.Tx, in CreatePersonInput, by s
 		// which is the honest answer for a contact somebody typed in without
 		// saying why — and the answer that makes the gap visible rather than
 		// leaving the question unasked.
-		Acquisition:  in.Acquisition,
-		Visibility:   visibilityFor(bornOwnerScoped(ctx)),
+		Acquisition: in.Acquisition,
+		// A typed create publishes to the workspace, whoever typed it. An agent
+		// creating a contact on a rep's behalf is doing the rep's filing, and a
+		// contact only its creator can see is not in the CRM in any useful
+		// sense: the colleague who goes looking finds nothing, and cannot tell an
+		// invisible record from a missing one.
+		//
+		// The capture paths are unaffected. They carry OwnerScoped on the spec
+		// and still mint an owner-scoped contact where privacy demands one — an
+		// unjudged sender, and an advisor's record among them.
+		Visibility:   visibilityWorkspace,
 		FullName:     in.FullName,
 		FirstName:    in.FirstName,
 		LastName:     in.LastName,

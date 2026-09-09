@@ -26,7 +26,6 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { RecordView } from "../design-system/composed";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ContactLink } from "../design-system/contactlink";
@@ -79,6 +78,7 @@ import {
   useRosterPartial,
 } from "./entityref";
 import { RecordHistoryTab, useRecordHistory } from "./history";
+import { leadBand } from "./leadband";
 import {
   promoteEligible,
   scoreFactorLabel,
@@ -753,7 +753,7 @@ function LeadIdentityFields({
  * over as one object rather than as a mutation plus a loose function, so no
  * caller can reach past `save` to `mutate` and skip the version it stamps.
  */
-type LeadWriter = ReturnType<typeof useLeadPatch>;
+export type LeadWriter = ReturnType<typeof useLeadPatch>;
 
 /**
  * The lead page's ONE write, and the two facts every control on it reads.
@@ -852,24 +852,6 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   return { patch, claim, readOnly, readOnlyReason, save, saveField };
 }
 
-// What the page's write refused, stated once for both of them.
-//
-// Two mutations, one sentence: the patch every field goes through, and the
-// claim that takes an unowned lead. They are alternatives — a pick is one or
-// the other — so whichever refused is the one to name.
-function LeadWriteRefusal({ writer }: Readonly<{ writer: LeadWriter }>) {
-  const t = useT();
-  const error = writer.patch.error ?? writer.claim.error;
-  if (!error) {
-    return null;
-  }
-  return (
-    <Callout tone="danger" live="alert">
-      {problemMessageOf(error, t)}
-    </Callout>
-  );
-}
-
 /**
  * The page's LEAD: where this lead stands, and the one step to take next.
  *
@@ -927,15 +909,12 @@ function LeadLadderPanel({
   );
 }
 
-/**
- * The rail: the lead's own words, and who owns it.
- *
- * Both are things a rep CONSULTS while doing the work in the column beside
- * it. The score used to fold into this column too; it is a reading with an
- * edit behind it and sits in the record's reading now, beside the inputs that
- * feed it.
- */
-function LeadRail({
+// The lead's owner, in the header where a reader acts.
+//
+// Its own component rather than inline in the header's props, because what
+// makes it pressable is three separate questions and they belong beside each
+// other rather than spread through a JSX attribute list.
+function LeadOwnerControl({
   lead,
   writer,
   terminalReasonId,
@@ -944,13 +923,60 @@ function LeadRail({
   writer: LeadWriter;
   terminalReasonId: string;
 }>) {
-  const t = useT();
   const me = useMe();
-  // The object grant and the seat ceiling, without the per-row answer: see the
-  // control below for why the row half is deliberately absent.
+  // Assignment asks a DIFFERENT question from editing, so it drops the PER-ROW
+  // half of the editor's answer and keeps the rest. `writable` is false on a
+  // lead nobody owns — the write arm being right — and gating on it would shut
+  // the only door out of the unassigned queue.
+  //
+  // The other two axes still bind. useCanWrite is the object grant AND the
+  // seat ceiling: a read seat, or one holding no `lead.update`, gets no
+  // pressable control, because the server refuses them and a button that only
+  // fails is worse than none. An archived lead is refused too — a terminal
+  // record is nobody's to hand on.
   const mayAssign = useCanWrite("lead", "update");
-  const assignRefusedReasonId =
+  const refusedReasonId =
     lead.archived_at || !mayAssign ? terminalReasonId : undefined;
+  return (
+    <LeadOwner
+      lead={lead}
+      meId={me.data?.user?.id}
+      refusedReasonId={refusedReasonId}
+      pending={
+        writer.patch.isPending ||
+        writer.claim.isPending ||
+        Boolean(refusedReasonId)
+      }
+      // A lead nobody owns is nobody's to change, so the PATCH this control
+      // used to send for EVERY pick was refused for the one pick a rep makes
+      // most: taking an unassigned lead. Picking yourself on an unowned lead
+      // goes through the claim door, which is the write the server actually
+      // admits; naming a colleague stays a patch, which the assignment gate
+      // answers.
+      onAssign={(ownerId) =>
+        !lead.owner_id && ownerId === me.data?.user?.id
+          ? writer.claim.mutate()
+          : writer.save({ owner_id: ownerId })
+      }
+    />
+  );
+}
+
+/**
+ * The rail: the lead's own words.
+ *
+ * What a rep CONSULTS while doing the work in the column beside it. Two things
+ * have left this column for the same reason — the score, which is a reading
+ * with an edit behind it and belongs beside the inputs that feed it, and the
+ * owner, which is a thing a reader ACTS on and belongs in the header.
+ */
+function LeadRail({
+  lead,
+  writer,
+}: Readonly<{
+  lead: Lead;
+  writer: LeadWriter;
+}>) {
   return (
     <div className="record-stack">
       <LeadIdentityFields
@@ -959,43 +985,6 @@ function LeadRail({
         saving={writer.patch.isPending}
         readOnlyReason={writer.readOnlyReason}
       />
-      <Panel title={t("lead.railTitle")}>
-        <PanelBody>
-          <LeadOwner
-            lead={lead}
-            meId={me.data?.user?.id}
-            // Assignment asks a DIFFERENT question from editing, so it drops
-            // the PER-ROW half of the editor's answer and keeps the rest.
-            // `writable` is false on a lead nobody owns — the write arm being
-            // right — and gating on it would shut the only door out of the
-            // unassigned queue, which is the bug this whole change is about.
-            //
-            // The other two axes still bind. useCanWrite is the object grant
-            // AND the seat ceiling: a read seat, or one holding no
-            // `lead.update`, gets no pressable control, because the server
-            // refuses them and a button that only fails is worse than none. An
-            // archived lead is refused too — a terminal record is nobody's to
-            // hand on.
-            refusedReasonId={assignRefusedReasonId}
-            pending={
-              writer.patch.isPending ||
-              writer.claim.isPending ||
-              Boolean(assignRefusedReasonId)
-            }
-            // A lead nobody owns is nobody's to change, so the PATCH this
-            // control used to send for EVERY pick was refused for the one
-            // pick a rep makes most: taking an unassigned lead. Picking
-            // yourself on an unowned lead goes through the claim door, which
-            // is the write the server actually admits; naming a colleague
-            // stays a patch, which the assignment gate answers.
-            onAssign={(ownerId) =>
-              !lead.owner_id && ownerId === me.data?.user?.id
-                ? writer.claim.mutate()
-                : writer.save({ owner_id: ownerId })
-            }
-          />
-        </PanelBody>
-      </Panel>
     </div>
   );
 }
@@ -1340,65 +1329,6 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
             )}
           </Field>
         </div>
-      </ConfirmModal>
-    </>
-  );
-}
-
-/**
- * ReopenAction puts a disqualified lead back on the open ladder.
- *
- * The page could say "Disqualified: <reason>" and could not offer the way
- * back. A judgement that somebody is not worth pursuing is exactly the kind
- * that changes — the budget arrives, the champion returns — and with no way
- * back the operator re-keys the lead, which loses its history and its score
- * along with its reason.
- *
- * No reason field, unlike the demote beside it. The demote asks for one
- * because it unwinds a person and a reader of that trail needs to know why;
- * reopening restores a status the trail already holds, and there is nothing a
- * caller could say that the server does not read for itself.
- */
-function ReopenAction({ id }: Readonly<{ id: string }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const reopen = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.POST("/leads/{id}/reopen", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-    onSuccess: () => {
-      for (const key of leadWriteKeys(id)) {
-        queryClient.invalidateQueries({ queryKey: key });
-      }
-      setOpen(false);
-    },
-  });
-  const close = () => {
-    setOpen(false);
-    reopen.reset();
-  };
-  return (
-    <>
-      <Button small onClick={() => setOpen(true)}>
-        {t("lead.reopen")}
-      </Button>
-      <ConfirmModal
-        open={open}
-        onClose={close}
-        title={t("lead.reopenDialog")}
-        confirmLabel={t("lead.reopenConfirm")}
-        onConfirm={() => reopen.mutate()}
-        pending={reopen.isPending}
-        error={reopen.isError ? problemMessageOf(reopen.error, t) : undefined}
-      >
-        <p className="t-body">{t("lead.reopenExplain")}</p>
       </ConfirmModal>
     </>
   );
@@ -1956,13 +1886,7 @@ function LeadRecord({
       // work and the context does not move when the tab does. The same pane,
       // fold and memory of it as every other record page.
       aside={
-        details.open ? (
-          <LeadRail
-            lead={lead}
-            writer={writer}
-            terminalReasonId={terminalReasonId}
-          />
-        ) : undefined
+        details.open ? <LeadRail lead={lead} writer={writer} /> : undefined
       }
       name={leadIdentityName(lead) || t("lead.unnamed")}
       avatarSrc={null}
@@ -1975,17 +1899,33 @@ function LeadRecord({
       // record was a printout. It opens the composer on this lead, as the
       // Email verb beside it does, and like that verb it is refused on a
       // closed lead — as text, since the verb already carries the reason.
+      // Owner above the address: both are things a reader ACTS on, and the
+      // wide header stacks its pulse rather than laying it out in a row.
+      //
+      // Ownership lived only in the details pane, which is open by default and
+      // REMEMBERS being hidden — so the one control that takes a lead out of
+      // the unassigned queue was, for anyone who had ever collapsed the pane,
+      // behind a toggle they had to remember. It is rendered here and nowhere
+      // else: a second copy in the pane made every owner query on the page
+      // ambiguous, which is two controls disagreeing waiting to happen.
       pulse={
-        lead.email ? (
-          <ContactLink
-            kind="email"
-            value={lead.email}
-            record={{ entityType: "lead", entityId: id }}
-            readOnly={Boolean(lead.archived_at)}
-            className="link-button lead-email"
-            textClassName="lead-email"
+        <>
+          <LeadOwnerControl
+            lead={lead}
+            writer={writer}
+            terminalReasonId={terminalReasonId}
           />
-        ) : null
+          {lead.email ? (
+            <ContactLink
+              kind="email"
+              value={lead.email}
+              record={{ entityType: "lead", entityId: id }}
+              readOnly={Boolean(lead.archived_at)}
+              className="link-button lead-email"
+              textClassName="lead-email"
+            />
+          ) : null}
+        </>
       }
       actions={
         <LeadActions
@@ -2032,40 +1972,7 @@ function LeadRecord({
         { overlay, pending: timelineQuery.isPending },
         t,
       )}
-      band={
-        <>
-          {/* The page's one write serves both columns and every tab, so what
-              it REFUSES is stated where both are visible. In the ladder panel
-              this reached only the Overview tab, and a rail write refused
-              while the reader was on History said nothing at all. */}
-          <LeadWriteRefusal writer={writer} />
-          {/* Stated ONCE for the page. Every control the closure refuses
-              points at this element by id, so a screen reader reaches it from
-              each of them without the sentence being printed beside all six. */}
-          {writer.readOnlyReason && (
-            <p id={terminalReasonId} className="t-caption">
-              {/* Which closure, not merely THAT it is closed. Both terminal
-                  states archive the row, so keying this off archived_at alone
-                  told every promoted lead it had been disqualified — invisible
-                  until ADR-0119 stopped the page redirecting away before
-                  anyone could read it. A live lead that is somebody else's
-                  prints the writer's own sentence instead. */}
-              {lead.archived_at
-                ? lead.status === "promoted"
-                  ? t("lead.terminalPromoted")
-                  : t("lead.terminalDisqualified")
-                : writer.readOnlyReason}
-            </p>
-          )}
-          {/* The way back, beside the sentence that says the lead is closed.
-              Offered only on a disqualification a reader may WRITE: the
-              promoted closure is the demote's to reverse, and a reader who
-              cannot change this lead cannot reopen it either. */}
-          {lead.archived_at &&
-            lead.status === "disqualified" &&
-            lead.writable !== false && <ReopenAction id={id} />}
-        </>
-      }
+      band={leadBand({ lead, writer, reasonId: terminalReasonId, id, t })}
       // The same strip every record in the product carries: a place a reader
       // navigates, drawn as a rule with the open body underlined, rather than
       // a pill that offers a setting.

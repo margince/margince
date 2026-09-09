@@ -400,6 +400,13 @@ func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspac
 	if err := w.engine.ReconcileLedgerWorkspace(wsCtx); err != nil {
 		return err
 	}
+	// After the ledger settles, and before anything is offered to a human: a
+	// sender judged on an earlier tick, or by a door whose own release could not
+	// finish, still has mail a posture is holding for a question that has an
+	// answer.
+	if err := w.engine.WidenClearedSendersWorkspace(wsCtx); err != nil {
+		return err
+	}
 	if err := w.engine.StageReviewsWorkspace(wsCtx, 0); err != nil {
 		return err
 	}

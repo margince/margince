@@ -342,10 +342,17 @@ func TestBriefActedAndDismissedItemsLeaveTheNextQueue(t *testing.T) {
 		t.Fatalf("post-mark queue = %v (candidates %d), want empty", queueDeals(next.Queue), next.CandidateCount)
 	}
 
-	// The marks bind for OTHER runs of the same user too, not just the
-	// run they were made in — and for another user not at all: rep2's
-	// own brief still ranks both deals (owned by rep1, visible under
-	// row_scope=all).
+	// The marks bind for OTHER runs of the same user too, not just the run they
+	// were made in — and for another user not at all.
+	//
+	// Rep2 needs a REASON to carry these deals, not merely permission to read
+	// them: the queue is scoped to the person's own responsibility, so an open
+	// task assigned to them is what puts somebody else's deal in their morning.
+	// That is the assist case the scope admits, and it is exactly what makes
+	// this a test about marks rather than about ownership.
+	for _, item := range run.Items {
+		assignTaskTo(t, owner, item.DealID, b.Rep2)
+	}
 	rep2 := b.As(b.Rep2, []ids.UUID{b.Team1}, integration.AdminPerms)
 	rep2Ranking, err := b.engine.Rank(rep2, nextClock)
 	if err != nil {
@@ -380,29 +387,66 @@ func TestBriefActedAndDismissedItemsLeaveTheNextQueue(t *testing.T) {
 // ranks another team's deal exactly as an all-scope principal does. The
 // candidate query still composes the deal read predicate, so this is the
 // place that proves it widens nothing beyond what read_record answers.
-func TestBriefRankRanksEveryDealTheReadModelShows(t *testing.T) {
+// The morning queue is the reader's OWN work, not everything they may read.
+//
+// A deal is workspace-readable here: ScopeClauseFor renders no predicate for a
+// rep on `deal`, so every seat may read every deal. The queue used to take its
+// top seven from that whole population and let the worklist narrow to "mine"
+// afterwards — so a rep whose colleagues carried larger deals watched all seven
+// slots fill with work that was never theirs, and their own deals never entered
+// the ranking. One observed morning selected six colleague deals out of seven.
+//
+// A big colleague deal is still VISIBLE; the team view is where breadth
+// belongs. What it may no longer do is consume a slot in this rep's morning.
+func TestTheQueueRanksTheReadersOwnWorkRatherThanEverythingVisible(t *testing.T) {
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
+	// Deliberately the most attractive deal in the fixture: if value alone
+	// still decided the queue, this would take the top slot.
 	foreign := b.seedBriefDeal(t, owner, "Foreign", b.stageA, int64Ptr(90_000_00), closeOn(briefClock, 3), &b.Rep3)
 
 	scoped, err := b.engine.Rank(b.As(b.Rep1, []ids.UUID{b.Team1}, integration.RepPerms), briefClock)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !queueHasDeal(scoped.Queue, foreign) {
-		t.Fatalf("team-scoped queue = %v misses another team's deal, which every seat reads", queueDeals(scoped.Queue))
+	if queueHasDeal(scoped.Queue, foreign) {
+		t.Errorf("queue = %v carries a deal owned by somebody else and unassigned to this rep",
+			queueDeals(scoped.Queue))
 	}
-	if len(scoped.Queue) != 3 {
-		t.Fatalf("scoped queue = %v, want rep1's two candidates plus the foreign deal", queueDeals(scoped.Queue))
+	if len(scoped.Queue) != 2 {
+		t.Fatalf("queue = %v, want rep1's own two candidates", queueDeals(scoped.Queue))
 	}
 
-	all, err := b.engine.Rank(b.repCtx, briefClock)
+	// An ASSIST puts it back: an open task assigned to this rep is a reason to
+	// carry somebody else's deal, which permission alone is not.
+	assignTaskTo(t, owner, foreign, b.Rep1)
+	withAssist, err := b.engine.Rank(b.As(b.Rep1, []ids.UUID{b.Team1}, integration.RepPerms), briefClock)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !queueHasDeal(all.Queue, foreign) {
-		t.Fatalf("all-scope queue = %v misses the foreign deal", queueDeals(all.Queue))
+	if !queueHasDeal(withAssist.Queue, foreign) {
+		t.Errorf("queue = %v drops a colleague's deal this rep has an open task on",
+			queueDeals(withAssist.Queue))
+	}
+}
+
+// assignTaskTo gives one person an open task on a deal — the assist that makes
+// somebody else's deal their responsibility for the morning.
+func assignTaskTo(t *testing.T, owner *pgx.Conn, dealID, assignee ids.UUID) {
+	t.Helper()
+	activity := ids.NewV7()
+	ctx := context.Background()
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, subject, assignee_id, is_done, occurred_at, source, captured_by)
+		VALUES ($1, 'task', 'Assist', $2, false, now(), 'manual', 'human:x')`, activity, assignee); err != nil {
+		t.Fatalf("seeding the assist task: %v", err)
+	}
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO activity_link (activity_id, entity_type, deal_id)
+		VALUES ($1, 'deal', $2)`,
+		activity, dealID); err != nil {
+		t.Fatalf("linking the assist task: %v", err)
 	}
 }
 
@@ -630,4 +674,40 @@ func TestALaterActRetiresTheDismissalLineage(t *testing.T) {
 				"the card reopens an argument they already closed", item.Lineage)
 		}
 	}
+}
+
+// A future-dated activity is not overnight momentum.
+//
+// Momentum folds any evidence in the window to 1.0 against a 0.4 baseline, so a
+// task dated next week would say the deal moved — on every morning until that
+// date arrives. Evidence of movement is bounded by the cutoff it is evidence
+// for.
+func TestAFutureDatedActivityIsNotOvernightMomentum(t *testing.T) {
+	b := setupBrief(t)
+	owner := integration.OwnerConn(t)
+
+	// Dated a week past the clock this run judges against, so it cannot have
+	// happened by the time the queue is built.
+	ahead := briefClock.Add(7 * 24 * time.Hour)
+	scheduled := integration.SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'task', 'prepare the renewal deck', $2, 'manual', 'human:x')`,
+		ahead)
+	integration.LinkActivity(t, owner, scheduled, "deal", b.dealB)
+
+	ranking, err := b.engine.Rank(b.repCtx, briefClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range ranking.Queue {
+		if item.DealID != b.dealB {
+			continue
+		}
+		if item.Features.Momentum != briefMomentumUnchanged {
+			t.Errorf("momentum = %v, want the %v baseline — nothing has happened on this deal yet",
+				item.Features.Momentum, briefMomentumUnchanged)
+		}
+		return
+	}
+	t.Fatal("deal B left the queue entirely; this test can say nothing about its momentum")
 }

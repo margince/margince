@@ -382,9 +382,17 @@ func anchorThreading(ctx context.Context, tx pgx.Tx, id ids.ActivityID, messageI
 	if err := auth.EnsureActivityContentVisible(ctx, tx, id.UUID); err != nil {
 		return threading{}, err
 	}
+	// LIVE ONLY, the same filter the origin resolution applied before this
+	// transaction opened. Without it the two reads disagree: SendEmail refuses
+	// an archived anchor when it resolves the origin, and this one — the read
+	// that actually builds the chain — accepted a row archived in between, so a
+	// reply went out threaded onto a conversation the workspace had since
+	// archived. The window is small and the answer is wrong for its whole width.
 	var kind, parent, root string
 	err := tx.QueryRow(ctx,
-		`SELECT kind, coalesce(source_id, ''), coalesce(thread_key, '') FROM activity WHERE id = $1 AND restricted_at IS NULL`,
+		`SELECT kind, coalesce(source_id, ''), coalesce(thread_key, '')
+		   FROM activity
+		  WHERE id = $1 AND restricted_at IS NULL AND archived_at IS NULL`,
 		id).Scan(&kind, &parent, &root)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return threading{}, apperrors.ErrNotFound

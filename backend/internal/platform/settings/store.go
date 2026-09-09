@@ -408,33 +408,6 @@ func RequireTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
 	return out, nil
 }
 
-// ApplyTx reads a setting inside the caller's transaction WITHOUT the entry's
-// read gate — for MACHINERY applying a workspace posture to its own write
-// (the capture sink stamping a freshly captured row's audience), where the
-// posture must bind whoever the acting principal happens to be: a posture a
-// narrow principal could not read would simply not apply to what they
-// capture, which is the opposite of a control. Never for a surface that
-// ANSWERS the value to a caller — those go through Get/GetTx, whose gate is
-// the only control on the un-RLS'd setting table. The restriction is
-// enforced, not asked politely: only an entry declared MachineryApplied at
-// Define time is readable here, so a convenient ungated read of any other
-// setting refuses at the first test that exercises it.
-func ApplyTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
-	var zero T
-	if !e.machineryApplied {
-		return zero, fmt.Errorf("settings: %s is not declared MachineryApplied — read it through Get/GetTx and its gate", e.Key())
-	}
-	raw, err := currentJSON(ctx, tx, e)
-	if err != nil {
-		return zero, err
-	}
-	var out T
-	if err := json.Unmarshal(raw, &out); err != nil {
-		return zero, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
-	}
-	return out, nil
-}
-
 // SetTx writes a typed setting inside a transaction the caller already holds —
 // the typed face of SetRawTx, for a PATCH that touches several settings and
 // must commit them as one change or none.

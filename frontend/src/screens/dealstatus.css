@@ -39,3 +39,21 @@
 .deal360-fold > summary:hover {
   color: var(--textPrimary);
 }
+
+/* The one FREE-TEXT fact on the deal's identity line: how a deal was won when
+   no contract carried it, in the words a person typed.
+
+   BOUNDED IN WIDTH, NOT IN CONTENT. It wraps rather than clipping, because the
+   fact exists to be read: a clip with the rest in a `title` needs a mouse, and
+   a clip with no `title` at all is simply unreadable — the person checking the
+   words they just typed is exactly who this is for, and both spellings failed
+   them. The server bounds the value at 500 characters, so wrapping cannot cost
+   more than a few lines and .identity-line already wraps.
+
+   `anywhere` because the value is free text: an unbroken 400-character token is
+   a thing a person can type, and without it that one would push the line wider
+   than the column instead of wrapping inside the max-width. */
+.deal-win-detail {
+  max-width: 22rem;
+  overflow-wrap: anywhere;
+}

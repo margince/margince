@@ -95,6 +95,11 @@ func (s *Store) ListDealOffers(ctx context.Context, dealID ids.DealID, in ListDe
 			}
 			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
+		// After the page is trimmed, so the extra row a cursor is computed
+		// from is not probed for a response it never reaches.
+		if err := withholdUnreadableBuyer(ctx, tx, offers); err != nil {
+			return err
+		}
 		return attachOfferLines(ctx, tx, offers)
 	})
 	if offers == nil {
@@ -154,6 +159,66 @@ const offerColumns = `id, deal_id, offer_number, revision, status, currency,
 	net_minor, tax_minor, gross_minor, fx_rate_to_base::text, fx_rate_date, pdf_asset_ref,
 	template_id, accepted_at, source, captured_by, version, created_at, updated_at, archived_at`
 
+// withholdUnreadableBuyer removes an offer's buyer organization from the
+// response when the caller could not open that organization.
+//
+// An offer is anchored on its DEAL, and every seat of the workspace reads
+// every deal — a deal is customer identity. The organization it points at is
+// not: capture privacy makes an organization private to the colleague who
+// captured it. So an offer read hands back a reference the reader's own
+// organization read would refuse, which is the existence oracle
+// unreadableReferences closes on the deal itself.
+//
+// TWO fields, and the second is the sharper one. buyer_org_id is an id.
+// buyer_snapshot is the buyer's legal block frozen at send time — display name,
+// and where the record carries one, legal name. Withholding the id and leaving
+// the snapshot would hand back the name of an organization whose id was judged
+// too much to disclose.
+//
+// The write path has enforced this rule for the explicit case all along:
+// resolveBuyerOrg gates a client-supplied buyer_org_id with
+// auth.EnsureLinkTarget. What it does not gate is the INHERITED one — an offer
+// created without a buyer takes the deal's organization, which is how an
+// unreadable reference gets onto an offer in the first place.
+//
+// ONE statement for the whole page, never a probe per row.
+func withholdUnreadableBuyer(ctx context.Context, tx pgx.Tx, offers []crmcontracts.Offer) error {
+	orgIDs := make([]ids.UUID, 0, len(offers))
+	for _, o := range offers {
+		if o.BuyerOrgId != nil {
+			orgIDs = append(orgIDs, ids.UUID(*o.BuyerOrgId))
+		}
+	}
+	// VisibleSubset answers an empty list without a round trip, so a page of
+	// offers that names no organization pays for nothing.
+	visible, err := auth.VisibleSubset(ctx, tx, "organization", orgIDs)
+	if err != nil {
+		return err
+	}
+	for i := range offers {
+		if offers[i].BuyerOrgId == nil || visible[ids.UUID(*offers[i].BuyerOrgId)] {
+			continue
+		}
+		offers[i].BuyerOrgId = nil
+		offers[i].BuyerSnapshot = nil
+	}
+	return nil
+}
+
+// withholdUnreadableBuyerOn is the single-offer spelling, and it exists so the
+// two callers cannot get the read-back wrong: a slice literal copies the offer,
+// so withholding against `[]Offer{offer}` mutates the copy and leaves the
+// caller's own value carrying the reference. That failure is silent — the read
+// path keeps working and the buyer is still there.
+func withholdUnreadableBuyerOn(ctx context.Context, tx pgx.Tx, offer *crmcontracts.Offer) error {
+	single := []crmcontracts.Offer{*offer}
+	if err := withholdUnreadableBuyer(ctx, tx, single); err != nil {
+		return err
+	}
+	*offer = single[0]
+	return nil
+}
+
 func readOffer(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived storekit.ArchivedFilter) (crmcontracts.Offer, error) {
 	q := `SELECT ` + offerColumns + ` FROM offer WHERE id = $1`
 	if archived == storekit.LiveOnly {
@@ -167,10 +232,21 @@ func readOffer(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived storekit
 }
 
 // readOfferWithLines is readOffer plus the nested line items — the shape
-// every offer response returns.
+// every offer response returns, and therefore where the buyer reference is
+// withheld.
+//
+// NOT in readOffer, deliberately. That one is also the read the WRITE paths
+// take their current state from: sendSnapshots freezes the buyer's legal block
+// from the offer it is handed, so an offer withheld before the freeze would
+// record a blank legal buyer — destroying the evidence rather than protecting
+// it. The rule is about what leaves the server, so it is applied where things
+// leave.
 func readOfferWithLines(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived storekit.ArchivedFilter) (crmcontracts.Offer, error) {
 	offer, err := readOffer(ctx, tx, id, archived)
 	if err != nil {
+		return crmcontracts.Offer{}, err
+	}
+	if err := withholdUnreadableBuyerOn(ctx, tx, &offer); err != nil {
 		return crmcontracts.Offer{}, err
 	}
 	lines, err := readOfferLines(ctx, tx, id)

@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -138,15 +137,31 @@ func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clear
 	if logger == nil {
 		logger = slog.Default()
 	}
+	// BEFORE the fleet is touched. A second reset must be refused while the
+	// first still holds the pause, and it must be refused without having paused
+	// anything of its own — a refusal that had already quiesced the fleet would
+	// be an outage caused by the check that prevents one.
+	release, err := takeResetLock(ctx, h.pool)
+	if err != nil {
+		return resetCounts{}, err
+	}
+	defer release()
+
 	rt := ResetRuntime{}
 	if h.runtime != nil {
 		rt = *h.runtime
 	}
+	// Registered AFTER the lock, and that ordering is what makes the resume
+	// this reset's own. It still runs on every exit from here — panic included,
+	// and including a Quiesce that failed after its pause already landed,
+	// because a pause with nobody to lift it wedges every queue. What changes
+	// is who reaches this line: a caller that lost the lock returned above,
+	// having paused nothing, so it can no longer lift a pause it never took.
 	defer resumeResetQueues(ctx, logger, rt)
 
-	counts, err := h.runRuntimePhase(ctx, rt, wsID, clearOutbox, sweep)
-	if err != nil {
-		return counts, err
+	counts, runErr := h.runRuntimePhase(ctx, rt, wsID, clearOutbox, sweep)
+	if runErr != nil {
+		return counts, runErr
 	}
 
 	// Everything from here runs detached from the request, under its own bound.
@@ -374,35 +389,6 @@ func (h dataResetHandlers) purgeUnjoinableSurfaces(ctx context.Context, logger *
 		counts.ObjectsDeleted = n
 	}
 	return h.purgeSealedCredentials(ctx, wsID, counts)
-}
-
-// purgeSealedCredentials redeems the credential handles the sweep collected
-// before it deleted the rows naming them.
-//
-// It runs after the commit because the vault is a seam, not a table: the local
-// provider happens to write Postgres, but a remote one has no transaction to
-// join. The handles were captured inside the transaction instead, which is the
-// half that has to be consistent — a sweep that rolled back leaves refs this
-// never receives.
-//
-// A failure fails the request. The alternative is reporting an installation as
-// reset while its sealed credentials are still resident, which is precisely
-// the state this exists to prevent. Delete is idempotent, so re-running the
-// reset finishes a partial purge.
-func (h dataResetHandlers) purgeSealedCredentials(ctx context.Context, wsID ids.UUID, counts *resetCounts) error {
-	if h.vault == nil {
-		return nil
-	}
-	ws := ids.From[ids.WorkspaceKind](wsID)
-	for _, ref := range counts.secretRefs {
-		// The ref is never logged or returned: it is the address of a secret,
-		// and an error naming it would put that address in every log sink.
-		if err := h.vault.Delete(ctx, ws, keyvault.Ref(ref)); err != nil {
-			return fmt.Errorf("data reset: purging a sealed credential: %w", err)
-		}
-		counts.SecretsPurged++
-	}
-	return nil
 }
 
 // ResetData wipes an installation that has ARMED the capability back to its

@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { RecordZoneProvider } from "../app/recordzone";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
@@ -25,6 +26,23 @@ import { BriefReadingsStrip } from "./brief.readings";
 // pace, because targets were retired from the product — and the interesting
 // cases are what replaced them: a pipeline figure that must never read as a
 // target, and must say whose pipeline it measured.
+
+// drawInZone renders the strip under a named record zone, which is what a
+// date-only wire value must be read in.
+function drawInZone(zone: string, ...args: Parameters<typeof readingsDay>) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <RecordZoneProvider zone={zone}>
+        <LocaleProvider initial="en">
+          <BriefReadingsStrip day={readingsDay(...args)} />
+        </LocaleProvider>
+      </RecordZoneProvider>
+    </QueryClientProvider>,
+  );
+}
 
 function draw(...args: Parameters<typeof readingsDay>) {
   // A QueryClient, because the pipeline reading is a read of its own: it is the
@@ -135,7 +153,7 @@ describe("the brief readings strip", () => {
     );
     draw();
 
-    await screen.findByText(/420k|420,000/);
+    await screen.findByText(/420k|420,000/i);
     expect(screen.queryAllByText("—")).toHaveLength(0);
   });
 
@@ -266,12 +284,16 @@ describe("the brief readings strip", () => {
     // COMPACT for the headline figure — the slot is ~110px and a full euro
     // amount wraps mid-number. The weighted figure keeps its exact form on the
     // detail line, where there is room for it.
-    expect(await screen.findByText(/420k/)).toBeTruthy();
+    expect(await screen.findByText(/420k/i)).toBeTruthy();
     // The weighted figure and the priced-of-eligible completeness ride the same
     // line: a weighted number over a partly priced population is a floor, and a
     // reader who cannot see the second cannot judge the first.
     expect(screen.getByText(/168,000/)).toBeTruthy();
     expect(screen.getByText(/11 of 12 priced/)).toBeTruthy();
+    // THE WINDOW the money covers. €420k of open pipeline means nothing without
+    // it: the same page carries a by-currency total of everything open, and a
+    // reader with no period cannot tell why the two disagree.
+    expect(screen.getByText(/1 Jul 2026 – 30 Sept 2026/)).toBeTruthy();
     // Never a target word. The quota table was dropped by founder decision.
     const strip = screen.getByTestId("brief-readings");
     expect(strip.textContent).not.toMatch(/on track|target|attainment|gap/i);
@@ -429,5 +451,88 @@ describe("the leads reading", () => {
 
     expect(leadsCard().textContent).toContain("2");
     expect(screen.getByText(en["brief.readings.leadsBasis"])).toBeTruthy();
+  });
+});
+
+// A period is a CALENDAR window, not an instant, and it reads the same for
+// every colleague.
+//
+// period_start and period_end are date-only wire values. Read in the viewer's
+// own clock west of UTC they parse as UTC midnight and print the day before, so
+// a rep in Los Angeles saw the third quarter labelled "30 Jun – 29 Sept" while
+// a colleague in Berlin saw "1 Jul – 30 Sept" — two people quoting one page and
+// quoting different quarters. The record's zone is the only answer that is the
+// same for both.
+describe("the pipeline period", () => {
+  afterEach(cleanup);
+
+  it("names the same days west of UTC as it does east of it", async () => {
+    const payload = {
+      period_start: "2026-07-01",
+      period_end: "2026-09-30",
+      scope_kind: "owner",
+      open_minor: 42_000_000,
+      weighted_minor: 16_800_000,
+      best_case_minor: 0,
+      evidence_minor: 0,
+      eligible_count: 12,
+      priced_count: 11,
+      confirmed_date_count: 8,
+      fx_missing_count: 0,
+      as_of: "2026-09-03T06:42:00Z",
+      base_currency: "EUR",
+    };
+    stubPipeline(
+      () =>
+        new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+
+    // The VIEWER sits west of UTC while the installation's calendar does not.
+    // Without this the suite's own machine decides whether the bug can appear
+    // at all: east of UTC a viewer-zone read prints the right days by luck, and
+    // the assertion passes over code that is wrong for half the world.
+    const resolved = Intl.DateTimeFormat.prototype.resolvedOptions;
+    vi.spyOn(
+      Intl.DateTimeFormat.prototype,
+      "resolvedOptions",
+    ).mockImplementation(function (this: Intl.DateTimeFormat) {
+      return { ...resolved.call(this), timeZone: "America/Los_Angeles" };
+    });
+
+    drawInZone("Europe/Berlin");
+    expect(await screen.findByText(/1 Jul 2026 – 30 Sept 2026/)).toBeTruthy();
+    cleanup();
+
+    drawInZone("Asia/Tokyo");
+    expect(await screen.findByText(/1 Jul 2026 – 30 Sept 2026/)).toBeTruthy();
+  });
+  // FOUR DOORS, FOUR NAMES.
+  //
+  // Every open button on this strip used to be called "Open these". Sighted, the
+  // card above each one says which "these" — a screen reader tabbing the strip
+  // hears the same four words four times and cannot tell the lanes apart, so the
+  // one control on each reading is the one thing that does not identify it.
+  //
+  // Asserted as a SET rather than card by card: the defect is duplication, and a
+  // per-card check passes on four buttons that share a name as happily as on
+  // four that do not.
+  it("gives every reading's door its own accessible name", async () => {
+    drawInZone("Europe/Berlin");
+
+    await screen.findByText(en["brief.readings.urgent"]);
+    const names = screen
+      .getAllByRole("button")
+      .map((button) => button.getAttribute("aria-label") ?? button.textContent)
+      .filter((name): name is string => Boolean(name?.startsWith("Open ")));
+
+    // The strip draws four readings and each one has a door, so the filter must
+    // find exactly four. Asserting only that the matches are distinct would
+    // pass on a strip where two doors lost the prefix and fell out of the set
+    // entirely — the filter would then be hiding the very buttons at issue.
+    expect(names).toHaveLength(4);
+    expect(new Set(names).size).toBe(names.length);
   });
 });

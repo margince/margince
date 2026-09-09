@@ -15,13 +15,20 @@
 
 import { UserRoundArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { Button, SegmentedControl } from "../design-system/atoms";
+import {
+  Button,
+  Field,
+  SegmentedControl,
+  Textarea,
+} from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
+import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { useMe } from "./common";
-import { useRoster } from "./entityref";
+import { useAssignableUserOptions } from "./assigneepicker";
+import { problemCodeOf, useMe } from "./common";
+import { useRosterPartial, useRosterPartialHint } from "./entityref";
 import {
   subjectAcceptsAnOwner,
   type TeamException,
@@ -46,53 +53,51 @@ type CoachKind = (typeof COACH_KINDS)[number];
 
 // Whose queue this page is answering.
 //
-// Every colleague, not only teammates: the server decides, and a shorter list
-// drawn from a membership read this screen does not have would hide people the
-// reader is entitled to open. An ask it refuses answers 403 and the page says
-// so, which is the same contract every other control on this page keeps.
+// A LABELLED FIELD, and the label is visible. The control carried its name in
+// `aria-label` alone, so a sighted reader met a dropdown reading "My own day"
+// with nothing on screen saying what it chose — and "My own day" is a value,
+// not a question. `Field` puts the words above the control and points the
+// control at them, which makes the visible label the accessible name: ONE
+// spelling, rather than a label a screen reader hears and a label a reader
+// sees being two different strings.
 export function OwnerPicker({
   owner,
   onOwner,
 }: Readonly<{ owner: string; onOwner: (next: string) => void }>) {
   const t = useT();
-  const roster = useRoster("user", true);
-  const options = [
-    { value: "", label: t("worklist.owner.mine") },
-    ...(roster.data ?? []).map((entry) => ({
-      value: entry.id,
-      label: "display_name" in entry ? entry.display_name : entry.id,
-    })),
-  ];
+  const people = useAssignableUserOptions();
+  // A ROSTER THAT STOPPED SHORT IS SAID SO. The walk is bounded, so past its
+  // reach this list is part of the workspace rather than the workspace — and a
+  // picker missing colleagues looks exactly like a workspace that has none, on
+  // the one control a lead uses to reach somebody. The words are the roster's
+  // own, and the `Field` wires them into the control's `aria-describedby`.
+  const partial = useRosterPartial("user", true);
+  const partialHint = useRosterPartialHint(partial);
+  const options = [{ value: "", label: t("worklist.owner.mine") }, ...people];
   return (
-    <Select
-      options={options}
-      value={owner}
-      onChange={onOwner}
-      aria-label={t("worklist.owner.label")}
-    />
+    <Field
+      label={t("worklist.owner.visibleLabel")}
+      hint={partialHint}
+      className="worklist-owner-field"
+    >
+      {(control) => (
+        <Select
+          {...control}
+          options={options}
+          value={owner}
+          onChange={onOwner}
+        />
+      )}
+    </Field>
   );
 }
 
-// Who the reader may hand work to, as options.
-//
-// AGENT SEATS ARE EXCLUDED. An agent seat is an Agent Runner identity, not a
-// person: it opens no Worklist, and the task lane is read per human. The server
-// refuses one — `ensureAssigneeCanHoldWork` in the activities module answers a
-// field fault on `assignee_id` — so offering the seat here would draw a control
-// whose only outcome is a refusal.
-//
-// Everyone else the roster carries is offered. Narrowing to teammates would
-// need a membership read this screen does not have, and the server refuses a
-// reassignment the caller may not make.
+// Who the reader may hand work to: the people, less whoever holds the task
+// already. Why the holder is excluded is the caller's own note below.
 function useAssigneeOptions(exclude: string | undefined) {
-  const roster = useRoster("user", true);
-  return (roster.data ?? [])
-    .filter((entry) => entry.id !== exclude)
-    .filter((entry) => !("is_agent" in entry && entry.is_agent))
-    .map((entry) => ({
-      value: entry.id,
-      label: "display_name" in entry ? entry.display_name : entry.id,
-    }));
+  return useAssignableUserOptions().filter(
+    (option) => option.value !== exclude,
+  );
 }
 
 // Hand one task to somebody else.
@@ -143,15 +148,24 @@ export function ReassignControl({
       />
     );
   }
+  // ONE LINE, ending in the answer. The form stands where the row's verbs were,
+  // so it keeps their reading: the quiet way out before the call to action, and
+  // the call to action on the trailing edge where every other verb on this page
+  // puts it. Cancel LAST would sit under the thumb that had been pressing the
+  // confirm.
   return (
     <div className="worklist-manager-control">
       <Select
+        className="worklist-hand-to"
         options={settled ? options : []}
         value={assignee}
         onChange={setAssignee}
         placeholder={t("worklist.manager.reassignTo")}
         aria-label={t("worklist.manager.reassignTo")}
       />
+      <Button variant="ghost" onClick={() => setOpen(false)}>
+        {t("worklist.manager.cancel")}
+      </Button>
       <Button
         variant="primary"
         disabled={assignee === "" || reassign.isPending}
@@ -167,15 +181,18 @@ export function ReassignControl({
                 setOpen(false);
                 toast.show(t("worklist.manager.reassigned"));
               },
-              onError: () => toast.show(t("worklist.manager.reassignFailed")),
+              // No completion mark on a refusal: the green dot is the region's
+              // way of saying "that worked", and a failure wearing it tells the
+              // reader the opposite of what the sentence beside it says.
+              onError: () =>
+                toast.show(t("worklist.manager.reassignFailed"), {
+                  mark: false,
+                }),
             },
           );
         }}
       >
         {t("worklist.manager.reassignConfirm")}
-      </Button>
-      <Button variant="ghost" onClick={() => setOpen(false)}>
-        {t("worklist.manager.cancel")}
       </Button>
     </div>
   );
@@ -187,70 +204,153 @@ export function ReassignControl({
 // why the kind is a control and the note is a plain field: the recipient reads
 // a sentence the product wrote either way, and the coach adds to it rather than
 // composing from nothing.
-export function CoachControl({ owner }: Readonly<{ owner: string }>) {
+//
+// A PANEL, and the same panel in both states. It was a bare ghost button
+// floating under the readings that turned into an unchrome'd stack of controls
+// on the press — so pressing it changed the page's shape, and the two states
+// read as two different features. It is also the reason a lead opened somebody
+// else's queue at all, which is why it stands at the head of that day rather
+// than among the panels below it.
+export function CoachControl({
+  owner,
+  name,
+}: Readonly<{
+  owner: string;
+  /**
+   * Whose day this is, by name, from the roster the page has already read.
+   *
+   * Absent for a roster that cannot name the id — and for a caller that has no
+   * roster at all — which is a real state rather than a loading nicety: a
+   * heading reading "A note for undefined" is worse than one that names
+   * nobody, and the write itself is addressed by id either way.
+   */
+  name?: string | null;
+}>) {
   const t = useT();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<CoachKind>("coach_general");
   const [note, setNote] = useState("");
   const coach = useCoachTeammate();
+  const title = name
+    ? t("worklist.manager.coachTitle", { name })
+    : t("worklist.manager.coachTitleUnnamed");
 
   if (!open) {
     return (
-      <Button variant="ghost" onClick={() => setOpen(true)}>
-        {t("worklist.manager.coach")}
-      </Button>
+      <Panel
+        className="worklist-coach"
+        title={title}
+        // What a note DOES, before the reader spends a press finding out. The
+        // verb alone said only that something could be left somewhere.
+        actions={
+          <Button variant="primary" onClick={() => setOpen(true)}>
+            {t("worklist.manager.coach")}
+          </Button>
+        }
+      >
+        <PanelBody>
+          <p className="t-body">{t("worklist.manager.coachIntro")}</p>
+        </PanelBody>
+      </Panel>
     );
   }
   return (
-    <div className="worklist-manager-coach">
-      <SegmentedControl
-        options={COACH_KINDS}
-        value={kind}
-        onChange={setKind}
-        label={t("worklist.manager.coachAbout")}
-        labels={{
-          coach_reply_aging: t("worklist.manager.kind.reply_aging"),
-          coach_deal_needs_next_step: t("worklist.manager.kind.next_step"),
-          coach_review_backlog: t("worklist.manager.kind.review_backlog"),
-          coach_general: t("worklist.manager.kind.general"),
-        }}
-      />
-      <label className="field">
-        <span className="t-label">{t("worklist.manager.note")}</span>
-        <textarea
-          className="input"
-          value={note}
-          maxLength={500}
-          rows={3}
-          onChange={(event) => setNote(event.target.value)}
-        />
-      </label>
-      <div className="worklist-manager-control">
-        <Button
-          variant="primary"
-          disabled={coach.isPending}
-          onClick={() => {
-            coach.mutate(
-              { recipientUserId: owner, kind, note },
-              {
-                onSuccess: () => {
-                  setOpen(false);
-                  setNote("");
-                  toast.show(t("worklist.manager.coached"));
+    <Panel
+      className="worklist-coach"
+      title={title}
+      actions={
+        <>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            {t("worklist.manager.cancel")}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={coach.isPending}
+            onClick={() => {
+              coach.mutate(
+                { recipientUserId: owner, kind, note },
+                {
+                  onSuccess: () => {
+                    setOpen(false);
+                    setNote("");
+                    toast.show(t("worklist.manager.coached"));
+                  },
+                  onError: (failure) => coachRefused(failure, name, t, toast),
                 },
-                onError: () => toast.show(t("worklist.manager.coachFailed")),
-              },
-            );
-          }}
-        >
-          {t("worklist.manager.coachConfirm")}
-        </Button>
-        <Button variant="ghost" onClick={() => setOpen(false)}>
-          {t("worklist.manager.cancel")}
-        </Button>
-      </div>
-    </div>
+              );
+            }}
+          >
+            {t("worklist.manager.coachConfirm")}
+          </Button>
+        </>
+      }
+    >
+      {/* `.form-stack` is the tree's own field rhythm — the panel's body is
+          padding and nothing else, so two bare fields in one met at the label.
+          Not two `PanelBody`s, which would draw the panel's seam hairline
+          between the kind and the note: one question, not two sections. */}
+      <PanelBody className="form-stack">
+        {/* The kind's name is VISIBLE and is also the group's accessible name:
+            the fieldset announces the words the row draws, rather than a
+            sighted reader meeting four buttons with nothing saying what they
+            choose between. Four short labels, all worth seeing at once, which
+            is what a segmented strip is for. */}
+        <div className="field">
+          <span className="t-label">{t("worklist.manager.coachAbout")}</span>
+          <SegmentedControl
+            options={COACH_KINDS}
+            value={kind}
+            onChange={setKind}
+            label={t("worklist.manager.coachAbout")}
+            labels={{
+              coach_reply_aging: t("worklist.manager.kind.reply_aging"),
+              coach_deal_needs_next_step: t("worklist.manager.kind.next_step"),
+              coach_review_backlog: t("worklist.manager.kind.review_backlog"),
+              coach_general: t("worklist.manager.kind.general"),
+            }}
+          />
+        </div>
+        <Field label={t("worklist.manager.note")}>
+          {(control) => (
+            <Textarea
+              {...control}
+              value={note}
+              maxLength={500}
+              rows={3}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          )}
+        </Field>
+      </PanelBody>
+    </Panel>
+  );
+}
+
+/**
+ * What a refused note says, and it never wears the completion mark.
+ *
+ * The server answers 403 `permission_denied` where the caller may not coach
+ * this person at all, which is not a failure to retry — the generic "that could
+ * not be left" invited exactly that, and every press earned the same refusal.
+ * Read off the RFC-7807 sentinel rather than off the message text: the words
+ * are the reader's locale's and the code is the contract's.
+ *
+ * The named wording needs a name. A roster that cannot name the recipient falls
+ * back to the generic sentence, which is still true.
+ */
+function coachRefused(
+  failure: unknown,
+  name: string | null | undefined,
+  t: ReturnType<typeof useT>,
+  toast: ReturnType<typeof useToast>,
+): void {
+  const refused = problemCodeOf(failure) === "permission_denied";
+  toast.show(
+    refused && name
+      ? t("worklist.manager.coachRefused", { name })
+      : t("worklist.manager.coachFailed"),
+    { mark: false },
   );
 }
 
@@ -301,56 +401,69 @@ export function TakeOwnershipControl({
   if (!subjectAcceptsAnOwner(subject)) {
     return null;
   }
+  // `.cell-actions` is the design system's TABLE-CELL verbs row — right-aligned,
+  // one line, no top margin — which is what this cell is. A single verb takes it
+  // too: the resting state and the answering one then start at the same x, and
+  // the column does not shift under the reader on the press.
   if (!confirming) {
     return (
-      <Button
-        variant="ghost"
-        onClick={(event) => {
-          contain(event);
-          setConfirming(true);
-        }}
-      >
-        {t("worklist.manager.takeOwnership")}
-      </Button>
+      <div className="cell-actions">
+        <Button
+          variant="ghost"
+          onClick={(event) => {
+            contain(event);
+            setConfirming(true);
+          }}
+        >
+          {t("worklist.manager.takeOwnership")}
+        </Button>
+      </div>
     );
   }
+  // The ask is a CAPTION LINE over its own verbs row, not a sentence beside
+  // them. Beside them it took the width the two buttons needed and wrapped
+  // Cancel to a third line, so answering one row made it twice the height of
+  // every other row in the table and put the verb the reader came for below the
+  // cell's own fold.
   return (
-    <div className="worklist-manager-control">
-      <span className="t-label">{t("worklist.manager.takeOwnershipAsk")}</span>
-      <Button
-        variant="primary"
-        disabled={take.isPending}
-        onClick={(event) => {
-          contain(event);
-          take.mutate(
-            { subject, userId: viewerId },
-            {
-              onSuccess: () => {
-                setConfirming(false);
-                toast.show(t("worklist.manager.tookOwnership"));
+    <div className="worklist-take">
+      <p className="t-caption">{t("worklist.manager.takeOwnershipAsk")}</p>
+      <div className="cell-actions">
+        <Button
+          variant="ghost"
+          onClick={(event) => {
+            contain(event);
+            setConfirming(false);
+          }}
+        >
+          {t("worklist.manager.cancel")}
+        </Button>
+        <Button
+          variant="primary"
+          disabled={take.isPending}
+          onClick={(event) => {
+            contain(event);
+            take.mutate(
+              { subject, userId: viewerId },
+              {
+                onSuccess: () => {
+                  setConfirming(false);
+                  toast.show(t("worklist.manager.tookOwnership"));
+                },
+                // The refusal stays on screen and the control stays open: a
+                // handover that failed leaves the record where it was, and a
+                // reader who is not told that believes they now hold it.
+                onError: () =>
+                  toast.show(t("worklist.manager.takeOwnershipFailed"), {
+                    mark: false,
+                  }),
               },
-              // The refusal stays on screen and the control stays open: a
-              // handover that failed leaves the record where it was, and a
-              // reader who is not told that believes they now hold it.
-              onError: () =>
-                toast.show(t("worklist.manager.takeOwnershipFailed"), {
-                  mark: false,
-                }),
-            },
-          );
-        }}
-      >
-        {t("worklist.manager.takeOwnershipConfirm")}
-      </Button>
-      <Button
-        variant="ghost"
-        onClick={(event) => {
-          contain(event);
-          setConfirming(false);
-        }}
-      >
-        {t("worklist.manager.cancel")}
-      </Button>
+            );
+          }}
+        >
+          {t("worklist.manager.takeOwnershipConfirm")}
+        </Button>
+      </div>
     </div>
   );
 }

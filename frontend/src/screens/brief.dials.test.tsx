@@ -30,8 +30,17 @@ beforeEach(() => {
 // next are all drawn from it, and a hand-built copy here would drift from theirs
 // one edited field at a time.
 function worklist(scopeOptions: Worklist["scope_options"]) {
-  const day = readingsDay({}, [waitingRow()]);
-  return { ...day, scope_options: scopeOptions };
+  // The row is marked CHANGED and a source is marked UNAVAILABLE, so all three
+  // morning elements above the work column actually draw. The default fixture
+  // leaves both empty, and both of those elements return null on an empty one —
+  // so a weekly case built on it would assert their absence over elements that
+  // were never going to appear, and would keep passing if the guard broke.
+  const day = readingsDay({}, [{ ...waitingRow(), changed_since_brief: true }]);
+  return {
+    ...day,
+    scope_options: scopeOptions,
+    sources_unavailable: [{ source: "calendar", reason: "not_connected" }],
+  };
 }
 
 /** Stub every read the Brief fans out to, for a reader with the given scopes. */
@@ -156,6 +165,41 @@ describe("the Brief's dials", () => {
     // load rather than one that was never there. `page-zones-aside` is the
     // class that reserves the column.
     expect(document.querySelector(".page-zones-aside")).toBeNull();
+  });
+
+  // THE READINGS AND THE NOTICES ABOVE THEM BELONG TO THE MORNING TOO.
+  //
+  // The same defect as the rail, one layer up and missed when the rail was
+  // fixed: the coverage callout, the changed-overnight notice and the readings
+  // strip are drawn ABOVE the view branch, so they render whatever the dial
+  // says. All three read the worklist — today's queue — and the worklist is
+  // fetched unconditionally, so under the weekly a rep saw today's urgent count
+  // and today's overnight changes stacked on top of a week that had closed.
+  it("leaves the morning's readings and notices off the weekly", async () => {
+    globalThis.location.hash = "#/brief?view=weekly";
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
+
+    await screen.findByRole("group", { name: en["brief.view.label"] });
+    await waitFor(() =>
+      expect(document.querySelector("#brief-weekly")).not.toBeNull(),
+    );
+    expect(screen.queryByTestId("brief-readings")).toBeNull();
+    expect(document.querySelector(".brief-coverage")).toBeNull();
+    expect(document.body.textContent).not.toContain(en["brief.changed.lead"]);
+  });
+
+  // The positive control for the case above, and it is the assertion that gives
+  // it any force. All three elements are absent on a weekly for two possible
+  // reasons — the guard, or a fixture that never made them appear — and only
+  // seeing them on the morning tells those apart.
+  it("keeps the readings and notices on the morning", async () => {
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
+
+    await screen.findByTestId("brief-readings");
+    expect(document.querySelector(".brief-coverage")).not.toBeNull();
+    expect(document.body.textContent).toContain(en["brief.changed.lead"]);
   });
 
   // And it is still there on the morning, or the assertion above passes over a

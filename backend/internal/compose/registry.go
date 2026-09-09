@@ -201,6 +201,13 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// recited in the tool schema, the same move run_report made.
 	agents.RegisterAnalyticsQueryTool(registry,
 		nativeOnlyAnalyticsRunner(sorMode, analyticsQueryToolRunner(InstallationDB(pool))))
+	// The vocabulary that query is written in, as a TOOL and not only as the
+	// margince://schema/analytics resource — same reason
+	// describe_report_vocabulary exists beside run_report, and it takes the
+	// same overlay guard: a caller taught these names in a workspace that
+	// refuses the verb would write a correct query and be refused for it.
+	agents.RegisterAnalyticsVocabularyTool(registry,
+		nativeOnlyAnalyticsVocabularyReader{mode: sorMode, inner: analyticsVocabularyReader{}})
 	// The grammar that document is written in, as a TOOL and not only as the
 	// margince://schema/report-blocks resource — same reason
 	// describe_report_vocabulary exists beside run_report: the Surface-B runner

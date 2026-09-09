@@ -9,8 +9,8 @@
     "version": {
       "type": "integer"
     },
-    "organization": {
-      "description": "Organization names the installation's singleton organization. Consumed only when the organization is created; it never reconciles into an existing installation (§6.3 of the ratified concept).",
+    "workspace": {
+      "description": "Workspace names the installation's singleton workspace — the tenant every row is filed under, and what the schema has always called it. Consumed only when the workspace is created; it never reconciles into an existing installation (§6.3 of the ratified concept).",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -29,7 +29,7 @@
       }
     },
     "bootstrap_admin": {
-      "description": "BootstrapAdmin identifies the first administrator. The password is a reference so the secret can be deleted after first boot — once the organization exists this whole section may be removed.",
+      "description": "BootstrapAdmin identifies the first administrator. The password is a reference so the secret can be deleted after first boot — once the workspace exists this whole section may be removed.",
       "type": [
         "object",
         "null"
@@ -364,6 +364,10 @@
       "properties": {
         "allow_data_reset": {
           "description": "AllowDataReset arms POST /v1/admin/reset-data, the two reset lanes that serve it, and the /me flag that offers the action in the UI.",
+          "type": "boolean"
+        },
+        "allow_test_mailbox": {
+          "description": "AllowTestMailbox arms the test_mailbox connector: the QC-only, no-network fake mailbox that can both capture and send. Same reasoning as AllowDataReset: a capability that can fake a real send outcome is stated here, never inferred from what MARGINCE_ENV happens to say a deployment is — a staging install is not \"non-production\" for this purpose either.",
           "type": "boolean"
         }
       }

@@ -48,6 +48,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -58,7 +59,8 @@ import (
 )
 
 const (
-	// composeTier is the subtree this gate judges.
+	// composeTier is the subtree this gate judged first, and still the only one
+	// covered whole.
 	composeTier = "internal/compose"
 
 	// rowScopeVocabularyPkg holds ownerScopedTables — the closed set of tables
@@ -78,6 +80,22 @@ const (
 // record's id without applying that record's row scope. Keyed
 // "package-dir:FuncName", each entry stating what stands in for the clause.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
+	// --- The module tier, one package at a time (censusedModules). ---
+	//
+	// These are the FIRST kind of read the widening has to tell apart, and the
+	// distinction is the reason this could not be one change: a store that OWNS
+	// its table answers "which of my rows may you see", while a read model
+	// pointing at somebody else's answers "may you still see the thing I am
+	// naming". Every entry below is the first kind, and each says how its own
+	// admission was already made.
+	"internal/modules/commissions:summaryTx":                  "the partner totals, grouped under the COMMISSION's own visibility clause (VisibleClause, applied in this statement). A caller admitted to an entry is admitted to what the entry is about, and the partner is what it is about — no organization content is read, only the id it groups by. The cost is that a total confirms a partner organization exists on a commission the caller may already open",
+	"internal/modules/contracts:ensureLinksShareOrganization": "the cross-company guard on a contract WRITE, and scoping it would defeat it. Its own doc says why: the predicate deciding who may READ a contract judges a deal-anchored one by its deal alone, so pairing company A's contract with company B's deal publishes A's agreement to everyone who can see B. The organization this cannot see is exactly the one the rule protects, and what leaves the function is a refusal rather than an id",
+	"internal/modules/projects:lockedDealProject":             "the project pointer read off a deal row the caller's transaction ALREADY HOLDS — the win path calls it only after its patch applied, and applying is what took the lock. The caller is past the deal's own write gate to be here, and the pointer is used to attach, never served. The cost is that a deal write learns which project the deal names",
+	"internal/modules/forecasting:SnapshotSide":               "one snapshot's frozen per-deal rows, behind the snapshot's own read gate — reading a snapshot IS reading the forecast, which is what that gate governs. The deal ids are the record of what the workspace expected when it was taken, not a live pointer: scoping them to today's visibility would rewrite history to match the reader. The cost is that a snapshot reader learns which deals were in it, including ones they could not open now",
+	"internal/modules/dealrooms:liveRoomForBuyerWrite":        "a BUYER session's write precondition. Row scope over deals is the seller side's model — it narrows to a seat's own rows — and a buyer holds no seat for it to narrow to. The authority here is the room being live and the capability admitting the write, which this function is entirely about; the deal it names is the room's own subject",
+	"internal/modules/dealrooms:reissueFor":                   "the resend, whose authority its own doc states: the participant row IS the authority, and it was found by the address the mail will go to. The deal is that participant's room, so a scope clause would ask whether the SELLER may see a deal on a path that has no seller session at all",
+	"internal/modules/signals:matchCandidates":                "the resolver matching an inbound signal to an organization, on the capture path under the system principal — the same ground the edge census ratifies signals/resolver.go on. The organization is what the signal is ABOUT, it goes to RecordDerived, and no reader sees it until the signal is served under their own signal row scope. The cost is that resolution reads organizations with no per-caller gate",
+
 	// Signal producers. Both run inside signalScanWorkspaceWorker, which binds
 	// PrincipalSystem "agent:signal-scan" before either read (jobs_signals.go),
 	// so there is no human actor for a row scope to narrow to and the org id
@@ -204,6 +222,33 @@ type referenceSite struct {
 	table         string
 }
 
+// censusedModules are the module packages this census reaches, admitted ONE AT
+// A TIME as their sites are read and ratified.
+//
+// A list, and it is the honest shape for the state this is in rather than a
+// permanent one. `internal/modules` holds 96 sites of this shape, and widening
+// to the tier in one step would mean 96 waivers written in one sitting — a
+// waiver list nobody read is worse than no gate, because it reads as handled.
+// So the roots grow one package at a time, each with its sites actually read,
+// and this slice is the visible measure of how far that has got: what is not in
+// it is not claimed.
+//
+// It is NOT the end state. What the census wants is gatekit.Scope over the whole
+// tier, where a site outside every root FAILS rather than being invisible — a
+// negative sweep is what makes a root a proof instead of a claim. That needs
+// every module ratified first, which is what this list is for getting to.
+//
+// Issue 799 carries the per-module counts, so the next slice can be picked by
+// size rather than by grepping.
+var censusedModules = []string{
+	"internal/modules/commissions",
+	"internal/modules/contracts",
+	"internal/modules/dealrooms",
+	"internal/modules/forecasting",
+	"internal/modules/projects",
+	"internal/modules/signals",
+}
+
 func TestEveryComposeReadOfARecordReferenceAppliesItsRowScope(t *testing.T) {
 	t.Parallel()
 	defer unscopedReferenceReads.AssertAllMatched(t)
@@ -217,6 +262,27 @@ func TestEveryComposeReadOfARecordReferenceAppliesItsRowScope(t *testing.T) {
 	if len(sites) < wantMinimumScopedSites {
 		t.Fatalf("only %d record-reference reads found in %s, want at least %d — the SQL extractor lost its source",
 			len(sites), composeTier, wantMinimumScopedSites)
+	}
+	// PER ROOT, not a total. An aggregate floor cannot see ONE root going dark:
+	// six roots contributing about one site each stay above any floor low enough
+	// not to be brittle, so the root the extractor stopped reading reports PASS —
+	// which is the failure this is here to catch, wearing the shape of the guard
+	// against it.
+	inModules := map[string]int{}
+	for _, site := range sites {
+		for _, root := range censusedModules {
+			if site.dir == root || strings.HasPrefix(site.dir, root+"/") {
+				inModules[root]++
+			}
+		}
+	}
+	for _, root := range censusedModules {
+		if inModules[root] == 0 {
+			t.Errorf("%s is a censused root and the extractor found no record-reference read in it — "+
+				"either its sites were removed, in which case drop the root and its waivers, or the "+
+				"extractor has stopped reading it and this root is being reported clean without being read",
+				root)
+		}
 	}
 
 	for _, site := range sites {
@@ -432,7 +498,13 @@ func reachesRowScope(fns map[string]*rowScopeFnInfo, name, table string, seen ma
 // promoted, which is the quiet narrowing the extractor floor below exists to
 // refuse.
 func referenceSites(t *testing.T, vocab referenceVocabulary) (map[string]rowScopePkg, []referenceSite) {
-	return referenceSitesIn(t, composeTier, vocab)
+	pkgs, sites := referenceSitesIn(t, composeTier, vocab)
+	for _, root := range censusedModules {
+		morePkgs, moreSites := referenceSitesIn(t, root, vocab)
+		maps.Copy(pkgs, morePkgs)
+		sites = append(sites, moreSites...)
+	}
+	return pkgs, sites
 }
 
 // referenceSitesIn is referenceSites over one named tier, so a second tier can

@@ -158,8 +158,16 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The stub answers /me/working-hours with the SERVER's answer, and a person who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
   },
   {
+    file: "screens/settings.stories.tsx",
+    why: "The catalog's own copy of the answer above, for the same reason and with the same constraint: every settings tab story routes /me/working-hours, because the bookability card indexes that answer and an unrouted one takes the whole screen down. It cannot import the testkit beside it — that module is built on `vi`, which no Storybook build has — so the zone is named here too. A zone read off the runner would draw a different card on every machine the catalog builds on.",
+  },
+  {
     file: "screens/worklist.when.test.tsx",
     why: "The rule under test is which SIDE of the reader's own day a moment falls on — today's meeting shows a bare time, another day's shows the date too. Deciding that needs a zone whose offset is not zero: in UTC the fixture's instants land on the same calendar day under either rule, so every case would pass whichever branch ran. The zone is injected by mocking viewerZone, which is the module this gate points callers at; naming it is what makes the expectation ('14:30', not '12:30') checkable at all.",
+  },
+  {
+    file: "screens/brief.readings.test.tsx",
+    why: "The case is that a date-only period reads as the SAME days for every colleague, and proving it needs three named zones at once: the installation's, which the tile must follow, and a viewer's on either side of UTC. A zone taken off the runner would decide whether the bug can appear at all — east of UTC a viewer-zone read prints the right days by luck, so the assertion would pass over code that is wrong for half the world. The installation's zone is supplied through RecordZoneProvider, the seam the product itself reads.",
   },
   {
     file: "screens/brief.weekly.test.tsx",

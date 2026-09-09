@@ -17,6 +17,7 @@ import {
   EXTENSION_SCREEN,
   findExtension,
 } from "./app/extensions";
+import { CREATE_ID } from "./app/nav";
 import {
   CommandPalette,
   useBuiltinCommands,
@@ -304,16 +305,13 @@ function ScreenPending() {
 }
 
 // Split out of the dispatch table purely to keep the deals list/detail split in
-// one place — it has its own "new" vs existing-id branch below the id check.
+// one place: `#/deals/new` carries CREATE_ID and is the LIST with its form open,
+// which is the same reading the shell's layout policy takes from that segment.
 function DealsRoute({ id, id2 }: Readonly<{ id?: string; id2?: string }>) {
-  if (id && id !== "new" && id2 === "room") {
-    return <DealRoomPage dealId={id} />;
+  if (!id || id === CREATE_ID) {
+    return <DealsScreen startCreating={id === CREATE_ID} />;
   }
-  return id && id !== "new" ? (
-    <DealScreen id={id} />
-  ) : (
-    <DealsScreen startCreating={id === "new"} />
-  );
+  return id2 === "room" ? <DealRoomPage dealId={id} /> : <DealScreen id={id} />;
 }
 
 // #/share/<record_type>/<record_id> (AS-3/4/5) — both segments are required;

@@ -261,7 +261,7 @@ func (e *AppEnv) Call(t *testing.T, method, path string, body any, headers map[s
 //
 // It lives here rather than with a suite because BootstrapWorkspace above calls
 // it, and a non-test file cannot reach a helper declared in a _test.go one.
-func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, organizationName, adminEmail, adminName string) {
+func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, workspaceName, adminEmail, adminName string) {
 	t.Helper()
 	// The password an OPERATOR supplies, which a configured bootstrap flags for
 	// replacement. It is deliberately NOT the one the suites sign in with: the
@@ -273,8 +273,8 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, organizationName, adminE
 		t.Fatal(err)
 	}
 	cfg := deployconfig.Config{
-		Version:      1,
-		Organization: deployconfig.Organization{Name: organizationName},
+		Version:   1,
+		Workspace: deployconfig.Workspace{Name: workspaceName},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: adminEmail, DisplayName: adminName, PasswordFile: pwFile,
 		},

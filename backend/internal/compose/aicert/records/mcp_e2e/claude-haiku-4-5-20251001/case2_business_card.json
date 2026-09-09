@@ -1,0 +1,17 @@
+{
+  "scenario": "case2_business_card",
+  "criteria": [
+    4
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "usage": {
+    "input_tokens": 278,
+    "output_tokens": 12742,
+    "cache_creation_input_tokens": 38965,
+    "cache_read_input_tokens": 1596103,
+    "runs_measured": 3,
+    "cost_usd": 0.3015
+  }
+}

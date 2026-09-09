@@ -68,6 +68,11 @@
  * The edges of the cards behind the live one — depth, not content. Each step
  * back is smaller, dimmer and lower, which is the only way a flat plate reads as
  * a stack: an offset alone reads as three cards side by side.
+ *
+ * The staged edge is spelled from the family's tokens rather than taken from
+ * `.staging-card` (panel.css): these are the EDGES of cards nobody has
+ * rendered, and a box that carried the class would then have to overrule its
+ * ground, its corner and its padding to be an edge at all.
  */
 .ddeck-peek {
   position: absolute;
@@ -210,6 +215,11 @@
  * the hand had been holding appeared to spring back — the exit has to continue
  * the gesture that caused it, or it denies it. The shadow is what makes it read
  * as a card lifting off the pile rather than a rectangle fading.
+ *
+ * A silhouette, so like the peeks above it spells the staged edge from the
+ * family's tokens instead of carrying `.staging-card`: every verdict below
+ * recolours that edge as it leaves, and there is no content under it to want
+ * the family's ground.
  */
 .ddeck-ghost {
   position: absolute;
@@ -334,11 +344,11 @@
   color: var(--textMeta);
 }
 
-/* --textSecondary, not --textTertiary: at 12px the tertiary ink measures
+/* --textMeta, not --textTertiary: at 12px the tertiary ink measures
  * 2.5:1 against the page, and this line is the only place a reader is told the
  * keyboard exists. A legend nobody can read is a legend that is not there. */
 .ddeck-keys {
-  color: var(--textSecondary);
+  color: var(--textMeta);
 }
 
 /*

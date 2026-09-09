@@ -11,8 +11,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "./mefixture";
+import { CREATE_ID } from "./nav";
 import {
-  ASK_QUERY_KEY,
   type Command,
   CommandPalette,
   paletteHotkeyCaps,
@@ -20,13 +20,14 @@ import {
 } from "./palette";
 
 // B-EP09.5 (AC-shell-3..7) and RS-1 (live /search records + see-all)
-// acceptance. B-EP09.6 (AC-shell-8) covered the record-scoped Ask composer,
-// which the agent surfaces that carried it no longer offer.
+// acceptance. AC-shell-8 is no longer about this file: it covered the
+// record-scoped Ask composer, and now covers the claim that composer carried
+// about what the agent can reach — asserted on the panel that carries it, in
+// frontend/e2e/ac.spec.ts and agentrail.scope.test.tsx.
 
 afterEach(() => {
   cleanup();
   window.location.hash = "";
-  sessionStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -68,7 +69,7 @@ const commands: Command[] = [
     id: "action:new-deal",
     label: "New deal",
     type: "action",
-    route: { screen: "deals", id: "new" },
+    route: { screen: "deals", id: CREATE_ID },
   },
   {
     id: "record:brandt",
@@ -148,15 +149,36 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(window.location.hash).toBe("#/deals");
   });
 
-  it("the Ask-AI row stores the query and lands on the AI surface (AC-shell-4)", async () => {
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+  // The question rides in the ADDRESS, which is the only carrier the AI surface
+  // can be relied on to read: a reader already standing there changes no path,
+  // so nothing remounts, and a question held anywhere else is one nothing on
+  // that screen ever looks at.
+  it("the Ask-AI row carries the query in the address and lands on the AI surface (AC-shell-4)", async () => {
+    const onClose = vi.fn();
+    render(<CommandPalette open onClose={onClose} commands={commands} />);
     await userEvent.type(screen.getByRole("searchbox"), "zzz nothing matches");
     // rows are [see-all, ask-ai] here (no builtin/record matches): step past
     // the see-all row to reach Ask-AI.
     await userEvent.keyboard("{ArrowDown}");
     await userEvent.keyboard("{Enter}");
-    expect(window.location.hash).toBe("#/ai");
-    expect(sessionStorage.getItem(ASK_QUERY_KEY)).toBe("zzz nothing matches");
+    expect(window.location.hash).toBe("#/ai?q=zzz+nothing+matches");
+    // And nowhere else. The address is the whole carrier, so there is no
+    // second copy for a reader's next tab to inherit.
+    expect(sessionStorage.length).toBe(0);
+    // Closing is the palette's own answer to a selection and not something it
+    // waits for the address to trigger: a reader already standing on the AI
+    // surface changes no path, and the palette still has to get out of the way.
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("closes on a selection that lands on the address it is already at", async () => {
+    window.location.hash = "#/deals";
+    const onClose = vi.fn();
+    render(<CommandPalette open onClose={onClose} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "deals");
+    await userEvent.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/deals");
+    expect(onClose).toHaveBeenCalled();
   });
 
   it("Esc closes; opening clears the previous query (AC-shell-3)", async () => {

@@ -1187,6 +1187,12 @@ export type MockApiOptions = Readonly<{
   // carries a form long enough to outgrow a short window, so it is what the
   // way-onward-stays-in-view claim is measured on.
   journey?: "finished" | "unstarted" | "unconfigured";
+  // What the server's write gate answers for the seeded PROJECT. "writable"
+  // (the default) is the spine every AC drives. "read-only" is the shape a
+  // record page reserves its band for: the caller may not write the row, so the
+  // page draws the one sentence that says so — and every seeded record being
+  // writable is why a sweep looking for a band found none.
+  project?: "writable" | "read-only";
 }>;
 
 export async function mockApi(
@@ -1323,7 +1329,10 @@ export async function mockApi(
     updated_at: string;
   }[] = [];
   const projectState = projectMock({
-    seeded: seededProject,
+    seeded: {
+      ...seededProject,
+      writable: options?.project !== "read-only",
+    },
     organizationName: brandt.display_name,
     deals: () => deals.map((deal) => ({ ...deal, ...dealPatches[deal.id] })),
     activities: () => loggedActivities,

@@ -192,7 +192,9 @@ describe("drafting to a lead", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    expect(await screen.findByTestId("ai-disclosure-banner")).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "AI-assisted draft" }),
+    ).toBeTruthy();
   });
 
   // A deployment running no model answers 501, and the composer says so rather

@@ -339,9 +339,11 @@ const (
 	// the real count.
 	wantMinimumModuleSites = 60
 	// What the tier holds today. A ratchet: it may only fall, and it has risen
-	// exactly once.
+	// three times. Every rise is a system-principal pass with no seat to narrow
+	// to, or a read a write-authority probe bounds a line later, and each is
+	// written out below rather than left as a number.
 	//
-	// THE ONE RISE, and why it is not a widening anybody should copy.
+	// THE FIRST RISE, and why it is not a widening anybody should copy.
 	// people.RetractMisattributedSignatureFields takes back the profile fields
 	// an earlier build wrote off a message the person never sent. It is a
 	// repair pass, chosen by DATA — the same SenderPredicate that decides what
@@ -357,5 +359,34 @@ const (
 	// TestEveryMutationOfAShareableRecordProbesForWriteAuthority says so and is
 	// right. The authority it takes instead is auth.Require(person, update),
 	// and its confinement is stated beside it in writesWithoutARowProbe.
-	modulesTierUnscopedCeiling = 96
+	//
+	// THE SECOND RISE, and the same shape as the first. deals.nextMembers reads
+	// the close-date pass's own frozen membership — close_date_run_member rows
+	// naming a deal_id — to walk the set that pass froze at its start. It runs
+	// under the workspace's system principal, which has no seat for a scope to
+	// narrow to, and narrowing it to one rep's deals would leave every other
+	// rep's pipeline unassessed while the run reported it had covered
+	// everything. That silent under-coverage is the exact defect the run table
+	// exists to make visible, so bounding this read by seat would reintroduce it
+	// through the gate meant to prevent it.
+	//
+	// What confines the read instead is the membership itself: the set was
+	// decided once by startRun, every row it returns belongs to that set, and
+	// the write it feeds re-locks the deal and re-verifies the deal is still
+	// open before touching it. The pass's authority is ratified as a whole in
+	// writeauthorityreach_test.go under SweepWorkspace and settleMember.
+	//
+	// THE THIRD RISE, +2, and the same pass again. deals.reversedCorrections
+	// and lockReversibleCorrection read deal_correction rows naming a deal_id:
+	// the first is the nightly sweep asking "has somebody taken this correction
+	// back?", which runs under the same system principal with no seat to narrow
+	// to, and narrowing it would let a correction one rep undid be re-applied to
+	// another rep's deal.
+	//
+	// The second is the Undo path, and it IS bounded — by auth.EnsureWritable on
+	// the deal, taken inside the same transaction immediately after. It reads
+	// unscoped here because the correction row is looked up first, under FOR
+	// UPDATE, so a repeated Undo serializes before either caller can act; the
+	// visibility answer follows it and refuses everything a row scope would.
+	modulesTierUnscopedCeiling = 99
 )

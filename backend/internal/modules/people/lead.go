@@ -383,6 +383,14 @@ type ListLeadsInput struct {
 	// rows first, so a reader asking for a score keeps the colder rows off
 	// the page rather than scanning past them.
 	MinScore *int
+	// OwedAReply keeps only the leads nobody has answered.
+	//
+	// A QUERY dial rather than something a caller filters afterwards, and the
+	// difference is the whole point: the page is bounded, so a caller cutting
+	// answered rows off the end of it loses the unanswered leads that were
+	// behind them — and reports the shortfall as "none owed" rather than as a
+	// page that was cut.
+	OwedAReply *bool
 	// Source narrows to one capture source (inbound, webform, referral,
 	// import, crawl, manual, ...): the exact stored value, no prefix match.
 	Source *string

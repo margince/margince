@@ -36,9 +36,16 @@ type rawEvent struct {
 	Attendees   []graphActor `json:"attendees"`
 	// Removed is Graph's tombstone on a delta round: an event deleted since the
 	// last pull arrives carrying this and little else. It is read as a
-	// cancellation because that is what it is to a calendar, and the shared
-	// rules already drop a cancelled meeting.
+	// cancellation because that is what it is to a calendar.
 	Removed *struct{} `json:"@removed"`
+	// ResponseStatus is the RSVP of the calendar this event was read from —
+	// Graph states the owner's own answer at the top level, so it needs no
+	// search through the attendee list the way Google's does.
+	ResponseStatus struct {
+		// Response is "none" | "organizer" | "tentativelyAccepted" |
+		// "accepted" | "declined" | "notResponded".
+		Response string `json:"response"`
+	} `json:"responseStatus"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
 }
 
 // graphTime is a Graph calendar timestamp: a local wall time plus the zone it
@@ -64,7 +71,11 @@ type graphActor struct {
 
 // decodeEvent reads one raw Graph event resource into the neutral shape — this
 // connector's whole contribution to the calendar mapping.
-func decodeEvent(raw []byte) (meetingmap.Event, error) {
+//
+// The owner is part of the shared Decode signature and unread here: Graph
+// states the connected calendar's own RSVP at the top level of the event, so
+// this connector needs no help identifying which answer is the owner's.
+func decodeEvent(raw []byte, _ string) (meetingmap.Event, error) {
 	var ev rawEvent
 	if err := json.Unmarshal(raw, &ev); err != nil {
 		return meetingmap.Event{}, fmt.Errorf("graphcal: parsing calendar event: %w", err)
@@ -83,13 +94,17 @@ func decode(ev rawEvent) meetingmap.Event {
 		})
 	}
 	return meetingmap.Event{
-		ID:          ev.ID,
-		Cancelled:   ev.IsCancelled || ev.Removed != nil,
-		Subject:     ev.Subject,
-		Description: ev.BodyPreview,
-		StartsAt:    parseStart(ev.Start, ev.IsAllDay),
-		Organizer:   meetingmap.Actor{Email: ev.Organizer.EmailAddress.Address, Name: ev.Organizer.EmailAddress.Name},
-		Attendees:   attendees,
+		ID:        ev.ID,
+		Cancelled: ev.IsCancelled || ev.Removed != nil,
+		// Only "declined". A tentative answer is an attendance somebody may yet
+		// make and "notResponded" is an invitation nobody has read, so neither
+		// takes the meeting off the schedule.
+		OwnerDeclined: strings.EqualFold(strings.TrimSpace(ev.ResponseStatus.Response), "declined"),
+		Subject:       ev.Subject,
+		Description:   ev.BodyPreview,
+		StartsAt:      parseStart(ev.Start, ev.IsAllDay),
+		Organizer:     meetingmap.Actor{Email: ev.Organizer.EmailAddress.Address, Name: ev.Organizer.EmailAddress.Name},
+		Attendees:     attendees,
 	}
 }
 
@@ -98,6 +113,12 @@ func decode(ev rawEvent) meetingmap.Event {
 // participants were recorded.
 func ParticipantsOf(raw []byte, owner string) ([]connector.MessageParticipant, error) {
 	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
+}
+
+// SettlementOf answers what one stored event resource settles as, for the
+// backfill that closes meetings captured before the RSVP was read.
+func SettlementOf(raw []byte, owner string) (meetingmap.Settlement, error) {
+	return meetingmap.SettlementOf(raw, owner, decodeEvent)
 }
 
 // graphLocalLayouts are the wall-clock forms Graph states a calendar time in.

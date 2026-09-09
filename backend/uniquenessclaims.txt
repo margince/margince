@@ -31,8 +31,6 @@
 # is whatever this file holds, and a second copy of it drifts.
 #
 # Sorted, one key per line: <path>#<declaration>.
-../cli/craft/gate/anthropic.go#func NewAnthropicClient
-../cli/craft/main.go#func pinnedModel
 ../desktop/launcher/console.go#func say
 ../desktop/launcher/main.go#type stack
 ../desktop/launcher/postgres.go#type cluster.connArgs
@@ -336,7 +334,7 @@ internal/modules/ai/voicecorpus.go#const CorpusMeterVersion
 internal/modules/aiactivity/handler.go#var eventType
 internal/modules/aiactivity/store.go#method Change.args
 internal/modules/approvals/authority.go#const objectActivity
-internal/modules/approvals/decide.go#method Service.runDecisionEffect
+internal/modules/approvals/decisioneffect.go#method Service.runDecisionEffect
 internal/modules/approvals/evidence.go#func validateEvidence
 internal/modules/approvals/expiresweep.go#method Service.ExpireDue
 internal/modules/approvals/expiry.go#func neverExpiringKinds
