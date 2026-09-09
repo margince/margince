@@ -61,7 +61,7 @@ export const REQUEST_TIMEOUT_MS = 360_000;
 
 // How long a request to a MODEL route may stay open — a declared mirror of
 // the server's ai.RouteWriteDeadline (backend/internal/modules/ai/outboundtransport.go),
-// held equal by backend/gates/modelroutes_test.go's
+// held to it (never shorter) by backend/gates/modelroutes_test.go's
 // TestTheClientsModelRouteDeadlineMatchesTheServers.
 //
 // Using REQUEST_TIMEOUT_MS here was the bug this constant exists to fix: 360s
@@ -70,13 +70,21 @@ export const REQUEST_TIMEOUT_MS = 360_000;
 // reader saw a stall, and their own retry served the answer instantly from
 // cache because the first request had finished in the meantime.
 //
+// 30 seconds ABOVE the server's own ai.RouteWriteDeadline (1,800,000ms),
+// mirroring the headroom the server's own formula already adds for the same
+// reason (writeHeadroom, outboundtransport.go): this clock starts when fetch
+// is called, before the request has even reached the network, while the
+// server's starts only once the request has arrived — so a client deadline
+// merely EQUAL to the server's is still shorter in practice by however long
+// that transit took.
+//
 // Deliberately its OWN constant rather than raising REQUEST_TIMEOUT_MS itself:
 // this client seam is shared by every route, and a single 30-minute deadline
 // on GET /v1/people would leave a request into a dead socket "pending" for
 // half an hour — exactly the eternal-pending state this deadline exists to
 // remove. modelWaitOf (below) is what routes a request to the right one of
 // the two.
-export const MODEL_ROUTE_TIMEOUT_MS = 1_830_000;
+export const MODEL_ROUTE_TIMEOUT_MS = 1_860_000;
 
 /**
  * A request that opened and never answered.

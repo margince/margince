@@ -54,7 +54,8 @@ func (h Handlers) GetOrganizationLogoIcon(w http.ResponseWriter, r *http.Request
 // the client's response to all three is the same monogram, and telling them
 // apart would leak which organizations exist.
 func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, slot LogoSlot, operation string) {
-	key, err := h.store.OrganizationLogoKey(r.Context(), pathID[ids.OrganizationKind](id), slot)
+	orgID := pathID[ids.OrganizationKind](id)
+	key, err := h.store.OrganizationLogoKey(r.Context(), orgID, slot)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -120,17 +121,25 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 		Download: httperr.Download{ContentType: imagenorm.ContentType, Inline: true, Size: int64(len(logo))},
 		Body:     io.NopCloser(bytes.NewReader(logo)),
 	}, "organization logo "+id.String())
+	// A body this small can sit in net/http's own write buffer until the
+	// handler returns, so without an explicit flush here the reader would
+	// wait on the write-back below before receiving anything they asked for
+	// — silently trading their own latency for the NEXT reader's benefit.
+	if fErr := http.NewResponseController(w).Flush(); fErr != nil {
+		slog.WarnContext(r.Context(), "flushing the organization logo response", "err", fErr)
+	}
 	// Only when a crop actually happened: TrimTransparentPNG returns src
 	// itself, unchanged, when the canvas was already tight, and writing
-	// identical bytes back would cost a PUT for nothing. After this write, the
-	// NEXT read of this same key finds visible == canvas on its own decode and
-	// pays no re-encode — the slowest of the three steps this endpoint was
-	// paying on every request, per margince#4913. The decode and the per-pixel
-	// scan are still paid on every read; closing that fully is the "trim at
-	// store time" fix margince#4913 leaves as a separate, decision-gated
-	// change (a backfill, or normalizing at upload instead of at read).
+	// identical bytes back would cost a PUT for nothing.
+	//
+	// Backgrounded, not merely context-detached: logoWriteBackTimeout only
+	// bounds a Store whose Put actually watches its context, and the shipped
+	// filesystem and in-memory stores both discard theirs (blobstore.Put's own
+	// doc comment makes no promise either way). A blocked write on one of
+	// those must not hold this handler's goroutine, and with it the reader's
+	// connection, open for as long as the disk stays stuck.
 	if !bytes.Equal(logo, source) {
-		h.writeBackTrimmedLogo(r.Context(), key, logo)
+		go h.writeBackTrimmedLogo(context.WithoutCancel(r.Context()), orgID, slot, key, logo)
 	}
 }
 
@@ -138,15 +147,30 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 // caller just read, so every read after this one finds bytes that need no
 // further crop.
 //
-// Detached from the request's own context (ai.flushDetached is the same
-// shape, for the same reason): the response has already been written by the
-// time this runs, so an unmount or a client that walked away must not cancel
-// a write purely for the NEXT reader's benefit. Best-effort — a failure here
-// costs nothing but the CPU this read already spent; the object at key still
-// holds the correct, if untrimmed, picture, and the next read tries again.
-func (h Handlers) writeBackTrimmedLogo(ctx context.Context, key string, logo []byte) {
-	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), logoWriteBackTimeout)
+// Runs on its own goroutine (see the call site) with its own timeout-bounded
+// context: the response is already on the wire by the time this starts, so an
+// unmount or a client that walked away must not cancel a write purely for the
+// NEXT reader's benefit. Best-effort — a failure here costs nothing but the
+// CPU this read already spent; the object at key still holds the correct, if
+// untrimmed, picture, and the next read tries again.
+//
+// Re-reads the slot's CURRENT key first and refuses to write if it has moved
+// on: this read may have raced a replace or an archive whose own cleanup
+// (deleteUnreferencedLogo, sitelogoreclaim.go) already deleted the object at
+// key, and a write-back landing after that delete would resurrect bytes
+// nothing references — the exact orphan knowledgeorphan_integration_test.go
+// exists to catch, one module over.
+func (h Handlers) writeBackTrimmedLogo(ctx context.Context, orgID ids.OrganizationID, slot LogoSlot, key string, logo []byte) {
+	writeCtx, cancel := context.WithTimeout(ctx, logoWriteBackTimeout)
 	defer cancel()
+	current, err := h.store.OrganizationLogoKey(writeCtx, orgID, slot)
+	if err != nil {
+		slog.WarnContext(ctx, "re-reading the current logo key before write-back", "err", err)
+		return
+	}
+	if current != key {
+		return
+	}
 	if err := h.blob.Put(writeCtx, key, bytes.NewReader(logo), int64(len(logo)), imagenorm.ContentType); err != nil {
 		slog.WarnContext(ctx, "writing back a trimmed organization logo", "err", err)
 	}

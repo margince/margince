@@ -22,6 +22,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -45,6 +46,27 @@ func logoPNG(t *testing.T) []byte {
 		t.Fatalf("encoding the fixture: %v", err)
 	}
 	return out.Bytes()
+}
+
+// waitForPutCount polls rather than asserting immediately, for a caller
+// whose write runs on its own goroutine (organization logo write-back,
+// deliberately backgrounded so a slow store cannot hold a handler open).
+// Bounded by the deadline rather than a fixed sleep: an in-memory store
+// settles in microseconds, so this returns on its first or second check in
+// the ordinary case, and only fails as slowly as a genuine regression would.
+func waitForPutCount(t *testing.T, blob *countingBlobstore, key string, want int) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if got := blob.putCount(key); got == want {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("Put(%s) calls = %d after 2s, want %d", key, blob.putCount(key), want)
+		}
+		//craft:ignore test-sleep the poll interval for a condition wait bounded by the deadline above, not the fixed-duration sleep this check exists to catch
+		time.Sleep(time.Millisecond)
+	}
 }
 
 // seedLoggedOrg creates an organization and stores a logo for it: the bytes in
@@ -175,12 +197,11 @@ func TestOrganizationLogoRemovesLegacyTransparentCanvasAtTheDisplayBoundary(t *t
 	}
 }
 
-// margince#4913: TrimTransparentPNG's decode-and-scan is unavoidable per read,
-// but a legacy letterboxed logo used to pay its re-encode on every single
-// request forever — the stored bytes never changed, so the crop it produced
-// was thrown away and redone next time. The read that first computes a crop
-// now writes it back over the object it read, so this proves the SECOND read
-// finds already-tight bytes and needs no further write.
+// TrimTransparentPNG's decode-and-scan is unavoidable per read, but a legacy
+// letterboxed logo's crop is deterministic on bytes that never change — so
+// paying the re-encode on every single request is waste. The read that first
+// computes a crop writes it back over the object it read, so this proves the
+// SECOND read finds already-tight bytes and needs no further write.
 func TestOrganizationLogoWritesBackATrimmedLegacyLogoSoTheNextReadNeedsNoCrop(t *testing.T) {
 	e := Setup(t)
 	blob := newCountingBlobstore()
@@ -208,9 +229,14 @@ func TestOrganizationLogoWritesBackATrimmedLegacyLogoSoTheNextReadNeedsNoCrop(t 
 	if first.Code != http.StatusOK {
 		t.Fatalf("first GET = %d, want 200: %s", first.Code, first.Body.String())
 	}
-	if got := blob.putCount(key); got != 2 {
-		t.Fatalf("Put(%s) calls after the first read = %d, want 2 (the seed and the write-back)", key, got)
-	}
+	// The write-back runs on its own goroutine (handlers_organizationlogo.go)
+	// precisely so a slow store cannot hold the handler open — see there for
+	// why. That makes it genuinely concurrent with this assertion, so this
+	// polls rather than asserting the count immediately after the call
+	// returns; an in-memory store's Put settles in microseconds, so the loop
+	// exits on its first or second check in the ordinary case and only the
+	// bound (not a fixed sleep) protects against a real regression hanging.
+	waitForPutCount(t, blob, key, 2)
 
 	rc, _, err := blob.Get(ctx, key)
 	if err != nil {

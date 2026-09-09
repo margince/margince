@@ -49,16 +49,17 @@ they last wrote this page down.
 
 Two different promises, and a task can make either without the other:
 
-- **Stays local** — the task's ladder names only rungs (` + "`local_small`" + `,
-  ` + "`local_large`" + `) meant to run on this installation's own hardware. Under
-  the ` + "`sovereign`" + ` profile that is also enforced: validation refuses a cloud
-  binding for either tier outright, so no cloud client for one is ever
-  constructed. Under every OTHER profile (` + "`eu_hosted`" + `, ` + "`cloud_frontier`" + `) it
-  is a naming convention, not an enforced rule — an operator's own binding can
-  point ` + "`local_small`" + ` or ` + "`local_large`" + ` at a hosted provider, and this
-  column would then answer "yes" for a task that does, in fact, leave the
-  machine. Read ` + "`GET /v1/ai/routing`" + ` for what a given deployment actually
-  bound.
+- **Local-only ladder** — the task's ladder names only rungs (` + "`local_small`" + `,
+  ` + "`local_large`" + `) meant to run on this installation's own hardware. That is a
+  fact about the LADDER'S NAMES, not a guarantee that text stays put: whether
+  it is enforced depends on the deployment's AI profile. Under ` + "`sovereign`" + `
+  it is enforced — validation refuses a cloud binding for either tier
+  outright, so no cloud client for one is ever constructed. Under every OTHER
+  profile (` + "`eu_hosted`" + `, ` + "`cloud_frontier`" + `) it is unenforced: an operator's
+  own binding can point ` + "`local_small`" + ` or ` + "`local_large`" + ` at a hosted
+  provider, and a task with a local-only ladder then leaves the machine
+  anyway. Read ` + "`GET /v1/ai/routing`" + ` for what a given deployment actually
+  bound, and ` + "`GET /v1/ai/profile`" + ` for which of the two rules applies to it.
 - **Prompt not retained** — the task declares ` + "`no_payload`" + `, so its prompt is
   never written to ` + "`ai_call_payload`" + ` whatever the deployment's capture posture
   says.
@@ -68,7 +69,7 @@ for its ladder's rungs, and may retain the prompt for debugging. That is the
 ordinary case and is not a defect: it is the deployment's choice, stated here so
 it can be answered for.
 
-| Task | Ladder | Stays local | Prompt not retained | Status |
+| Task | Ladder | Local-only ladder | Prompt not retained | Status |
 | --- | --- | --- | --- | --- |
 `)
 	for _, name := range names {
@@ -83,18 +84,22 @@ it can be answered for.
 	b.WriteString(`
 ## Reading this against a data-protection question
 
-"Does our mail leave the building?" is answered by the **Stays local** column
-for the tasks that read mail: ` + "`capture_classify`" + `, ` + "`capture_counterparty_verdict`" + `
-and ` + "`capture_confidentiality_verdict`" + `. The last two decide whether a sender or a
+"Does our mail leave the building?" needs TWO facts, not one, for the tasks
+that read mail: ` + "`capture_classify`" + `, ` + "`capture_counterparty_verdict`" + ` and
+` + "`capture_confidentiality_verdict`" + `. The last two decide whether a sender or a
 thread is private, so sending their text away to ask would be the question
 answering itself the wrong way round.
 
-**On this installation, specifically — not in general.** "Yes" here names a
-ladder that CAN run entirely on this machine; it is a guarantee only under the
-` + "`sovereign`" + ` profile. Under ` + "`eu_hosted`" + ` or ` + "`cloud_frontier`" + `, both mailbox
-classifiers stay local unless an admin binds a cloud model to ` + "`local_small`" + `
-or ` + "`local_large`" + ` — read ` + "`GET /v1/ai/routing`" + ` on the deployment in question
-for what it actually bound, rather than trusting this column alone.
+The **Local-only ladder** column is the first fact and, on its own, does NOT
+answer the question — it names the ladder's tiers, not what a deployment does
+with them. The second fact is the AI profile: under ` + "`sovereign`" + `, a local-only
+ladder is enforced (validation refuses a cloud binding for it outright) and
+the column's "yes" is a real guarantee. Under ` + "`eu_hosted`" + ` or
+` + "`cloud_frontier`" + `, it is not — an admin's own binding can point ` + "`local_small`" + `
+or ` + "`local_large`" + ` at a hosted provider, and a "yes" task then leaves the
+machine anyway. Read ` + "`GET /v1/ai/profile`" + ` for which rule applies to the
+deployment in question, and ` + "`GET /v1/ai/routing`" + ` for what it actually bound
+— never this page alone.
 
 "Is a copy kept?" is the **Prompt not retained** column, and it is about this
 installation's own database rather than about the provider. What a bound
