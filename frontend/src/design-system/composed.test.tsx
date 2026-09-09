@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { Button } from "./atoms";
 import {
   type BoardColumn,
   type BoardMoneyColumn,
@@ -340,7 +341,7 @@ describe("RecordView's chrome", () => {
       <RecordView
         name="Fleet retrofit"
         zone="UTC"
-        tabs={<button type="button">Overview</button>}
+        tabs={<Button>Overview</Button>}
         band={<p>Kick-off pending</p>}
       />,
     );
@@ -363,7 +364,7 @@ describe("RecordView's chrome", () => {
       <RecordView
         name="Fleet retrofit"
         zone="UTC"
-        tabs={<button type="button">Overview</button>}
+        tabs={<Button>Overview</Button>}
       />,
     );
 

@@ -213,6 +213,18 @@ export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
 // every other list and must not take the record column.
 export const CREATE_ID = "new";
 
+// The screen that segment belongs to, spelled once. Deals is the only route
+// that reads `new` as a create form, so anywhere else the word is an ordinary
+// id: `#/leads/new` is the lead whose id happens to be "new" and is as much a
+// record as any other.
+const CREATE_SCREEN: Screen = "deals";
+
+// Whether the route's id is that create segment rather than a record id — the
+// question the shell's column policy asks before it calls a page a record.
+export function opensCreateForm(route: Route): boolean {
+  return route.screen === CREATE_SCREEN && route.id === CREATE_ID;
+}
+
 // Screens that keep the same reading column with NO id, because they are not
 // records and never carry one. Every one of them reads DOWN: Brief is a
 // briefing in sentences beside a rail of context, with decision cards carrying

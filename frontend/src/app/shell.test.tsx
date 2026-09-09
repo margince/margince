@@ -545,6 +545,9 @@ describe("Shell", () => {
     ["#/companies/o-1", true],
     ["#/contacts/p-1", true],
     ["#/leads/l-1", true],
+    // A lead whose id is the word "new" is a record like any other: the create
+    // segment is the deals screen's, not every screen's.
+    ["#/leads/new", true],
     ["#/deals/d-1", true],
     ["#/projects/pr-1", true],
     // The deal room is a page OF the deal, so it keeps the deal's column.
@@ -568,7 +571,9 @@ describe("Shell", () => {
     ["#/leads", false],
     ["#/projects", false],
     // `#/deals/new` carries the create segment rather than a record id: it is
-    // the deals LIST with its form open, and a list is scanned across.
+    // the deals LIST with its form open, and a list is scanned across. The
+    // segment belongs to deals alone, so the lead row above it keeps the
+    // column.
     ["#/deals/new", false],
     // A composed unit's page keeps the settings LEVEL (below) but not the
     // reading column: the column is a claim about the page's own content, and a
@@ -600,6 +605,8 @@ describe("Shell", () => {
     ["#/deals/d-1", true],
     ["#/projects/pr-1", true],
     ["#/deals/d-1/room", true],
+    // Off the deals screen the create segment is an ordinary record id.
+    ["#/leads/new", true],
     ["#/deals/new", false],
     ["#/settings/account", false],
     ["#/worklist", false],

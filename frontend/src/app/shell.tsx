@@ -23,7 +23,6 @@ import { EmbedReindexBanner } from "./embedreindexbanner";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import {
-  CREATE_ID,
   entryLabel,
   GRIDDED_RECORD_SCREENS,
   GRIDDED_SCREENS,
@@ -34,6 +33,7 @@ import {
   type NavLevelGroup,
   type NavSection,
   navEntryHref,
+  opensCreateForm,
   RAIL_LESS_SCREENS,
 } from "./nav";
 import {
@@ -837,7 +837,7 @@ export function Shell({
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
   const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
   // A RECORD id makes one: `#/companies` and `#/deals/new` are both lists.
-  const recordPage = route.id !== undefined && route.id !== CREATE_ID;
+  const recordPage = route.id !== undefined && !opensCreateForm(route);
   const griddedRecord = recordPage && GRIDDED_RECORD_SCREENS.has(route.screen);
   // The id-less half of the same policy: a screen that reads down but is not a
   // record, so there is no id to key on. Brief is the one today.

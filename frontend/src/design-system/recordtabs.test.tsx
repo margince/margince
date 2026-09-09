@@ -5,6 +5,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { Button } from "./atoms";
 import { RecordTabs } from "./recordtabs";
 
 afterEach(cleanup);
@@ -34,7 +35,7 @@ function strip(trailing?: React.ReactNode) {
 // no empty end.
 describe("RecordTabs carries the details control at the row's end", () => {
   it("renders the trailing control outside the strip", () => {
-    const { container } = strip(<button type="button">Details</button>);
+    const { container } = strip(<Button>Details</Button>);
     const trailing = container.querySelector(".recordtabs-trailing");
     expect(trailing).not.toBeNull();
     expect(
@@ -63,7 +64,7 @@ describe("RecordTabs draws a lone body as a label", () => {
           options={["overview"]}
           value="overview"
           labels={LABELS}
-          trailing={<button type="button">Details</button>}
+          trailing={<Button>Details</Button>}
         />
       </LocaleProvider>,
     );
