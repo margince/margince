@@ -53,27 +53,43 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	//
 	// This is exported and takes a transaction it does not own, so anything
 	// holding a consent store can call it directly — and its effect is to write
-	// a suppression onto a subject the caller names. person:update is the same
-	// grant the merge itself takes, and it is the honest bar: moving somebody's
-	// stop onto another record is curation of both records, which is the act
-	// the merge verb already maps to update.
+	// a suppression onto a subject the caller names.
 	//
-	// Deliberately not ratified into ungatedEntryPoints. An entry there has to
-	// argue that no gate could apply; here one plainly does.
-	if err := auth.Require(ctx, entityPerson, principal.ActionUpdate); err != nil {
+	// THE GRANT FOLLOWS THE SUBJECT BEING WRITTEN, which is the survivor. A
+	// person merge already holds person:update, and a lead merge or promotion
+	// holds lead:update — grants are independent, so requiring person:update of
+	// every caller refused the lead paths outright, including when there was
+	// nothing to carry.
+	object := entityPerson
+	if to.PersonID.IsZero() {
+		object = entityLead
+	}
+	if err := auth.Require(ctx, object, principal.ActionUpdate); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
-	// One statement, so the read of the predecessor's live rows and the write
-	// of the survivor's cannot straddle a concurrent lift.
+	// LOCKED FIRST, because carry and lift are otherwise unserialized: a lift
+	// committing between this read and the write could revoke the very row
+	// that made the carry skip, leaving the survivor unstopped. lift.go takes
+	// the same advisory lock on the subject, so the two now queue.
+	if err := lockOneSubjectsSuppressions(ctx, tx, to); err != nil {
+		return err
+	}
+
+	// DISTINCT ON collapses several live source rows of one kind to the
+	// strongest, because a subquery in an INSERT ... SELECT does NOT see the
+	// rows that statement is inserting — Postgres evaluates it against the
+	// statement's snapshot. Without this, a subject holding two live
+	// subject_requests carried two copies onto the survivor.
 	//
-	// The NOT EXISTS is the idempotence: it is evaluated per candidate row
-	// against the survivor's live rows of the same kind, including rows this
-	// same statement is inserting, because the subquery sees the table as of
-	// the statement's snapshot plus its own effects.
+	// The NOT EXISTS compares AUTHORITY, not merely kind. A survivor holding a
+	// weaker row of the same kind must not block a stronger one: a legacy
+	// user-level subject_request would otherwise keep a subject-level objection
+	// out, and an admin could then lift the weaker row — the laundering path
+	// carrying the authority was meant to close.
 	// RETURNING, so each carried stop can ship its own event. A consumer that
 	// learned about the original suppression must learn that it now also
 	// applies to the survivor, or it keeps mailing the record the merge just
@@ -82,7 +98,8 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 		INSERT INTO communication_suppression
 		  (person_id, lead_id, address, kind, source, decided_by_level,
 		   captured_by, carried_from)
-		SELECT $3, $4, live.address, live.kind, live.source, live.decided_by_level,
+		SELECT DISTINCT ON (live.kind)
+		       $3, $4, live.address, live.kind, live.source, live.decided_by_level,
 		       $5, live.id
 		  FROM communication_suppression live
 		 WHERE (($1::uuid IS NOT NULL AND live.person_id = $1)
@@ -93,10 +110,13 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 		          WHERE (($3::uuid IS NOT NULL AND held.person_id = $3)
 		              OR ($4::uuid IS NOT NULL AND held.lead_id = $4))
 		            AND held.kind = live.kind
-		            AND held.revoked_at IS NULL)
+		            AND held.revoked_at IS NULL
+		            AND coalesce(array_position($6::text[], held.decided_by_level), array_length($6::text[], 1) + 1)
+		                >= coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1))
+		 ORDER BY live.kind, coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1) DESC, live.recorded_at DESC
 		RETURNING kind, decided_by_level`,
 		zeroAsNull(from.PersonID.UUID), zeroAsNull(from.LeadID.UUID),
-		zeroAsNull(to.PersonID.UUID), zeroAsNull(to.LeadID.UUID), by)
+		zeroAsNull(to.PersonID.UUID), zeroAsNull(to.LeadID.UUID), by, authorityLadder())
 	if err != nil {
 		return fmt.Errorf("consent: carrying the subject's stops onto the surviving record: %w", err)
 	}
@@ -146,6 +166,40 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 			suppressionRecordedPayload(c.kind, commsauthz.AuthorityLevel(c.level))); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// authorityLadder renders commsauthz's own rank order for SQL, weakest first,
+// so the comparison in the carry is the one CanOverrule makes and not a second
+// copy of it. An unknown level is absent from the ladder and the query ranks it
+// ABOVE every known one, matching rank()'s default: a level this build does not
+// understand must not be overruled by one it does.
+func authorityLadder() []string {
+	levels := commsauthz.LevelsWeakestFirst()
+	out := make([]string, 0, len(levels))
+	for _, l := range levels {
+		out = append(out, string(l))
+	}
+	return out
+}
+
+// lockOneSubjectsSuppressions takes the SAME advisory lock lift.go takes, on
+// the same key, so a carry and a lift touching one subject queue instead of
+// racing.
+//
+// Without it the two interleave in a way that loses a stop: carry reads the
+// survivor's live rows, a lift revokes the row carry just saw and skipped, and
+// carry commits having decided there was nothing to add. The survivor ends up
+// with no stop at all, which is the failure this whole file exists to prevent.
+func lockOneSubjectsSuppressions(ctx context.Context, tx pgx.Tx, subject commsauthz.StopSubject) error {
+	key := subject.PersonID.String()
+	if subject.PersonID.IsZero() {
+		key = subject.LeadID.String()
+	}
+	if _, err := tx.Exec(ctx,
+		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, key); err != nil {
+		return fmt.Errorf("consent: serialising stop writes for this subject: %w", err)
 	}
 	return nil
 }

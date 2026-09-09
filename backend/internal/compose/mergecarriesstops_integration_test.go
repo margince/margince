@@ -208,3 +208,124 @@ func TestAnUnwiredMergeRefusesOnlyWhenAStopWouldBeLost(t *testing.T) {
 		t.Errorf("the refused merge left %d stop(s) on the source, want its own intact", got)
 	}
 }
+
+// A WEAKER ROW ON THE SURVIVOR MUST NOT BLOCK A STRONGER OBJECTION.
+//
+// The first spelling of the carry compared kind and liveness only. So a
+// survivor holding a user-level subject_request kept a subject-level one out —
+// and an admin could then lift the weaker row, which is exactly the laundering
+// path carrying the authority was meant to close: merge the record, then lift.
+//
+// Found by review, not by the tests above, because all of them started from a
+// survivor with nothing recorded.
+func TestAStrongerStopCarriesOverAWeakerOneTheSurvivorHolds(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	consentStore := consent.NewStore(e.DB())
+	peopleStore := people.NewStore(e.DB()).WithStopCarrier(consentStore)
+
+	objector := e.SeedPerson(t, "Stronger Source", nil)
+	survivor := e.SeedPerson(t, "Weaker Survivor", nil)
+
+	// BOTH ROWS ARE THE SAME KIND, or the guard never fires and this test
+	// proves nothing — found by mutation: with two different kinds it passed
+	// with the authority comparison reverted.
+	//
+	// The survivor's, written at the SEAT's level: an admin recorded it, so it
+	// lands at admin and any admin can lift it.
+	if err := consentStore.Suppress(admin, consent.SuppressInput{
+		PersonID: ids.From[ids.PersonKind](survivor),
+		Kind:     commsauthz.ReasonObjection,
+		Reason:   "recorded by an admin",
+	}); err != nil {
+		t.Fatalf("recording the survivor's stop: %v", err)
+	}
+	// Then force it down to a weaker authority than the source will carry. A
+	// marketing_objection is always written at subject level by design, so the
+	// only way to build the weaker-survivor case this guard exists for is to
+	// plant it — which is honest here: a legacy row predating that rule is
+	// exactly the shape an installation holds.
+	if _, err := e.Pool.Exec(context.Background(), `
+		UPDATE communication_suppression SET decided_by_level = 'user'
+		 WHERE person_id = $1 AND revoked_at IS NULL`, survivor); err != nil {
+		t.Fatalf("planting the weaker survivor row: %v", err)
+	}
+	// The retiring record's, at the SUBJECT's level.
+	if err := consentStore.Suppress(admin, consent.SuppressInput{
+		PersonID: ids.From[ids.PersonKind](objector),
+		Kind:     commsauthz.ReasonObjection,
+		Reason:   "objected to marketing",
+	}); err != nil {
+		t.Fatalf("recording the objection: %v", err)
+	}
+
+	if _, err := peopleStore.MergePerson(admin,
+		ids.From[ids.PersonKind](objector), ids.From[ids.PersonKind](survivor)); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+
+	// The objection reached the survivor at its own authority, so no seat can
+	// lift it.
+	// Asked as EXISTS rather than max(): max() on text sorts alphabetically,
+	// where "user" comes after "subject" — so the first spelling of this
+	// assertion reported the weaker row as the strongest one and failed a
+	// working carry. The question is simply whether a subject-level objection
+	// reached the survivor at all.
+	var reached bool
+	if err := e.Pool.QueryRow(context.Background(), `
+		SELECT EXISTS (
+			SELECT 1 FROM communication_suppression
+			 WHERE person_id = $1 AND kind = $2 AND revoked_at IS NULL
+			   AND decided_by_level = $3)`,
+		survivor, commsauthz.ReasonObjection, string(commsauthz.LevelSubject)).Scan(&reached); err != nil {
+		t.Fatalf("reading the survivor's stops: %v", err)
+	}
+	if !reached {
+		t.Error("no subject-level objection reached the survivor: a weaker row kept the subject's " +
+			"own act out, and an admin can lift what remains")
+	}
+}
+
+// TWO LIVE STOPS OF ONE KIND ON THE SOURCE CARRY AS ONE.
+//
+// A subquery in an INSERT ... SELECT does not see the rows that statement is
+// inserting — Postgres evaluates it against the statement's snapshot — so the
+// NOT EXISTS could not deduplicate within one carry. Direct suppression
+// deliberately allows repeated requests to stack up, so a source holding two
+// is an ordinary state, not a corrupt one.
+func TestASubjectHoldingTwoStopsOfOneKindCarriesOne(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	consentStore := consent.NewStore(e.DB())
+	peopleStore := people.NewStore(e.DB()).WithStopCarrier(consentStore)
+
+	objector := e.SeedPerson(t, "Twice Asked", nil)
+	survivor := e.SeedPerson(t, "Twice Survivor", nil)
+
+	for _, reason := range []string{"asked in January", "asked again in March"} {
+		if err := consentStore.Suppress(admin, consent.SuppressInput{
+			PersonID: ids.From[ids.PersonKind](objector),
+			Kind:     "subject_request",
+			Reason:   reason,
+		}); err != nil {
+			t.Fatalf("recording %q: %v", reason, err)
+		}
+	}
+
+	if _, err := peopleStore.MergePerson(admin,
+		ids.From[ids.PersonKind](objector), ids.From[ids.PersonKind](survivor)); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+
+	var n int
+	if err := e.Pool.QueryRow(context.Background(), `
+		SELECT count(*) FROM communication_suppression
+		 WHERE person_id = $1 AND kind = 'subject_request' AND revoked_at IS NULL`,
+		survivor).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Errorf("the survivor holds %d live subject_requests, want 1 — a second row is one more "+
+			"lift somebody has to remember to make", n)
+	}
+}
