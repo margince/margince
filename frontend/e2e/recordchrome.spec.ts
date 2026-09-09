@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { RECORDS } from "./records";
-import { mockApi } from "./seed";
+import { type MockApiOptions, mockApi } from "./seed";
 
 /**
  * The record's own chrome, measured rather than described.
@@ -39,8 +39,8 @@ import { mockApi } from "./seed";
  * record page missing from it fails there instead of going unmeasured here.
  */
 
-async function openRecord(page: Page, route: string) {
-  await mockApi(page);
+async function openRecord(page: Page, route: string, options?: MockApiOptions) {
+  await mockApi(page, options);
   await page.goto(route);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 }
@@ -151,74 +151,96 @@ test.describe("the record's rhythm", () => {
     ).toBeLessThanOrEqual(1);
   }
 
+  /** Opens the record with its details pane out, measures every interval the
+   *  opening claims, and answers the band's edges — or null on a record with
+   *  nothing to say about itself as a whole, which draws none. */
+  async function measureOpening(
+    page: Page,
+    route: string,
+    options?: MockApiOptions,
+  ): Promise<Edge | null> {
+    await page.setViewportSize({ width: WIDE, height: 900 });
+    // The arrival is a 10px translate (design-system/enter.css) and
+    // `getBoundingClientRect` reads transforms, so a block measured in
+    // flight is up to half a step from where the layout put it — a gap this
+    // suite would then report as a spacing defect that no stylesheet holds.
+    // Reduced motion IS the end state by construction, so every box is at
+    // rest from the first frame.
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await openRecord(page, route, options);
+    await detailsSwitch(page).click();
+    await expect(
+      page.locator(".record-aside"),
+      "the switch did not open the pane",
+    ).toBeVisible();
+
+    const step = await recordStep(page);
+    const head = await present(page, ".record-head");
+    const tabs = await present(page, ".record-tabs");
+    const band = await edge(page, ".record-band");
+    // The work column rather than the grid around it: a record with neither
+    // rail nor aside draws no `.page-zones` at all, and this column is the
+    // one block every shape puts at the columns' top edge.
+    const columns = await present(page, ".page-zones-main");
+
+    isOneStep(
+      tabs.top - head.bottom,
+      step,
+      "the strip does not sit one interval under the identity",
+    );
+    // What follows the strip is the band on a record that carries one and
+    // the columns on a record that does not, and the reader meets the same
+    // interval either way — which is the whole invariant.
+    const next = band ?? columns;
+    isOneStep(
+      next.top - tabs.bottom,
+      step,
+      "the block under the strip does not sit one interval below it",
+    );
+    if (band) {
+      isOneStep(
+        columns.top - band.bottom,
+        step,
+        "the columns do not sit one interval under the band",
+      );
+    }
+    return band;
+  }
+
   for (const record of RECORDS) {
     test(`opens on one interval on a ${record.name}, band or no band`, async ({
       page,
     }) => {
-      await page.setViewportSize({ width: WIDE, height: 900 });
-      // The arrival is a 10px translate (design-system/enter.css) and
-      // `getBoundingClientRect` reads transforms, so a block measured in
-      // flight is up to half a step from where the layout put it — a gap this
-      // suite would then report as a spacing defect that no stylesheet holds.
-      // Reduced motion IS the end state by construction, so every box is at
-      // rest from the first frame.
-      await page.emulateMedia({ reducedMotion: "reduce" });
-      await openRecord(page, record.route);
-      await detailsSwitch(page).click();
-      await expect(
-        page.locator(".record-aside"),
-        "the switch did not open the pane",
-      ).toBeVisible();
-
-      const step = await recordStep(page);
-      const head = await present(page, ".record-head");
-      const tabs = await present(page, ".record-tabs");
-      const band = await edge(page, ".record-band");
-      // The work column rather than the grid around it: a record with neither
-      // rail nor aside draws no `.page-zones` at all, and this column is the
-      // one block every shape puts at the columns' top edge.
-      const columns = await present(page, ".page-zones-main");
-
-      isOneStep(
-        tabs.top - head.bottom,
-        step,
-        "the strip does not sit one interval under the identity",
-      );
-      // What follows the strip is the band on a record that carries one and
-      // the columns on a record that does not, and the reader meets the same
-      // interval either way — which is the whole invariant.
-      const next = band ?? columns;
-      isOneStep(
-        next.top - tabs.bottom,
-        step,
-        "the block under the strip does not sit one interval below it",
-      );
-      if (band) {
-        isOneStep(
-          columns.top - band.bottom,
-          step,
-          "the columns do not sit one interval under the band",
-        );
-      }
+      await measureOpening(page, record.route);
     });
   }
 
-  // The band's two intervals are measured only where a band is drawn, so a
-  // sweep over records that all happen to draw none would report PASS having
-  // measured half of what it names. This is the assertion that notices.
-  test("at least one record in the sweep draws a band", async ({ page }) => {
-    await page.setViewportSize({ width: WIDE, height: 900 });
-    const withBand: string[] = [];
-    for (const record of RECORDS) {
-      await openRecord(page, record.route);
-      if ((await page.locator(".record-band").count()) > 0) {
-        withBand.push(record.name);
-      }
+  // The band's two intervals are measured only where a band is drawn, and a
+  // record draws one only when it has something to say about itself as a whole
+  // — which every record in the seed, all of them writable and none closed,
+  // has not. The sweep above would then report PASS having measured half of
+  // what it names, with no failing assertion to notice.
+  //
+  // So this case DRAWS one rather than hoping to find one: the same project
+  // page, seeded as a row this caller may not write, whose band carries the one
+  // sentence that refuses an edit. The band is asserted present, so the case
+  // cannot go quiet the way the census it replaces did.
+  test("measures the band's own intervals on a record that draws one", async ({
+    page,
+  }) => {
+    // The project's own route from the census rather than a second spelling of
+    // it: `src/app/recordcensus.test.ts` holds that entry against the shell.
+    const project = RECORDS.find((record) => record.screen === "projects");
+    if (!project) {
+      throw new Error("no project route in the record census to measure");
     }
+    const band = await measureOpening(page, project.route, {
+      project: "read-only",
+    });
     expect(
-      withBand,
-      "no record page draws a band, so the band's intervals went unmeasured",
-    ).not.toEqual([]);
+      band,
+      "the read-only project drew no band, so the band's intervals went unmeasured",
+    ).not.toBeNull();
   });
 });
 
