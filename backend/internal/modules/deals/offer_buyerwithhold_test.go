@@ -80,3 +80,22 @@ func TestAnOfferWithNoBuyerIsLeftAlone(t *testing.T) {
 		t.Errorf("an offer with no buyer gained one: id=%v snapshot=%v", offer.BuyerOrgId, offer.BuyerSnapshot)
 	}
 }
+
+// No principal, no verdict — and the offer does not travel.
+//
+// The withholding decides visibility against the caller; with no actor bound
+// there is no caller to decide about, and the honest answer is an error rather
+// than an offer whose buyer was never judged. Returning the offer unchanged
+// would be the worst reading of "could not tell": the reference reaches whoever
+// asked, on a path that failed to ask the question.
+func TestWithholdingFailsRatherThanPassingAnUnjudgedBuyerThrough(t *testing.T) {
+	org := ids.NewV7()
+	offer := offerNamingBuyer(org)
+	err := withholdUnreadableBuyerOn(context.Background(), nil, &offer)
+	if err == nil {
+		t.Fatal("withholding answered nil with no actor bound — the buyer travelled without anyone deciding it could")
+	}
+	if offer.BuyerOrgId == nil || ids.UUID(*offer.BuyerOrgId) != org {
+		t.Errorf("the offer was rewritten on a failed verdict (id=%v) — a caller that ignores the error would then read a withholding that never happened", offer.BuyerOrgId)
+	}
+}
