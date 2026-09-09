@@ -393,15 +393,39 @@ func TestOrganizationLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlread
 // overwrites) is never held.
 type gatedBlobstore struct {
 	*countingBlobstore
-	mu      sync.Mutex
-	heldKey string
-	armed   bool
-	entered chan struct{}
-	release chan struct{}
+	mu         sync.Mutex
+	heldKey    string
+	armed      bool
+	entered    chan struct{}
+	release    chan struct{}
+	failPutKey string
+	failDelKey string
+	// attempted fires once per Put/Delete call, keyed by "op key" — the
+	// signal a failed call still needs, since failPut/failDelete short-circuit
+	// before countingBlobstore ever records anything.
+	attempted chan string
 }
 
 func newGatedBlobstore(inner *countingBlobstore) *gatedBlobstore {
-	return &gatedBlobstore{countingBlobstore: inner}
+	return &gatedBlobstore{countingBlobstore: inner, attempted: make(chan string, 32)}
+}
+
+// waitAttempted blocks until op ("put"/"delete") is attempted against key, or
+// fails the test after 2s.
+func waitAttempted(t *testing.T, g *gatedBlobstore, op, key string) {
+	t.Helper()
+	want := op + " " + key
+	deadline := time.After(2 * time.Second)
+	for {
+		select {
+		case got := <-g.attempted:
+			if got == want {
+				return
+			}
+		case <-deadline:
+			t.Fatalf("%q was never attempted within 2s", want)
+		}
+	}
 }
 
 // hold arms the gate: the next Put(s) to key block after entering (signalling
@@ -422,11 +446,44 @@ func (g *gatedBlobstore) releaseHeld() {
 	close(g.release)
 }
 
+// failPut makes the next Put(s) to key answer an error instead of storing —
+// the store this call's caller must log rather than fail its own request
+// over, since the response it answers is already on the wire.
+func (g *gatedBlobstore) failPut(key string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.failPutKey = key
+}
+
+// failDelete is failPut's twin for the collection write-back runs when a
+// replace raced its own Put.
+func (g *gatedBlobstore) failDelete(key string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.failDelKey = key
+}
+
+func (g *gatedBlobstore) Delete(ctx context.Context, key string) error {
+	g.mu.Lock()
+	failing := g.failDelKey != "" && key == g.failDelKey
+	g.mu.Unlock()
+	g.attempted <- "delete " + key
+	if failing {
+		return errors.New("simulated delete failure")
+	}
+	return g.countingBlobstore.Delete(ctx, key)
+}
+
 func (g *gatedBlobstore) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
 	g.mu.Lock()
 	gate := g.armed && key == g.heldKey
+	failing := g.failPutKey != "" && key == g.failPutKey
 	entered, release := g.entered, g.release
 	g.mu.Unlock()
+	g.attempted <- "put " + key
+	if failing {
+		return errors.New("simulated put failure")
+	}
 	if gate {
 		entered <- struct{}{}
 		<-release
@@ -594,6 +651,152 @@ func TestOrganizationLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(
 	}
 	if current != replacement {
 		t.Fatalf("current logo key = %q, want the replacement %q", current, replacement)
+	}
+}
+
+// A store whose write-back Put fails costs nothing but that read's own CPU:
+// the response is already on the wire, and the object at key still holds the
+// correct, if untrimmed, picture for the next read to try again against.
+func TestOrganizationLogoWriteBackLogsRatherThanFailsWhenThePutErrors(t *testing.T) {
+	e := Setup(t)
+	inner := newCountingBlobstore()
+	blob := newGatedBlobstore(inner)
+	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	ctx := e.Admin()
+	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
+	for y := range 8 {
+		for x := range 32 {
+			wide.SetNRGBA(x, y, color.NRGBA{R: 255, G: 90, A: 255})
+		}
+	}
+	legacy, err := imagenorm.SquarePNG(wide, 32)
+	if err != nil {
+		t.Fatalf("encoding a legacy square-canvas logo: %v", err)
+	}
+	orgID := seedLoggedOrg(ctx, t, e, blob, legacy)
+	key, err := e.People.OrganizationLogoKey(ctx, orgID, people.LogoWide)
+	if err != nil {
+		t.Fatalf("read the stored logo key: %v", err)
+	}
+	url := "/v1/organizations/" + orgID.String() + "/logo"
+
+	blob.failPut(key)
+	rec := httptest.NewRecorder()
+	handlers.GetOrganizationLogo(rec, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(orgID.UUID))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	// The response is always the freshly TRIMMED bytes — the crop runs before
+	// the write-back is even considered — so a failed persist changes only
+	// what is STORED, never what this read answers.
+	displayed, err := png.Decode(rec.Body)
+	if err != nil {
+		t.Fatalf("display response is not a PNG: %v", err)
+	}
+	if bounds := displayed.Bounds(); bounds.Dx() != 32 || bounds.Dy() != 8 {
+		t.Fatalf("displayed logo is %v, want the trimmed 4:1 wordmark even though the write-back failed", bounds)
+	}
+
+	// Best-effort: the failed Put is attempted exactly once and never retried
+	// inline, and the object at key must still hold the ORIGINAL untrimmed
+	// bytes — only the seed's own successful Put (count 1), never a second.
+	waitAttempted(t, blob, "put", key)
+	if got := inner.putCount(key); got != 1 {
+		t.Fatalf("Put(%s) succeeded %d times, want only the seed's own 1", key, got)
+	}
+	rc, _, err := blob.Get(ctx, key)
+	if err != nil {
+		t.Fatalf("reading the object back: %v", err)
+	}
+	stored, err := io.ReadAll(rc)
+	if closeErr := rc.Close(); closeErr != nil {
+		t.Fatalf("closing the object reader: %v", closeErr)
+	}
+	if err != nil {
+		t.Fatalf("reading the object's bytes: %v", err)
+	}
+	if !bytes.Equal(stored, legacy) {
+		t.Fatal("the object at key must still hold the untrimmed bytes after a failed write-back")
+	}
+}
+
+// A store whose collecting Delete fails, after a replace raced the write-back's
+// own Put, costs storage and nothing else — the row already names the
+// replacement, so nothing serves the resurrected object; it is logged rather
+// than retried inline.
+func TestOrganizationLogoWriteBackLogsRatherThanFailsWhenTheCollectingDeleteErrors(t *testing.T) {
+	e := Setup(t)
+	inner := newCountingBlobstore()
+	blob := newGatedBlobstore(inner)
+	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	ctx := e.Admin()
+	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
+	for y := range 8 {
+		for x := range 32 {
+			wide.SetNRGBA(x, y, color.NRGBA{R: 255, G: 90, A: 255})
+		}
+	}
+	legacy, err := imagenorm.SquarePNG(wide, 32)
+	if err != nil {
+		t.Fatalf("encoding a legacy square-canvas logo: %v", err)
+	}
+	offer, icp := "Revenue operations software", "RevOps at SaaS scale-ups"
+	company, err := e.People.SaveCompany(ctx, people.SaveCompanyInput{
+		DisplayName: "Voltaq Systems GmbH",
+		Fields:      map[string]*string{"offer_summary": &offer, "icp": &icp},
+	})
+	if err != nil {
+		t.Fatalf("save the company: %v", err)
+	}
+	orgID := company.OrganizationID
+	staleKey := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), "organization_logo", orgID.String()+"/"+ids.NewV7().String())
+	if err := blob.Put(ctx, staleKey, bytes.NewReader(legacy), int64(len(legacy)), imagenorm.ContentType); err != nil {
+		t.Fatalf("store the legacy logo bytes: %v", err)
+	}
+	if written, _, err := e.People.SetOrganizationLogo(ctx, orgID, staleKey, "https://voltaq.test/legacy.png"); err != nil {
+		t.Fatalf("SetOrganizationLogo (seed): %v", err)
+	} else if !written {
+		t.Fatal("the seed write reported no change on a fresh anchor organization")
+	}
+	url := "/v1/organizations/" + orgID.String() + "/logo"
+
+	blob.hold(staleKey)
+	blob.failDelete(staleKey)
+	rec := httptest.NewRecorder()
+	handlers.GetOrganizationLogo(rec, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(orgID.UUID))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	select {
+	case <-blob.entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the write-back never reached blob.Put within 2s")
+	}
+
+	replacement := "organization_logo/" + orgID.String() + "/" + ids.NewV7().String()
+	if err := blob.Put(ctx, replacement, bytes.NewReader(logoPNG(t)), int64(len(logoPNG(t))), imagenorm.ContentType); err != nil {
+		t.Fatalf("store the replacement logo bytes: %v", err)
+	}
+	if _, err := e.People.SetCompanyLogo(ctx, people.LogoWide, replacement, "replacement.png"); err != nil {
+		t.Fatalf("SetCompanyLogo (replacement): %v", err)
+	}
+
+	blob.releaseHeld()
+	waitForPutCount(t, inner, staleKey, 2)
+	waitAttempted(t, blob, "delete", staleKey)
+
+	// The failed collect leaves the resurrected object behind rather than
+	// retrying inline — logged, not fatal, and never blocking the row from
+	// already naming the replacement.
+	if _, _, err := blob.Get(ctx, staleKey); err != nil {
+		t.Fatalf("the object at staleKey should still exist after a failed Delete: %v", err)
+	}
+	current, err := e.People.OrganizationLogoKey(ctx, orgID, people.LogoWide)
+	if err != nil {
+		t.Fatalf("read the stored logo key: %v", err)
+	}
+	if current != replacement {
+		t.Fatalf("current logo key = %q, want the replacement %q — a failed collect must not roll back the row", current, replacement)
 	}
 }
 
