@@ -1509,14 +1509,24 @@ snapshot)
   # is connected to, and the api's pool reconnects the instant it is terminated —
   # so a snapshot attempted against a running stack fails on a race rather than
   # on a rule, which is the confusing way to learn this.
+  #
+  # SESSIONS, not ports. This asked `port_listeners` about the api and the fe,
+  # and the WORKER binds no port at all while connecting to the same database —
+  # so a stack whose worker outlived a partial stop passed the check and then
+  # failed inside CREATE DATABASE, which is precisely the confusing failure the
+  # check exists to prevent. The precondition is "nothing is connected", so that
+  # is what is asked, of the one authority on it.
   ensure_infra
-  for _p in "$api_port" "$fe_port"; do
-    if [[ -n "$(port_listeners "$_p")" ]]; then
-      echo "FAIL: $label is running, and Postgres cannot copy a database a session is connected to." >&2
-      echo "  Stop it first:  make dev-stop${slug:+ DEV_SLUG=$slug}" >&2
-      exit 1
-    fi
-  done
+  sessions="$(psql_owner postgres -tAc \
+    "SELECT count(*) FROM pg_stat_activity WHERE datname = '${db}' AND pid <> pg_backend_pid()" \
+    </dev/null | tr -d '[:space:]')"
+  if [[ "${sessions:-0}" != "0" ]]; then
+    echo "FAIL: ${sessions} session(s) are still connected to ${db}, and Postgres cannot copy a" >&2
+    echo "database a session is connected to. The worker holds one without binding a port, so a" >&2
+    echo "stack can look stopped and not be." >&2
+    echo "  Stop it first:  make dev-stop${slug:+ DEV_SLUG=$slug}" >&2
+    exit 1
+  fi
   psql_owner postgres -c "DROP DATABASE IF EXISTS \"${db}_tmpl\" WITH (FORCE)" </dev/null
   psql_owner postgres -c "CREATE DATABASE \"${db}_tmpl\" TEMPLATE \"${db}\"" </dev/null
   echo "dev: snapshotted ${db} → ${db}_tmpl"

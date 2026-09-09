@@ -30,21 +30,50 @@ import (
 // caller managed to fit in it.
 const MaxCallerToken = 80
 
-// QuoteCaller renders one caller-supplied name for a refusal: quoted, so an
-// empty or space-padded token is still visible, and bounded at MaxCallerToken.
+// QuoteCaller renders one caller-supplied name for a refusal: escaped, quoted,
+// and bounded so the RENDERED token never exceeds MaxCallerToken.
 //
-// It does NOT escape. A refusal crosses more than one boundary and each has its
-// own rule about what a control character does there — a tool transcript needs
-// them rendered visible, an HTTP body needs them JSON-encoded — so escaping
-// belongs at the boundary that knows, and doing it here would double-escape on
-// one of the two.
+// It escapes, and that is deliberate rather than incidental. `%q` renders the
+// token as a Go string literal, so a newline inside a caller's name arrives as
+// `\n` and not as what reads like a new line of conversation — which matters
+// most on the tool surface, where the refusal lands in a transcript whose later
+// prompts the same model reads, and where the name being quoted was written by
+// that model. A refusal is not the place to discover that a caller chose a
+// control character.
+//
+// The bound is applied AFTER quoting, not before, because quoting is what
+// decides the length: eighty bytes of newlines escape to a hundred and sixty,
+// so a token bounded before it is rendered is not bounded at all. Cutting the
+// rendered form costs a mangled escape at the seam in the pathological case,
+// which is the right trade — the alternative is a refusal whose size a caller
+// chooses.
 func QuoteCaller(s string) string {
-	if len(s) > MaxCallerToken {
-		cut := MaxCallerToken
-		for cut > 0 && !utf8.RuneStart(s[cut]) {
-			cut--
-		}
-		s = s[:cut] + "…"
+	quoted := fmt.Sprintf("%q", s)
+	if len(quoted) <= MaxCallerToken {
+		return quoted
 	}
-	return fmt.Sprintf("%q", s)
+	// Room for the ellipsis and the closing quote the cut throws away, so the
+	// answer is a quoted token a reader can see the end of.
+	cut := MaxCallerToken - len("…\"")
+	for cut > 0 && !utf8.RuneStart(quoted[cut]) {
+		cut--
+	}
+	// A cut that lands just after a backslash would emit a dangling escape —
+	// `"abc\` — which reads as a quoting bug in this function rather than as a
+	// truncated name. Drop the orphan.
+	for cut > 0 && trailingBackslashes(quoted[:cut])%2 == 1 {
+		cut--
+	}
+	return quoted[:cut] + "…\""
+}
+
+// trailingBackslashes counts the unbroken run of backslashes at the end of s,
+// which is what says whether a final one escapes the next byte or is itself
+// escaped.
+func trailingBackslashes(s string) int {
+	n := 0
+	for n < len(s) && s[len(s)-1-n] == '\\' {
+		n++
+	}
+	return n
 }
