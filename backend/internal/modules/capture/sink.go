@@ -55,7 +55,7 @@ type Sink struct {
 	// cancelMeeting closes a captured meeting the calendar says is off — called
 	// off by its organizer, or declined by the seat whose calendar it is. Nil
 	// captures meetings and cancels none.
-	cancelMeeting MeetingCanceller
+	cancelMeeting MeetingCloser
 }
 
 // fieldSourceSystem / fieldSourceID are the shared system_log detail keys for
@@ -134,6 +134,18 @@ func (s *Sink) WithStager(stager MergeStager) *Sink {
 }
 
 var _ connector.Sink = (*Sink)(nil)
+
+// And the calendar verb, asserted HERE rather than left to the runtime.
+//
+// meetingmap.CaptureOne reaches cancellation through a type assertion, and its
+// miss is a no-op by design — a Sink that cannot cancel drops the event, which
+// is what a fixture does. That makes breaking this the quietest change in the
+// tree: a signature edit on CancelMeeting compiles, syncs, captures, and turns
+// every cancellation back into the silent drop this whole path exists to
+// replace. Nothing but the integration lane would notice.
+//
+// This line is what makes that a compile error instead.
+var _ connector.MeetingCanceller = (*Sink)(nil)
 
 // Upsert lands one normalized record: raw original + domain row +
 // audit + captured event, one transaction, idempotent on the natural

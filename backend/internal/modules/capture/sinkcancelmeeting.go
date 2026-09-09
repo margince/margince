@@ -25,7 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// MeetingCanceller marks a captured meeting cancelled, keyed by the natural key
+// MeetingCloser marks a captured meeting cancelled, keyed by the natural key
 // the capture landed under. The activities module owns the activity table and
 // its status history, so it owns this write; compose injects it, because capture
 // never imports a sibling — the same shape AudienceRecomputer and
@@ -38,15 +38,15 @@ import (
 // Nil is a Sink that captures meetings and cancels none — what every fixture is
 // until it says otherwise, and what a deployment composing capture without the
 // timeline gets.
-type MeetingCanceller func(
+type MeetingCloser func(
 	ctx context.Context, tx pgx.Tx, key connector.NaturalKey, at time.Time,
 ) (ids.ActivityID, bool, error)
 
-// WithMeetingCanceller returns a copy that closes a captured meeting when the
+// WithMeetingCloser returns a copy that closes a captured meeting when the
 // calendar says it is off.
-func (s *Sink) WithMeetingCanceller(cancel MeetingCanceller) *Sink {
+func (s *Sink) WithMeetingCloser(closeMeeting MeetingCloser) *Sink {
 	c := *s
-	c.cancelMeeting = cancel
+	c.cancelMeeting = closeMeeting
 	return &c
 }
 
@@ -68,13 +68,27 @@ func (s *Sink) CancelMeeting(ctx context.Context, key connector.NaturalKey, at t
 	if key.SourceSystem == "" || key.SourceID == "" {
 		return fmt.Errorf("capture: cancelling a meeting needs a natural key")
 	}
-	// The same door admitRecord holds for a write, asked directly: this verb
-	// carries no record to admit, and the rule it needs is the one about who is
-	// calling. A connector principal is minted by the registry and by nothing
-	// else, so requiring it here is what keeps the verb off every other caller.
+	// Both halves of the door admitRecord holds for a write, asked directly:
+	// this verb carries no record to admit, and the two rules it needs are the
+	// ones about who is calling.
+	//
+	// First, a connector principal, which the registry mints and nothing else
+	// does — that is what keeps the verb off every other caller.
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalConnector {
 		return errors.New("capture: cancelling a meeting requires a connector principal — the registry builds it, nothing else may")
+	}
+	// Second, the provenance, which is the same rule admitRecord states as
+	// "a connector cannot claim to be another one" — and the reason it binds
+	// HERE too is that this verb takes the source system as an argument. The
+	// natural key is what finds the row, so without this check a connector
+	// principal for one provider could close meetings captured by another: a
+	// Telegram or IMAP sync naming SourceSystem "gcal" would cancel Google
+	// Calendar meetings it has no standing to touch.
+	if want := connectorPrincipalID(key.SourceSystem); want != actor.ID {
+		return fmt.Errorf(
+			"capture: %q cannot cancel a meeting captured by %q — a connector acts for its own provider and no other",
+			actor.ID, want)
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, _, err := s.cancelMeeting(ctx, tx, key, at)

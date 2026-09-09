@@ -4,9 +4,10 @@
 // Package meetingmap is the pure calendar-event → meeting-activity mapping: no
 // provider handle, no I/O. It is the calendar analogue of capture/mailmap — the
 // test-guarded surface a calendar connector's Sync and Normalize compose, so the
-// classification (all-internal skip, cancelled skip, booked rooms are not
-// guests) and the field mapping are proven by fixtures rather than by a live
-// calendar.
+// classification (all-internal skip, a cancelled meeting CLOSED rather than
+// dropped, booked rooms are not guests) and the field mapping are proven by
+// fixtures rather than by a live calendar. What each event settles as, and why,
+// is settlement.go beside this.
 //
 // It lived inside the gcal package while gcal was the only calendar connector,
 // which is what ADR-0054 §3 asks for — flat by default, grow a subpackage when a
@@ -89,7 +90,7 @@ type Meeting struct {
 	occurredAt    time.Time
 	cancelled     bool
 	ownerDeclined bool
-	hasExternal   bool // any party outside the OWNER's own domain — the floor, see SkipReason
+	hasExternal   bool // any party outside the OWNER's own domain — the floor, see Settle
 	addresses     []string
 	participants  []connector.MessageParticipant
 }
@@ -163,80 +164,6 @@ func meetingParties(ev Event, ownerLower string) []connector.MessageParticipant 
 	}
 
 	return connector.CapParticipants(out)
-}
-
-// Settlement is what capture should DO with one event: write it, cancel a
-// meeting already written, or drop it.
-type Settlement int
-
-const (
-	// SettleCapture writes the meeting.
-	SettleCapture Settlement = iota
-	// SettleCancel means the meeting is off — the organizer called it off, or
-	// the connected account declined it. A meeting captured while it was live
-	// must be marked cancelled rather than left standing; one never captured
-	// has nothing to mark, and the writer's own upsert answers that.
-	SettleCancel
-	// SettleDrop means this event never belongs in the timeline at all.
-	SettleDrop
-)
-
-// SkipReason names why a meeting is intentionally dropped, or reports that it
-// should be captured. It is the two-way form of Settle below, kept for the
-// callers that only ask whether to write — a cancelled meeting reads as a skip
-// here, which is what it is for a caller that cannot cancel one.
-func (m Meeting) SkipReason() (string, bool) {
-	reason, settle := m.Settle()
-	return reason, settle != SettleCapture
-}
-
-// Settle decides what happens to this event, and why.
-//
-// A CANCELLED or DECLINED event is not simply dropped. Dropping is right for one
-// that was never captured, and wrong for one that was: the meeting is already on
-// the timeline and on the reader's schedule, and no later pull ever mentions it
-// again — the row stands as booked forever. So the two answers are told apart,
-// and the writer marks what it already has.
-//
-// The order matters. Cancellation is asked FIRST, before the party rules below,
-// because those rules answer "is this worth capturing" and a meeting already
-// captured has had that question answered in the affirmative once. Asking them
-// first would drop the cancellation of a meeting whose attendee list changed
-// after it was booked, and leave exactly the stale row this exists to clear.
-//
-// The owner's domain is a FLOOR here, not the authority. The workspace's
-// registered domains decide internal-vs-external for mail and calendar alike
-// (formulas §20, ADR-0082/A127), and only the capture writer can read them — a
-// connector holds no database handle by design. This drops what the owner's own
-// domain alone proves internal; the writer widens that, never narrows it.
-func (m Meeting) Settle() (string, Settlement) {
-	if m.id == "" {
-		// Nothing to key on, so nothing to write and nothing to find again.
-		return "no event id", SettleDrop
-	}
-	if m.cancelled {
-		return "cancelled", SettleCancel
-	}
-	if m.ownerDeclined {
-		return "declined by the calendar owner", SettleCancel
-	}
-	// An event naming nobody but the owner is a block in their own calendar —
-	// focus time, a reminder, a flight. Nobody was met, so there is no
-	// interaction to log. This asks whether there was a second party at all,
-	// not whose side they were on, so it needs no knowledge of any domain.
-	if len(m.addresses) <= 1 {
-		return "no party besides the owner", SettleDrop
-	}
-	// The owner-domain floor. The workspace's registered domains are the
-	// authority (formulas §20) and the writer applies them over the full party
-	// set, which is wider than this — but that set can be empty or incomplete,
-	// and an internal meeting stored while it is would be readable by the whole
-	// workspace. This drops what the owner's own domain alone can prove
-	// internal; the writer widens it, never narrows it.
-	if !m.hasExternal {
-		return "no party outside the owner's domain", SettleDrop
-	}
-	return "", SettleCapture
 }
 
 // ID is the provider's event id — the idempotency source id a calendar
@@ -421,20 +348,27 @@ func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, con
 		return nil //nolint:nilerr // a single unparseable event is a skip, not a fatal pull error (mirrors the mail connectors)
 	}
 	m := Classify(ev, owner)
+	// Every settlement is named, and an unnamed one is an ERROR rather than a
+	// write. This type exists to tell "write it" apart from "do not", so falling
+	// through to the upsert is the one wrong direction to fail in: a settlement
+	// added later and not handled here would put the event on the timeline as a
+	// booked meeting, which is precisely the row this path was written to stop.
 	switch _, settlement := m.Settle(); settlement {
 	case SettleDrop:
 		return nil
 	case SettleCancel:
 		return cancelCaptured(ctx, sink, m, connectorName)
 	case SettleCapture:
-	}
-	if _, err := sink.Upsert(ctx, m.ToRecord(connectorName, raw)); err != nil {
-		if errors.Is(err, connector.ErrSkip) {
-			return nil
+		if _, err := sink.Upsert(ctx, m.ToRecord(connectorName, raw)); err != nil {
+			if errors.Is(err, connector.ErrSkip) {
+				return nil
+			}
+			return err
 		}
-		return err
+		return nil
+	default:
+		return fmt.Errorf("meetingmap: %s settled as %d, which nothing here handles", m.ID(), settlement)
 	}
-	return nil
 }
 
 // cancelCaptured marks a meeting this workspace already captured as cancelled.

@@ -52,7 +52,7 @@ var meetingStart = time.Date(2026, 3, 4, 9, 0, 0, 0, time.UTC)
 // calendarSink is the Sink as compose builds it for a calendar connector: the
 // cancel seam wired to the module that owns the activity table.
 func calendarSink(e *integration.Env) *capture.Sink {
-	return capture.NewSink(e.DB()).WithMeetingCanceller(activities.CancelCapturedMeetingTx)
+	return capture.NewSink(e.DB()).WithMeetingCloser(activities.CancelCapturedMeetingTx)
 }
 
 // captureMeeting lands one meeting activity through the real Sink, exactly as a
@@ -258,6 +258,39 @@ func TestASinkWithoutTheSeamDoesNotFail(t *testing.T) {
 	}
 	if status, set := readMeetingStatus(t, e, id); set {
 		t.Errorf("meeting_status = %q, want a Sink without the seam to write nothing", status)
+	}
+}
+
+// A connector may cancel only its OWN provider's meetings.
+//
+// The natural key is what finds the row, and it is an argument rather than
+// something the acting principal implies — so without this refusal any connector
+// principal could close another's meetings by naming its source system. It is
+// the same rule admitRecord states for a write ("a connector cannot claim to be
+// another one"), and it binds here for the same reason.
+func TestAConnectorCannotCancelAnotherConnectorsMeeting(t *testing.T) {
+	e := integration.Setup(t)
+	id := captureMeeting(t, e, e.AdminUser)
+
+	// A Telegram sync, naming the calendar's key. Everything about this
+	// principal is legitimate except the provider it is speaking for.
+	impostor := principal.WithCorrelationID(
+		principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	impostor = principal.WithActor(impostor, principal.Principal{
+		Type: principal.PrincipalConnector, ID: "connector:telegram",
+		UserID: e.AdminUser, OnBehalfOf: e.AdminUser,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"activity": {Create: true, Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+
+	err := calendarSink(e).CancelMeeting(impostor, meetingKey, meetingStart)
+	if err == nil {
+		t.Fatal("a telegram connector cancelled a gcal meeting; a connector must act for its own provider only")
+	}
+	if status, set := readMeetingStatus(t, e, id); set {
+		t.Errorf("meeting_status = %q after a refused cancellation, want the row untouched", status)
 	}
 }
 

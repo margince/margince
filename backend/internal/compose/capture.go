@@ -287,7 +287,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// Without it a cancelled meeting stays on the timeline as booked: the
 		// provider stops listing an event once it is off, so the pull that
 		// carries the cancellation is the only one that will ever mention it.
-		WithMeetingCanceller(activities.CancelCapturedMeetingTx).
+		WithMeetingCloser(activities.CancelCapturedMeetingTx).
 		// The 24-hour trace's payload posture. It rides the Sink because the
 		// Sink is where a payload would be written, and it is a deployment
 		// decision rather than a workspace one -- there is no API that flips it.
