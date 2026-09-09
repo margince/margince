@@ -38371,22 +38371,6 @@ type ConnectorOAuthCallbackParams struct {
 	Error *string `form:"error,omitempty" json:"error,omitempty"`
 }
 
-// ListConsentPurposesParams defines parameters for ListConsentPurposes.
-type ListConsentPurposesParams struct {
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
 // CreateContractParams defines parameters for CreateContract.
 type CreateContractParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -42075,22 +42059,6 @@ type RejectVoiceDraftParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// ListVoiceCorpusSourcesParams defines parameters for ListVoiceCorpusSources.
-type ListVoiceCorpusSourcesParams struct {
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // IngestVoiceCorpusSourceParams defines parameters for IngestVoiceCorpusSource.
@@ -51520,7 +51488,7 @@ type ServerInterface interface {
 	SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 	// (GET /consent-purposes)
-	ListConsentPurposes(w http.ResponseWriter, r *http.Request, params ListConsentPurposesParams)
+	ListConsentPurposes(w http.ResponseWriter, r *http.Request)
 	// Define a consent purpose. 🟢 admin write.
 	// (POST /consent-purposes)
 	CreateConsentPurpose(w http.ResponseWriter, r *http.Request)
@@ -52786,7 +52754,7 @@ type ServerInterface interface {
 	GetVoiceLearningSummary(w http.ResponseWriter, r *http.Request, id Id)
 	// List the owner's corpus manifest and live meter; source text is never returned.
 	// (GET /voice-profiles/{id}/sources)
-	ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id Id, params ListVoiceCorpusSourcesParams)
+	ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id Id)
 	// Ingest or replace one manual own-authored text source.
 	// (POST /voice-profiles/{id}/sources)
 	IngestVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id, params IngestVoiceCorpusSourceParams)
@@ -53869,7 +53837,7 @@ func (_ Unimplemented) SetConnectorSignatureEnrichment(w http.ResponseWriter, r 
 
 // List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 // (GET /consent-purposes)
-func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Request, params ListConsentPurposesParams) {
+func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -56401,7 +56369,7 @@ func (_ Unimplemented) GetVoiceLearningSummary(w http.ResponseWriter, r *http.Re
 
 // List the owner's corpus manifest and live meter; source text is never returned.
 // (GET /voice-profiles/{id}/sources)
-func (_ Unimplemented) ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id Id, params ListVoiceCorpusSourcesParams) {
+func (_ Unimplemented) ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -62365,9 +62333,6 @@ func (siw *ServerInterfaceWrapper) SetConnectorSignatureEnrichment(w http.Respon
 // ListConsentPurposes operation middleware
 func (siw *ServerInterfaceWrapper) ListConsentPurposes(w http.ResponseWriter, r *http.Request) {
 
-	var err error
-	_ = err
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -62376,37 +62341,8 @@ func (siw *ServerInterfaceWrapper) ListConsentPurposes(w http.ResponseWriter, r 
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListConsentPurposesParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListConsentPurposes(w, r, params)
+		siw.Handler.ListConsentPurposes(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -81471,37 +81407,8 @@ func (siw *ServerInterfaceWrapper) ListVoiceCorpusSources(w http.ResponseWriter,
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListVoiceCorpusSourcesParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListVoiceCorpusSources(w, r, id, params)
+		siw.Handler.ListVoiceCorpusSources(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

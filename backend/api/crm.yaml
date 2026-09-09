@@ -13965,9 +13965,14 @@ paths:
       tags: [Compliance]
       operationId: listConsentPurposes
       summary: List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
+      description: |
+        UNPAGED, deliberately. A workspace's consent purposes are configuration — a handful of
+        them, set up once — so the answer is the whole set and `page` reports `has_more: false`.
+
+        It used to declare `cursor` and `limit` and honour neither: `?limit=5` returned the
+        catalog, and a caller who sized a page got everything. Nothing was hidden, and nothing
+        was kept either. Removing the dial makes the surface true rather than adding paging
+        machinery with no user.
       responses:
         '200':
           description: A page of consent purposes.
@@ -15505,9 +15510,13 @@ paths:
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       summary: List the owner's corpus manifest and live meter; source text is never returned.
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
+      description: |
+        UNPAGED, deliberately, and for the same reason listConsentPurposes is: one voice
+        profile's corpus sources are configuration rather than accumulated data, so the answer
+        is the whole manifest.
+
+        It declared `cursor` and `limit` and honoured neither. Removing the dial is free now
+        and stops being free once a client depends on the parameter being accepted.
       responses:
         '200':
           description: Manifest and meter.

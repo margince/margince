@@ -58,64 +58,8 @@ type ListGrantsInput struct {
 	RecordID    *ids.UUID
 	SubjectType *string
 	SubjectID   *ids.UUID
-}
-
-func (s *Service) ListRecordGrants(ctx context.Context, in ListGrantsInput) ([]grantRow, error) {
-	var out []grantRow
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		where := "(expires_at IS NULL OR expires_at > now())"
-		if in.RecordType != nil {
-			where += storekit.SQLf(" AND record_type = $%d", arg(*in.RecordType))
-		}
-		if in.RecordID != nil {
-			where += storekit.SQLf(" AND record_id = $%d", arg(*in.RecordID))
-		}
-		if in.SubjectType != nil {
-			where += storekit.SQLf(" AND subject_type = $%d", arg(*in.SubjectType))
-		}
-		if in.SubjectID != nil {
-			where += storekit.SQLf(" AND subject_id = $%d", arg(*in.SubjectID))
-		}
-		rows, err := tx.Query(ctx,
-			"SELECT "+grantColumns+" FROM record_grant WHERE "+where+" ORDER BY created_at DESC", args...)
-		if err != nil {
-			return err
-		}
-		var candidates []grantRow
-		for rows.Next() {
-			g, err := scanGrant(rows)
-			if err != nil {
-				rows.Close()
-				return err
-			}
-			candidates = append(candidates, g)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		// The visibility probe runs AFTER the cursor is drained and closed,
-		// never inside the scan loop: it issues its own query on this same
-		// transaction, and pgx refuses a second query while rows are open
-		// ("conn busy"). The probe used to be a no-op for an unbounded
-		// caller, which hid the collision until a caller whose row scope
-		// renders a real clause came along.
-		for _, g := range candidates {
-			// A grant row names a row-scoped record: only grants whose
-			// target the caller could read are disclosed.
-			visible, err := auth.VisibleTo(ctx, tx, g.RecordType, g.RecordID)
-			if err != nil {
-				return err
-			}
-			if visible {
-				out = append(out, g)
-			}
-		}
-		return nil
-	})
-	return out, err
+	Cursor      *string
+	Limit       *int
 }
 
 type CreateGrantInput struct {

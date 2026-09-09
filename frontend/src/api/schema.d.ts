@@ -9606,7 +9606,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List the workspace's consent purposes (e.g. transactional, marketing_email, profiling). */
+        /**
+         * List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
+         * @description UNPAGED, deliberately. A workspace's consent purposes are configuration — a handful of
+         *     them, set up once — so the answer is the whole set and `page` reports `has_more: false`.
+         *
+         *     It used to declare `cursor` and `limit` and honour neither: `?limit=5` returned the
+         *     catalog, and a caller who sized a page got everything. Nothing was hidden, and nothing
+         *     was kept either. Removing the dial makes the surface true rather than adding paging
+         *     machinery with no user.
+         */
         get: operations["listConsentPurposes"];
         put?: never;
         /** Define a consent purpose. 🟢 admin write. */
@@ -10647,7 +10656,15 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List the owner's corpus manifest and live meter; source text is never returned. */
+        /**
+         * List the owner's corpus manifest and live meter; source text is never returned.
+         * @description UNPAGED, deliberately, and for the same reason listConsentPurposes is: one voice
+         *     profile's corpus sources are configuration rather than accumulated data, so the answer
+         *     is the whole manifest.
+         *
+         *     It declared `cursor` and `limit` and honoured neither. Removing the dial is free now
+         *     and stops being free once a client depends on the parameter being accepted.
+         */
         get: operations["listVoiceCorpusSources"];
         put?: never;
         /**
@@ -48260,21 +48277,7 @@ export interface operations {
     };
     listConsentPurposes: {
         parameters: {
-            query?: {
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
-                limit?: components["parameters"]["Limit"];
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -49828,21 +49831,7 @@ export interface operations {
     };
     listVoiceCorpusSources: {
         parameters: {
-            query?: {
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
-                limit?: components["parameters"]["Limit"];
-            };
+            query?: never;
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
