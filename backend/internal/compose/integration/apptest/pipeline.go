@@ -105,6 +105,9 @@ func CreateOpenDeal(t *testing.T, e *AppEnv, stages SeededStages) string {
 
 	var deal map[string]any
 	status = e.Call(t, "POST", "/v1/deals", map[string]any{
+		//nolint:goconst // a request-body key, spelled where the body is written; the
+		// other "name" in this package is a key READ off an MCP tool listing, and one
+		// constant over both would assert the two wires agree about the word
 		"name":         "Acme rollout",
 		"amount_minor": 250_000_00,
 		"currency":     "EUR",

@@ -37,3 +37,4 @@ e0c11716048a939f1f1187d6992754335300ac41 ce200199d82e76fca7c07e5781a7af1a963b496
 82f676997776c2b77cd04767490824812b59953a a150a2ec34f28b3daf86467a27c8c896be52a23f ratified-1983-a-contract-masks-the-references-its-reader-cannot-open
 e4bc6bbe59911e0290a06f515c0c3ea9a3ae0218 fe9c2b0a85863adcbfc9a90825e181736ed76db8 ratified-1898-the-access-preview-is-a-read-and-carries-the-methods-of-one
 79fa8c2d60fdf8f8d8d71882a948cc8464b98c30 57058d94cf5a272de7ee74470eb2bdf212227590 ratified-a-confirm-link-answers-the-shape-its-mail-promised
+ab03776e791b70cf7aeba9bd6340f64acb5002f3 6cfddc72ec0256cd00a99ea6336e5fd5620d5968 ratified-2025-the-record-type-is-called-company

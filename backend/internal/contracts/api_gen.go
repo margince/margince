@@ -33565,7 +33565,7 @@ type SignInProvider struct {
 
 // Signal A surfaced "something changed / worth attention" item. Mirrors the `signal` table:
 // company-level and consent-gated by construction — the only mandatory attribution is
-// organizational (`resolved_company_id` after resolution); `resolved_person_id` is optional
+// to a company (`resolved_company_id` after resolution); `resolved_person_id` is optional
 // and set only under a recorded consent grant (P12). Unattributable signals are
 // `dropped`, never retained as a person-level dossier.
 type Signal struct {

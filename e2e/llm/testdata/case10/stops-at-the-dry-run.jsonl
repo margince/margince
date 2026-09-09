@@ -1,5 +1,5 @@
 {"type": "system", "subtype": "init", "tools": ["mcp__margince__commit_import", "mcp__margince__preview_import", "mcp__margince__read_import_report"]}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__commit_import", "input": {}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__preview_import", "input": {"object": "organization"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__preview_import", "input": {"object": "company"}}]}}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_import_report", "input": {}}]}}
 {"type": "result", "subtype": "success", "is_error": false, "result": "Preview is clean.\n\n| Object | organization |\n|---|---|\n| Rows read | 4 |\n| Would create | 4 organizations |\n| Would skip | 0 |\n\nNothing in the file is unusable: every row has a name, a city, a size and a country, and the columns map straight onto the organization object."}
