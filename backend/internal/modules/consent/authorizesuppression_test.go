@@ -67,8 +67,11 @@ func TestWhatEachSuppressionBinds(t *testing.T) {
 		commsauthz.ReasonRestricted: restricted,
 		// The five included: no template makes a dead address live.
 		commsauthz.ReasonHardBounce: all,
-		// The subject said stop, so nothing goes.
-		commsauthz.ReasonSubjectRequest: all,
+		// The subject said stop, so nothing goes EXCEPT the three the
+		// controller owes them whatever they want sent — the same three
+		// Art. 18(2) spares. Binding all fourteen meant a person who asked
+		// us to stop never received the confirmation that we had stopped.
+		commsauthz.ReasonSubjectRequest: restricted,
 		// A reason code this function does not recognise refuses everything.
 		"a_code_nobody_added_here": all,
 	}

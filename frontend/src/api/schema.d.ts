@@ -9841,13 +9841,24 @@ export interface paths {
          *     to stop stays stopped until somebody with the authority to lift it says otherwise.
          *
          *     **Who may lift it is part of the record.** The row carries the authority of whoever wrote
-         *     it, taken from the session and never from this body. A rep's row is liftable by an admin
-         *     and not by another rep; nothing an installation can do lifts the subject's own Art. 21
-         *     objection, which is a different kind this door cannot write.
+         *     it, taken from the session and never from this body. A rep's `subject_request` row is
+         *     liftable by an admin and not by another rep.
          *
-         *     The only kind recordable here is `subject_request`. An objection and a processing
-         *     restriction carry legal consequences a relayed phone call does not establish, and a hard
-         *     bounce is a fact about a mailbox only the mail path observes.
+         *     A `marketing_objection` is different: it is recorded at the SUBJECT'S authority whoever
+         *     types it, because Art. 21 gives the right to the data subject and a rep relaying the call
+         *     is a courier rather than its author. Nothing an installation can do lifts it — only the
+         *     subject reversing it, or the per-message exception path, which records a send as
+         *     exceptional rather than making the objection go away.
+         *
+         *     Two kinds are recordable here. `subject_request` is "stop contacting me", and it stops
+         *     every category except the three the controller owes regardless of what the subject wants
+         *     sent: a privacy notice, a security warning, and the confirmation that an opt-out was
+         *     recorded. `marketing_objection` is Art. 21(2) and stops marketing only, so the invoice the
+         *     same person is owed still goes.
+         *
+         *     A processing restriction and a hard bounce are not recordable by hand: the first is an
+         *     Art. 18 legal state with its own workflow, the second a fact about a mailbox only the mail
+         *     path observes.
          */
         post: operations["suppressPerson"];
         delete?: never;
@@ -48696,10 +48707,13 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * @description Which stop this is. Only the subject's own request is recordable by hand.
+                     * @description Which stop this is. `subject_request` is "stop contacting me" and reaches every
+                     *     category but the three the controller owes anyway. `marketing_objection` is
+                     *     Art. 21(2), reaches marketing only, and is recorded at the subject's own
+                     *     authority so no seat can lift it.
                      * @enum {string}
                      */
-                    kind: "subject_request";
+                    kind: "subject_request" | "marketing_objection";
                     /**
                      * @description What the person was told, in their words. Stored because a suppression somebody
                      *     later asks to lift is only reviewable if the record says why it was made.

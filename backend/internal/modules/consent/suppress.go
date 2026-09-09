@@ -23,6 +23,7 @@ package consent
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -52,12 +53,27 @@ type SuppressInput struct {
 	Reason string
 }
 
-// suppressibleKind is the one kind a seat may write.
+// The kinds a seat may write, and the two are a different shape of thing.
 //
-// A rep relaying "please stop emailing me" is recording the SUBJECT'S request,
-// not adjudicating an Art. 21 objection or a statutory restriction — those two
-// carry legal consequences a phone call does not establish, and a hard bounce
-// is a fact about a mailbox that only the mail path can observe.
+// subject_request is "they asked us to stop contacting them" — broad, and the
+// scope the subject actually named is whatever the rep was told.
+//
+// marketing_objection is Art. 21(2)/(3): an objection to direct marketing. It
+// is deliberately writable BY HAND, because the article gives the subject an
+// unconditional right exercised "at any time" and by any means. Requiring a
+// signed form or a self-service link before one could be recorded would put a
+// condition on an unconditional right, and the practical effect was worse than
+// the theory: nothing wrote this kind at all, so a rep told "stop the
+// newsletter" on the phone had only subject_request — which stopped the
+// invoices too.
+//
+// A processing restriction and a hard bounce stay machine-written: the first is
+// an Art. 18 legal state with its own workflow, the second a fact about a
+// mailbox only the mail path can observe.
+var suppressibleKinds = []string{"subject_request", commsauthz.ReasonObjection}
+
+// suppressibleKind is the kind a seat writes when the subject asked to stop
+// being contacted at all, as opposed to objecting to marketing.
 const suppressibleKind = "subject_request"
 
 // auditFieldKind is the wire request body's own field name, named so a
@@ -96,11 +112,11 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 	if err != nil {
 		return subject{}, "", err
 	}
-	if in.Kind != suppressibleKind {
+	if !slices.Contains(suppressibleKinds, in.Kind) {
 		return subject{}, "", &ValidationError{
 			Field: auditFieldKind,
-			Reason: "a person may record that the subject asked us to stop; an objection, a " +
-				"processing restriction and a bounce are not recorded by hand here",
+			Reason: "a person may record that the subject asked us to stop, or objected to " +
+				"marketing; a processing restriction and a bounce are not recorded by hand here",
 		}
 	}
 	// The BOUND only. The contract makes this reason optional (`required: [kind]`),
@@ -117,7 +133,33 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
 		return subject{}, "", err
 	}
-	return sub, authorityOf(ctx), nil
+	return sub, levelFor(ctx, in.Kind), nil
+}
+
+// levelFor answers whose decision this stop is, which is what decides who may
+// later lift it.
+//
+// AN OBJECTION IS THE SUBJECT'S ACT, whoever typed it. Art. 21 gives the right
+// to the data subject; a rep relaying the phone call is a courier, not the
+// author, and recording their seat level would let another seat of equal or
+// greater rank lift a stop the subject asked for. CanOverrule refuses to rank
+// anything above LevelSubject, so stamping it here is what makes the objection
+// hold against the whole staff.
+//
+// The cost is real and accepted: a mistyped objection can be undone only by the
+// subject reversing it or by the per-message exception path. That is the right
+// way round — the failure of a stop that is too hard to lift is an awkward
+// conversation, and the failure of one that is too easy is mail somebody
+// explicitly refused.
+//
+// subject_request keeps the seat's own level: it is the rep's report of a
+// conversation, with no article behind it, and an admin correcting a
+// misheard "stop everything" should not need the subject on the phone.
+func levelFor(ctx context.Context, kind string) commsauthz.AuthorityLevel {
+	if kind == commsauthz.ReasonObjection {
+		return commsauthz.LevelSubject
+	}
+	return authorityOf(ctx)
 }
 
 // authorityOf reads the caller's tier from the authenticated principal.
