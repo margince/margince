@@ -18,10 +18,20 @@ import (
 )
 
 // storeRawCapture appends the provider's original bytes under the natural
-// key. Raw capture is EVIDENCE: append-once, never rewritten. A replay
+// key. Raw capture is EVIDENCE: append-once, and rewritten by exactly two
+// sweeps, both of which NARROW what it holds rather than replace it. A replay
 // carrying different bytes for the same natural key keeps the original —
 // silently replacing provenance would gut lineage and forensic replay. A
 // record that arrived with no original stores nothing.
+//
+// The two sanctioned rewrites. Retention's erase (privacy/retention.go) takes
+// the whole payload once the activity's window closes. The part sweep
+// (partslimstore.go) takes a stored attachment's OCTETS once it can prove them
+// durable in the object store, leaving a stanza naming the object, its length
+// and its digest — so what the column still promises afterwards is the message
+// verbatim and its attachments by reference, and partslim.RestoreStoredParts
+// rebuilds the provider's exact bytes or refuses to hand any back. What it no
+// longer promises is that the column ALONE holds them.
 //
 // For mail that key is transport-independent, so the FIRST connector to deliver
 // a message supplies the bytes on file and a second connector's copy of the

@@ -233,10 +233,13 @@ func TestTheSweepConsidersEachOriginalOnce(t *testing.T) {
 	}
 }
 
-// With no object store there is no proof to have, so the sweep stamps what it
-// read and removes nothing. The rows it looked at must come out byte-identical:
-// this is the posture of the api and worker on a deployment that never wired a
-// bucket, and it must be a no-op rather than a data loss.
+// With no object store the sweep does nothing at all — it does not even read.
+//
+// The trap it must not fall into is STAMPING: a pass that marked every row
+// considered while proving nothing would consume the whole backlog, and an
+// object store wired later would find no work left. So this asserts the rows
+// come back byte-identical AND that none was stamped, which is the difference
+// between a no-op and a silent, permanent loss of the backlog.
 func TestTheSweepRemovesNothingWithoutAnObjectStore(t *testing.T) {
 	e := Setup(t)
 	ctx := context.Background()
@@ -264,11 +267,22 @@ func TestTheSweepRemovesNothingWithoutAnObjectStore(t *testing.T) {
 	if got.Slimmed != 0 {
 		t.Fatalf("slimmed %d rows with no object store, want 0", got.Slimmed)
 	}
-	if got.Unproved == 0 {
-		t.Errorf("unproved = 0; the pass must report that it could vouch for nothing")
+	if got.Considered != 0 {
+		t.Errorf("considered %d rows with no object store; want 0 — a stamp here "+
+			"consumes the backlog a later-wired store would have worked", got.Considered)
 	}
 	if kept := payloadOf(t, e, sourceID); kept != string(original) {
 		t.Errorf("an original was rewritten on a deployment with no object store")
+	}
+	var stamped int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT count(*) FROM raw_capture WHERE parts_slimmed_at IS NOT NULL`).Scan(&stamped)
+	}); err != nil {
+		t.Fatalf("counting the stamps: %v", err)
+	}
+	if stamped != 0 {
+		t.Errorf("%d rows were stamped with no object store to prove anything against", stamped)
 	}
 }
 

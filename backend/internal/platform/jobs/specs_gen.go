@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "3c48ae49d7dde393546016f7e7c8645ef499cbe2cc17a2535ee5560bff9d07b7"
+const JobContractHash = "53c27472f7696d582c0d2ef2dcc10e04dab585753473d532acbc2daa14e9e31c"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -202,6 +202,17 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Cadence:      Cadence{Fixed: 24 * time.Hour},
 		Registration: Registration{When: []string{"EnrichBrain"}},
+	},
+	"capture_part_slim": {
+		Kind:         "capture_part_slim",
+		GoType:       "CapturePartSlimArgs",
+		Role:         Worker,
+		Queue:        "capture_part_slim",
+		Timeout:      TimeoutPolicy{Fixed: 15 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 5 * time.Minute},
+		Registration: Registration{When: []string{"Blobstore"}},
+		Fault:        FaultPolicy{NilAfterLogging: "A batch is independent rows, and a row the pass cannot use is STAMPED rather than failed: one it cannot decode, cannot prove durable, or cannot locate an encoding in is left byte-identical, because none of those change on their own and an unstamped row would be re-read and re-refused every cadence forever. What does fail the job is the database refusing a write, which is the one condition a retry can answer. The retry policy is otherwise the CADENCE: this runs every five minutes and re-reads whatever is still unstamped."},
 	},
 	"capture_sync": {
 		Kind:         "capture_sync",
@@ -772,6 +783,7 @@ var specs = map[string]Spec{
 var queues = map[string]int{
 	"agent_scheduler":   2,
 	"ai_capture":        2,
+	"capture_part_slim": 1,
 	"deep_read":         2,
 	"default":           5,
 	"geocode":           1,

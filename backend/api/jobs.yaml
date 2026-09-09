@@ -164,6 +164,13 @@ queues:
     reason: >-
       A batch of agent runs, each entitled to the full RunWallClock — the
       longest pass in the tree.
+  capture_part_slim:
+    max_workers: 1
+    reason: >-
+      One object read per part plus an encode of those octets, for a bounded
+      batch — outbound-bound work that would hold a default worker for as long
+      as the object store takes to answer.
+
   privacy_retention:
     max_workers: 2
     reason: >-
@@ -1167,6 +1174,26 @@ kinds:
   # cap. The dispatcher enumerated EVERY workspace including archived ones,
   # because archiving does not un-store the subject data inside one — that
   # obligation is the pass's own now rather than the enumeration's.
+  capture_part_slim:
+    role: worker
+    go_type: CapturePartSlimArgs
+    queue: capture_part_slim
+    timeout: 15m
+    opts_owner: caller
+    cadence: 5m
+    registration: {when: [Blobstore], absent: registers_nothing}
+    args: {}
+    fault:
+      nil_after_logging: >-
+        A batch is independent rows, and a row the pass cannot use is STAMPED
+        rather than failed: one it cannot decode, cannot prove durable, or
+        cannot locate an encoding in is left byte-identical, because none of
+        those change on their own and an unstamped row would be re-read and
+        re-refused every cadence forever. What does fail the job is the
+        database refusing a write, which is the one condition a retry can
+        answer. The retry policy is otherwise the CADENCE: this runs every five
+        minutes and re-reads whatever is still unstamped.
+
   privacy_retention:
     role: worker
     go_type: PrivacyRetentionArgs

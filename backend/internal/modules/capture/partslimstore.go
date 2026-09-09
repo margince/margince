@@ -111,7 +111,16 @@ var errPartSlimRaced = errors.New("capture: the original changed under the slim"
 
 // SlimBatch reads a batch of unconsidered rows, removes what it can prove, and
 // stamps every row it considered.
+//
+// With no object store it does NOTHING — it does not even read. Stamping under
+// that posture would be the worst outcome available: every row would be marked
+// considered, having proved nothing and removed nothing, and a store wired
+// later would find no backlog left to work. "Nothing to prove with" is not
+// "considered and found wanting", and the stamp may only ever mean the second.
 func (s *PartSlimStore) SlimBatch(ctx context.Context, limit int) (PartSlimResult, error) {
+	if s.blob == nil {
+		return PartSlimResult{}, nil
+	}
 	if limit <= 0 {
 		limit = PartSlimBatch
 	}
