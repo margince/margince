@@ -29,6 +29,7 @@ func TestEchoSafeEscapesEverythingThatDoesNotPrint(t *testing.T) {
 		{"zero width space", "\u200b"},
 		{"a bare escape byte", "\x1b"},
 		{"a byte that is not utf-8", "\xff"},
+		{"a tag character above the BMP", "\U000e0020"},
 	} {
 		t.Run(tc.what, func(t *testing.T) {
 			t.Parallel()
@@ -41,6 +42,34 @@ func TestEchoSafeEscapesEverythingThatDoesNotPrint(t *testing.T) {
 				t.Errorf("the caller's own text was lost around the escape: %q", got)
 			}
 		})
+	}
+}
+
+// A REPLACEMENT CHARACTER the caller actually sent is reported as itself.
+//
+// It is the one rune a range loop cannot tell from a broken byte — both arrive
+// as RuneError — and deciding between them by re-validating the single lead byte
+// gets this case wrong: U+FFFD came back as a bare \xef with its two
+// continuation bytes dropped, so the refusal named a byte nobody sent.
+func TestEchoSafeReportsARealReplacementCharacterAsItself(t *testing.T) {
+	t.Parallel()
+	const sent = "before\ufffdafter"
+
+	got := echoSafe(sent, maxBadArgsDetail)
+
+	if got != sent {
+		t.Errorf("a legitimately encoded U+FFFD was rewritten: %q became %q", sent, got)
+	}
+}
+
+// An astral escape must be one a reader can parse back. `\u` takes four digits,
+// so U+E0020 rendered as `\ue0020` reads as `\ue002` followed by a `0`.
+func TestEchoSafeRendersAnAstralRuneUnambiguously(t *testing.T) {
+	t.Parallel()
+	got := echoSafe("tag\U000e0020here", maxBadArgsDetail)
+
+	if !strings.Contains(got, `\U000e0020`) {
+		t.Errorf("an astral rune was not rendered as an eight-digit escape: %q", got)
 	}
 }
 

@@ -146,7 +146,13 @@ func (e *reportEngine) Derive(ctx context.Context, report string, q derivationQu
 	}
 	spec, ok := prebuiltReports[report]
 	if !ok {
-		return derivationOutcome{}, fmt.Errorf("report %q: %w", report, apperrors.ErrNotFound)
+		// UnknownReportError, the same answer Run gives: it bounds the caller's
+		// key and names the keys this installation does serve. A bare %q here
+		// echoed an unbounded key and named nothing that would have worked.
+		return derivationOutcome{}, &UnknownReportError{
+			Report: report,
+			Served: slices.Sorted(maps.Keys(prebuiltReports)),
+		}
 	}
 	if err := auth.Require(ctx, string(spec.entity), principal.ActionRead); err != nil {
 		return derivationOutcome{}, err
@@ -208,7 +214,15 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 	grouped := map[string]bool{}
 	for _, dim := range q.GroupBy {
 		if _, ok := spec.dimensions[dim]; !ok {
-			return derivationPlan{}, &FieldNotAllowedError{Field: dim}
+			// Slot and Allowed, not the name alone. Without them the refusal
+			// says "use a name this report declares" and declares nothing, so
+			// a caller loops on guesses — the same refusal Run's own group_by
+			// path gives, which this one silently did not match.
+			return derivationPlan{}, &FieldNotAllowedError{
+				Field:   dim,
+				Slot:    slotGroupBy,
+				Allowed: allowedReportNames(spec.dimensions),
+			}
 		}
 		grouped[dim] = true
 		plan.groupBy = append(plan.groupBy, dim)
@@ -216,28 +230,18 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 	// Predicates admit the union of the report's dimensions and filters:
 	// a group-key value pins the cell, a filter value replays the plan.
 	for key, value := range q.Predicates {
-		if threshold, ok := spec.thresholds[key]; ok {
-			plan.preds = append(plan.preds, boundExpr{field: key, value: value, threshold: &threshold})
-			continue
+		pred, err := resolvePredicate(spec, key, value, false)
+		if err != nil {
+			return derivationPlan{}, err
 		}
-		expr, ok := spec.dimensions[key]
-		if !ok {
-			expr, ok = spec.filters[key]
-		}
-		if !ok {
-			return derivationPlan{}, &FieldNotAllowedError{Field: key}
-		}
-		plan.preds = append(plan.preds, boundExpr{field: key, expr: expr, value: value})
+		plan.preds = append(plan.preds, pred)
 	}
 	for field := range q.Unset {
-		expr, ok := spec.dimensions[field]
-		if !ok {
-			expr, ok = spec.filters[field]
+		pred, err := resolvePredicate(spec, field, "", true)
+		if err != nil {
+			return derivationPlan{}, err
 		}
-		if !ok {
-			return derivationPlan{}, &FieldNotAllowedError{Field: field}
-		}
-		plan.preds = append(plan.preds, boundExpr{field: field, expr: expr, isNull: true})
+		plan.preds = append(plan.preds, pred)
 	}
 	sort.Slice(plan.preds, func(i, j int) bool { return plan.preds[i].field < plan.preds[j].field })
 
@@ -393,4 +397,52 @@ func sortedKeys(m map[string]string) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// allowedPredicateNames is what a derivation predicate may name: the union a
+// predicate is actually resolved against above — the report's dimensions, its
+// filters and its thresholds.
+//
+// Derived from the spec rather than listed, and the UNION rather than either
+// half, because a refusal naming only the dimensions would refuse a caller a
+// filter name this engine accepts.
+func allowedPredicateNames(spec reportSpec) []string {
+	names := make([]string, 0, len(spec.dimensions)+len(spec.filters)+len(spec.thresholds))
+	names = append(names, allowedReportNames(spec.dimensions)...)
+	names = append(names, allowedReportNames(spec.filters)...)
+	for key := range spec.thresholds {
+		names = append(names, key)
+	}
+	slices.Sort(names)
+	return slices.Compact(names)
+}
+
+// resolvePredicate resolves one predicate name against what this report admits: a
+// threshold, a dimension or a filter, in that order.
+//
+// The two callers differ only in whether the predicate pins a value or asserts
+// its absence, and they resolved the name identically — twice, which is how one
+// of them came to refuse without naming the vocabulary while the other did.
+func resolvePredicate(spec reportSpec, name, value string, isNull bool) (boundExpr, error) {
+	if threshold, ok := spec.thresholds[name]; ok {
+		if isNull {
+			return boundExpr{field: name, isNull: true, threshold: &threshold}, nil
+		}
+		return boundExpr{field: name, value: value, threshold: &threshold}, nil
+	}
+	expr, ok := spec.dimensions[name]
+	if !ok {
+		expr, ok = spec.filters[name]
+	}
+	if !ok {
+		return boundExpr{}, &FieldNotAllowedError{
+			Field:   name,
+			Slot:    slotFilters,
+			Allowed: allowedPredicateNames(spec),
+		}
+	}
+	if isNull {
+		return boundExpr{field: name, expr: expr, isNull: true}, nil
+	}
+	return boundExpr{field: name, expr: expr, value: value}, nil
 }

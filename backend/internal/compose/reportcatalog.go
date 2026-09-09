@@ -126,7 +126,7 @@ func (e *reportEngine) Run(ctx context.Context, report string, req reportRequest
 	if uuidShape.MatchString(report) {
 		// Saved reports are a later slice; an unknown id is absent, not
 		// half-supported.
-		return reportOutcome{}, fmt.Errorf("saved report %s: %w", httperr.QuoteCaller(report), apperrors.ErrNotFound)
+		return reportOutcome{}, fmt.Errorf("saved report %s: %w", report, apperrors.ErrNotFound)
 	}
 	spec, ok := prebuiltReports[report]
 	if !ok {
@@ -155,17 +155,32 @@ func unservedPlanArguments(planArgs json.RawMessage) []string {
 	var unserved []string
 	for key := range keys {
 		if !servedPlanArguments[key] {
-			// The key is the CALLER's, quoted and bounded where it enters. It
-			// reaches an agent spliced into a refusal that goes on to name the
-			// arguments this tool DOES take, and a raw one arrived able to both
-			// push that list out and carry a character the transcript reads as
-			// a line ending.
+			// The key is the CALLER's, quoted and bounded where it enters: raw,
+			// it carried both an unbounded write and a character the transcript
+			// reads as a line ending.
 			unserved = append(unserved, httperr.QuoteCaller(key))
 		}
 	}
 	slices.Sort(unserved)
+
+	// AND THE LENGTH OF THE LIST IS ALSO THE CALLER'S. Bounding each key left
+	// the count unbounded, which crowds the served set out of the same refusal
+	// just as effectively: twenty unknown keys pushed `group_by` and
+	// `aggregates` off the end of a sentence that exists to name them. Naming a
+	// few and counting the rest keeps the answer's size ours — a caller with
+	// twenty wrong keys has the grammar wrong, not twenty separate mistakes.
+	if len(unserved) > maxUnservedNamed {
+		rest := len(unserved) - maxUnservedNamed
+		unserved = append(unserved[:maxUnservedNamed:maxUnservedNamed],
+			fmt.Sprintf("and %d more", rest))
+	}
 	return unserved
 }
+
+// maxUnservedNamed bounds how many of a caller's unknown plan-argument keys one
+// refusal names. Enough that a caller fixing a typo or two sees their own key
+// quoted back; few enough that the served vocabulary beside it always fits.
+const maxUnservedNamed = 4
 
 // reportPlanVocabulary is what the engine accepts from a plan beyond the
 // per-report names: the aggregate functions.
