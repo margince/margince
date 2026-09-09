@@ -153,7 +153,7 @@ describe("the brief readings strip", () => {
     );
     draw();
 
-    await screen.findByText(/420k|420,000/);
+    await screen.findByText(/420k|420,000/i);
     expect(screen.queryAllByText("—")).toHaveLength(0);
   });
 
@@ -284,7 +284,7 @@ describe("the brief readings strip", () => {
     // COMPACT for the headline figure — the slot is ~110px and a full euro
     // amount wraps mid-number. The weighted figure keeps its exact form on the
     // detail line, where there is room for it.
-    expect(await screen.findByText(/420k/)).toBeTruthy();
+    expect(await screen.findByText(/420k/i)).toBeTruthy();
     // The weighted figure and the priced-of-eligible completeness ride the same
     // line: a weighted number over a partly priced population is a floor, and a
     // reader who cannot see the second cannot judge the first.
