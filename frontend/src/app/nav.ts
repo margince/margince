@@ -179,25 +179,34 @@ export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
   "deals",
 ]);
 
-// Which RECORD screens keep the reading column instead of taking the width they
-// are given. This is the one place that decision lives, because it is a
-// judgement per surface and it gets revised by opening the page and looking:
-// move a screen out of this set and it goes full width, put one in and it is
-// capped. Settings is always capped and is not listed here — it is a whole
+// Every RECORD page keeps ONE reading column, so a reader who walks from a
+// company to a deal to the lead behind it meets the same measure on each. That
+// is the invariant this set states: a screen whose record page exists belongs
+// here, and a record page missing from it is the one page in the walk that
+// jumps. Settings is always capped and is not listed here — it is a whole
 // section, not a record.
 //
-// The two that are here read DOWN rather than across: a rail of facts beside
-// prose, where a measured line length is the point and a fact a monitor away
-// from its label is worse, not wider. A list, a board or a report is scanned
-// ACROSS, and the cap only ever pushed columns off the right edge of a wide
-// display.
+// A record reads DOWN rather than across: a rail of facts beside prose, where a
+// measured line length is the point and a fact a monitor away from its label is
+// worse, not wider. A list, a board or a report is scanned ACROSS, and the cap
+// only ever pushed columns off the right edge of a wide display — which is why
+// the key is the id and not the screen alone.
 //
-// Keyed on the screen, applied only when the route carries an id: `#/companies`
-// is the list and belongs to the other family, `#/companies/<id>` is the record.
+// Keyed on the screen, applied only when the route carries a RECORD id:
+// `#/companies` is the list and belongs to the other family, `#/companies/<id>`
+// is the record.
 export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
   "companies",
   "contacts",
+  "leads",
+  "deals",
+  "projects",
 ]);
+
+// The one id segment that is not a record id: `#/deals/new` is the deals LIST
+// with its create form open (App.tsx, DealsRoute), so it is scanned across like
+// every other list and must not take the record column.
+export const CREATE_ID = "new";
 
 // Screens that keep the same reading column with NO id, because they are not
 // records and never carry one. Every one of them reads DOWN: Brief is a

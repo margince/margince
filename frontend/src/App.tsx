@@ -17,6 +17,7 @@ import {
   EXTENSION_SCREEN,
   findExtension,
 } from "./app/extensions";
+import { CREATE_ID } from "./app/nav";
 import {
   CommandPalette,
   useBuiltinCommands,
@@ -304,15 +305,17 @@ function ScreenPending() {
 }
 
 // Split out of the dispatch table purely to keep the deals list/detail split in
-// one place — it has its own "new" vs existing-id branch below the id check.
+// one place — it has its own create-segment vs existing-id branch below the id
+// check. The segment is CREATE_ID, spelled where the layout policy reads it so
+// the list that opens a form and the page that is not capped stay one decision.
 function DealsRoute({ id, id2 }: Readonly<{ id?: string; id2?: string }>) {
-  if (id && id !== "new" && id2 === "room") {
+  if (id && id !== CREATE_ID && id2 === "room") {
     return <DealRoomPage dealId={id} />;
   }
-  return id && id !== "new" ? (
+  return id && id !== CREATE_ID ? (
     <DealScreen id={id} />
   ) : (
-    <DealsScreen startCreating={id === "new"} />
+    <DealsScreen startCreating={id === CREATE_ID} />
   );
 }
 

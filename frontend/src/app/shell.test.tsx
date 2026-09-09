@@ -540,8 +540,15 @@ describe("Shell", () => {
   // read down without ever being a record).
   it.each([
     ["#/settings/account", true],
+    // Every record page keeps the one measure, so a walk from a company to the
+    // deal on it to the lead behind it never changes column.
     ["#/companies/o-1", true],
     ["#/contacts/p-1", true],
+    ["#/leads/l-1", true],
+    ["#/deals/d-1", true],
+    ["#/projects/pr-1", true],
+    // The deal room is a page OF the deal, so it keeps the deal's column.
+    ["#/deals/d-1/room", true],
     // Brief carries no id and is capped anyway: it reads down, and its decision
     // cards carry drafted prose somebody has to read before deciding.
     ["#/", true],
@@ -558,6 +565,11 @@ describe("Shell", () => {
     ["#/companies", false],
     ["#/contacts", false],
     ["#/deals", false],
+    ["#/leads", false],
+    ["#/projects", false],
+    // `#/deals/new` carries the create segment rather than a record id: it is
+    // the deals LIST with its form open, and a list is scanned across.
+    ["#/deals/new", false],
     // A composed unit's page keeps the settings LEVEL (below) but not the
     // reading column: the column is a claim about the page's own content, and a
     // unit lays its own surface out.
@@ -569,6 +581,29 @@ describe("Shell", () => {
     );
     const main = container.querySelector("main");
     expect(main?.className.includes("main-gridded")).toBe(capped);
+  });
+
+  // A record page carries `main-record` on top of the cap: the class adds no
+  // width and only NAMES the column as a container, which is what lets the
+  // record's tab strip measure the column it spans. A capped page that is not a
+  // record has no such strip and must not name one.
+  it.each([
+    ["#/companies/o-1", true],
+    ["#/contacts/p-1", true],
+    ["#/leads/l-1", true],
+    ["#/deals/d-1", true],
+    ["#/projects/pr-1", true],
+    ["#/deals/d-1/room", true],
+    ["#/deals/new", false],
+    ["#/settings/account", false],
+    ["#/worklist", false],
+  ])("names the record column as a container: %s", (hash, record) => {
+    window.location.hash = String(hash);
+    const { container } = render(
+      <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
+    );
+    const main = container.querySelector("main");
+    expect(main?.className.includes("main-record")).toBe(record);
   });
 
   // A unit's page is REACHED from settings and its trail says so

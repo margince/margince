@@ -16,7 +16,7 @@ import {
   customPaletteScreens,
   resolveCustomLabel,
 } from "./custom";
-import { NAV } from "./nav";
+import { CREATE_ID, NAV } from "./nav";
 import { navigate, type Route } from "./router";
 import {
   SEARCH_HIT_KIND_KEY,
@@ -124,7 +124,7 @@ export function useBuiltinCommands(): Command[] {
         id: "action:new-deal",
         label: t("action.newDeal"),
         type: "action",
-        route: { screen: "deals", id: "new" },
+        route: { screen: "deals", id: CREATE_ID },
       },
       {
         id: "action:read-company",

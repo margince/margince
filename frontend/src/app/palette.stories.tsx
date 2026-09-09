@@ -8,6 +8,7 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../screens/story-utils";
+import { CREATE_ID } from "./nav";
 import { type Command, CommandPalette } from "./palette";
 
 // The palette had no story at all. It was mounted CLOSED behind the top bar in
@@ -49,7 +50,7 @@ const COMMANDS: Command[] = [
     id: "action:new-deal",
     label: "New deal",
     type: "action",
-    route: { screen: "deals", id: "new" },
+    route: { screen: "deals", id: CREATE_ID },
   },
 ];
 
