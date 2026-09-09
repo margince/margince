@@ -65,15 +65,15 @@ func idArgByRecordType(t *testing.T) map[string]map[string]string {
 			// TestEveryDeclaredToolVerbIsRegistered is the gate that names it.
 			continue
 		}
-		named := idArgumentsNaming(t, schema, string(pol.RecordType))
-		if len(named) != 1 {
+		arg, settled := requiredRecordID(t, schema)
+		if !settled {
 			continue
 		}
 		recordType := string(pol.RecordType)
 		if grouped[recordType] == nil {
 			grouped[recordType] = map[string]string{}
 		}
-		grouped[recordType][pol.Tool] = named[0]
+		grouped[recordType][pol.Tool] = arg
 	}
 	if len(grouped) == 0 {
 		t.Fatal("no declared tool named an id for its record type, so both censuses below measure nothing")
@@ -106,15 +106,45 @@ func TestSiblingVerbsAgreeOnTheIDTheyName(t *testing.T) {
 	}
 }
 
-// idArgumentsNaming reads the REQUIRED uuid arguments whose name plausibly names
-// this record — the record's own `<type>_id`, or the generic `record_id`/`id`.
+// notTheRecordsOwnID names the required uuid arguments that are some OTHER
+// record, so the one left over is the record the verb is about.
 //
-// Required only, and uuid only: an optional id is not what a caller must learn,
-// and a non-uuid required argument (a trigger, a reason) is not an id at all.
-// Reading the schema rather than a Go struct tag is deliberate — the schema is
-// what a caller is served on tools/list, so it is what a caller can be wrong
-// about.
-func idArgumentsNaming(t *testing.T, inputSchema json.RawMessage, recordType string) []string {
+// A DECLARED set of roles rather than an allowlist of accepted id names, and the
+// difference is the whole correctness of this census. Matching names against
+// `<type>_id`/`record_id`/`id` meant a verb that renamed its id to anything else
+// produced no candidate at all and was skipped — so a lead verb changing
+// `lead_id` to `case_id` would have left both censuses green while the lead
+// verbs disagreed, which is the under-recognition a census must not have. Naming
+// the roles that are NOT the subject inverts that: an unfamiliar id stays in and
+// is compared.
+//
+// Each entry is a role, with why it is not the subject:
+//
+//   - to_stage_id, into_tag_id — the DESTINATION of a move or a merge.
+//   - source_id, target_id — merge_records' pair. Neither is "the record"; the
+//     call is about both, which is why it names neither generically.
+//   - entity_id — what relink_* attaches activities TO, not the activity.
+//   - from, to — forecast_movement's two periods.
+//   - approval_id — the staged call being redeemed, not the record it touches.
+var notTheRecordsOwnID = map[string]string{
+	"to_stage_id":  "the destination of a stage move",
+	"into_tag_id":  "the tag being merged into",
+	"source_id":    "one half of a merge pair",
+	"target_id":    "the other half of a merge pair",
+	"entity_id":    "what activities are relinked onto",
+	"from":         "the period a movement starts in",
+	"to":           "the period a movement ends in",
+	"approval_id":  "the staged call being redeemed",
+	"host_user_id": "whose calendar a meeting is booked on",
+	"assignee_id":  "who a task is for",
+}
+
+// requiredRecordID is the one required uuid argument naming the record this verb
+// is about, or false where the schema does not settle it.
+//
+// Read from the SCHEMA rather than a Go struct tag, because the schema is what a
+// caller is served on tools/list and therefore what a caller can be wrong about.
+func requiredRecordID(t *testing.T, inputSchema json.RawMessage) (string, bool) {
 	t.Helper()
 	var schema struct {
 		Required   []string `json:"required"`
@@ -125,26 +155,33 @@ func idArgumentsNaming(t *testing.T, inputSchema json.RawMessage, recordType str
 	if err := json.Unmarshal(inputSchema, &schema); err != nil {
 		t.Fatalf("a registered tool's input schema is not readable: %v", err)
 	}
-	// A verb that takes `record_type` is the GENERIC shape, and `record_id` is
-	// the right spelling there — it is the companion of the type beside it.
-	// Grouping those with the single-type verbs would report every generic verb
-	// as disagreeing with every dedicated one, which is the convention rather
-	// than a defect.
+	// A verb that takes `record_type` is the GENERIC shape and is excluded, not
+	// compared: it serves many record types, so `record_id`/`id` is the correct
+	// spelling for it and grouping it under each type it can reach would report
+	// the convention as a disagreement with every dedicated verb.
+	// TestAGenericIDNamesAGenericVerb is what holds the generic shape instead.
 	if _, generic := schema.Properties["record_type"]; generic {
-		return nil
+		return "", false
 	}
-	candidates := map[string]bool{recordType + "_id": true, "record_id": true, "id": true}
-	var named []string
+	var subject []string
 	for _, req := range schema.Required {
-		if !candidates[req] {
+		if schema.Properties[req].Format != "uuid" {
 			continue
 		}
-		if schema.Properties[req].Format == "uuid" {
-			named = append(named, req)
+		if _, other := notTheRecordsOwnID[req]; other {
+			continue
 		}
+		subject = append(subject, req)
 	}
-	sort.Strings(named)
-	return named
+	sort.Strings(subject)
+	if len(subject) != 1 {
+		// None: a collection read, or a verb whose every required id is another
+		// record's (merge_records, the set relinks). Several: a shape this
+		// census has no opinion on, and saying so beats guessing which is the
+		// subject.
+		return "", false
+	}
+	return subject[0], true
 }
 
 func joinVerbs(verbs []string) string {
