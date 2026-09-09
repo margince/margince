@@ -133,10 +133,11 @@ export function usePageAside(available = true): { open: boolean } {
  * It chooses what the page shows beside the work, so it stands with the
  * controls that choose what the work column shows rather than in the head
  * among the record's verbs, where it reads as one more thing to do to the
- * record instead of a way to see more of it. A record with no tab row —
- * the project page — has nowhere else to put it and keeps it in the head;
- * every record that HAS a strip passes it as that strip's `trailing`.
- * Renders nothing when no screen supplies a pane.
+ * record instead of a way to see more of it. Every record page passes it as
+ * its tab strip's `trailing`, and a record with a single body draws the strip
+ * anyway: the row is where the switch lives, and a reader who has learned that
+ * finds it in the same place on every record. Renders nothing when no screen
+ * supplies a pane.
  */
 export function PageAsideToggle() {
   const t = useT();

@@ -1105,46 +1105,47 @@ function CompanyRecord({
   // otherwise keep serving a native-looking company view.
   const overlay = view.data?.state === "overlay" || sorMode === "overlay";
   const visibleTabs = companyTabsFor(org, tab);
-  // One tab is not a choice. A strip with a single tab is a control that does
-  // nothing, so it disappears entirely rather than asking the reader to pick
-  // the page they are already on.
-  const tabs =
-    visibleTabs.length > 1 ? (
-      <div className="co-tabs">
-        <RecordTabs
-          options={visibleTabs}
-          value={tab}
-          onChange={onTab}
-          counts={companyTabCounts(assembled)}
-          // The switch for the account's own details column, at the end of
-          // the tab row: it chooses what the page shows beside the work, so it
-          // stands with the controls that choose what the work column shows,
-          // and never in the head among the record's verbs.
-          trailing={<PageAsideToggle />}
-          labels={{
-            // "360", not the shared "Overview": this tab is the account's
-            // one assembled reading, and the card inside it is named the same
-            // — a tab and the thing it opens calling themselves two different
-            // words is two places to learn. Its own key rather than a re-worded
-            // `tab.overview`, which four other record types render and none of
-            // them is this.
-            overview: t("tab.overview"),
-            contacts: t("tab.contacts"),
-            deals: t("tab.deals"),
-            tasks: t("tab.tasks"),
-            timeline: t("tab.timeline"),
-            // The tab's own key rather than `finance.title`, which the card
-            // inside varies by lifecycle ("Finance (historical)"). A tab label
-            // names a place and does not qualify it; sharing one key would tie
-            // the strip to a title that changes under it.
-            finance: t("tab.finance"),
-            documents: t("tab.documents"),
-            profile: t("tab.profile"),
-            partner: t("tab.partner"),
-          }}
-        />
-      </div>
-    ) : null;
+  // The strip stands whatever it holds, because choosing between the account's
+  // bodies is not all it does: the details switch rides at its end, so a row
+  // that disappeared for an account with one body to read would take the only
+  // way into the pane with it. One strip on every record page is also what
+  // lets a reader learn where the switch is once.
+  const tabs = (
+    <div className="co-tabs">
+      <RecordTabs
+        options={visibleTabs}
+        value={tab}
+        onChange={onTab}
+        counts={companyTabCounts(assembled)}
+        // The switch for the account's own details column, at the end of
+        // the tab row: it chooses what the page shows beside the work, so it
+        // stands with the controls that choose what the work column shows,
+        // and never in the head among the record's verbs.
+        trailing={<PageAsideToggle />}
+        labels={{
+          // "360", not the shared "Overview": this tab is the account's
+          // one assembled reading, and the card inside it is named the same
+          // — a tab and the thing it opens calling themselves two different
+          // words is two places to learn. Its own key rather than a re-worded
+          // `tab.overview`, which four other record types render and none of
+          // them is this.
+          overview: t("tab.overview"),
+          contacts: t("tab.contacts"),
+          deals: t("tab.deals"),
+          tasks: t("tab.tasks"),
+          timeline: t("tab.timeline"),
+          // The tab's own key rather than `finance.title`, which the card
+          // inside varies by lifecycle ("Finance (historical)"). A tab label
+          // names a place and does not qualify it; sharing one key would tie
+          // the strip to a title that changes under it.
+          finance: t("tab.finance"),
+          documents: t("tab.documents"),
+          profile: t("tab.profile"),
+          partner: t("tab.partner"),
+        }}
+      />
+    </div>
+  );
 
   // Both tabs render inside ONE page. Partner used to be a different
   // component tree with no rails, so switching tab unmounted both side
