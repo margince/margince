@@ -3551,6 +3551,9 @@
           "confirmed_date_count": {
             "type": "integer"
           },
+          "coverage_note": {
+            "type": "string"
+          },
           "current_call": {
             "type": "object"
           },

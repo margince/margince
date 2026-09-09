@@ -2020,7 +2020,7 @@
     },
     {
       "name": "forecast_readings",
-      "tokens": 349,
+      "tokens": 357,
       "agents": [],
       "required_by_cases": [
         "case21_what_are_we_closing"
