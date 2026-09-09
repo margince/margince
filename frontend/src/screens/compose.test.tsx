@@ -538,7 +538,7 @@ describe("ComposeModal", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    expect(await screen.findByRole("heading", DISCLOSURE)).toBeTruthy();
+    await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(
       screen.getByText("AI-assisted draft (Art. 50): reviewed by a human."),
     ).toBeTruthy();
@@ -573,7 +573,7 @@ describe("ComposeModal", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    expect(await screen.findByRole("heading", DISCLOSURE)).toBeTruthy();
+    await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(screen.getByText(/This draft was produced by AI/i)).toBeTruthy();
   });
 
@@ -1483,7 +1483,7 @@ describe("ComposeModal draft provenance", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    expect(await screen.findByRole("heading", DISCLOSURE)).toBeTruthy();
+    await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(screen.queryByText("Provisional voice")).toBeNull();
   });
 });
