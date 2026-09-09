@@ -45,7 +45,6 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	// Past this module. Neither can import internal/platform/outbound — they
 	// are separate Go modules — and neither needs to.
 	"../extensions/openchannel/client.go:func post": "posts a document signed with a secret the RECEIVER issued, over a nonce and a timestamp they check; the signature names the sender to them more exactly than an agent could, and to anyone else the request is unverifiable whatever it claims",
-	"../cli/craft/gate/anthropic.go:func Complete":  "carries the developer's own x-api-key, which is the identity that provider bills and throttles — the same ground as the model providers below",
 
 	// This product's own origin, and the harnesses that drive it.
 	"internal/modules/agents/apps/fetch.go:func Fetch":         "fetches this product's own origin, so the server on the other end is this same process and a name would be it introducing itself to itself",
