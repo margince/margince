@@ -400,5 +400,20 @@ const (
 	// person never gets here. The read hands back no row: it returns one uuid,
 	// which is either the id the caller already named or the survivor that id
 	// now resolves to.
-	modulesTierUnscopedCeiling = 100
+	//
+	// THE FIFTH RISE, +3, and all three are the public withdrawal resolve.
+	// consent.resolveWithdrawalTokenTx projects person_id and lead_id off
+	// withdrawal_credential, and legacyPreferenceTokenAsWithdrawal projects
+	// person_id off preference_token, so a one-click unsubscribe can act.
+	//
+	// There is NO row scope to reach on this edge and there cannot be: the
+	// surface is anonymous by construction — RFC 8058 requires the POST to work
+	// with no session, from a mail client, and a scope needs a seat to narrow
+	// to. Possession of the emailed credential IS the authority, which is the
+	// posture ResolvePreferenceToken and ResolveConfirmToken already hold and
+	// which ungatedEntryPoints records for all three. What bounds it instead is
+	// the credential's narrowness: the ref carries an address and a scope, so a
+	// holder cannot read a consent state, cannot grant, and cannot reach
+	// business correspondence.
+	modulesTierUnscopedCeiling = 103
 )

@@ -37,7 +37,7 @@ package gates
 // and it arrives as a "token" parameter — on the store lookups and, before them,
 // on the unauthenticated HTTP handlers a mailed link resolves to.
 //
-// It may then be laundered (hashConfirmToken, confirmLink), handed to a consumer
+// It may then be laundered (hashPublicToken, confirmLink), handed to a consumer
 // that looks it up and returns a record, or placed on the IssuedConfirm the mail
 // path reads. Everything else is a finding.
 //
@@ -100,7 +100,7 @@ const tokenParameterName = "token"
 //
 // gatekit:fixture why each destination may receive the plaintext
 var ratifiedDestinations = map[string]string{
-	"hashConfirmToken":        "returns only the digest, which is what the row holds",
+	"hashPublicToken":         "returns only the digest, which is what the row holds",
 	"confirmLink":             "returns the URL that goes in the mail body",
 	"ResolveConfirmToken":     "looks the token up and returns a record, never the token",
 	"subjectOfConfirmTokenTx": "looks the token up and returns whose link it is",
@@ -108,6 +108,14 @@ var ratifiedDestinations = map[string]string{
 	"SubmitConfirmation":      "is the store method the public handler forwards its token to",
 	"ResolvePreferenceToken":  "consumes a different credential, the preference-centre token",
 	"QueryRow":                "is the parameterised lookup: the token is a bound argument, never text in a statement",
+
+	// The WITHDRAWAL credential travels the same edge and is tracked the same
+	// way. It is hashed at rest like the confirm token, so the plaintext is
+	// equally short-lived and equally worth following.
+	"ResolveWithdrawalToken":            "looks the token up and returns an address and a scope, never the token",
+	"resolveWithdrawalTokenTx":          "is the same resolve inside a caller's transaction",
+	"legacyPreferenceTokenAsWithdrawal": "looks up an OLD preference token and returns a withdrawal ref, never the token",
+	"HasPrefix":                         "reads the credential's family prefix and returns a bool; a prefix test discloses nothing the link's own shape does not",
 }
 
 // launderers are the two functions whose OWN BODY this gate does not inspect,
@@ -127,7 +135,7 @@ var ratifiedDestinations = map[string]string{
 // fmt.Println(token) inside it then read green. So this map names only the two
 // functions that end the credential, and receipt is decided separately above.
 var launderers = map[string]bool{
-	"hashConfirmToken":  true,
+	"hashPublicToken":   true,
 	"Store.confirmLink": true,
 }
 
@@ -447,7 +455,7 @@ func taintAssignment(assign *ast.AssignStmt, names map[string]bool) bool {
 // mint's result, a tainted name, or a read of IssuedConfirm.Token.
 //
 // A call's RESULT is never the token, even when the token went in.
-// ResolveConfirmToken(token) evaluates to a record, hashConfirmToken(token) to
+// ResolveConfirmToken(token) evaluates to a record, hashPublicToken(token) to
 // a digest, confirmLink(token) to the URL that goes in the mail. Treating a
 // result as tainted was the first shape of this walk, and it reported the
 // handlers' own WriteJSON — which carries the resolved card — as a leak of the
@@ -609,8 +617,8 @@ func ratifiedCall(call *ast.CallExpr, callee string, names map[string]bool) bool
 // to a launderer. launderers itself is receiver-qualified, which is the right
 // key for asking whether a DECLARATION is one.
 var laundererNames = map[string]bool{
-	"hashConfirmToken": true,
-	"confirmLink":      true,
+	"hashPublicToken": true,
+	"confirmLink":     true,
 }
 
 // carriesPlaintextAt reports whether one positional argument is the plaintext.
