@@ -44,3 +44,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Each carriage bound this message breaks, stacked under the shelf. There can
+   be several at once — too many files AND one too large — so it is a list; no
+   markers, because each item is a full sentence a rep reads and acts on. */
+.compose-carriage {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

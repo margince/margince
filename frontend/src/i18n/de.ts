@@ -3412,6 +3412,16 @@ export const de = {
   "compose.fileUploading": "Datei wird abgelegt…",
   "compose.fileStoredUnnamed":
     "Die Datei liegt am Datensatz, aber wir konnten nicht zurücklesen, welche es ist. Hängen Sie sie über die Liste oben an.",
+  "compose.carriageCarries":
+    "{channel} kann keine Dateien übertragen, daher können diese Nachricht und ihre {count} Anhänge dort nicht gesendet werden. Senden Sie den Text über {channel} oder die Dateien auf anderem Weg.",
+  "compose.carriageCount":
+    "{channel} überträgt höchstens {limit} Dateien in einer Nachricht, und diese hat {named}. Senden Sie den Rest als zweite Nachricht.",
+  "compose.carriagePerFile":
+    "{filename} ist größer als die {limit}, die {channel} für eine einzelne Datei zulässt. Senden Sie eine kleinere Fassung oder teilen Sie sie auf anderem Weg.",
+  "compose.carriageAggregate":
+    "Diese {count} Dateien ergeben zusammen {total}, und {channel} überträgt höchstens {limit} in einer Nachricht. Verteilen Sie sie auf mehrere Nachrichten.",
+  "compose.carriageCaption":
+    "{channel} überträgt den Text einer Nachricht mit Dateien als Bildunterschrift, höchstens {limit} Zeichen, und diese hat {length}. Kürzen Sie ihn oder senden Sie die Dateien separat.",
   "calendar.previousMonth": "Voriger Monat",
   "calendar.nextMonth": "Nächster Monat",
   "compose.schedulePick": "Datum und Uhrzeit wählen",

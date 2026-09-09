@@ -3376,6 +3376,16 @@ export const vi = {
   "compose.fileUploading": "Đang lưu tệp…",
   "compose.fileStoredUnnamed":
     "Tệp đã ở trên hồ sơ, nhưng chúng tôi không đọc lại được đó là tệp nào. Hãy đính kèm nó từ danh sách phía trên.",
+  "compose.carriageCarries":
+    "{channel} không mang được tệp, nên tin nhắn này cùng {count} tệp đính kèm không thể gửi trên đó. Hãy gửi phần chữ qua {channel}, hoặc gửi tệp bằng cách khác.",
+  "compose.carriageCount":
+    "{channel} mang tối đa {limit} tệp trong một tin nhắn, mà tin này có {named}. Hãy gửi phần còn lại thành một tin nhắn thứ hai.",
+  "compose.carriagePerFile":
+    "{filename} lớn hơn mức {limit} mà {channel} chấp nhận cho một tệp. Hãy gửi bản nhỏ hơn, hoặc chia sẻ bằng cách khác.",
+  "compose.carriageAggregate":
+    "{count} tệp này cộng lại là {total}, mà {channel} chỉ mang tối đa {limit} trong một tin nhắn. Hãy gửi chúng qua nhiều tin nhắn.",
+  "compose.carriageCaption":
+    "{channel} mang phần chữ của tin nhắn có tệp dưới dạng chú thích, tối đa {limit} ký tự, mà tin này có {length}. Hãy rút ngắn, hoặc gửi tệp riêng.",
   "calendar.previousMonth": "Tháng trước",
   "calendar.nextMonth": "Tháng sau",
   "compose.schedulePick": "Chọn ngày và giờ",

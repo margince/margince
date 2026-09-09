@@ -3502,6 +3502,16 @@ export const en = {
   "compose.fileUploading": "Filing the file…",
   "compose.fileStoredUnnamed":
     "The file is on the record, but we could not read back which one it is. Attach it from the list above.",
+  "compose.carriageCarries":
+    "{channel} cannot carry files, so this message and its {count} attached cannot go on it. Send the text on {channel}, or the files another way.",
+  "compose.carriageCount":
+    "{channel} carries at most {limit} files in one message, and this has {named}. Send the rest as a second message.",
+  "compose.carriagePerFile":
+    "{filename} is larger than the {limit} {channel} accepts for one file. Send a smaller version, or share it another way.",
+  "compose.carriageAggregate":
+    "These {count} files come to {total} together, and {channel} carries at most {limit} in one message. Send them across several messages.",
+  "compose.carriageCaption":
+    "{channel} carries the text of a message with files as a caption, at most {limit} characters, and this has {length}. Shorten it, or send the files separately.",
   "calendar.previousMonth": "Previous month",
   "calendar.nextMonth": "Next month",
   "compose.schedulePick": "Pick date and time",
