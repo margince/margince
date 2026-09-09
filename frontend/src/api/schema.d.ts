@@ -24529,6 +24529,11 @@ export interface components {
              * @description Set on promotion (convenience mirror).
              */
             promoted_person_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Set when this lead was merged away into another, and null otherwise. It is what separates a merged-away lead from a disqualified one — both are archived and neither carries a `promoted_person_id`, so without this a reader can only see that the lead ended, not which of two very different things happened to it. Disqualified says a human judged the lead not worth pursuing; merged says it was the same lead as another one. The id names the survivor to read instead. `person` and `organization` already carry the same field for the same reason.
+             */
+            readonly merged_into_id?: string | null;
             /** Format: date-time */
             promoted_at?: string | null;
             /**

@@ -35,7 +35,7 @@ const liveOnlyClause = ` AND archived_at IS NULL`
 // retention obligation) is in none of them, the same as in every other read.
 var leadColumns = `id, full_name, email, title, company_name, candidate_org_key,
 	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, source_system, source_id,
-	promoted_person_id, promoted_at, source, captured_by, version, created_at, updated_at, archived_at,
+	promoted_person_id, promoted_at, merged_into_id, source, captured_by, version, created_at, updated_at, archived_at,
 	routed_at, first_response_at,
 	(SELECT s.label FROM lead_source s WHERE s.key = lead.source),
 	disqualify_reason_id, disqualify_note,
@@ -125,7 +125,7 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, extra ...any) (crmcontracts.Lead, error) {
 	var l crmcontracts.Lead
 	var id ids.UUID
-	var ownerID, projectID, promotedPerson, disqualifyReason, qualifiedDeal *ids.UUID
+	var ownerID, projectID, promotedPerson, mergedInto, disqualifyReason, qualifiedDeal *ids.UUID
 	var statusSetBy *string
 	var evidence []byte
 	var email *string
@@ -136,7 +136,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	dests := []any{
 		&id, &l.FullName, &email, &l.Title, &l.CompanyName, &l.CandidateOrgKey,
 		&l.LinkedinUrl, &status, &l.Score, &l.ScoreOverrideReason, &l.ScoreComputed, &ownerID, &projectID, &l.SourceSystem, &l.SourceId,
-		&promotedPerson, &l.PromotedAt, &l.Source, &l.CapturedBy, &version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
+		&promotedPerson, &l.PromotedAt, &mergedInto, &l.Source, &l.CapturedBy, &version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
 		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &qualifiedDeal, &evidence,
 		&l.LastActivityAt, &openTasks,
@@ -154,6 +154,11 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	l.OwnerId = uuidPtr(ownerID)
 	l.ProjectId = uuidPtr(projectID)
 	l.PromotedPersonId = uuidPtr(promotedPerson)
+	// What separates a merged-away lead from a disqualified one. Both are
+	// archived and neither carries a promoted_person_id, so without this the
+	// page can only see that the lead ended — and it said "Disqualified",
+	// which claims a human judged the lead not worth pursuing.
+	l.MergedIntoId = uuidPtr(mergedInto)
 	l.DisqualifyReasonId = uuidPtr(disqualifyReason)
 	l.QualifiedDealId = uuidPtr(qualifiedDeal)
 	if statusSetBy != nil {
