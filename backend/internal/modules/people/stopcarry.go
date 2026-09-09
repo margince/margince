@@ -46,6 +46,20 @@ import (
 // failed to carry the stops would leave exactly the state this exists to
 // prevent, with no way to tell it from a merge that never tried.
 type StopCarrier interface {
+	// LockStopsTx takes consent's own lock on both subjects, and MUST be
+	// called before the merge locks any person row.
+	//
+	// THE ORDER IS THE WHOLE REASON THIS METHOD EXISTS. Recording a stop takes
+	// consent's advisory lock on the subject and then reads the person row;
+	// the merge locks the person rows and then, inside CarryStopsTx, reaches
+	// for that same advisory lock. Two transactions taking the same pair of
+	// locks in opposite orders is a deadlock, and Postgres duly reported one.
+	//
+	// Splitting the lock out lets the merge take it first, so both paths
+	// acquire consent's lock before any person row and the inversion cannot
+	// form. Calling it is cheap when there is nothing to carry.
+	LockStopsTx(ctx context.Context, tx pgx.Tx, subjects ...commsauthz.StopSubject) error
+
 	// CarryStopsTx copies every live stop held by the retiring subject onto
 	// the survivor. Idempotent: a stop the survivor already holds is left
 	// alone rather than duplicated.
@@ -69,6 +83,19 @@ func (e *StopCarrierNotWiredError) Error() string {
 		"asked us to stop"
 }
 
+// FieldFault carries the refusal to every surface rather than to the HTTP one
+// alone. The MCP tool surface reaches this store through the datasource seam
+// and never runs the REST error mapper, so a branch there would have told an
+// agent merging records that the server had failed and to try again — which it
+// would, forever, because the seam is still not wired.
+//
+// The field is the source record, because that is the one holding the stop and
+// the one an operator will look at. Naming the target would send them to the
+// record that has nothing wrong with it.
+func (e *StopCarrierNotWiredError) FieldFault() (field, code, message string) {
+	return "source_id", "stop_carrier_not_wired", e.Error()
+}
+
 // carryStopsTx is the one call site, so the refusal below cannot be forgotten
 // by a second caller written later.
 //
@@ -87,6 +114,16 @@ func (e *StopCarrierNotWiredError) Error() string {
 // it is the case an operator can act on — the message names the record.
 func (s *Store) carryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error {
 	return carryStopsOrRefuse(ctx, tx, s.stopCarrier, from, to)
+}
+
+// lockStopsOrSkip takes consent's lock before the merge locks any person row.
+// An unwired carrier has no lock to take, and the refusal for that case is
+// carryStopsOrRefuse's to make once the merge knows what it would lose.
+func lockStopsOrSkip(ctx context.Context, tx pgx.Tx, carrier StopCarrier, subjects ...commsauthz.StopSubject) error {
+	if carrier == nil {
+		return nil
+	}
+	return carrier.LockStopsTx(ctx, tx, subjects...)
 }
 
 // carryStopsOrRefuse is the rule itself, taking the carrier as an argument so

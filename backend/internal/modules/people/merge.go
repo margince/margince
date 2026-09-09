@@ -143,6 +143,15 @@ func (s *Store) MergePerson(ctx context.Context, sourceID, targetID ids.PersonID
 // concurrent merge(target→elsewhere) could archive the survivor
 // mid-merge, leaving relinked children pointing at a dead record.
 func (s *Store) mergePersonTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.PersonID, active []fieldcatalog.Column) (crmcontracts.Person, error) {
+	// BEFORE LockPair, because recording a stop takes consent's lock and then
+	// reads the person row. Locking the rows first and reaching for consent's
+	// lock later (inside carryStopsTx, below) inverts the order between the two
+	// transactions and deadlocks — see StopCarrier.LockStopsTx.
+	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier,
+		commsauthz.PersonStopSubject(sourceID),
+		commsauthz.PersonStopSubject(targetID)); err != nil {
+		return crmcontracts.Person{}, err
+	}
 	_, tgtLock, err := storekit.LockPair(ctx, tx, "person", sourceID.UUID, targetID.UUID)
 	if err != nil {
 		return crmcontracts.Person{}, err

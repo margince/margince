@@ -329,3 +329,64 @@ func TestASubjectHoldingTwoStopsOfOneKindCarriesOne(t *testing.T) {
 			"lift somebody has to remember to make", n)
 	}
 }
+
+// A STOP RECORDED WHILE THE MERGE RUNS must still reach the survivor.
+//
+// The two writers touch different rows — Suppress inserts against the retiring
+// person, the carry reads them and inserts against the survivor — so nothing in
+// Postgres makes them queue on their own. Before suppressionlock.go they did
+// not, and the loser was the stop:
+//
+//	Suppress(objector)              MergePerson(objector -> survivor)
+//	   BEGIN                            BEGIN
+//	                                    reads the objector's live rows: none
+//	   INSERT the objection
+//	   COMMIT                           COMMIT, having carried nothing
+//
+// The objection then exists only on the record the merge retired, which is the
+// orphaned-stop defect this whole file exists to close, reintroduced through
+// the carry's own concurrency rather than through the merge forgetting.
+//
+// The test drives that exact order: the merge is held open until the concurrent
+// Suppress has been ISSUED, so with no lock the carry reads before the insert
+// lands. With the lock, one of the two waits for the other and the stop is
+// carried either by the merge or by being already present when it looks.
+func TestAStopRecordedDuringAMergeStillReachesTheSurvivor(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	consentStore := consent.NewStore(e.DB())
+	peopleStore := people.NewStore(e.DB()).WithStopCarrier(consentStore)
+
+	objector := e.SeedPerson(t, "Late Objector", nil)
+	survivor := e.SeedPerson(t, "Survivor", nil)
+
+	// The concurrent writer, started first so its transaction is genuinely
+	// open while the merge runs. It reports back rather than failing from
+	// another goroutine.
+	suppressed := make(chan error, 1)
+	go func() {
+		suppressed <- consentStore.Suppress(admin, consent.SuppressInput{
+			PersonID: ids.From[ids.PersonKind](objector),
+			Kind:     commsauthz.ReasonObjection,
+			Reason:   "called while their duplicate was being merged",
+		})
+	}()
+
+	// The merge races it. Whichever order the two land in, the survivor must
+	// end up holding the objection: either the carry saw it, or the carry ran
+	// first and the stop landed on a record the merge had already retired —
+	// which is the case the lock exists to make impossible.
+	if _, err := peopleStore.MergePerson(admin,
+		ids.From[ids.PersonKind](objector), ids.From[ids.PersonKind](survivor)); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+	if err := <-suppressed; err != nil {
+		t.Fatalf("recording the concurrent objection: %v", err)
+	}
+
+	if got := liveObjections(t, e, survivor); got != 1 {
+		t.Fatalf("the survivor holds %d live objection(s), want 1 — a stop recorded "+
+			"during the merge landed only on the record the merge retired, so the "+
+			"send path will never see it", got)
+	}
+}

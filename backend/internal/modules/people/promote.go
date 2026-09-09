@@ -418,6 +418,15 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 // converted_from_lead_id that lies when the field was already set, and never
 // omitting a title it just filled. A no-op merge returns a nil map.
 func (s *Store) mergeLeadIntoPerson(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, personID ids.PersonID) (map[string]any, error) {
+	// BEFORE the person row lock. Recording a stop takes consent's lock on the
+	// person and then reads the person row; taking the row first here and
+	// consent's lock later (in carryStopsTx, once the promotion knows this is
+	// the surviving person) inverts the order and deadlocks. See
+	// StopCarrier.LockStopsTx.
+	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier,
+		commsauthz.PersonStopSubject(personID)); err != nil {
+		return nil, err
+	}
 	lock, err := storekit.LockRow(ctx, tx, "person", personID.UUID, storekit.LiveOnly)
 	if err != nil {
 		return nil, fmt.Errorf("lock merge-target person: %w", err)

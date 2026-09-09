@@ -37,6 +37,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
+// LockStopsTx implements people.StopCarrier: it takes this module's lock on
+// every named subject, so a merge can acquire it BEFORE it locks any person
+// row. See the interface for why the order matters.
+//
+// Ungated on purpose. Taking a lock reveals nothing and writes nothing; the
+// gate belongs on CarryStopsTx, which is the call that writes.
+func (s *Store) LockStopsTx(ctx context.Context, tx pgx.Tx, subjects ...commsauthz.StopSubject) error {
+	keys := make([]ids.UUID, 0, len(subjects))
+	for _, sub := range subjects {
+		if !sub.IsZero() {
+			keys = append(keys, subjectKey(sub))
+		}
+	}
+	return lockSubjectsInOrder(ctx, tx, keys...)
+}
+
 // CarryStopsTx implements people.StopCarrier.
 //
 // IDEMPOTENT ON KIND. A survivor who already holds a live stop of the same
@@ -55,27 +71,36 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	// holding a consent store can call it directly — and its effect is to write
 	// a suppression onto a subject the caller names.
 	//
-	// THE GRANT FOLLOWS THE SUBJECT BEING WRITTEN, which is the survivor. A
-	// person merge already holds person:update, and a lead merge or promotion
-	// holds lead:update — grants are independent, so requiring person:update of
-	// every caller refused the lead paths outright, including when there was
-	// nothing to carry.
-	object := entityPerson
-	if to.PersonID.IsZero() {
-		object = entityLead
-	}
-	if err := auth.Require(ctx, object, principal.ActionUpdate); err != nil {
+	// THE GATE ADMITS ANY OF THE THREE GRANTS ITS THREE CALLERS RUN UNDER,
+	// rather than naming one and refusing the others. The three doors are:
+	//
+	//   MergePerson   person:update
+	//   MergeLeads    lead:update
+	//   PromoteLead   lead:update + person:create, and NEVER person:update
+	//
+	// so a rule of "update on whichever subject survives" refused promotion
+	// outright — a rep entitled to turn a lead into a contact does not thereby
+	// hold the right to edit contacts, and the promotion rolled back on a
+	// permission the caller was never required to have.
+	//
+	// The point of this gate is to keep a caller who holds NO people grant at
+	// all from writing suppressions through a seam meant for merges. It is not
+	// to re-decide the merge's own entitlement, which each door already checked
+	// before opening its transaction.
+	if err := admitAMergingCaller(ctx); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
-	// LOCKED FIRST, because carry and lift are otherwise unserialized: a lift
-	// committing between this read and the write could revoke the very row
-	// that made the carry skip, leaving the survivor unstopped. lift.go takes
-	// the same advisory lock on the subject, so the two now queue.
-	if err := lockOneSubjectsSuppressions(ctx, tx, to); err != nil {
+	// LOCKED FIRST, and on BOTH SIDES, because the carry reads the retiring
+	// subject's rows and writes the survivor's. Locking only the survivor left
+	// the read side open: a Suppress committing on the retiring subject after
+	// this read lands a stop on a record nothing evaluates any more, which is
+	// this file's own defect reintroduced through its own concurrency. See
+	// suppressionlock.go for the interleaving.
+	if err := lockBothSidesOfACarry(ctx, tx, from, to); err != nil {
 		return err
 	}
 
@@ -191,6 +216,29 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	return nil
 }
 
+// admitAMergingCaller refuses a principal holding none of the three grants the
+// three merge doors run under. auth.RequireAny takes one object and several
+// actions, and this rule spans two objects, so it is spelled out here rather
+// than by widening the platform primitive for a single call site.
+//
+// A refusal names person.update, because that is the grant an ordinary person
+// merge is missing and the one an operator will go and grant.
+func admitAMergingCaller(ctx context.Context) error {
+	for _, g := range []struct {
+		object string
+		action principal.Action
+	}{
+		{entityPerson, principal.ActionUpdate},
+		{entityLead, principal.ActionUpdate},
+		{entityPerson, principal.ActionCreate},
+	} {
+		if err := auth.Require(ctx, g.object, g.action); err == nil {
+			return nil
+		}
+	}
+	return auth.Require(ctx, entityPerson, principal.ActionUpdate)
+}
+
 // authorityLadder renders commsauthz's own rank order for SQL, weakest first,
 // so the comparison in the carry is the one CanOverrule makes and not a second
 // copy of it. An unknown level is absent from the ladder and the query ranks it
@@ -203,26 +251,6 @@ func authorityLadder() []string {
 		out = append(out, string(l))
 	}
 	return out
-}
-
-// lockOneSubjectsSuppressions takes the SAME advisory lock lift.go takes, on
-// the same key, so a carry and a lift touching one subject queue instead of
-// racing.
-//
-// Without it the two interleave in a way that loses a stop: carry reads the
-// survivor's live rows, a lift revokes the row carry just saw and skipped, and
-// carry commits having decided there was nothing to add. The survivor ends up
-// with no stop at all, which is the failure this whole file exists to prevent.
-func lockOneSubjectsSuppressions(ctx context.Context, tx pgx.Tx, subject commsauthz.StopSubject) error {
-	key := subject.PersonID.String()
-	if subject.PersonID.IsZero() {
-		key = subject.LeadID.String()
-	}
-	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, key); err != nil {
-		return fmt.Errorf("consent: serialising stop writes for this subject: %w", err)
-	}
-	return nil
 }
 
 // zeroAsNull sends a zero uuid as SQL NULL, so the WHERE arms above can ask
