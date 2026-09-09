@@ -9,9 +9,16 @@ they last wrote this page down.
 
 Two different promises, and a task can make either without the other:
 
-- **Stays local** — the task's ladder names only rungs that run on this
-  installation's own hardware, so no binding an operator chooses can send its
-  text to a hosted provider.
+- **Stays local** — the task's ladder names only rungs (`local_small`,
+  `local_large`) meant to run on this installation's own hardware. Under
+  the `sovereign` profile that is also enforced: validation refuses a cloud
+  binding for either tier outright, so no cloud client for one is ever
+  constructed. Under every OTHER profile (`eu_hosted`, `cloud_frontier`) it
+  is a naming convention, not an enforced rule — an operator's own binding can
+  point `local_small` or `local_large` at a hosted provider, and this
+  column would then answer "yes" for a task that does, in fact, leave the
+  machine. Read `GET /v1/ai/routing` for what a given deployment actually
+  bound.
 - **Prompt not retained** — the task declares `no_payload`, so its prompt is
   never written to `ai_call_payload` whatever the deployment's capture posture
   says.
@@ -61,6 +68,13 @@ for the tasks that read mail: `capture_classify`, `capture_counterparty_verdict`
 and `capture_confidentiality_verdict`. The last two decide whether a sender or a
 thread is private, so sending their text away to ask would be the question
 answering itself the wrong way round.
+
+**On this installation, specifically — not in general.** "Yes" here names a
+ladder that CAN run entirely on this machine; it is a guarantee only under the
+`sovereign` profile. Under `eu_hosted` or `cloud_frontier`, both mailbox
+classifiers stay local unless an admin binds a cloud model to `local_small`
+or `local_large` — read `GET /v1/ai/routing` on the deployment in question
+for what it actually bound, rather than trusting this column alone.
 
 "Is a copy kept?" is the **Prompt not retained** column, and it is about this
 installation's own database rather than about the provider. What a bound

@@ -11,10 +11,12 @@ package people
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -28,6 +30,11 @@ import (
 // carries — 200 and 304 alike, so a client revalidating gets the same
 // freshness window as one that fetched fresh bytes.
 const logoCacheControl = "private, max-age=300"
+
+// logoWriteBackTimeout bounds the write-back below, the same shape
+// ai.flushDetached gives its own post-response write: generous for one small
+// PUT, and short enough that a dead blob store cannot pin a handler goroutine.
+const logoWriteBackTimeout = 5 * time.Second
 
 // GetOrganizationLogo streams the organization's wide mark — the lockup a
 // record page and an expanded sidebar draw.
@@ -113,4 +120,34 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 		Download: httperr.Download{ContentType: imagenorm.ContentType, Inline: true, Size: int64(len(logo))},
 		Body:     io.NopCloser(bytes.NewReader(logo)),
 	}, "organization logo "+id.String())
+	// Only when a crop actually happened: TrimTransparentPNG returns src
+	// itself, unchanged, when the canvas was already tight, and writing
+	// identical bytes back would cost a PUT for nothing. After this write, the
+	// NEXT read of this same key finds visible == canvas on its own decode and
+	// pays no re-encode — the slowest of the three steps this endpoint was
+	// paying on every request, per margince#4913. The decode and the per-pixel
+	// scan are still paid on every read; closing that fully is the "trim at
+	// store time" fix margince#4913 leaves as a separate, decision-gated
+	// change (a backfill, or normalizing at upload instead of at read).
+	if !bytes.Equal(logo, source) {
+		h.writeBackTrimmedLogo(r.Context(), key, logo)
+	}
+}
+
+// writeBackTrimmedLogo persists a freshly trimmed image over the object a
+// caller just read, so every read after this one finds bytes that need no
+// further crop.
+//
+// Detached from the request's own context (ai.flushDetached is the same
+// shape, for the same reason): the response has already been written by the
+// time this runs, so an unmount or a client that walked away must not cancel
+// a write purely for the NEXT reader's benefit. Best-effort — a failure here
+// costs nothing but the CPU this read already spent; the object at key still
+// holds the correct, if untrimmed, picture, and the next read tries again.
+func (h Handlers) writeBackTrimmedLogo(ctx context.Context, key string, logo []byte) {
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), logoWriteBackTimeout)
+	defer cancel()
+	if err := h.blob.Put(writeCtx, key, bytes.NewReader(logo), int64(len(logo)), imagenorm.ContentType); err != nil {
+		slog.WarnContext(ctx, "writing back a trimmed organization logo", "err", err)
+	}
 }

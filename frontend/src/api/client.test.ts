@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   api,
   CACHE_ANSWER_GRACE_MS,
+  MODEL_ROUTE_TIMEOUT_MS,
   REQUEST_TIMEOUT_MS,
   RequestTimeoutError,
 } from "./client";
@@ -91,6 +92,28 @@ describe("the api client's request deadline", () => {
     // A timer still armed here would abort a controller nobody is listening to
     // and keep the page awake for the whole deadline after every answered request.
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  // The regression this deadline split exists to fix: a model route used to
+  // give up at REQUEST_TIMEOUT_MS, 24.5 minutes before the server's own
+  // deadline, so a slow-but-live model answer reached the reader as a stall.
+  it("still waits on a model route past REQUEST_TIMEOUT_MS", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", neverAnswers());
+    const draft = api.POST("/people/{id}/draft-email", {
+      params: { path: { id: "01a0-4cd2" } },
+      body: {},
+    });
+    const settled = vi.fn();
+    draft.then(settled, settled);
+
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
+    expect(settled).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(
+      MODEL_ROUTE_TIMEOUT_MS - REQUEST_TIMEOUT_MS,
+    );
+    await expect(draft).rejects.toBeInstanceOf(RequestTimeoutError);
   });
 });
 

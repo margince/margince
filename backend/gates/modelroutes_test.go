@@ -30,11 +30,13 @@ package gates
 import (
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -238,4 +240,48 @@ func clientModelRoutes(t *testing.T) map[string]string {
 		t.Fatalf("no entries parsed out of %s's %s — a gate that reads nothing agrees with everything", modelRouteClient, marker)
 	}
 	return entries
+}
+
+// tsNumericConst reads one `export const NAME = 1_234;` declaration's value,
+// underscores and all — TypeScript's numeric separators, which strconv does
+// not accept.
+var tsNumericConst = regexp.MustCompile(`export const (\w+)\s*=\s*([\d_]+);`)
+
+// TestTheClientsModelRouteDeadlineMatchesTheServers holds the client's
+// MODEL_ROUTE_TIMEOUT_MS to the server's ai.RouteWriteDeadline: the two ends
+// of one wait, and nothing else compares them. A client deadline shorter than
+// the server's gives up on work the server is still doing — the reader sees a
+// stall, and their own retry serves the answer instantly from cache because
+// the first request finished in the meantime.
+//
+// >=, not ==: the client is allowed to wait longer than the server can
+// possibly take (there is no cost to that, the server ends the call first
+// either way) but never shorter.
+func TestTheClientsModelRouteDeadlineMatchesTheServers(t *testing.T) {
+	t.Parallel()
+	source, err := os.ReadFile(modelRouteClient)
+	if err != nil {
+		t.Fatalf("reading the client: %v", err)
+	}
+	const name = "MODEL_ROUTE_TIMEOUT_MS"
+	clientMs := int64(-1)
+	for _, m := range tsNumericConst.FindAllStringSubmatch(string(source), -1) {
+		if m[1] != name {
+			continue
+		}
+		v, convErr := strconv.ParseInt(strings.ReplaceAll(m[2], "_", ""), 10, 64)
+		if convErr != nil {
+			t.Fatalf("%s: %s = %q is not a number", modelRouteClient, name, m[2])
+		}
+		clientMs = v
+	}
+	if clientMs < 0 {
+		t.Fatalf("%s declares no `export const %s = ...;` — this gate is reading a shape that is gone", modelRouteClient, name)
+	}
+
+	serverMs := ai.RouteWriteDeadline.Milliseconds()
+	if clientMs < serverMs {
+		t.Errorf("%s's %s is %dms, %s's ai.RouteWriteDeadline is %dms — the client gives up on a model route %dms before the server does, which is exactly the defect this gate exists to hold shut",
+			modelRouteClient, name, clientMs, "ai.RouteWriteDeadline", serverMs, serverMs-clientMs)
+	}
 }

@@ -71,6 +71,19 @@ func (c *countingBlobstore) getCount() int {
 	return c.gets
 }
 
+// putCount reports how many times Put wrote to key so far.
+func (c *countingBlobstore) putCount(key string) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	n := 0
+	for _, k := range c.put {
+		if k == key {
+			n++
+		}
+	}
+	return n
+}
+
 func (c *countingBlobstore) Delete(ctx context.Context, key string) error {
 	c.mu.Lock()
 	c.gone[key] = true

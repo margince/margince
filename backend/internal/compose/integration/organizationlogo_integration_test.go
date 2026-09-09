@@ -17,6 +17,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -171,6 +172,75 @@ func TestOrganizationLogoRemovesLegacyTransparentCanvasAtTheDisplayBoundary(t *t
 	}
 	if bounds := displayed.Bounds(); bounds.Dx() != 32 || bounds.Dy() != 8 {
 		t.Fatalf("displayed logo is %v, want the original 4:1 wordmark", bounds)
+	}
+}
+
+// margince#4913: TrimTransparentPNG's decode-and-scan is unavoidable per read,
+// but a legacy letterboxed logo used to pay its re-encode on every single
+// request forever — the stored bytes never changed, so the crop it produced
+// was thrown away and redone next time. The read that first computes a crop
+// now writes it back over the object it read, so this proves the SECOND read
+// finds already-tight bytes and needs no further write.
+func TestOrganizationLogoWritesBackATrimmedLegacyLogoSoTheNextReadNeedsNoCrop(t *testing.T) {
+	e := Setup(t)
+	blob := newCountingBlobstore()
+	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	ctx := e.Admin()
+	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
+	for y := range 8 {
+		for x := range 32 {
+			wide.SetNRGBA(x, y, color.NRGBA{R: 255, G: 90, A: 255})
+		}
+	}
+	legacy, err := imagenorm.SquarePNG(wide, 32)
+	if err != nil {
+		t.Fatalf("encoding a legacy square-canvas logo: %v", err)
+	}
+	orgID := seedLoggedOrg(ctx, t, e, blob, legacy)
+	key, err := e.People.OrganizationLogoKey(ctx, orgID, people.LogoWide)
+	if err != nil {
+		t.Fatalf("read the stored logo key: %v", err)
+	}
+	url := "/v1/organizations/" + orgID.String() + "/logo"
+
+	first := httptest.NewRecorder()
+	handlers.GetOrganizationLogo(first, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(orgID.UUID))
+	if first.Code != http.StatusOK {
+		t.Fatalf("first GET = %d, want 200: %s", first.Code, first.Body.String())
+	}
+	if got := blob.putCount(key); got != 2 {
+		t.Fatalf("Put(%s) calls after the first read = %d, want 2 (the seed and the write-back)", key, got)
+	}
+
+	rc, _, err := blob.Get(ctx, key)
+	if err != nil {
+		t.Fatalf("reading the object back: %v", err)
+	}
+	stored, err := io.ReadAll(rc)
+	if closeErr := rc.Close(); closeErr != nil {
+		t.Fatalf("closing the object reader: %v", closeErr)
+	}
+	if err != nil {
+		t.Fatalf("reading the object's bytes: %v", err)
+	}
+	decoded, err := png.Decode(bytes.NewReader(stored))
+	if err != nil {
+		t.Fatalf("the written-back object is not a PNG: %v", err)
+	}
+	if bounds := decoded.Bounds(); bounds.Dx() != 32 || bounds.Dy() != 8 {
+		t.Fatalf("the object stored after write-back is %v, want the trimmed 4:1 wordmark — it should not still be the 32x32 legacy canvas", bounds)
+	}
+
+	second := httptest.NewRecorder()
+	handlers.GetOrganizationLogo(second, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(orgID.UUID))
+	if second.Code != http.StatusOK {
+		t.Fatalf("second GET = %d, want 200: %s", second.Code, second.Body.String())
+	}
+	if !bytes.Equal(second.Body.Bytes(), stored) {
+		t.Fatal("the second read's bytes are not the written-back object's bytes")
+	}
+	if got := blob.putCount(key); got != 2 {
+		t.Fatalf("Put(%s) calls after the second read = %d, want still 2 — a read of already-tight bytes must not write back", key, got)
 	}
 }
 
