@@ -41261,6 +41261,16 @@ type CreatePipelineParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ArchivePipelineParams defines parameters for ArchivePipeline.
+type ArchivePipelineParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // UpdatePipelineParams defines parameters for UpdatePipeline.
 type UpdatePipelineParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -52855,12 +52865,18 @@ type ServerInterface interface {
 	// Create a pipeline.
 	// (POST /pipelines)
 	CreatePipeline(w http.ResponseWriter, r *http.Request, params CreatePipelineParams)
+	// Retire a pipeline (soft delete; archive is the delete).
+	// (DELETE /pipelines/{id})
+	ArchivePipeline(w http.ResponseWriter, r *http.Request, id Id, params ArchivePipelineParams)
 	// Get a pipeline (with its ordered stages).
 	// (GET /pipelines/{id})
 	GetPipeline(w http.ResponseWriter, r *http.Request, id Id)
 	// Update a pipeline (rename / reorder / set default — bounded config).
 	// (PATCH /pipelines/{id})
 	UpdatePipeline(w http.ResponseWriter, r *http.Request, id Id, params UpdatePipelineParams)
+	// Put a retired pipeline back in use.
+	// (POST /pipelines/{id}/restore)
+	RestorePipeline(w http.ResponseWriter, r *http.Request, id Id)
 	// List rate-card products (live by default; cursor-paginated).
 	// (GET /products)
 	ListProducts(w http.ResponseWriter, r *http.Request, params ListProductsParams)
@@ -56080,6 +56096,12 @@ func (_ Unimplemented) CreatePipeline(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Retire a pipeline (soft delete; archive is the delete).
+// (DELETE /pipelines/{id})
+func (_ Unimplemented) ArchivePipeline(w http.ResponseWriter, r *http.Request, id Id, params ArchivePipelineParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Get a pipeline (with its ordered stages).
 // (GET /pipelines/{id})
 func (_ Unimplemented) GetPipeline(w http.ResponseWriter, r *http.Request, id Id) {
@@ -56089,6 +56111,12 @@ func (_ Unimplemented) GetPipeline(w http.ResponseWriter, r *http.Request, id Id
 // Update a pipeline (rename / reorder / set default — bounded config).
 // (PATCH /pipelines/{id})
 func (_ Unimplemented) UpdatePipeline(w http.ResponseWriter, r *http.Request, id Id, params UpdatePipelineParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a retired pipeline back in use.
+// (POST /pipelines/{id}/restore)
+func (_ Unimplemented) RestorePipeline(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -75699,6 +75727,62 @@ func (siw *ServerInterfaceWrapper) CreatePipeline(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ArchivePipeline operation middleware
+func (siw *ServerInterfaceWrapper) ArchivePipeline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArchivePipelineParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchivePipeline(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPipeline operation middleware
 func (siw *ServerInterfaceWrapper) GetPipeline(w http.ResponseWriter, r *http.Request) {
 
@@ -75780,6 +75864,38 @@ func (siw *ServerInterfaceWrapper) UpdatePipeline(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdatePipeline(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestorePipeline operation middleware
+func (siw *ServerInterfaceWrapper) RestorePipeline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestorePipeline(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -84956,10 +85072,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/pipelines", wrapper.CreatePipeline)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/pipelines/{id}", wrapper.ArchivePipeline)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/pipelines/{id}", wrapper.GetPipeline)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/pipelines/{id}", wrapper.UpdatePipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/pipelines/{id}/restore", wrapper.RestorePipeline)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/products", wrapper.ListProducts)

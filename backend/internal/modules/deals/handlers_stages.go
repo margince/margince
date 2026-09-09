@@ -117,3 +117,29 @@ func (h Handlers) ArchiveStage(w http.ResponseWriter, r *http.Request, id crmcon
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// ArchivePipeline retires a pipeline. The single refusal — the default cannot
+// be retired while it is the default — carries its own verdict as a
+// values.ParseError, so nothing is mapped by hand here.
+func (h Handlers) ArchivePipeline(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchivePipelineParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	if err := h.store.ArchivePipeline(r.Context(), pathID[ids.PipelineKind](id), ifVersion); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RestorePipeline puts a retired pipeline back in use, and answers the
+// pipeline so a caller sees the state it is in rather than having to re-read.
+func (h Handlers) RestorePipeline(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	pipeline, err := h.store.RestorePipeline(r.Context(), pathID[ids.PipelineKind](id))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, pipeline)
+}
