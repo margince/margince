@@ -161,6 +161,27 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	// One event per carried stop, the same consent.suppressed a directly
 	// recorded one ships — a consumer cannot tell the two apart, and should
 	// not: the survivor is suppressed either way.
+	//
+	// FOR A PERSON SURVIVOR ONLY, and that is the contract's own rule rather
+	// than a shortcut. public-events.yaml declares consent.suppressed with
+	// `x-entity-type: person` and says why: "the subject is a person and only
+	// a person ... so this is a static entity whose delivery scope the fan-out
+	// gate proves mechanically rather than by hand-ratification". The
+	// generated payload's EntityType() returns "person" unconditionally, so a
+	// lead survivor would ship an envelope naming person:<lead uuid> — an id
+	// of the wrong kind, scoped by a gate that was told it could trust the
+	// type. Webhook consumers would then be handed, or refused, the wrong
+	// thing.
+	//
+	// A lead merge is the narrower case and it loses nothing that matters: the
+	// carried rows are on the record, the audit above names them, and the send
+	// engine reads the table rather than the event stream. Widening the event
+	// to leads is a contract change with its own fan-out question to answer,
+	// and it belongs in the slice that asks it — not smuggled in behind a
+	// merge.
+	if to.PersonID.IsZero() {
+		return nil
+	}
 	for _, c := range moved {
 		if err := storekit.EmitEvent(ctx, tx, auditID, entityID,
 			suppressionRecordedPayload(c.kind, commsauthz.AuthorityLevel(c.level))); err != nil {
