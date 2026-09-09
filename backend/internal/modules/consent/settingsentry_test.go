@@ -64,6 +64,34 @@ func TestAPartialMapIsRefused(t *testing.T) {
 	}
 }
 
+// A PARTIAL MAP THAT PREDATES THE VALIDATOR IS READ SAFELY.
+//
+// The validator guards the write, and settings.ApplyTx does not re-run it on
+// the read — so a map stored before this change arrives at the engine exactly
+// as it was written, with categories missing. That is not a hypothetical: it
+// is what every installation that moved one category to observe now holds.
+//
+// The reading has to be safe on its own, without help from the validator, and
+// safe here means the unnamed categories bind the engine's answer. This asserts
+// the whole map rather than one lookup, because the failure being guarded
+// against is a category nobody thought about.
+func TestAStoredPartialMapReadsTheRestAsEnforce(t *testing.T) {
+	// The shape an operator who rolled marketing back would have left behind.
+	stored := map[string]string{string(commsauthz.CategoryMarketing): "observe"}
+
+	if got := ModeFor(stored, commsauthz.CategoryMarketing); got != commsauthz.ModeObserve {
+		t.Errorf("the named category resolved to %q, want the observe that was stored", got)
+	}
+	for _, c := range commsauthz.Categories() {
+		if c == commsauthz.CategoryMarketing {
+			continue
+		}
+		if got := ModeFor(stored, c); got != commsauthz.ModeEnforce {
+			t.Errorf("%s was left out of a stored map and resolved to %q, want enforce", c, got)
+		}
+	}
+}
+
 // A misspelled category is refused rather than stored. Accepting one would let
 // it silently mean nothing, which reads exactly like a rollout that was
 // configured and did not take.

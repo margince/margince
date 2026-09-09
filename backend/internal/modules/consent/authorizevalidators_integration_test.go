@@ -152,6 +152,83 @@ func TestAnInvoiceReachesAContactAtTheCustomer(t *testing.T) {
 	}
 }
 
+// AND IT STILL REACHES THEM ONE PHASE LATER.
+//
+// The evidence that supported this message at staging is not written to the
+// decision row — communication_decision has an evidence column and nothing
+// fills it — so stagedRequestFor rebuilds the transmit question with the
+// category and the thread key and NOTHING ELSE. validateInvoice then reads a
+// zero InvoiceID, finds no invoice, and the message falls through to the
+// legacy purpose arm.
+//
+// That fall-through used to end in the transactional class's unconditional
+// allow, which is what hid the evidence loss: the invoice went out on the
+// purpose key rather than on the invoice, and the two answers happened to
+// agree. Closing the key means they no longer do, and a real invoice would
+// park at transmit after staging clean.
+//
+// So this test is the one that fails if the fix ships without the evidence
+// being carried. It is the rep-facing half of the change: refusing a message
+// nobody can evidence is the point, refusing an invoice somebody DID evidence
+// is the regression.
+func TestAnEvidencedInvoiceSurvivesToTransmit(t *testing.T) {
+	e := setupResolve(t)
+	org := e.organization(t)
+	invoice := e.invoice(t, org, false)
+	e.employ(t, org)
+	e.seedPurpose(t, "transactional", "transactional")
+
+	req := commsauthz.Request{
+		Context:  commsauthz.CategoryInvoiceOrPayment,
+		Evidence: commsauthz.Evidence{InvoiceID: invoice},
+		// The shape a caller who has not migrated still sends: the modern
+		// context AND the old key. The key must not be what carries it, and
+		// its presence must not take the evidence away either.
+		LegacyPurposeKey: "transactional",
+	}
+
+	// Through the REAL staging writer, not a hand-planted row. A fixture that
+	// wrote its own communication_decision would be asserting about the
+	// fixture: the whole question is whether AuthorizeStagingTx records the
+	// evidence, so the test that answers it has to be the one that calls it.
+	delivery := e.plantDelivery(t)
+	req.Recipients = []connector.Recipient{{Email: e.address}}
+	var staged commsauthz.DecisionSet
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		staged, err = e.gate.AuthorizeStagingTx(e.ctx, tx, delivery, req)
+		return err
+	}); err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+	if len(staged.Decisions) != 1 || staged.Decisions[0].Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("staging refused an evidenced invoice: %+v", staged.Decisions)
+	}
+
+	// Now the transmit question, built the way authorizetransmit.go builds it.
+	var got commsauthz.Decision
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		claims, err := stagedClaims(e.ctx, tx, delivery)
+		if err != nil {
+			return err
+		}
+		r := connector.Recipient{Email: e.address}
+		got, err = e.gate.decideOne(e.ctx, tx, r,
+			stagedRequestFor(commsauthz.TransmitRequest{
+				DeliveryID: delivery, PurposeKey: "transactional",
+			}, r, claims, ""), commsauthz.PhaseTransmit)
+		return err
+	}); err != nil {
+		t.Fatalf("deciding at transmit: %v", err)
+	}
+
+	if got.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("an invoice authorized at staging was refused at transmit (%s / %s): the evidence "+
+			"that supported it is not carried past staging, and the transactional key is no longer "+
+			"there to accidentally cover for that", got.Verdict, got.ReasonCode)
+	}
+}
+
 // AN ENDED EMPLOYMENT DOES NOT REACH. Somebody who left the customer is not the
 // person their invoices go to.
 //
