@@ -125,10 +125,11 @@ export function CorpusAskCard({
   // miss every arrival that is not one.
   //
   // `asked` is what keeps one arrival to one ask. The effect is replayed for
-  // the set list landing, for a caller's callback changing identity, and twice
-  // over on a development mount, and a model call is not a thing to make
-  // twice. It clears when the address does, which is what makes the same
-  // question carried again a second ask rather than a row that does nothing.
+  // the set list landing, for the grant landing, for a caller's callback
+  // changing identity, and twice over on a development mount, and a model call
+  // is not a thing to make twice. It clears when the address does, which is
+  // what makes the same question carried again a second ask rather than a row
+  // that does nothing.
   const carried = carriedQuestion?.trim() ?? "";
   const asked = useRef("");
   const submit = ask.mutate;
@@ -137,16 +138,21 @@ export function CorpusAskCard({
       asked.current = "";
       return;
     }
-    // The set is chosen in the effect above, and an ask with no set to search
-    // is one the mutation would refuse.
-    if (corpusId === "" || asked.current === carried) {
+    // Two things have to be known first, and neither is on the first render.
+    // A set, because an ask with none to search is one the mutation refuses.
+    // And the GRANT: the set is chosen from whatever the corpora cache holds,
+    // and a warm cache outlives the grant that filled it, so without this the
+    // card would ask on behalf of a reader it is not even drawn for and spend
+    // the question doing it. Held rather than dropped either way, so a grant
+    // that lands a moment later still asks it.
+    if (!canAsk || corpusId === "" || asked.current === carried) {
       return;
     }
     asked.current = carried;
     setQuestion(carried);
     submit({ corpusId, question: carried });
     onCarriedAsked?.();
-  }, [carried, corpusId, submit, onCarriedAsked]);
+  }, [canAsk, carried, corpusId, submit, onCarriedAsked]);
 
   // Nothing is offered until we KNOW there is something to ask. The three
   // cases collapse to one answer — no grant, no sets, or not yet told — and

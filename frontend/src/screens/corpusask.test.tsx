@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -103,11 +104,17 @@ const render = (ui: ReactNode, locale: Locale = "en") => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial={locale}>{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  return {
+    // Handed back so a case can move a grant the way the product does — by
+    // re-reading /me — rather than by re-rendering the card with a prop the
+    // product has no way to change.
+    client,
+    ...rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial={locale}>{ui}</LocaleProvider>
+      </QueryClientProvider>,
+    ),
+  };
 };
 
 afterEach(() => {
@@ -291,6 +298,84 @@ describe("CorpusAskCard", () => {
     // ONE call. The arrival is replayed for the set list landing and for a
     // caller re-rendering, and a model call is not a thing to make twice.
     expect(backend.asked).toEqual([{ question: "how long are messages kept" }]);
+  });
+
+  // A carried question is SPENT the moment it is asked, so when it is asked has
+  // to be after the grant is known. `useAskableSets` is disabled without the
+  // grant and still serves whatever the ["knowledge-corpora"] entry holds, and
+  // a warm entry outlives the grant that filled it — so the set can be chosen,
+  // and the ask fired, for a reader this card renders nothing for. The server
+  // refuses that ask, the question is gone from the address, and the grant
+  // landing a moment later finds nothing left to ask: no box, no answer, and
+  // no error either, because the card is not on screen to draw one.
+  //
+  // Which is why the assertion is about WHICH ask reached the server and not
+  // about how many did. Spent early there is still exactly one, and it is the
+  // one that fails.
+  it("holds a carried question until the grant lands, then asks it once", async () => {
+    let allowed = false;
+    const asked: unknown[] = [];
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me")) {
+          return jsonResponse(meFixture({ allow: allowed ? ASKER : {} }));
+        }
+        if (req.url.includes("/ask")) {
+          const { question } = (await req.json()) as { question: string };
+          asked.push({ question, granted: allowed });
+          // What the server does with an ask the grant does not cover, so a
+          // question spent early is a question lost rather than one answered.
+          return allowed
+            ? jsonResponse(answer())
+            : jsonResponse({ title: "Forbidden" }, 403);
+        }
+        if (req.url.includes("/knowledge/corpora")) {
+          return jsonResponse({ items: [SET] });
+        }
+        throw new Error(`unexpected request: ${req.method} ${req.url}`);
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const view = render(
+      <CorpusAskCard carriedQuestion="how long are messages kept" />,
+    );
+    // The set list, under the key the card reads, cached by a reader who did
+    // hold the grant. This is the state the guard is about.
+    view.client.setQueryData(["knowledge-corpora"], { items: [SET] });
+
+    // Settled ungranted: /me has answered, the set list is in the cache the
+    // card reads, and React has run the effects that chain off both — the set
+    // being chosen is one pass and the ask would be the next. Waiting on the
+    // client rather than on the screen because the card draws nothing here,
+    // and that is exactly what makes an ask fired from it invisible.
+    await waitFor(() =>
+      expect(view.client.getQueryState(["me"])?.status).toBe("success"),
+    );
+    expect(view.client.getQueryData(["knowledge-corpora"])).toBeDefined();
+    await act(async () => {});
+    await act(async () => {});
+
+    // Nothing is offered without the grant, whatever the cache holds — and
+    // nothing is asked, so the question is still there to ask.
+    expect(screen.queryByLabelText(/your question/i)).toBeNull();
+    expect(asked).toEqual([]);
+
+    allowed = true;
+    await view.client.invalidateQueries({ queryKey: ["me"] });
+
+    // The question that was waiting is asked, and answered, and it reached the
+    // server WITH the grant in hand.
+    expect(
+      await screen.findByText("Captured messages are kept for 400 days."),
+    ).toBeTruthy();
+    expect(screen.getByLabelText(/your question/i)).toHaveValue(
+      "how long are messages kept",
+    );
+    expect(asked).toEqual([
+      { question: "how long are messages kept", granted: true },
+    ]);
   });
 
   // The positive half is what makes the negative half mean anything.
