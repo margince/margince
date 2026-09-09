@@ -94,21 +94,28 @@
 
 /* ---- the document's unanswered row ---- */
 
-/* Dashed, on the agent's ground: staged, not yet real, per the provenance
-   rule in design-system/README.md — nothing here is on the record until the
-   deck writes it. The pill is the whole point of drawing this as its own row
-   rather than a plain blank line: reading the whole record is exactly where a
-   gap gets noticed, and this is the one press back to where it gets filled. */
+/* Staged, not yet real: the dashed edge and the agent's ground are
+   `.staging-card`'s, worn by the row itself — nothing here is on the record
+   until the deck writes it. The pill is the whole point of drawing this as its
+   own row rather than a plain blank line: reading the whole record is exactly
+   where a gap gets noticed, and this is the one press back to where it gets
+   filled. */
 .pdigest-open {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   margin: 0;
-  padding: var(--space-2) var(--space-3);
-  border: 1.5px dashed var(--aiMed);
-  border-radius: var(--r-sm);
-  background: var(--aiLight);
   font-size: var(--fs-sm);
+}
+/* What is left here is the MEASURE — this is a ROW in the document's rhythm,
+   where the staged card's reading padding and 16px corner would make one gap
+   taller and rounder than every line it sits between. Two classes, so that
+   measure wins wherever the two sheets land in the bundle. */
+.pdigest-open.staging-card {
+  /* ds:ignore a line in the document's rhythm, matching .pdigest-line's own
+     inset, not a card's reading inset */
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-sm);
 }
 /* Text on --aiLight takes --aiText (design-system/README.md): the label's
    meta grey and the blank's tertiary grey both fail AA on this ground. */

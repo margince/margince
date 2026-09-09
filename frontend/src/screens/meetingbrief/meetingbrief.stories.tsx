@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, within } from "storybook/test";
 import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
 import { PersonMeetingBrief } from "./drawer";
 import {
   briefEmpty,
   briefManager,
   briefModel,
+  briefModelPlan,
   briefOmitted,
   briefReady,
   briefScoped,
@@ -25,10 +27,25 @@ const PROJECTS = [
   },
 ];
 
+// The drawer is a Modal, portalled to document.body, so `#storybook-root` holds
+// the preview decorator and nothing else however well the brief renders — and
+// declaring `layout: "fullscreen"` removes even that, which left the render gate
+// watching an empty root and reporting all eighteen frames as components that
+// never rendered. The frame the decorator draws sits behind a fixed overlay and
+// changes no capture.
+//
+// The root filling is then only evidence that the DECORATOR ran, so the meta
+// carries a play every frame inherits: the dialog, and the title that says which
+// dialog it is. Stated once here because it is true of every state the drawer
+// can be in — assembling, failed, empty and prepared alike — and a per-story
+// copy would be the same two lines eighteen times.
 const meta: Meta<typeof PersonMeetingBrief> = {
   title: "Records/Person record/Meeting brief",
   component: PersonMeetingBrief,
-  parameters: { layout: "fullscreen" },
+  play: async () => {
+    const drawer = within(await screen.findByRole("dialog"));
+    await drawer.findByRole("heading", { name: "Meeting brief" });
+  },
 };
 
 export default meta;
@@ -61,10 +78,23 @@ export const Ready: Story = {
   render: () => drawer(() => jsonResponse(briefReady)),
 };
 
-// The same facts with a model lane behind them. The band turns indigo and the
-// badge names the writer; nothing else moves.
+// The same facts with a model lane behind them. Every panel turns indigo and
+// the lead's head carries the disclosure badge; nothing else moves.
 export const ModelWritten: Story = {
   render: () => drawer(() => jsonResponse(briefModel)),
+};
+
+// The whole PLAN written by a model: the objective, the arc, the close, the
+// unknowns and the ranked asks all indigo, with the badge on the objective
+// alone. Read beside `WithPlan` — the same panels and the same facts, composed
+// rather than written — this is the only place the claim can be checked.
+export const ModelWrittenPlan: Story = {
+  render: () => drawer(() => jsonResponse(briefModelPlan)),
+};
+
+export const ModelWrittenPlanDark: Story = {
+  render: () => drawer(() => jsonResponse(briefModelPlan)),
+  globals: { theme: "dark" },
 };
 
 // What a reader sees in the seconds before the brief arrives.
