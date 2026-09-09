@@ -243,6 +243,63 @@ func TestTheOutboundClientCannotBeRoutedThroughAProxy(t *testing.T) {
 	}
 }
 
+// A redirect is the other way a credential leaves for a host the binding never
+// named, and Go will not stop it: it strips Authorization and Cookie across a
+// domain change and has never heard of x-api-key or x-goog-api-key, and it
+// strips nothing at all when only the scheme changes.
+//
+// The two hops that move a credential are refused; the one that does not is
+// followed, because this client also carries streaming completions and a
+// blanket refusal would turn a redirect a vendor genuinely uses into an outage.
+func TestTheOutboundClientRefusesARedirectThatMovesTheKey(t *testing.T) {
+	t.Parallel()
+
+	hop := func(from, to string) error {
+		previous, err := http.NewRequestWithContext(context.Background(), http.MethodGet, from, nil)
+		if err != nil {
+			t.Fatalf("building %q: %v", from, err)
+		}
+		next, err := http.NewRequestWithContext(context.Background(), http.MethodGet, to, nil)
+		if err != nil {
+			t.Fatalf("building %q: %v", to, err)
+		}
+		return refuseOffHostRedirect(next, []*http.Request{previous})
+	}
+
+	for name, tc := range map[string]struct {
+		from, to string
+		refused  bool
+	}{
+		"another host":                {"https://api.vendor.example/v1", "https://attacker.example/v1", true},
+		"a subdomain is another host": {"https://api.vendor.example/v1", "https://evil.api.vendor.example/v1", true},
+		"a downgrade to cleartext":    {"https://api.vendor.example/v1", "http://api.vendor.example/v1", true},
+		// Followed: the key goes nowhere it was not already going.
+		"another path on the same host": {"https://api.vendor.example/v1", "https://api.vendor.example/v2", false},
+		"the same host in another case": {"https://api.vendor.example/v1", "https://API.Vendor.Example/v1", false},
+		// An operator's own gateway may be plain http throughout; only a
+		// DOWNGRADE moves a key from protected to unprotected.
+		"http to http on one host": {"http://gateway.internal/v1", "http://gateway.internal/v2", false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			err := hop(tc.from, tc.to)
+			if tc.refused && err == nil {
+				t.Errorf("the redirect %s -> %s was followed, carrying the model key", tc.from, tc.to)
+			}
+			if !tc.refused && err != nil {
+				t.Errorf("the redirect %s -> %s was refused, which a vendor's own routing would read as an outage: %v", tc.from, tc.to, err)
+			}
+		})
+	}
+
+	// The policy is on the client every adapter is handed, not on one lane.
+	for _, provider := range KnownProviders() {
+		if newOutboundClient(provider).CheckRedirect == nil {
+			t.Errorf("provider %q: the outbound client follows redirects by Go's default rules, which do not strip x-api-key", provider)
+		}
+	}
+}
+
 // The production wiring, through the exported constructor rather than around
 // it: a client built by SelectBrain carries its lane's guard.
 //

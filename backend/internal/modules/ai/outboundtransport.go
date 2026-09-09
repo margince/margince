@@ -4,8 +4,10 @@
 package ai
 
 import (
+	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -135,5 +137,36 @@ func newOutboundClient(provider string) *http.Client {
 		SendPingTimeout: http2PingAfterIdle,
 		PingTimeout:     http2PingTimeout,
 	}
-	return &http.Client{Timeout: CallCeiling, Transport: transport}
+	return &http.Client{Timeout: CallCeiling, Transport: transport, CheckRedirect: refuseOffHostRedirect}
+}
+
+// refuseOffHostRedirect stops a redirect that would carry the installation's
+// model key somewhere the binding did not name.
+//
+// Go strips the headers IT knows to be sensitive across a host change —
+// Authorization, Cookie, WWW-Authenticate — and it has never heard of
+// `x-api-key` or `x-goog-api-key`. Anthropic and Gemini authenticate with
+// exactly those, so a vendor answering 302 to another host would be handed the
+// customer's own credential by a client that believed it was being careful.
+// Nor does it strip anything when only the SCHEME changes, so an https endpoint
+// redirecting to http sends the same key in clear.
+//
+// Scoped to the hop that leaks rather than refused outright, which is where this
+// differs from modellist.go's noRedirect. That one covers a list endpoint where
+// a 3xx never happens in normal operation, and its comment declines to make the
+// wider change here because this client also carries streaming completions,
+// where a redirect a vendor genuinely uses would become an outage. A same-host
+// redirect that keeps its scheme carries the key nowhere new, so it is followed;
+// the two hops that move a credential are the two that are refused.
+func refuseOffHostRedirect(req *http.Request, via []*http.Request) error {
+	previous := via[len(via)-1]
+	if !strings.EqualFold(req.URL.Hostname(), previous.URL.Hostname()) {
+		return fmt.Errorf("ai: refusing a redirect from %s to %s: the model key travels with the request, and the binding named the first host",
+			previous.URL.Hostname(), req.URL.Hostname())
+	}
+	if strings.EqualFold(previous.URL.Scheme, "https") && !strings.EqualFold(req.URL.Scheme, "https") {
+		return fmt.Errorf("ai: refusing a redirect from https to %s on %s: the model key would leave in clear",
+			req.URL.Scheme, req.URL.Hostname())
+	}
+	return nil
 }
