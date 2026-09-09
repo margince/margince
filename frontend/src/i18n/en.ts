@@ -3992,14 +3992,13 @@ export const en = {
   "agent.activity.transcriptRead.queued":
     "The meeting transcript is queued to be read.",
   "agent.activity.transcriptRead.running":
-    "I'm reading the meeting transcript for next steps.",
+    "I'm reading the transcript for next steps.",
   "agent.activity.transcriptRead.stalled":
-    "Reading the meeting transcript has taken unusually long. It may have stopped.",
-  "agent.activity.transcriptRead.done": "I've read the meeting transcript.",
+    "Reading the transcript has taken unusually long. It may have stopped.",
+  "agent.activity.transcriptRead.done": "I've read the transcript.",
   "agent.activity.transcriptRead.degraded":
-    "I stopped before finishing the meeting transcript.",
-  "agent.activity.transcriptRead.failed":
-    "I couldn't read the meeting transcript.",
+    "I stopped before finishing the transcript.",
+  "agent.activity.transcriptRead.failed": "I couldn't read the transcript.",
   "agent.activity.siteRead.queued": "The company website is queued to be read.",
   "agent.activity.siteRead.running": "I'm reading the company website.",
   "agent.activity.siteRead.stalled":

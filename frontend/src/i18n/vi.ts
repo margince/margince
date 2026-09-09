@@ -3865,16 +3865,15 @@ export const vi = {
     "Tôi đã đọc {name} đến mức các bản ghi cho phép rồi dừng.",
   "agent.activity.accountScanNamed.failed":
     "Tôi không hoàn thành được việc đọc {name}.",
-  "agent.activity.transcriptRead.queued": "Bản ghi cuộc họp đang chờ được đọc.",
+  "agent.activity.transcriptRead.queued": "Bản chép lời đang chờ được đọc.",
   "agent.activity.transcriptRead.running":
-    "Tôi đang đọc bản ghi cuộc họp để tìm các bước tiếp theo.",
+    "Tôi đang đọc bản chép lời để tìm các bước tiếp theo.",
   "agent.activity.transcriptRead.stalled":
-    "Việc đọc bản ghi cuộc họp kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.transcriptRead.done": "Tôi đã đọc xong bản ghi cuộc họp.",
+    "Việc đọc bản chép lời kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.transcriptRead.done": "Tôi đã đọc xong bản chép lời.",
   "agent.activity.transcriptRead.degraded":
-    "Tôi đã dừng trước khi đọc hết bản ghi cuộc họp.",
-  "agent.activity.transcriptRead.failed":
-    "Tôi không đọc được bản ghi cuộc họp.",
+    "Tôi đã dừng trước khi đọc hết bản chép lời.",
+  "agent.activity.transcriptRead.failed": "Tôi không đọc được bản chép lời.",
   "agent.activity.siteRead.queued": "Trang web của công ty đang chờ được đọc.",
   "agent.activity.siteRead.running": "Tôi đang đọc trang web của công ty.",
   "agent.activity.siteRead.stalled":

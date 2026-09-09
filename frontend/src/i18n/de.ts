@@ -3913,17 +3913,16 @@ export const de = {
   "agent.activity.accountScanNamed.failed":
     "Ich konnte das Lesen von {name} nicht abschließen.",
   "agent.activity.transcriptRead.queued":
-    "Das Meeting-Transkript steht zum Lesen in der Warteschlange.",
+    "Das Transkript steht zum Lesen in der Warteschlange.",
   "agent.activity.transcriptRead.running":
-    "Ich lese das Meeting-Transkript auf nächste Schritte durch.",
+    "Ich lese das Transkript auf nächste Schritte durch.",
   "agent.activity.transcriptRead.stalled":
-    "Das Lesen des Meeting-Transkripts dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
-  "agent.activity.transcriptRead.done":
-    "Ich habe das Meeting-Transkript gelesen.",
+    "Das Lesen des Transkripts dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.transcriptRead.done": "Ich habe das Transkript gelesen.",
   "agent.activity.transcriptRead.degraded":
-    "Ich habe das Meeting-Transkript nicht zu Ende gelesen.",
+    "Ich habe das Transkript nicht zu Ende gelesen.",
   "agent.activity.transcriptRead.failed":
-    "Ich konnte das Meeting-Transkript nicht lesen.",
+    "Ich konnte das Transkript nicht lesen.",
   "agent.activity.siteRead.queued":
     "Die Firmenwebsite steht zum Lesen in der Warteschlange.",
   "agent.activity.siteRead.running": "Ich lese die Firmenwebsite.",
