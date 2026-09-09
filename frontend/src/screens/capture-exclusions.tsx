@@ -183,7 +183,11 @@ export function CaptureExclusionsCard() {
           </p>
         )}
         {remove.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("captureSettings.removeFailed")}
+          >
             {problemMessageOf(remove.error, t)}
           </Callout>
         )}
@@ -333,7 +337,11 @@ function ExcludeDialog({
           </p>
         )}
         {add.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("captureSettings.addFailed")}
+          >
             {problemMessageOf(add.error, t)}
           </Callout>
         )}

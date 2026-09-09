@@ -115,9 +115,16 @@ export function Recipe({ endpoint }: Readonly<{ endpoint: Endpoint }>) {
       />
       {/* Said WHERE THE URL IS, not in a tooltip: a member who believes the
           link is the secret will paste it where a secret goes, and the link is
-          in every access log and proxy between a sender and this
-          installation. */}
-      <Callout tone="warn">{t("extOpenchannel.recipe.urlNotSecret")}</Callout>
+          in every access log and proxy between a sender and this installation.
+          `info`, because nothing here goes wrong if the reader does nothing —
+          it states what the address IS, and the one `warn` in this section is
+          the command below, which really does leak a key. */}
+      <Callout
+        kind="standing"
+        title={t("extOpenchannel.recipe.urlNotSecretTitle")}
+      >
+        {t("extOpenchannel.recipe.urlNotSecret")}
+      </Callout>
       <p className="t-caption">{t("extOpenchannel.recipe.urlLabel")}</p>
       <pre className="code-block t-mono" data-testid="openchannel-inbound-url">
         {url}
@@ -138,7 +145,11 @@ export function Recipe({ endpoint }: Readonly<{ endpoint: Endpoint }>) {
           is no environment-variable or stdin form to route it through instead
           — so a shared host really does show it in the process list for as
           long as the command runs. Said here rather than left silent. */}
-      <Callout tone="warn">
+      <Callout
+        tone="warn"
+        kind="standing"
+        title={t("extOpenchannel.recipe.secretInProcessArgsTitle")}
+      >
         {t("extOpenchannel.recipe.secretInProcessArgs")}
       </Callout>
     </>

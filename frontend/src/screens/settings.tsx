@@ -82,6 +82,7 @@ import {
   throwProblem,
   useLogout,
   useMe,
+  WriteRefused,
 } from "./common";
 import { CompanyContextCard } from "./company-context";
 import { ConnectedAgentsCard } from "./connected-agents";
@@ -574,16 +575,14 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
           `useUnsavedGuard` and need to know nothing about where the answer is
           asked. */}
       <div className="settings-stack arrive-stack">
-        {/* Said ONCE, at the top, and only when the whole page is a read. A
-            reader who can change nothing here would otherwise have to infer it
-            from a screenful of disabled controls, one card at a time.
-
-            Only for a page with no open control at all: a page where SOME
-            surface is theirs says nothing here, because a banner claiming the
-            page is read-only above a control that works is worse than
-            silence. That is exactly the `looksUp` half of the partition. */}
+        {/* Said ONCE, at the top, and only for a page with NO open control —
+            the `looksUp` half of the partition: a reader who can change nothing
+            would otherwise infer it from a screenful of disabled cards, and a
+            banner over a control that works is worse than silence. */}
         {readOnlyPage && (
-          <Callout tone="info">{t("settings.readOnlyPage")}</Callout>
+          <Callout kind="standing" title={t("settings.readOnlyPageTitle")}>
+            {t("settings.readOnlyPage")}
+          </Callout>
         )}
         {tabContent(active.id)}
       </div>
@@ -815,11 +814,7 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             <h2 className="t-h3 modal-title" id={titleId}>
               {t("settings.signature")}
             </h2>
-            {save.isError && (
-              <Callout tone="danger" live="alert">
-                {problemMessageOf(save.error, t)}
-              </Callout>
-            )}
+            <WriteRefused titleKey="settings.saveFailed" error={save.error} />
             <Field label={t("settings.signatureLabel")}>
               {(control) => (
                 <Textarea
@@ -964,14 +959,8 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         // verb stacked at the row's own measure, the same shape the pipeline
         // rows use.
         <div className="form-stack settingrow-measure">
-          {/* A refused save says so HERE. The query client's own handler only
-              logs, so without this a rejected name looked exactly like nothing
-              happening — and the server's 422 names this very control. */}
-          {save.isError && (
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(save.error, t)}
-            </Callout>
-          )}
+          {/* Beside this control, because the server's 422 names it. */}
+          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
           <TextInput
             {...control}
             value={shown}
@@ -1359,15 +1348,8 @@ function PassportCard() {
                 />
               ))}
             </fieldset>
-            {/* Beside the button that produced it, in the danger tone. It used
-                to render two blocks below, past the token region, as a caption
-                with no live role — so a refused mint announced nothing and sat
-                where nothing had been pressed. */}
-            {mint.isError && (
-              <Callout tone="danger" live="alert">
-                {problemMessageOf(mint.error, t)}
-              </Callout>
-            )}
+            {/* Beside the button that produced it, not below the tokens. */}
+            <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
             <div className="form-actions">
               <Button small disabled={mint.isPending} onClick={closeMint}>
                 {t("settings.mintCancel")}

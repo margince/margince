@@ -251,12 +251,16 @@ export function BlockedDomainsCard() {
             already listed looked like nothing had happened at all. The dialog
             is gone by the time it is true. */}
         {set.data && (
-          <Callout tone="success" live="status">
-            {t("blockedDomains.stored", {
+          <Callout
+            tone="success"
+            kind="outcome"
+            // One short sentence, so it IS the heading and there is nothing
+            // left to say under it.
+            title={t("blockedDomains.stored", {
               domain: set.data.domain,
               admission: t(ADMISSION_LABEL[set.data.admission]),
             })}
-          </Callout>
+          />
         )}
         {editing !== null && (
           <DecisionDialog
@@ -460,7 +464,11 @@ function DecisionDialog({
           )}
         </Field>
         {set.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("blockedDomains.saveFailed")}
+          >
             {problemMessageOf(set.error, t)}
           </Callout>
         )}

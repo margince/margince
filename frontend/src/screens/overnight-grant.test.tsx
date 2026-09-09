@@ -65,9 +65,10 @@ it("names what goes empty the moment it is cleared", async () => {
     screen.getByRole("checkbox", { name: en["overnightGrant.label"] }),
   );
   const warning = await screen.findByText(en["overnightGrant.danger"]);
-  // role=alert, so it is announced rather than only seen: a reader who cleared
-  // the box with the keyboard never looks at the space below it.
-  expect(warning.closest("[role='alert']")).toBeTruthy();
+  expect(warning).toBeTruthy();
+  // Stated, never announced: a cleared box is the rep's own answer, and
+  // interrupting them with the cost of it reads their decision back as a fault.
+  expect(warning.closest("[role='alert']")).toBeNull();
 });
 
 it("writes nothing on its own — the onboarding step carries the answer", async () => {

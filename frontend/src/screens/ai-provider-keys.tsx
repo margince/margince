@@ -318,7 +318,11 @@ function ProviderKeyRow({
           </Field>
         )}
         {failure ? (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("aiProviderKeys.saveFailed")}
+          >
             {problemMessageOf(failure, t)}
           </Callout>
         ) : null}

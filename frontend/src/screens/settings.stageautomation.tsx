@@ -174,7 +174,11 @@ function beforeTheReport(
     return (
       <Panel title={t("stageAutomation.title")}>
         <PanelBody>
-          <Callout tone="warn">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("stageAutomation.unreadable")}
+          >
             {problemMessageOf(pipelines.error ?? report.error, t)}
           </Callout>
         </PanelBody>

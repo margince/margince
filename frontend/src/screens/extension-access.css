@@ -62,8 +62,12 @@
   text-overflow: ellipsis;
 }
 
-/* The two matrix notices sit under the grid they are about. */
-.ext-matrix-note {
+/* The two matrix notices sit under the grid they are about. The gap is the
+   STACK's, declared on this container rather than handed to a notice: a
+   callout owns no layout, so anything that needs air gets it from where it
+   stands. `TableScroll` is the only other child, so this reaches the notices
+   and nothing else. */
+.ext-object > * + * {
   margin-top: var(--space-2);
 }
 

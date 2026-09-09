@@ -16,9 +16,12 @@ import type { WorklistItem } from "./worklist.queries";
 // the whole page rather than about any one row — and they carry the same
 // `brief-notice` rhythm on the screen that draws them.
 //
-// The frames are the two shapes it takes. Up to three rows are NAMED, because a
-// rep can act on a name; past that it counts, because a list of eleven titles is
-// the queue again and nobody reads it twice. There is deliberately no frame for
+// The frames are the two shapes it takes. Up to three rows are NAMED under the
+// strip's own heading, one to a line, because a rep can act on a name and three
+// titles run together by interpuncts read as one long title; past that it
+// counts, because a list of eleven is the queue again and nobody reads it
+// twice. The door to that queue is the strip's own verb rather than the tail of
+// its last sentence. There is deliberately no frame for
 // the quiet morning: the strip renders null both when nothing changed and when
 // there was no run to compare against, and those are held in
 // `brief.changed.test.tsx` rather than as an empty story root.

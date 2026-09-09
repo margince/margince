@@ -128,7 +128,11 @@ function SyncStatusPanel({
     <section className="overlay-section">
       <SectionHeader title={t("overlay.syncTitle")} level={3} />
       {query.isError ? (
-        <Callout tone="danger" live="alert">
+        <Callout
+          kind="outcome"
+          tone="danger"
+          title={t("overlay.syncLoadFailedTitle")}
+        >
           {problemMessageOf(query.error, t, t("overlay.syncLoadFailed"))}
         </Callout>
       ) : (
@@ -284,7 +288,11 @@ function BudgetPanel({
           is a different thing to go and fix from one that timed out, and only
           the server knows which. */}
       {query.isError ? (
-        <Callout tone="danger" live="alert">
+        <Callout
+          kind="outcome"
+          tone="danger"
+          title={t("overlay.budgetLoadFailedTitle")}
+        >
           {problemMessageOf(query.error, t, t("overlay.budgetLoadFailed"))}
         </Callout>
       ) : (
@@ -297,7 +305,11 @@ function BudgetPanel({
               an operator chasing HubSpot quota when the fault is on our
               side (the meter's own doc says which arms report false). */}
           {query.data?.measured === false ? (
-            <Callout tone="warn" live="status">
+            <Callout
+              kind="standing"
+              tone="warn"
+              title={t("overlay.budgetUnmeasuredTitle")}
+            >
               {t("overlay.budgetUnmeasured")}
             </Callout>
           ) : (
@@ -392,9 +404,18 @@ export function OverlayLiveActions({
         </p>
       )}
       {reconcileError && (
-        <Callout tone="danger" live="alert" className="overlay-action-note">
-          {reconcileError}
-        </Callout>
+        // The wrapper owns the line break: `.overlay-action-note` gives a note
+        // its own row under the band's flex row of verbs, which is the band's
+        // layout and not the notice's.
+        <div className="overlay-action-note">
+          <Callout
+            kind="outcome"
+            tone="danger"
+            title={t("overlay.reconcileFailedTitle")}
+          >
+            {reconcileError}
+          </Callout>
+        </div>
       )}
     </>
   );

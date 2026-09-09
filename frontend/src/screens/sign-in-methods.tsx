@@ -107,7 +107,11 @@ export function SignInMethodsCard() {
             return (
               <>
                 {save.error && (
-                  <Callout tone="danger">
+                  <Callout
+                    tone="danger"
+                    kind="outcome"
+                    title={t("signInMethods.saveFailed")}
+                  >
                     {problemMessageOf(save.error, t)}
                   </Callout>
                 )}

@@ -615,14 +615,14 @@ function MemberRow({
           </>
         }
       />
-      {/* Same vocabulary as the invite dialog's refusal: a failed role change or
-          deactivation is the surface saying something is wrong, and it takes
-          the row's full width rather than wedging itself between the controls
-          that caused it. */}
+      {/* The invite dialog's vocabulary, at the row's full width. The interval
+          under it belongs to the WRAPPER: a notice owns no layout. */}
       {error && (
-        <Callout tone="danger" live="alert" className="users-member-error">
-          {error}
-        </Callout>
+        <div className="users-member-error">
+          <Callout tone="danger" kind="outcome" title={t("users.notSaved")}>
+            {error}
+          </Callout>
+        </div>
       )}
       <ConfirmModal
         open={confirmOff}

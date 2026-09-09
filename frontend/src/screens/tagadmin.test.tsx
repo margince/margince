@@ -124,9 +124,13 @@ describe("the tag vocabulary card", () => {
       screen.getByLabelText(en["tagAdmin.nameLabel"]),
       "key-account",
     );
+    // The heading makes the claim; the body names the word it is close to, so
+    // both halves are asserted — a heading alone would pass on a notice that
+    // never says which word.
     expect(
-      await screen.findByText(/Close to a word this company already has/),
+      await screen.findByText(en["tagAdmin.nearMatchTitle"]),
     ).toBeInTheDocument();
+    expect(screen.getByText(/apply that one instead/i)).toBeInTheDocument();
   });
 
   // An admin picks a tag's colour BY the colour. A list of tone words is what
@@ -237,8 +241,9 @@ describe("the tag vocabulary card", () => {
         name: en["tagAdmin.merge"],
       }),
     );
-    const warning = await screen.findByText(/This cannot be undone/);
-    expect(warning).toBeInTheDocument();
-    expect(warning.textContent).toContain("released");
+    // The heading is the claim and the body is what it costs, so the released
+    // name is asserted on the notice as a whole rather than on its heading.
+    const warning = await screen.findByText(en["tagAdmin.mergeWarningTitle"]);
+    expect(warning.closest(".callout")?.textContent).toContain("released");
   });
 });

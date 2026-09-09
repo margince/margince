@@ -184,6 +184,10 @@ const auditLog = () =>
 // one of them alone leaves the others failing in exactly that way, nowhere near
 // the cause. The shape is restated rather than shared with that testkit because
 // the testkit is built on `vi`, which no Storybook build has.
+//
+// The zone comes from the identity fixture rather than being typed again here.
+// A story that named one would be a second author of the reader's clock, and
+// `format/timezone.ts` is the module that owns naming zones.
 const WORKING_HOURS: RouteMap = {
   "GET /me/working-hours": () =>
     jsonResponse({
@@ -192,7 +196,7 @@ const WORKING_HOURS: RouteMap = {
         start_time: "09:00",
         end_time: "17:00",
         days: [1, 2, 3, 4, 5],
-        timezone: "Europe/Berlin",
+        timezone: meFixture().user.timezone,
       },
     }),
 };
@@ -586,14 +590,23 @@ const auditLogPage = {
   page: { next_cursor: null, has_more: false },
 };
 
-const auditLogMe = (roles: string[]) =>
-  jsonResponse({ user: { id: "u-1", display_name: "Me" }, roles, teams: [] });
+// The grants the card asks for, not a bare identity: `useCan("audit_log",
+// "read")` is what draws the filter disclosure, and a hand-rolled /me carrying
+// no `authorization` fails every grant closed — so the trail rendered with no
+// dials above it and the play() below had no "Filters" to press. The id stays
+// `u-1`, which is the actor the fixture's `on_behalf_of` names, so the entry
+// still reads as the viewer's own.
+const auditLogMe = () =>
+  jsonResponse({
+    ...meFixture({ roles: ["admin"], allow: { audit_log: ["read"] } }),
+    user: { ...meFixture().user, id: "u-1", display_name: "Me" },
+  });
 
 function auditLogCard() {
   return () => {
     globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
     installFetchStub({
-      "GET /me": () => auditLogMe(["admin"]),
+      "GET /me": auditLogMe,
       "GET /audit-log": () => jsonResponse(auditLogPage),
       "GET /people/p-1": () =>
         jsonResponse({ id: "p-1", full_name: "Priya Shah" }),

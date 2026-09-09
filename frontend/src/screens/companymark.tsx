@@ -215,7 +215,6 @@ function MarkSlot({
   // press — so a double press or a held Enter cannot start a second request
   // whose answer would race the first, nor open a second picker whose file
   // would then be dropped.
-  const failure = upload.error ?? remove.error;
   const removeMark = () => {
     // A picker left open under a removal is a second writer: a file dropped
     // while the DELETE is out lands in whichever order the two answer.
@@ -271,9 +270,24 @@ function MarkSlot({
           onPick={uploadMark}
         />
       )}
-      {failure && (
-        <Callout tone="danger" live="alert">
-          {problemMessageOf(failure, t)}
+      {/* One notice per verb: a single heading over `upload.error ?? remove.error`
+          left the reader unable to tell which of the two the server refused. */}
+      {upload.error !== null && (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("settings.companyMarkUploadFailed")}
+        >
+          {problemMessageOf(upload.error, t)}
+        </Callout>
+      )}
+      {remove.error !== null && (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("settings.companyMarkRemoveFailed")}
+        >
+          {problemMessageOf(remove.error, t)}
         </Callout>
       )}
     </section>

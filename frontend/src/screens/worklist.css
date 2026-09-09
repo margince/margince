@@ -444,9 +444,9 @@
   }
 }
 
-/* The coaching list inside its callout.
+/* The coaching list inside its panel body.
    Unstyled markers and no indent: these are three sentences a lead reads, not
-   a nested outline, and the callout already carries the tone. */
+   a nested outline, and the panel already carries the heading and the ground. */
 .worklist-coaching {
   list-style: none;
   margin: 0;

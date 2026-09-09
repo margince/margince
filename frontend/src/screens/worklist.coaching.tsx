@@ -16,7 +16,7 @@
 // suggestion they will stop reading, and each line carries the number it was
 // drawn from.
 
-import { Callout } from "../design-system/callout";
+import { Panel, PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { TeamBoardMember } from "./worklist.queries";
@@ -113,24 +113,29 @@ export function CoachingMoves({
   if (moves.length === 0) {
     return null;
   }
+  // A section of the page, not a notice on it: this is CONTENT — three
+  // sentences drawn from the board's own counts, each one a link to the person
+  // it names — and a callout is what a surface says about itself.
   return (
-    <Callout tone="info" title={t("worklist.coaching.title")}>
-      <ul className="worklist-coaching">
-        {moves.map((move) => (
-          <li key={move.ownerId}>
-            <button
-              type="button"
-              className="link-button"
-              onClick={() => onOwner(move.ownerId)}
-            >
-              {t(`worklist.coaching.${move.kind}` as const, {
-                name: move.name,
-                count: formatNumber(move.evidence, locale),
-              })}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </Callout>
+    <Panel title={t("worklist.coaching.title")}>
+      <PanelBody>
+        <ul className="worklist-coaching">
+          {moves.map((move) => (
+            <li key={move.ownerId}>
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => onOwner(move.ownerId)}
+              >
+                {t(`worklist.coaching.${move.kind}` as const, {
+                  name: move.name,
+                  count: formatNumber(move.evidence, locale),
+                })}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </PanelBody>
+    </Panel>
   );
 }

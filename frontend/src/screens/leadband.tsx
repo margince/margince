@@ -6,10 +6,9 @@ import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, throwProblem, WriteRefused } from "./common";
 import { leadWriteKeys } from "./leadkeys";
 import type { LeadWriter } from "./leads";
 
@@ -21,25 +20,12 @@ type Lead = components["schemas"]["Lead"];
 // claim that takes an unowned lead. They are alternatives — a pick is one or
 // the other — so whichever refused is the one to name.
 //
-// Spelled once because two readers ask it: the callout below, to say so, and
-// the band around the callout, to decide whether it has anything to draw at
-// all. Two spellings is how a band comes to be drawn around a callout that
-// renders nothing.
+// Spelled once because two readers ask it: the notice below, to say so, and the
+// band around it, to decide whether it has anything to draw at all. Two
+// spellings is how a band comes to be drawn around a notice that renders
+// nothing.
 function writeRefusal(writer: LeadWriter) {
   return writer.patch.error ?? writer.claim.error;
-}
-
-function LeadWriteRefusal({ writer }: Readonly<{ writer: LeadWriter }>) {
-  const t = useT();
-  const error = writeRefusal(writer);
-  if (!error) {
-    return null;
-  }
-  return (
-    <Callout tone="danger" live="alert">
-      {problemMessageOf(error, t)}
-    </Callout>
-  );
 }
 
 // The band under the header: what the lead has to say about itself as a whole
@@ -80,7 +66,7 @@ export function leadBand({
           REFUSES is stated where both are visible. In the ladder panel this
           reached only the Overview tab, and a rail write refused while the
           reader was on History said nothing at all. */}
-      <LeadWriteRefusal writer={writer} />
+      <WriteRefused titleKey="lead.writeRefused" error={writeRefusal(writer)} />
       {/* Stated ONCE for the page. Every control the closure refuses points at
           this element by id, so a screen reader reaches it from each of them
           without the sentence being printed beside all six. */}

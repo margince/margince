@@ -20,7 +20,6 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -62,6 +61,7 @@ import {
   isTerminal,
   nextStatuses,
 } from "./privacy.logic";
+import { ErasureRefusals } from "./privacy.notices";
 import "./privacy.css";
 import { isOption } from "../app/options";
 
@@ -994,20 +994,7 @@ function FulfilErasureModal({
           onChange={(event) => setTyped(event.target.value)}
         />
       </div>
-      {/* The one spelling of "what this surface says about itself". Both of
-          these were a hand-rolled bordered panel — `.dsr-legal-hold`, at its
-          own padding and its own radius — which is a Callout with a different
-          name and a second set of numbers to keep in step. */}
-      {held && (
-        <Callout tone="danger" live="alert" className="dsr-refusal">
-          <p>{t("privacy.legalHold")}</p>
-        </Callout>
-      )}
-      {movedOn && (
-        <Callout tone="danger" live="alert" className="dsr-refusal">
-          <p>{t("privacy.movedOn")}</p>
-        </Callout>
-      )}
+      <ErasureRefusals held={held} movedOn={movedOn} />
     </ConfirmModal>
   );
 }

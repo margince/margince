@@ -15,11 +15,11 @@
     {
       "model": "claude-haiku-4-5-20251001",
       "cases_with_a_committed_run": 21,
-      "cases_that_reached_their_bar": 11,
-      "cases_below_their_bar": 10,
+      "cases_that_reached_their_bar": 10,
+      "cases_below_their_bar": 11,
       "runs": 63,
-      "passed": 30,
-      "reliability": 0.47619047619047616,
+      "passed": 29,
+      "reliability": 0.4603174603174603,
       "cases_below_their_bar_named": [
         "case10_finish_the_import",
         "case20_put_it_in_the_board_pack",
@@ -30,7 +30,8 @@
         "case41_close_the_project",
         "case4_use_the_moment",
         "case5_before_the_meeting",
-        "case6_ask_the_company"
+        "case6_ask_the_company",
+        "case8_whats_waiting"
       ]
     },
     {
@@ -801,9 +802,9 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 2,
+          "passed": 1,
           "pass_at": 2,
-          "held": true
+          "held": false
         },
         {
           "model": "claude-opus-5",
@@ -2020,7 +2021,7 @@
     },
     {
       "name": "forecast_readings",
-      "tokens": 349,
+      "tokens": 357,
       "agents": [],
       "required_by_cases": [
         "case21_what_are_we_closing"
@@ -2208,9 +2209,11 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case8_whats_waiting"
+          ]
         },
         "claude-opus-5": {
           "runs": 3,
@@ -2277,9 +2280,11 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case8_whats_waiting"
+          ]
         },
         "claude-opus-5": {
           "runs": 3,
@@ -2712,9 +2717,11 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case8_whats_waiting"
+          ]
         },
         "claude-opus-5": {
           "runs": 3,

@@ -368,27 +368,27 @@ function SecretRevealModal({
         {t("webhooks.secret.title")}
       </h2>
       {/* One stack owns every interval in this dialog, so the warning, the
-          secret and whatever the copy attempt has to say do not each set a
-          margin of their own. */}
+          secret and the copy attempt do not each set a margin of their own. */}
       <div className="form-stack">
         <p className="t-caption">{t("webhooks.secret.warning")}</p>
         <pre className="code-block t-mono" data-testid="webhook-signing-secret">
           {secret}
         </pre>
         {copyFailed && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("webhooks.secret.copyFailedTitle")}
+          >
             {t("webhooks.secret.copyFailed")}
           </Callout>
         )}
       </div>
       {/* Dismissing is what DESTROYS the only copy of the secret: it lives in
           this component's state and is never re-derivable from any read. So
-          Copy is the primary act here and Done is the quiet one — the reverse
-          of what this dialog used to say, where the green button was the
-          irreversible half and read as the safe way out. Done is still
-          available before a copy (a reader who deliberately abandons a
-          subscription must be able to leave), but the caution says in words
-          what it costs. */}
+          Copy is the primary act here and Done is the quiet one. Done stays
+          available before a copy — abandoning a subscription must be possible —
+          but the caution says in words what it costs. */}
       {!copied && (
         <p className="t-caption webhook-secret-caution">
           {t("webhooks.secret.leaveWarning")}

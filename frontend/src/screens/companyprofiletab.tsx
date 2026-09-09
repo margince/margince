@@ -99,9 +99,13 @@ export function CompanyProfileForm({
   return (
     <div className="record-stack">
       {reason && (
-        <Callout tone="info">
-          <p id={reasonId}>{reason}</p>
-        </Callout>
+        <Callout
+          tone="info"
+          kind="standing"
+          // The sentence carries the id every refused control below points at,
+          // so the heading IS the description rather than a copy of it.
+          title={<span id={reasonId}>{reason}</span>}
+        />
       )}
       <Panel title={t("co.details.title")}>
         <PanelBody>

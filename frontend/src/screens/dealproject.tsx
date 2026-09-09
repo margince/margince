@@ -317,37 +317,50 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
     return null;
   }
   return (
-    <Callout
-      tone="info"
-      icon={Briefcase}
-      title={t("deal.startDeliveryTitle")}
-      actions={
-        <Button
-          small
-          variant="primary"
-          disabled={attach.isPending}
-          data-testid="deal-start-delivery"
-          onClick={() =>
-            attach.mutate({
-              dealId: deal.id,
-              version: deal.version,
-              project,
-              attached,
-            })
-          }
-        >
-          {t("deal.startDelivery")}
-        </Button>
-      }
-    >
-      {t(attached ? "deal.startDeliveryAttached" : "deal.startDeliveryBody", {
-        project: project.name,
-      })}
+    <>
+      {/* `accent`, because this is the one notice on the page asking for a MOVE
+          rather than reporting state. The project is a nameable thing, so it
+          keeps its own glyph over the tone's. */}
+      <Callout
+        tone="accent"
+        kind="standing"
+        icon={Briefcase}
+        title={t("deal.startDeliveryTitle")}
+        actions={
+          <Button
+            small
+            variant="primary"
+            disabled={attach.isPending}
+            data-testid="deal-start-delivery"
+            onClick={() =>
+              attach.mutate({
+                dealId: deal.id,
+                version: deal.version,
+                project,
+                attached,
+              })
+            }
+          >
+            {t("deal.startDelivery")}
+          </Button>
+        }
+      >
+        {t(attached ? "deal.startDeliveryAttached" : "deal.startDeliveryBody", {
+          project: project.name,
+        })}
+      </Callout>
+      {/* The refusal is its own notice rather than a hand-rolled alert inside
+          the offer: an offer and the reason the last press failed are two
+          claims, and the second one is the surface's own danger tone. */}
       {attach.isError && (
-        <p className="t-caption" role="alert">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("deal.startDeliveryFailed")}
+        >
           {problemMessageOf(attach.error, t)}
-        </p>
+        </Callout>
       )}
-    </Callout>
+    </>
   );
 }

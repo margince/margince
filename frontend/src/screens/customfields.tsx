@@ -236,18 +236,18 @@ export function FieldBuilder({
       )}
 
       {structural && (
-        <Callout tone="danger" live="alert" title={t("cf.refuse.title")}>
+        <Callout tone="danger" kind="standing" title={t("cf.refuse.title")}>
           <p>{t("cf.refuse.body")}</p>
           <p>{t("cf.refuse.route")}</p>
         </Callout>
       )}
 
-      {/* `warn` because nothing is wrong yet and something will be if the
-          reader confirms without reading: the column goes live on every record
-          of this object. The autonomy dot rides in the title so the confirm
-          tier and the sentence it qualifies are one line, not two. */}
+      {/* `warn`: nothing is wrong yet, and something will be if the reader
+          confirms unread — the column goes live on every record of this object.
+          The dot rides in the title, so tier and sentence are one line. */}
       <Callout
         tone="warn"
+        kind="standing"
         title={
           <>
             <AutonomyDot tier="confirm" /> {t("cf.gate.title")}

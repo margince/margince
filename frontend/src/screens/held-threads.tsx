@@ -198,17 +198,29 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
         ]}
       />
       {release.isError && (
-        <Callout tone="danger" live="alert">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("heldThreads.releaseFailed")}
+        >
           {problemMessageOf(release.error, t)}
         </Callout>
       )}
-      {stillHeld.map(([threadKey, owners]) => (
-        <Callout key={threadKey} tone="info">
-          {t("heldThreads.heldByOthers", {
-            count: formatNumber(owners, locale),
-          })}
+      {/* One notice with a line per thread, not a notice per thread: a reader
+          working down the table grew a stack of identical bands under it. */}
+      {stillHeld.length > 0 && (
+        <Callout kind="outcome" title={t("heldThreads.stillHeldTitle")}>
+          <ul>
+            {stillHeld.map(([threadKey, owners]) => (
+              <li key={threadKey}>
+                {t("heldThreads.heldByOthers", {
+                  count: formatNumber(owners, locale),
+                })}
+              </li>
+            ))}
+          </ul>
         </Callout>
-      ))}
+      )}
       {/* One drawer over the table, at its level rather than inside a row:
           two mounted dialogs would be two `aria-modal` elements. */}
       <OpenEmailDrawer
@@ -253,7 +265,11 @@ function BacklogCallout({ rows }: Readonly<{ rows: HeldThread[] }>) {
     return null;
   }
   return (
-    <Callout tone="warn" live="status">
+    <Callout
+      tone="warn"
+      kind="event"
+      title={t("heldThreads.backlogStalledTitle")}
+    >
       {t("heldThreads.backlogStalled", {
         count: formatNumber(stalled.length, locale),
       })}

@@ -11,11 +11,16 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import {
+  problemMessageOf,
+  QueryGate,
+  throwProblem,
+  useMe,
+  WriteRefused,
+} from "./common";
 import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";
 import { calendarDay } from "../format/calendarday";
@@ -289,15 +294,7 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
             />
           )}
         </Field>
-        {/* The failure is a live region, not tinted text: a message that
-            appears after the reader has pressed Save is one they are not
-            looking at. The dialog stays open behind it, so the retry is the
-            same button. */}
-        {error ? (
-          <Callout tone="danger" live="alert">
-            {error}
-          </Callout>
-        ) : null}
+        <WriteRefused titleKey="settings.rates.notSaved" message={error} />
         <div className="form-actions">
           <Button small variant="ghost" onClick={onClose}>
             {t("create.cancel")}
@@ -555,15 +552,7 @@ function ModelCostModal({ onClose }: Readonly<{ onClose: () => void }>) {
             />
           )}
         </Field>
-        {/* The failure is a live region, not tinted text: a message that
-            appears after the reader has pressed Save is one they are not
-            looking at. The dialog stays open behind it, so the retry is the
-            same button. */}
-        {error ? (
-          <Callout tone="danger" live="alert">
-            {error}
-          </Callout>
-        ) : null}
+        <WriteRefused titleKey="settings.rates.notSaved" message={error} />
         <div className="form-actions">
           <Button small variant="ghost" onClick={onClose}>
             {t("create.cancel")}

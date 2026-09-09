@@ -1,4 +1,4 @@
-import { CalendarClock, TriangleAlert } from "lucide-react";
+import { CalendarClock } from "lucide-react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Callout } from "../design-system/callout";
@@ -17,9 +17,11 @@ import "./licenseholder.css";
 // that something is missing from THEIR license rather than from the vocabulary
 // it was issued under.
 //
-// Two states interrupt, and they are ordered against the seat warning below by
-// what they cost. Expiry stops the installation eventually; being over the seat
-// count never stops anything. So the expiry notice lives here, above.
+// Two states are stated here, and they are ordered against the seat warning
+// below by what they cost. Expiry stops the installation eventually; being over
+// the seat count never stops anything. So the expiry notice lives here, above.
+// Neither interrupts: both are true as the page renders, and a settings tab
+// that announced them on every visit would teach a reader to ignore all three.
 
 type LicenseHolder = components["schemas"]["LicenseHolder"];
 
@@ -40,18 +42,20 @@ export function LicenseHolderCard({
           // The license stopped being current and still works. This is the one
           // state upstream calls out: it passes today and will stop passing.
           <Callout
+            kind="standing"
             tone="danger"
-            live="alert"
-            icon={TriangleAlert}
             title={t("license.grace.title")}
           >
             {t("license.grace.body", { expiry })}
           </Callout>
         ) : (
           holder.renewal_due && (
-            // Inside the warning window. Amber, and not `alert`: nothing has gone
-            // wrong yet, and a renewal is a thing to plan rather than to fix now.
+            // Inside the warning window. Amber: nothing has gone wrong yet,
+            // and a renewal is a thing to plan rather than to fix now. The
+            // calendar glyph rather than the tone's, because this notice is
+            // about a DATE rather than about how bad the news is.
             <Callout
+              kind="standing"
               tone="warn"
               icon={CalendarClock}
               title={t("license.renewal.title")}

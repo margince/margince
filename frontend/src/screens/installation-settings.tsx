@@ -481,6 +481,7 @@ function InstallationProfileDialog({
   onSubmit: () => void;
 }>) {
   const t = useT();
+  const refusalTitle = t("installationSettings.saveFailed");
   const { locale } = useLocale();
   const titleId = useId();
   // Focus lands on the field whose Edit was pressed — programmatic rather than
@@ -698,11 +699,10 @@ function InstallationProfileDialog({
           </Field>
         </div>
 
-        {/* Only what no field claimed. A refusal shown BOTH on the input and
-            again in a paragraph below states one problem twice, and the
-            paragraph is the copy a reader stops reading. */}
+        {/* Only what no field claimed: a refusal on the input AND again below
+            states one problem twice, and the second is what nobody reads. */}
         {blanketError !== null ? (
-          <Callout tone="danger" live="alert">
+          <Callout tone="danger" kind="outcome" title={refusalTitle}>
             {blanketError}
           </Callout>
         ) : null}

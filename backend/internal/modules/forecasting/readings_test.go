@@ -5,8 +5,10 @@ package forecasting
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 )
@@ -376,5 +378,128 @@ func TestAPeriodWhoseHalvesDisagreeIsNotConsistent(t *testing.T) {
 	zoneless.Zone = nil
 	if zoneless.consistent() {
 		t.Error("a period with no zone passed the check — which day an instant falls on has no answer without one")
+	}
+}
+
+// The note is driven through Compute rather than assembled by hand, because
+// what it must agree with is the counts a real population produces — a
+// hand-built Readings could state a gap the arithmetic never had.
+func TestTheCoverageNoteNamesWhatTheMoneyLeftOut(t *testing.T) {
+	t.Parallel()
+	period := testPeriod(t)
+	asOf := *day(t, time.May, 14)
+
+	unpriced := healthyDeal(t)
+	unpriced.ID = "d2"
+	unpriced.AmountMinor = nil
+	unpriced.BaseMinor = nil
+
+	unconverted := healthyDeal(t)
+	unconverted.ID = "d3"
+	unconverted.BaseMinor = nil
+
+	cases := []struct {
+		what  string
+		deals []Deal
+		// The substrings the note must carry, and never a whole sentence: what
+		// is asserted is the FACT reaching the reader, not the copy.
+		says []string
+	}{
+		{
+			what:  "every eligible deal priced and converted",
+			deals: []Deal{healthyDeal(t)},
+			says:  nil,
+		},
+		{
+			what:  "one deal with no amount",
+			deals: []Deal{healthyDeal(t), unpriced},
+			says:  []string{"1 deal carries no amount"},
+		},
+		{
+			what:  "a deal priced in a currency no rate could convert",
+			deals: []Deal{healthyDeal(t), unconverted},
+			says:  []string{"1 deal was priced in a currency no rate could convert", "absent from the totals"},
+		},
+		{
+			// BOTH gaps, which is where the fraction has to be the money's own
+			// and not the priced count: two of these three deals carry an
+			// amount and only one of them reaches a total.
+			what:  "both gaps at once",
+			deals: []Deal{healthyDeal(t), unpriced, unconverted},
+			says:  []string{"1 deal carries no amount", "no rate could convert"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.what, func(t *testing.T) {
+			t.Parallel()
+			readings, err := Compute(period, asOf, tc.deals)
+			if err != nil {
+				t.Fatalf("computing: %v", err)
+			}
+			note := readings.CoverageNote()
+			if len(tc.says) == 0 {
+				if note != "" {
+					t.Errorf("readings that cover every eligible deal still carry a caveat: %q", note)
+				}
+				return
+			}
+			for _, want := range tc.says {
+				if !strings.Contains(note, want) {
+					t.Errorf("the note does not say %q, so the reader is not told:\n%s", want, note)
+				}
+			}
+			assertCoverageFractionIsTheMoneysOwn(t, readings, note)
+		})
+	}
+}
+
+// assertCoverageFractionIsTheMoneysOwn holds the fraction against the
+// contributions rather than against the counts the note was written from.
+//
+// The counts and the note come out of the same arithmetic, so an expectation
+// built from PricedCount cannot tell "quotes the right pair" from "quotes the
+// pair the code happens to use". What the money covers is decided per deal, by
+// whether contribute() found a reason to exclude it — an independent fact, and
+// the one a reader of the total is actually owed.
+func assertCoverageFractionIsTheMoneysOwn(t *testing.T, readings Readings, note string) {
+	t.Helper()
+	contributing := 0
+	for _, c := range readings.Contributions {
+		if c.ExclusionReason == "" {
+			contributing++
+		}
+	}
+	want := fmt.Sprintf("cover %d of %d eligible deals", contributing, len(readings.Contributions))
+	if !strings.Contains(note, want) {
+		t.Errorf("the note does not say %q — the money reaches %d of %d deals:\n%s",
+			want, contributing, len(readings.Contributions), note)
+	}
+}
+
+// A gap of more than one deal must not be reported in the singular, and the
+// fraction must still be the money's. Four unpriced deals beside one healthy
+// one is the plural case every clause has to agree with.
+func TestTheCoverageNoteAgreesWithACountAboveOne(t *testing.T) {
+	t.Parallel()
+	period := testPeriod(t)
+	asOf := *day(t, time.May, 14)
+
+	deals := []Deal{healthyDeal(t)}
+	for i := range 4 {
+		gap := healthyDeal(t)
+		gap.ID = fmt.Sprintf("gap%d", i)
+		gap.AmountMinor = nil
+		gap.BaseMinor = nil
+		deals = append(deals, gap)
+	}
+	readings, err := Compute(period, asOf, deals)
+	if err != nil {
+		t.Fatalf("computing: %v", err)
+	}
+	note := readings.CoverageNote()
+	assertCoverageFractionIsTheMoneysOwn(t, readings, note)
+	if !strings.Contains(note, "4 deals carry no amount") {
+		t.Errorf("four unpriced deals were not reported as four:\n%s", note)
 	}
 }

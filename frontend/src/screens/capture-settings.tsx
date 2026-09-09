@@ -135,7 +135,11 @@ export function CaptureSettingsCard() {
           )}
         </QueryGate>
         {update.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("captureSettings.updateFailed")}
+          >
             {problemMessageOf(update.error, t)}
           </Callout>
         )}

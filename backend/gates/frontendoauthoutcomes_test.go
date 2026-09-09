@@ -35,9 +35,9 @@ import (
 )
 
 const (
-	outcomeOwner       = "internal/compose/connectors_outcome.go"
-	outcomeSettingsMap = "../frontend/src/screens/connectors.tsx"
-	outcomePanelsMap   = "../frontend/src/screens/onboarding-connect-panels.tsx"
+	outcomeOwner      = "internal/compose/connectors_outcome.go"
+	outcomeScreenGlob = "../frontend/src/screens/connectors*.tsx"
+	outcomePanelsMap  = "../frontend/src/screens/onboarding-connect-panels.tsx"
 )
 
 // outcomeConst matches the declarations that DEFINE the vocabulary.
@@ -65,34 +65,60 @@ func serverOutcomes(t *testing.T) []string {
 	return slices.Compact(out)
 }
 
+// renderedOutcomes reads the table from whichever connections screen owns it,
+// and names the files it read for the report.
+//
+// GLOBBED, not named: the table has already moved between the screen and a
+// sibling `connectors.*.tsx` once. A path pinned to the file it used to sit in
+// reads a file with no entries — a census that fails short, which is the one
+// way this gate must not break.
+func renderedOutcomes(t *testing.T) (outcomes []string, read string) {
+	t.Helper()
+	paths, err := filepath.Glob(outcomeScreenGlob)
+	if err != nil {
+		t.Fatalf("globbing the connections screens: %v", err)
+	}
+	var owners []string
+	for _, path := range paths {
+		source, readErr := os.ReadFile(path)
+		if readErr != nil {
+			t.Fatalf("reading %s: %v", path, readErr)
+		}
+		found := settingsOutcomeKey.FindAllStringSubmatch(string(source), -1)
+		if len(found) > 0 {
+			owners = append(owners, path)
+		}
+		for _, m := range found {
+			outcomes = append(outcomes, m[1])
+		}
+	}
+	// NOT a tolerated zero: the SPA renders these sentences today, so an empty
+	// read means the table moved out of reach of the glob or changed shape, and
+	// this gate now proves nothing.
+	if len(outcomes) == 0 {
+		t.Fatalf("found no outcome entries in %s — the detection has gone blind", outcomeScreenGlob)
+	}
+	slices.Sort(outcomes)
+	return slices.Compact(outcomes), strings.Join(owners, ", ")
+}
+
 // Every outcome the api can redirect with renders a sentence, and every
 // sentence the settings screen holds is one the api can send.
 func TestEveryOAuthOutcomeRendersAndEveryRenderedOneExists(t *testing.T) {
 	t.Parallel()
 	server := serverOutcomes(t)
-
-	source, err := os.ReadFile(outcomeSettingsMap)
-	if err != nil {
-		t.Fatalf("reading the settings outcome map: %v", err)
-	}
-	var rendered []string
-	for _, m := range settingsOutcomeKey.FindAllStringSubmatch(string(source), -1) {
-		rendered = append(rendered, m[1])
-	}
-	if len(rendered) == 0 {
-		t.Fatalf("found no outcome entries in %s — the detection has gone blind", outcomeSettingsMap)
-	}
+	rendered, read := renderedOutcomes(t)
 
 	for _, o := range server {
 		if !slices.Contains(rendered, o) {
 			t.Errorf("the api can land on %q and %s renders nothing for it — a human sees a blank card "+
-				"after a connection failed, with the reason only in a log they cannot read", o, outcomeSettingsMap)
+				"after a connection failed, with the reason only in a log they cannot read", o, read)
 		}
 	}
 	for _, o := range rendered {
 		if !slices.Contains(server, o) {
 			t.Errorf("%s renders copy for %q, which the api never sends — dead copy is how the next "+
-				"reader learns this map is not maintained", outcomeSettingsMap, o)
+				"reader learns this map is not maintained", read, o)
 		}
 	}
 }

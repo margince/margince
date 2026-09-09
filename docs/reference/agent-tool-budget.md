@@ -32,7 +32,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1626 | 4% | 21584 | 6 | 6 |
 | `overnight_at_risk_sweep` | 7 | 2499 | 7% | 20711 | 15 | 10 |
-| _whole served catalog, for scale_ | 75 | 22571 | 68% | — | — | — |
+| _whole served catalog, for scale_ | 75 | 22580 | 68% | — | — | — |
 
 ### `morning_brief`
 
@@ -155,9 +155,9 @@ a term in an addition.
 | `compose_analytics_report` | 390 | — |
 | `enrich` | 385 | — |
 | `search_records` | 382 | 9 scenarios |
+| `forecast_readings` | 357 | — |
 | `forecast_movement` | 351 | — |
 | `describe_report_vocabulary` | 349 | — |
-| `forecast_readings` | 349 | — |
 | `search_context` | 343 | — |
 | `prep_for_meeting` | 324 | — |
 | `demote_lead` | 316 | — |

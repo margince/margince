@@ -8,14 +8,15 @@ import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, EmptyState, PendingBody } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import type { Provenance } from "../design-system/trust";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./common.css";
 
 // Shared screen plumbing: honest loading / error / empty states (§3a screen-
-// state matrix), the captured_by → provenance mapping every list reuses, and
-// the ONE /me query the auth gate and every role-aware surface share.
+// state matrix), the ONE refused-write notice, the captured_by → provenance
+// mapping every list reuses, and the ONE /me query every surface reads.
 
 // Authentication and availability are different product states: a failed
 // session probe is typed so the auth boundary can render login (401), the
@@ -286,6 +287,47 @@ export function QueryStates({
     );
   }
   return <>{children}</>;
+}
+
+/**
+ * A write the server refused, beside the control that asked for it: the
+ * screen's own claim as the heading, the cause the server sent under it.
+ *
+ * ONE spelling, because a dozen screens had each grown their own around the
+ * same nine lines — a dozen places for a refusal to stop interrupting or to
+ * lose the server's words. `outcome` + `danger` derives the interrupting role.
+ *
+ * The heading arrives as a KEY, so no caller can hand this a sentence the
+ * catalogue never said. The cause is `message` where the caller already holds
+ * the words and `error` where it holds only the thrown failure; with NEITHER
+ * there is nothing to report and nothing is drawn, so a caller states no
+ * condition of its own — answering that separately is how a band came to be
+ * drawn around a notice that rendered nothing.
+ */
+export function WriteRefused({
+  titleKey,
+  message,
+  error,
+  actions,
+}: Readonly<{
+  titleKey: MessageKey;
+  message?: string | null;
+  error?: unknown;
+  /** What the reader can do about it: a retry, a way back out. */
+  actions?: ReactNode;
+}>) {
+  const t = useT();
+  const cause =
+    message ??
+    (error === null || error === undefined ? null : problemMessageOf(error, t));
+  if (cause === null) {
+    return null;
+  }
+  return (
+    <Callout kind="outcome" tone="danger" title={t(titleKey)} actions={actions}>
+      {cause}
+    </Callout>
+  );
 }
 
 // The one "Load more" spelling for every keyset-paginated infinite query
@@ -830,48 +872,6 @@ export function coldFieldLabel(
 // translates it — same map, same fallback contract as coldFieldLabel.
 export function coldFieldLabelKey(field: string): MessageKey | undefined {
   return COLD_FIELD_LABELS[field];
-}
-
-/**
- * What kind of page the crawl was looking at, in the reader's words. The enum
- * is closed and both read shapes carry it (`SiteReadPage.kind`, required, and
- * `CompanySiteReadPage.kind`, optional), so the vocabulary lives here once: a
- * company page, a deep-read report and the onboarding dossier must not name the
- * same page three different ways.
- */
-const SITE_READ_KIND_LABELS: Record<
-  components["schemas"]["SiteReadPage"]["kind"],
-  MessageKey
-> = {
-  home: "deepread.kindHome",
-  impressum: "deepread.kindImpressum",
-  about: "deepread.kindAbout",
-  team: "deepread.kindTeam",
-  services: "deepread.kindServices",
-  products: "deepread.kindProducts",
-  contact: "deepread.kindContact",
-  other: "deepread.kindOther",
-};
-
-/**
- * The same vocabulary for a caller that already has a label of its own and only
- * wants a better one. An absent kind and "other" both answer undefined: they say
- * nothing the caller's own wording does not, and "Other" in place of a real name
- * reads as information when it is not.
- */
-// The same map seen as a plain lookup, for callers whose kind is only a string
-// at compile time. Widening an assignment costs nothing and keeps the map above
-// exhaustive over the enum — a cast at the call site would give up both.
-const KIND_LABELS_BY_NAME: Readonly<Record<string, MessageKey>> =
-  SITE_READ_KIND_LABELS;
-
-export function namedSiteReadKind(
-  kind: string | null | undefined,
-): MessageKey | undefined {
-  if (!kind || kind === "other") {
-    return undefined;
-  }
-  return KIND_LABELS_BY_NAME[kind];
 }
 
 // The account's finance summary. It lives here rather than beside the finance

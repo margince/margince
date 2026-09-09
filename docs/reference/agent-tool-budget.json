@@ -6,7 +6,7 @@
   "catalog": {
     "tools": 75,
     "system_frame_tokens": 353,
-    "tokens": 22571,
+    "tokens": 22580,
     "median_tool_tokens": 266,
     "mean_tool_tokens": 300
   },
@@ -151,15 +151,15 @@
       "tokens": 382
     },
     {
+      "name": "forecast_readings",
+      "tokens": 357
+    },
+    {
       "name": "forecast_movement",
       "tokens": 351
     },
     {
       "name": "describe_report_vocabulary",
-      "tokens": 349
-    },
-    {
-      "name": "forecast_readings",
       "tokens": 349
     },
     {

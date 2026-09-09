@@ -25,6 +25,7 @@ import {
   useT,
 } from "../i18n";
 import { problemMessageOf, useMe } from "./common";
+import { UndoErrors, UndoInterruptedNotice } from "./import.notices";
 import { useImportFlow } from "./importflow";
 import { ImportMappingTable } from "./importmapping";
 import type {
@@ -238,7 +239,7 @@ function ImportWizard({
       </Button>
 
       {upload.error ? (
-        <Callout tone="danger" live="alert">
+        <Callout tone="danger" kind="outcome" title={t("import.uploadFailed")}>
           {problemMessageOf(upload.error, t)}
         </Callout>
       ) : null}
@@ -361,7 +362,7 @@ function ImportOutcome({
       {/* A run the reader did not just cause, shown as though they had, reads as
           an import that ran by itself — so the card says when it happened. */}
       {resumed ? (
-        <Callout tone="info">
+        <Callout kind="standing" title={t("import.resumedRunTitle")}>
           {t("import.resumedRun", {
             when: formatDateTime(run.created_at, locale, viewerZone()),
           })}
@@ -381,11 +382,11 @@ function ImportOutcome({
       </p>
       <LinkCount links={report.links} committed={committed} />
 
+      {/* The lead is the notice's heading and the rows are its body. A band
+          standing over a list it introduces is a heading in notice clothing —
+          and the list is what the reader came here to read. */}
       {report.issues.length > 0 ? (
-        <>
-          <Callout tone="warn" live="status">
-            {t("import.issuesLead")}
-          </Callout>
+        <Callout tone="warn" kind="outcome" title={t("import.issuesLead")}>
           <ul className="import__issues t-sub">
             {report.issues.map((issue) => (
               <li key={`${issue.line}-${issue.reason}`}>
@@ -394,11 +395,11 @@ function ImportOutcome({
               </li>
             ))}
           </ul>
-        </>
+        </Callout>
       ) : null}
 
       {resumable ? (
-        <Callout tone="danger" live="alert">
+        <Callout tone="danger" kind="outcome" title={t("import.failedTitle")}>
           {t("import.failed", {
             checkpoint: formatNumber(run.checkpoint, locale),
           })}
@@ -406,9 +407,7 @@ function ImportOutcome({
       ) : null}
 
       {committed && !resumable && !undoInterrupted && !undone ? (
-        <Callout tone="success" live="status">
-          {t("import.done")}
-        </Callout>
+        <Callout tone="success" kind="outcome" title={t("import.done")} />
       ) : null}
 
       {!committed ? (
@@ -437,7 +436,7 @@ function ImportOutcome({
         </Button>
       ) : null}
       {error ? (
-        <Callout tone="danger" live="alert">
+        <Callout tone="danger" kind="outcome" title={t("import.commitFailed")}>
           {problemMessageOf(error, t)}
         </Callout>
       ) : null}
@@ -490,11 +489,7 @@ function UndoSection({
   const { locale } = useLocale();
   return (
     <>
-      {undoInterrupted ? (
-        <Callout tone="warn" live="status">
-          {t("import.undoInterrupted")}
-        </Callout>
-      ) : null}
+      <UndoInterruptedNotice interrupted={undoInterrupted} />
 
       {undone ? <UndoOutcome undo={report.undo} /> : null}
 
@@ -513,7 +508,7 @@ function UndoSection({
         </Button>
       ) : null}
       {undoError ? (
-        <Callout tone="danger" live="alert">
+        <Callout tone="danger" kind="outcome" title={t("import.undoFailed")}>
           {problemMessageOf(undoError, t)}
         </Callout>
       ) : null}
@@ -536,9 +531,7 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
   const { locale } = useLocale();
   return (
     <div className="import__undoOutcome">
-      <Callout tone="success" live="status">
-        {t("import.undone")}
-      </Callout>
+      <Callout tone="success" kind="outcome" title={t("import.undone")} />
       {undo ? (
         <>
           <p className="import__hint t-sub">
@@ -558,20 +551,7 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
               </ul>
             </>
           ) : null}
-          {undo.errored.length > 0 ? (
-            <>
-              <Callout tone="warn" live="status">
-                {t("import.undoErroredLead")}
-              </Callout>
-              <ul className="import__issues t-sub">
-                {undo.errored.map((row) => (
-                  <li key={`${row.object}-${row.id}`}>
-                    {t(`import.object.${row.object}`)} — {row.id}: {row.reason}
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
+          <UndoErrors rows={undo.errored} />
         </>
       ) : null}
     </div>
@@ -681,9 +661,11 @@ function ImportMappingStep({
           })}
         </p>
       ) : (
-        <Callout tone="warn">
-          {t("import.needsIdentifier", { field: identifying })}
-        </Callout>
+        <Callout
+          tone="warn"
+          kind="standing"
+          title={t("import.needsIdentifier", { field: identifying })}
+        />
       )}
       {/* Chosen BEFORE the dry run, because the commit honours what the dry
           run reported on — a word picked afterwards would file records the
@@ -700,7 +682,11 @@ function ImportMappingStep({
         {t("import.validate")}
       </Button>
       {error ? (
-        <Callout tone="danger" live="alert">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("import.validateFailed")}
+        >
           {problemMessageOf(error, t)}
         </Callout>
       ) : null}

@@ -216,7 +216,13 @@ function SigningSecret({ endpointId }: Readonly<{ endpointId: string }>) {
       </Row>
       {secret ? (
         <>
-          <Callout tone="warn">{t("extOpenchannel.secret.shownOnce")}</Callout>
+          <Callout
+            tone="warn"
+            kind="outcome"
+            title={t("extOpenchannel.secret.shownOnceTitle")}
+          >
+            {t("extOpenchannel.secret.shownOnce")}
+          </Callout>
           <pre
             className="code-block t-mono"
             data-testid="openchannel-signing-secret"
@@ -225,8 +231,17 @@ function SigningSecret({ endpointId }: Readonly<{ endpointId: string }>) {
           </pre>
         </>
       ) : null}
+      {/* The same vocabulary the caution above uses. A bare `role="alert"`
+          paragraph took its emphasis from nothing at all, so one component
+          spelled one job two ways. */}
       {mint.isError ? (
-        <p role="alert">{t("extOpenchannel.secret.mintFailed")}</p>
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("extOpenchannel.secret.mintFailedTitle")}
+        >
+          {t("extOpenchannel.secret.mintFailed")}
+        </Callout>
       ) : null}
     </Stack>
   );

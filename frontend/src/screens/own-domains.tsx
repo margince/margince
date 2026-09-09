@@ -194,7 +194,11 @@ export function OwnDomainsCard() {
           </p>
         )}
         {remove.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            kind="outcome"
+            tone="danger"
+            title={t("ownDomains.removeFailed")}
+          >
             {problemMessageOf(remove.error, t)}
           </Callout>
         )}
@@ -295,7 +299,11 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
           onChange={(event) => setDraft(event.target.value)}
         />
         {add.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            kind="outcome"
+            tone="danger"
+            title={t("ownDomains.addFailed")}
+          >
             {problemMessageOf(add.error, t)}
           </Callout>
         )}

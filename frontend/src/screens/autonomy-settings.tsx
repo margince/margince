@@ -213,7 +213,13 @@ export function AutonomyChoices({
   return (
     <>
       {noneDecidedYet(rows) && (
-        <Callout tone="info">{t("autonomy.noneDecidedYet")}</Callout>
+        <Callout
+          tone="info"
+          kind="standing"
+          title={t("autonomy.noneDecidedYetTitle")}
+        >
+          {t("autonomy.noneDecidedYet")}
+        </Callout>
       )}
       <SettingList>
         {rows.map((row) => (
@@ -239,7 +245,11 @@ export function AutonomyChoices({
         ))}
       </SettingList>
       {update.isError && (
-        <Callout tone="danger" live="alert">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("autonomy.updateFailed")}
+        >
           {problemMessageOf(update.error, t)}
         </Callout>
       )}

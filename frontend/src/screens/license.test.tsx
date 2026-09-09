@@ -451,9 +451,10 @@ describe("the licensee", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  // Past expiry and still accepted. This one interrupts, because the
-  // installation will stop working.
-  it("interrupts when the license runs on its grace period", async () => {
+  // Past expiry and still accepted. Stated in the danger family and NOT
+  // announced: the expiry is true as the tab renders, so the one interruption
+  // on this screen stays with the seat breach an admin has to act on.
+  it("states the grace period without interrupting", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor({
@@ -467,9 +468,11 @@ describe("the licensee", () => {
     );
     render(<LicenseCard />);
 
-    const alert = await waitFor(() => screen.getByRole("alert"));
-    expect(alert.textContent).toMatch(/expired/i);
-    expect(alert.textContent).toMatch(/still works/i);
+    expect(
+      await waitFor(() => screen.getByText("This license expired")),
+    ).toBeTruthy();
+    expect(screen.getByText(/still works/i)).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
     // One notice, not two: the grace state supersedes the renewal warning.
     expect(screen.queryByText("This license needs a renewal")).toBeNull();
   });

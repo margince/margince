@@ -248,9 +248,15 @@ export function OvernightPanel() {
             {projects && <DigestProjectsBlock projects={projects} />}
             {unhealthy.length > 0 && (
               <PanelBody>
+                {/* EVERY broken connector, not the first one: naming
+                    `unhealthy[0]` alone told a reader with two dead mailboxes
+                    about one of them, and the digest is where they find out at
+                    all. `event`, because a sync failed overnight rather than
+                    under the reader's hand. */}
                 <Callout
                   tone="warn"
-                  className="rail-connector-health"
+                  kind="event"
+                  title={t("brief.overnight.connectorsUnhealthy")}
                   actions={
                     <Button
                       small
@@ -262,7 +268,13 @@ export function OvernightPanel() {
                     </Button>
                   }
                 >
-                  {t(errorClassKey(unhealthy[0].last_sync_error_class))}
+                  <ul>
+                    {unhealthy.map((connector) => (
+                      <li key={connector.provider}>
+                        {t(errorClassKey(connector.last_sync_error_class))}
+                      </li>
+                    ))}
+                  </ul>
                 </Callout>
               </PanelBody>
             )}

@@ -160,6 +160,7 @@ func forecastToolResult(
 		Timezone:           period.Zone.String(),
 		BaseCurrency:       baseCurrency,
 		ScopeLimited:       &limited,
+		CoverageNote:       in.CoverageNote(),
 	}
 	if scope.ID != nil {
 		id := scope.ID.String()

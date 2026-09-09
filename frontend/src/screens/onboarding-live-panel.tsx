@@ -7,8 +7,8 @@ import type { components } from "../api/schema";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { namedSiteReadKind } from "./common";
 import { skipReasonText } from "./onboarding";
+import { namedSiteReadKind } from "./sitereadkind";
 import "./onboarding-live-panel.css";
 
 // The coverage card: what a company site read covered and what it could not,

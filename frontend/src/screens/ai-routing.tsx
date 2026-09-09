@@ -235,21 +235,15 @@ function RoutingForm({
   // dies on is the one an error path or an older server produces.
   const tiers = orderedTiers(draft.tiers);
   if (tiers.length === 0) {
-    // An installation that binds nothing needs a FIRST binding, and for a long
-    // time this said only that a deployment declares one under
-    // `seeds.ai_routing`. True of a deployment, false for everybody else: the
-    // seed is consumed once, at company creation, so an installation that
-    // ALREADY EXISTS can never take one. The desktop bundles make it concrete —
-    // they ship a database, so their company was created on the build
-    // machine, and their recipient met this callout with no way forward but
-    // curl or deleting the demo data they were given.
+    // An installation that binds nothing needs a FIRST binding, and it has to
+    // be reachable from HERE: `seeds.ai_routing` is consumed once, at
+    // company creation, so an installation that ALREADY EXISTS can never
+    // take one — the desktop bundles ship a database whose company was
+    // created on the build machine, leaving their recipient curl or deleting
+    // the demo data they were given.
     //
-    // The old reasoning was "a form whose every field is blank has a Save that
-    // cannot produce a valid document". Right about the blank form, wrong about
-    // the conclusion: the defaults are not unknown. A keyed provider names the
-    // preset the app's own onboarding would have offered, so the form can open
-    // on a document that is already valid and the reader adjusts it.
-    //
+    // The defaults are not unknown, so the form need not open blank: a keyed
+    // provider names the preset the app's own onboarding would have offered.
     // Nothing is written until Save — this seeds the DRAFT, so the binding
     // stays their decision and goes through the same validation as every later
     // change.
@@ -258,27 +252,33 @@ function RoutingForm({
       // No key, so nothing to bind TO. The seed sentence is still right for a
       // deployment; the other half — add a key first — is the part a reader of
       // THIS screen can act on.
-      return <Callout tone="info">{t("aiRouting.unboundUnkeyed")}</Callout>;
+      return (
+        <EmptyState title={t("aiRouting.unboundTitle")}>
+          {t("aiRouting.unboundUnkeyed")}
+        </EmptyState>
+      );
     }
+    // The instructional empty state and not a notice: it stands WHERE the form
+    // would be, so the verbs that bring one into being are its own action slot.
     return (
-      <Callout tone="info">
+      <EmptyState
+        title={t("aiRouting.unboundTitle")}
+        action={startable.map(({ id, label }) => (
+          <Button
+            key={id}
+            // `dirty` is derived — draft against the document it was seeded
+            // from — so replacing the draft is what marks it unsaved. There
+            // is no setter to call, and the re-seed effect above leaves a
+            // dirty form alone, so this survives another role's save.
+            onClick={() => setDraft(firstBinding(id))}
+            disabled={!canManage}
+          >
+            {t("aiRouting.unboundStart", { provider: label })}
+          </Button>
+        ))}
+      >
         {t("aiRouting.unboundKeyed")}
-        <div className="ai-routing-start">
-          {startable.map(({ id, label }) => (
-            <Button
-              key={id}
-              // `dirty` is derived — draft against the document it was seeded
-              // from — so replacing the draft is what marks it unsaved. There
-              // is no setter to call, and the re-seed effect above leaves a
-              // dirty form alone, so this survives another role's save.
-              onClick={() => setDraft(firstBinding(id))}
-              disabled={!canManage}
-            >
-              {t("aiRouting.unboundStart", { provider: label })}
-            </Button>
-          ))}
-        </div>
-      </Callout>
+      </EmptyState>
     );
   }
 
@@ -413,12 +413,16 @@ function RoutingForm({
       </Panel>
 
       {replace.isError && (
-        <Callout tone="danger" live="alert">
+        <Callout tone="danger" kind="outcome" title={t("aiRouting.saveFailed")}>
           {problemMessageOf(replace.error, t)}
         </Callout>
       )}
       {replace.isSuccess && (
-        <Callout tone="success" live="status">
+        <Callout
+          tone="success"
+          kind="outcome"
+          title={t("aiRouting.savedTitle")}
+        >
           {t("aiRouting.saved")}
         </Callout>
       )}
@@ -759,11 +763,9 @@ function EmbeddingWidthField({
 // The providers this installation could bind RIGHT NOW: keyed, and named by a
 // preset so the binding opens on real model ids rather than blank fields.
 //
-// Deliberately the onboarding list rather than every keyed vendor. Those two
-// are the vendors that serve chat AND embeddings from one key, and a routing
-// document REQUIRES an embeddings binding — offering a third here would open a
-// form its reader cannot complete, which is the failure this branch exists to
-// end rather than repeat.
+// Deliberately the onboarding list rather than every keyed vendor: those two
+// serve chat AND embeddings from one key, and a routing document REQUIRES an
+// embeddings binding, so a third would open a form nobody can complete.
 function startableProviders(
   providers: readonly { provider: string; configured: boolean }[] | undefined,
 ): readonly { id: keyof typeof SETUP_PROVIDERS; label: string }[] {
@@ -930,11 +932,9 @@ function priceLabel(
 // sheet the reader cannot read answers null, and the caller says so rather than
 // printing a date it does not have.
 //
-// Rendered as the wire's own ISO day, like every other effective date in this
-// product (the price sheet's own column does the same). It is a CALENDAR day
-// rather than an instant, so putting it through a zone could shift it by one —
-// and this is an operator reading a date they will compare against the sheet
-// beside it, not prose.
+// Rendered as the wire's own ISO day, like every other effective date here: it
+// is a CALENDAR day rather than an instant, so a zone could shift it by one,
+// and an operator compares it against the sheet beside it.
 function sheetAsOf(catalogue: ModelCatalogue): string | null {
   return (catalogue ?? []).reduce<string | null>(
     (latest, rate) =>

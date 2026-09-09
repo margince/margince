@@ -121,16 +121,23 @@ export function PasswordLinkModal({
         {t("users.link.title", { name: memberName })}
       </h2>
       {pending && <p className="t-caption">{t("users.link.pending")}</p>}
-      {/* `danger`: the credential does not exist. The same vocabulary the
-          roster and the invite form now use for a refused write, rather than a
-          paragraph tinted by hand — the tint WAS the claim, spelled in an
-          inline style, and nothing said which of the four tones it meant.
-
-          The member exists either way — only the link failed. Retry is the
-          whole point of this branch: without it the admin is left with an
-          account nobody can sign into and no visible way forward. */}
+      {/* `danger`: the credential does not exist. The member exists either way
+          — only the link failed, and the retry is the whole point of this
+          branch: without it the admin is left with an account nobody can sign
+          into and no visible way forward. So it belongs to the REFUSAL rather
+          than to the dialog's own row, where the remedy sat two paragraphs
+          from the thing it remedies. */}
       {error && (
-        <Callout tone="danger" live="alert">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("users.link.failedTitle")}
+          actions={
+            <Button variant="primary" onClick={onRetry} disabled={pending}>
+              {t("users.link.retry")}
+            </Button>
+          }
+        >
           <p>{error}</p>
           <p>{t("users.link.failed")}</p>
         </Callout>
@@ -143,11 +150,6 @@ export function PasswordLinkModal({
         </>
       )}
       <div className="actions">
-        {error && (
-          <Button variant="primary" onClick={onRetry} disabled={pending}>
-            {t("users.link.retry")}
-          </Button>
-        )}
         <Button onClick={onClose}>{t("users.link.done")}</Button>
       </div>
     </Modal>
@@ -214,14 +216,21 @@ function CopyableLink({ url }: Readonly<{ url: string }>) {
       >
         {copied ? t("users.link.copied") : t("users.link.copy")}
       </Button>
-      {/* `warn`, not `danger`: the link itself is fine and is on screen in the
-          field beside this — what failed is the clipboard, and the way out is
-          to select the field by hand, which is exactly why it is a read-only
-          input rather than text. */}
+      {/* A clipboard that refused is `danger` here and everywhere else in the
+          product — one fact, one tone. The link itself is fine and on screen in
+          the field beside this, which is exactly why it is a read-only input:
+          selecting it by hand is the way out. The BOX takes the whole line; a
+          notice owns no layout of its own. */}
       {copyFailed && (
-        <Callout tone="warn" live="alert" className="users-formerror">
-          {t("users.link.copyFailed")}
-        </Callout>
+        <div className="users-formerror">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("users.link.copyFailedTitle")}
+          >
+            {t("users.link.copyFailed")}
+          </Callout>
+        </div>
       )}
     </div>
   );

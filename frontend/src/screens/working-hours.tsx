@@ -2,14 +2,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
+import {
+  Button,
+  Checkbox,
+  EmptyState,
+  Field,
+  TextInput,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // When this reader is bookable, and on whose clock.
 //
@@ -99,12 +105,21 @@ export function WorkingHoursCard() {
       <PanelBody className="form-stack">
         <p className="settings-panel-sub">{t("workingHours.sub")}</p>
         <QueryGate pendingLabel={t("workingHours.title")} query={query}>
-          {(answer) => (
-            <WorkingHoursForm
-              chosen={answer.chosen}
-              hours={answer.working_hours}
-            />
-          )}
+          {(answer) =>
+            // Checked, not asserted. The field is contract-required, but a body
+            // that lost it hands over `undefined` anyway — and this card sits
+            // on the settings screen, so dereferencing it took the whole
+            // ACCOUNT PAGE down over one window nobody could edit. The same
+            // reading the sign-in methods card documents for its own list.
+            answer.working_hours ? (
+              <WorkingHoursForm
+                chosen={answer.chosen}
+                hours={answer.working_hours}
+              />
+            ) : (
+              <EmptyState>{t("state.unavailable")}</EmptyState>
+            )
+          }
         </QueryGate>
       </PanelBody>
     </Panel>
@@ -160,7 +175,11 @@ function WorkingHoursForm({
 
   return (
     <>
-      {!chosen && <Callout tone="info">{t("workingHours.unset")}</Callout>}
+      {!chosen && (
+        <Callout kind="standing" title={t("workingHours.unsetTitle")}>
+          {t("workingHours.unset")}
+        </Callout>
+      )}
       <div className="form-row">
         <Field label={t("workingHours.start")}>
           {(control) => (
@@ -216,16 +235,24 @@ function WorkingHoursForm({
         {t("workingHours.save")}
       </Button>
       {/* After the save, never before: the reader has made the change, and the
-          sentence is about what it will do rather than a warning against
-          making it. */}
+          sentence is about what it will do rather than a warning against making
+          it — which is why the tone is `info` and not `warn`. The save
+          SUCCEEDED, and the copy says as much in words: that is the change, not
+          a fault. */}
       {narrowed && save.isSuccess && (
-        <Callout tone="warn" live="status">
+        <Callout kind="outcome" title={t("workingHours.narrowedTitle")}>
           {t("workingHours.narrowed")}
         </Callout>
       )}
       {save.isError && (
-        <Callout tone="danger" live="alert">
-          {t("workingHours.saveFailed")}
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("workingHours.saveFailed")}
+        >
+          {/* The server's own account of it: a fixed sentence here threw away
+              the one detail that says whether a retry can help. */}
+          {problemMessageOf(save.error, t)}
         </Callout>
       )}
     </>

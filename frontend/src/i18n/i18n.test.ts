@@ -111,6 +111,14 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Two phase names and an arrow.
   "project.history.moved",
   "brief.digestPhaseChange",
+  // A filename and the server's own refusal, separated by a colon. It is one
+  // line of a list whose heading says what the list is, and both halves arrive
+  // already in the reader's own words.
+  "knowledge.upload.refused",
+  // The sources a day could not read, joined into one line. Every phrase in it
+  // is built from its own translated key (worklist.source.failed /
+  // .withheld), so this value is the placeholder and a full stop.
+  "worklist.partial",
   // An em dash standing in for a figure nobody can compute yet. A glyph, not a
   // word — the sentence explaining it is the detail line beside it.
   "co.strip.financeUnknown",

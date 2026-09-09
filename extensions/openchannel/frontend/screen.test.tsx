@@ -131,7 +131,8 @@ const QUIET = {
 
 function renderScreen(client?: QueryClient) {
   const usedClient =
-    client ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client ??
+    new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={usedClient}>
       <LocaleProvider>
@@ -300,7 +301,9 @@ describe("the openchannel screen", () => {
 
     renderScreen();
     await screen.findByTestId("openchannel-curl");
-    expect(screen.getByText(/visible to them in the process list/)).toBeTruthy();
+    expect(
+      screen.getByText(/visible to them in the process list/),
+    ).toBeTruthy();
   });
 
   // The secret exists on a screen exactly once, and the sentence saying so is
@@ -324,7 +327,10 @@ describe("the openchannel screen", () => {
 
     const shown = await screen.findByTestId("openchannel-signing-secret");
     expect(shown.textContent).toBe("b1946ac92492d2347c6235b4d2611184");
-    expect(screen.getByText(/only time this secret is shown/)).toBeTruthy();
+    // The caution's heading makes the claim; its body says what to do about
+    // it, and a reader who sees only one half has been told half of it.
+    expect(screen.getByText(/only time it is shown/)).toBeTruthy();
+    expect(screen.getByText(/copy it into the sender now/)).toBeTruthy();
     const mint = calls.find(
       (call) => call.path === "/ext/openchannel/endpoint/secret",
     );
