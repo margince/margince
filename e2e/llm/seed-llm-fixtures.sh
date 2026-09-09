@@ -936,8 +936,13 @@ tag_record "$strategic_short" company "$vorort"
 #
 # THE DUPLICATE is named so a case-insensitive pattern can tell the two apart:
 # "Ostfriesen Kranbau GmbH" is not a substring of "Ostfriesen Kranbau Gesellschaft
-# mbH", so an assertion naming the survivor cannot be satisfied by the record
-# that is merged away.
+# mbH", so an answer that names one card has not named the other.
+#
+# WHICH of them survives is the RUN's choice and not this fixture's. A merge
+# moves the source's activities onto the survivor either way, so keeping the card
+# the mail is already on and keeping the older card both answer the prompt. The
+# scenario asserts that the survivor is NAMED, and the naming above is what makes
+# that assertion possible; it does not pin a direction.
 #
 # IT IS A COMPANY NO OTHER CASE ASKS ABOUT, and that is the whole reason it is
 # not the Vietnam partner. Case 5 finds the Vietnam account from a description

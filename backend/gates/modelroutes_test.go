@@ -30,11 +30,13 @@ package gates
 import (
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -238,4 +240,65 @@ func clientModelRoutes(t *testing.T) map[string]string {
 		t.Fatalf("no entries parsed out of %s's %s — a gate that reads nothing agrees with everything", modelRouteClient, marker)
 	}
 	return entries
+}
+
+// tsNumericConst reads one `export const NAME = 1_234;` declaration's value,
+// underscores and all — TypeScript's numeric separators, which strconv does
+// not accept.
+var tsNumericConst = regexp.MustCompile(`export const (\w+)\s*=\s*([\d_]+);`)
+
+// clientDeadlineHeadroomMs is how much LONGER the client's model-route
+// deadline must sit above the server's, mirroring ai.outboundtransport.go's
+// own writeHeadroom and for the same reason on the other end of the wire: the
+// client's clock starts at fetch(), before the request has reached the
+// network, while the server's starts only once the request has arrived —
+// so a client deadline merely EQUAL to the server's is shorter in practice
+// by however long that transit took.
+const clientDeadlineHeadroomMs = 30_000
+
+// TestTheClientsModelRouteDeadlineMatchesTheServers holds the client's
+// MODEL_ROUTE_TIMEOUT_MS to the server's ai.RouteWriteDeadline: the two ends
+// of one wait, and nothing else compares them. A client deadline shorter than
+// the server's (plus the transit headroom above) gives up on work the server
+// is still doing — the reader sees a stall, and their own retry serves the
+// answer instantly from cache because the first request finished in the
+// meantime.
+//
+// >=, not ==: the client is allowed to wait longer than the server can
+// possibly take (there is no cost to that, the server ends the call first
+// either way) but never shorter.
+func TestTheClientsModelRouteDeadlineMatchesTheServers(t *testing.T) {
+	t.Parallel()
+	source, err := os.ReadFile(modelRouteClient)
+	if err != nil {
+		t.Fatalf("reading the client: %v", err)
+	}
+	// Comments stripped first, the same as clientModelRoutes above: a
+	// commented-out or example declaration mentioning the same name is not a
+	// second real one, and without this the LAST match in source order would
+	// silently win over the real, live one above it.
+	text := tsComment.ReplaceAllString(string(source), " ")
+	const name = "MODEL_ROUTE_TIMEOUT_MS"
+	var found []string
+	for _, m := range tsNumericConst.FindAllStringSubmatch(text, -1) {
+		if m[1] == name {
+			found = append(found, m[2])
+		}
+	}
+	if len(found) == 0 {
+		t.Fatalf("%s declares no `export const %s = ...;` — this gate is reading a shape that is gone", modelRouteClient, name)
+	}
+	if len(found) > 1 {
+		t.Fatalf("%s declares %s more than once (%v) — this gate cannot tell which is the real one", modelRouteClient, name, found)
+	}
+	clientMs, convErr := strconv.ParseInt(strings.ReplaceAll(found[0], "_", ""), 10, 64)
+	if convErr != nil {
+		t.Fatalf("%s: %s = %q is not a number", modelRouteClient, name, found[0])
+	}
+
+	wantMs := ai.RouteWriteDeadline.Milliseconds() + clientDeadlineHeadroomMs
+	if clientMs < wantMs {
+		t.Errorf("%s's %s is %dms, want at least %dms (ai.RouteWriteDeadline's %dms plus %dms of transit headroom) — the client can give up on a model route while the server is still doing the work, which is exactly the defect this gate exists to hold shut",
+			modelRouteClient, name, clientMs, wantMs, ai.RouteWriteDeadline.Milliseconds(), clientDeadlineHeadroomMs)
+	}
 }

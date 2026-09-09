@@ -51,7 +51,40 @@ function readerLanguage(): string | undefined {
 // reason. It sits above the server's own ceiling now, so the SERVER is what
 // ends a hopeless request — it knows what the work was — and this remains what
 // it was for: the request that opened and will never answer at all.
+//
+// NOT what a request to a model route waits for — see MODEL_ROUTE_TIMEOUT_MS
+// below. This value covers "sits above CallCeiling" and stops there: it is
+// well below RouteWriteDeadline, the bound that actually governs the response
+// a model route is writing, so a request to one of those routes must use the
+// longer of the two or it gives up on work the server is still doing.
 export const REQUEST_TIMEOUT_MS = 360_000;
+
+// How long a request to a MODEL route may stay open — a declared mirror of
+// the server's ai.RouteWriteDeadline (backend/internal/modules/ai/outboundtransport.go),
+// held to it (never shorter) by backend/gates/modelroutes_test.go's
+// TestTheClientsModelRouteDeadlineMatchesTheServers.
+//
+// Using REQUEST_TIMEOUT_MS here was the bug this constant exists to fix: 360s
+// sits 1470s — 24.5 minutes — short of the server's own deadline, so the
+// client gave up on a model route that was still legitimately working, the
+// reader saw a stall, and their own retry served the answer instantly from
+// cache because the first request had finished in the meantime.
+//
+// 30 seconds ABOVE the server's own ai.RouteWriteDeadline (1,800,000ms),
+// mirroring the headroom the server's own formula already adds for the same
+// reason (writeHeadroom, outboundtransport.go): this clock starts when fetch
+// is called, before the request has even reached the network, while the
+// server's starts only once the request has arrived — so a client deadline
+// merely EQUAL to the server's is still shorter in practice by however long
+// that transit took.
+//
+// Deliberately its OWN constant rather than raising REQUEST_TIMEOUT_MS itself:
+// this client seam is shared by every route, and a single 30-minute deadline
+// on GET /v1/people would leave a request into a dead socket "pending" for
+// half an hour — exactly the eternal-pending state this deadline exists to
+// remove. modelWaitOf (below) is what routes a request to the right one of
+// the two.
+export const MODEL_ROUTE_TIMEOUT_MS = 1_860_000;
 
 /**
  * A request that opened and never answered.
@@ -84,6 +117,12 @@ export class RequestTimeoutError extends Error {
 // that one counts on a clock inside the platform, which no test can advance, and
 // a deadline nothing can exercise is a deadline nobody knows still works.
 async function fetchWithDeadline(request: Request): Promise<Response> {
+  // A model route gets the longer deadline; every other request keeps the
+  // shorter one. modelWaitOf is declared further down this file — safe to
+  // call here because nothing calls fetchWithDeadline until the module has
+  // finished loading and every binding below is initialised.
+  const timeoutMs =
+    modelWaitOf(request) === null ? REQUEST_TIMEOUT_MS : MODEL_ROUTE_TIMEOUT_MS;
   const deadline = new AbortController();
   // The REQUEST's own signal is what React Query aborts when a screen unmounts
   // or a query is cancelled. Without this the deadline was the only way a call
@@ -102,9 +141,9 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
   }
   const expiry = globalThis.setTimeout(() => {
     deadline.abort(
-      new RequestTimeoutError(request.method, request.url, REQUEST_TIMEOUT_MS),
+      new RequestTimeoutError(request.method, request.url, timeoutMs),
     );
-  }, REQUEST_TIMEOUT_MS);
+  }, timeoutMs);
   try {
     return withGatewayProblem(
       await globalThis.fetch(request, { signal: deadline.signal }),
