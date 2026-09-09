@@ -11,9 +11,8 @@ import {
 } from "./story-utils";
 
 // The fixture and the mount every `personpage*.test.tsx` suite shares, in one
-// place: PersonPageV2's own coverage outgrew one file's line-length ratchet,
-// and a second suite reading its own copy of this fixture is the shape that
-// drifts the two apart.
+// place: a second suite reading its own copy of this fixture is the shape
+// that drifts the two apart.
 
 type Person360 = components["schemas"]["Person360"];
 export type PersonConsentGuardEntry =

@@ -15,12 +15,10 @@ import { mapPersonUpdate, personEditFields } from "./personformfields";
 
 // Edit, merge and archive — the record's own core write verbs, shared
 // between PersonScreen's header (contacts.tsx) and PersonPageV2's
-// (personactions.tsx's sibling, wired from personpage.tsx), which had no
-// reachable edit form at all: the route moved to PersonPageV2 years before
-// this file existed, and this wiring stayed behind on the screen nothing
-// routes to any more. One writer of the PATCH/merge/archive config rather
-// than two, so a change to what a person edit form carries cannot fix one
-// page's form and silently leave the other stale.
+// (personactions.tsx's sibling, wired from personpage.tsx). One writer of
+// the PATCH/merge/archive config rather than two, so a change to what a
+// person edit form carries cannot fix one page's form and silently leave
+// the other stale.
 
 type Person = components["schemas"]["Person"];
 

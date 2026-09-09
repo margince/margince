@@ -31,9 +31,9 @@ import {
 // panel switch and the routing between them — because the bug this file exists
 // to catch lived in the seam between them, not inside any one tab.
 //
-// The shared fixture and the ordinary mount are personpage.testkit.tsx's —
-// also used by personpage.editverbs.test.tsx, split out once this file's own
-// coverage met the frontend's file-length ratchet. Specs here that need a
+// The shared fixture and the ordinary mount are personpage.testkit.tsx's,
+// also used by personpage.editverbs.test.tsx — one fixture rather than a
+// second copy the two suites could disagree about. Specs here that need a
 // non-default mount (a route override outside `mount`'s own extraRoutes, a
 // distinct grant) still reach the same seam directly.
 

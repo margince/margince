@@ -23,11 +23,8 @@ import { primaryTransportAction, useTransports } from "./persontransports";
 import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
 
-// The header's verbs on the person record page (personpage.tsx), split out
-// once its own growth met the frontend's file-length ratchet — the wiring
-// this file adds (PersonEditMergeArchive on the header's badges, restoring
-// the contact edit form personpage.tsx had none of) needed the room this
-// component's own size was owed back.
+// The header's verbs on the person record page (personpage.tsx): writing,
+// calling, meeting, logging, and the research/full-history/share menu.
 
 type Person360 = components["schemas"]["Person360"];
 

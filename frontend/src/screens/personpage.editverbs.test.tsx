@@ -6,11 +6,9 @@ import type { components } from "../api/schema";
 import { mount, view } from "./personpage.testkit";
 import { jsonResponse } from "./story-utils";
 
-// PersonPageV2 offered no way to correct a bounced email, a wrong phone
-// number or a misspelled name — the edit/merge/archive wiring stayed behind
-// on the screen nothing routes to any more, and API-only was the only path
-// left. Its own file, split from personpage.test.tsx, over the frontend's
-// file-length ratchet.
+// The header's edit/merge/archive verbs, restored to the record page every
+// contact actually opens to. Its own file, sharing personpage.testkit.tsx's
+// fixture with personpage.test.tsx rather than duplicating it.
 
 type Person360 = components["schemas"]["Person360"];
 
