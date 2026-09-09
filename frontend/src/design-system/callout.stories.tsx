@@ -53,29 +53,38 @@ function Derives({
   );
 }
 
-/** The four tones together, which is the only way to judge that they differ.
+/** The five tones together, which is the only way to judge that they differ.
  * No `icon` at any of them: the glyph comes from the tone, so shape carries the
- * claim as well as colour does. */
+ * claim as well as colour does — and `accent` shares `info`'s glyph, because it
+ * is the same claim asking for more of the reader's attention. */
 export const Tones: Story = {
   render: () => (
     <Stack>
-      <Callout>Capture is reading this mailbox every five minutes.</Callout>
+      <Callout title="Capture is running">
+        Every message to and from this mailbox is read every five minutes.
+      </Callout>
+      <Callout tone="accent" title="Two accounts are waiting on you">
+        Neither has been answered since the buyer asked for a price.
+      </Callout>
       <Callout tone="warn" title="Reindex needed">
         Search is answering from an index that is behind the records.
       </Callout>
       <Callout tone="danger" title="That did not save">
         The role changed while you were editing. Re-read it and try again.
       </Callout>
-      <Callout tone="success">HubSpot is connected.</Callout>
+      <Callout tone="success" title="HubSpot is connected">
+        The first read starts within five minutes.
+      </Callout>
     </Stack>
   ),
 };
 
 /**
- * The six reference states, in the order a reader meets them: a notice with
- * nothing to do about it, one with a verb, a failure that names what it
- * refused, a confirmation the reader can put away, a standing warning, and the
- * bare row that 108 of this primitive's call sites actually are.
+ * The reference stack: every state, every one of them with a heading, in the
+ * order a reader meets them — a notice with nothing to do about it, an ask with
+ * its verb beside it, a failure that names what it refused, a confirmation the
+ * reader can put away, a standing warning, and the bare heading with no body at
+ * all, which is what most of this primitive's call sites actually are.
  */
 export const AlertAnatomy: Story = {
   render: () => (
@@ -85,6 +94,7 @@ export const AlertAnatomy: Story = {
       </Callout>
 
       <Callout
+        tone="accent"
         title="The index is behind"
         actions={<Button small>Refresh</Button>}
       >
@@ -111,10 +121,9 @@ export const AlertAnatomy: Story = {
       <Callout
         tone="success"
         kind="outcome"
+        title="HubSpot is connected"
         dismiss={{ label: "Dismiss", onDismiss: () => {} }}
-      >
-        HubSpot is connected.
-      </Callout>
+      />
 
       <Callout tone="warn" kind="standing" title="This licence is in grace">
         Seats stay writable until 31 March. After that the workspace keeps
@@ -122,9 +131,11 @@ export const AlertAnatomy: Story = {
         connectors make on their own.
       </Callout>
 
-      <Callout tone="danger" live="alert">
-        The invitation could not be sent.
-      </Callout>
+      <Callout
+        tone="danger"
+        kind="outcome"
+        title="The invitation could not be sent"
+      />
     </Stack>
   ),
 };
@@ -145,8 +156,8 @@ export const Kinds: Story = {
       </Derives>
 
       <Derives announces='kind="outcome" + any other tone → role="status"'>
-        <Callout tone="success" kind="outcome">
-          The invitation is on its way.
+        <Callout tone="success" kind="outcome" title="The invitation is away">
+          It expires in seven days if nobody opens it.
         </Callout>
       </Derives>
 
@@ -158,7 +169,7 @@ export const Kinds: Story = {
       </Derives>
 
       <Derives announces='kind="standing" → no role at all'>
-        <Callout kind="standing">
+        <Callout kind="standing" title="People arrive with the work">
           A person is only visible here once a deal or a thread names them.
         </Callout>
       </Derives>
@@ -167,8 +178,8 @@ export const Kinds: Story = {
 };
 
 /**
- * The titled-with-a-verb state at a phone's width, where the verb drops BELOW
- * the words instead of sitting in a column at their end.
+ * The state with a verb at a phone's width, where the verb drops BELOW the
+ * words instead of sitting in a column at their end.
  *
  * `uat-phone` is what drives the capture gate's browser to 390px: Storybook's
  * own viewport is applied by the manager, which the gate's bare `iframe.html`
@@ -183,6 +194,7 @@ export const Narrow: Story = {
     // reader has.
     <div style={{ padding: "var(--padCard)" }}>
       <Callout
+        tone="accent"
         title="The index is behind"
         actions={<Button small>Refresh</Button>}
       >
@@ -195,7 +207,9 @@ export const Narrow: Story = {
   tags: ["uat-phone"],
 };
 
-/** With an action, which is what most banners actually are. */
+/** With an action AND a dismiss, which is what most banners actually are: the
+ * verbs right-aligned at the end of the heading's line, the dismiss after
+ * them. */
 export const WithActions: Story = {
   render: () => (
     <Callout

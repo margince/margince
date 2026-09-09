@@ -23,10 +23,11 @@ import "./callout.css";
 // The tones are a closed set because they are claims, not decoration. `warn`
 // says something will go wrong if you do nothing; `danger` says something is
 // wrong or is about to be irreversible; `success` confirms an action landed;
-// `info` is the default and carries no urgency at all. A surface that wants a
-// fifth is usually reaching for emphasis, which is what the words are for.
+// `info` is the default and carries no urgency at all; `accent` is `info` said
+// emphatically. There is no sixth: a surface reaching for one is reaching for
+// emphasis, which is what the words are for.
 
-export type CalloutTone = "info" | "warn" | "danger" | "success";
+export type CalloutTone = "info" | "accent" | "warn" | "danger" | "success";
 
 /**
  * What the notice IS, which is a different question from how loud it is.
@@ -47,9 +48,15 @@ export type CalloutKind = "outcome" | "standing" | "event";
  * `CircleX` rather than `OctagonX` for danger: an octagon's eight short edges
  * alias into a circle at 16px, and the circular pair reads as one family beside
  * `CircleCheck` — the same outline, the opposite news.
+ *
+ * `accent` takes `Info` as well, because it is the same CLAIM as `info` said
+ * emphatically: a second glyph there would tell a reader the two notices were
+ * about different kinds of thing, when the only difference is how much of their
+ * attention the surface is asking for.
  */
 const TONE_ICONS: Readonly<Record<CalloutTone, LucideIcon>> = {
   info: Info,
+  accent: Info,
   warn: TriangleAlert,
   danger: CircleX,
   success: CircleCheck,
@@ -68,18 +75,27 @@ function announcementFor(
 }
 
 /**
- * A bordered notice on the pane's ground: the tone's icon, an optional heading
- * in the tone's ink, the words in ordinary ink, then whatever the reader can do
- * about it. Never a filled coloured box — colour on a page means one thing at a
- * time, and a tinted plate shouts over the record it sits in.
+ * A bordered notice on the pane's ground: the tone's icon, the heading in the
+ * tone's ink, the words in ordinary ink, then whatever the reader can do about
+ * it. Never a filled coloured box — colour on a page means one thing at a time,
+ * and a tinted plate shouts over the record it sits in.
  *
- * Two faces, and `title` picks between them. WITH a heading it is a card: the
- * icon on the heading's first line, the heading in the tone's ink, the
- * description under it, and `actions` in a column at the end which drops below
- * the body on a phone. WITHOUT one it is a single row about a control tall,
- * which is what a dialog footer and a setting row need to keep their density —
- * and there the words stay in ordinary ink, because the icon carries the tone
- * on its own.
+ * ONE anatomy, and the heading is part of it rather than a choice: icon,
+ * heading over an OPTIONAL body, `actions` in a column at the end which drops
+ * below the words on a phone, then the dismiss. A heading alone is a complete
+ * callout, and it is the commonest shape — most notices are one sentence, and
+ * that sentence is the heading. What the two faces this replaced bought was
+ * density; what they cost was a notice whose first words were sometimes a
+ * heading and sometimes not, so no two of them scanned the same way down a page
+ * and the tone reached the ink of one and not the other.
+ *
+ * `accent` is the emphasised information notice, in the brand accent: the same
+ * role `Panel tone="accent"` plays — a lead, an ask, the one notice on a screen
+ * that wants a MOVE rather than reporting state. Two of them on one screen is
+ * no emphasis at all. It is deliberately NOT indigo: `--ai` is a claim about
+ * provenance, that an agent authored what you are reading, so an emphatic
+ * notice a person wrote wearing indigo would tell every reader of that screen
+ * something false about who decided.
  *
  * `live` decides how a screen reader learns about it; `kind` is the same
  * question asked in the caller's own terms. Passing neither is silent, exactly
@@ -98,6 +114,12 @@ function announcementFor(
  * page has nothing to interrupt for. Passing `alert` to something merely
  * informative is how a reader learns to ignore all of them.
  *
+ * There is no `className`, and that is the point of the prop's absence: a
+ * notice needing air gets it from the stack it sits in, and one that wanted its
+ * own colour, edge or plate was not this primitive at all — it was a second
+ * callout wearing this one's name, which is the thing the fourteen spellings
+ * above were.
+ *
  * Copy never lives here: every word arrives as a prop, translated by the
  * caller.
  */
@@ -109,7 +131,6 @@ export function Callout({
   actions,
   live,
   dismiss,
-  className,
   children,
 }: Readonly<{
   tone?: CalloutTone;
@@ -119,7 +140,8 @@ export function Callout({
    * rather than about how bad the news is.
    */
   icon?: LucideIcon;
-  title?: ReactNode;
+  /** The notice's first words, and the one part of it that is not optional. */
+  title: ReactNode;
   /** Buttons or links, laid out after the body. */
   actions?: ReactNode;
   live?: "status" | "alert";
@@ -131,13 +153,12 @@ export function Callout({
    * translated verb — this file holds no words.
    */
   dismiss?: Readonly<{ label: string; onDismiss: () => void }>;
-  className?: string;
-  children: ReactNode;
+  /** Whatever the heading does not already say, where there is more to say. */
+  children?: ReactNode;
 }>) {
-  const face = title === undefined ? "compact" : "titled";
   return (
     <div
-      className={`callout callout-${tone} callout-${face}${className ? ` ${className}` : ""}`}
+      className={`callout callout-${tone}`}
       role={live ?? announcementFor(kind, tone)}
     >
       <span className="callout-icon" aria-hidden="true">
@@ -145,8 +166,10 @@ export function Callout({
       </span>
       <div className="callout-body">
         <div className="callout-copy">
-          {title !== undefined && <p className="callout-title">{title}</p>}
-          <div className="callout-text">{children}</div>
+          <p className="callout-title">{title}</p>
+          {children !== undefined && (
+            <div className="callout-text">{children}</div>
+          )}
         </div>
         {actions !== undefined && (
           <div className="callout-actions">{actions}</div>
