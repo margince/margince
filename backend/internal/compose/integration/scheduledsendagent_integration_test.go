@@ -50,7 +50,7 @@ func (p *preflightEnv) scheduleAsAgent(t *testing.T, actor principal.Principal, 
 			Subject:        "Monday morning",
 			Body:           "Written the night before, by a tool.",
 			ConsentPurpose: "transactional",
-		}, at)
+		}, at, compose.SendOrigin{PublicBaseURL: preflightBaseURL})
 	if err != nil {
 		t.Fatalf("scheduling as an agent: %v", err)
 	}
