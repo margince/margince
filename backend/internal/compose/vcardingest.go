@@ -185,7 +185,35 @@ func (w *vcardIngestWorker) importCards(ctx context.Context, args VCardIngestArg
 // subject, which here is the mailbox's granting human. That is the right
 // reviewer: the card arrived in their mailbox.
 func (w *vcardIngestWorker) stageReviews(ctx context.Context, entries []people.VCardEntry, results []people.VCardResult) error {
-	stage := vcardCreateStager(w.pool)
+	return stageReviewsWith(ctx, w.log, vcardCreateStager(w.pool), entries, results)
+}
+
+// stageReviewsWith is stageReviews against an injected stager, so a test can
+// make one card's stage fail without needing a real staging conflict — what
+// is under test is the aggregation below, not vcardCreateStager's own SQL.
+//
+// EVERY ELIGIBLE CARD GETS ITS OWN ATTEMPT, one card's staging fault does not
+// cost its siblings in the same message their own review. ImportVCards
+// (people/vcardimport.go) already keeps this promise one step earlier — "a
+// file of forty cards with one bad row should import thirty-nine people" —
+// and this used to break it again one step later: the first staging fault
+// returned immediately, so a message with two near-matches lost the SECOND
+// one's review to the first one's failure, and the whole job with it. Nobody
+// is watching this job's own report to notice an early return the way an
+// upload's reader watches theirs.
+//
+// A card that failed is still worth a retry — the fault may be the database,
+// not the data — so the aggregate error is returned when any card failed,
+// and River still retries the whole message against vcardIngestMaxAttempts.
+// What changed is that a retry (or the log line below, read after the fact)
+// no longer has to explain why cards that staged fine on attempt one are
+// simply missing.
+func stageReviewsWith(
+	ctx context.Context, log *slog.Logger,
+	stage func(ctx context.Context, entry people.VCardEntry, candidate *ids.PersonID) error,
+	entries []people.VCardEntry, results []people.VCardResult,
+) error {
+	var eligible, failed int
 	for _, r := range results {
 		// The index is ImportVCards' own position in the slice it was handed, so
 		// the bound is a belt on a contract that already holds — but a panic in
@@ -193,9 +221,16 @@ func (w *vcardIngestWorker) stageReviews(ctx context.Context, entries []people.V
 		if r.Outcome != people.VCardNeedsReview || r.Index < 0 || r.Index >= len(entries) {
 			continue
 		}
+		eligible++
 		if err := stage(ctx, entries[r.Index], r.PersonID); err != nil {
-			return fmt.Errorf("compose: staging a mailed card for review: %w", err)
+			log.ErrorContext(ctx, "a card attached to captured mail could not be staged for review",
+				"card", r.Index+1, "err", err)
+			failed++
+			continue
 		}
+	}
+	if failed > 0 {
+		return fmt.Errorf("compose: staging %d of %d mailed cards for review", failed, eligible)
 	}
 	return nil
 }
