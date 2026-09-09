@@ -564,11 +564,21 @@ fi
 
 # --- CASE 20 + 21: a priced pipeline, and one deal nobody put a number on ----
 #
-# ONE stage, ONE owner, ONE currency, deliberately. The analytics floor withholds
-# any group under five rows AND the complement that would hand it back by
-# subtraction (compose/analyticsquery/floor.go), so a pipeline spread thin
-# answers "withheld" to every grouping a model might reach for. Seven in one
-# column clears the floor for all of them.
+# ONE stage and ONE owner, deliberately. The analytics floor withholds any group
+# under five rows AND the complement that would hand it back by subtraction
+# (compose/analyticsquery/floor.go), so a pipeline spread thin answers "withheld"
+# to every grouping a model might reach for. Seven in one column clears the floor
+# for the stage, the owner and the pipeline.
+#
+# NOT for the currency, and the claim that it did was false for as long as it
+# stood here. The seventh deal below carries no amount, and the product refuses a
+# currency without one — "amount_minor and currency come together or not at all"
+# — so the currency column holds six EUR rows and one null, the null group is
+# under the floor, and the anti-subtraction rule withholds the EUR group and the
+# total along with it. A grouping by currency is therefore WITHHELD here, and
+# correctly: that is the floor doing its job on a real pipeline, not a fixture
+# defect to seed around. The headline figure case 20 needs comes from any of the
+# other groupings, or from no grouping at all.
 pipeline="$(api GET /pipelines | python3 -c 'import json,sys
 rows = json.load(sys.stdin).get("data", [])
 print(next((r["id"] for r in rows if r.get("is_default")), rows[0]["id"] if rows else ""))')"
@@ -691,6 +701,64 @@ seed_deal "Körber Sensorik Rollout"        5600000 "${close_dates[5]}"
 # outstanding Vietnam deal with no value on it greened the criterion without
 # ever reading the correspondence.
 seed_deal "Weserbund Pilotphase"              null "${close_dates[6]}"
+
+# --- CASE 20: what we have WON, because the prompt asks for it ---------------
+#
+# "The headline open pipeline and what we have won so far" is two figures, and
+# for a long time this fixture held only the first. Every deal above is `open`,
+# so the win-loss population answered NO ROWS to every grouping a model could
+# reach for — and compose_analytics_report refuses a figure the composer typed
+# itself, so there was no legal way to answer half of what was asked. Three
+# models scored zero on this case and none of them was wrong to.
+#
+# FIVE, and the number is the disclosure floor rather than a taste. The
+# analytics engine withholds any group under five rows AND the smallest
+# remaining group beside it, so a subtraction cannot undo the withholding
+# (compose/analyticsquery/floor.go). Four won deals would answer "withheld" and
+# read exactly like the empty fixture this replaces.
+#
+# They are won IN THE CURRENT QUARTER, which is what a board pack means by "so
+# far", and they carry a `won_without_contract_reason` because the product
+# refuses a win that offers neither a signed contract nor a reason for its
+# absence. That refusal is right and this fixture answers it the way a real
+# installation does rather than routing around it.
+won_stage="$(api GET "/pipelines/$pipeline" | python3 -c 'import json,sys
+stages = json.load(sys.stdin).get("stages", [])
+print(next((s["id"] for s in stages if s.get("semantic") == "won"), ""))')"
+[[ -n "$won_stage" ]] || { echo "the default pipeline has no won stage to close a deal into" >&2; exit 1; }
+
+# seed_won_deal creates a deal open and then WINS it, because that is the only
+# path: a deal cannot be created closed, and INV-CLOSE-PAST refuses an open deal
+# a close date already past. So it opens inside this quarter and is advanced.
+seed_won_deal() {
+  local name="$1" amount="$2" close_date="$3" existing created id code
+  existing="$(api GET "/deals?stage_id=$won_stage&limit=100" | python3 -c 'import json,sys
+want = sys.argv[1]
+for row in json.load(sys.stdin).get("data", []):
+    if row.get("name") == want:
+        print(row["id"]); break
+else:
+    print("")' "$name")"
+  if [[ -n "$existing" ]]; then
+    echo "  $name already won"
+    return 0
+  fi
+  created="$(api POST /deals "$(printf '{"name":"%s","pipeline_id":"%s","stage_id":"%s","owner_id":"%s","amount_minor":%s,"currency":"EUR","expected_close_date":"%s","source":"%s"}'     "$name" "$pipeline" "$stage" "$colleague" "$amount" "$close_date" "$FIXTURE_SOURCE")")"
+  id="$(id_of "$created")"
+  [[ -n "$id" ]] || { echo "could not create the won deal $name: $created" >&2; exit 1; }
+  # purchase_order: the commonest honest answer in a CRM whose paper lives in
+  # somebody's mail client. The reason is REQUIRED, not cosmetic — a win with
+  # neither contract nor reason is refused.
+  code="$(status_of POST "/deals/$id/advance"     "$(printf '{"to_stage_id":"%s","status":"won","won_without_contract_reason":"purchase_order"}' "$won_stage")")"
+  [[ "$code" = "200" ]] || {
+    echo "winning $name answered HTTP $code, not the 200 that means it closed" >&2; exit 1; }
+}
+
+seed_won_deal "Emsland Werke Modernisierung"   2750000 "${close_dates[0]}"
+seed_won_deal "Sauerland Guss Anlagenbau"      1840000 "${close_dates[1]}"
+seed_won_deal "Altmark Logistik Systemwechsel"  620000 "${close_dates[2]}"
+seed_won_deal "Spreewald Technik Ausbaustufe"  3400000 "${close_dates[3]}"
+seed_won_deal "Lahntal Praezision Erstauftrag" 1150000 "${close_dates[4]}"
 
 # --- CASE 23: a week that is not empty --------------------------------------
 #

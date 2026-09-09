@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // Query is one question.
@@ -162,7 +164,7 @@ func (q Query) Validate(schema Schema) error {
 	if !ok {
 		return &RefusalError{
 			Kind:    RefusalUnsupported,
-			Message: fmt.Sprintf("no population named %q", q.Entity),
+			Message: fmt.Sprintf("no population named %s", httperr.QuoteCaller(q.Entity)),
 			Suggest: fmt.Sprintf("ask about one of: %s",
 				strings.Join(schema.EntityNames(), ", ")),
 		}
@@ -196,7 +198,7 @@ func validateNames(entity Entity, names []string, kind FieldKind) error {
 		if field.Kind != kind {
 			return &RefusalError{
 				Kind:    RefusalInvalid,
-				Message: fmt.Sprintf("%q is a %s, not a %s", name, field.Kind, kind),
+				Message: fmt.Sprintf("%s is a %s, not a %s", httperr.QuoteCaller(name), field.Kind, kind),
 				Suggest: fmt.Sprintf("group by one of: %s",
 					strings.Join(entity.FieldNames(kind), ", ")),
 			}
@@ -340,7 +342,7 @@ func valueShape(op FilterOp) string {
 func unknownField(entity Entity, name string, kind FieldKind) error {
 	return &RefusalError{
 		Kind:    RefusalUnsupported,
-		Message: fmt.Sprintf("no field named %q on %s", name, entity.Name),
+		Message: fmt.Sprintf("no field named %s on %s", httperr.QuoteCaller(name), entity.Name),
 		Suggest: fmt.Sprintf("available: %s", strings.Join(entity.FieldNames(kind), ", ")),
 	}
 }
