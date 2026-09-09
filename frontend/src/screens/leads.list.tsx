@@ -24,7 +24,7 @@ import {
 } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
-import { useRoster } from "./entityref";
+import { useAssignableUserOptions } from "./entityref";
 import { LeadBulkBar } from "./leadbulk";
 import {
   LEAD_STATUS_FILTER_OPTIONS,
@@ -241,7 +241,7 @@ function LeadsWorkbench({
   const ownerChips = useOwnerChips();
   const pageName = usePageName("leads");
   const savedViews = useSavedViewTabs("leads");
-  const roster = useRoster("user", true);
+  const assignable = useAssignableUserOptions();
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -299,14 +299,7 @@ function LeadsWorkbench({
   const ownerOptions = [
     { value: viewerId, label: t("lead.assignToMe") },
     { value: UNASSIGNED_OWNER, label: t("lead.unassigned") },
-    ...(roster.data ?? [])
-      .filter((entry) => !("is_agent" in entry && entry.is_agent))
-      .filter((entry) => entry.id !== viewerId)
-      .map((entry) => ({
-        value: entry.id,
-        label:
-          ("display_name" in entry ? entry.display_name : null) ?? entry.id,
-      })),
+    ...assignable.filter((option) => option.value !== viewerId),
   ];
 
   return (

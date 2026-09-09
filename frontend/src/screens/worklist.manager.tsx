@@ -27,7 +27,11 @@ import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemCodeOf, useMe } from "./common";
-import { useRoster, useRosterPartial, useRosterPartialHint } from "./entityref";
+import {
+  useAssignableUserOptions,
+  useRosterPartial,
+  useRosterPartialHint,
+} from "./entityref";
 import {
   subjectAcceptsAnOwner,
   type TeamException,
@@ -50,30 +54,6 @@ const COACH_KINDS = [
 
 type CoachKind = (typeof COACH_KINDS)[number];
 
-// Everyone on the roster who can hold a day's work, as options.
-//
-// AGENT SEATS ARE EXCLUDED, and the exclusion lives here rather than in either
-// picker because both ask the same question of the same roster. An agent seat
-// is an Agent Runner identity, not a person: it opens no Worklist, and the task
-// lane is read per human. The server refuses one as an assignee —
-// `ensureAssigneeCanHoldWork` in the activities module answers a field fault on
-// `assignee_id` — so a seat offered in the hand-off is a control whose only
-// outcome is a refusal, and a seat offered in the owner picker is a day that
-// comes back with nothing in it and no reason why.
-//
-// Everyone else the roster carries is offered. Narrowing to teammates would
-// need a membership read this screen does not have, and the server decides both
-// asks: an owner the reader may not open answers 403 and the page says so.
-function usePeopleOptions() {
-  const roster = useRoster("user", true);
-  return (roster.data ?? [])
-    .filter((entry) => !("is_agent" in entry && entry.is_agent))
-    .map((entry) => ({
-      value: entry.id,
-      label: "display_name" in entry ? entry.display_name : entry.id,
-    }));
-}
-
 // Whose queue this page is answering.
 //
 // A LABELLED FIELD, and the label is visible. The control carried its name in
@@ -88,7 +68,7 @@ export function OwnerPicker({
   onOwner,
 }: Readonly<{ owner: string; onOwner: (next: string) => void }>) {
   const t = useT();
-  const people = usePeopleOptions();
+  const people = useAssignableUserOptions();
   // A ROSTER THAT STOPPED SHORT IS SAID SO. The walk is bounded, so past its
   // reach this list is part of the workspace rather than the workspace — and a
   // picker missing colleagues looks exactly like a workspace that has none, on
@@ -118,7 +98,9 @@ export function OwnerPicker({
 // Who the reader may hand work to: the people, less whoever holds the task
 // already. Why the holder is excluded is the caller's own note below.
 function useAssigneeOptions(exclude: string | undefined) {
-  return usePeopleOptions().filter((option) => option.value !== exclude);
+  return useAssignableUserOptions().filter(
+    (option) => option.value !== exclude,
+  );
 }
 
 // Hand one task to somebody else.

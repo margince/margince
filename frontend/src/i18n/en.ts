@@ -3411,6 +3411,8 @@ export const en = {
     "Could not read that file — try pasting the text instead.",
   "log.dueAt": "Due date",
   "log.date": "Date",
+  "log.assignee": "Assignee",
+  "log.unassigned": "Unassigned",
   "log.save": "Log",
   "log.saving": "Logging…",
 

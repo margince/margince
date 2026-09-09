@@ -3287,6 +3287,8 @@ export const vi = {
   "log.body": "Nội dung",
   "log.dueAt": "Ngày đến hạn",
   "log.date": "Ngày",
+  "log.assignee": "Người phụ trách",
+  "log.unassigned": "Chưa giao",
   "log.save": "Ghi nhận",
   "log.saving": "Đang ghi nhận…",
 

@@ -23,6 +23,11 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
 import { problemMessageOf, throwProblem, useMe, useSorMode } from "./common";
+import {
+  useAssignableUserOptions,
+  useRosterPartial,
+  useRosterPartialHint,
+} from "./entityref";
 
 // Log a note or task from a 360 (person/company/deal/lead): the contract's
 // logActivity POST, linked to the record being viewed, occurred_at stamped
@@ -45,6 +50,10 @@ type ActivityDraft = {
   // the activity/transcript retention scope sweeps on a different schedule
   // than an ordinary meeting note. Meaningless outside kind: meeting.
   asTranscript: boolean;
+  // Who this task is for, "" for nobody. Meaningless outside kind: task — a
+  // note or meeting is not held by a colleague — so it only reaches the wire on
+  // a task, the same way `day` only becomes a due date there.
+  assigneeId: string;
 };
 
 const EMPTY_DRAFT: ActivityDraft = {
@@ -53,6 +62,7 @@ const EMPTY_DRAFT: ActivityDraft = {
   body: "",
   day: "",
   asTranscript: false,
+  assigneeId: "",
 };
 
 // Only a plain-text paste round-trips through normalizeTranscript's line
@@ -188,6 +198,13 @@ function activityRequestBody(
     ...(input.kind === "task" && input.day
       ? { due_at: dueInstant(input.day, recordZone) }
       : {}),
+    // Only a task is held by somebody, and only when the writer named them:
+    // an unassigned task is a legitimate landing state (the worklist scopes
+    // unowned work on its own), so "" sends no field rather than a null the
+    // form would have to invent.
+    ...(input.kind === "task" && input.assigneeId
+      ? { assignee_id: input.assigneeId }
+      : {}),
     // Held: a hand-logged meeting already took place (the date caps at
     // today), and held is what the lead ladder reads as engagement.
     ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
@@ -207,6 +224,47 @@ function activityRequestBody(
         : [{ entity_type: entityType, entity_id: entityId }],
     source: "manual",
   };
+}
+
+/**
+ * The assignee picker for a task being written: the workspace's people, less
+ * agent seats, plus a leading "Unassigned".
+ *
+ * Renders nothing for a non-task kind, and its roster walk is deferred to that
+ * same condition — a note or meeting is not held by a colleague, so neither the
+ * control nor the `/users` walk behind it appears while one is being logged.
+ * Because it OFFERS colleagues it owes the roster-partial caveat beside it: a
+ * picker missing people looks exactly like a small workspace, so the `Field`
+ * carries the hint into the control's `aria-describedby`.
+ */
+function TaskAssigneeField({
+  kind,
+  value,
+  onChange,
+}: Readonly<{
+  kind: ActivityDraft["kind"];
+  value: string;
+  onChange: (next: string) => void;
+}>) {
+  const t = useT();
+  const isTask = kind === "task";
+  const options = useAssignableUserOptions(isTask);
+  const partialHint = useRosterPartialHint(useRosterPartial("user", isTask));
+  if (!isTask) {
+    return null;
+  }
+  return (
+    <Field label={t("log.assignee")} hint={partialHint}>
+      {(control) => (
+        <Select
+          {...control}
+          options={[{ value: "", label: t("log.unassigned") }, ...options]}
+          value={value}
+          onChange={onChange}
+        />
+      )}
+    </Field>
+  );
 }
 
 /**
@@ -374,6 +432,14 @@ export function LogActivityForm({
           )}
         </Field>
       </div>
+      {/* WHO owes this task, asked beside when it is due. Only a task is held
+          by a colleague; the field renders nothing for a note or meeting, and
+          defers its roster walk to that same condition. */}
+      <TaskAssigneeField
+        kind={draft.kind}
+        value={draft.assigneeId}
+        onChange={(value) => setField({ assigneeId: value })}
+      />
       {/* WHO was in the room, asked before what was said. A meeting or a call
           is with a person and the server refuses one filed against a company,
           so on a company this is the field that decides whether the entry can
