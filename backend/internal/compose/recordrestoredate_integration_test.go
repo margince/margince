@@ -55,7 +55,7 @@ func TestADateFieldGoesBackWhereItWas(t *testing.T) {
 	entry := latestAuditRowID(t, e, "deal", id, "update")
 
 	seam := NewRestoreSeam(e.Pool, NewDispatcher(NewProvider(e.Pool),
-		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool))
+		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool), nil)
 	if _, err := seam.Restore(ctx, "deal", id, entry, currentVersion(t, e, "deal", id)); err != nil {
 		t.Fatalf("putting the close date back answered %v — nothing moved under it, "+
 			"the audit image and the live row are just spelling the same day differently", err)

@@ -40,12 +40,12 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
 | `claude-haiku-4-5-20251001` | 21 of 21 | 11 | 10 | 30/63 | 48% |
-| `claude-opus-5` | 21 of 21 | 16 | 5 | 48/63 | 76% |
+| `claude-opus-5` | 21 of 21 | 17 | 4 | 50/63 | 79% |
 | `claude-sonnet-5` | 21 of 21 | 12 | 9 | 36/63 | 57% |
 
 > `claude-haiku-4-5-20251001` below its bar on: case10_finish_the_import, case20_put_it_in_the_board_pack, case23_find_us_a_slot, case31_wrong_word_on_the_record, case32_two_words_for_one_thing, case33_two_cards_for_one_company, case41_close_the_project, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company
 
-> `claude-opus-5` below its bar on: case20_put_it_in_the_board_pack, case2_business_card, case3_spreadsheet, case40_sort_the_queue, case6_ask_the_company
+> `claude-opus-5` below its bar on: case2_business_card, case3_spreadsheet, case40_sort_the_queue, case6_ask_the_company
 
 > `claude-sonnet-5` below its bar on: case20_put_it_in_the_board_pack, case2_business_card, case32_two_words_for_one_thing, case40_sort_the_queue, case41_close_the_project, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company, case9_filed_in_the_wrong_place
 
@@ -107,7 +107,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case2_business_card](../../e2e/llm/scenarios/case2-business-card.yaml) | `claude-opus-5` | **FAIL** | 1/3 | 2 | **4** A possible duplicate is reported, not just filed | `create_record` |
 | [case2_business_card](../../e2e/llm/scenarios/case2-business-card.yaml) | `claude-sonnet-5` | **FAIL** | 0/3 | 2 | **4** A possible duplicate is reported, not just filed | `create_record` |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-haiku-4-5-20251001` | **FAIL** | 0/3 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | `compose_analytics_report`, `run_analytics_query` |
-| [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-opus-5` | **FAIL** | 0/3 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | `compose_analytics_report`, `run_analytics_query` |
+| [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-opus-5` | pass | 2/3 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | `compose_analytics_report`, `run_analytics_query` |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-sonnet-5` | **FAIL** | 0/3 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | `compose_analytics_report`, `run_analytics_query` |
 | [case21_what_are_we_closing](../../e2e/llm/scenarios/case21-what-are-we-closing.yaml) | `claude-haiku-4-5-20251001` | pass | 3/3 | 2 | **1** The forecast is read, not assembled<br>**4** The deal with no amount is named | `forecast_readings` |
 | [case21_what_are_we_closing](../../e2e/llm/scenarios/case21-what-are-we-closing.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The forecast is read, not assembled<br>**4** The deal with no amount is named | `forecast_readings` |
@@ -327,9 +327,9 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `log_activity` | 0.83 | 5/6 | — | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
 | `preview_import` | 0.67 | 4/6 | `case3_spreadsheet` | `case10_finish_the_import`, `case3_spreadsheet` |
 | `query_workspace` | 0.67 | 2/3 | — | `case4_use_the_moment` |
-| `run_analytics_query` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
+| `run_analytics_query` | 0.67 | 2/3 | — | `case20_put_it_in_the_board_pack` |
 | `create_record` | 0.50 | 3/6 | `case2_business_card` | `case1_log_it`, `case2_business_card` |
-| `compose_analytics_report` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
+| `compose_analytics_report` | 0.67 | 2/3 | — | `case20_put_it_in_the_board_pack` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `promote_lead` | 0.33 | 1/3 | `case40_sort_the_queue` | `case40_sort_the_queue` |
 | `qualify_lead` | 0.33 | 1/3 | `case40_sort_the_queue` | `case40_sort_the_queue` |

@@ -63,6 +63,15 @@ function Dossier({ body }: Readonly<{ body: unknown }>) {
 
 export const Described: Story = { render: () => <Dossier body={described} /> };
 
+// The panel's own claim, which is about AUTHORSHIP: the prose was written
+// rather than recorded, so the head is indigo and says so in words. Both
+// themes, because the band and its ink are color-mix() of tokens that lift on
+// dark while the tint behind them does not.
+export const DescribedDark: Story = {
+  ...Described,
+  globals: { theme: "dark" },
+};
+
 // Said out loud beside the content, never instead of it — a stale dossier is
 // more useful than none.
 export const Stale: Story = {

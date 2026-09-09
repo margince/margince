@@ -285,15 +285,19 @@ func writeAgeGauge(w io.Writer, series map[queueKey]float64) error {
 
 // writeSweepGauges renders the pair that answers "are tenants being
 // missed". Both halves carry the same sweep label so an alert can compare
-// them; the label is the CHILD kind, which is what the rows hold — mapping
-// back to the dispatcher would be a hand-kept table.
+// them; for a fan-out kind the label is the CHILD kind, which is what the
+// rows hold — mapping back to the dispatcher would be a hand-kept table.
+// For a Fleet kind that fans out to nothing (ADR-0103's collapsed pass) the
+// label is the kind's own name, and the reading is 1 (or 0, if the pass has
+// never run) rather than a true workspace count — there is no workspace
+// grain to read for it at all.
 func writeSweepGauges(w io.Writer, sweeps []jobs.SweepPass) error {
 	ordered := slices.SortedFunc(slices.Values(sweeps), func(a, b jobs.SweepPass) int {
 		return cmp.Compare(a.Kind, b.Kind)
 	})
 
 	if err := writeFamilyHeader(w, "margince_sweep_workspaces",
-		"Workspaces with a surviving child of this fleet pass. Counted per workspace rather than per pass: a child still active from an earlier fan-out is deduplicated out of the current one and writes no new row, so no batch can be identified. A workspace whose only child aged out of River's job retention is absent rather than reported as zero."); err != nil {
+		"Workspaces with a surviving child of this fleet pass. Counted per workspace rather than per pass: a child still active from an earlier fan-out is deduplicated out of the current one and writes no new row, so no batch can be identified. A workspace whose only child aged out of River's job retention is absent rather than reported as zero. For a kind that answers for the whole installation in one row rather than fanning out, this reads 1 when its latest tagged run exists — the closest reading to 'did the pass happen' when there is no workspace to count."); err != nil {
 		return err
 	}
 	for _, s := range ordered {
@@ -304,7 +308,7 @@ func writeSweepGauges(w io.Writer, sweeps []jobs.SweepPass) error {
 	}
 
 	if err := writeFamilyHeader(w, "margince_sweep_workspaces_failed",
-		"Workspaces whose MOST RECENT child of this fleet pass ended discarded or cancelled — tenants whose share of the pass did not happen. A workspace that failed and then succeeded is not counted."); err != nil {
+		"Workspaces whose MOST RECENT child of this fleet pass ended discarded or cancelled — tenants whose share of the pass did not happen. A workspace that failed and then succeeded is not counted. For a kind that answers for the whole installation in one row, this reads 1 when its latest tagged run ended that way."); err != nil {
 		return err
 	}
 	for _, s := range ordered {

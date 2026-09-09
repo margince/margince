@@ -1037,13 +1037,22 @@
 .mw-citations svg {
   width: 11px;
 }
+/* What the read proposes changing, inside the reply that proposed it. The
+   ground, the dashed edge and the corner are `.staging-card`'s: none of these
+   values is on the record until Apply, and the dashes are what say so. */
 .mw-proposal {
   margin-top: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--aiMed);
-  border-radius: var(--r-md);
-  background: var(--aiLight);
 }
+/* What is left here is the MEASURE — this card is NESTED, and the staged card's
+   own asymmetric inset is wider than the whole inset of the bubble hosting it,
+   which reads as the bubble's edge drawn wrong. A card's inset by its role
+   instead, which lines up with the bubble's. Two classes, so that measure wins
+   wherever the two sheets land in the bundle. */
+.mw-proposal.staging-card {
+  padding: var(--padCard);
+}
+/* The heading names the machine that wrote the list, so it takes the family's
+   ink — `--aiText` rather than `--ai`, which fails AA on this ground. */
 .mw-proposal > div:first-child {
   display: flex;
   align-items: center;

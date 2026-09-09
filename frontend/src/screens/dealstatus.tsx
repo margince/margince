@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
-import { Button } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -264,11 +264,18 @@ function Briefing({
           between a scanning reader and the call. */}
       <Panel
         title={t("deal360.brief")}
-        titleAction={<WrittenBy by={card.generated_by} />}
+        // A machine's reading in EVERY state it can be in, so the tint rides
+        // the panel; which writer answered is sourcing, and sits in the foot
+        // beside the verb that has it written again.
+        tone="ai"
+        titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
         footer={
           <div className="deal360-foot">
+            <WrittenBy by={card.generated_by} />
             <Button
-              variant="ghost"
+              // Quiet rather than filled: this asks the panel's own writer to
+              // run again, inside the panel that writer already filled.
+              variant="aiQuiet"
               small
               pending={rewriting}
               onClick={onRewrite}

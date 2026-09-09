@@ -31,15 +31,20 @@
   color: var(--textMeta);
 }
 
-/* The week's sentence, above its numbers. */
+/* The week's sentence, above its numbers. The indigo edge and the badge in the
+   panel head come from `Panel tone="ai"`; what is left here is where it sits. */
 .brief-weekly-narrative {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
   margin: 0 0 var(--space-4);
 }
 
-.brief-weekly-narrative > p {
+/* Who wrote it, over what they wrote. */
+.brief-weekly-narrative-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.brief-weekly-narrative-text > p {
   margin: 0;
   color: var(--textContent);
   line-height: 1.5;

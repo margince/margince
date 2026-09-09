@@ -5,6 +5,12 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  /* One line at its own width: a pill is a shrinkable flex item like anything
+     else, and beside a title that filled a panel's head band "AI-assisted"
+     came out as two lines. Three surfaces had already fixed this on their own
+     side of it. */
+  white-space: nowrap;
+  flex: none;
   font-size: var(--fs-meta);
   /* Medium at 20px: the pill states one standing fact beside a name and must
      not outweigh the name. Semibold at this size reads as a warning. */

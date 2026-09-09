@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ASK_QUERY_KEY } from "../app/palette";
+import { ASK_QUESTION_PARAM } from "../app/palette";
 import { AskAiScreen } from "./ai";
 import {
   installFetchStub,
@@ -46,19 +47,41 @@ const SET: Corpus = {
   created_at: "2026-08-01T00:00:00Z",
 };
 
+// What the carried question lands on, so the story shows the ANSWER rather than
+// a box with a sentence in it: arriving with a question is the whole
+// interaction now, and a story that stopped at the filled box would be a story
+// about the shape this surface used to have.
+const ANSWER = {
+  outcome: "answered" as const,
+  generated_by: "model" as const,
+  corpus: { id: SET.id, name: SET.name, topic_statement: SET.topic_statement },
+  coverage: SET.coverage,
+  claims: [
+    {
+      chunk_id: "00000000-0000-4000-8000-0000000000c1",
+      document_id: "00000000-0000-4000-8000-0000000000b1",
+      document_name: "operating.md",
+      line: 14,
+      column: 3,
+      text: "Captured messages are kept for 400 days.",
+      quote: "kept for 400 days from the day they arrive",
+    },
+  ],
+};
+
 function askSurface(carried: string | null) {
   return () => {
-    // The palette hands its question over in session storage, and the screen
-    // reads it ONCE and clears it. Written or removed explicitly, so a story
-    // never inherits what the story before it left behind.
-    if (carried === null) {
-      sessionStorage.removeItem(ASK_QUERY_KEY);
-    } else {
-      sessionStorage.setItem(ASK_QUERY_KEY, carried);
-    }
+    // The palette hands its question over in the ADDRESS, and the screen asks
+    // it and empties the dial. Written on every story rather than only when
+    // there is one, so a story never inherits the address the story before it
+    // left behind.
+    globalThis.location.hash = carried
+      ? `#/ai?${ASK_QUESTION_PARAM}=${encodeURIComponent(carried)}`
+      : "#/ai";
     installFetchStub({
       "GET /me": meRoute({ knowledge_corpus: ["read"] }),
       "GET /knowledge/corpora": () => jsonResponse({ items: [SET] }),
+      [`POST /knowledge/corpora/${SET.id}/ask`]: () => jsonResponse(ANSWER),
     });
     return (
       <StoryProviders>
@@ -79,9 +102,14 @@ type Story = StoryObj<typeof AskAiScreen>;
 // and the tier contract under it is the rest of the surface.
 export const Cold: Story = { render: askSurface(null) };
 
-// Opened from the command palette, which hands the typed question over in
-// session storage. It goes straight into the ask box rather than being reprinted
-// above one — a reader who typed a question ASKED it.
+// Opened from the command palette, which hands the typed question over in the
+// address. It is ASKED on arrival rather than reprinted above a box the reader
+// must press — they asked it when they typed it.
 export const FromThePalette: Story = {
   render: askSurface("which accounts went quiet since the trade fair?"),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText(
+      /Captured messages are kept for 400 days/,
+    );
+  },
 };

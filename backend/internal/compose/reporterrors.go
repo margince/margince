@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -103,9 +104,15 @@ type UnknownReportError struct {
 	Served []string
 }
 
+// Error names the refused key and every key that would have worked.
+//
+// The key is the CALLER's, and this refusal reaches an agent through a sentinel
+// branch that bounds nothing — so it is bounded here, where it enters, rather
+// than left to a renderer that does not. The served keys are ours and travel
+// whole: they are the half a caller acts on.
 func (e *UnknownReportError) Error() string {
-	return fmt.Sprintf("report %q is not a report this installation serves; the prebuilt reports are: %s",
-		e.Report, strings.Join(e.Served, ", "))
+	return fmt.Sprintf("report %s is not a report this installation serves; the prebuilt reports are: %s",
+		httperr.QuoteCaller(e.Report), strings.Join(e.Served, ", "))
 }
 
 // Unwrap puts it on the sentinel table's 404 row. Deliberately NOT a
