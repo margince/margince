@@ -120,13 +120,11 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   }, [record, edits]);
 
   const submit = useMutation({
-    // The SUBSCRIPTION flag arrives as a variable, not off render state.
+    // THE RECORD PAGE'S OWN SUBMIT, and only that.
     //
-    // A consent link's submit says one thing — "yes, this subscription" — and
-    // carries none of the record form's corrections or erasure request, which
-    // belong to the other body entirely. Reading those from the closure here
-    // would post whatever the record form happened to hold on a page that never
-    // showed it.
+    // A consent link never reaches here — SubscriptionConfirm owns its own
+    // mutation. This one used to serve both, which is what let a subscription
+    // post the record page's marketing sentence as its consent evidence.
     mutationFn: async () => {
       const body = {
         corrections,
