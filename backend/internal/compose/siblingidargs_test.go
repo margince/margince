@@ -33,19 +33,28 @@ import (
 	"testing"
 )
 
-// TestSiblingVerbsAgreeOnTheIDTheyName groups the tool surface by the record
-// type the contract declares for each verb, and refuses two spellings of one
-// record's id.
-func TestSiblingVerbsAgreeOnTheIDTheyName(t *testing.T) {
-	t.Parallel()
+// idArgByRecordType groups the declared tool surface by the record type the
+// contract names for each verb, mapping verb -> the single id argument it
+// requires for that record.
+//
+// One helper because both censuses below ask the same question of the same
+// corpus and differ only in what they conclude from it — agreement across
+// siblings, and the convention where there is no sibling. Two copies drifted the
+// moment one of them learned to skip a shape (AGENTS.md: two writers of one
+// invariant share a helper or say why they do not).
+//
+// Verbs naming no id, or several, are left out: a collection read has none, and
+// merge_records' source and target are a pair rather than two spellings of one
+// id.
+func idArgByRecordType(t *testing.T) map[string]map[string]string {
+	t.Helper()
 
 	schemas := map[string]json.RawMessage{}
 	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
 		schemas[spec.Name] = spec.InputSchema
 	}
 
-	// verb -> spelling, grouped by the record type the contract declares.
-	byRecordType := map[string]map[string]string{}
+	grouped := map[string]map[string]string{}
 	for _, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.RecordType == "" || pol.Tool == "" {
 			continue
@@ -58,22 +67,24 @@ func TestSiblingVerbsAgreeOnTheIDTheyName(t *testing.T) {
 		}
 		named := idArgumentsNaming(t, schema, string(pol.RecordType))
 		if len(named) != 1 {
-			// Nothing to compare: a verb that names no id for this record (a
-			// collection read), or several (merge_records' source and target,
-			// whose pair is its own shape rather than a spelling of one id).
 			continue
 		}
-		if byRecordType[string(pol.RecordType)] == nil {
-			byRecordType[string(pol.RecordType)] = map[string]string{}
+		recordType := string(pol.RecordType)
+		if grouped[recordType] == nil {
+			grouped[recordType] = map[string]string{}
 		}
-		byRecordType[string(pol.RecordType)][pol.Tool] = named[0]
+		grouped[recordType][pol.Tool] = named[0]
 	}
-
-	if len(byRecordType) == 0 {
-		t.Fatal("no declared tool named an id for its record type, so this census measures nothing")
+	if len(grouped) == 0 {
+		t.Fatal("no declared tool named an id for its record type, so both censuses below measure nothing")
 	}
+	return grouped
+}
 
-	for recordType, verbs := range byRecordType {
+// TestSiblingVerbsAgreeOnTheIDTheyName refuses two spellings of one record's id.
+func TestSiblingVerbsAgreeOnTheIDTheyName(t *testing.T) {
+	t.Parallel()
+	for recordType, verbs := range idArgByRecordType(t) {
 		spellings := map[string][]string{}
 		for verb, arg := range verbs {
 			spellings[arg] = append(spellings[arg], verb)
@@ -239,32 +250,8 @@ func TestAGenericIDNamesAGenericVerb(t *testing.T) {
 func TestOneVerbPerRecordTypeIsStillHeldToTheConvention(t *testing.T) {
 	t.Parallel()
 
-	schemas := map[string]json.RawMessage{}
-	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
-		schemas[spec.Name] = spec.InputSchema
-	}
-
-	perType := map[string]map[string]string{}
-	for _, pol := range agentPolicies {
-		if pol.Access != accessTool || pol.RecordType == "" || pol.Tool == "" {
-			continue
-		}
-		schema, registered := schemas[pol.Tool]
-		if !registered {
-			continue
-		}
-		named := idArgumentsNaming(t, schema, string(pol.RecordType))
-		if len(named) != 1 {
-			continue
-		}
-		if perType[string(pol.RecordType)] == nil {
-			perType[string(pol.RecordType)] = map[string]string{}
-		}
-		perType[string(pol.RecordType)][pol.Tool] = named[0]
-	}
-
 	checked := 0
-	for recordType, verbs := range perType {
+	for recordType, verbs := range idArgByRecordType(t) {
 		if len(verbs) != 1 {
 			continue
 		}
