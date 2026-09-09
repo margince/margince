@@ -9,9 +9,10 @@ package integration
 // hold under 200ms on the seeded dataset — v1 dropped this acceptance
 // criterion silently.
 //
-// It carries the `bench` tag, so no merge gate runs it — `make vet` and both
-// golangci passes still type-check it, which is the only thing standing between
-// a by-hand lane and rot. `make bench-dispatch` is how it runs.
+// It carries the `bench` tag, so no merge gate runs it — both golangci passes
+// still type-check it, which is the only thing standing between a by-hand lane
+// and rot. NOT `make vet`: that pass is untagged by design and says so, so it
+// cannot see this file at all. `make bench-dispatch` is how it runs.
 //
 // It rode the standing integration lane until it stopped being a signal there.
 // Its p95 is the eleventh-largest of two hundred samples taken on a runner
