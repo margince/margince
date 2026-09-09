@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, within } from "storybook/test";
 import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
 import { PersonMeetingBrief } from "./drawer";
 import {
@@ -26,10 +27,25 @@ const PROJECTS = [
   },
 ];
 
+// The drawer is a Modal, portalled to document.body, so `#storybook-root` holds
+// the preview decorator and nothing else however well the brief renders — and
+// declaring `layout: "fullscreen"` removes even that, which left the render gate
+// watching an empty root and reporting all eighteen frames as components that
+// never rendered. The frame the decorator draws sits behind a fixed overlay and
+// changes no capture.
+//
+// The root filling is then only evidence that the DECORATOR ran, so the meta
+// carries a play every frame inherits: the dialog, and the title that says which
+// dialog it is. Stated once here because it is true of every state the drawer
+// can be in — assembling, failed, empty and prepared alike — and a per-story
+// copy would be the same two lines eighteen times.
 const meta: Meta<typeof PersonMeetingBrief> = {
   title: "Records/Person record/Meeting brief",
   component: PersonMeetingBrief,
-  parameters: { layout: "fullscreen" },
+  play: async () => {
+    const drawer = within(await screen.findByRole("dialog"));
+    await drawer.findByRole("heading", { name: "Meeting brief" });
+  },
 };
 
 export default meta;

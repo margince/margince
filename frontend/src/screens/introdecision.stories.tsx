@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, within } from "storybook/test";
 import { IntroDecisionDrawer } from "./introdecision";
 import type { IntroRequest } from "./introrequests";
 import { installFetchStub, StoryProviders } from "./story-utils";
@@ -62,10 +63,23 @@ function drawer(over: Partial<IntroRequest>) {
   };
 }
 
+// This surface is a Modal, portalled to document.body, so `#storybook-root`
+// holds the preview decorator and nothing else however well the drawer renders
+// — and declaring `layout: "fullscreen"` removes even that, which leaves the
+// render gate watching an empty root and reporting a drawer that mounted
+// perfectly as one that never rendered. The frame the decorator draws sits
+// behind a fixed overlay and changes no capture.
+//
+// The root filling is then only evidence that the DECORATOR ran, so every frame
+// here drives a play that names what it expects. A rejecting play IS a failure
+// the gate reports, which is what makes these stories worth their green.
 const meta: Meta<typeof IntroDecisionDrawer> = {
   title: "Records/Intro decision",
   component: IntroDecisionDrawer,
-  parameters: { layout: "fullscreen" },
+  play: async () => {
+    const drawer = within(await screen.findByRole("dialog"));
+    await drawer.findByText("Note your colleague can forward");
+  },
 };
 export default meta;
 type Story = StoryObj<typeof IntroDecisionDrawer>;

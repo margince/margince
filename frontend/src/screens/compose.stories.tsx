@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ComposeModal, RelinkModal } from "./compose";
 import type { Transport } from "./persontransports";
@@ -19,6 +19,17 @@ import {
 // interesting states are reachable only through the form (draft, send-confirm),
 // so each story that needs one drives it in `play` with the same userEvent
 // steps the unit tests use, keeping the captured frame faithful to a real run.
+
+// The composer's "why are you writing?" dial and the answer these frames give
+// it — the same pair compose.test.tsx addresses. Named rather than reached for
+// by role alone: To and Cc are comboboxes of their own, so a bare role query
+// matches three controls and picks whichever comes first in the document.
+//
+// It is the WHY that satisfies the send precondition. The consent purposes are
+// served below because the composer reads them, but a reader never picks one —
+// the answer here is what the send derives its purpose from.
+const WHY_ASK = "Why are you writing?";
+const WHY_ANSWER = "They asked me to get in touch";
 
 // One consent purpose is enough to satisfy the Send precondition and populate
 // the purpose dropdown; its `label` is what the story clicks and its `key`
@@ -134,26 +145,41 @@ async function composerOnScreen() {
   await dialog.findByLabelText("To");
 }
 
-// Fills the four Send preconditions (To, subject, body, purpose) then confirms
-// — the same sequence fillSendableForm drives in compose.test.tsx, so a story
-// reaches the send outcome (409 gate / 501 unavailable) it means to capture.
+// Fills the four Send preconditions (To, subject, body, purpose) then confirms,
+// so a story reaches the send outcome (409 gate / 501 unavailable) it captures.
+//
+// EVERY FIELD BY THE NAME A READER SEES, never by a placeholder: the subject's
+// placeholder is the example copy ("What it is about") and the body is a
+// contentEditable `RichText` that has none at all, so the placeholder queries
+// this helper used to make could not match anything the composer draws.
+//
+// Driven with `storybook/test`'s own userEvent and nothing else. compose.test.tsx
+// reaches the same two controls through `writeMessage` and `pickOption`, and both
+// import `@testing-library/react` — whose `act` shim is not the one the story
+// runner installs, so importing either here replaces a passing story with
+// `t.act is not a function`. In a real browser the typing those helpers exist to
+// work around is simply what a keystroke does.
+//
 // `screen` rather than the story canvas throughout: this composer IS a Modal,
 // portalled to document.body, so a canvas-scoped query searches an empty div.
 async function fillAndSend() {
   await composerOnScreen();
-  const canvas = screen;
-  await userEvent.type(canvas.getByLabelText("To"), "buyer@acme.test");
+  await userEvent.type(screen.getByLabelText("To"), "buyer@acme.test");
   await userEvent.tab();
-  await userEvent.type(canvas.getByPlaceholderText("Subject"), "Following up");
-  await userEvent.type(canvas.getByPlaceholderText("Body"), "As promised.");
-  // The purpose control is a button plus a listbox the component portals to the
-  // body, so the option is reached OUTSIDE the story canvas — and by the label a
-  // reader clicks, never by the wire key behind it.
-  await userEvent.click(canvas.getByRole("combobox"));
-  await userEvent.click(
-    screen.getByRole("option", { name: PURPOSES.data[0].label }),
+  await userEvent.type(screen.getByLabelText("Subject"), "Following up");
+  await userEvent.type(
+    screen.getByRole("textbox", { name: "Body" }),
+    "As promised.",
   );
-  await userEvent.click(canvas.getByRole("button", { name: "Send" }));
+  // The dial is a button over a listbox the component portals to the body, so
+  // the option is reached OUTSIDE the dialog. One click opens it and one click
+  // commits: the trigger TOGGLES, so a second attempt would close the list the
+  // first one opened.
+  await userEvent.click(screen.getByRole("combobox", { name: WHY_ASK }));
+  await userEvent.click(
+    await screen.findByRole("option", { name: WHY_ANSWER }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Send" }));
 }
 
 const meta: Meta = {
@@ -365,7 +391,11 @@ export const ChannelReplyUnfiled: Story = {
   ),
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await dialog.findByPlaceholderText("Body");
+    // The MIRROR of the frame above, and it has to be: an assertion that only
+    // found the editor would pass just as well over a reply that announced a
+    // filing nobody asked for, which is the whole subject of this story.
+    await dialog.findByRole("textbox", { name: "Body" });
+    expect(dialog.queryByText(/Will be filed under/)).toBeNull();
   },
 };
 
