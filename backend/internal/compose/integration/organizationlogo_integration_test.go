@@ -173,6 +173,58 @@ func TestOrganizationLogoRemovesLegacyTransparentCanvasAtTheDisplayBoundary(t *t
 	}
 }
 
+// margince#4913: streamLogo used to decode, per-pixel-scan and re-encode the
+// stored PNG on every request, including a repeat of one already answered.
+// The ETag lets a client that already holds today's picture be told so
+// without the endpoint touching blob storage at all. countingBlobstore is
+// shared with knowledgeorphan_integration_test.go.
+func TestOrganizationLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlreadyHasIt(t *testing.T) {
+	e := Setup(t)
+	blob := newCountingBlobstore()
+	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	ctx := e.Admin()
+	orgID := seedLoggedOrg(ctx, t, e, blob, logoPNG(t))
+	url := "/v1/organizations/" + orgID.String() + "/logo"
+
+	first := httptest.NewRecorder()
+	handlers.GetOrganizationLogo(first, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(orgID.UUID))
+	if first.Code != http.StatusOK {
+		t.Fatalf("first GET = %d, want 200: %s", first.Code, first.Body.String())
+	}
+	etag := first.Header().Get("ETag")
+	if etag == "" {
+		t.Fatal("the 200 response carries no ETag")
+	}
+	if got := blob.getCount(); got != 1 {
+		t.Fatalf("blob.Get calls after the first request = %d, want 1", got)
+	}
+
+	matching := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx)
+	req.Header.Set("If-None-Match", etag)
+	handlers.GetOrganizationLogo(matching, req, crmcontracts.Id(orgID.UUID))
+	if matching.Code != http.StatusNotModified {
+		t.Fatalf("GET with a matching If-None-Match = %d, want 304: %s", matching.Code, matching.Body.String())
+	}
+	if matching.Body.Len() != 0 {
+		t.Fatalf("a 304 response body = %d bytes, want none", matching.Body.Len())
+	}
+	if got := blob.getCount(); got != 1 {
+		t.Fatalf("blob.Get calls after the matching request = %d, want still 1 (the cache hit must not touch blob storage)", got)
+	}
+
+	stale := httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx)
+	req.Header.Set("If-None-Match", `"stale-revision"`)
+	handlers.GetOrganizationLogo(stale, req, crmcontracts.Id(orgID.UUID))
+	if stale.Code != http.StatusOK {
+		t.Fatalf("GET with a stale If-None-Match = %d, want 200: %s", stale.Code, stale.Body.String())
+	}
+	if got := blob.getCount(); got != 2 {
+		t.Fatalf("blob.Get calls after the stale-etag request = %d, want 2", got)
+	}
+}
+
 func TestOrganizationLogoIs404WithoutOneAnd501WithoutAnObjectStore(t *testing.T) {
 	e := Setup(t)
 	blob := blobstore.NewMemory()

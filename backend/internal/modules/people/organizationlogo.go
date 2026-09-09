@@ -302,6 +302,21 @@ func (s *Store) OrganizationLogoKey(ctx context.Context, id ids.OrganizationID, 
 	return *key, nil
 }
 
+// logoRevisionDigest names one slot's stored bytes on the wire: LogoURL bakes
+// it into a cache-busting query token, and streamLogo answers with the same
+// value as an ETag — one spelling, so the two mechanisms naming the same
+// bytes can never drift into disagreeing about which revision they mean.
+//
+// The prefix versions the representation as well as the object. Version 2
+// removes the transparent square canvas written by older logo uploads, so a
+// browser that cached that letterboxed response must fetch the wide one. The
+// slot needs no version of its own: each slot has its own path, and a key is
+// minted per upload (orglogowrite.go), so two marks can never share a digest.
+func logoRevisionDigest(objectKey string) string {
+	digest := sha256.Sum256([]byte("logo-display-v2\x00" + objectKey))
+	return fmt.Sprintf("%x", digest[:6])
+}
+
 // LogoURL renders where a client fetches one slot's logo bytes, or nil when the
 // organization wears no mark there. Its query token changes with the object key,
 // so replacing a logo cannot leave a browser showing the previous cached image
@@ -315,12 +330,6 @@ func LogoURL(id ids.UUID, objectKey *string, slot LogoSlot) *string {
 	if objectKey == nil || *objectKey == "" {
 		return nil
 	}
-	// The prefix versions the representation as well as the object. Version 2
-	// removes the transparent square canvas written by older logo uploads, so a
-	// browser that cached that letterboxed response must fetch the wide one.
-	// The slot needs no version of its own: each slot has its own path, and a
-	// key is minted per upload, so two marks can never share a cache entry.
-	digest := sha256.Sum256([]byte("logo-display-v2\x00" + *objectKey))
-	path := fmt.Sprintf("/v1/organizations/%s/logo%s?v=%x", id.String(), slot.urlSuffix(), digest[:6])
+	path := fmt.Sprintf("/v1/organizations/%s/logo%s?v=%s", id.String(), slot.urlSuffix(), logoRevisionDigest(*objectKey))
 	return &path
 }
