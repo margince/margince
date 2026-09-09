@@ -17,11 +17,82 @@
 // about which body had arrived, and `card.provenance.length` on a subscription
 // answer is the crash this file removes.
 
+import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Card } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { throwProblem } from "./common";
+import {
+  explainPublicError,
+  LinkInvalidError,
+  RateLimitedError,
+} from "./preferences";
 
 type SubscriptionPage = components["schemas"]["SubscriptionConfirmationPage"];
+
+// SubscriptionConfirm owns the consent link end to end: its own submit, its own
+// wording, its own confirmed and refused states.
+//
+// It used to share the record page's mutation, which is what produced two of
+// the three defects review found here — the submit posted the record page's
+// marketing sentence as the proof of a subscription, and a refusal rendered
+// nowhere because this branch returns before the record page's error line.
+// Sharing a submit between two pages that ask different questions was the
+// mistake; each now answers for itself.
+export function SubscriptionConfirm({
+  token,
+  card,
+}: Readonly<{ token: string; card: SubscriptionPage }>) {
+  const t = useT();
+  const [done, setDone] = useState(false);
+
+  // The sentence THIS page shows, which is the one the server stores verbatim
+  // as consent evidence. Read where it is rendered, not re-derived at submit
+  // time, because the two drifting is how proof stops matching the promise.
+  const wording = t("confirm.subscription.ask", {
+    purpose: card.purpose_label,
+  });
+
+  const submit = useMutation({
+    mutationFn: async ({ policyText }: { policyText: string }) => {
+      const { error, response } = await api.POST("/public/confirm/{token}", {
+        params: { path: { token } },
+        body: {
+          corrections: [],
+          request_erasure: false,
+          marketing_choice: "granted" as const,
+          marketing_wording: policyText,
+        },
+      });
+      // GATED ON THE STATUS, NOT ON `error`. openapi-fetch returns
+      // {error: undefined} for a non-2xx with an empty body — a proxy 502, a
+      // 500 that wrote no problem document — so asking only whether `error` is
+      // truthy reports those as success, and this page's success state tells
+      // somebody their consent was recorded when nothing was written.
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new LinkInvalidError();
+        }
+        if (response.status === 429) {
+          throw new RateLimitedError();
+        }
+        throwProblem(error);
+      }
+    },
+    onSuccess: () => setDone(true),
+  });
+
+  return (
+    <SubscriptionConfirmBody
+      card={done ? { ...card, state: "granted" } : card}
+      submitting={submit.isPending}
+      error={submit.error ? explainPublicError(submit.error, t) : undefined}
+      onConfirm={() => submit.mutate({ policyText: wording })}
+    />
+  );
+}
 
 export function SubscriptionConfirmBody({
   card,

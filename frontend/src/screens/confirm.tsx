@@ -11,7 +11,7 @@ import {
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
-import { SubscriptionConfirmBody } from "./confirmsubscription";
+import { SubscriptionConfirm } from "./confirmsubscription";
 import {
   explainPublicError,
   LinkInvalidError,
@@ -103,14 +103,6 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   // is how the two drift.
   const marketingWording = t("confirm.marketing.ask");
 
-  // The subscription page's own sentence, read here for the same reason: it is
-  // the proof the server stores, so it is taken from the same place the page
-  // renders it rather than re-derived at submit time.
-  const subscriptionWording = t("confirm.subscription.ask", {
-    purpose:
-      card?.kind === "subscription_confirmation" ? card.purpose_label : "",
-  });
-
   // Narrowed BEFORE any record field is read, including here. A subscription
   // body carries no correctable field at all, and indexing it by `full_name` is
   // the same mistake the discriminator exists to stop. The typechecker says so
@@ -135,31 +127,14 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
     // belong to the other body entirely. Reading those from the closure here
     // would post whatever the record form happened to hold on a page that never
     // showed it.
-    mutationFn: async ({ subscription }: { subscription?: boolean } = {}) => {
-      const body = subscription
-        ? {
-            corrections: [],
-            request_erasure: false,
-            marketing_choice: "granted" as const,
-            // THE SENTENCE THIS PAGE ACTUALLY SHOWED, not the record page's.
-            //
-            // The server stores this verbatim as consent evidence
-            // (consent_event.policy_text), so submitting the generic marketing
-            // ask here would file proof of a sentence the person never read.
-            // The subscription page shows the purpose-specific one, and that is
-            // what they agreed to.
-            marketing_wording: subscriptionWording,
-          }
-        : {
-            corrections,
-            request_erasure: erasure,
-            ...(marketing
-              ? {
-                  marketing_choice: marketing,
-                  marketing_wording: marketingWording,
-                }
-              : {}),
-          };
+    mutationFn: async () => {
+      const body = {
+        corrections,
+        request_erasure: erasure,
+        ...(marketing
+          ? { marketing_choice: marketing, marketing_wording: marketingWording }
+          : {}),
+      };
       const { error, response } = await api.POST("/public/confirm/{token}", {
         params: { path: { token } },
         body,
@@ -200,29 +175,17 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   }
   // THE DISCRIMINATOR, ASKED BEFORE ANY RECORD FIELD IS READ.
   //
-  // This endpoint answers two different bodies and always has: a record card
-  // for a record link, one subscription question for a consent link. Until the
-  // contract grew `kind` there was nothing on the wire saying which had
-  // arrived, so every read below — `card.provenance.length` above all — was
-  // taken off a body that might not carry it.
+  // This endpoint answers two bodies and always has: a record card for a
+  // record link, one subscription question for a consent link. Until the
+  // contract grew `kind` nothing on the wire said which had arrived, so every
+  // read below — `card.provenance.length` above all — was taken off a body
+  // that might not carry it.
   //
-  // Checked BEFORE `done`, and the subscription body renders its own confirmed
-  // state: the shared done card says "thank you for confirming your details",
-  // which is about a record this person was never shown.
+  // The consent link goes to its own page, which owns its own submit. Sharing
+  // one meant posting the record page's marketing sentence as the proof of a
+  // subscription, and rendering a refusal nowhere.
   if (card.kind === "subscription_confirmation") {
-    return (
-      <SubscriptionConfirmBody
-        // `done` is set only by onSuccess, and the mutation now refuses any
-        // non-2xx, so a confirmed state here means the writer accepted it.
-        card={done ? { ...card, state: "granted" } : card}
-        submitting={submit.isPending}
-        // A refusal must be VISIBLE. This branch returns before the record
-        // page's own error line, so without passing it a rejected submit just
-        // re-enabled the button and said nothing.
-        error={submit.error ? explainPublicError(submit.error, t) : undefined}
-        onConfirm={() => submit.mutate({ subscription: true })}
-      />
-    );
+    return <SubscriptionConfirm token={token} card={card} />;
   }
   if (done) {
     return (
@@ -320,7 +283,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         <Button
           variant="primary"
           disabled={submit.isPending}
-          onClick={() => submit.mutate({})}
+          onClick={() => submit.mutate()}
         >
           {t("confirm.submit")}
         </Button>
