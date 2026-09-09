@@ -20,7 +20,7 @@ func discardLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
-func TestEnsureInstallationRefusesAnAdminWithoutAnOrganization(t *testing.T) {
+func TestEnsureInstallationRefusesAnAdminWithoutAWorkspace(t *testing.T) {
 	cfg := deployconfig.Config{
 		Version: 1,
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
@@ -28,8 +28,8 @@ func TestEnsureInstallationRefusesAnAdminWithoutAnOrganization(t *testing.T) {
 		},
 	}
 	err := EnsureInstallation(context.Background(), nil, discardLogger(), cfg)
-	if err == nil || !strings.Contains(err.Error(), "organization.name") {
-		t.Fatalf("err = %v, want the missing-organization refusal", err)
+	if err == nil || !strings.Contains(err.Error(), "workspace.name") {
+		t.Fatalf("err = %v, want the missing-workspace refusal", err)
 	}
 }
 

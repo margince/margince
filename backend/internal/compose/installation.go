@@ -44,15 +44,15 @@ import (
 // seeds atomically from cfg (requires organization + bootstrap_admin);
 // 1 → bind; >1 → refuse with the operator-facing invariant error.
 // Restarts are idempotent — bootstrap values never reconcile into an
-// existing organization.
+// existing workspace.
 func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, cfg deployconfig.Config) error {
 	var create func() (identity.InstallationBootstrap, error)
 	if b := cfg.BootstrapAdmin; b != nil {
 		if cfg.Workspace.Name == "" {
-			return errors.New("compose: bootstrap_admin is configured but organization.name is missing — both are required to bootstrap an empty database")
+			return errors.New("compose: bootstrap_admin is configured but workspace.name is missing — both are required to bootstrap an empty database")
 		}
 		// The password secret is read inside this closure, which bootstrap
-		// calls only when it is actually creating the organization. Reading it
+		// calls only when it is actually creating the workspace. Reading it
 		// here would read it on every boot, and ADR-0061 §2 permits deleting
 		// the secret once the organization exists — so an installation that
 		// followed the ADR would stop booting.

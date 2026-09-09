@@ -349,14 +349,14 @@ func (c Config) validate() error {
 	}
 	if c.Workspace.Timezone != "" {
 		if _, err := values.ParseTimezone(c.Workspace.Timezone); err != nil {
-			return fmt.Errorf("deployconfig: organization.timezone: %w", err)
+			return fmt.Errorf("deployconfig: workspace.timezone: %w", err)
 		}
 	}
 	if cur := c.Workspace.BaseCurrency; cur != "" && !values.ValidCurrency(cur) {
-		return fmt.Errorf("deployconfig: organization.base_currency %q is not a 3-letter ISO 4217 code", cur)
+		return fmt.Errorf("deployconfig: workspace.base_currency %q is not a 3-letter ISO 4217 code", cur)
 	}
 	if lang := c.Workspace.BaseLanguage; lang != "" && !textlang.Known(lang) {
-		return fmt.Errorf("deployconfig: organization.base_language %q is not a language this build speaks (en, de, vi)", lang)
+		return fmt.Errorf("deployconfig: workspace.base_language %q is not a language this build speaks (en, de, vi)", lang)
 	}
 	if err := c.Rates.validate(); err != nil {
 		return err
