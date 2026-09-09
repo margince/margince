@@ -40,24 +40,40 @@ describe("a live contact that is not the viewer's to change refuses its core wri
 });
 
 describe("the header's core record verbs — edit, merge, archive", () => {
-  it("PATCHes /people/{id} from the header's edit form", async () => {
+  it("PATCHes /people/{id} from the header's edit form, and the page shows the save — not the stale 360 it had cached", async () => {
     let patchBody: unknown = null;
+    let saved = false;
     // version is the field EditAction's own record.version reads, and its
     // absence throws inside the update callback (requireVersion) rather than
     // sending nothing — the shared fixture carries no version because no
     // other spec that imports it writes the record.
     const withVersion: Person360 = {
       ...view,
-      person: { ...view.person, version: 3 },
+      person: { ...view.person, version: 3, title: "Old title" },
     };
     mount("overview", withVersion, [], {
       "PATCH /people/p-1": (body) => {
         patchBody = body;
+        saved = true;
         return jsonResponse({ ...withVersion.person, title: "New title" });
       },
+      // The page reads the person through /360, not through the edit
+      // response — a save that invalidates the wrong cache key answers the
+      // PATCH correctly and still shows the header title it had before.
+      "GET /people/p-1/360": () =>
+        jsonResponse(
+          saved
+            ? {
+                ...withVersion,
+                person: { ...withVersion.person, title: "New title" },
+              }
+            : withVersion,
+        ),
     });
 
     await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
+    const subtitle = () => document.querySelector(".record-sub");
+    await waitFor(() => expect(subtitle()?.textContent).toBe("Old title"));
     await userEvent.click(screen.getByTestId("edit-record"));
     const title = await screen.findByLabelText("Title");
     await userEvent.clear(title);
@@ -66,6 +82,7 @@ describe("the header's core record verbs — edit, merge, archive", () => {
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ title: "New title" });
+    await waitFor(() => expect(subtitle()?.textContent).toBe("New title"));
   });
 
   it("archives the record from the header", async () => {

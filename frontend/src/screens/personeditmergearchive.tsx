@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -12,6 +13,7 @@ import type { ObjectCustomFields } from "./customfields.form";
 import { EditAction } from "./edit";
 import { MergeAction } from "./merge";
 import { mapPersonUpdate, personEditFields } from "./personformfields";
+import { invalidateRecord } from "./recordwritekeys";
 
 // Edit, merge and archive — the record's own core write verbs, shared
 // between PersonScreen's header (contacts.tsx) and PersonPageV2's
@@ -65,6 +67,14 @@ export function PersonEditMergeArchive({
 }>) {
   const t = useT();
   const id = person.id;
+  // EditAction/MergeAction/ArchiveAction's own invalidate/recordKey props
+  // only reach the LIST cache and this record's own `["person", id]` read.
+  // A person's fields are ALSO served under `["person360", id]` (the page
+  // shell PersonPageV2 reads) and `["personBrief", id]`, three siblings
+  // under no common prefix (recordwritekeys.ts) — without this, a save on
+  // PersonPageV2 closes the form over a page still showing what the reader
+  // just corrected.
+  const queryClient = useQueryClient();
   return (
     <>
       <EditAction<Person>
@@ -119,6 +129,7 @@ export function PersonEditMergeArchive({
           if (error) {
             throwProblem(error);
           }
+          await invalidateRecord(queryClient, "person", id);
           return data;
         }}
         invalidate="people"
@@ -146,6 +157,11 @@ export function PersonEditMergeArchive({
             if (error) {
               throwProblem(error, t);
             }
+            // Both ends of the merge: the source is gone and the survivor
+            // may now carry fields the source contributed — a reader landing
+            // on either via survivorRoute must not see pre-merge state.
+            await invalidateRecord(queryClient, "person", person.id);
+            await invalidateRecord(queryClient, "person", targetId);
             return data;
           }}
           invalidate="people"
@@ -170,6 +186,7 @@ export function PersonEditMergeArchive({
           if (error) {
             throwProblem(error);
           }
+          await invalidateRecord(queryClient, "person", id);
           return data;
         }}
         invalidate="people"
