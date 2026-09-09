@@ -96,22 +96,19 @@ func replacePersonEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, p
 		personID, keep); err != nil {
 		return fmt.Errorf("archive person emails: %w", err)
 	}
-	// Retained rows are re-placed BEFORE the new addresses land, and that order is
-	// the whole correctness of this function.
+	// Retained rows are re-placed BEFORE the new addresses land, and demotions
+	// before promotions within that. uq_person_email_primary allows one primary
+	// per (person_id, email_type), and both movements meet it:
 	//
-	// uq_person_email_primary allows one primary per (person_id, email_type). The
-	// ordinary correction — a person's work address changed, and the file carries
-	// the new one while this person's other stored addresses are carried through —
-	// produces two work rows where the stored one is still primary and the
-	// incoming one wants to be. Inserting first makes both live primaries of one
-	// type for the length of a statement, which the index refuses, and the whole
-	// run fails on the most common row a corrected export contains.
+	// A swap of which of two same-type rows is primary travels this loop with both
+	// rows retained; promoting the incoming one while the stored one is still
+	// primary is two live primaries of one type for the length of a statement,
+	// which the index refuses. So does a corrected export, where the stored
+	// primary is carried through demoted and the file's new one promoted.
 	//
-	// Demoting first empties the slot the insert is about to claim.
-	for _, e := range emails {
-		if !held[strings.ToLower(e.Email)] {
-			continue
-		}
+	// Demoting first empties the slot every later write — this loop's promotions
+	// and the archive-then-insert below alike — is about to claim.
+	place := func(e PersonEmailInput) error {
 		if _, err := tx.Exec(ctx,
 			`UPDATE person_email SET email_type = $3, is_primary = $4, position = $5
 			  WHERE person_id = $1 AND email = lower($2) AND archived_at IS NULL`,
@@ -120,6 +117,21 @@ func replacePersonEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, p
 				return apperrors.ErrConflict
 			}
 			return fmt.Errorf("update person email placement: %w", err)
+		}
+		return nil
+	}
+	for _, e := range emails {
+		if held[strings.ToLower(e.Email)] && !e.IsPrimary {
+			if err := place(e); err != nil {
+				return err
+			}
+		}
+	}
+	for _, e := range emails {
+		if held[strings.ToLower(e.Email)] && e.IsPrimary {
+			if err := place(e); err != nil {
+				return err
+			}
 		}
 	}
 	// Only the addresses this person does not already hold are inserted: a held
@@ -160,6 +172,12 @@ func livePersonEmails(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (ma
 // phones normalize to E.164 — making the schema's "E.164 normalized at
 // write" contract true instead of documentary. Values are written back
 // in place so everything downstream handles only normalized strings.
+//
+// It also refuses a set that marks two rows of one type primary. This is the
+// one seam create, update and vCard import all pass through, so the intent
+// behind uq_person_{email,phone}_primary is enforced here once rather than at
+// each writer, and the contradiction is answered with a typed refusal before
+// any write instead of the bare conflict the index would raise.
 func parsePersonContacts(emails []PersonEmailInput, phones []PersonPhoneInput) error {
 	for i, e := range emails {
 		parsed, err := values.ParseEmail(e.Email)
@@ -175,7 +193,14 @@ func parsePersonContacts(emails []PersonEmailInput, phones []PersonPhoneInput) e
 		}
 		phones[i].Phone = parsed.String()
 	}
-	return nil
+	if err := ensureOnePrimaryPerType("address", emails, func(e PersonEmailInput) (string, bool) {
+		return e.EmailType, e.IsPrimary
+	}); err != nil {
+		return err
+	}
+	return ensureOnePrimaryPerType("phone number", phones, func(p PersonPhoneInput) (string, bool) {
+		return p.PhoneType, p.IsPrimary
+	})
 }
 
 // insertPersonEmails lands the person's emails; the unique index stays

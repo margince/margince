@@ -178,6 +178,13 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		httperr.Write(w, r, httperr.Duplicate("duplicate_linkedin_url", duplicateID(dupLeadLinkedIn.ExistingID.UUID)))
 		return
 	}
+	var primaryConflict *PrimaryConflictError
+	if errors.As(err, &primaryConflict) {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict, Code: "multiple_primary", Detail: primaryConflict.Error(),
+		})
+		return
+	}
 	var promoted *AlreadyPromotedError
 	if errors.As(err, &promoted) {
 		e := &httperr.DetailedError{
