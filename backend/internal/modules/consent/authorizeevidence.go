@@ -42,14 +42,13 @@ type subjectRef struct {
 	// a chat names people by the provider's own account id and carries no
 	// address at all (1788759372). Both empty means an ordinary mail
 	// recipient. recipientSubjectAddress fills all three from a
-	// connector.Recipient in the one spelling both the person and the lead
-	// arm need.
+	// connector.Recipient.
 	ChannelProvider string
 	ChannelUserID   string
 }
 
-// recipientSubjectAddress is the ONE spelling of "how a subjectRef names the
-// recipient a caller gave", shared by decideTransmit's person arm and
+// recipientSubjectAddress derives how a subjectRef names the recipient a
+// caller gave, shared by decideTransmit's person arm and
 // decideLeadOnItsRecord's lead arm — both build a subjectRef from a
 // connector.Recipient, and both need the same bare-identity fallback
 // authorIsTheSubject reads. A channel recipient carries no Email
@@ -183,7 +182,10 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 // Held by: TestBeingCopiedOnAThreadIsNotWritingIntoIt (authorizeresolve_integration_test.go)
 // and TestAFiledActivityIsNotSomethingThePersonWrote (authorizevalidators_integration_test.go)
 // — the first fails if the thread arm stops requiring authorship, the second if
-// the window arm goes back to reading a filing link.
+// the window arm goes back to reading a filing link. The channel account arm is
+// held the same way by TestAChannelParticipantAnswersTheThreadArm and
+// TestADifferentChannelAccountOnTheSameProviderIsNotTheSubject
+// (authorizeresolve_integration_test.go).
 //
 // $1 subject kind, $2 subject id, $3 address, $4 channel provider, $5 channel
 // user id. The placeholders are fixed so every caller binds the same five in

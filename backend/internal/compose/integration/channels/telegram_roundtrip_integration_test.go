@@ -110,35 +110,6 @@ func TestInboundThenReplyRoundTrip(t *testing.T) {
 		t.Fatalf("the inbound message did not produce one ownerless counterparty")
 	}
 
-	// A deal with the customer staked on it — real evidence for the
-	// "transactional" claim below (#5103 closed the escape hatch that let the
-	// purpose key alone authorize a send). A channel reply inherits its links
-	// from the anchor and offers the caller no way to name one directly
-	// (SendMessageInput carries no Links field, deliberately — the recipient
-	// is resolved from the conversation, never named by the caller), so the
-	// deal is relinked onto the captured activity after the fact rather than
-	// supplied at send time.
-	stages := apptest.DiscoverSeededPipeline(t, c.AppEnv)
-	var deal struct {
-		ID string `json:"id"`
-	}
-	if status := c.Call(t, "POST", "/v1/deals", integration.AnyMap{
-		"name": "Telegram opportunity", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
-		"source": "manual",
-	}, nil, &deal); status != http.StatusCreated {
-		t.Fatalf("create deal → %d", status)
-	}
-	if status := c.Call(t, "POST", "/v1/relationships", integration.AnyMap{
-		"kind": "deal_stakeholder", "deal_id": deal.ID, "person_id": personID, "source": "manual",
-	}, nil, nil); status != http.StatusCreated {
-		t.Fatalf("stake the customer on the deal → %d", status)
-	}
-	if status := c.Call(t, "POST", "/v1/activities/"+activityID+"/relink", integration.AnyMap{
-		"entity_type": "deal", "entity_id": deal.ID,
-	}, nil, nil); status != http.StatusOK {
-		t.Fatalf("relink the captured message onto the deal → %d", status)
-	}
-
 	// 3. The workspace records the lawful basis for answering.
 	c.grantConsent(t, personID, "transactional")
 

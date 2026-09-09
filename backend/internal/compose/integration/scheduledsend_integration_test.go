@@ -239,10 +239,15 @@ func (p *preflightEnv) withdrawConsent(t *testing.T) {
 	p.setTransactionalConsent(t, "withdrawn")
 }
 
-// closeDealAsLost closes the fixture's deal so the live-deal evidence arm can
-// no longer fire — liveDealInLinks requires status = 'open'.
+// closeDealAsLost closes the fixture's deal, when the caller staked one via
+// stakeADeal, so the live-deal evidence arm can no longer fire —
+// liveDealInLinks requires status = 'open'. A no-op otherwise: stakeADeal is
+// opt-in, and most withdrawConsent callers have no deal to close.
 func (p *preflightEnv) closeDealAsLost(t *testing.T) {
 	t.Helper()
+	if p.dealID == "" {
+		return
+	}
 	stages := apptest.DiscoverSeededPipeline(t, p.AppEnv)
 	if status := p.Call(t, "POST", "/v1/deals/"+p.dealID+"/advance", AnyMap{
 		"to_stage_id": stages.Lost, "lost_reason": "test: closing the fixture's evidence",
@@ -288,6 +293,7 @@ func (p *preflightEnv) setTransactionalConsent(t *testing.T, state string) {
 func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	activitiesBefore := p.countActivities(t, "true")
 	deliveriesBefore := p.countDeliveries(t)
@@ -332,6 +338,7 @@ func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
 func TestAConfirmedReceiptCarriesTheScheduledSendToSent(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	p.makeDue(t, id)
@@ -361,6 +368,7 @@ func TestAConfirmedReceiptCarriesTheScheduledSendToSent(t *testing.T) {
 func TestFilteringByStatusFindsTheStateTheListActuallyShows(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	p.makeDue(t, id)
@@ -827,6 +835,7 @@ func TestACancelledMessageIsNotSentWhenItsTimerFires(t *testing.T) {
 func TestTwoTimersFiringTheSameMessageSendItOnce(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	activitiesBefore := p.countActivities(t, "true")
@@ -856,6 +865,7 @@ func TestTwoTimersFiringTheSameMessageSendItOnce(t *testing.T) {
 func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	// A record the anchor does not carry — the shape a project attached to the
 	// deal after the conversation began takes.

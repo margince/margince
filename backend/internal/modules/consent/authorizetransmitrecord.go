@@ -6,10 +6,8 @@ package consent
 // The transmit decision's own persistence, and the suppression facts it reads
 // independently of any consent grant.
 //
-// Split from authorizetransmit.go for the file-length ceiling, the same
-// reason authorizedecide.go was split from it before: that file answers
-// "may this go out now", and this one answers "what stops it regardless of
-// consent" and "how the answer is written down".
+// authorizetransmit.go answers "may this go out now"; this file answers "what
+// stops it regardless of consent" and "how the answer is written down".
 
 import (
 	"context"

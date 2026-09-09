@@ -54,10 +54,10 @@ import (
 // reason it is built in one place.
 //
 // The deal link is evidence, not decoration: an account-started send opens no
-// thread (that is the whole point of the suite it is fixturing), and
-// resolveCategory's fallback for a bare `transactional` claim is a REVIEW —
-// ReasonLegacyTransactionalUnevidenced — since #5103 closed the purpose-key
-// escape hatch. The org link stays too, because linkedActivities counts by it.
+// thread (that is the whole point of the suite it is fixturing), and a bare
+// `transactional` claim with nothing behind it resolves as a REVIEW —
+// ReasonLegacyTransactionalUnevidenced — not an allow. The org link stays
+// too, because linkedActivities counts by it.
 func accountSendBody(org, deal, subject string) AnyMap {
 	return AnyMap{
 		"subject": subject, "body": "Good morning — introducing ourselves.",

@@ -294,19 +294,31 @@ func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, cla
 	}
 }
 
-// deliveryThreadKey reads the conversation a delivery belongs to.
+// deliveryThreadKey reads the conversation a delivery's activity belongs to,
+// so the transmit phase can name it without communication_decision having to
+// store an anchor of its own.
 //
-// comms_outbound.thread_key is written when the message is staged, from the
-// same origin the anchor came from, so it names the conversation at transmit
-// without communication_decision having to store an anchor of its own.
+// Read off the ACTIVITY rather than comms_outbound.thread_key: that column is
+// populated when a mail message stages, but comms_outbound_shape forces it
+// NULL for a channel delivery (1788759372 — the same migration that keeps
+// channel_provider off activity_participant, for the identical reason: an
+// account id is only unique within its provider, and duplicating a fact the
+// activity already carries is one more place for it to drift). Reading
+// comms_outbound.thread_key directly therefore answered mail correctly and
+// silently starved every channel reply of thread evidence at transmit — the
+// exact "stages clean, parks at send" shape closing the purpose-key escape
+// hatch was supposed to fix, just moved one phase later.
 func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (string, error) {
 	var key *string
-	err := tx.QueryRow(ctx,
-		`SELECT thread_key FROM comms_outbound WHERE id = $1`, deliveryID).Scan(&key)
+	err := tx.QueryRow(ctx, `
+		SELECT a.thread_key
+		  FROM comms_outbound o
+		  JOIN activity a ON a.id = o.activity_id
+		 WHERE o.id = $1`, deliveryID).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// The delivery is gone. Not this function's answer to give: the caller
-		// asks the evidence question with no thread, which refuses rather than
-		// inventing one.
+		// The delivery (or its activity) is gone. Not this function's answer to
+		// give: the caller asks the evidence question with no thread, which
+		// refuses rather than inventing one.
 		return "", nil
 	}
 	if err != nil {
@@ -329,8 +341,8 @@ func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (str
 // live — a copy here would be a second place for the set to drift from the
 // activity's own.
 //
-// Only deal ids, because liveDealInLinks is the one reader and a deal id is
-// the only shape it asks about.
+// Only deal ids: liveDealInLinks is what reads Request.Links, and a deal id
+// is the only shape it asks about.
 func deliveryLinks(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT l.deal_id
