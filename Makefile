@@ -15,7 +15,7 @@ GO ?= go
 # The deterministic script gates `check-backend` fans out. One list, one
 # consumer — see the comment on check-backend for why they are not that
 # target's prerequisites.
-ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
+ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation \
   test-dev-cleanup \
   test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict \
   test-review-coverage \
@@ -62,7 +62,7 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -778,24 +778,23 @@ test-craft-pin:
 ## to arm it. extensions/ and fixtures/ are their own Go modules, so `./...`
 ## never reaches them and the bar has to name them: a first-party unit ships
 ## the same product, and the fixture is the worked example a unit author copies.
-craft-static:
-	go run -C cli/craft . static --strict --root ../../backend
-	go run -C cli/craft . static --strict --root ../../extensions
-	go run -C cli/craft . static --strict --root ../../fixtures
-	go run -C cli/craft . static --strict --root ../../desktop
+##
+## The gate is a pinned binary (scripts/craft-pin.sh), not source in this tree.
+## Roots are written from the REPOSITORY ROOT, which is where the binary runs —
+## they used to lead with ../../ because `go run -C cli/craft` had changed the
+## working directory first. A leftover ../../ resolves outside the repository and
+## reports a clean sweep of nothing, which reads exactly like a pass.
+craft-static: test-craft-pin
+	@bin="$$(./scripts/craft-pin.sh)" && \
+		"$$bin" static --strict --root backend && \
+		"$$bin" static --strict --root extensions && \
+		"$$bin" static --strict --root fixtures && \
+		"$$bin" static --strict --root desktop
 
-## craft-test — cli/craft's own suite, including the `wiring` package that
-## asserts the repo-level obligations no Go package can express: the CI job
-## ordering, the contributor rulebook, and the community-health files. It needs
-## its own target because every other test lane runs `./...` inside the backend
-## module, which cannot reach a separate module — a test nothing runs is a test
-## that proves nothing.
-craft-test:
-	go test -C cli/craft -count=1 ./...
-
-## test-desktop-launcher — the launcher's own suite. It exists for the reason
-## craft-test does, and the reason is worth repeating because this module hid it
-## longer: desktop/launcher is its own module and deliberately OUTSIDE go.work,
+## test-desktop-launcher — the launcher's own suite. It exists because a test
+## lane that cannot reach a module is a test lane that proves nothing about it,
+## and this module hid that longer than any other: desktop/launcher is its own
+## module and deliberately OUTSIDE go.work,
 ## since it supervises the shipped binaries as child processes rather than
 ## importing them. So `./...` inside backend cannot reach it, the workspace
 ## cannot reach it, and the seven test files it already carried ran nowhere —
@@ -817,7 +816,24 @@ test-desktop-launcher:
 ## left in the backend tree (the review-loop residue check, ADR-0045). The CI
 ## `craft-residue` job runs this so a marker can never ride to main.
 craft-residue:
-	go run -C cli/craft . residue --root ../../backend
+	@"$$(./scripts/craft-pin.sh)" residue --root backend
+
+## craft-prose — the rulebook's ## Craftsmanship section agrees with the standard
+## the gate applies: every T- or P-id the prose names is a real rule, and the
+## range it advertises reaches the highest rule there is.
+##
+## Both directions, because they fail differently. Prose naming a rule that does
+## not exist is survivable — a reader looks for it and finds nothing. A range
+## that falls SHORT is not: the reader is told the standard is smaller than it
+## is, has no reason to look further, and nothing else in the tree corrects them.
+## The prose once advertised "T1-P3" over a rubric of T1-T10 plus P1-P5.
+##
+## The check lives in the gate rather than here because both directions need its
+## section scanner, which survives a fenced example and a fence opener behind a
+## list marker. A second copy of that scanner in this tree would be the untested
+## one. check-craft-doc stays beside this as the cheap floor: the section exists.
+craft-prose:
+	@"$$(./scripts/craft-pin.sh)" prose --rulebook AGENTS.md
 
 ## check-craft-doc — assert AGENTS.md still carries the `## Craftsmanship`
 ## section (the craft gate's operating contract, ADR-0045). A cheap doc floor
