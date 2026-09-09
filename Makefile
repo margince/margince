@@ -781,9 +781,10 @@ test-craft-pin:
 ##
 ## The gate is a pinned binary (scripts/craft-pin.sh), not source in this tree.
 ## Roots are written from the REPOSITORY ROOT, which is where the binary runs —
-## they used to lead with ../../ because `go run -C cli/craft` had changed the
-## working directory first. A leftover ../../ resolves outside the repository and
-## reports a clean sweep of nothing, which reads exactly like a pass.
+## they used to lead with ../../ because the gate was built and run from its own
+## directory, which changed the working directory first. A leftover ../../
+## resolves outside the repository and reports a clean sweep of nothing, which
+## reads exactly like a pass.
 craft-static: test-craft-pin
 	@bin="$$(./scripts/craft-pin.sh)" && \
 		"$$bin" static --strict --root backend && \
@@ -1046,7 +1047,7 @@ gofmt:
 	@./scripts/check-gofmt.sh
 
 ## lint-modules — golangci-lint over the Go modules `./...` from backend/ cannot
-## reach: backend/tools, cli/craft, composition and the units under extensions/
+## reach: backend/tools, composition and the units under extensions/
 ## are each their own module, so the backend lint lane never saw them. Same
 ## config as the product module; the list derives from tracked go.mod files.
 lint-modules: composition
