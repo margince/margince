@@ -476,6 +476,18 @@
   --fs-sm: 13px; /* dense UI: chips, table cells, helper text */
   --fs-body: 13.5px; /* the default reading size */
   --fs-lead: 15px; /* the one paragraph under a heading; inputs */
+  /* A ROLE among the rungs, and the one entry here that is not a rung: it
+     answers "how big is a PANEL TITLE" rather than "how big", which is a
+     question the house settles once for every panel on every screen. It sits
+     in the ramp in its place by size, because a size out of order reads as a
+     scale that was edited rather than designed (type.test.ts holds both).
+
+     16 and not the card rung above it because a title in the 56px band beside
+     a badge crowded that band at 17 — which the tone panels had already
+     answered by dropping their own titles to body size and the glance by
+     taking its panes UP to the section rung, so one title stood at four sizes
+     across the product. Retune it here and every panel head moves together. */
+  --fs-panel-title: 16px;
   --fs-h3: 17px; /* card title */
   --fs-h2: 20px; /* section title */
   --fs-h1: 24px; /* the title of a step */

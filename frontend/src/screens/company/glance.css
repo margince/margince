@@ -21,15 +21,6 @@
   gap: var(--space-5);
   min-width: 0;
 }
-/* The head is the band every other panel draws — its height, its air and its
-   rule belong to panel.css and are not restated here. What differs is the
-   title, one rung up from a card title: a glance pane is a section of the
-   account's own reading rather than one card among many, and at the card size
-   the four heads sat under the 360 without leading anything. The rung fits the
-   band, so a taller title costs the column nothing (DESIGN.md §7). */
-.co-glance-cols .panel > .panel-head .panel-title {
-  font-size: var(--fs-h2);
-}
 /* One column as soon as two would squeeze a list to nothing. Measured against
    the STACK these columns sit in (company360.css's `.co-overview-stack`), not
    the window and not the `work` container: `work` is the record's whole

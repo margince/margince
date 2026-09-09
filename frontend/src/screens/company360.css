@@ -1642,12 +1642,12 @@
   block-size: 1rem;
 }
 
-/* The record's own name, at reading size. It was set at caption size beside a
-   louder eyebrow, which said the authorship mattered more than the record it
-   was claiming to have read. */
+/* The record's own name, and it is the words OF this panel's title: the size
+   comes from `.panel-head .panel-title`, and only face and weight are stated
+   here. A size of its own would be a second answer to the question every panel
+   head answers once. */
 .co-360-title .co-360-subject {
   font-family: var(--f-display);
-  font-size: var(--fs-lead);
   font-weight: var(--fw-medium);
   letter-spacing: var(--tracking-display);
   color: var(--textPrimary);

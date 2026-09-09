@@ -149,6 +149,12 @@ const BAND_GEOMETRY =
 // panel in the product. A tone recolours that hairline — tint on the same
 // geometry, held below — but no sheet outside panel.css redraws or drops it.
 const BAND_EDGE = /^border-bottom(?:-|$)/;
+// How the title is SET. Every panel title in the product reads at one size, so
+// each of these is a way of answering a question the house has answered — and
+// four sheets answered it differently, from body size up to a section rung.
+// `font` is in the list because the shorthand carries the size along with it.
+const TITLE_TYPE =
+  /^(?:font|font-size|font-weight|font-family|line-height|letter-spacing)$/;
 
 function stripComments(css: string): string {
   return css.replace(/\/\*[\s\S]*?\*\//g, "");
@@ -163,6 +169,20 @@ function stripComments(css: string): string {
 // smaller tree reports PASS with nothing to notice.
 function unwrapAtRules(css: string): string {
   return css.replace(/@[a-zA-Z-]+[^{};]*[{;]/g, "");
+}
+
+// One declaration's value, read by NAME rather than matched in place: a
+// property spelled beside a colon inside a regex literal reads to the type
+// gate (type.test.ts) as a size this file declares.
+function declaredValue(block: string, property: string): string | undefined {
+  for (const declaration of block.split(";")) {
+    const colon = declaration.indexOf(":");
+    if (colon < 0) continue;
+    if (declaration.slice(0, colon).trim().toLowerCase() === property) {
+      return declaration.slice(colon + 1).trim();
+    }
+  }
+  return undefined;
 }
 
 function declaredProperties(block: string): readonly string[] {
@@ -213,6 +233,26 @@ function bandRules(css: string): readonly CssRule[] {
   return cssRules(css).filter((rule) => stylesTheBand(rule.selector));
 }
 
+// The title, wherever it hangs: `.panel-head .panel-title`, a screen's
+// `.co-glance-cols .panel > .panel-head .panel-title`, an `h2.panel-title` and
+// a `.panel-title:hover` are all the same node. The dot is load-bearing —
+// `.rmap-panel-title` is the map's own aside and not this title at all.
+function stylesTheTitle(selector: string): boolean {
+  return /(?:^|[^\w-])\.panel-title(?![\w-])/.test(lastCompound(selector));
+}
+
+function titleRules(css: string): readonly CssRule[] {
+  return cssRules(css).filter((rule) => stylesTheTitle(rule.selector));
+}
+
+// The rules that decide how a title is SET, which is the thing one sheet owns.
+// A rule that only recolours or truncates it is not one of them.
+function titleTypeRules(css: string): readonly CssRule[] {
+  return titleRules(css).filter((rule) =>
+    rule.properties.some((property) => TITLE_TYPE.test(property)),
+  );
+}
+
 // Comments are stripped first here and in the gap below: prose about a
 // property reads exactly like the property to a regex, and a sentence opening
 // "No gap: …" is what the stack's own comment says.
@@ -235,7 +275,7 @@ function titleStackGap(): number {
   const stack = cssRules(panelCss()).find(
     (rule) => rule.selector === ".panel-head-text",
   );
-  const gap = /gap:\s*([^;]+)/.exec(stack?.block ?? "")?.[1].trim() ?? "0";
+  const gap = declaredValue(stack?.block ?? "", "gap") ?? "0";
   const token = /^var\((--[\w-]+)\)$/.exec(gap);
   return token ? tokenPixels(token[1]) : Number.parseFloat(gap);
 }
@@ -271,10 +311,31 @@ describe("the panel head is one band, fixed at the height every panel shares", (
     // stack takes a gap back, which are the three ways the pair stops fitting.
     const leading = Number.parseFloat(tokenValue("--lh-normal"));
     const stack =
-      tokenPixels("--fs-h3") * leading +
+      tokenPixels("--fs-panel-title") * leading +
       tokenPixels("--fs-meta") * leading +
       titleStackGap();
     expect(stack).toBeLessThanOrEqual(tokenPixels("--panel-head-h"));
+  });
+
+  // The size is the house's, not the rule's: a title beside a badge reads at 16
+  // in this band, and every panel on every screen is that one title.
+  it("sets the title at the house's own size", () => {
+    const title = cssRules(panelCss()).find(
+      (rule) => rule.selector === ".panel-head .panel-title",
+    );
+    expect(declaredValue(title?.block ?? "", "font-size")).toBe(
+      "var(--fs-panel-title)",
+    );
+    expect(tokenValue("--fs-panel-title")).toBe("16px");
+  });
+
+  // One rule states it, so retuning the token moves every title. A second rule
+  // in this sheet is the tone panels' old habit: each dropped its own title a
+  // rung and a page then showed the ask and the report at two sizes.
+  it("states that size exactly once in the sheet", () => {
+    expect(titleTypeRules(panelCss()).map((rule) => rule.selector)).toEqual([
+      ".panel-head .panel-title",
+    ]);
   });
 
   // Nothing in the band wraps to a second line, because a second line is a
@@ -363,12 +424,27 @@ describe("panel.css is the only sheet that shapes the head band", () => {
 
   it("reads a rule about the head's CONTENT as content", () => {
     const inside = bandRules(`
-      .co-glance-cols .panel > .panel-head .panel-title { font-size: var(--fs-h2); }
       .ext-unit > .panel-head > .ext-unit-actions { flex: 0 1 auto; }
       .panel-head-text { gap: 0; }
       .panel-head-sub { font-size: var(--fs-meta); }
     `);
     expect(inside).toEqual([]);
+  });
+
+  // The title is not the band, and it is not a screen's either. Proven on the
+  // rule the glance carried and on the near-miss beside it: `.rmap-panel-title`
+  // is the relationship map's aside, and a detector that read it as this title
+  // would fail a sheet that never touched a panel.
+  it("reads a title rule as the title, wherever it hangs", () => {
+    const css = `
+      .co-glance-cols .panel > .panel-head .panel-title { font-size: var(--fs-h2); }
+      .rmap-panel-title { font-size: var(--fs-h3); }
+      .pe-memory .panel-head .panel-title:hover { color: var(--accent); }
+    `;
+    expect(bandRules(css)).toEqual([]);
+    expect(titleTypeRules(css).map((rule) => rule.selector)).toEqual([
+      ".co-glance-cols .panel > .panel-head .panel-title",
+    ]);
   });
 
   it("reads a band rule wrapped in a query, and one that follows an import", () => {
@@ -385,7 +461,7 @@ describe("panel.css is the only sheet that shapes the head band", () => {
     ]);
   });
 
-  it("finds no other sheet setting the band's geometry or its edge", () => {
+  it("finds no other sheet setting the band's geometry, its edge or its title", () => {
     const swept = [...stylesheetsUnder(src), ...stylesheetsUnder(extensions)]
       .filter((path) => path !== owner)
       .sort();
@@ -401,22 +477,29 @@ describe("panel.css is the only sheet that shapes the head band", () => {
       ),
     ).toHaveLength(2);
 
-    const offences = swept.flatMap((path) =>
-      bandRules(readFileSync(path, "utf8")).flatMap((rule) =>
-        rule.properties
-          .filter(
-            (property) =>
-              BAND_GEOMETRY.test(property) || BAND_EDGE.test(property),
-          )
-          .map(
-            (property) =>
-              `${relative(src, path)}: ${rule.selector} sets ${property}`,
-          ),
-      ),
-    );
+    const offences = swept.flatMap((path) => {
+      const css = readFileSync(path, "utf8");
+      const said = (rule: CssRule, property: string) =>
+        `${relative(src, path)}: ${rule.selector} sets ${property}`;
+      return [
+        ...bandRules(css).flatMap((rule) =>
+          rule.properties
+            .filter(
+              (property) =>
+                BAND_GEOMETRY.test(property) || BAND_EDGE.test(property),
+            )
+            .map((property) => said(rule, property)),
+        ),
+        ...titleRules(css).flatMap((rule) =>
+          rule.properties
+            .filter((property) => TITLE_TYPE.test(property))
+            .map((property) => said(rule, property)),
+        ),
+      ];
+    });
     expect(
       offences,
-      "the head band is 56px on every screen: state the difference in panel.css or put the content in the body",
+      "the head band is 56px and its title one size on every screen: recolour them if you must, resize them in panel.css or not at all",
     ).toEqual([]);
   });
 });
