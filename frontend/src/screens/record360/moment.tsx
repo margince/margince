@@ -21,6 +21,13 @@ import { formatDate } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { type Grounding, Proof, type StandingTone } from "./verdict";
+// The row's classes — `co-move`, `co-move-lead`, `co-dim` — live in the screen
+// stylesheet, as every `co-`prefixed class in this kit still does (README.md
+// says why the rename is its own job). Imported HERE and not left to whichever
+// page mounts the row: relying on a caller's import is a row that renders
+// unstyled the first time a page draws it without that stylesheet in its
+// graph, which is a defect nothing fails on.
+import "../company360.css";
 
 type PersonMoment = components["schemas"]["PersonMoment"];
 type PersonMomentEvidence = components["schemas"]["PersonMomentEvidence"];
