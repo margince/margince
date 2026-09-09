@@ -65,13 +65,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
-	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -128,11 +124,6 @@ func TestWorkflowTriggerToDispatchP95HoldsOnTheSeededDataset(t *testing.T) {
 	}
 }
 
-// leadCreatedEventType names the trigger this suite fires — the one seeded
-// starter (route_lead) that reacts to it unconditionally, so every sampled lead
-// produces exactly one dispatch to measure.
-const leadCreatedEventType = "lead.created"
-
 // dispatchWarmupSamples is discarded, per the file doc comment's fixed-cost
 // note.
 const dispatchWarmupSamples = 5
@@ -148,19 +139,6 @@ func leadCreatedEnvelope(leadID ids.UUID) kevents.Envelope {
 		Type:       leadCreatedEventType,
 		OccurredAt: time.Now().UTC(),
 		Entity:     kevents.EntityRef{Type: "lead", ID: leadID},
-	}
-}
-
-// seedAllStarterAutomations enrolls the six seeded starter templates the way a
-// fresh workspace's bootstrap does (SeedStarterAutomationsTx) — "the seeded
-// dataset" AC-W2 names, not a hand-picked single instance.
-func seedAllStarterAutomations(t *testing.T, e *Env) {
-	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return automation.SeedStarterAutomationsTx(context.Background(), tx)
-	})
-	if err != nil {
-		t.Fatalf("seeding starter automations: %v", err)
 	}
 }
 

@@ -200,10 +200,9 @@ tree. The write-path regression the standing canary once caught by TIMING OUT
 rather than by measuring is held deterministically now, by the `seq_scan` count
 in `lastactivity_integration_test.go`.
 
-`bench-dispatch` came the same way, and is the one arrival that left NOTHING behind
-in the lane — its own file says so rather than implying cover it lacks. AC-W2 gated
-the merge until a `main-health` run read p50=13.19 ms against the 200 ms budget and
-p95=201.63 ms, failing `main` on the 1.63 ms with six shards sharing one Postgres.
+`bench-dispatch` arrived the same way and left NOTHING behind in the lane, which its
+own file says rather than implying cover it lacks: AC-W2 gated the merge until a
+`main-health` run read p95=201.63 ms against 200 ms, six shards sharing one Postgres.
 
 ## Root-only (frontend lane)
 
