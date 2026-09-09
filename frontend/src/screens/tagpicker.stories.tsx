@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import { screen, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -23,10 +24,22 @@ const VOCABULARY = [
   { id: "t-2", workspace_id: "w", name: "Renewal", color: "lime" },
 ];
 
+// This surface is a Modal, portalled to document.body, so `#storybook-root`
+// holds the preview decorator and nothing else however well the dialog renders
+// — and `layout: "fullscreen"` removes even that, which leaves the render gate
+// watching an empty root and reporting a dialog that mounted perfectly as one
+// that never rendered.
+//
+// The root filling is then only evidence that the DECORATOR ran, so the frames
+// here drive a play that names what they expect. A rejecting play IS a failure
+// the gate reports, which is what makes their green worth something.
 const meta: Meta<typeof AddTagDialog> = {
   title: "Patterns/Add tag",
   component: AddTagDialog,
-  parameters: { layout: "fullscreen" },
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await dialog.findByText("Key Account");
+  },
 };
 export default meta;
 type Story = StoryObj<typeof AddTagDialog>;

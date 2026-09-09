@@ -2,7 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
+import {
+  Button,
+  Checkbox,
+  EmptyState,
+  Field,
+  TextInput,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
@@ -99,12 +105,21 @@ export function WorkingHoursCard() {
       <PanelBody className="form-stack">
         <p className="settings-panel-sub">{t("workingHours.sub")}</p>
         <QueryGate pendingLabel={t("workingHours.title")} query={query}>
-          {(answer) => (
-            <WorkingHoursForm
-              chosen={answer.chosen}
-              hours={answer.working_hours}
-            />
-          )}
+          {(answer) =>
+            // Checked, not asserted. The field is contract-required, but a body
+            // that lost it hands over `undefined` anyway — and this card sits
+            // on the settings screen, so dereferencing it took the whole
+            // ACCOUNT PAGE down over one window nobody could edit. The same
+            // reading the sign-in methods card documents for its own list.
+            answer.working_hours ? (
+              <WorkingHoursForm
+                chosen={answer.chosen}
+                hours={answer.working_hours}
+              />
+            ) : (
+              <EmptyState>{t("state.unavailable")}</EmptyState>
+            )
+          }
         </QueryGate>
       </PanelBody>
     </Panel>

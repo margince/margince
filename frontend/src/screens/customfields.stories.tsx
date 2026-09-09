@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { CustomFieldsAdmin, FieldBuilder, FieldTable } from "./customfields";
 import {
@@ -168,7 +168,17 @@ export const BuilderRefusal: Story = {
       canvas.getByLabelText("Label"),
       "Link to parent account",
     );
-    await canvas.findByRole("alert");
+    // The refusal is STANDING — true of the label as it stands, and redrawn on
+    // every keystroke — so it announces nothing: an `alert` per character is
+    // how a reader learns to ignore every notice on a page. What holds it is
+    // the claim itself and the verb it keeps dead, which is what the co-located
+    // test asserts too.
+    await canvas.findByText(
+      "That looks like a new object or relationship, not a field.",
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Confirm & add field" }),
+    ).toBeDisabled();
   },
 };
 
