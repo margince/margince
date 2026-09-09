@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package partslim
-
-// Replacing a stored part's encoded body with a reference to it.
+// Package partslim replaces a stored attachment's encoded body inside a
+// provider original with a reference to the object holding those bytes, and
+// puts them back byte-exactly on demand.
 //
 // The bytes of an attachment are already durable in the object store before
 // this runs — capture/sinkparts.go stages them, activities/capturedfiles.go
@@ -28,6 +28,7 @@ package partslim
 // line, and Content-Transfer-Encoding is deliberately left in place: the
 // substitute body is itself valid base64, so the slimmed message still decodes,
 // and a restore removes exactly the run it added.
+package partslim
 
 import (
 	"bytes"

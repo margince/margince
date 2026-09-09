@@ -333,7 +333,7 @@ func TestASlimmedOriginalRestoresToWhatTheProviderSent(t *testing.T) {
 			if err != nil {
 				return nil, err
 			}
-			defer body.Close()
+			defer func() { _ = body.Close() }()
 			return io.ReadAll(io.LimitReader(body, ref.Bytes+1))
 		})
 	if err2 != nil {

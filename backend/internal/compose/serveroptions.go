@@ -160,7 +160,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		// than at assembly for the reason the purger above is: a role with no
 		// object store has no restore, and disclosing the stanza instead would
 		// answer Art. 15 with an address the subject cannot resolve.
-		s.consentHandlers = s.consentHandlers.WithSubjectAccessAssembler(
+		s.consentHandlers = s.WithSubjectAccessAssembler(
 			newSubjectAccessAssembler(InstallationDB(pool)).withBlobstore(store))
 		s.captureConfig.Blob = store
 		s.activitiesHandlers = s.activitiesHandlers.WithBlobstore(store)

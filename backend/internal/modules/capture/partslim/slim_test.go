@@ -252,3 +252,77 @@ func firstKB(b []byte) []byte {
 	}
 	return b
 }
+
+// twoAttachmentMessage carries two base64 attachments, so a strip of the
+// SECOND has a neighbour it must not touch.
+func twoAttachmentMessage(first, second []byte) []byte {
+	return []byte("MIME-Version: 1.0\r\n" +
+		"Subject: Both figures\r\n" +
+		"Content-Type: multipart/mixed; boundary=\"b1\"\r\n" +
+		"\r\n" +
+		"--b1\r\n" +
+		"Content-Type: text/plain; charset=utf-8\r\n" +
+		"\r\n" +
+		"the visible body\r\n" +
+		"--b1\r\n" +
+		"Content-Type: application/pdf\r\n" +
+		"Content-Disposition: attachment; filename=\"first.pdf\"\r\n" +
+		"Content-Transfer-Encoding: base64\r\n" +
+		"\r\n" +
+		wrap76(first) + "\r\n" +
+		"--b1\r\n" +
+		"Content-Type: application/pdf\r\n" +
+		"Content-Disposition: attachment; filename=\"second.pdf\"\r\n" +
+		"Content-Transfer-Encoding: base64\r\n" +
+		"\r\n" +
+		wrap76(second) + "\r\n" +
+		"--b1--\r\n")
+}
+
+// A stanza names the ordinal its attachment row carries, and stripping one
+// part leaves its neighbour byte-identical.
+//
+// The ordinal is not how the part is FOUND — location is by encoding — so this
+// pins the two things the ordinal is actually for: the label a restore reads
+// back, and the identity the attachment row joins on. A stanza numbered from
+// the strip's own walk order rather than from the row would silently mislabel
+// every message whose first attachment could not be located.
+func TestStripStoredPartsNamesTheOrdinalItWasGiven(t *testing.T) {
+	first, second := attachmentBody(11), attachmentBody(12)
+	raw := twoAttachmentMessage(first, second)
+
+	out, stripped, err := partslim.StripStoredParts(raw, []partslim.StoredPart{storedPart(2, second)})
+	if err != nil || stripped != 1 {
+		t.Fatalf("stripping the second attachment: stripped=%d err=%v", stripped, err)
+	}
+	if !bytes.Contains(out, []byte(partslim.PartStoredHeader+": part:2")) {
+		t.Errorf("the stanza does not name part:2")
+	}
+	if bytes.Contains(out, []byte(partslim.PartStoredHeader+": part:1")) {
+		t.Errorf("the stanza named part:1, which was never asked for")
+	}
+	if bytes.Contains(out, []byte(wrap76(second))) {
+		t.Errorf("the second attachment's encoded body survived")
+	}
+	if !bytes.Contains(out, []byte(wrap76(first))) {
+		t.Errorf("the FIRST attachment was collateral damage")
+	}
+	if !bytes.Contains(out, []byte("filename=\"first.pdf\"")) ||
+		!bytes.Contains(out, []byte("filename=\"second.pdf\"")) {
+		t.Errorf("a part's own header fields were lost")
+	}
+
+	restored, err := partslim.RestoreStoredParts(out, func(ref partslim.PartRef) ([]byte, error) {
+		if ref.Ordinal != 2 {
+			t.Errorf("restore asked for ordinal %d, want 2", ref.Ordinal)
+		}
+		return second, nil
+	})
+	if err != nil {
+		t.Fatalf("restoring: %v", err)
+	}
+	if !bytes.Equal(restored, raw) {
+		t.Errorf("restore of a two-attachment message was not byte-exact: %d vs %d",
+			len(restored), len(raw))
+	}
+}
