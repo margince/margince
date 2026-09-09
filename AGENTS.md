@@ -12,9 +12,8 @@ A rule that binds the whole tree belongs in this file instead.
 
 **Rules live here; everything else lives in [docs/](docs/README.md).** Every line
 here is paid for by every session — the right price for a rule that binds a change,
-the wrong one for a procedure, a catalog or an explanation. The craftsmanship
-gate feeds this file's `## Craftsmanship` section into its gate prompt, so that
-section must stay.
+the wrong one for a procedure, a catalog or an explanation. The gate feeds this
+file's `## Craftsmanship` section into its prompt, so that section must stay.
 Links point one way: down into `docs/`, never back up.
 
 Margince CRM: the running Go software, its contract, its tests and its docs are
@@ -253,11 +252,10 @@ The incidents behind these, and the scan for auditing a subsystem:
 The rule under every rule: **code that reads best to a human reads best to the
 next agent that edits it.** Legibility is the product.
 
-The standard the gate applies is the rubric the gate carries — `craft rubric`
-prints it — anti-tells T1–T11 plus positive rules P1–P5 (idiomatic,
-small-focused, tests-as-spec, pr-tells-story, restraint). When this prose and the
-rubric disagree, the rubric is what blocked your push, and `make craft-prose`
-fails if this section and that rubric stop naming the same rules.
+The standard is the rubric the gate carries; `craft rubric` prints it. Anti-tells
+T1–T11 plus positive rules P1–P5 (idiomatic, small-focused, tests-as-spec,
+pr-tells-story, restraint). When this prose and the rubric disagree, the rubric
+is what blocked your push; `make craft-prose` fails if they stop agreeing.
 
 - Comments say *why*, not *what* (T1). Domain names, not `data`/`tmp`/`helper` (T4).
 - **Never swallow an error** (T2) — no `_ = f()`, no empty `catch`, no ignored
@@ -280,9 +278,7 @@ fails if this section and that rubric stop naming the same rules.
 **The gate runs before every push, diff-scoped, and it is strict.**
 `.githooks/pre-push` runs `craft static --strict` over the Go files this push
 changes vs `origin/main`, across `backend/`, `extensions/`, `fixtures/` and
-`desktop/`. The gate is a binary pinned by `scripts/craft-pin.sh` and fetched
-once, not source in this tree — nothing to install, and the verdict on a laptop
-is the verdict the pull request gets. There is no backlog to exempt — the tree was cleared to zero before
+`desktop/`. There is no backlog to exempt — the tree was cleared to zero before
 this bar was armed, so the rule is simply that touched code is clean.
 
 - `BLOCKER` and `MAJOR` both block; `MINOR` is advisory.
@@ -291,8 +287,7 @@ this bar was armed, so the rule is simply that touched code is clean.
   asks how much a reader must hold at once, and an explanation reduces that.
 - Waive a genuine false positive in source, with a reason:
   `//craft:ignore <check> <reason>`. A reasonless waiver is itself a finding.
-- Whole-tree sweep: `make craft-static`, plus `make craft-prose` for this
-  section against the rubric. CI runs the same bar.
+- Whole-tree sweep: `make craft-static` and `make craft-prose`. Same bar in CI.
 
 ## License headers
 
