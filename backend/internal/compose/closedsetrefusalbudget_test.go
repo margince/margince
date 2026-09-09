@@ -26,7 +26,9 @@ package compose
 // modules/agents, modules/search or shared/ports/datasource — compose is
 // downstream of all three, so importing them here is legal but provoking their
 // refusals from this package is not the same test. Those carry the same
-// obligation and are held where they live; this file does not speak for them.
+// obligation. Two of them are NOT held anywhere — the enrich depths and the
+// approval decision, both agents' own sets — and saying so is better than a
+// sentence implying somebody covers them.
 //
 // IT ASSERTS ON THE CLASSIFIED FAULT, not on err.Error(). The renderer is not
 // the only ceiling: httperr bounds a module-declared fault at MaxFaultText
@@ -35,6 +37,8 @@ package compose
 // Asking httperr.Classify is asking the surface rather than a model of it.
 
 import (
+	"encoding/json"
+	"fmt"
 	"maps"
 	"slices"
 	"strings"
@@ -51,7 +55,14 @@ import (
 // echo leaves nothing for the set.
 const floodedCallerTokenLen = 4000
 
-func floodedCallerToken() string { return strings.Repeat("k", floodedCallerTokenLen) }
+// It is not plain ASCII, and that is the point: a token bounded at 80 bytes by
+// QuoteCaller can still EXPAND downstream, because agents.echoSafe escapes what
+// does not print. An ASCII flood measured the bound and never the expansion, and
+// an astral-escaping regression that pushed a refusal from 358 to 466 bytes went
+// unseen here for exactly that reason.
+func floodedCallerToken() string {
+	return strings.Repeat("k\u2028\U000e0020", floodedCallerTokenLen/12)
+}
 
 // setBearingRefusal is one vocabulary, the refusal that names it, and the way to
 // provoke that refusal with a token of the caller's choosing.
@@ -171,6 +182,34 @@ func closedSetRefusals(t *testing.T) []setBearingRefusal {
 						{Field: "currency", Op: analyticsquery.FilterOp(token), Value: "EUR"},
 					},
 				}.Validate(schema)
+			},
+		},
+		{
+			// The refusal maxUnservedNamed exists for. Each unknown key is
+			// bounded, but the COUNT of them is the caller's too — twenty
+			// pushed the served vocabulary off the end of the sentence that
+			// names it, which is why the list is truncated and counted.
+			what:    "the plan arguments this tool takes",
+			members: []string{slotFilters, slotGroupBy, slotAggregates},
+			refuse: func(token string) error {
+				// TWENTY unknown keys, not one: each is bounded on its own and
+				// the count is what crowds the served set out.
+				args := map[string]string{}
+				for i := range 20 {
+					args[fmt.Sprintf("%s-%d", token, i)] = "x"
+				}
+				body, err := json.Marshal(args)
+				if err != nil {
+					t.Fatalf("could not build a plan with unknown keys: %v", err)
+				}
+				unserved := unservedPlanArguments(body)
+				if len(unserved) == 0 {
+					t.Fatal("twenty unknown plan keys were all served, so this case measures nothing")
+				}
+				// The sentence the tool surface builds, as registry.go builds it.
+				return httperr.Validation("arguments", "malformed_json",
+					"this tool does not take "+strings.Join(unserved, ", ")+
+						"; its plan arguments are `"+slotFilters+"`, `"+slotGroupBy+"` and `"+slotAggregates+"`")
 			},
 		},
 		{

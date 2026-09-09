@@ -256,11 +256,14 @@ func echoSafe(s string, n int) string {
 			// which IS printable, so writing the rune back would replace the
 			// caller's byte with U+FFFD and report a name they did not send.
 			fmt.Fprintf(&b, `\x%02x`, s[i])
-		case r > 0xFFFF:
-			// Above the BMP, `\u` takes no more than four digits — `\ue0020`
-			// for U+E0020 is not a legal escape anywhere and reads as `\ue002`
-			// followed by a `0`. The tag block this covers (U+E0000..U+E007F)
-			// is the one used to smuggle invisible text.
+		case !unicode.IsPrint(r) && r > 0xFFFF:
+			// An UNPRINTABLE rune above the BMP, and the printability test comes
+			// first for a reason: an emoji and a CJK extension character are
+			// both astral AND printable, so escaping every astral rune would
+			// mangle a real name. `\u` takes no more than four digits, so
+			// `\ue0020` for U+E0020 is not a legal escape anywhere and reads as
+			// `\ue002` followed by a `0` — and U+E0000..U+E007F is the tag block
+			// used to smuggle invisible text.
 			fmt.Fprintf(&b, `\U%08x`, r)
 		case !unicode.IsPrint(r):
 			fmt.Fprintf(&b, `\u%04x`, r)

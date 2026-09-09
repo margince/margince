@@ -84,6 +84,10 @@ func TestEchoSafeLeavesRealNamesAlone(t *testing.T) {
 		"deals-by-stage",
 		"amount_base_minor",
 		"a name with spaces",
+		// Astral AND printable. Escaping every rune above the BMP to render the
+		// tag block safely would have mangled both of these.
+		"Ren\u00e9 \U0001f600",
+		"\U00020000 extension B",
 	} {
 		if got := echoSafe(name, maxBadArgsDetail); got != name {
 			t.Errorf("echoSafe rewrote an ordinary name: %q became %q", name, got)
