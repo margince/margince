@@ -146,6 +146,7 @@ budget rather than keeping its own list of which pages are generated.
 - [write-backbone.md](explanation/write-backbone.md) — storekit, `audit_log`, the outbox, and who consumes the events.
 - [composition-layer.md](explanation/composition-layer.md) — how `internal/compose/` boots and where every cross-module edge is wired.
 - [job-fleet.md](explanation/job-fleet.md) — the job contract: declaration before code, dispatchers vs workspace workers, why args name rows, and the failure vocabulary.
+- [raw-capture-part-slimming.md](explanation/raw-capture-part-slimming.md) — why the stored original keeps its attachments by reference: proof before removal, why the strip is by byte offset rather than by parsing, and the guarantee it narrows.
 - [custom-fields.md](explanation/custom-fields.md) — the one runtime `ALTER TABLE` chokepoint: the closed type/object sets, the privilege boundary, and the `fieldcatalog` seam.
 
 **Capture, messaging and privacy**
