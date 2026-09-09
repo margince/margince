@@ -10,6 +10,7 @@ import {
 } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { SubscriptionConfirmBody } from "./confirmsubscription";
 import { throwProblem } from "./common";
 import {
   explainPublicError,
@@ -112,19 +113,34 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   }, [card, edits]);
 
   const submit = useMutation({
-    mutationFn: async () => {
+    // The SUBSCRIPTION flag arrives as a variable, not off render state.
+    //
+    // A consent link's submit says one thing — "yes, this subscription" — and
+    // carries none of the record form's corrections or erasure request, which
+    // belong to the other body entirely. Reading those from the closure here
+    // would post whatever the record form happened to hold on a page that never
+    // showed it.
+    mutationFn: async ({ subscription }: { subscription?: boolean } = {}) => {
+      const body = subscription
+        ? {
+            corrections: [],
+            request_erasure: false,
+            marketing_choice: "granted" as const,
+            marketing_wording: marketingWording,
+          }
+        : {
+            corrections,
+            request_erasure: erasure,
+            ...(marketing
+              ? {
+                  marketing_choice: marketing,
+                  marketing_wording: marketingWording,
+                }
+              : {}),
+          };
       const { error, response } = await api.POST("/public/confirm/{token}", {
         params: { path: { token } },
-        body: {
-          corrections,
-          request_erasure: erasure,
-          ...(marketing
-            ? {
-                marketing_choice: marketing,
-                marketing_wording: marketingWording,
-              }
-            : {}),
-        },
+        body,
       });
       if (error) {
         if (response.status === 404) {
@@ -151,6 +167,26 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       <div className="pref-page">
         <EmptyState>{explainPublicError(details.error, t)}</EmptyState>
       </div>
+    );
+  }
+  // THE DISCRIMINATOR, ASKED BEFORE ANY RECORD FIELD IS READ.
+  //
+  // This endpoint answers two different bodies and always has: a record card
+  // for a record link, one subscription question for a consent link. Until the
+  // contract grew `kind` there was nothing on the wire saying which had
+  // arrived, so every read below — `card.provenance.length` above all — was
+  // taken off a body that might not carry it.
+  //
+  // Checked BEFORE `done`, and the subscription body renders its own confirmed
+  // state: the shared done card says "thank you for confirming your details",
+  // which is about a record this person was never shown.
+  if (card.kind === "subscription_confirmation") {
+    return (
+      <SubscriptionConfirmBody
+        card={done ? { ...card, state: "granted" } : card}
+        submitting={submit.isPending}
+        onConfirm={() => submit.mutate({ subscription: true })}
+      />
     );
   }
   if (done) {
@@ -249,7 +285,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         <Button
           variant="primary"
           disabled={submit.isPending}
-          onClick={() => submit.mutate()}
+          onClick={() => submit.mutate({})}
         >
           {t("confirm.submit")}
         </Button>

@@ -6156,6 +6156,11 @@ export const en = {
   "confirm.erasure.ask": "Remove my details",
   "confirm.erasure.staged": "Removal requested. Confirm below to send it.",
   "confirm.submit": "Confirm",
+  "confirm.subscription.title": "Confirm your subscription",
+  "confirm.subscription.ask": "Confirm that you want to receive {purpose}.",
+  "confirm.subscription.confirm": "Yes, subscribe me",
+  "confirm.subscription.alreadyTitle": "You are subscribed",
+  "confirm.subscription.alreadyBody": "Your subscription to {purpose} is confirmed. You can stop it at any time from any email we send.",
   "confirm.done.title": "Thank you",
   "confirm.done.body":
     "I have recorded your answer. Anything you changed goes to a person here to apply, and this link is now used up.",

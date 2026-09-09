@@ -37,7 +37,7 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 			writeConsentErr(w, r, err)
 			return
 		}
-		httperr.WriteJSON(w, http.StatusOK, card)
+		httperr.WriteJSON(w, http.StatusOK, wireSubscriptionCard(card))
 		return
 	}
 	card, err := h.store.confirmCardFor(r.Context(), ref.PersonID)
@@ -89,7 +89,7 @@ func submissionFromWire(req crmcontracts.SubmitConfirmDetailsJSONRequestBody) Co
 // wireConfirmCard renders the card. marketing_state is spelled 'unknown' rather
 // than empty, matching the preference surface's own vocabulary: no record and a
 // withdrawal are different answers, and the page shows them differently.
-func wireConfirmCard(card ConfirmCard) crmcontracts.ConfirmDetails {
+func wireConfirmCard(card ConfirmCard) crmcontracts.RecordConfirmationPage {
 	state := card.Marketing
 	if state == "" {
 		state = "unknown"
@@ -100,13 +100,39 @@ func wireConfirmCard(card ConfirmCard) crmcontracts.ConfirmDetails {
 			Field: o.Field, RecordedAt: o.RecordedAt, Source: o.Source,
 		})
 	}
-	return crmcontracts.ConfirmDetails{
+	return crmcontracts.RecordConfirmationPage{
+		// The discriminator, and the reason this endpoint has an honest schema
+		// again. Both bodies used to arrive carrying nothing that said which
+		// they were, so a client had to guess from which fields happened to be
+		// present — and the published schema described only this one.
+		Kind:           crmcontracts.RecordConfirmation,
 		FullName:       card.FullName,
 		Title:          card.Title,
 		Company:        card.Company,
 		Email:          card.Email,
 		Phone:          card.Phone,
-		MarketingState: crmcontracts.ConfirmDetailsMarketingState(state),
+		MarketingState: crmcontracts.RecordConfirmationPageMarketingState(state),
 		Provenance:     origins,
+	}
+}
+
+// wireSubscriptionCard is the other branch, and it exists so the subscription
+// answer carries its discriminator too.
+//
+// Before this the handler wrote consent.SubscriptionCard — a module type with
+// its own json tags — straight to the response. It serialized acceptably, which
+// is exactly why nothing caught that the contract did not describe it: the
+// generated client typed every 200 from this endpoint as the record card, so
+// the subscription page read `provenance` off a body with three fields.
+func wireSubscriptionCard(card SubscriptionCard) crmcontracts.SubscriptionConfirmationPage {
+	state := card.State
+	if state == "" {
+		state = "unknown"
+	}
+	return crmcontracts.SubscriptionConfirmationPage{
+		Kind:         crmcontracts.SubscriptionConfirmation,
+		PurposeKey:   card.PurposeKey,
+		PurposeLabel: card.PurposeLabel,
+		State:        crmcontracts.SubscriptionConfirmationPageState(state),
 	}
 }

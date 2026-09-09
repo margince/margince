@@ -7141,10 +7141,10 @@ paths:
         was opened and changes nothing else.
       responses:
         '200':
-          description: The contact's own view of their record.
+          description: 'The record card or the subscription question, per the kind discriminator.'
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ConfirmDetails' }
+              schema: { $ref: '#/components/schemas/ConfirmPage' }
         '404': { $ref: '#/components/responses/NotFound' }
     post:
       tags: [Public]
@@ -39541,14 +39541,59 @@ components:
                   DEPRECATED, kept for one release as the inverse of `can_opt_in` on unlocked purposes. Read
                   `can_opt_in` instead.
 
-    ConfirmDetails:
+    ConfirmPage:
+      description: |
+        What a confirm link answers, which depends on what the link was FOR.
+
+        A record link asks the person to check what the workspace holds about them; a consent link
+        asks one subscription question and must not disclose the record. Those are different
+        payloads and this endpoint has always returned both — the schema said only the first, so a
+        client that trusted the contract read `provenance` off a body that never carries it and
+        crashed on the subscription page.
+
+        Branch on `kind`. Adding a variant here is a contract change; adding one in the handler
+        without one is the defect this union closes.
+      oneOf:
+        - $ref: '#/components/schemas/RecordConfirmationPage'
+        - $ref: '#/components/schemas/SubscriptionConfirmationPage'
+      discriminator:
+        propertyName: kind
+        mapping:
+          record_confirmation: '#/components/schemas/RecordConfirmationPage'
+          subscription_confirmation: '#/components/schemas/SubscriptionConfirmationPage'
+
+    SubscriptionConfirmationPage:
+      type: object
+      description: |
+        The answer for a consent link: one named subscription and the person's current answer to it.
+
+        Deliberately carries NOTHING about the record. The mail said "confirm this subscription", and
+        serving the record card here would hand whoever holds the link the person's name, employer,
+        address, phone and provenance trail — wider than the mail described and wider than this
+        link's own write side allows.
+      required: [kind, purpose_key, purpose_label, state]
+      properties:
+        kind:
+          type: string
+          enum: [subscription_confirmation]
+        purpose_key:   { type: string, description: 'The subscription this link is about.' }
+        purpose_label: { type: string, description: 'Its published name, for the page to show.' }
+        state:
+          type: string
+          enum: [unknown, granted, withdrawn]
+          description: 'Their answer today, so somebody who already said yes is not asked as though they had not.'
+
+    RecordConfirmationPage:
       type: object
       description: |
         One contact's own view of what the workspace holds about them, for the no-login confirm page.
         A purpose-built projection and never the Person360 read model, which carries this workspace's
         working notes — owner, lifecycle, scores — rather than the subject's own data.
-      required: [full_name, title, company, email, phone, marketing_state, provenance]
+      required: [kind, full_name, title, company, email, phone, marketing_state, provenance]
       properties:
+        kind:
+          type: string
+          enum: [record_confirmation]
         full_name: { type: string }
         title:     { type: string }
         company:   { type: string, description: 'The current employer, read through the live employment relationship. Not correctable here.' }

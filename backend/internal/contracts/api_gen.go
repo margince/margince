@@ -3751,27 +3751,6 @@ func (e ComputedFieldKind) Valid() bool {
 	}
 }
 
-// Defines values for ConfirmDetailsMarketingState.
-const (
-	ConfirmDetailsMarketingStateGranted   ConfirmDetailsMarketingState = "granted"
-	ConfirmDetailsMarketingStateUnknown   ConfirmDetailsMarketingState = "unknown"
-	ConfirmDetailsMarketingStateWithdrawn ConfirmDetailsMarketingState = "withdrawn"
-)
-
-// Valid indicates whether the value is a known member of the ConfirmDetailsMarketingState enum.
-func (e ConfirmDetailsMarketingState) Valid() bool {
-	switch e {
-	case ConfirmDetailsMarketingStateGranted:
-		return true
-	case ConfirmDetailsMarketingStateUnknown:
-		return true
-	case ConfirmDetailsMarketingStateWithdrawn:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ConnectChannelRequestProvider.
 const (
 	ConnectChannelRequestProviderTelegram ConnectChannelRequestProvider = "telegram"
@@ -10534,6 +10513,42 @@ func (e RecordClaimRecordType) Valid() bool {
 	}
 }
 
+// Defines values for RecordConfirmationPageKind.
+const (
+	RecordConfirmation RecordConfirmationPageKind = "record_confirmation"
+)
+
+// Valid indicates whether the value is a known member of the RecordConfirmationPageKind enum.
+func (e RecordConfirmationPageKind) Valid() bool {
+	switch e {
+	case RecordConfirmation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordConfirmationPageMarketingState.
+const (
+	RecordConfirmationPageMarketingStateGranted   RecordConfirmationPageMarketingState = "granted"
+	RecordConfirmationPageMarketingStateUnknown   RecordConfirmationPageMarketingState = "unknown"
+	RecordConfirmationPageMarketingStateWithdrawn RecordConfirmationPageMarketingState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the RecordConfirmationPageMarketingState enum.
+func (e RecordConfirmationPageMarketingState) Valid() bool {
+	switch e {
+	case RecordConfirmationPageMarketingStateGranted:
+		return true
+	case RecordConfirmationPageMarketingStateUnknown:
+		return true
+	case RecordConfirmationPageMarketingStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordConsentRequestNewState.
 const (
 	RecordConsentRequestNewStateGranted   RecordConsentRequestNewState = "granted"
@@ -12295,6 +12310,42 @@ func (e StartBackfillRequestWindow) Valid() bool {
 	}
 }
 
+// Defines values for SubscriptionConfirmationPageKind.
+const (
+	SubscriptionConfirmation SubscriptionConfirmationPageKind = "subscription_confirmation"
+)
+
+// Valid indicates whether the value is a known member of the SubscriptionConfirmationPageKind enum.
+func (e SubscriptionConfirmationPageKind) Valid() bool {
+	switch e {
+	case SubscriptionConfirmation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubscriptionConfirmationPageState.
+const (
+	SubscriptionConfirmationPageStateGranted   SubscriptionConfirmationPageState = "granted"
+	SubscriptionConfirmationPageStateUnknown   SubscriptionConfirmationPageState = "unknown"
+	SubscriptionConfirmationPageStateWithdrawn SubscriptionConfirmationPageState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the SubscriptionConfirmationPageState enum.
+func (e SubscriptionConfirmationPageState) Valid() bool {
+	switch e {
+	case SubscriptionConfirmationPageStateGranted:
+		return true
+	case SubscriptionConfirmationPageStateUnknown:
+		return true
+	case SubscriptionConfirmationPageStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TagColor.
 const (
 	TagColorAmber  TagColor = "amber"
@@ -13755,22 +13806,22 @@ func (e VoiceProfileEvaluationRepeatsPerPrompt) Valid() bool {
 
 // Defines values for VoiceProfileVersionReason.
 const (
-	VoiceProfileVersionReasonAutomatic  VoiceProfileVersionReason = "automatic"
-	VoiceProfileVersionReasonManual     VoiceProfileVersionReason = "manual"
-	VoiceProfileVersionReasonOnboarding VoiceProfileVersionReason = "onboarding"
-	VoiceProfileVersionReasonRollback   VoiceProfileVersionReason = "rollback"
+	Automatic  VoiceProfileVersionReason = "automatic"
+	Manual     VoiceProfileVersionReason = "manual"
+	Onboarding VoiceProfileVersionReason = "onboarding"
+	Rollback   VoiceProfileVersionReason = "rollback"
 )
 
 // Valid indicates whether the value is a known member of the VoiceProfileVersionReason enum.
 func (e VoiceProfileVersionReason) Valid() bool {
 	switch e {
-	case VoiceProfileVersionReasonAutomatic:
+	case Automatic:
 		return true
-	case VoiceProfileVersionReasonManual:
+	case Manual:
 		return true
-	case VoiceProfileVersionReasonOnboarding:
+	case Onboarding:
 		return true
-	case VoiceProfileVersionReasonRollback:
+	case Rollback:
 		return true
 	default:
 		return false
@@ -16416,16 +16467,16 @@ func (e SubmitConfirmDetailsJSONBodyMarketingChoice) Valid() bool {
 
 // Defines values for UpdatePreferencesJSONBodyChoicesState.
 const (
-	Granted   UpdatePreferencesJSONBodyChoicesState = "granted"
-	Withdrawn UpdatePreferencesJSONBodyChoicesState = "withdrawn"
+	UpdatePreferencesJSONBodyChoicesStateGranted   UpdatePreferencesJSONBodyChoicesState = "granted"
+	UpdatePreferencesJSONBodyChoicesStateWithdrawn UpdatePreferencesJSONBodyChoicesState = "withdrawn"
 )
 
 // Valid indicates whether the value is a known member of the UpdatePreferencesJSONBodyChoicesState enum.
 func (e UpdatePreferencesJSONBodyChoicesState) Valid() bool {
 	switch e {
-	case Granted:
+	case UpdatePreferencesJSONBodyChoicesStateGranted:
 		return true
-	case Withdrawn:
+	case UpdatePreferencesJSONBodyChoicesStateWithdrawn:
 		return true
 	default:
 		return false
@@ -21214,27 +21265,6 @@ type ConfirmCompanySiteReadRequest struct {
 	SelectedFactKeys []string `json:"selected_fact_keys"`
 }
 
-// ConfirmDetails One contact's own view of what the workspace holds about them, for the no-login confirm page.
-// A purpose-built projection and never the Person360 read model, which carries this workspace's
-// working notes — owner, lifecycle, scores — rather than the subject's own data.
-type ConfirmDetails struct {
-	// Company The current employer, read through the live employment relationship. Not correctable here.
-	Company  string `json:"company"`
-	Email    string `json:"email"`
-	FullName string `json:"full_name"`
-
-	// MarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
-	MarketingState ConfirmDetailsMarketingState `json:"marketing_state"`
-	Phone          string                       `json:"phone"`
-
-	// Provenance Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.
-	Provenance []ConfirmFieldOrigin `json:"provenance"`
-	Title      string               `json:"title"`
-}
-
-// ConfirmDetailsMarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
-type ConfirmDetailsMarketingState string
-
 // ConfirmFieldOrigin One line of where a held value came from, for the Art. 14 disclosure on the confirm page.
 type ConfirmFieldOrigin struct {
 	Field string `json:"field"`
@@ -21242,6 +21272,20 @@ type ConfirmFieldOrigin struct {
 	// RecordedAt The date the value was recorded, as YYYY-MM-DD.
 	RecordedAt string `json:"recorded_at"`
 	Source     string `json:"source"`
+}
+
+// ConfirmPage What a confirm link answers, which depends on what the link was FOR.
+//
+// A record link asks the person to check what the workspace holds about them; a consent link
+// asks one subscription question and must not disclose the record. Those are different
+// payloads and this endpoint has always returned both — the schema said only the first, so a
+// client that trusted the contract read `provenance` off a body that never carries it and
+// crashed on the subscription page.
+//
+// Branch on `kind`. Adding a variant here is a contract change; adding one in the handler
+// without one is the defect this union closes.
+type ConfirmPage struct {
+	union json.RawMessage
 }
 
 // ConfirmRequestIssued A confirm link that now exists, and whether a message carrying it was queued. What
@@ -31649,6 +31693,31 @@ type RecordClaim struct {
 // RecordClaimRecordType defines model for RecordClaim.RecordType.
 type RecordClaimRecordType string
 
+// RecordConfirmationPage One contact's own view of what the workspace holds about them, for the no-login confirm page.
+// A purpose-built projection and never the Person360 read model, which carries this workspace's
+// working notes — owner, lifecycle, scores — rather than the subject's own data.
+type RecordConfirmationPage struct {
+	// Company The current employer, read through the live employment relationship. Not correctable here.
+	Company  string                     `json:"company"`
+	Email    string                     `json:"email"`
+	FullName string                     `json:"full_name"`
+	Kind     RecordConfirmationPageKind `json:"kind"`
+
+	// MarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
+	MarketingState RecordConfirmationPageMarketingState `json:"marketing_state"`
+	Phone          string                               `json:"phone"`
+
+	// Provenance Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.
+	Provenance []ConfirmFieldOrigin `json:"provenance"`
+	Title      string               `json:"title"`
+}
+
+// RecordConfirmationPageKind defines model for RecordConfirmationPage.Kind.
+type RecordConfirmationPageKind string
+
+// RecordConfirmationPageMarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
+type RecordConfirmationPageMarketingState string
+
 // RecordConsentRequest defines model for RecordConsentRequest.
 type RecordConsentRequest struct {
 	LawfulBasis *string                      `json:"lawful_basis,omitempty"`
@@ -33985,6 +34054,31 @@ type StartCompanySiteReadRequest struct {
 	// Url Public company website to read.
 	Url string `json:"url"`
 }
+
+// SubscriptionConfirmationPage The answer for a consent link: one named subscription and the person's current answer to it.
+//
+// Deliberately carries NOTHING about the record. The mail said "confirm this subscription", and
+// serving the record card here would hand whoever holds the link the person's name, employer,
+// address, phone and provenance trail — wider than the mail described and wider than this
+// link's own write side allows.
+type SubscriptionConfirmationPage struct {
+	Kind SubscriptionConfirmationPageKind `json:"kind"`
+
+	// PurposeKey The subscription this link is about.
+	PurposeKey string `json:"purpose_key"`
+
+	// PurposeLabel Its published name, for the page to show.
+	PurposeLabel string `json:"purpose_label"`
+
+	// State Their answer today, so somebody who already said yes is not asked as though they had not.
+	State SubscriptionConfirmationPageState `json:"state"`
+}
+
+// SubscriptionConfirmationPageKind defines model for SubscriptionConfirmationPage.Kind.
+type SubscriptionConfirmationPageKind string
+
+// SubscriptionConfirmationPageState Their answer today, so somebody who already said yes is not asked as though they had not.
+type SubscriptionConfirmationPageState string
 
 // Tag A tag. Mirrors the `tag` table.
 type Tag struct {
@@ -51030,6 +51124,95 @@ func (t *ColdStartRequest) UnmarshalJSON(b []byte) error {
 		}
 	}
 
+	return err
+}
+
+// AsRecordConfirmationPage returns the union data inside the ConfirmPage as a RecordConfirmationPage
+func (t ConfirmPage) AsRecordConfirmationPage() (RecordConfirmationPage, error) {
+	var body RecordConfirmationPage
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRecordConfirmationPage overwrites any union data inside the ConfirmPage as the provided RecordConfirmationPage
+func (t *ConfirmPage) FromRecordConfirmationPage(v RecordConfirmationPage) error {
+	v.Kind = "record_confirmation"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRecordConfirmationPage performs a merge with any union data inside the ConfirmPage, using the provided RecordConfirmationPage
+func (t *ConfirmPage) MergeRecordConfirmationPage(v RecordConfirmationPage) error {
+	v.Kind = "record_confirmation"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSubscriptionConfirmationPage returns the union data inside the ConfirmPage as a SubscriptionConfirmationPage
+func (t ConfirmPage) AsSubscriptionConfirmationPage() (SubscriptionConfirmationPage, error) {
+	var body SubscriptionConfirmationPage
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSubscriptionConfirmationPage overwrites any union data inside the ConfirmPage as the provided SubscriptionConfirmationPage
+func (t *ConfirmPage) FromSubscriptionConfirmationPage(v SubscriptionConfirmationPage) error {
+	v.Kind = "subscription_confirmation"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSubscriptionConfirmationPage performs a merge with any union data inside the ConfirmPage, using the provided SubscriptionConfirmationPage
+func (t *ConfirmPage) MergeSubscriptionConfirmationPage(v SubscriptionConfirmationPage) error {
+	v.Kind = "subscription_confirmation"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ConfirmPage) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"kind"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t ConfirmPage) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "record_confirmation":
+		return t.AsRecordConfirmationPage()
+	case "subscription_confirmation":
+		return t.AsSubscriptionConfirmationPage()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t ConfirmPage) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ConfirmPage) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
 	return err
 }
 

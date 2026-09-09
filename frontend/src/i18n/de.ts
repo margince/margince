@@ -6015,6 +6015,11 @@ export const de = {
   "confirm.erasure.ask": "Meine Daten löschen",
   "confirm.erasure.staged": "Löschung angefragt. Zum Senden unten bestätigen.",
   "confirm.submit": "Bestätigen",
+  "confirm.subscription.title": "Abo bestätigen",
+  "confirm.subscription.ask": "Bestätigen Sie, dass Sie {purpose} erhalten möchten.",
+  "confirm.subscription.confirm": "Ja, ich möchte das Abo",
+  "confirm.subscription.alreadyTitle": "Abo bestätigt",
+  "confirm.subscription.alreadyBody": "Ihr Abo für {purpose} ist bestätigt. Sie können es jederzeit über jede unserer E-Mails beenden.",
   "confirm.done.title": "Danke",
   "confirm.done.body":
     "Ich habe Ihre Antwort erfasst. Änderungen gehen an eine Person hier zur Übernahme, und dieser Link ist jetzt verbraucht.",
