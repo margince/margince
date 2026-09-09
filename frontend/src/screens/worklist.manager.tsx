@@ -26,12 +26,9 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { useAssignableUserOptions } from "./assigneepicker";
 import { problemCodeOf, useMe } from "./common";
-import {
-  useAssignableUserOptions,
-  useRosterPartial,
-  useRosterPartialHint,
-} from "./entityref";
+import { useRosterPartial, useRosterPartialHint } from "./entityref";
 import {
   subjectAcceptsAnOwner,
   type TeamException,

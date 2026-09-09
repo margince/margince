@@ -15,6 +15,7 @@ import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useAssignableUserOptions } from "./assigneepicker";
 import {
   ProblemError,
   QueryGate,
@@ -24,7 +25,6 @@ import {
 } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
-import { useAssignableUserOptions } from "./entityref";
 import { LeadBulkBar } from "./leadbulk";
 import {
   LEAD_STATUS_FILTER_OPTIONS,
