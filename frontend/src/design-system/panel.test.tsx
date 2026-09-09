@@ -343,14 +343,19 @@ describe("the panel head is one band, fixed at the height every panel shares", (
   // and only they give way: a badge or a button squeezed by a long title reads
   // as a different control.
   it("truncates the two lines and lets nothing else give way", () => {
-    const truncated =
-      /(?:^|\n)\.panel-head \.panel-title,\n\.panel-head-sub\s*\{([^}]*)\}/.exec(
-        panelCss(),
-      )?.[1] ?? "";
-    expect(truncated).toMatch(/white-space:\s*nowrap/);
-    expect(truncated).toMatch(/overflow:\s*hidden/);
-    expect(truncated).toMatch(/text-overflow:\s*ellipsis/);
-    expect(truncated).toMatch(/min-width:\s*0/);
+    const rules = cssRules(panelCss());
+    for (const selector of [".panel-head .panel-title", ".panel-head-sub"]) {
+      const declared = rules
+        .filter((rule) => rule.selector === selector)
+        .map((rule) => rule.block)
+        .join(";");
+      expect(declaredValue(declared, "white-space"), selector).toBe("nowrap");
+      expect(declaredValue(declared, "overflow"), selector).toBe("hidden");
+      expect(declaredValue(declared, "text-overflow"), selector).toBe(
+        "ellipsis",
+      );
+      expect(declaredValue(declared, "min-width"), selector).toBe("0");
+    }
 
     const stack = /(?:^|\n)\.panel-head-text\s*\{([^}]*)\}/.exec(panelCss());
     expect(stack?.[1]).toMatch(/min-width:\s*0/);
