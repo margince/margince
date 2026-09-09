@@ -1494,56 +1494,20 @@
   display: block;
 }
 
-/* A section subhead inside the Company 360 card: the label on the left, and
-   whatever the section counts on the right. It is what lets a reader tell
-   four readings apart inside one card. */
-/* A section's label, and the interval that separates one reading from the next.
-   The space belongs ABOVE the label rather than below the section before it:
-   four readings inside one card are told apart by where each one starts, and
-   an even rhythm down the card made the whole thing a wall. Tight underneath,
-   because the label and the rows under it are one block. */
-/* A NEW THEMATIC SECTION starts at the card's edges.
-   The card's default seam is inset to the body's padding, which is the rule
-   for two blocks of one reading (panel.css). A section head begins a different
-   reading of the account, and the card holds five of them: drawn at the same
-   inset as the rules inside a section, every boundary carried the same weight
-   and the card read as one long ladder of hairlines. Full-bleed the reader
-   sees the card's divisions first and its blocks second. */
-.panel-body + .panel-body.co-360-head::before,
-.panel-row + .panel-body.co-360-head::before {
-  inset-inline: 0;
-}
-
-.co-360-head {
+/* The needs pane's head actions: the disclosure that a machine read the
+   record, and the way to the record's own list, as ONE item at the far end of
+   `Panel`'s head band. They are grouped rather than handed in loose because a
+   `.badge` is a shrinkable flex item like anything else — beside a title long
+   enough to fill the band, "AI-assisted" came out as two lines. Grouped and
+   held whole, the TITLE gives way instead, which a tone="ai" head is already
+   sized for. Same on every record: the pane is the record-360 kit's, not the
+   company's, and its rules sit with `.co-reading`'s here for the reason
+   record360/README.md gives. */
+.co-reading-today-actions {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--space-2);
-  padding-top: var(--space-6);
-  padding-bottom: var(--space-2);
-}
-
-/* No seam under a head, wherever one is drawn. The panel's rule divides one
-   section of a card from the next, and a head is not a section — it names the
-   block below it, and a rule between the two reads as a caption for the rule.
-   The boundary a section head does need is the seam ABOVE it, which is drawn
-   by the head's own ::before and stays. */
-.co-360-head + .panel-body::before,
-.co-360-head + .panel-row::before {
-  content: none;
-}
-
-/* The needs pane heads itself as a PANE rather than as a section of one: its
-   head is the panel's first line, so it takes its own room top and bottom
-   instead of the interval that separates two sections of a card. Same on
-   every record — the pane is the record-360 kit's, not the company's. */
-.co-reading-today .co-360-head {
-  padding-top: var(--space-5);
-  padding-bottom: var(--space-3);
-}
-.co-reading-today .co-360-title-text {
-  margin: 0;
-  letter-spacing: var(--tracking-display);
+  flex: none;
 }
 /* The three rated dimensions under the verdict: a dot in the dimension's
    tone, the dimension, its rating. Inline, because they qualify the word
@@ -1628,38 +1592,10 @@
   background: var(--danger);
 }
 
-/* The head's name and the count beside it, on one baseline. */
-.co-360-headtext {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-3);
-  min-width: 0;
-}
 /* When the row was written and by whom, closing the facts line: the date
    and the provenance mark beside it, in the line's own ink. */
 .co-record-provenance {
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-/* Except the first, which follows the card's own band and would otherwise open
-   the reading with an interval nothing sits in. */
-.co-lead > .panel-body:first-of-type.co-360-head {
-  padding-top: var(--space-5);
-}
-
-/* A section's own verbs, opposite its label in the section head — they belong
-   to the section rather than to the card, whose header band names the record,
-   and a reader decides whether to open the whole list before reading it
-   rather than after. */
-.co-360-headverbs {
-  display: inline-flex;
-  flex-wrap: wrap;
-  /* Centred, not baselined. One of these verbs carries an icon and one does
-     not, and two buttons whose insides differ have no baseline in common —
-     aligning on it stepped the pair up and down against each other. What a
-     reader sees is two boxes in a row, so the boxes are what line up. */
   align-items: center;
   gap: var(--space-2);
 }

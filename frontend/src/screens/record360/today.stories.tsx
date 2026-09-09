@@ -18,8 +18,17 @@ import { FoundMove, TodayPanel, TodoRow } from "./today";
 // plain outlined one; the two rows side by side are the only way to see that
 // the tint still means something.
 //
+// The head is `Panel`'s own, and the fixture below gives it the widest thing
+// it has to hold: a title, the disclosure and the verb on one band, with what
+// the day counts down to and what it was read from in the band UNDER the rows.
+// Crammed into the head those three read as one long line and the badge broke
+// in half, so the story carries the full foot rather than a single chip.
+//
 // Check both themes. Every indigo here is a color-mix() that lifts on dark,
-// the badge and the tinted verb included.
+// the badge and the tinted verb included. Check the narrow width too: the
+// story's own frame is the desktop measure, and the pane draws at 390px on
+// four record pages, where the title takes the second line and the head's
+// actions stay whole.
 
 const meta: Meta<typeof TodayPanel> = {
   title: "Records/Record reading/What needs you",
@@ -30,14 +39,24 @@ export default meta;
 
 type Story = StoryObj<typeof TodayPanel>;
 
-function Pane() {
+// What the day counts down to and what it was read from, exactly as
+// companytoday.tsx assembles it: a commitment badge, then the read's own
+// provenance and what it covered.
+const foot = (
+  <>
+    <Badge tone="warn">1 overdue</Badge>
+    <span className="co-scan-foot">
+      <Badge tone="ai">Margince</Badge>
+      <span className="co-row-meta">Read 14 exchanges and 2 deals</span>
+    </span>
+  </>
+);
+
+function Pane({ width = 720 }: Readonly<{ width?: number }>) {
   return (
     <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <TodayPanel
-          onOpenTasks={() => {}}
-          footer={<Badge tone="warn">1 overdue</Badge>}
-        >
+      <div style={{ maxWidth: width }}>
+        <TodayPanel onOpenTasks={() => {}} footer={foot}>
           <FoundMove
             when="06:52"
             title="Send the breakdown Lena promised on 5 August."
@@ -78,6 +97,11 @@ export const FoundAndOwedDark: Story = {
   ...FoundAndOwed,
   globals: { theme: "dark" },
 };
+
+// The pane at phone measure, which is where its head has least room: the title
+// takes the second line and the disclosure beside the verb stays whole. The
+// same pane the four record pages draw — none of them narrows it further.
+export const FoundAndOwedNarrow: Story = { render: () => <Pane width={390} /> };
 
 export const NothingNeedsYou: Story = {
   // The honest quiet answer, which is a reading rather than an empty list —
