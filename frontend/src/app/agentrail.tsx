@@ -21,7 +21,6 @@ import {
   type MarginceCoreState,
 } from "../design-system/margince-core";
 import { usePrefersReducedMotion } from "../design-system/motion";
-import { Switch } from "../design-system/switch";
 import {
   formatMoney,
   formatNumber,
@@ -33,7 +32,6 @@ import type { MessageKey } from "../i18n/en";
 import { usePendingApprovals } from "../screens/approvals.queries";
 import { useConnectors } from "../screens/connectors";
 import { useLicenseEntitlement } from "../screens/license";
-import { setEdgeLightShown, useEdgeLightShown } from "./agent-edge-preference";
 import {
   type AgentEdgeRegister,
   clearAgentEdge,
@@ -47,6 +45,7 @@ import {
   RUNNING,
   TASK_SAID,
 } from "./agentrail-copy";
+import { EdgeLightSetting } from "./agentrail-edgelight";
 import { RailLine } from "./agentrail-line";
 import { useAgentTicker } from "./agentrail-ticker";
 import { type AiActivity, useAiActivity } from "./ai-activity";
@@ -576,39 +575,6 @@ function RunSection({
   );
 }
 
-/**
- * The panel's foot: whether the window's own margins light while the agent
- * works.
- *
- * It belongs to the agent rather than to the settings screen because it is a
- * reading of the agent, and the panel is where a person is already looking at
- * that reading — a preference about a surface you can see from here is one you
- * should be able to answer from here. It is also the only control on this
- * panel, which is why the foot carries nothing else: everything above it
- * REPORTS, and a second verb down here would blur what the surface is for.
- *
- * The margin is decoration with a job (`agent-edge.tsx`), and turning it off
- * costs a reader nothing they cannot get in words: the block above says what
- * the agent is doing, in a sentence, whether or not the window is lit. So this
- * needs no warning and no confirmation — it is a preference, not a trade.
- *
- * A `Switch` rather than a `Checkbox` because flipping it IS the write: the
- * margins go dark on the flip and the browser remembers, with no Save anywhere
- * on this surface to press.
- */
-function EdgeLightSetting() {
-  const shown = useEdgeLightShown();
-  return (
-    <div className="arfoot">
-      <Switch
-        label={LABELS.edgeLight}
-        checked={shown}
-        onChange={setEdgeLightShown}
-      />
-    </div>
-  );
-}
-
 function AgentPanel({
   state,
   line,
@@ -635,6 +601,7 @@ function AgentPanel({
   frame: PanelFrame;
 }>) {
   const { locale } = useLocale();
+  const t = useT();
   return (
     <section
       className="arpanel"
@@ -734,6 +701,14 @@ function AgentPanel({
           the small print of the panel, and small print that takes a heading and
           four rows reads as more important than the counts above it. */}
       <div className="arstrip">
+        {/* The bound comes FIRST, above the runtime rows, because it is the one
+            line here that is true whatever those rows managed to read: the model
+            can be unknown and the licence unreadable, and the agent still reaches
+            no further than this reader does. It is a promise rather than a
+            reading, which is also why it is not in the strip's rows — a row
+            reports what a call answered, and nothing answered this.
+            Held by AC-shell-8. */}
+        <p className="arclaim t-sub">{t("shell.agent.scope")}</p>
         <RuntimeRows
           offline={signals.offline}
           model={model}

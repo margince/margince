@@ -912,6 +912,13 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
+/* The scope claim, above the runtime rows it shares the strip with. It keeps
+   the strip's small-print size and takes air under it so it reads as its own
+   sentence rather than as the first of the rows. */
+.arclaim {
+  margin: 0 0 var(--space-2);
+}
+
 /* ===== The foot =====
  *
  * The panel's one control, at the far end of the last line: everything above it
