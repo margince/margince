@@ -71,9 +71,9 @@ const meetingAttendeeRepairPerTick = 200
 // nothing and changes no display name. And the marker means a settled meeting is
 // not offered again, so a restart resumes rather than re-reading from the top.
 func repairMeetingAttendeesBatch(ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger) (int, error) {
-	return drainStoredOriginals(ctx, pool, limit, log, storedOriginalPass{
+	return drainStoredOriginals(ctx, pool, limit, log, storedOriginalPass[replayCandidate]{
 		name:   "meeting attendee repair",
-		unit:   "meetings",
+		unit:   unitMeetings,
 		offer:  selectMeetingRepairCandidates,
 		settle: repairOneMeeting,
 		mark:   markMeetingRepaired,

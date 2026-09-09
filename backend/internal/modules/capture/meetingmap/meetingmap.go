@@ -423,3 +423,20 @@ func ParticipantsOf(raw []byte, owner string, decode Decode) ([]connector.Messag
 	}
 	return Classify(ev, owner).Participants(), nil
 }
+
+// SettlementOf answers what one STORED event resource settles as, for the
+// backfill that closes meetings captured before the RSVP was read.
+//
+// It is Settle over a stored original rather than a live pull, and it exists so
+// that pass asks the SAME question live capture asks. A backfill that re-derived
+// "is this meeting off" from the payload itself would be a second answer to a
+// question this package already owns, and the two would part company the first
+// time a provider changed how it says no.
+func SettlementOf(raw []byte, owner string, decode Decode) (Settlement, error) {
+	ev, err := decode(raw, owner)
+	if err != nil {
+		return SettleDrop, err
+	}
+	_, settlement := Classify(ev, owner).Settle()
+	return settlement, nil
+}

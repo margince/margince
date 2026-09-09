@@ -165,6 +165,12 @@ func ParticipantsOf(raw []byte, owner string) ([]connector.MessageParticipant, e
 	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
 }
 
+// SettlementOf answers what one stored event resource settles as, for the
+// backfill that closes meetings captured before the RSVP was read.
+func SettlementOf(raw []byte, owner string) (meetingmap.Settlement, error) {
+	return meetingmap.SettlementOf(raw, owner, decodeEvent)
+}
+
 // parseStart reads the event's start: a timed dateTime (RFC3339) preferred,
 // falling back to an all-day date. A start we cannot read yields the zero time
 // — the Sink then stamps capture time honestly rather than sorting the row to

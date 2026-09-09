@@ -116,16 +116,48 @@ func (w *participantBackfillWorker) backfillWorkspace(ctx context.Context, ws id
 	if err != nil {
 		return total + replayed + repaired, err
 	}
+	// The meetings the calendar had already called off when they were captured.
+	// A cancelled or declined event was DROPPED then, so the row still reads
+	// booked and no later sync will say otherwise — a provider stops listing an
+	// event once it is off.
+	//
+	// Independent of the passes around it: it reads each meeting's own stored
+	// original and writes only meeting_status, touching no participant row, so
+	// its position in this sequence is not load-bearing.
+	closed, err := w.backfillMeetingRSVPWorkspace(wsCtx)
+	if err != nil {
+		return total + replayed + repaired + closed, err
+	}
 	// Last, because it reads what the passes above write: an attendee row that
 	// does not exist yet cannot be given the name its invitation used.
 	named, err := w.recoverNamesWorkspace(wsCtx)
 	if err != nil {
-		return total + replayed + repaired + named, err
+		return total + replayed + repaired + closed + named, err
 	}
 	// And after that, because the names it recovers are what a stale display
 	// name is refreshed from.
 	shown, err := w.refreshDisplayNamesWorkspace(wsCtx)
-	return total + replayed + repaired + named + shown, err
+	return total + replayed + repaired + closed + named + shown, err
+}
+
+// backfillMeetingRSVPWorkspace closes the meetings whose stored original says
+// the calendar had already called them off.
+//
+// Same drain shape as the passes around it: it stops the moment a batch finds
+// nothing, so a workspace with none left costs one probe a tick.
+func (w *participantBackfillWorker) backfillMeetingRSVPWorkspace(wsCtx context.Context) (int, error) {
+	total := 0
+	for i := 0; i < participantBackfillBatchesPerTick; i++ {
+		n, err := backfillMeetingRSVPBatch(wsCtx, w.pool, meetingRSVPBackfillPerTick, w.log)
+		if err != nil {
+			return total, err
+		}
+		if n == 0 {
+			return total, nil
+		}
+		total += n
+	}
+	return total, nil
 }
 
 // repairMeetingAttendeesWorkspace binds the invited colleagues of meetings

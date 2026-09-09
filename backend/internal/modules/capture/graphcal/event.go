@@ -115,6 +115,12 @@ func ParticipantsOf(raw []byte, owner string) ([]connector.MessageParticipant, e
 	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
 }
 
+// SettlementOf answers what one stored event resource settles as, for the
+// backfill that closes meetings captured before the RSVP was read.
+func SettlementOf(raw []byte, owner string) (meetingmap.Settlement, error) {
+	return meetingmap.SettlementOf(raw, owner, decodeEvent)
+}
+
 // graphLocalLayouts are the wall-clock forms Graph states a calendar time in.
 // It sends fractional seconds and no offset, which is why time.RFC3339 does not
 // read it: the zone travels beside the value, in timeZone.
