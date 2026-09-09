@@ -22,12 +22,19 @@ import { mockApi } from "./seed";
  *
  * Geometry, therefore, and in a browser: both defects were invisible to every
  * unit test in the tree and obvious in a screenshot.
+ *
+ * Both belong to the record SHELL rather than to any one screen, so both are
+ * measured on every record page the product has: a screen that draws its own
+ * answer to either is the thing these tests exist to catch, and it can only be
+ * caught on the page that draws it.
  */
 
 const RECORDS = [
   { name: "contact", route: "/#/contacts/p-anna" },
   { name: "lead", route: "/#/leads/l-1" },
   { name: "company", route: "/#/companies/o-brandt" },
+  { name: "deal", route: "/#/deals/d-fleet" },
+  { name: "project", route: "/#/projects/pr-fleet" },
 ];
 
 async function openRecord(page: Page, route: string) {
@@ -93,72 +100,74 @@ test.describe("the record's details pane", () => {
     return page.locator(".recordtabs-trailing button[aria-pressed]");
   }
 
-  test(`opens beside the work column, under the tab row, at ${BESIDE}px`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: BESIDE, height: 900 });
-    await openRecord(page, "/#/companies/o-brandt");
-
-    const pane = page.locator(".record-aside");
-    // Closed on arrival: the pane is where a reader goes for the attributes,
-    // not what they open a record to see.
-    await expect(pane, "the pane is open on arrival").toBeHidden();
-    await detailsSwitch(page).click();
-    await expect(pane, "the switch did not open the pane").toBeVisible();
-
-    const paneBox = await pane.boundingBox();
-    const work = await page.locator(".page-zones-main").boundingBox();
-    const tabs = await page.locator(".record-tabs").boundingBox();
-    if (!paneBox || !work || !tabs) {
-      throw new Error(
-        "the pane, the work column and the tab row are visible but one has no box",
-      );
-    }
-    expect(
-      paneBox.x,
-      "the pane is not beside the work column",
-    ).toBeGreaterThanOrEqual(work.x + work.width - 1);
-    expect(
-      paneBox.y,
-      "the pane does not open under the tab row",
-    ).toBeGreaterThanOrEqual(tabs.y + tabs.height - 1);
-  });
-
-  for (const width of STACKED) {
-    test(`stacks the pane under the work column at ${width}px`, async ({
+  for (const record of RECORDS) {
+    test(`opens beside the work column, under the tab row, on a ${record.name} at ${BESIDE}px`, async ({
       page,
     }) => {
-      await page.setViewportSize({ width, height: 844 });
-      await openRecord(page, "/#/companies/o-brandt");
+      await page.setViewportSize({ width: BESIDE, height: 900 });
+      await openRecord(page, record.route);
 
       const pane = page.locator(".record-aside");
+      // Closed on arrival: the pane is where a reader goes for the attributes,
+      // not what they open a record to see.
       await expect(pane, "the pane is open on arrival").toBeHidden();
       await detailsSwitch(page).click();
       await expect(pane, "the switch did not open the pane").toBeVisible();
 
       const paneBox = await pane.boundingBox();
       const work = await page.locator(".page-zones-main").boundingBox();
-      if (!paneBox || !work) {
+      const tabs = await page.locator(".record-tabs").boundingBox();
+      if (!paneBox || !work || !tabs) {
         throw new Error(
-          "the pane and the work column are visible but one has no box",
+          "the pane, the work column and the tab row are visible but one has no box",
         );
       }
-      // Under the work rather than squeezed beside it: two columns leave
-      // neither readable at this width.
+      expect(
+        paneBox.x,
+        "the pane is not beside the work column",
+      ).toBeGreaterThanOrEqual(work.x + work.width - 1);
       expect(
         paneBox.y,
-        "the pane stands beside the work column on a screen that fits one",
-      ).toBeGreaterThanOrEqual(work.y + work.height - 1);
-      // And it takes the record's whole width rather than a 300px stack at
-      // the edge of it.
-      expect(
-        paneBox.width,
-        "the pane keeps the narrow column's width in a region several times wider",
-      ).toBeGreaterThan(work.width * 0.8);
-
-      // And away again, from the same switch.
-      await detailsSwitch(page).click();
-      await expect(pane, "the pane is still on screen").toBeHidden();
+        "the pane does not open under the tab row",
+      ).toBeGreaterThanOrEqual(tabs.y + tabs.height - 1);
     });
+
+    for (const width of STACKED) {
+      test(`stacks the pane under the work column on a ${record.name} at ${width}px`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 844 });
+        await openRecord(page, record.route);
+
+        const pane = page.locator(".record-aside");
+        await expect(pane, "the pane is open on arrival").toBeHidden();
+        await detailsSwitch(page).click();
+        await expect(pane, "the switch did not open the pane").toBeVisible();
+
+        const paneBox = await pane.boundingBox();
+        const work = await page.locator(".page-zones-main").boundingBox();
+        if (!paneBox || !work) {
+          throw new Error(
+            "the pane and the work column are visible but one has no box",
+          );
+        }
+        // Under the work rather than squeezed beside it: two columns leave
+        // neither readable at this width.
+        expect(
+          paneBox.y,
+          "the pane stands beside the work column on a screen that fits one",
+        ).toBeGreaterThanOrEqual(work.y + work.height - 1);
+        // And it takes the record's whole width rather than a 300px stack at
+        // the edge of it.
+        expect(
+          paneBox.width,
+          "the pane keeps the narrow column's width in a region several times wider",
+        ).toBeGreaterThan(work.width * 0.8);
+
+        // And away again, from the same switch.
+        await detailsSwitch(page).click();
+        await expect(pane, "the pane is still on screen").toBeHidden();
+      });
+    }
   }
 });
