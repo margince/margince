@@ -65,7 +65,7 @@ const LIVE_RECORD_MS = 60_000;
 // server-side whenever the deal has moved, and a cadence on that would spend
 // the workspace's AI budget on an open tab. Its key is the status card's, not
 // the deal record's, which is what keeps it out.
-function liveInterval(query: { queryKey: QueryKey }): number | false {
+export function liveInterval(query: { queryKey: QueryKey }): number | false {
   return isRecordRead(query.queryKey) && LIVE_RECORD_MS;
 }
 
@@ -75,7 +75,7 @@ function liveInterval(query: { queryKey: QueryKey }): number | false {
 // cache and waits out the interval. That is the case the minute-long cadence
 // above is priced against — the return is what covers the reader who leaves —
 // so the return has to actually read.
-function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
+export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
   return isRecordRead(query.queryKey) && "always";
 }
 
