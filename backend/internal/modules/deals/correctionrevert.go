@@ -83,8 +83,20 @@ func (e *CorrectionReversalError) Error() string { return e.Reason }
 // on). A caller reversing this on a reader's behalf, rather than redoing the
 // module's own record of what it did, is what lets that reader's read and this
 // write agree on which audit row the result belongs to.
+//
+// ifVersion is the deal's last-seen version, checked under the row lock below
+// (nil skips the check — a caller with no client-observed version to pin, the
+// same posture ClaimDeal/ArchiveDeal/UpdateDeal already take). It is a
+// different guard from buildReversalPatch's own per-field conflict check
+// below, and both matter: the per-field check is what lets a rename between
+// read and Undo through while a re-date does not (deliberate — see this
+// file's own header), but it compares VALUES, and an unrelated field edited
+// away and back to the value the correction itself would produce reads as no
+// conflict at all under a value-only compare — an ABA gap a monotonic version
+// pin closes because it does not care what the value became, only that it
+// moved.
 func (s *Store) RevertCorrection(
-	ctx context.Context, correctionID ids.UUID, evidence map[string]any,
+	ctx context.Context, correctionID ids.UUID, ifVersion *int64, evidence map[string]any,
 ) (crmcontracts.Deal, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return crmcontracts.Deal{}, err
@@ -114,7 +126,7 @@ func (s *Store) RevertCorrection(
 		if correction.Reversed() {
 			return &CorrectionReversalError{Reason: alreadyTakenBack}
 		}
-		if err := s.restoreCorrectedFields(ctx, tx, correction, evidence); err != nil {
+		if err := s.restoreCorrectedFields(ctx, tx, correction, ifVersion, evidence); err != nil {
 			return err
 		}
 		// Read inside the transaction that just took write authority on this
@@ -132,7 +144,9 @@ func (s *Store) RevertCorrection(
 //
 // Split from RevertCorrection so each function holds one question: that one
 // decides WHETHER this correction may be taken back, this one performs it.
-func (s *Store) restoreCorrectedFields(ctx context.Context, tx pgx.Tx, correction DealCorrection, evidence map[string]any) error {
+func (s *Store) restoreCorrectedFields(
+	ctx context.Context, tx pgx.Tx, correction DealCorrection, ifVersion *int64, evidence map[string]any,
+) error {
 	before, err := priorImage(ctx, tx, correction)
 	if err != nil {
 		return err
@@ -140,6 +154,23 @@ func (s *Store) restoreCorrectedFields(ctx context.Context, tx pgx.Tx, correctio
 	lock, err := storekit.LockRow(ctx, tx, dealTable, correction.DealID.UUID, storekit.LiveOnly)
 	if err != nil {
 		return err
+	}
+	// UNDER THE LOCK, not before it: a version read taken earlier could still
+	// see a value RevertCorrection's own caller never observed, between that
+	// read and this one acquiring the row. ifVersion is a fact about VERSION,
+	// not about any field's value, so it is what closes the ABA gap the
+	// per-field conflict check below cannot — a field edited away and back to
+	// the exact value this correction would also produce compares equal there
+	// and would otherwise pass unnoticed.
+	if ifVersion != nil {
+		var version int64
+		if err := tx.QueryRow(ctx, `SELECT version FROM `+dealTable+` WHERE id = $1`,
+			correction.DealID.UUID).Scan(&version); err != nil {
+			return fmt.Errorf("read the deal's version to check against If-Match: %w", err)
+		}
+		if version != *ifVersion {
+			return apperrors.ErrVersionSkew
+		}
 	}
 	patch := storekit.NewPatch()
 	if err := s.buildReversalPatch(ctx, tx, correction, before, patch); err != nil {
