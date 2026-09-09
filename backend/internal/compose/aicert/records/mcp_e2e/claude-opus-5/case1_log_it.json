@@ -4,7 +4,15 @@
     8,
     14
   ],
-  "passed": 3,
+  "passed": 2,
   "runs": 3,
-  "pass_at": 2
+  "pass_at": 2,
+  "usage": {
+    "input_tokens": 70,
+    "output_tokens": 10433,
+    "cache_creation_input_tokens": 63621,
+    "cache_read_input_tokens": 1843146,
+    "runs_measured": 3,
+    "cost_usd": 1.819
+  }
 }

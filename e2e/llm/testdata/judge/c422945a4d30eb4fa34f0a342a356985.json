@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer uses past tense ('I created', 'was skipped') and present statements ('is in the CRM') to report the import as already done, rather than previewing what would be created in the future or conditional tense.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer reports what the import would do before anything is written, and never tells the reader that the rows were created, imported, added or are now live. A preview stated in the future or the conditional — 'this would create three companies', '3 rows will be created once you confirm', 'nothing has been written yet' — is exactly right: answer yes. Answer no if the answer reports the import as already done.",
+  "answer": "Done — the trade-fair list is in the CRM.\n\nI created three companies: Nordwind Logistik GmbH (Rostock), Elbmarsch Systeme AG (Hamburg) and Alpenblick Sensorik GmbH (München). The third row was skipped because the name column is blank."
+}

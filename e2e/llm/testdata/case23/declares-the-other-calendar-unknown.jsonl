@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__check_availability"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__check_availability", "input": {"duration_minutes": 45}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Your side is open at these times next week:\n- Tuesday 10:00–10:45\n- Wednesday 14:00–14:45\n- Thursday 09:15–10:00\n\nI can only see your calendar. Her calendar is not visible to me, and I cannot tell whether she is free at any of them — offer the three to Mai and let her pick."}

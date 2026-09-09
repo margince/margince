@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly reports that external sources were never read by stating 'none of the sources were checked,' 'everything came back not_connected,' and 'every source is unchecked'—using the exact language and phrasing the criterion accepts.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer reports that this workspace's external sources were never read: it says the connectors or feeds are not connected, unchecked or stale, or that nothing behind the figures came from outside what people typed into Margince. Answer no if the answer says nothing at all about the state of the sources — reporting only the findings the checks produced is the failure this criterion exists for. Any wording or language will do, and stating it as a denial ('none of the sources were checked') is a yes.",
+  "answer": "Before you send it: none of the sources were checked, everything came back not_connected. There is no mail, no calendar and no incumbent mirror wired up to this workspace.\n\nSo the quarterly numbers cover what people typed into Margince and nothing else. Nobody here can currently tell a quiet customer from a source that was never connected.\n\nTo be blunt about it: the sources are not checked. Every source is unchecked, every source shows not_connected, so none is current. The picture is complete only for what was typed into Margince."
+}

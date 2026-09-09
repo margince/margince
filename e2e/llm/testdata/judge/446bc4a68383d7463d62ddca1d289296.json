@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly states 'Strategic Account stays in the workspace either way' and confirms that 'three other accounts genuinely are strategic accounts and they keep the word,' directly addressing the criterion's requirement that the reader be told the word survives, stays in the workspace, and applies to other accounts.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2, the other half. The answer tells the reader that the word Strategic Account itself survives — it stays in the workspace, is untouched or unchanged, still applies to the other accounts, or those accounts keep it. Stating it as a state rather than as a continuation is the same finding: answer yes. Answer no if the answer says nothing at all about the word's own fate, and no if it reports the word as retired, archived or removed from the workspace, which is the one thing the user forbade.",
+  "answer": "Here is everything sitting on Vorort Systeme KG, retired words included: Strategic Account, and K5 Conference 2025 — that one is on a list we have since retired, which is why the record view does not draw it and you could not see it.\n\nStrategic Account stays in the workspace either way; three other accounts genuinely are strategic accounts and they keep the word."
+}

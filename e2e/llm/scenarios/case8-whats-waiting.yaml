@@ -1,0 +1,136 @@
+# CASE 8 — What is waiting on me.
+#
+# The approval queue driven end to end: find what is waiting, read what it
+# actually holds, and answer it with the verdict the person gave.
+#
+# Case 1 already proves an assistant can SAY that something is waiting
+# (criterion 14). Nothing in the lane has ever ANSWERED one, which is the half
+# where a wrong move is a write: approving what should have been rejected
+# releases a change nobody wanted, and the queue cannot un-approve it.
+#
+# WHY read_approval IS REQUIRED HERE AND NOT DECORATION. The inbox carries a
+# one-line summary and never the change itself, and that line is built from the
+# staged body with each value cut at 48 bytes (compose/agentsummary.go). The
+# seeded proposal's description is longer than that, so the words past the cut
+# exist in exactly one place a caller can reach: read_approval's
+# proposed_change. The prompt asks for the full text for that reason, and
+# must_mention below is a word that is only there — a run that answered off the
+# listing cannot produce it.
+#
+# The verdicts are the PERSON'S, both of them, spelled in the prompt. That is
+# not politeness: decide_approval's own contract says to take an explicit
+# approve or reject rather than deciding what they would have wanted, so a
+# scenario that left the verdict to the assistant would be asking it to break
+# the tool it is being measured on.
+name: case8_whats_waiting
+criteria: [1, 2, 3]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Before I shut the laptop — is anything sitting in my queue waiting on me?
+
+  Whatever the overnight cleanup has queued up, I want to see the full text of
+  what it wants to change before anything happens. The one-liners in the list
+  are cut off and I am not approving half a sentence.
+
+  If it is the company description being rewritten, that one is fine, approve
+  it. Anything that hands an account to a different owner — reject it, we do
+  not move accounts without talking to the rep first.
+
+must_call:
+  - list_approvals
+  - read_approval
+  - decide_approval
+may_call:
+  # The listing names its target by id, so an assistant that wants to tell the
+  # person WHICH company has to look it up. Optional: the two seeded proposals
+  # are told apart by the field each one changes, which the summary already
+  # carries, so a run that never resolves a name has still answered correctly.
+  - read_record
+  - search_records
+  - query_workspace
+
+# THE TOOL NAME IS NOT THE ASSERTION. `must_call: decide_approval` passes on one
+# call that approved the wrong thing. Requiring BOTH verdicts means the run made
+# two decisions that disagree with each other, which is only what a run that
+# read the two instructions does — a run that approved everything, or rejected
+# everything, or decided one item and reported on the other, fails here.
+#
+# The staged_action_id is deliberately not pinned: it is a fresh uuid on every
+# seeded stack and there is nothing a scenario file could compare it to. Which
+# verdict landed on which item is pinned in the prose instead, below.
+must_call_with:
+  - decide_approval.decision=approve
+  - decide_approval.decision=reject
+
+must_mention:
+  # CRITERION 1, and the sharpest assertion in this case. "Werkzeugbau" sits
+  # past the 48-byte cut in the staged description, so it appears in the inbox
+  # listing nowhere, on the organization record nowhere (the record still holds
+  # the human's own line), and in read_approval's proposed_change only. An
+  # answer carrying it opened the item; an answer without it did not.
+  - "Werkzeugbau"
+
+  # CRITERION 2: the verdict landed on the item it was given for.
+  #
+  # must_call_with above proves both verdicts were CAST; nothing in a transcript
+  # of arguments says which item each one hit, because both ids are uuids. This
+  # is where that is caught, and the swap is a real failure mode: approving the
+  # ownership move is the write the person explicitly refused.
+  #
+  # Each half is a verdict word reached to its own subject through a run that
+  # contains NO OTHER verdict word. That guard is what makes it work on one
+  # sentence: "I approved the owner change and rejected the description rewrite"
+  # would otherwise green the approve half by sheer proximity, since
+  # `description` is only thirty characters from `approved`. With `reject`
+  # excluded from the run between them, the swapped answer reaches nothing.
+  #
+  # Judged on the FINDING, not the wording: approved/approving/genehmigt and
+  # blurb/description/Beschreibung/Werkzeugbau are the same answer, and both
+  # orders are accepted because a bulleted answer writes the subject first
+  # ("Company description rewrite — approved") and a prose one writes the verb
+  # first. Under-recognition is the direction this must not fail in, so the
+  # window is generous (60 characters) and the alternations are wide.
+  #
+  # THE SWAP IS CAUGHT BY THE FIRST HALF, and only by it. "I approved the owner
+  # change and rejected the description rewrite" still greens the second, because
+  # its reverse-order alternative reads "owner change and rejected" and the
+  # approval word sits before the subject rather than between the two. Stated
+  # rather than papered over: the pair fails such an answer, one member of it
+  # does not, and a future edit that relaxes the first half loses the swap.
+  - "(?:approv\w*|genehmigt|greenlit|signed off)(?:(?!reject|declin|refus)[^\n]){0,60}(?:description|blurb|Beschreibung|Werkzeugbau)|(?:description|blurb|Beschreibung|Werkzeugbau)(?:(?!reject|declin|refus)[^\n]){0,60}(?:approv\w*|genehmigt|greenlit|signed off)"
+  - "(?:reject\w*|declin\w*|refus\w*|turned down|abgelehnt)(?:(?!approv|genehmigt)[^\n]){0,60}(?:owner|ownership|Inhaber|account.{0,20}(?:move|hand|transfer))|(?:owner|ownership|Inhaber)(?:(?!approv|genehmigt)[^\n]){0,60}(?:reject\w*|declin\w*|refus\w*|turned down|abgelehnt)"
+
+must_not_mention:
+  # CRITERION 3. The failure this case exists for is not a wrong verdict — that
+  # is caught above — but a refusal to give one: the person said approve this,
+  # reject that, and the assistant hands the queue back and tells them to open
+  # the app. A passport decides on its human's own authority and the decision
+  # happened when they gave the instruction, so an answer that routes them to a
+  # browser tab has reported a limitation the product does not have.
+  #
+  # NOT a bare "cannot approve": an honest sentence explaining that it did not
+  # approve the ownership move BECAUSE they rejected it contains those words.
+  # Every alternative needs the abdication itself — the queue handed to a person
+  # to answer elsewhere, or a claim that this surface answers nothing.
+  #
+  # WHICH IS WHY THE OBJECT IS NAMED. The prompt asks the assistant to read the
+  # full text before anything happens, so "I can't approve anything I haven't
+  # read in full" is the instruction being followed out loud, and an alternative
+  # ending in a bare "anything" reds the run for obeying. The refusal only
+  # counts as one when it says where the decision has to go instead: on your
+  # behalf, from here, through this surface.
+  #
+  # The abdication also gets written with no person in it at all — "approvals
+  # have to be decided in the web app" — and the first alternative, which needs
+  # "you" or "a human" as its subject, walked straight past that one.
+  - "(?:you|the user|somebody|a human)[^\n]{0,30}(?:will need to|need to|have to|has to|must)[^\n]{0,30}(?:approve|reject|decide)[^\n]{0,40}(?:in the (?:web )?app|in Margince|in the browser|yourself)|I (?:cannot|can not|can't|am unable to|am not able to) (?:approve|reject|decide)[^\n]{0,30}(?:on your behalf|for you|from here|through (?:this|the) (?:tool|surface|interface|chat)|in this (?:chat|session|conversation)|myself)|(?:approvals?|these|they|it|the queue) (?:have to|has to|must|need to|needs to) be (?:approved|rejected|decided|actioned)[^\n]{0,30}(?:in the (?:web )?app|in Margince|in the browser)"
+
+runs: 3
+pass_at: 2

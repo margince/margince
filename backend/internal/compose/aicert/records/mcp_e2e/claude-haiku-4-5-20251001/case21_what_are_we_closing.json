@@ -1,0 +1,18 @@
+{
+  "scenario": "case21_what_are_we_closing",
+  "criteria": [
+    1,
+    4
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "usage": {
+    "input_tokens": 62,
+    "output_tokens": 4176,
+    "cache_creation_input_tokens": 16757,
+    "cache_read_input_tokens": 292909,
+    "runs_measured": 3,
+    "cost_usd": 0.0837
+  }
+}

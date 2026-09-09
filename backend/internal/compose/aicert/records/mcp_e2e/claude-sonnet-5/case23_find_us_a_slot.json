@@ -1,0 +1,18 @@
+{
+  "scenario": "case23_find_us_a_slot",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "usage": {
+    "input_tokens": 18,
+    "output_tokens": 4093,
+    "cache_creation_input_tokens": 23279,
+    "cache_read_input_tokens": 498512,
+    "runs_measured": 3,
+    "cost_usd": 0.2338
+  }
+}

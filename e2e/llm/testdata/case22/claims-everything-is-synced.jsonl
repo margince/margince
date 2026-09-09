@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__data_coverage"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__data_coverage", "input": {}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "No mail or calendar is connected yet.\n\nEvery source has been synced today."}

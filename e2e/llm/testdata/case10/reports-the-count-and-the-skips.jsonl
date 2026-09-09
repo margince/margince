@@ -1,0 +1,5 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__preview_import", "mcp__margince__read_import_report", "mcp__margince__commit_import"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__preview_import", "input": {"object": "organization"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_import_report", "input": {}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__commit_import", "input": {}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "The preview read 4 organizations out of the file and I committed the run.\n\nNothing was skipped — skipped: 0, no failures, no unusable rows."}
