@@ -44,7 +44,7 @@ func TestArchivableTypesAnswersForTheRoutedMode(t *testing.T) {
 	}
 
 	want := []datasource.EntityType{
-		datasource.EntityDeal, datasource.EntityCompany, datasource.EntityPerson,
+		datasource.EntityCompany, datasource.EntityDeal, datasource.EntityPerson,
 	}
 	if !slices.Equal(types, want) {
 		t.Errorf("the dispatcher archives %v, want the overlay set %v — answering the native six "+

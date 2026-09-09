@@ -151,7 +151,7 @@ func (s *Store) sendSnapshots(ctx context.Context, tx pgx.Tx, baseCurrency strin
 			return nil, nil, fmt.Errorf("snapshot buyer company: %w", err)
 		}
 		if err == nil {
-			buyer = map[string]any{"company_id": offer.BuyerCompanyId, "display_name": displayName}
+			buyer = map[string]any{filterCompanyID: offer.BuyerCompanyId, "display_name": displayName}
 			if legalName != nil {
 				buyer["legal_name"] = *legalName
 			}

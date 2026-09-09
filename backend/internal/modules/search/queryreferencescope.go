@@ -126,13 +126,13 @@ const memberPathSeparator = "."
 // added later fails rather than quietly resolving to nothing — which is the
 // only way this list can be wrong and the only way that would not be noticed.
 var roleNamedReferences = map[string]string{
-	"partner_company_id":         entityCompany,
-	"parent_company_id":          entityCompany,
-	"counterparty_company_id":    entityCompany,
-	"promoted_person_id":     entityPerson,
-	"qualified_deal_id":      entityDeal,
-	"converted_from_lead_id": entityLead,
-	"source_activity_id":     entityActivity,
+	"partner_company_id":      entityCompany,
+	"parent_company_id":       entityCompany,
+	"counterparty_company_id": entityCompany,
+	"promoted_person_id":      entityPerson,
+	"qualified_deal_id":       entityDeal,
+	"converted_from_lead_id":  entityLead,
+	"source_activity_id":      entityActivity,
 }
 
 // selfReferences name another row of the SAME record type, so their target is

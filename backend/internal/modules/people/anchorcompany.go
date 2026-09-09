@@ -197,7 +197,7 @@ type SaveCompanyInput struct {
 	Fields      map[string]*string
 }
 
-// GetCompany reads the anchor company. It returns ErrNotFound when the
+// GetAnchorCompany reads the anchor company. It returns ErrNotFound when the
 // installation has not described itself yet — that 404 IS the onboarding
 // signal, and it is deliberately indistinguishable from "no such record" to a
 // caller who may not see it.
@@ -425,7 +425,7 @@ func createAnchorCompany(ctx context.Context, tx pgx.Tx, displayName, by string)
 	companyID, err := createCompany(ctx, tx, match, CompanySpec{
 		DisplayName: displayName,
 		IsAnchor:    true,
-		Source:      "manual",
+		Source:      activitySourceManual,
 		CapturedBy:  by,
 	})
 	if constraint, dup := storekit.UniqueViolation(err); dup && constraint == "uq_company_anchor" {
@@ -434,7 +434,7 @@ func createAnchorCompany(ctx context.Context, tx pgx.Tx, displayName, by string)
 	if err != nil {
 		return ids.CompanyID{}, err
 	}
-	if err := match.recordIfReview(ctx, tx, companyID, displayName, "manual", by); err != nil {
+	if err := match.recordIfReview(ctx, tx, companyID, displayName, activitySourceManual, by); err != nil {
 		return ids.CompanyID{}, err
 	}
 	return companyID, nil

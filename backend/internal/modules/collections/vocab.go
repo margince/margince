@@ -240,8 +240,8 @@ var segmentEngines = map[string]storekit.Query{
 			tagFilterField:   tagLinkFor("person"),
 		},
 	},
-	"company": {
-		Table: "company",
+	typeCompany: {
+		Table: typeCompany,
 		// The installation's own company is never a segment member: a segment
 		// answers "which of our accounts match this", and the company running
 		// the CRM is not one of them (ADR-0082/A127). In the base clause rather
@@ -263,7 +263,7 @@ var segmentEngines = map[string]storekit.Query{
 			"classification":    {Expr: "t.classification", Type: storekit.FieldPicklist},
 			"relationship_type": relationshipTypeField,
 			domainFilterField:   domainField,
-			tagFilterField:      tagLinkFor("company"),
+			tagFilterField:      tagLinkFor(typeCompany),
 			// What the account demonstrably RUNS, read from public records
 			// rather than from anything they told us (vocabaccountleaves.go).
 			// This is what makes "every account with a webshop" and "every
@@ -346,7 +346,7 @@ var segmentEngines = map[string]storekit.Query{
 // carry a field of the same name where only one of them has retired it.
 var retiredCoreFields = map[string]map[string]bool{
 	// ADR-0079/A124 replaced it with lifecycle.
-	"company": {"classification": true},
+	typeCompany: {"classification": true},
 }
 
 // SegmentEngine returns the ONE predicate engine for a filterable resource: the

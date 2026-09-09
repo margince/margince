@@ -54,7 +54,7 @@ var offerRenderDeskPerms = principal.Permissions{
 		// buyer_company_id as null for it. The cases below are about which block
 		// the render resolves (live while draft, frozen once sent), not about
 		// who may see one, so the seat holds the grant that question assumes.
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeAll,

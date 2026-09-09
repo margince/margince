@@ -108,7 +108,7 @@ type exportMember struct {
 var exportMembers = []exportMember{
 	{table: "person", scope: scopeShareable, objectGate: "person"},
 	{table: "person_social", scope: scopePersonChild, objectGate: "person"},
-	{table: "company", scope: scopeShareable, objectGate: "company"},
+	{table: string(recordTypeCompany), scope: scopeShareable, objectGate: string(recordTypeCompany)},
 	{table: "deal", scope: scopeShareable, objectGate: "deal"},
 	{table: "lead", scope: scopeShareable, objectGate: "lead"},
 	{table: "activity", scope: scopeActivity, objectGate: "activity"},

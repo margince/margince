@@ -32,6 +32,8 @@ func (e *DuplicateDomainError) Error() string {
 }
 func (e *DuplicateDomainError) Is(target error) bool { return target == apperrors.ErrConflict }
 
+// CompanyDomainInput is one domain a caller claims for a company, and
+// whether it is the primary one.
 type CompanyDomainInput struct {
 	Domain    string
 	IsPrimary bool

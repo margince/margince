@@ -32,7 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// SetCompanyLogo points the anchor company at bytes a person uploaded.
+// SetAnchorCompanyLogo points the anchor company at bytes a person uploaded.
 // `named` is the name of the file they chose: it is what the field's history
 // shows for the change, and it is written as the row's origin, where a resolve
 // puts the page it read — the column says where a mark came from, whichever

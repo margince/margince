@@ -45,6 +45,9 @@ const sourceAtRisk = "deal_at_risk"
 // the ranking fix closed, one layer down.
 const sourceBriefItem = "brief_item"
 
+// subjectCompany is the subject type a company-shaped row names.
+const subjectCompany = "company"
+
 // subjectDeal is the subject type a deal-shaped row names.
 const subjectDeal = "deal"
 

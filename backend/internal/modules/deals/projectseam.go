@@ -80,5 +80,5 @@ func (e *DealProjectCompanyMismatchError) Error() string {
 
 // FieldFault refuses linking a deal to a project under a different company.
 func (e *DealProjectCompanyMismatchError) FieldFault() (field, code, message string) {
-	return "project_id", "project_company_mismatch", e.Error()
+	return filterProjectID, "project_company_mismatch", e.Error()
 }

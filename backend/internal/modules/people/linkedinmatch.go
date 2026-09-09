@@ -321,7 +321,7 @@ func suggestGhostsByNameAndEmployer(ctx context.Context, tx pgx.Tx, owner, onlyP
 	return int(tag.RowsAffected()), nil
 }
 
-// matchGhostCompanies attaches ghosts to an ACCOUNT by employer name even
+// CompanyLinkedInReach attaches ghosts to an ACCOUNT by employer name even
 // when the person never matches.
 //
 // This is where most of the value is, and it needs no identity at all. "Three

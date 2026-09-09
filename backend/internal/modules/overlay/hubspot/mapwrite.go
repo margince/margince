@@ -164,7 +164,7 @@ var deferredCompanyWrites = map[string]string{
 	"lifecycle": "HubSpot's lifecyclestage names a different axis from our lifecycle and the two " +
 		"vocabularies do not correspond term for term; issue #1028 holds the read half and the transform " +
 		"both directions would need",
-	"parent_company_id":      "a company-to-company association, not a property — it writes through the association API rather than through this projection",
+	"parent_company_id":  "a company-to-company association, not a property — it writes through the association API rather than through this projection",
 	"relationship_types": "a Margince concept with no HubSpot counterpart: the incumbent models no such classification",
 }
 
@@ -202,7 +202,7 @@ var deferredLeadWrites = map[string]string{
 	"score":                 "a Margince-computed figure, and writing it would publish our model's output as though the incumbent had produced it",
 	"score_override_reason": "the human sentence explaining a score override — same reason as score",
 	"project_id":            "a Margince association with no Leads-object counterpart",
-	"candidate_company_key":     "a matching key internal to our own resolution, never an incumbent property",
+	"candidate_company_key": "a matching key internal to our own resolution, never an incumbent property",
 }
 
 // stringProp reads a canonical STRING field's writable value. present reports

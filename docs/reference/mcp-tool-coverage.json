@@ -5,7 +5,7 @@
     "driven": 36,
     "never_driven": 39,
     "permitted_but_never_required": 19,
-    "tokens_served_but_never_driven": 12378,
+    "tokens_served_but_never_driven": 12341,
     "use_case_cases": 21,
     "acceptance_criteria_named": 48,
     "tools_added_by_shipped_units": 7,
@@ -1151,7 +1151,7 @@
   "tools": [
     {
       "name": "send_account_email",
-      "tokens": 742,
+      "tokens": 741,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -1173,7 +1173,7 @@
     },
     {
       "name": "update_record",
-      "tokens": 572,
+      "tokens": 571,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [
@@ -1196,8 +1196,20 @@
       "measured_by_model": {}
     },
     {
+      "name": "progress_deal",
+      "tokens": 505,
+      "agents": [],
+      "required_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
+      "measured_by_model": {}
+    },
+    {
       "name": "list_records",
-      "tokens": 508,
+      "tokens": 503,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1220,20 +1232,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "progress_deal",
-      "tokens": 505,
-      "agents": [],
-      "required_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
-      "measured_by_model": {}
-    },
-    {
       "name": "resolve_entities",
-      "tokens": 498,
+      "tokens": 491,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [
@@ -1292,7 +1292,7 @@
     },
     {
       "name": "book_meeting",
-      "tokens": 393,
+      "tokens": 391,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -1302,7 +1302,7 @@
     },
     {
       "name": "enrich",
-      "tokens": 393,
+      "tokens": 385,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -1338,7 +1338,7 @@
     },
     {
       "name": "prep_for_meeting",
-      "tokens": 326,
+      "tokens": 324,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [
@@ -1373,7 +1373,7 @@
     },
     {
       "name": "catch_me_up_on",
-      "tokens": 280,
+      "tokens": 278,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1396,7 +1396,7 @@
     },
     {
       "name": "draft_email",
-      "tokens": 279,
+      "tokens": 278,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -1494,7 +1494,7 @@
     },
     {
       "name": "create_task",
-      "tokens": 222,
+      "tokens": 220,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [
@@ -1508,7 +1508,7 @@
     },
     {
       "name": "read_record",
-      "tokens": 222,
+      "tokens": 220,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1582,7 +1582,7 @@
     },
     {
       "name": "relink_thread",
-      "tokens": 197,
+      "tokens": 196,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -1622,7 +1622,7 @@
     },
     {
       "name": "intro_path_to",
-      "tokens": 190,
+      "tokens": 187,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],
@@ -1687,7 +1687,7 @@
     },
     {
       "name": "run_report",
-      "tokens": 939,
+      "tokens": 938,
       "agents": [],
       "required_by_cases": [
         "case7_ask_for_a_number"
@@ -1724,7 +1724,7 @@
     },
     {
       "name": "log_activity",
-      "tokens": 677,
+      "tokens": 676,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -1760,7 +1760,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 677,
+      "tokens": 672,
       "agents": [],
       "required_by_cases": [
         "case10_finish_the_import",
@@ -1891,7 +1891,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 473,
+      "tokens": 470,
       "agents": [],
       "required_by_cases": [
         "case1_log_it",
@@ -1964,7 +1964,7 @@
     },
     {
       "name": "search_records",
-      "tokens": 385,
+      "tokens": 382,
       "agents": [],
       "required_by_cases": [
         "case5_before_the_meeting"
@@ -2053,7 +2053,7 @@
     },
     {
       "name": "search_context",
-      "tokens": 345,
+      "tokens": 343,
       "agents": [],
       "required_by_cases": [
         "case6_ask_the_company"
@@ -2096,7 +2096,7 @@
     },
     {
       "name": "merge_records",
-      "tokens": 292,
+      "tokens": 289,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company"
@@ -2164,7 +2164,7 @@
     },
     {
       "name": "relink_activity",
-      "tokens": 277,
+      "tokens": 276,
       "agents": [],
       "required_by_cases": [
         "case9_filed_in_the_wrong_place"
@@ -2330,7 +2330,7 @@
     },
     {
       "name": "archive_record",
-      "tokens": 261,
+      "tokens": 260,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company"
@@ -2398,7 +2398,7 @@
     },
     {
       "name": "apply_tag",
-      "tokens": 227,
+      "tokens": 226,
       "agents": [],
       "required_by_cases": [
         "case30_a_word_for_it"
@@ -2426,39 +2426,6 @@
           "passed": 3,
           "reliability": 1,
           "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "relink_activities",
-      "tokens": 206,
-      "agents": [],
-      "required_by_cases": [
-        "case9_filed_in_the_wrong_place"
-      ],
-      "permitted_in_cases": [],
-      "driven": true,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case9_filed_in_the_wrong_place"
-          ]
         }
       }
     },
@@ -2493,6 +2460,39 @@
           "reliability": 0,
           "cases_below_their_bar": [
             "case32_two_words_for_one_thing"
+          ]
+        }
+      }
+    },
+    {
+      "name": "relink_activities",
+      "tokens": 204,
+      "agents": [],
+      "required_by_cases": [
+        "case9_filed_in_the_wrong_place"
+      ],
+      "permitted_in_cases": [],
+      "driven": true,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case9_filed_in_the_wrong_place"
           ]
         }
       }
@@ -2631,7 +2631,7 @@
     },
     {
       "name": "remove_tag",
-      "tokens": 167,
+      "tokens": 166,
       "agents": [],
       "required_by_cases": [
         "case31_wrong_word_on_the_record"
@@ -2732,7 +2732,7 @@
     },
     {
       "name": "get_record_tags",
-      "tokens": 142,
+      "tokens": 141,
       "agents": [],
       "required_by_cases": [
         "case31_wrong_word_on_the_record"

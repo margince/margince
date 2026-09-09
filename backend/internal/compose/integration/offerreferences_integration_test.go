@@ -41,7 +41,7 @@ var offerDeskCompanyPerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"deal":                  {Create: true, Read: true, Update: true},
 		"offer":                 {Create: true, Read: true, Update: true},
-		"company":          {Read: true},
+		"company":               {Read: true},
 		"installation_settings": {Read: true},
 	},
 }

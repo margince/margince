@@ -53,7 +53,7 @@ func (s *Store) Warmth(ctx context.Context, signalID ids.SignalID, now time.Time
 		if sig, err = readSignal(ctx, tx, signalID, storekit.LiveOnly); err != nil {
 			return err
 		}
-		if sig.ResolutionState != "resolved" || sig.ResolvedCompanyId == nil {
+		if sig.ResolutionState != resolutionResolved || sig.ResolvedCompanyId == nil {
 			return &NoWarmthError{Reason: fmt.Sprintf(
 				"signal is %s: only a signal resolved to a company has a warm/cold branch", sig.ResolutionState)}
 		}

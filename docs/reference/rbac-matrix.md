@@ -74,6 +74,7 @@ changes none.
 | `capture_trace` | -R-- | -R-- | -R-- | ---- | ---- | -R-- |
 | `channel_connection` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `commission` | CRUD | CRUD | CRUD | -R-- | -R-- | CRUD |
+| `company` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `computed_field` | -R-- | -R-- | -R-- | -R-- | -R-- | -R-- |
 | `consent_config` | CRUD | -R-- | ---- | ---- | ---- | CRUD |
 | `contract` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
@@ -99,7 +100,6 @@ changes none.
 | `oauth_application` | CRUD | -R-- | ---- | ---- | ---- | CRUD |
 | `offer` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `offer_template` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
-| `company` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `overlay_connection` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `partner` | CRUD | CRUD | CRUD | -R-- | -R-- | CRUD |
 | `person` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |

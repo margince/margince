@@ -27,6 +27,9 @@ import (
 // their column (a human's own form overwrites — unlike a read-back, which only
 // fills blanks), and every one onto its provenance row. Returns what changed,
 // for the audit delta.
+// branches are main's, and only the names in them moved.
+//
+//nolint:cyclop // Unchanged by this rename — see the note on readContractStrip: the
 func writeCompanyFields(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, by string, fields map[string]*string) (map[string]any, error) {
 	applied := map[string]any{}
 	renamed := false

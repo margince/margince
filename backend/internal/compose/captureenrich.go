@@ -41,6 +41,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
+// companyNameField is the profile field a captured employer name lands in.
+const companyNameField = "company_name"
+
 const (
 	// signatureLineCount is the §2.9 input pin: the trailing non-quoted
 	// lines of the person's most recent inbound mail.
@@ -57,7 +60,7 @@ const (
 // a signature and a business card state the same things about a person, and two
 // vocabularies would let which one arrived decide what could be recorded.
 var enrichFieldNames = map[string]bool{
-	"title": true, "phone": true, "role": true, "linkedin": true, "company_name": true,
+	fieldTitle: true, "phone": true, "role": true, "linkedin": true, companyNameField: true,
 	"address": true, "website": true,
 }
 
@@ -383,7 +386,7 @@ func signatureEnrichSchema() json.RawMessage {
 		map[string]schema.Node{
 			laneFields: schema.Array(schema.Object(
 				map[string]schema.Node{
-					extractionFieldKey: schema.Enum("title", "phone", "role", "linkedin", "company_name", "address", "website"),
+					extractionFieldKey: schema.Enum(fieldTitle, "phone", "role", "linkedin", companyNameField, "address", "website"),
 					"value":            schema.String(),
 					"evidence_snippet": schema.String(),
 					"confidence":       schema.Number(),

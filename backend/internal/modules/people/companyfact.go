@@ -81,6 +81,8 @@ const (
 	FactOperatedService = "operated_service"
 )
 
+// CompanyFactFields names the fields each fact category admits. A field
+// outside its category is refused rather than filed under the wrong head.
 var CompanyFactFields = map[string][]string{
 	factCategoryCompany:  {FactFoundedYear, FactEmployeeRange, FactPhone, FactContactEmail, FactLocation},
 	factCategoryOffering: {FactService, FactProduct, FactCapability},

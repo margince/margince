@@ -165,7 +165,16 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 // composing the arm here rather than returning an empty clause is what keeps
 // that true if the owner-private set ever changes — the alternative is a
 // silent widening at a distance, in a file nobody would think to re-read.
+// legacyTypes, when set, widens one kind's arm to the extra values a column
+// may still hold. Only the audit trail needs it, and only for the company —
+// see auditlegacytype.go for why those rows cannot be rewritten.
 func polymorphicVisible(ctx context.Context, typeCol, idCol string, arg func(any) int) (string, error) {
+	return polymorphicVisibleWith(ctx, typeCol, idCol, arg, nil)
+}
+
+func polymorphicVisibleWith(ctx context.Context, typeCol, idCol string, arg func(any) int,
+	legacyTypes map[string][]string,
+) (string, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return "", errors.New("compose: no actor bound to export context")
@@ -186,9 +195,17 @@ func polymorphicVisible(ctx context.Context, typeCol, idCol string, arg func(any
 		{"lead", "lead"},
 	} {
 		predicate := auth.VisiblePredicate(actor, e.table, arg)
+		match := fmt.Sprintf("%s = '%s'", typeCol, e.kind)
+		if extra := legacyTypes[e.kind]; len(extra) > 0 {
+			quoted := make([]string, 0, len(extra))
+			for _, v := range extra {
+				quoted = append(quoted, "'"+v+"'")
+			}
+			match = fmt.Sprintf("%s IN (%s)", typeCol, strings.Join(quoted, ", "))
+		}
 		parts = append(parts, fmt.Sprintf(
-			`(%s = '%s' AND EXISTS (SELECT 1 FROM %s ep WHERE ep.id = %s AND %s))`,
-			typeCol, e.kind, e.table, idCol, predicate("ep"),
+			`(%s AND EXISTS (SELECT 1 FROM %s ep WHERE ep.id = %s AND %s))`,
+			match, e.table, idCol, predicate("ep"),
 		))
 	}
 	parts = append(parts, activityArm)
@@ -223,7 +240,8 @@ func auditExportScope(ctx context.Context, alias string, arg func(any) int) (str
 	if !ok {
 		return "", errors.New("compose: no actor bound to export context")
 	}
-	entity, err := polymorphicVisible(ctx, alias+".entity_type", alias+".entity_id", arg)
+	entity, err := polymorphicVisibleWith(ctx, alias+".entity_type", alias+".entity_id", arg,
+		map[string][]string{string(recordTypeCompany): auditCompanyTypes()})
 	if err != nil {
 		return "", err
 	}

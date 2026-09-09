@@ -446,12 +446,12 @@ func subjectOf(entityType string, id ids.UUID) *crmcontracts.AttentionSubject {
 // pointed a reader at the wrong record would be worse than one that pointed
 // nowhere.
 var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
-	"company":  "company",
-	"person":   "person",
-	"deal":     "deal",
-	"lead":     "lead",
-	"activity": "activity",
-	"project":  "project",
+	subjectCompany: subjectCompany,
+	"person":       "person",
+	"deal":         "deal",
+	"lead":         "lead",
+	"activity":     "activity",
+	"project":      "project",
 }
 
 // openableSubject reports whether a subject names a record with a page of its
@@ -463,7 +463,7 @@ func openableSubject(subject *crmcontracts.AttentionSubject) bool {
 		return false
 	}
 	switch subject.Type {
-	case "company", "person", "deal", "lead", "project":
+	case subjectCompany, subjectPerson, subjectDeal, "lead", "project":
 		return true
 	}
 	return false

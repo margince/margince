@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 75,
     "system_frame_tokens": 353,
-    "tokens": 22631,
+    "tokens": 22572,
     "median_tool_tokens": 266,
-    "mean_tool_tokens": 301
+    "mean_tool_tokens": 300
   },
   "agents": [
     {
@@ -21,9 +21,9 @@
         "read_brief",
         "read_record"
       ],
-      "tokens": 1634,
+      "tokens": 1626,
       "percent_of_ceiling": 4,
-      "headroom_tokens": 21576,
+      "headroom_tokens": 21584,
       "dangling_cross_references": [
         "annotate_brief → log_activity",
         "catch_me_up_on → prep_for_meeting",
@@ -46,9 +46,9 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "tokens": 2509,
+      "tokens": 2499,
       "percent_of_ceiling": 7,
-      "headroom_tokens": 20701,
+      "headroom_tokens": 20711,
       "dangling_cross_references": [
         "at_risk_relationships → account_coverage",
         "at_risk_relationships → intro_path_to",
@@ -72,43 +72,43 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 939
+      "tokens": 938
     },
     {
       "name": "send_account_email",
-      "tokens": 742
+      "tokens": 741
     },
     {
       "name": "log_activity",
-      "tokens": 677
-    },
-    {
-      "name": "preview_import",
-      "tokens": 677
+      "tokens": 676
     },
     {
       "name": "send_email",
       "tokens": 675
     },
     {
+      "name": "preview_import",
+      "tokens": 672
+    },
+    {
       "name": "update_record",
-      "tokens": 572
+      "tokens": 571
     },
     {
       "name": "send_message",
       "tokens": 518
     },
     {
-      "name": "list_records",
-      "tokens": 508
-    },
-    {
       "name": "progress_deal",
       "tokens": 505
     },
     {
+      "name": "list_records",
+      "tokens": 503
+    },
+    {
       "name": "resolve_entities",
-      "tokens": 498
+      "tokens": 491
     },
     {
       "name": "query_workspace",
@@ -120,7 +120,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 473
+      "tokens": 470
     },
     {
       "name": "advance_deal",
@@ -136,19 +136,19 @@
     },
     {
       "name": "book_meeting",
-      "tokens": 393
-    },
-    {
-      "name": "enrich",
-      "tokens": 393
+      "tokens": 391
     },
     {
       "name": "compose_analytics_report",
       "tokens": 390
     },
     {
-      "name": "search_records",
+      "name": "enrich",
       "tokens": 385
+    },
+    {
+      "name": "search_records",
+      "tokens": 382
     },
     {
       "name": "forecast_movement",
@@ -164,11 +164,11 @@
     },
     {
       "name": "search_context",
-      "tokens": 345
+      "tokens": 343
     },
     {
       "name": "prep_for_meeting",
-      "tokens": 326
+      "tokens": 324
     },
     {
       "name": "demote_lead",
@@ -176,27 +176,27 @@
     },
     {
       "name": "merge_records",
-      "tokens": 292
+      "tokens": 289
     },
     {
       "name": "describe_analytics_vocabulary",
       "tokens": 286
     },
     {
-      "name": "catch_me_up_on",
-      "tokens": 280
-    },
-    {
       "name": "advance_project_phase",
       "tokens": 279
     },
     {
+      "name": "catch_me_up_on",
+      "tokens": 278
+    },
+    {
       "name": "draft_email",
-      "tokens": 279
+      "tokens": 278
     },
     {
       "name": "relink_activity",
-      "tokens": 277
+      "tokens": 276
     },
     {
       "name": "draft_follow_ups_for",
@@ -228,7 +228,7 @@
     },
     {
       "name": "archive_record",
-      "tokens": 261
+      "tokens": 260
     },
     {
       "name": "forecast_input_checks",
@@ -252,15 +252,15 @@
     },
     {
       "name": "apply_tag",
-      "tokens": 227
+      "tokens": 226
     },
     {
       "name": "create_task",
-      "tokens": 222
+      "tokens": 220
     },
     {
       "name": "read_record",
-      "tokens": 222
+      "tokens": 220
     },
     {
       "name": "whats_slipping_this_week",
@@ -275,12 +275,12 @@
       "tokens": 206
     },
     {
-      "name": "relink_activities",
-      "tokens": 206
-    },
-    {
       "name": "update_tag",
       "tokens": 205
+    },
+    {
+      "name": "relink_activities",
+      "tokens": 204
     },
     {
       "name": "merge_tags",
@@ -288,7 +288,7 @@
     },
     {
       "name": "relink_thread",
-      "tokens": 197
+      "tokens": 196
     },
     {
       "name": "who_knows",
@@ -304,7 +304,7 @@
     },
     {
       "name": "intro_path_to",
-      "tokens": 190
+      "tokens": 187
     },
     {
       "name": "create_tag",
@@ -316,7 +316,7 @@
     },
     {
       "name": "remove_tag",
-      "tokens": 167
+      "tokens": 166
     },
     {
       "name": "check_location_support",
@@ -336,7 +336,7 @@
     },
     {
       "name": "get_record_tags",
-      "tokens": 142
+      "tokens": 141
     },
     {
       "name": "list_colleagues",

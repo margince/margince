@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 75 |
 | Resources | 12 |
-| Tool catalog | 210.4 KB |
+| Tool catalog | 210.1 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 55013 |
+| Approx. wire tokens | 54943 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 98.3 KB | 46% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.8 KB | 24% | Yes, every step |
-| Input schemas | 44.5 KB | 21% | Yes, every step |
+| Input schemas | 44.3 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
-| **Description + input schema** | **96.3 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **96.0 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -110,7 +110,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 4.2 KB |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 4.1 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.4 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.4 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
@@ -125,7 +125,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.3 KB |
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.0 KB |
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
-| [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.6 KB |
+| [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.5 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.2 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 5.0 KB |
@@ -4863,6 +4863,11 @@ Learn about a company by reading its public website, and propose what was found 
       "format": "uuid",
       "type": "string"
     },
+    "company_id": {
+      "description": "The company to enrich",
+      "format": "uuid",
+      "type": "string"
+    },
     "depth": {
       "default": "page",
       "description": "page reads one page and returns a staged proposal; site queues a multi-page crawl and returns its read id; technical queues a lookup of what the company publicly runs (DNS, certificate logs, one homepage fingerprint) and returns its queue state",
@@ -4876,11 +4881,6 @@ Learn about a company by reading its public website, and propose what was found 
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
-      "type": "string"
-    },
-    "company_id": {
-      "description": "The company to enrich",
-      "format": "uuid",
       "type": "string"
     },
     "url": {
@@ -6913,7 +6913,7 @@ Enumerate the people, companies, deals, leads or projects that meet exact condit
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — forecast_category (commit|best_case|pipeline|omitted), company_id, owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — key, company_id, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+      "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
       "type": "object"
     },
     "limit": {
@@ -8628,6 +8628,10 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
         "as_of": {
           "type": "string"
         },
+        "company_id": {
+          "format": "uuid",
+          "type": "string"
+        },
         "deals": {
           "items": {
             "properties": {
@@ -8760,10 +8764,6 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
             "type": "object"
           },
           "type": "array"
-        },
-        "company_id": {
-          "format": "uuid",
-          "type": "string"
         },
         "owner_id": {
           "format": "uuid",
@@ -10926,6 +10926,22 @@ Read one project's whole page: company, phase history with time per phase, deals
           ],
           "type": "object"
         },
+        "company": {
+          "properties": {
+            "company_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "company_id",
+            "name"
+          ],
+          "type": "object"
+        },
         "contracts": {
           "properties": {
             "items": {
@@ -11085,22 +11101,6 @@ Read one project's whole page: company, phase history with time per phase, deals
           ],
           "type": "object"
         },
-        "company": {
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "company_id": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          "required": [
-            "name",
-            "company_id"
-          ],
-          "type": "object"
-        },
         "phase_history": {
           "properties": {
             "phase_durations": {
@@ -11171,6 +11171,10 @@ Read one project's whole page: company, phase history with time per phase, deals
             "closed_reason": {
               "type": "string"
             },
+            "company_id": {
+              "format": "uuid",
+              "type": "string"
+            },
             "description": {
               "type": "string"
             },
@@ -11181,10 +11185,6 @@ Read one project's whole page: company, phase history with time per phase, deals
               "type": "string"
             },
             "name": {
-              "type": "string"
-            },
-            "company_id": {
-              "format": "uuid",
               "type": "string"
             },
             "owner_id": {

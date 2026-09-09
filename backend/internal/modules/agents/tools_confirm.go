@@ -110,7 +110,7 @@ func (t archiveRecord) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "archivePerson/archiveCompany/archiveDeal/archiveProject/archiveRelationship/archiveActivity",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["person","company","deal","project","relationship","activity"]},
+			"record_type":{"type":"string","enum":["person",importObjectCompany,"deal","project","relationship","activity"]},
 			"id":{"type":"string","format":"uuid"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
@@ -283,7 +283,7 @@ type mergeArgs struct {
 
 // mergeableTypes: only person and company have a merge verb (deals and
 // leads leave through their own lifecycle).
-var mergeableTypes = map[string]bool{"person": true, "company": true}
+var mergeableTypes = map[string]bool{"person": true, importObjectCompany: true}
 
 // mergeableTypeNames renders the vocabulary above for a refusal, sorted so the
 // message is byte-stable across processes rather than following map order.
@@ -307,7 +307,7 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "mergePerson/mergeCompany",
 		InputSchema: schema(`{"type":"object","required":["record_type","source_id","target_id"],"properties":{
-			"record_type":{"type":"string","enum":["person","company"]},
+			"record_type":{"type":"string","enum":["person",importObjectCompany]},
 			"source_id":{"type":"string","format":"uuid","description":"The record merged away (archived, redirected to the survivor)"},
 			"target_id":{"type":"string","format":"uuid","description":"The surviving record everything relinks to"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
