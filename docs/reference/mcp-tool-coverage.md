@@ -249,13 +249,13 @@ Every run of every case requiring this tool passed, for the model named.
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `apply_tag` | 1.00 | 3 | `case30_a_word_for_it` |
 | `relink_activities` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
+| `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `create_tag` | 1.00 | 3 | `case30_a_word_for_it` |
 | `list_channel_providers` | 1.00 | 3 | `case42_can_i_answer_on_whatsapp` |
 | `remove_tag` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
 | `read_project_360` | 1.00 | 3 | `case41_close_the_project` |
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
 | `get_record_tags` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
-| `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `read_import_report` | 1.00 | 3 | `case10_finish_the_import` |
@@ -306,13 +306,13 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `qualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
 | `update_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 | `merge_tags` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
+| `list_colleagues` | 0.00 | 0/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `disqualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
 | `list_channel_providers` | 0.67 | 2/3 | — | `case42_can_i_answer_on_whatsapp` |
 | `remove_tag` | 0.00 | 0/3 | `case31_wrong_word_on_the_record` | `case31_wrong_word_on_the_record` |
 | `read_project_360` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `read_approval` | 0.33 | 1/3 | `case8_whats_waiting` | `case8_whats_waiting` |
 | `get_record_tags` | 0.00 | 0/3 | `case31_wrong_word_on_the_record` | `case31_wrong_word_on_the_record` |
-| `list_colleagues` | 0.00 | 0/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `commit_import` | 0.33 | 1/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `data_coverage` | 0.67 | 2/3 | — | `case22_can_i_trust_the_numbers` |
 | `list_tags` | 0.50 | 3/6 | `case32_two_words_for_one_thing` | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |
@@ -357,10 +357,10 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `qualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
 | `update_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 | `merge_tags` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
+| `list_colleagues` | 0.33 | 1/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `disqualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
 | `read_project_360` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `read_approval` | 0.67 | 2/3 | — | `case8_whats_waiting` |
-| `list_colleagues` | 0.33 | 1/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `list_tags` | 0.50 | 3/6 | `case32_two_words_for_one_thing` | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |
 | `get_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 

@@ -1929,7 +1929,7 @@
     },
     {
       "name": "compose_analytics_report",
-      "tokens": 390,
+      "tokens": 423,
       "agents": [],
       "required_by_cases": [
         "case20_put_it_in_the_board_pack"
@@ -2533,6 +2533,45 @@
       }
     },
     {
+      "name": "list_colleagues",
+      "tokens": 195,
+      "agents": [],
+      "required_by_cases": [
+        "case33_two_cards_for_one_company"
+      ],
+      "permitted_in_cases": [
+        "case30_a_word_for_it",
+        "case31_wrong_word_on_the_record",
+        "case32_two_words_for_one_thing"
+      ],
+      "driven": true,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case33_two_cards_for_one_company"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case33_two_cards_for_one_company"
+          ]
+        }
+      }
+    },
+    {
       "name": "disqualify_lead",
       "tokens": 190,
       "agents": [],
@@ -2763,45 +2802,6 @@
           "passed": 3,
           "reliability": 1,
           "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "list_colleagues",
-      "tokens": 141,
-      "agents": [],
-      "required_by_cases": [
-        "case33_two_cards_for_one_company"
-      ],
-      "permitted_in_cases": [
-        "case30_a_word_for_it",
-        "case31_wrong_word_on_the_record",
-        "case32_two_words_for_one_thing"
-      ],
-      "driven": true,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
         }
       }
     },

@@ -38,6 +38,39 @@ type ListColleaguesResult struct {
 	// nothing would read a capped list as the whole roster and report that a
 	// colleague does not work here.
 	Truncated bool `json:"truncated,omitempty"`
+	// AllColleagues is the set the narrowing was matched against, present ONLY
+	// when a narrowing `q` matched none of it — the same obligation a refusal
+	// naming a closed vocabulary carries.
+	//
+	// An empty `colleagues` answers two different questions identically: this
+	// workspace employs nobody, and nobody here is spelled the way you asked.
+	// A caller cannot tell them apart, and the one it picks is the wrong one:
+	// asked to hand an account to a colleague, an assistant read `[]` and
+	// reported that the person does not work here — with the seat sitting in
+	// the roster under a spelling it had not tried.
+	//
+	// So the miss hands over the set it was matched against. `colleagues` stays
+	// empty, because that is the honest answer to what was asked.
+	//
+	// NOT named `roster`, which is what this whole result already is.
+	//
+	// A POINTER, so a successful fallback over a workspace that employs nobody
+	// serializes as `[]` and an unreadable one is absent. A plain slice made
+	// those two the same bytes — which is the defect this field exists to
+	// remove, one level up: "nobody works here" and "I could not find out" are
+	// different answers, and a caller cannot act on the difference it cannot
+	// see. The warnings say which; the data now says it too.
+	AllColleagues *[]Colleague `json:"all_colleagues,omitempty"`
+	// AllColleaguesTruncated bounds AllColleagues, and is its OWN flag rather
+	// than a second meaning for Truncated above.
+	//
+	// The two answer different questions — "your query has more matches than
+	// fit" and "the fallback list is capped" — and one flag beside an empty
+	// `colleagues` reads as the first. It would read as it in the case that
+	// matters most: a large workspace, the name absent from the first page, and
+	// a caller MORE certain the person does not work here than a bare empty
+	// list left it.
+	AllColleaguesTruncated bool `json:"all_colleagues_truncated,omitempty"`
 }
 
 // ListTagsResult is the workspace's tag vocabulary. Empty is a real answer —

@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 75 |
 | Resources | 12 |
-| Tool catalog | 210.5 KB |
+| Tool catalog | 211.2 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 55029 |
+| Approx. wire tokens | 55204 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 98.4 KB | 46% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 51.8 KB | 24% | Yes, every step |
+| Output schemas | 98.7 KB | 46% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 52.2 KB | 24% | Yes, every step |
 | Input schemas | 44.5 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
-| **Description + input schema** | **96.3 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **96.6 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -76,7 +76,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.2 KB |
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 1.7 KB |
-| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.6 KB |
+| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.8 KB |
 | [`create_record`](#create_record) | Create a record |  |  | 3.5 KB |
 | [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
@@ -100,7 +100,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 2.9 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
-| [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 1.9 KB |
+| [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.4 KB |
 | [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.1 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 3.3 KB |
@@ -2450,7 +2450,7 @@ Write a checked import into the workspace, once a person approves. Only from awa
 
 **Compose an analytics report**
 
-Render a report whose every figure comes from a saved analytics run. The document carries the STRUCTURE and the WORDS; each number names a run id and a cell inside it, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Save a run first — run an analytics query with save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
+WRITE a document somebody reads — a board-pack section, a summary for a meeting, a written-up answer with figures in it — whose every number comes from a saved analytics run instead of being typed. The document carries the STRUCTURE and the WORDS; each figure names a run id and a cell inside it, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Save a run first — run an analytics query with save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -6411,7 +6411,7 @@ Find out which messaging transports exist in THIS installation, and what each is
 
 **List colleagues**
 
-List the people who work HERE — colleagues holding a seat, not the contacts stored as person records. Reads only, and lists seats that can actually receive work — archived, suspended and locked-out ones are absent. `truncated` means there are more. search_records/person finds a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an is_agent seat. (Governance: runs immediately; requires passport scope "read".)
+List the people who work HERE — colleagues holding a seat, not the contacts stored as person records. Reads only, and lists seats that can actually receive work — archived, suspended and locked-out ones are absent. `truncated` means there are more. A `q` matching nobody answers with `all_colleagues` and a warning; that list is ABSENT if it could not be read and partial if `all_colleagues_truncated`, so read the warning before concluding a person has no seat. search_records/person finds a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an is_agent seat. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -6437,6 +6437,40 @@ List the people who work HERE — colleagues holding a seat, not the contacts st
   "properties": {
     "data": {
       "properties": {
+        "all_colleagues": {
+          "items": {
+            "properties": {
+              "display_name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "is_agent": {
+                "type": "boolean"
+              },
+              "seat_type": {
+                "type": "string"
+              },
+              "user_id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "display_name",
+              "email",
+              "is_agent",
+              "seat_type",
+              "user_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "all_colleagues_truncated": {
+          "type": "boolean"
+        },
         "colleagues": {
           "items": {
             "properties": {

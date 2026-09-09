@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 75,
     "system_frame_tokens": 353,
-    "tokens": 22639,
+    "tokens": 22726,
     "median_tool_tokens": 266,
-    "mean_tool_tokens": 301
+    "mean_tool_tokens": 302
   },
   "agents": [
     {
@@ -127,6 +127,10 @@
       "tokens": 447
     },
     {
+      "name": "compose_analytics_report",
+      "tokens": 423
+    },
+    {
       "name": "annotate_brief",
       "tokens": 418
     },
@@ -141,10 +145,6 @@
     {
       "name": "enrich",
       "tokens": 393
-    },
-    {
-      "name": "compose_analytics_report",
-      "tokens": 390
     },
     {
       "name": "search_records",
@@ -291,6 +291,10 @@
       "tokens": 197
     },
     {
+      "name": "list_colleagues",
+      "tokens": 195
+    },
+    {
       "name": "who_knows",
       "tokens": 194
     },
@@ -337,10 +341,6 @@
     {
       "name": "get_record_tags",
       "tokens": 142
-    },
-    {
-      "name": "list_colleagues",
-      "tokens": 141
     },
     {
       "name": "whoami",

@@ -330,7 +330,13 @@ const maxRemedyBudget = 4 * httperr.MaxFaultText
 // The summary is the sentence the human's own card carries, so the person and
 // the agent are waiting on one described thing.
 //
-// IT ALSO SAYS WHAT IS NOT BLOCKED, because an agent reads a refusal as a stop.
+// IT ALSO SAYS WHAT IS NOT BLOCKED, AND TO REPORT WHAT ALREADY HAPPENED,
+// because an agent reads a refusal as a stop and then writes its answer about
+// the stop. Two measured runs merged a duplicate and archived a dead company
+// correctly and then said only "one approval waiting: reassign the account" —
+// two completed writes the reader was never told about. Doing the rest and
+// reporting the rest are separate instructions, and only the first was given.
+//
 // Asked to merge two words and then give the survivor a meaning, a measured run
 // staged the merge, relayed the summary correctly, and finished with "Confirm
 // and I'll proceed, then add the description afterward" — deferring an
@@ -352,5 +358,6 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 	return "Confirm-first (🟡): a person answers this before it runs. " + what +
 		" Tell them that, in those words; they release it in the CRM, and this exact call then " +
 		"repeats with \"approval_id\": \"" + staged.ApprovalID.String() + "\". " +
-		"Blocks THIS call only — do the rest of what you were asked that does not depend on it."
+		"Blocks THIS call only — do the rest of what you were asked that does not depend on it, " +
+		"and report what you DID alongside what is waiting."
 }

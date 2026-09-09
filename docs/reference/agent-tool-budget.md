@@ -32,7 +32,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1634 | 4% | 21576 | 6 | 6 |
 | `overnight_at_risk_sweep` | 7 | 2509 | 7% | 20701 | 15 | 10 |
-| _whole served catalog, for scale_ | 75 | 22639 | 69% | — | — | — |
+| _whole served catalog, for scale_ | 75 | 22726 | 69% | — | — | — |
 
 ### `morning_brief`
 
@@ -126,7 +126,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 266 tokens, mean 301, across 75 served tools.
+Median 266 tokens, mean 302, across 75 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -149,11 +149,11 @@ a term in an addition.
 | `run_analytics_query` | 476 | — |
 | `create_record` | 473 | 1 scenario |
 | `advance_deal` | 447 | 1 scenario |
+| `compose_analytics_report` | 423 | — |
 | `annotate_brief` | 418 | — |
 | `review_commitments` | 401 | 1 scenario |
 | `book_meeting` | 393 | — |
 | `enrich` | 393 | — |
-| `compose_analytics_report` | 390 | — |
 | `search_records` | 385 | 9 scenarios |
 | `forecast_readings` | 357 | — |
 | `forecast_movement` | 351 | — |
@@ -190,6 +190,7 @@ a term in an addition.
 | `update_tag` | 205 | — |
 | `merge_tags` | 198 | — |
 | `relink_thread` | 197 | — |
+| `list_colleagues` | 195 | — |
 | `who_knows` | 194 | — |
 | `list_pipelines` | 191 | — |
 | `disqualify_lead` | 190 | — |
@@ -202,7 +203,6 @@ a term in an addition.
 | `read_approval` | 153 | — |
 | `list_input_checks` | 146 | — |
 | `get_record_tags` | 142 | — |
-| `list_colleagues` | 141 | — |
 | `whoami` | 128 | — |
 | `commit_import` | 118 | — |
 | `data_coverage` | 109 | — |
