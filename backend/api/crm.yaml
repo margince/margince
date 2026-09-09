@@ -33676,6 +33676,18 @@ components:
         source_system: { type: [string, 'null'] }
         source_id: { type: [string, 'null'] }
         promoted_person_id: { type: [string, 'null'], format: uuid, description: Set on promotion (convenience mirror). }
+        merged_into_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            Set when this lead was merged away into another, and null otherwise. It is what
+            separates a merged-away lead from a disqualified one — both are archived and neither
+            carries a `promoted_person_id`, so without this a reader can only see that the lead
+            ended, not which of two very different things happened to it. Disqualified says a
+            human judged the lead not worth pursuing; merged says it was the same lead as
+            another one. The id names the survivor to read instead. `person` and `organization`
+            already carry the same field for the same reason.
         promoted_at: { type: [string, 'null'], format: date-time }
         routed_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'When routing assigned an owner. Starts the §18 first-response clock; null means the clock starts at created_at.' }
         first_response_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'First genuine response to this lead (formulas §18): an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.' }

@@ -25647,6 +25647,9 @@ type Lead struct {
 	// LinkedinUrl Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key.
 	LinkedinUrl *string `json:"linkedin_url,omitempty"`
 
+	// MergedIntoId Set when this lead was merged away into another, and null otherwise. It is what separates a merged-away lead from a disqualified one — both are archived and neither carries a `promoted_person_id`, so without this a reader can only see that the lead ended, not which of two very different things happened to it. Disqualified says a human judged the lead not worth pursuing; merged says it was the same lead as another one. The id names the survivor to read instead. `person` and `organization` already carry the same field for the same reason.
+	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
+
 	// NextTaskDueAt Due time of the earliest open task linked to this lead; undated tasks follow dated ones.
 	NextTaskDueAt *time.Time `json:"next_task_due_at,omitempty"`
 
@@ -46644,6 +46647,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "linkedin_url")
 	}
 
+	if raw, found := object["merged_into_id"]; found {
+		err = json.Unmarshal(raw, &a.MergedIntoId)
+		if err != nil {
+			return fmt.Errorf("error reading 'merged_into_id': %w", err)
+		}
+		delete(object, "merged_into_id")
+	}
+
 	if raw, found := object["next_task_due_at"]; found {
 		err = json.Unmarshal(raw, &a.NextTaskDueAt)
 		if err != nil {
@@ -46968,6 +46979,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
+		}
+	}
+
+	if a.MergedIntoId != nil {
+		object["merged_into_id"], err = json.Marshal(a.MergedIntoId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'merged_into_id': %w", err)
 		}
 	}
 

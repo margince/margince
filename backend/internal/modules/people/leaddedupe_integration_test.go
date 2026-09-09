@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -242,5 +243,56 @@ func TestLeadMergeRetiresOtherPairsNamingTheLoser(t *testing.T) {
 		if row.LeftID == a.UUID || row.RightID == a.UUID {
 			t.Errorf("an open pair still names the merged-away lead %s (%s)", a, row.ID)
 		}
+	}
+}
+
+// A merged-away lead says so on the wire.
+//
+// THE FALSE STATEMENT THIS REMOVES. A merged-away lead and a disqualified one
+// are both archived and neither carries a promoted_person_id, so the page's
+// terminal badge — which keys on exactly that pair — said "Disqualified" for
+// both. Those are different facts about a real person: disqualified says a
+// human judged the lead not worth pursuing, merged says it was the same lead
+// as another one, and a rep reading the wrong one draws the wrong conclusion
+// about their own pipeline.
+//
+// The id is the useful half beyond the badge: a reader who learns the lead was
+// merged wants the lead it was merged INTO, which is the next thing they ask.
+func TestAMergedAwayLeadNamesTheLeadItWasMergedInto(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	survivor := e.createLead(ctx, t, "Karin Vogt", "karin@vogt.test", "Vogt KG")
+	loser := e.createLead(ctx, t, "Karin Voigt", "", "Vogt KG")
+
+	if _, err := e.store.MergeLead(ctx, loser, survivor); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+
+	merged, err := e.store.GetLead(ctx, loser, storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("reading the merged-away lead: %v", err)
+	}
+	if merged.MergedIntoId == nil {
+		t.Fatal("the merged-away lead carries no merged_into_id — the column is set and the wire does " +
+			"not say so, so the page cannot tell this from a lead somebody disqualified")
+	}
+	if ids.UUID(*merged.MergedIntoId) != survivor.UUID {
+		t.Errorf("it names %s, want the survivor %s", *merged.MergedIntoId, survivor)
+	}
+	if merged.ArchivedAt == nil {
+		t.Error("the merged-away lead is not archived, so this case is not the one the badge is about")
+	}
+	if merged.PromotedPersonId != nil {
+		t.Error("the merged-away lead carries a promoted_person_id, so the badge would already have " +
+			"had a way to tell it apart and this test proves nothing")
+	}
+
+	// The survivor is untouched: it is not merged into anything.
+	kept, err := e.store.GetLead(ctx, survivor, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("reading the survivor: %v", err)
+	}
+	if kept.MergedIntoId != nil {
+		t.Errorf("the survivor names %s as its own merge target", *kept.MergedIntoId)
 	}
 }
