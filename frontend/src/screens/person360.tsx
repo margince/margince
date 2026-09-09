@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { liveRecordRead } from "../app/queryclient";
 import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
@@ -36,6 +37,10 @@ type Colleague = components["schemas"]["PersonNetworkColleague"];
  */
 export function usePerson360(id: string, enabled = true) {
   return useQuery({
+    // Live while the reader is on the page: a task filed against this contact
+    // by a colleague or by the agent is work they are looking straight at
+    // (FE-PARAM-5, app/queryclient.ts).
+    ...liveRecordRead,
     enabled,
     queryKey: ["person360", id],
     queryFn: async () => {

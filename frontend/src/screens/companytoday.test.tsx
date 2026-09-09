@@ -388,7 +388,56 @@ describe("the day's call, and which record it is read from", () => {
     expect(screen.getByText(/nobody has come back/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Not now" })).toBeTruthy();
   });
+
+  // The account card fires on owed promises alone, and the suggestions beside
+  // it fire on everything else. A quiet card over a row that asks for
+  // something is the panel disagreeing with itself, and the row is the half a
+  // reader can check.
+  it("drops the quiet card when the list still asks for something", () => {
+    show({
+      ...BASE,
+      moment: QUIET_MOMENT,
+      suggestions: [
+        {
+          kind: "no_reply",
+          fingerprint: "f-1",
+          reason: "You reached out 15 days ago and nobody has come back.",
+          evidence: [],
+        },
+      ],
+    });
+    expect(screen.getByText(/nobody has come back/)).toBeTruthy();
+    expect(screen.queryByText("Nothing is owed to this account")).toBeNull();
+    expect(screen.queryByText("Nothing here needs you today.")).toBeNull();
+  });
+
+  // Dropped only where it would contradict. On an account with nothing else in
+  // the list the quiet card IS the answer, and it keeps the reason and the
+  // verb the panel's bare sentence cannot carry.
+  it("keeps the quiet card when it is the whole answer", () => {
+    show({ ...BASE, moment: QUIET_MOMENT });
+    expect(screen.getByText("Nothing is owed to this account")).toBeTruthy();
+    expect(
+      screen.getByText("No promise to this account is open or coming due."),
+    ).toBeTruthy();
+  });
 });
+
+// The card the server sends for an account owing nothing.
+const QUIET_MOMENT: NonNullable<Organization360["moment"]> = {
+  claim_key: "moment:nothing_needed",
+  evidence_fingerprint: "quiet",
+  rule: "nothing_needed",
+  headline: "Nothing is owed to this account",
+  why_now: "No promise to this account is open or coming due.",
+  confidence: "observed_fact",
+  evidence: [],
+  recommended_action: {
+    kind: "log_activity",
+    label: "Log something",
+    state: "will_confirm",
+  },
+};
 
 // Every 360 collection is a page of 25 with `has_more` beside it. A reading
 // that counts off that page states a fact about the PAGE, and the reader has

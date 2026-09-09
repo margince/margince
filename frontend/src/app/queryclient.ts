@@ -2,7 +2,7 @@ import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { logUnexpectedError, ProblemError } from "../screens/common";
 import { ENTITY_NAME_KEY } from "../screens/entityref";
 
-// The data layer's parameters (architecture/frontend, FE-PARAM-1..4). The
+// The data layer's parameters (architecture/frontend, FE-PARAM-1..5). The
 // library's defaults are not this product's: they hold nothing back from the
 // network, retry a refusal the server has already made final, and drop every
 // failure on the floor. Each value below is chosen, and the ones the reader
@@ -13,6 +13,55 @@ import { ENTITY_NAME_KEY } from "../screens/entityref";
 // its own (the /me probe holds five minutes and refetches on focus, because a
 // grant change must not sit behind a stale snapshot).
 const STALE_TIME_MS = 30_000;
+
+// FE-PARAM-5. How often the record a reader has OPEN re-reads itself.
+//
+// Work reaches a record from places the tab cannot see: an agent files a task,
+// a colleague answers a mail, a promise falls due while the page is on screen.
+// Read once on arrival, the page keeps answering from that instant — and the
+// failure is silent, because a stale "what needs you" looks exactly like a
+// current one.
+//
+// Twenty seconds is the cadence, not a stream: the contract serves no push, so
+// this is the honest approximation — new work reaches the reader within one
+// cadence rather than the moment it lands. It is short enough that a rep who
+// files a task from their phone sees it on the open page before they have
+// finished reading the paragraph, and long enough that an idle tab is one
+// composite read every twenty seconds and nothing else.
+const LIVE_RECORD_MS = 20_000;
+
+/**
+ * The options that make a read LIVE: it repeats while somebody is looking at
+ * it, and catches up the instant they come back to the tab.
+ *
+ * Spelled ONCE, because the cadence is a property of the product rather than
+ * of one screen. Four record pages read live, and four copies of the number
+ * would be four cadences the first time anybody tuned one.
+ *
+ * Both flags beside the interval are load-bearing.
+ * `refetchIntervalInBackground` is the library's default restated, because it
+ * is the half that keeps a tab forgotten on a second monitor from re-reading
+ * all night — the interval runs only while the window has focus. The focus
+ * refetch is the deliberate exception to FE-PARAM-3: returning to a record
+ * after an hour away is exactly the moment the cached answer is wrong, and it
+ * is the moment the reader is most likely to act on it.
+ *
+ * It belongs on a record's COMPOSITE read — the one that carries its open
+ * work — and not on a read whose answer a model writes: the deal briefing is
+ * rewritten server-side whenever the deal has moved, so putting this on it
+ * would spend the workspace's AI budget on an idle tab.
+ *
+ * It sits on the READ and not on the record screen, so every surface showing
+ * that record is current: the composer anchored on a contact and the
+ * worklist's record pane are looking at the same thing the page is. They also
+ * share one interval — a cache key has one query however many surfaces mount
+ * it — and it stops when the last of them unmounts.
+ */
+export const liveRecordRead = {
+  refetchInterval: LIVE_RECORD_MS,
+  refetchIntervalInBackground: false,
+  refetchOnWindowFocus: true,
+} as const;
 
 // FE-PARAM-2. Two retries, and only for a failure the server reported as its
 // own fault.

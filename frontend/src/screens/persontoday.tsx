@@ -139,6 +139,31 @@ export function isLate(rule: PersonMoment["rule"]): boolean {
   return rule === "gone_quiet" || rule === "overdue_promise";
 }
 
+/**
+ * Whether the moment is a ROW in the day's work, given what else is in the
+ * list beside it.
+ *
+ * Every moment is, except the quiet one — and the quiet one only when there is
+ * nothing else. "Nothing needs you today" drawn above a row that asks for
+ * something is the panel disagreeing with itself inside one glance, and it is
+ * the panel the reader stops believing: the row below it is checkable and the
+ * verdict above it is not. The account page reached that state routinely,
+ * because its card fires on owed promises alone while the suggestions under it
+ * fire on unanswered mail, a stalled deal, an account with nothing scheduled.
+ *
+ * Nothing is lost by dropping it. The row is dropped only where the list has
+ * something in it, and what is in the list IS the answer to what needs the
+ * reader — the card was not carrying an answer there, it was carrying a wrong
+ * one. Where the list is empty the card stands, reason and verb included, and
+ * a panel handed no rows at all still has its own one sentence.
+ */
+export function momentIsARow(
+  moment: PersonMoment,
+  othersInTheList: boolean,
+): boolean {
+  return moment.rule !== "nothing_needed" || !othersInTheList;
+}
+
 export function PersonToday({
   moment,
   name,
@@ -247,10 +272,17 @@ export function PersonToday({
         />
       </CallCard>
       <TodayPanel onOpenTasks={onOpenTasks} notice={withheld}>
-        {/* Rung 10 is a moment like any other: "nothing needs you today" is
-            the answer a reader came for, and the verb the ladder still names
-            on it — log what happened — rides the row like every other. */}
-        <MomentMove key="moment" moment={moment} onAction={onAction} />
+        {/* Rung 10 is a moment like any other while it is the only thing in
+            the list: "nothing needs you today" is the answer a reader came
+            for, and the verb the ladder names on it — log what happened —
+            rides the row like every other. Over an open task it is not an
+            answer but a contradiction, and the task is the half a reader can
+            check. The ladder reaches rung 10 with work still listed whenever
+            the reader dismissed the card that spoke for it: a dismissal
+            silences a card, never the record. */}
+        {momentIsARow(moment, taskRows.length > 0) && (
+          <MomentMove key="moment" moment={moment} onAction={onAction} />
+        )}
         {taskRows}
       </TodayPanel>
     </>

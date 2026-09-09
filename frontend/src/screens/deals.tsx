@@ -25,6 +25,7 @@ import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
 import { useCanWriteRecord, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
+import { liveRecordRead } from "../app/queryclient";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, routeHash } from "../app/router";
 import { useInstallationSettings } from "../app/uploadlimit";
@@ -3972,6 +3973,36 @@ function dealBand({
   );
 }
 
+/**
+ * useDeal is the deal page's read of the deal record itself.
+ *
+ * Live while the reader is on the page (FE-PARAM-5, app/queryclient.ts): a
+ * stage somebody else advanced, or an amount they corrected, reaches the page
+ * the reader is looking at rather than waiting for a reload. The deal RECORD
+ * only — the briefing beside it is model-written and rewritten server-side
+ * whenever the deal has moved, so putting the cadence on that would spend the
+ * workspace's AI budget on an open tab.
+ *
+ * A hook rather than a query inline in the screen, so the record kinds that
+ * read live all read the same way and a suite can mount this one the way it
+ * mounts the other three.
+ */
+export function useDeal(id: string) {
+  return useQuery({
+    ...liveRecordRead,
+    queryKey: ["deal", id],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/deals/{id}", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
 export function DealScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const details = usePageAside();
@@ -3984,18 +4015,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const [tab, setTab] = useState<DealTab>("overview");
   const [pending, setPending] = useState<PendingAdvance | null>(null);
   const advance = useAdvanceDeal();
-  const dealQuery = useQuery({
-    queryKey: ["deal", id],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const dealQuery = useDeal(id);
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
   // Every write affordance on this page answers ONE question, asked once: an
   // archived deal takes no changes, and one this caller cannot write takes

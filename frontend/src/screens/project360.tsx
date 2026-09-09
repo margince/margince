@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCan, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
+import { liveRecordRead } from "../app/queryclient";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { OverflowMenu } from "../design-system/atoms";
@@ -76,6 +77,8 @@ import "./projects.css";
 
 export function useProject360(id: string) {
   return useQuery({
+    // Live while the reader is on the page (FE-PARAM-5, app/queryclient.ts).
+    ...liveRecordRead,
     // Under the ["project", id] prefix the edit and archive actions
     // invalidate, so a saved name reaches the page without a second key.
     queryKey: ["project", id, "360"],

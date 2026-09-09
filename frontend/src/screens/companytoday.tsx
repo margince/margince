@@ -32,6 +32,7 @@ import { EntityRef } from "./entityref";
 import {
   MOMENT_RULE_LABEL,
   momentGrounding,
+  momentIsARow,
   standingTone,
 } from "./persontoday";
 import {
@@ -209,10 +210,39 @@ export function useTodayReading({
     // to quote two different readings of one dimension.
     because: verdict.restsOn.find((reading) => reading.key === key)?.quote,
   }));
+  // The read in flight, above the rows it will add to: the rules' rows stand
+  // while Margince reads, and the pending row is what says more is coming
+  // rather than that this is everything.
+  const scanRows: ReactNode[] = scanIsLive(scan)
+    ? [
+        <PanelRow key="scan" className="co-move co-move-reading">
+          <AiPending
+            label={t(
+              scan?.state === "running"
+                ? "today.scan.reading"
+                : "today.scan.queued",
+            )}
+            lines={2}
+          />
+        </PanelRow>,
+      ]
+    : [];
+  const manual = manualMoveRows({
+    view,
+    t,
+    onPrepareMeeting,
+    onDraftTo,
+    hasDraftReply: suggestions.hasDraftReply,
+  });
+  // How much the list holds without the moment, which is what decides whether
+  // the quiet card is still an answer (`momentIsARow`). COUNTED rather than
+  // measured off the rows below: `suggestions.rows` is one node carrying
+  // several, and the section reports its own count for exactly this reason.
+  const besidesTheMoment = scanRows.length + suggestions.count + manual.length;
   // WHAT WE OWE leads the list. A promise past its date outranks a reading of
   // the account: one is a thing to do today and the other is context for it.
   const rows: ReactNode[] = [
-    ...(view.moment
+    ...(view.moment && momentIsARow(view.moment, besidesTheMoment > 0)
       ? [
           <MomentRow
             key="moment"
@@ -221,31 +251,9 @@ export function useTodayReading({
           />,
         ]
       : []),
-    // The read in flight, above the rows it will add to: the rules' rows
-    // stand while Margince reads, and the pending row is what says more is
-    // coming rather than that this is everything.
-    ...(scanIsLive(scan)
-      ? [
-          <PanelRow key="scan" className="co-move co-move-reading">
-            <AiPending
-              label={t(
-                scan?.state === "running"
-                  ? "today.scan.reading"
-                  : "today.scan.queued",
-              )}
-              lines={2}
-            />
-          </PanelRow>,
-        ]
-      : []),
+    ...scanRows,
     suggestions.rows,
-    ...manualMoveRows({
-      view,
-      t,
-      onPrepareMeeting,
-      onDraftTo,
-      hasDraftReply: suggestions.hasDraftReply,
-    }),
+    ...manual,
   ];
   return {
     state: "ready",
