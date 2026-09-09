@@ -311,7 +311,8 @@ func (s *Store) OrganizationLogoKey(ctx context.Context, id ids.OrganizationID, 
 // removes the transparent square canvas written by older logo uploads, so a
 // browser that cached that letterboxed response must fetch the wide one. The
 // slot needs no version of its own: each slot has its own path, and a key is
-// minted per upload (orglogowrite.go), so two marks can never share a digest.
+// minted per upload (organizationLogoKey / siteReadLogoKey,
+// compose/sitelogo.go), so two marks can never share a digest.
 func logoRevisionDigest(objectKey string) string {
 	digest := sha256.Sum256([]byte("logo-display-v2\x00" + objectKey))
 	return fmt.Sprintf("%x", digest[:6])

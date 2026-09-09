@@ -19,6 +19,7 @@ import (
 	"image/png"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -173,11 +174,10 @@ func TestOrganizationLogoRemovesLegacyTransparentCanvasAtTheDisplayBoundary(t *t
 	}
 }
 
-// margince#4913: streamLogo used to decode, per-pixel-scan and re-encode the
-// stored PNG on every request, including a repeat of one already answered.
-// The ETag lets a client that already holds today's picture be told so
-// without the endpoint touching blob storage at all. countingBlobstore is
-// shared with knowledgeorphan_integration_test.go.
+// A client that already holds today's picture is told so — 304, no body —
+// without the endpoint decoding, scanning or re-encoding the stored PNG, or
+// even opening it in blob storage. countingBlobstore is shared with
+// knowledgeorphan_integration_test.go.
 func TestOrganizationLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlreadyHasIt(t *testing.T) {
 	e := Setup(t)
 	blob := newCountingBlobstore()
@@ -199,6 +199,19 @@ func TestOrganizationLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlread
 		t.Fatalf("blob.Get calls after the first request = %d, want 1", got)
 	}
 
+	// The ETag and LogoURL's own cache-busting query token are meant to be
+	// the SAME digest of the same key (logoRevisionDigest) — pin that they
+	// still are, so the two spellings cannot silently drift apart.
+	key, err := e.People.OrganizationLogoKey(ctx, orgID, people.LogoWide)
+	if err != nil {
+		t.Fatalf("read the stored logo key: %v", err)
+	}
+	wantURL := *people.LogoURL(orgID.UUID, &key, people.LogoWide)
+	wantDigest := wantURL[strings.LastIndex(wantURL, "=")+1:]
+	if gotDigest := strings.Trim(etag, `"`); gotDigest != wantDigest {
+		t.Fatalf("ETag digest = %q, want %q (LogoURL's own query token)", gotDigest, wantDigest)
+	}
+
 	matching := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx)
 	req.Header.Set("If-None-Match", etag)
@@ -211,6 +224,20 @@ func TestOrganizationLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlread
 	}
 	if got := blob.getCount(); got != 1 {
 		t.Fatalf("blob.Get calls after the matching request = %d, want still 1 (the cache hit must not touch blob storage)", got)
+	}
+
+	// RFC 9110 §13.1.2: If-None-Match comparison is WEAK, so a proxy that
+	// prefixes this server's own strong tag with "W/" must still count as a
+	// match rather than falling through to the full decode/re-encode path.
+	weak := httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx)
+	req.Header.Set("If-None-Match", "W/"+etag)
+	handlers.GetOrganizationLogo(weak, req, crmcontracts.Id(orgID.UUID))
+	if weak.Code != http.StatusNotModified {
+		t.Fatalf("GET with a weak (W/-prefixed) matching If-None-Match = %d, want 304: %s", weak.Code, weak.Body.String())
+	}
+	if got := blob.getCount(); got != 1 {
+		t.Fatalf("blob.Get calls after the weak-match request = %d, want still 1", got)
 	}
 
 	stale := httptest.NewRecorder()
