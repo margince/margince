@@ -260,7 +260,7 @@ func TestAFilteredQueueCarriesOnlyThatKindOfWork(t *testing.T) {
 		AtRisk:   lane(item("r1", "deal_at_risk")),
 	}
 
-	kept := keepCategory(classifyDay(day, rankInstant, dayMoney{}), "deals_at_risk")
+	kept := keepFiltered(classifyDay(day, rankInstant, dayMoney{}), "deals_at_risk")
 
 	if len(kept) != 1 || kept[0].item.Id != "r1" {
 		t.Fatalf("filtering for deals kept %d rows, wanted just the deal", len(kept))

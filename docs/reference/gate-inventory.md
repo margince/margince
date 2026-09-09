@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (102)
+## Parity (103)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -34,6 +34,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `basevaluespelling_test.go` | H2 | One deal's base-currency value is spelled twice, in two packages that cannot import each other, and this is what stops the two from drifting. |
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the SAME variable whether to publish a record, and both answer only to the same value. |
 | `bookinginvite_test.go` | H2 | What booking a meeting CLAIMS and what it DOES, held against each other. |
+| `briefdeckexclusion_test.go` | H3 | A Brief count and the door beneath it must exclude the SAME rows. |
 | `captureledgerstatuses_test.go` | H2 | The disposition ledger's status vocabulary has ONE definition, and it is the column's own constraint. |
 | `coachingroles_test.go` | H2 | The seats that may coach are seats that exist. |
 | `coderabbitpathrules_test.go` | H3 | What .coderabbit.yaml tells the reviewer about backend Go, held against what is true. |

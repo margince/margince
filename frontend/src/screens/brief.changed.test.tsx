@@ -148,13 +148,19 @@ describe("what changed since the brief", () => {
 
   // The only way out of the strip. Without it a reader is told three things
   // moved and given nowhere to go and see them.
-  it("offers the way to the rows it named", () => {
+  //
+  // It carries the SAME narrowing this strip counted. A bare `#/worklist` named
+  // three rows and opened a queue of forty, so the count and its door shared
+  // nothing at all — which is the whole reason the server grew this filter.
+  it("opens the rows it named, and not the whole queue", () => {
     draw([
       item({ id: "a", title: "Aster replied", changed_since_brief: true }),
     ]);
 
     const link = screen.getByText(en["brief.changed.open"]);
-    expect(link.getAttribute("href")).toBe("#/worklist");
+    expect(link.getAttribute("href")).toBe(
+      "#/worklist?filter=changed_since_brief",
+    );
   });
 
   // A payload with no queue at all draws nothing rather than throwing: a page

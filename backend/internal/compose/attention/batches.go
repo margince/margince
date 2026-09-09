@@ -333,6 +333,18 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 			occurred = member.occurredAt
 		}
 	}
+	// Whether the night had seen this group, from the members it stands for.
+	//
+	// NOT from `occurred` above, which is the OLDEST member's moment: a group
+	// whose third failure arrived this morning would be judged by its first and
+	// reported as old news. A group is new when any member is, because that is
+	// what a reader means by a group appearing in the overnight notice.
+	//
+	// Carried explicitly because the fold MINTS a row: the members were stamped
+	// before the fold ran, and a synthetic row inherits none of their fields
+	// unless it is told to. Left out, an incident group reached the changed
+	// strip with an absent flag and was silently dropped from it.
+	row.ChangedSinceBrief = groupChangedSinceBrief(members)
 	return ranked{
 		item:       row,
 		foldedFrom: from,
@@ -347,6 +359,35 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		// picking one member's owner and reporting it as the group's.
 		ownerRef: ownerOfTheGroup(members),
 	}
+}
+
+// groupChangedSinceBrief says whether the night had seen a folded group.
+//
+// TRUE IF ANY MEMBER IS NEW. A group stands for its members, and one arriving
+// after the run makes the group something the reader has not read — judging it
+// by the oldest member would report a fresh failure as old news.
+//
+// Absent when NO member carries the flag, which keeps the three states the wire
+// distinguishes: a run that saw everything answers false, and a morning with no
+// run at all answers nothing. A group of unflagged members has no answer to
+// give, and false would claim a night that never happened had seen them.
+func groupChangedSinceBrief(members []ranked) *bool {
+	answer := false
+	answered := false
+	for _, member := range members {
+		if member.item.ChangedSinceBrief == nil {
+			continue
+		}
+		answered = true
+		if *member.item.ChangedSinceBrief {
+			answer = true
+			break
+		}
+	}
+	if !answered {
+		return nil
+	}
+	return &answer
 }
 
 // ownerOfTheGroup is the one answer a folded row may give.

@@ -65,7 +65,7 @@ func TestAFilterDoesNotEmptyTheOtherReadings(t *testing.T) {
 
 	// What a page filtered to decisions would carry, against the snapshot the
 	// readings are actually taken over.
-	narrowed := keepCategory(considered, categoryDecisions)
+	narrowed := keepFiltered(considered, crmcontracts.WorklistFilter(categoryDecisions))
 	overNarrowed := readingsOf(narrowed, nil, nil)
 	overConsidered := readingsOf(considered, nil, nil)
 

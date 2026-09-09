@@ -10,6 +10,8 @@
 // them are one thing: a lane the strip offers and the address cannot spell, or
 // the reverse, is a link somebody pastes that opens the wrong day.
 
+import { routeHash } from "../app/router";
+import { hashWithParams } from "../app/urlstate";
 import { SegmentedControl } from "../design-system/atoms";
 import { FilterPills } from "../design-system/filterpills";
 import { formatNumber } from "../format/format";
@@ -24,7 +26,12 @@ import type {
 import "./worklist.css";
 
 // The cuts through the queue. `all` first because it is the default view.
-const FILTERS: readonly WorklistFilter[] = [
+//
+// `as const` rather than a widened annotation, and it is load-bearing: each pill
+// reads `worklist.filter.<value>`, so the literal type is what makes a pill
+// without a label a compile error. Annotated as the whole filter vocabulary it
+// would silently admit the link-only values below, which have no pill copy.
+const FILTERS = [
   "all",
   "customer_waiting",
   "leads",
@@ -33,7 +40,27 @@ const FILTERS: readonly WorklistFilter[] = [
   "tasks",
   "decisions",
   "system",
-];
+] as const satisfies readonly WorklistFilter[];
+
+// The narrowings that are reachable by ADDRESS but are not pills.
+//
+// Both are the destination of a count on another screen — Brief's feed footer
+// and its overnight notice — and both exist so that count and its link read one
+// filter. Neither is a lane a reader picks: `except_decisions` is a complement
+// that only means something on a screen already drawing its own decisions, and
+// `changed_since_brief` describes a moment rather than a kind of work. Offered
+// as pills they would be two cuts nobody asked for, so the row stays the seven
+// kinds plus `all` and these arrive by link.
+const LINKED_ONLY = [
+  "except_decisions",
+  "changed_since_brief",
+] as const satisfies readonly WorklistFilter[];
+
+/** A narrowing that only a link can ask for. */
+type LinkedOnlyFilter = (typeof LINKED_ONLY)[number];
+
+/** Every filter this build can be addressed with — the pills and the links. */
+const ADDRESSABLE: readonly WorklistFilter[] = [...FILTERS, ...LINKED_ONLY];
 
 /** The dial's name in the address. One spelling, read and written. */
 export const WORKLIST_FILTER_PARAM = "filter";
@@ -44,12 +71,51 @@ export const WORKLIST_FILTER_PARAM = "filter";
  * An unknown value reads as `all` rather than as an error: the vocabulary grows
  * on the server, and a pasted link naming a lane this build has not learnt
  * should show the day rather than an empty screen or a crash.
+ *
+ * Read against ADDRESSABLE, not the pill row. A link-only narrowing checked
+ * against the pills would fall through to `all` — the door would open the whole
+ * queue while the count that sent the reader named a part of it, which is the
+ * exact defect these two values were added to fix.
  */
 export function worklistFilterFrom(
   params: ReadonlyMap<string, string>,
 ): WorklistFilter {
   const asked = params.get(WORKLIST_FILTER_PARAM);
-  return FILTERS.find((value) => value === asked) ?? "all";
+  return ADDRESSABLE.find((value) => value === asked) ?? "all";
+}
+
+/**
+ * Whether this narrowing arrived by link rather than off the pill row.
+ *
+ * A type guard, so the caption below can spell `worklist.filter.linked.<value>`
+ * and have the compiler check that both link-only values have copy — the same
+ * protection the pill row gets from FILTERS being `as const`.
+ */
+export function isLinkedOnlyFilter(
+  filter: WorklistFilter,
+): filter is LinkedOnlyFilter {
+  return (LINKED_ONLY as readonly WorklistFilter[]).includes(filter);
+}
+
+/**
+ * The address that opens the queue on one narrowing.
+ *
+ * ONE spelling, because the surfaces that link here count a population first and
+ * the count is only true if the door applies the same filter. Two hand-written
+ * `#/worklist?filter=…` strings are two chances to typo a value that then falls
+ * through to `all` — silently, since an unknown filter is deliberately not an
+ * error — and the reader lands on the whole queue under a number describing part
+ * of it. That is the defect this function exists to make unrepeatable.
+ *
+ * Built from the router's own two halves rather than by hand, so an address
+ * written here and one the dial on the screen writes are byte-identical — which
+ * is what lets the reader arrive by link, press a pill, and press Back.
+ */
+export function worklistLaneHref(filter: WorklistFilter): string {
+  return hashWithParams(
+    routeHash({ screen: "worklist" }),
+    new Map([[WORKLIST_FILTER_PARAM, filter]]),
+  );
 }
 
 /**
@@ -159,6 +225,23 @@ export function WorklistHeader({
           onChange={onFilter}
           label={t("worklist.filter.label")}
         />
+        {/* A narrowing that came by LINK names itself, because no pill is
+            pressed to name it. Without this the reader arrives from Brief at a
+            short queue with the whole row unselected and nothing saying why —
+            which reads as a broken page rather than a narrowed one. The way
+            back out is the same control, so the sentence carries it. */}
+        {isLinkedOnlyFilter(filter) && (
+          <p className="t-caption worklist-completeness">
+            {t(`worklist.filter.linked.${filter}` as const)}{" "}
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => onFilter("all")}
+            >
+              {t("worklist.filter.linked.clear")}
+            </button>
+          </p>
+        )}
         {/* What the page is NOT showing. Drawn only when there is a difference
             to report: on a day the queue carries whole, "12 of 12" is noise. */}
         {completeness !== null && (

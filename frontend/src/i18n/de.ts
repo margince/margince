@@ -8805,6 +8805,11 @@ export const de = {
   "worklist.filter.tasks": "Aufgaben",
   "worklist.filter.decisions": "Entscheidungen",
   "worklist.filter.system": "System",
+  "worklist.filter.linked.except_decisions":
+    "Alles außer den Entscheidungen, nach denen Ihr Briefing bereits gefragt hat.",
+  "worklist.filter.linked.changed_since_brief":
+    "Nur das, was sich seit dem Lauf der letzten Nacht geändert hat.",
+  "worklist.filter.linked.clear": "Ganze Liste anzeigen",
   "worklist.category.customer_waiting": "Kunde wartet",
   "worklist.category.leads": "Lead",
   "worklist.signal.closing_soon": "Schließt bald",

@@ -8698,6 +8698,11 @@ export const vi = {
   "worklist.filter.tasks": "Công việc",
   "worklist.filter.decisions": "Quyết định",
   "worklist.filter.system": "Hệ thống",
+  "worklist.filter.linked.except_decisions":
+    "Hiển thị mọi thứ trừ các quyết định mà bản tóm tắt của bạn đã hỏi.",
+  "worklist.filter.linked.changed_since_brief":
+    "Chỉ hiển thị những gì đã thay đổi kể từ lần chạy đêm qua.",
+  "worklist.filter.linked.clear": "Hiển thị toàn bộ danh sách",
   "worklist.category.customer_waiting": "Khách đang chờ",
   "worklist.category.leads": "Khách tiềm năng",
   "worklist.signal.closing_soon": "Sắp chốt",
