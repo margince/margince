@@ -1034,7 +1034,7 @@ type PublicEventConsentSuppressed struct {
 	// DecidedByLevel Whose decision it is, which is what says who may lift it (machine | user | admin | subject).
 	DecidedByLevel string `json:"decided_by_level"`
 
-	// Kind Which stop this is (subject_request for a hand-recorded one).
+	// Kind Which stop this is. `subject_request` and `marketing_objection` are the two recorded by hand; `processing_restriction` and `hard_bounce` are written by machinery. They differ in reach: a subject request stops everything except the privacy notice, security notice and opt-out confirmation the controller owes regardless, while an objection is Art. 21(2) and stops marketing alone.
 	Kind string `json:"kind"`
 }
 

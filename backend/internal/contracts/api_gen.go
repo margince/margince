@@ -16332,12 +16332,15 @@ func (e ListPeopleParamsTagMode) Valid() bool {
 
 // Defines values for SuppressPersonJSONBodyKind.
 const (
-	SubjectRequest SuppressPersonJSONBodyKind = "subject_request"
+	MarketingObjection SuppressPersonJSONBodyKind = "marketing_objection"
+	SubjectRequest     SuppressPersonJSONBodyKind = "subject_request"
 )
 
 // Valid indicates whether the value is a known member of the SuppressPersonJSONBodyKind enum.
 func (e SuppressPersonJSONBodyKind) Valid() bool {
 	switch e {
+	case MarketingObjection:
+		return true
 	case SubjectRequest:
 		return true
 	default:
@@ -40768,7 +40771,10 @@ type IssueDoubleOptInJSONBody struct {
 
 // SuppressPersonJSONBody defines parameters for SuppressPerson.
 type SuppressPersonJSONBody struct {
-	// Kind Which stop this is. Only the subject's own request is recordable by hand.
+	// Kind Which stop this is. `subject_request` is "stop contacting me" and reaches every
+	// category but the three the controller owes anyway. `marketing_objection` is
+	// Art. 21(2), reaches marketing only, and is recorded at the subject's own
+	// authority so no seat can lift it.
 	Kind SuppressPersonJSONBodyKind `json:"kind"`
 
 	// Reason What the person was told, in their words. Stored because a suppression somebody
