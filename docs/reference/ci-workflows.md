@@ -161,10 +161,19 @@ Eight workflows sit beside the gate, deliberately outside it:
   Findings become **issues** (`scripts/scheduled-report.sh`), one open issue per
   check keyed on an exact title, because a red scheduled run notifies nobody and
   these checks exist precisely for the case where nothing prompts a human to look.
+  A check that comes back **green closes its own issue** — so the report job runs
+  whatever the lanes said, rather than only when one failed. Without that half a
+  finding outlives its fix until somebody closes it by hand, and the tracker
+  answers "is `main` red, and is anyone on it" wrongly in both directions; it also
+  means each red is its own issue instead of one standing title collecting every
+  breakage a lane has ever had. A `skipped` result is neither: it is the absence
+  of a verdict, and reading it as a pass would close a finding nothing re-examined.
   Two of those checks split one job result into **two** findings — the perf
   budgets and the model lane both distinguish "the thing under test is wrong"
   from "the lane could not run", because filing the former for the latter sends
-  somebody bisecting a regression that was never measured.
+  somebody bisecting a regression that was never measured. The split binds the
+  retraction too: a lane that ran and measured something bad has disproved "could
+  not run", so that finding is withdrawn on the same run the other one is filed.
   The reporting job is the sole holder of `issues: write` and runs no build code —
   the same permission isolation `sbom.yml` uses for signing.
 
