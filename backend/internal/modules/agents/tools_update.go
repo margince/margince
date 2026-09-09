@@ -135,11 +135,13 @@ func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 		if err != nil {
 			return nil, err
 		}
-		id, alreadyApproved, err := t.stageConflicts(ctx, args, split, canonical, hash)
+		id, alreadyApproved, summary, err := t.stageConflicts(ctx, args, split, canonical, hash)
 		if err != nil {
 			return nil, err
 		}
-		return nil, &workflow.StagedApprovalError{ApprovalID: id, AlreadyApproved: alreadyApproved}
+		return nil, &workflow.StagedApprovalError{
+			ApprovalID: id, AlreadyApproved: alreadyApproved, Summary: summary,
+		}
 	}
 	return t.applySplit(ctx, args, split)
 }
@@ -167,7 +169,9 @@ func (t updateRecord) applySplit(ctx context.Context, args updateRecordArgs, spl
 	if err != nil {
 		return nil, err
 	}
-	id, alreadyApproved, err := t.stageConflicts(ctx, args, split, canonical, hash)
+	// The summary is dropped here and not repeated: this path answers with a
+	// structured note that already names the staged fields.
+	id, alreadyApproved, _, err := t.stageConflicts(ctx, args, split, canonical, hash)
 	if err != nil {
 		return nil, fmt.Errorf("the other fields were updated, but staging the human-edited fields (%s) failed: %w",
 			strings.Join(split.Conflicts, ", "), err)
@@ -205,24 +209,29 @@ func splitStagingNote(conflicts []string, id ids.ApprovalID, alreadyApproved boo
 // here runs AFTER any auto-execute remainder landed, so the pinned version
 // (ADR-0036 §2) is the state the approving human will actually judge —
 // this call's own auto-execute half cannot invalidate its staged half.
-func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs, split PatchSplit, canonical json.RawMessage, hash string) (ids.ApprovalID, bool, error) {
+func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs, split PatchSplit, canonical json.RawMessage, hash string) (ids.ApprovalID, bool, string, error) {
 	rec, err := t.p.Read(ctx, datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID})
 	if err != nil {
-		return ids.ApprovalID{}, false, err
+		return ids.ApprovalID{}, false, "", err
 	}
 	if err := refuseStagingElsewhere(rec); err != nil {
-		return ids.ApprovalID{}, false, err
+		return ids.ApprovalID{}, false, "", err
 	}
-	return t.staging.StageCall(ctx, StageRequest{
+	// Composed once and answered twice: the human's card and the caller's
+	// refusal describe one staged change, and a second wording of it would let
+	// the person and the agent wait on two different descriptions.
+	summary := fmt.Sprintf("Update %s %s: overwrite human-edited %s",
+		args.RecordType, recordLabel(rec), strings.Join(split.Conflicts, ", "))
+	id, alreadyApproved, err := t.staging.StageCall(ctx, StageRequest{
 		Tool:           "update_record",
 		ProposedChange: canonical,
 		DiffHash:       hash,
 		TargetType:     args.RecordType,
 		TargetID:       args.ID,
 		TargetVersion:  &rec.Version,
-		Summary: fmt.Sprintf("Update %s %s: overwrite human-edited %s",
-			args.RecordType, recordLabel(rec), strings.Join(split.Conflicts, ", ")),
+		Summary:        summary,
 	})
+	return id, alreadyApproved, summary, err
 }
 
 // apply writes the patch and answers with the post-write record.

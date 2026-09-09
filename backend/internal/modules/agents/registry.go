@@ -350,7 +350,9 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 	if err != nil {
 		return err
 	}
-	return &workflow.StagedApprovalError{ApprovalID: id, AlreadyApproved: alreadyApproved}
+	return &workflow.StagedApprovalError{
+		ApprovalID: id, AlreadyApproved: alreadyApproved, Summary: info.Summary,
+	}
 }
 
 // NamesRecordType reports whether this verb can say which record type a given

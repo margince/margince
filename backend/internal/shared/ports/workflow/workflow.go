@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -238,17 +239,67 @@ func Declined(reason string) error { return &DeclinedError{Reason: reason} }
 type StagedApprovalError struct {
 	ApprovalID      ids.ApprovalID
 	AlreadyApproved bool
+	// Summary is what the staging already composed for the human's inbox card,
+	// repeated to the caller that wrote the arguments.
+	//
+	// Without it a caller is told a decision is pending and has to go read the
+	// proposal back to learn what it itself proposed — which an agent relaying
+	// to a person does not do: it says "a change will be applied once approved"
+	// and never says which. The card and this sentence are the same sentence on
+	// purpose, so the person and the agent are waiting on one described thing.
+	//
+	// Nothing new is disclosed. It describes THIS call, built from arguments
+	// this caller supplied, and the human sees the same text.
+	Summary string
+}
+
+// MaxStagedSummary bounds the summary this answer repeats.
+//
+// A summary is server prose with CALLER VALUES inside it — a field list, a
+// message body quoted whole — and it lands in a transcript whose later prompts
+// the same run reads. The inbox card renders it in a scrollable panel and can
+// afford the whole thing; a refusal cannot, or a caller chooses how much this
+// server writes back at it.
+//
+// It is deliberately the same 300 as httperr.MaxFaultText, the near sibling:
+// both bound one server-authored sentence carrying caller values, and a reader
+// comparing two refusals should not find two different ceilings for the same
+// obligation. Not shared as a constant because platform is downstream of
+// shared/ports and an error type here cannot import it — the tool surface
+// re-applies the figure anyway, through agents.echoSafe, which is where this
+// text is also ESCAPED before a model reads it.
+const MaxStagedSummary = 300
+
+// boundedSummary keeps the repeated summary to MaxStagedSummary bytes, cut on a
+// rune boundary so the answer is never invalid UTF-8.
+func boundedSummary(s string) string {
+	if len(s) <= MaxStagedSummary {
+		return s
+	}
+	cut := MaxStagedSummary
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut] + "…"
 }
 
 func (e *StagedApprovalError) Error() string {
+	// The summary leads, because it is the part a caller relays to a person.
+	// An empty one is a producer that stages without describing what it staged,
+	// which is a real state (the automation engine's effects) rather than a
+	// gap to fill with a placeholder sentence.
+	what := ""
+	if e.Summary != "" {
+		what = " to " + boundedSummary(e.Summary)
+	}
 	if e.AlreadyApproved {
 		return fmt.Sprintf(
-			"a human has already approved this exact call as approval %s — repeat it with \"approval_id\": %q and do not stage another: %s",
-			e.ApprovalID, e.ApprovalID.String(), apperrors.ErrRequiresApproval)
+			"a human has already approved this exact call%s, as approval %s — repeat it with \"approval_id\": %q and do not stage another: %s",
+			what, e.ApprovalID, e.ApprovalID.String(), apperrors.ErrRequiresApproval)
 	}
 	return fmt.Sprintf(
-		"staged as approval %s — once a human approves it, repeat this exact call with \"approval_id\": %q: %s",
-		e.ApprovalID, e.ApprovalID.String(), apperrors.ErrRequiresApproval)
+		"staged as approval %s%s — tell the user what it would do, and once a human approves it repeat this exact call with \"approval_id\": %q: %s",
+		e.ApprovalID, what, e.ApprovalID.String(), apperrors.ErrRequiresApproval)
 }
 
 func (e *StagedApprovalError) Unwrap() error { return apperrors.ErrRequiresApproval }
