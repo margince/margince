@@ -2363,7 +2363,7 @@
     },
     {
       "name": "qualify_lead",
-      "tokens": 230,
+      "tokens": 229,
       "agents": [],
       "required_by_cases": [
         "case40_sort_the_queue"
