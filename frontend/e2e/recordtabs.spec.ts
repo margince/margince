@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { RECORDS } from "./records";
 import { mockApi } from "./seed";
 import { itemsOf } from "./waits";
 
@@ -22,21 +23,14 @@ import { itemsOf } from "./waits";
  * jsdom has no box model and would have passed throughout.
  *
  * EVERY record that carries a context column, not just the one a defect was
- * reported on: the invariant belongs to the strip, so every record page in the
- * product is swept and a new one joins this list on the day it is written.
+ * reported on: the invariant belongs to the strip, so the sweep reads the one
+ * list of record pages in `./records`, whose census — `src/app/recordcensus.test.ts`
+ * — fails when a screen the shell gives a record column to has no route in it.
  */
 
 // Above the fold the context column is BESIDE the work column and can be run
 // under; below 1100px it stacks underneath and the question does not arise.
 const RAILED_WIDTHS = [1280, 1440, 1600];
-
-const RECORDS = [
-  { name: "contact", route: "/#/contacts/p-anna" },
-  { name: "lead", route: "/#/leads/l-1" },
-  { name: "company", route: "/#/companies/o-brandt" },
-  { name: "deal", route: "/#/deals/d-fleet" },
-  { name: "project", route: "/#/projects/pr-fleet" },
-];
 
 async function openRecord(page: Page, route: string) {
   await mockApi(page);
@@ -97,10 +91,12 @@ test.describe("the record tab strip", () => {
   // in both states.
   //
   // Every record here can fail it: the breakout lives in `@container work`,
-  // which `mainClasses` opens for GRIDDED_RECORD_SCREENS, and every record
-  // screen is in that set — so each one has a container to size itself from and
-  // something to overhang with. A record left out of the sweep is a record
-  // nobody notices is not being measured.
+  // which `mainClasses` opens for the screens GRIDDED_RECORD_SCREENS names —
+  // the same set `./records` is censused against by
+  // `src/app/recordcensus.test.ts` — so every record swept here
+  // has a container to size itself from and something to overhang with. A
+  // record left out of the sweep is a record nobody notices is not being
+  // measured.
   //
   // 2200px is in the list because the reading column is CAPPED there
   // (--pageColumn) while the work column keeps growing, so the `@container work`

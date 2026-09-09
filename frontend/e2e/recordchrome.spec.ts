@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { RECORDS } from "./records";
 import { mockApi } from "./seed";
 
 /**
@@ -24,18 +25,12 @@ import { mockApi } from "./seed";
  * unit test in the tree and obvious in a screenshot.
  *
  * Both belong to the record SHELL rather than to any one screen, so both are
- * measured on every record page the product has: a screen that draws its own
+ * measured on every record page in `./records`: a screen that draws its own
  * answer to either is the thing these tests exist to catch, and it can only be
- * caught on the page that draws it.
+ * caught on the page that draws it. That list is a census rather than a habit:
+ * `src/app/recordcensus.test.ts` holds it against the set the shell caps, so a
+ * record page missing from it fails there instead of going unmeasured here.
  */
-
-const RECORDS = [
-  { name: "contact", route: "/#/contacts/p-anna" },
-  { name: "lead", route: "/#/leads/l-1" },
-  { name: "company", route: "/#/companies/o-brandt" },
-  { name: "deal", route: "/#/deals/d-fleet" },
-  { name: "project", route: "/#/projects/pr-fleet" },
-];
 
 async function openRecord(page: Page, route: string) {
   await mockApi(page);
