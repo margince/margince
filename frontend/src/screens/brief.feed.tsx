@@ -10,6 +10,7 @@ import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { waitingRows } from "./brief.sentence";
+import { worklistLaneHref } from "./worklist.header";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 
@@ -66,7 +67,13 @@ export function BriefFeed({
           // The way to the rest. A page showing eight of nineteen rows that did
           // not say where the other eleven are has hidden them.
           day && rest > 0 ? (
-            <a className="entity-link" href="#/worklist">
+            // The SAME cut this footer counted. `rest` comes off waitingRows,
+            // which drops the approvals the Decisions deck above already draws,
+            // so a bare `#/worklist` sent a rep told "11 more" to a list of 14.
+            <a
+              className="entity-link"
+              href={worklistLaneHref("except_decisions")}
+            >
               {t("brief.feed.rest", { count: formatNumber(rest, locale) })}
             </a>
           ) : undefined

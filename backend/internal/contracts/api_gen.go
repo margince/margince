@@ -14073,14 +14073,16 @@ func (e WeeklyReviewOutlookPeriodKind) Valid() bool {
 
 // Defines values for WorklistFilter.
 const (
-	WorklistFilterAll             WorklistFilter = "all"
-	WorklistFilterCustomerWaiting WorklistFilter = "customer_waiting"
-	WorklistFilterDealsAtRisk     WorklistFilter = "deals_at_risk"
-	WorklistFilterDecisions       WorklistFilter = "decisions"
-	WorklistFilterLeads           WorklistFilter = "leads"
-	WorklistFilterMeetings        WorklistFilter = "meetings"
-	WorklistFilterSystem          WorklistFilter = "system"
-	WorklistFilterTasks           WorklistFilter = "tasks"
+	WorklistFilterAll               WorklistFilter = "all"
+	WorklistFilterChangedSinceBrief WorklistFilter = "changed_since_brief"
+	WorklistFilterCustomerWaiting   WorklistFilter = "customer_waiting"
+	WorklistFilterDealsAtRisk       WorklistFilter = "deals_at_risk"
+	WorklistFilterDecisions         WorklistFilter = "decisions"
+	WorklistFilterExceptDecisions   WorklistFilter = "except_decisions"
+	WorklistFilterLeads             WorklistFilter = "leads"
+	WorklistFilterMeetings          WorklistFilter = "meetings"
+	WorklistFilterSystem            WorklistFilter = "system"
+	WorklistFilterTasks             WorklistFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the WorklistFilter enum.
@@ -14088,11 +14090,15 @@ func (e WorklistFilter) Valid() bool {
 	switch e {
 	case WorklistFilterAll:
 		return true
+	case WorklistFilterChangedSinceBrief:
+		return true
 	case WorklistFilterCustomerWaiting:
 		return true
 	case WorklistFilterDealsAtRisk:
 		return true
 	case WorklistFilterDecisions:
+		return true
+	case WorklistFilterExceptDecisions:
 		return true
 	case WorklistFilterLeads:
 		return true
@@ -16770,14 +16776,16 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	All             GetWorklistParamsFilter = "all"
-	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	Decisions       GetWorklistParamsFilter = "decisions"
-	Leads           GetWorklistParamsFilter = "leads"
-	Meetings        GetWorklistParamsFilter = "meetings"
-	System          GetWorklistParamsFilter = "system"
-	Tasks           GetWorklistParamsFilter = "tasks"
+	All               GetWorklistParamsFilter = "all"
+	ChangedSinceBrief GetWorklistParamsFilter = "changed_since_brief"
+	CustomerWaiting   GetWorklistParamsFilter = "customer_waiting"
+	DealsAtRisk       GetWorklistParamsFilter = "deals_at_risk"
+	Decisions         GetWorklistParamsFilter = "decisions"
+	ExceptDecisions   GetWorklistParamsFilter = "except_decisions"
+	Leads             GetWorklistParamsFilter = "leads"
+	Meetings          GetWorklistParamsFilter = "meetings"
+	System            GetWorklistParamsFilter = "system"
+	Tasks             GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
@@ -16785,11 +16793,15 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
 	case All:
 		return true
+	case ChangedSinceBrief:
+		return true
 	case CustomerWaiting:
 		return true
 	case DealsAtRisk:
 		return true
 	case Decisions:
+		return true
+	case ExceptDecisions:
 		return true
 	case Leads:
 		return true
@@ -36268,7 +36280,7 @@ type Worklist struct {
 	// not drawing.
 	Counts []WorklistCount `json:"counts"`
 
-	// Filter The narrowing this read applied.
+	// Filter The narrowing this read applied. The same vocabulary the query parameter takes.
 	Filter *WorklistFilter `json:"filter,omitempty"`
 
 	// NextCursor Send this back as `cursor` to continue past the last row of this page. See that
@@ -36368,7 +36380,7 @@ type Worklist struct {
 	Walk *WorklistWalk `json:"walk,omitempty"`
 }
 
-// WorklistFilter The narrowing this read applied.
+// WorklistFilter The narrowing this read applied. The same vocabulary the query parameter takes.
 type WorklistFilter string
 
 // WorklistScope Whose work this read answered for.
@@ -42309,7 +42321,22 @@ type GetWorklistParams struct {
 	// licence to read a colleague's inbox.
 	Scope *GetWorklistParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
 
-	// Filter Narrow the queue to one kind of work. Omitted means everything, which is the default view.
+	// Filter Narrow the queue. Omitted means everything, which is the default view.
+	//
+	// Most values name ONE kind of work. Two do not, and exist because a surface
+	// counted a population this vocabulary could not then ask for — a count whose
+	// link lands on a different population is a number that lies about where it goes.
+	//
+	// `except_decisions` is everything a decisions-drawing surface has NOT already
+	// answered. It is the complement of `decisions`, not a kind of work, and no
+	// single category spells it.
+	//
+	// `changed_since_brief` is the rows whose material moment falls after the
+	// overnight run's data cutoff — the same test that stamps each row's
+	// `changed_since_brief` flag — and, like the value above, not the decisions a
+	// brief already draws as cards. With no run to compare against it answers empty
+	// rather than everything: absent is not false, and a reader asking what changed
+	// since a night that never happened is owed nothing, not the whole queue.
 	Filter *GetWorklistParamsFilter `form:"filter,omitempty" json:"filter,omitempty"`
 
 	// Limit How many ranked items to return.

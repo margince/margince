@@ -186,7 +186,12 @@ describe("the morning feed", () => {
     const link = screen.getByText(
       en["brief.feed.rest"].replace("{count}", "3"),
     );
-    expect(link.getAttribute("href")).toBe("#/worklist");
+    // The door narrows to the same population the count was taken over. The
+    // test below proves the count drops approvals; a bare `#/worklist` would
+    // then open a queue holding them, so a rep told "11 more" landed on 14.
+    expect(link.getAttribute("href")).toBe(
+      "#/worklist?filter=except_decisions",
+    );
   });
 
   // The remainder counts what THIS surface is showing, not what the queue

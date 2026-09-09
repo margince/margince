@@ -297,11 +297,29 @@ func (s *Service) worklistFrom(
 	// "tasks, not shown", and a filtered-out source that hit its bound took its
 	// more_available signal out with it.
 	considered := rows
+	// Which of these the night had not seen, stamped over EVERY candidate rather
+	// than the cut page, because `changed_since_brief` is one of the narrowings
+	// below and a filter cannot read a flag set after it runs.
+	//
+	// One pass serving both the filter and the drawing is what stops the door and
+	// the count disagreeing — the defect these two filter values exist to fix. It
+	// costs one comparison per row against an instant this call already holds.
+	rows = markChangedSinceBrief(rows, s.briefCutoff)
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {
-		rows = keepCategory(rows, crmcontracts.WorklistItemCategory(filter))
+		rows = keepFiltered(rows, crmcontracts.WorklistFilter(filter))
 	}
-	if !narrowed {
+	// The routine-decision fold, skipped for a narrowing that IS opening the
+	// group — foldAndRepin's own rule, and the reason it is conditional at all.
+	//
+	// `opensTheDeck` rather than `narrowed`, because the two new filter values are
+	// narrowings that are not that request. A reader asking what changed overnight
+	// asked about freshness and can be owed decisions; answering with a hundred
+	// alike rows the unfiltered page draws as one would make the door show more
+	// than the count that sent them — the same disagreement in the other
+	// direction. `except_decisions` keeps no decision to fold, so the call is a
+	// no-op there and costs only the walk.
+	if !opensTheDeck(filter) {
 		rows = s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth)
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
@@ -352,9 +370,10 @@ func (s *Service) worklistFrom(
 	// cut from the ranking above; a frozen walk's sequence is a previous run of
 	// that same comparator, and running it again here would return the reader's
 	// own rows in today's order rather than the one they were shown.
-	// Which of these the night had not seen, against the run's own data cutoff.
-	// Over the CUT page, because it is drawn and never ranked.
-	shown = markChangedSinceBrief(shown, s.briefCutoff)
+	// Already stamped, above the narrowing: `shown` is a slice of those same rows,
+	// so it carries the flags the `changed_since_brief` filter read. Stamping
+	// again here would be a second answer to one question, and the page's copy
+	// would be the one a reader sees while the filter used the other.
 	ordered := renderInOrder(stampAsOf(shown, day.AsOf), readerOf(ctx))
 	bands := bandsOf(ordered)
 	out := crmcontracts.Worklist{

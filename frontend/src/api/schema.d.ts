@@ -32128,10 +32128,10 @@ export interface components {
              */
             scope_options: ("mine" | "unassigned" | "team" | "all")[];
             /**
-             * @description The narrowing this read applied.
+             * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
              */
-            filter?: "all" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            filter?: "all" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system" | "except_decisions" | "changed_since_brief";
             summary: components["schemas"]["WorklistSummary"];
             /** @description Everything actionable, best-first. The order is the product of this endpoint. */
             queue: components["schemas"]["WorklistItem"][];
@@ -45870,8 +45870,25 @@ export interface operations {
                  *     licence to read a colleague's inbox.
                  */
                 scope?: "mine" | "unassigned" | "team" | "all";
-                /** @description Narrow the queue to one kind of work. Omitted means everything, which is the default view. */
-                filter?: "all" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+                /**
+                 * @description Narrow the queue. Omitted means everything, which is the default view.
+                 *
+                 *     Most values name ONE kind of work. Two do not, and exist because a surface
+                 *     counted a population this vocabulary could not then ask for — a count whose
+                 *     link lands on a different population is a number that lies about where it goes.
+                 *
+                 *     `except_decisions` is everything a decisions-drawing surface has NOT already
+                 *     answered. It is the complement of `decisions`, not a kind of work, and no
+                 *     single category spells it.
+                 *
+                 *     `changed_since_brief` is the rows whose material moment falls after the
+                 *     overnight run's data cutoff — the same test that stamps each row's
+                 *     `changed_since_brief` flag — and, like the value above, not the decisions a
+                 *     brief already draws as cards. With no run to compare against it answers empty
+                 *     rather than everything: absent is not false, and a reader asking what changed
+                 *     since a night that never happened is owed nothing, not the whole queue.
+                 */
+                filter?: "all" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system" | "except_decisions" | "changed_since_brief";
                 /** @description How many ranked items to return. */
                 limit?: number;
                 /**

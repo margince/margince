@@ -8940,6 +8940,11 @@ export const en = {
   "worklist.filter.tasks": "Tasks",
   "worklist.filter.decisions": "Decisions",
   "worklist.filter.system": "System",
+  "worklist.filter.linked.except_decisions":
+    "Showing everything except the decisions your brief already asked you about.",
+  "worklist.filter.linked.changed_since_brief":
+    "Showing only what changed since last night's run.",
+  "worklist.filter.linked.clear": "Show the whole queue",
   "worklist.category.customer_waiting": "Customer waiting",
   "worklist.category.leads": "Lead",
   "worklist.signal.closing_soon": "Closing soon",
