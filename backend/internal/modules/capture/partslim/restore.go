@@ -166,8 +166,10 @@ func readStanza(raw []byte, markerAt int) (storedStanza, error) {
 	return stanza, nil
 }
 
-// substituteLen is how many bytes the strip's substitute body occupies. Derived
-// from the same constant the strip wrote, so the two cannot disagree.
+// substituteLen is how many bytes the strip's substitute body occupies.
+//
+// Derived from the constant the strip wrote rather than restated as a number,
+// so editing the notice moves both halves of it in one place.
 func (s storedStanza) substituteLen() int {
 	return len(wrapBase64([]byte(partStoredNotice), base64WrapWidth))
 }

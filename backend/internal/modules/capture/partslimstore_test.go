@@ -62,8 +62,8 @@ func TestProvePartsKeepsOnlyWhatTheStoreVouchesFor(t *testing.T) {
 }
 
 // With no store wired there is no proof to have, so nothing is vouched for.
-// This is the arm that keeps an unwired deployment from destroying its only
-// copy of every attachment it ever captured.
+// This is the arm that keeps an unwired deployment from removing attachment
+// bytes that exist nowhere else.
 func TestProvePartsVouchesForNothingWithoutAStore(t *testing.T) {
 	store := NewPartSlimStore(nil, nil)
 	proved, unproved := store.proveParts(context.Background(), []CandidatePart{

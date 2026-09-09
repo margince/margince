@@ -77,9 +77,13 @@ type CandidatePart struct {
 	Checksum   string
 }
 
-// UnmarshalJSON reads the shape the candidates query aggregates. Spelled out
-// rather than tagged so the SQL's key names and this struct cannot drift
-// without the compiler noticing the field it no longer fills.
+// UnmarshalJSON reads the shape the candidates query aggregates.
+//
+// Spelled out rather than struct-tagged so a reader sees which aggregate key
+// fills which field without holding both this type and the SQL in their head.
+// Held by: TestCandidatePartReadsTheAggregateShape (partslimstore_test.go),
+// which fails if a field stops being filled — it cannot see a renamed key on
+// the SQL side, so that pairing is read, not proved.
 func (c *CandidatePart) UnmarshalJSON(data []byte) error {
 	var wire struct {
 		Ordinal int    `json:"ordinal"`

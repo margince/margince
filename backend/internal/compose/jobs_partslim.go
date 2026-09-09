@@ -20,6 +20,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -96,7 +98,7 @@ func (w *capturePartSlimWorker) Work(ctx context.Context, _ *river.Job[CapturePa
 	ctx = partSlimJobActor(ctx)
 	got, err := w.slim(InstallationDB(w.pool)).SlimBatch(ctx, capture.PartSlimBatch)
 	if err != nil {
-		return err
+		return jobs.FaultContext(ctx, fmt.Errorf("capture_part_slim: slimming a batch: %w", err))
 	}
 	if got.Considered == 0 {
 		// The backlog is drained. Said at debug so a quiet installation does

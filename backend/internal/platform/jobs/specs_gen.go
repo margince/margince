@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "53c27472f7696d582c0d2ef2dcc10e04dab585753473d532acbc2daa14e9e31c"
+const JobContractHash = "c6c0b31e9f7fda3902fa3fd17d65e349b47d5ab502079518dd277376948db59e"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -212,7 +212,6 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Cadence:      Cadence{Fixed: 5 * time.Minute},
 		Registration: Registration{When: []string{"Blobstore"}},
-		Fault:        FaultPolicy{NilAfterLogging: "A batch is independent rows, and a row the pass cannot use is STAMPED rather than failed: one it cannot decode, cannot prove durable, or cannot locate an encoding in is left byte-identical, because none of those change on their own and an unstamped row would be re-read and re-refused every cadence forever. What does fail the job is the database refusing a write, which is the one condition a retry can answer. The retry policy is otherwise the CADENCE: this runs every five minutes and re-reads whatever is still unstamped."},
 	},
 	"capture_sync": {
 		Kind:         "capture_sync",
