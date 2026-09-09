@@ -3989,6 +3989,16 @@ export const en = {
   "agent.activity.documentExtractNamed.failed": "I couldn't read {name}.",
   // A company's website being read. The same shape as the document lines: the
   // unnamed pair says which kind of thing, the named one says which company.
+  "agent.activity.transcriptRead.queued":
+    "The meeting transcript is queued to be read.",
+  "agent.activity.transcriptRead.running":
+    "I'm reading the transcript for next steps.",
+  "agent.activity.transcriptRead.stalled":
+    "Reading the transcript has taken unusually long. It may have stopped.",
+  "agent.activity.transcriptRead.done": "I've read the transcript.",
+  "agent.activity.transcriptRead.degraded":
+    "I stopped before finishing the transcript.",
+  "agent.activity.transcriptRead.failed": "I couldn't read the transcript.",
   "agent.activity.siteRead.queued": "The company website is queued to be read.",
   "agent.activity.siteRead.running": "I'm reading the company website.",
   "agent.activity.siteRead.stalled":
