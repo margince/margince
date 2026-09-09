@@ -30,11 +30,11 @@ import {
 import "./company360.css";
 import { SurfaceState } from "../design-system/surfacestate";
 
-type OrganizationFact = components["schemas"]["OrganizationFact"];
-type FactCategory = OrganizationFact["category"];
-type FactField = OrganizationFact["field"];
+type CompanyFact = components["schemas"]["CompanyFact"];
+type FactCategory = CompanyFact["category"];
+type FactField = CompanyFact["field"];
 
-type FactSuspectReason = NonNullable<OrganizationFact["suspect_reason"]>;
+type FactSuspectReason = NonNullable<CompanyFact["suspect_reason"]>;
 
 const FACT_SUSPECT_LABELS: Record<FactSuspectReason, MessageKey> = {
   phone_shaped_location: "co.factSuspect.phoneShapedLocation",
@@ -66,8 +66,8 @@ const STATEABLE: Readonly<Record<FactCategory, readonly FactField[]>> = {
   signal: ["certification", "partner", "named_customer", "quantified_outcome"],
 };
 
-export function factsKey(orgId: string) {
-  return ["org-facts", orgId] as const;
+export function factsKey(companyId: string) {
+  return ["company-facts", companyId] as const;
 }
 
 // How many rows of a category are shown before the reader asks for the rest. A
@@ -93,12 +93,12 @@ const FACT_PREVIEW = 5;
  * something and apparently changed nothing.
  */
 export function CompanyFactsPanel({
-  orgId,
+  companyId,
   canEdit,
   reasonId,
   onOpenHistory,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   canEdit: boolean;
   // The one sentence saying why this reader may not write, already on the page.
   // Every refused control points at it rather than carrying its own copy.
@@ -113,16 +113,16 @@ export function CompanyFactsPanel({
   // its draft across, and the save would write what was typed about one company
   // onto another. Resetting on the id is what makes the draft belong to the
   // account it was typed about.
-  const [openFor, setOpenFor] = useState(orgId);
-  if (openFor !== orgId) {
-    setOpenFor(orgId);
+  const [openFor, setOpenFor] = useState(companyId);
+  if (openFor !== companyId) {
+    setOpenFor(companyId);
     setAdding(false);
   }
   const factsQuery = useQuery({
-    queryKey: factsKey(orgId),
+    queryKey: factsKey(companyId),
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/facts", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.GET("/companies/{id}/facts", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -156,7 +156,7 @@ export function CompanyFactsPanel({
       <PanelBody>
         {adding && (
           <AddFactForm
-            orgId={orgId}
+            companyId={companyId}
             canEdit={canEdit}
             onDone={() => setAdding(false)}
           />
@@ -174,7 +174,7 @@ export function CompanyFactsPanel({
             listFacts(facts, t, locale).map((group) => (
               <FactCategoryBlock
                 key={group.category}
-                orgId={orgId}
+                companyId={companyId}
                 group={group}
                 canEdit={canEdit}
                 onOpenHistory={onOpenHistory}
@@ -188,12 +188,12 @@ export function CompanyFactsPanel({
 }
 
 function FactCategoryBlock({
-  orgId,
+  companyId,
   group,
   canEdit,
   onOpenHistory,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   group: FactGroup;
   canEdit: boolean;
   onOpenHistory?: () => void;
@@ -213,7 +213,7 @@ function FactCategoryBlock({
       {shown.map((fact) => (
         <FactRow
           key={`${fact.field}:${fact.value_key}`}
-          orgId={orgId}
+          companyId={companyId}
           fact={fact}
           canEdit={canEdit}
           onOpenHistory={onOpenHistory}
@@ -233,13 +233,13 @@ function FactCategoryBlock({
 }
 
 function FactRow({
-  orgId,
+  companyId,
   fact,
   canEdit,
   onOpenHistory,
 }: Readonly<{
-  orgId: string;
-  fact: OrganizationFact;
+  companyId: string;
+  fact: CompanyFact;
   canEdit: boolean;
   onOpenHistory?: () => void;
 }>) {
@@ -268,8 +268,8 @@ function FactRow({
           </span>
         )}
         <EvidenceVerdict
-          orgId={orgId}
-          claim={factClaim(orgId, fact)}
+          companyId={companyId}
+          claim={factClaim(companyId, fact)}
           canEdit={canEdit}
         />
         {/* Removal is the verb correction cannot spell. A correction says "this
@@ -289,7 +289,7 @@ function FactRow({
       </div>
       {removing && (
         <RemoveFactConfirm
-          orgId={orgId}
+          companyId={companyId}
           fact={fact}
           canEdit={canEdit}
           onClose={() => setRemoving(false)}
@@ -300,13 +300,13 @@ function FactRow({
 }
 
 function RemoveFactConfirm({
-  orgId,
+  companyId,
   fact,
   canEdit,
   onClose,
 }: Readonly<{
-  orgId: string;
-  fact: OrganizationFact;
+  companyId: string;
+  fact: CompanyFact;
   // Re-read at CONFIRM time, not only at open time. A grant can be withdrawn
   // while this dialog stands, and a confirm that fired on the answer from
   // thirty seconds ago is a write the reader is no longer allowed to make.
@@ -319,13 +319,13 @@ function RemoveFactConfirm({
     // The fact travels as a variable rather than through this closure: the
     // click belongs to the committed render, so what it passes cannot be older
     // than the row that carried it.
-    mutationFn: async (doomed: OrganizationFact) => {
+    mutationFn: async (doomed: CompanyFact) => {
       const { error } = await api.DELETE(
-        "/organizations/{id}/facts/{factKey}",
+        "/companies/{id}/facts/{factKey}",
         {
           params: {
             path: {
-              id: orgId,
+              id: companyId,
               factKey: `${doomed.field}:${doomed.value_key}`,
             },
             ...ifMatch(requireVersion(doomed.version)),
@@ -337,7 +337,7 @@ function RemoveFactConfirm({
       }
     },
     onSuccess: async () => {
-      await settleFacts(queryClient, orgId);
+      await settleFacts(queryClient, companyId);
       onClose();
     },
   });
@@ -364,10 +364,10 @@ function RemoveFactConfirm({
 }
 
 function AddFactForm({
-  orgId,
+  companyId,
   canEdit,
   onDone,
-}: Readonly<{ orgId: string; canEdit: boolean; onDone: () => void }>) {
+}: Readonly<{ companyId: string; canEdit: boolean; onDone: () => void }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const fieldId = useId();
@@ -386,8 +386,8 @@ function AddFactForm({
   const add = useMutation({
     mutationFn: async (stated: { field: string; value: string }) => {
       const [category, name] = stated.field.split(":");
-      const { error } = await api.POST("/organizations/{id}/facts", {
-        params: { path: { id: orgId } },
+      const { error } = await api.POST("/companies/{id}/facts", {
+        params: { path: { id: companyId } },
         body: {
           category: category as FactCategory,
           field: name,
@@ -399,7 +399,7 @@ function AddFactForm({
       }
     },
     onSuccess: async () => {
-      await settleFacts(queryClient, orgId);
+      await settleFacts(queryClient, companyId);
       setField("");
       setValue("");
       onDone();
@@ -473,13 +473,13 @@ function refusal(
 // a reader just removed.
 async function settleFacts(
   queryClient: ReturnType<typeof useQueryClient>,
-  orgId: string,
+  companyId: string,
 ) {
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: factsKey(orgId) }),
-    queryClient.invalidateQueries({ queryKey: ["organization", orgId] }),
-    queryClient.invalidateQueries({ queryKey: ["organization360", orgId] }),
-    queryClient.invalidateQueries({ queryKey: ["organizations"] }),
+    queryClient.invalidateQueries({ queryKey: factsKey(companyId) }),
+    queryClient.invalidateQueries({ queryKey: ["company", companyId] }),
+    queryClient.invalidateQueries({ queryKey: ["company360", companyId] }),
+    queryClient.invalidateQueries({ queryKey: ["companies"] }),
   ]);
 }
 

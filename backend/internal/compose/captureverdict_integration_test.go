@@ -104,11 +104,11 @@ func TestVerdictRealCreatesTheCounterpartyCaptureWithheld(t *testing.T) {
 	// A `real` verdict admits the PERSON. Whether they have an employer is a
 	// separate question with its own evidence, so the verdict opens it rather
 	// than inventing "Realco" from the domain.
-	if n := countIn(t, e, `SELECT count(*) FROM organization`); n != 0 {
-		t.Fatalf("%d organizations from a verdict, want 0 — the company question is answered by a site read", n)
+	if n := countIn(t, e, `SELECT count(*) FROM company`); n != 0 {
+		t.Fatalf("%d companies from a verdict, want 0 — the company question is answered by a site read", n)
 	}
 	if n := countIn(t, e, `
-		SELECT count(*) FROM organization_domain_disposition
+		SELECT count(*) FROM company_domain_disposition
 		 WHERE domain = 'realco.example' AND status = 'pending'`); n != 1 {
 		t.Fatalf("%d open company questions for realco.example, want exactly 1", n)
 	}
@@ -535,7 +535,7 @@ func suppressAddress(t *testing.T, e *integration.Env, email string) {
 
 // Only a person becomes a person. The binary vocabulary put "a person or
 // company" on one side of a single line, so every above-floor `real` ran the
-// person-creation path and an organization writing under its own name became a
+// person-creation path and a company writing under its own name became a
 // contact named after the company — a real import produced people called
 // "Docsign" (on a vendor's support address), "VINASA" and "Expensify".
 func TestOnlyThePersonKindCreatesAPerson(t *testing.T) {
@@ -551,7 +551,7 @@ func TestOnlyThePersonKindCreatesAPerson(t *testing.T) {
 		// Real correspondence, no human to name. The mail stays visible; the
 		// contact is what is withheld.
 		{kind: capture.KindRoleMailbox, email: "support@respacio.example", wantPersons: 0, wantStatus: capture.PendingStatusReal},
-		{kind: capture.KindOrganizationSender, email: "contact@vinasa.example", wantPersons: 0, wantStatus: capture.PendingStatusReal},
+		{kind: capture.KindCompanySender, email: "contact@vinasa.example", wantPersons: 0, wantStatus: capture.PendingStatusReal},
 		// Bulk and automated mail is hidden as before.
 		{kind: capture.KindNewsletter, email: "digest@saasweekly.example", wantPersons: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
 		{kind: capture.KindTransactional, email: "receipts@expensify.example", wantPersons: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},

@@ -15,7 +15,7 @@ package gates
 // package, so a bare object gate satisfies it, and the spelling gate iterates
 // probes, so a function holding none produces no sites and passes silently.
 //
-// The gap matters here more than it would elsewhere. Person, organization,
+// The gap matters here more than it would elsewhere. Person, company,
 // lead, deal and project are read by every seat in the workspace, so the write
 // predicate is the ONLY thing that scopes them — a mutation that forgets it is
 // not caught by a narrower read, it simply works for everyone.
@@ -82,9 +82,9 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	// record — a second person or company for the same human — which is worse
 	// for Rep A than the write it would have prevented.
 	"internal/modules/people:EnsureCounterparty":           "capture resolving the person and company a captured message is about, and attaching it. The row it lands on is frequently a colleague's, by design: refusing would not protect that record, it would create a duplicate of it alongside. What this may write to an incumbent is bounded instead — a name fills only where the column is still empty, and a header carrying an impersonation tell teaches an existing record nothing",
-	"internal/modules/people:writeOrgColumn":               "the cold-start writer's per-column half, reached only from applyColdStartTx and bounded by the same accepted proposal",
-	"internal/modules/people:applyUnclaimedOrgColumn":      "the fill arm of writeOrgColumn, reached only through it, so the proposal that bounds one bounds the other. Newly visible to this census rather than newly unprobed: its statements sit in a package-level table, which the index could not read until it folded them",
-	"internal/modules/people:setCompanyColumn":             "the company form's per-column half, reached only from writeCompanyFields. Its authority is taken two frames up in resolveOrCreateAnchor — auth.EnsureWritable on the anchor, after anchorOrganization has resolved it live and locked it FOR UPDATE for the rest of the transaction. Newly visible for the same reason applyUnclaimedOrgColumn is",
+	"internal/modules/people:writeCompanyColumn":               "the cold-start writer's per-column half, reached only from applyColdStartTx and bounded by the same accepted proposal",
+	"internal/modules/people:applyUnclaimedCompanyColumn":      "the fill arm of writeCompanyColumn, reached only through it, so the proposal that bounds one bounds the other. Newly visible to this census rather than newly unprobed: its statements sit in a package-level table, which the index could not read until it folded them",
+	"internal/modules/people:setCompanyColumn":             "the company form's per-column half, reached only from writeCompanyFields. Its authority is taken two frames up in resolveOrCreateAnchor — auth.EnsureWritable on the anchor, after anchorCompany has resolved it live and locked it FOR UPDATE for the rest of the transaction. Newly visible for the same reason applyUnclaimedCompanyColumn is",
 	"internal/modules/people:EnsureCounterpartyTx":         "capture's resolution running inside the caller's transaction, reached only from EnsureCounterparty",
 	"internal/modules/people:ensurePerson":                 "the person half of that same capture resolution",
 	"internal/modules/people:fillMissingPersonName":        "capture's name fill on an incumbent, reached only from ensurePerson. The write predicate is first_name IS NULL AND last_name IS NULL, so it only ever completes a record nobody has split into parts; full_name moves with them unless a person set it, which displayNameSetByHumanTx answers from who minted the row (person.captured_by) and whether a human has edited the name since (an audit update naming full_name). A name a person typed is left alone at both moments. It completes what a machine guessed rather than overwriting what somebody decided, which is why the row it lands on being a colleague's is not the disclosure a probe would prevent",
@@ -99,11 +99,11 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	// Merges and sweeps whose authority is taken once, at the top.
 	"internal/modules/projects:recordPhaseTransition":          "one project phase move, written for two callers whose authority is taken differently: AdvanceProject probes the project itself, and the won-deal delivery start took it on the DEAL — ensureProjectAttachable demands write authority over the project at the moment a deal is bound to one, which is the act that later authorizes advancing its phase. That is a real gate this walk cannot see, because it ran in a different function on a different record",
 	"internal/modules/projects:StartDeliveryForWonDeal":        "moves a won deal's project into delivery, from the deal's own close. The authority is the DEAL's and was taken there; binding the deal to the project earlier demanded write authority over the project through ensureProjectAttachable, which is what makes this move authorized without a second probe on a record the closing caller may not own",
-	"internal/modules/people:applyEvidenceFieldsWithOverwrite": "the company evidence writer, reached from three paths that each take the probe before calling it: the cold-start accept (gateResolvedColdStartTarget, on the organization the URL resolved to), Enrich, and the site-read confirmation",
+	"internal/modules/people:applyEvidenceFieldsWithOverwrite": "the company evidence writer, reached from three paths that each take the probe before calling it: the cold-start accept (gateResolvedColdStartTarget, on the company the URL resolved to), Enrich, and the site-read confirmation",
 
 	"internal/modules/people:recomputeUnderOverrideTx": "the sticky-override branch of recomputeLeadScoreTx, reached from nowhere else. Its four callers each take the row probe before they get here — RecomputeLeadScore, both manual-signal paths and UpdateLead — and the probe belongs at those entry points rather than in a branch, because an archived lead is a silent no-op to the workflow lane and a 404 to a human",
 
-	"internal/modules/people:absorbOrgReferences":    "the organization merge's cascade: it re-points the deals, projects and child companies that NAMED the absorbed company at the survivor. The merge itself takes write authority on BOTH organizations through mergePair before anything moves, and the rows re-pointed here are not the ones being decided about — refusing to re-point a deal the caller cannot write would leave it pointing at a company that no longer exists",
+	"internal/modules/people:absorbCompanyReferences":    "the company merge's cascade: it re-points the deals, projects and child companies that NAMED the absorbed company at the survivor. The merge itself takes write authority on BOTH companies through mergePair before anything moves, and the rows re-pointed here are not the ones being decided about — refusing to re-point a deal the caller cannot write would leave it pointing at a company that no longer exists",
 	"internal/modules/people:RouteLead":              "routing assigns an ownerless lead to a chosen rep, and an ownerless row is nobody's to write by construction (the write arm renders no owner_id IS NULL branch) — auth.EnsureWritable here could only ever refuse. It self-guards instead: a lead that already has an owner returns already_owned before anything is written, so routing can never overwrite a human's assignment. The claim-then-write primitive this shape wants is storekit.ClaimOwnership, which takes the claimant as `me` and so does not fit an assignment to a third party",
 	"internal/modules/deals:sweepWorkspace":          "the close-date sweep's inner pass, reached only from SweepWorkspace",
 	"internal/modules/deals:correct":                 "one close-date correction inside that sweep",
@@ -284,7 +284,7 @@ func TestNoMutationOfAShareableRecordHidesItsTableFromThisGate(t *testing.T) {
 // It has to be every caller, not any. Suppressing on one guarded caller is how a
 // helper reached by a probed wrapper AND by an unprobed path reads as safe: the
 // wrapper answers for the write, and the other path walks straight past it.
-// PromoteOrgNameTx was exactly that shape — its wrapper took the probe while
+// PromoteCompanyNameTx was exactly that shape — its wrapper took the probe while
 // compose called the Tx form directly on both of its real paths.
 //
 // A helper with any caller that does NOT write, or does not reach a probe, stays

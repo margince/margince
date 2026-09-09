@@ -93,7 +93,7 @@ func BindProviderDomain(store *integrations.Store) *integrations.Store {
 func bindProviderDomain(store *integrations.Store) *integrations.Store {
 	return store.
 		WithDomain(providerFence, people.DuplicateCluster, people.SubjectIdentifiers).
-		WithRequesterStanding(providerRequesterHoldsOrg).
+		WithRequesterStanding(providerRequesterHoldsCompany).
 		WithSubjectHold(providerSubjectHold).
 		WithStoredClaimApplier(providerStoredClaimApplier).
 		WithClaimWriter(providerClaimWriter).
@@ -160,18 +160,18 @@ func providerClaimDeleter(ctx context.Context, tx pgx.Tx, providerName string) (
 	return people.DeleteProviderClaims(ctx, tx, providerName)
 }
 
-// providerRequesterHoldsOrg answers whether the human who queued a run may read
-// organizations, so the submission knows whether the employer may travel.
+// providerRequesterHoldsCompany answers whether the human who queued a run may read
+// companies, so the submission knows whether the employer may travel.
 //
 // It asks identity rather than the context on purpose: by the time a run is
 // submitted the actor is the CONNECTOR, and a system principal passes every
 // object gate — so asking the context would always answer yes. Asked live
 // rather than frozen at queue time, for the reason the share links are:
 // a grant taken away between the ask and the send is taken away.
-func providerRequesterHoldsOrg(ctx context.Context, tx pgx.Tx, userID string) (bool, error) {
+func providerRequesterHoldsCompany(ctx context.Context, tx pgx.Tx, userID string) (bool, error) {
 	id, err := ids.Parse(userID)
 	if err != nil {
 		return false, fmt.Errorf("compose: run requester %q is not a user id: %w", userID, err)
 	}
-	return identity.IssuerStillHolds(ctx, tx, ids.From[ids.UserKind](id), "organization", principal.ActionRead)
+	return identity.IssuerStillHolds(ctx, tx, ids.From[ids.UserKind](id), "company", principal.ActionRead)
 }

@@ -352,7 +352,7 @@ describe("AuthScreen login", () => {
     stubApi({ password: true, password_reset: true }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);
     expect(
-      await screen.findByText("Access to this organization is restricted."),
+      await screen.findByText("Access to this company is restricted."),
     ).toBeTruthy();
     expect(
       screen.queryByText(/encrypted|compliant|sovereign|your data is safe/i),

@@ -36,12 +36,12 @@ type UpdateDealInput struct {
 	Name                  *string
 	AmountMinor           *int64
 	Currency              *string
-	OrganizationID        *ids.OrganizationID
+	CompanyID        *ids.CompanyID
 	ProjectID             *ids.ProjectID
 	OwnerID               *ids.UserID
-	PartnerOrganizationID *ids.OrganizationID
+	PartnerCompanyID *ids.CompanyID
 	// PartnerAttribution says what the partner did for the deal — "sourced"
-	// or "influenced". It is meaningless without PartnerOrganizationID, and
+	// or "influenced". It is meaningless without PartnerCompanyID, and
 	// the store refuses the pair half-set rather than storing a claim about
 	// a partner the deal does not name.
 	PartnerAttribution *string
@@ -129,8 +129,8 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 	}
 
 	if err := applyDealPatchGuarded(ctx, tx, id, p, in.IfVersion); err != nil {
-		if constraint, ok := storekit.CheckViolation(err); ok && constraint == dealProjectSameOrgConstraint {
-			return crmcontracts.Deal{}, &DealProjectOrgMismatchError{}
+		if constraint, ok := storekit.CheckViolation(err); ok && constraint == dealProjectSameCompanyConstraint {
+			return crmcontracts.Deal{}, &DealProjectCompanyMismatchError{}
 		}
 		return crmcontracts.Deal{}, fmt.Errorf("apply deal patch: %w", err)
 	}

@@ -45,7 +45,7 @@ const (
 // link check, the read's visibility clause and the read mask, and a table name
 // spelled at each of those is three places for one rename to miss.
 const (
-	organizationTable = "organization"
+	companyTable = "company"
 	dealTable         = "deal"
 	projectTable      = "project"
 )
@@ -113,7 +113,7 @@ func (s *Store) today() time.Time {
 // scanContract expects. `under_contract` is computed in SQL rather than in Go
 // so that a filtered list and a single read cannot drift apart: one expression,
 // one meaning of the word (CONTRACT-FORM-1).
-const contractColumns = `id, organization_id, deal_id, project_id, contract_number, title,
+const contractColumns = `id, company_id, deal_id, project_id, contract_number, title,
 	value_minor, currency, value_basis, fx_rate_to_base, fx_rate_date,
 	starts_on, ends_on, renewal_on, auto_renew, notice_period_days,
 	status, signed_on, cancellation_notice_on, cancellation_effective_on,
@@ -142,7 +142,7 @@ func scanContract(row pgx.Row) (crmcontracts.Contract, error) {
 		c             crmcontracts.Contract
 		underContract bool
 		id            ids.UUID
-		orgID         ids.UUID
+		companyID         ids.UUID
 		dealID        *ids.UUID
 		projectID     *ids.UUID
 		supersededBy  *ids.UUID
@@ -157,7 +157,7 @@ func scanContract(row pgx.Row) (crmcontracts.Contract, error) {
 		effectiveOn   *time.Time
 		fxDate        *time.Time
 	)
-	err := row.Scan(&id, &orgID, &dealID, &projectID, &c.ContractNumber, &c.Title,
+	err := row.Scan(&id, &companyID, &dealID, &projectID, &c.ContractNumber, &c.Title,
 		&c.ValueMinor, &c.Currency, &basis, &c.FxRateToBase, &fxDate,
 		&startsOn, &endsOn, &renewalOn, &c.AutoRenew, &c.NoticePeriodDays,
 		&status, &signedOn, &noticeOn, &effectiveOn,
@@ -167,7 +167,7 @@ func scanContract(row pgx.Row) (crmcontracts.Contract, error) {
 		return crmcontracts.Contract{}, err
 	}
 	c.Id = openapi_types.UUID(id)
-	c.OrganizationId = uuidPtr(&orgID)
+	c.CompanyId = uuidPtr(&companyID)
 	c.DealId = uuidPtr(dealID)
 	c.ProjectId = uuidPtr(projectID)
 	c.SupersededById = uuidPtr(supersededBy)
@@ -196,16 +196,16 @@ func datePtr(t *time.Time) *openapi_types.Date {
 
 // anchorOf is the counterparty of a contract that a WRITE is about to act on.
 //
-// organization_id left the wire's required set so a reader admitted through the
+// company_id left the wire's required set so a reader admitted through the
 // DEAL can be told nothing about a company they may not open. Every write path
 // takes its pre-image from readContract, which does not mask — so a nil anchor
 // here is a masked row that reached a write, not an agreement without a
 // company, and it stops rather than authorizing against a zero uuid.
 func anchorOf(c crmcontracts.Contract) (ids.UUID, error) {
-	if c.OrganizationId == nil {
+	if c.CompanyId == nil {
 		return ids.UUID{}, fmt.Errorf("contracts: a write reached contract %s with its counterparty withheld", ids.UUID(c.Id))
 	}
-	return ids.UUID(*c.OrganizationId), nil
+	return ids.UUID(*c.CompanyId), nil
 }
 
 func uuidPtr(id *ids.UUID) *openapi_types.UUID {

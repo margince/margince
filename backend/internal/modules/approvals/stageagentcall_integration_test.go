@@ -31,9 +31,9 @@ import (
 func (e *stagingEnv) agentCall(target ids.UUID) StageInput {
 	return StageInput{
 		Kind:           "enrich",
-		ProposedChange: []byte(`{"organization_id":"` + target.String() + `","url":"https://stainzer.at"}`),
+		ProposedChange: []byte(`{"company_id":"` + target.String() + `","url":"https://stainzer.at"}`),
 		DiffHash:       "c276f78957b5b2fc-one-call",
-		TargetType:     "organization",
+		TargetType:     "company",
 		TargetID:       target,
 		Summary:        "Read stainzer.at and propose what it says",
 	}
@@ -62,20 +62,20 @@ func (e *stagingEnv) seedPassport(t *testing.T) ids.UUID {
 	return id
 }
 
-func (e *stagingEnv) seedOrg(t *testing.T) ids.UUID {
+func (e *stagingEnv) seedCompany(t *testing.T) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO organization (id, display_name, source, captured_by)
+		INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Steirische Molkerei AG', 'gmail:seed', 'connector:gmail')`, id); err != nil {
-		t.Fatalf("seeding an organization: %v", err)
+		t.Fatalf("seeding a company: %v", err)
 	}
 	return id
 }
 
 // approve settles the staged call as the human who lent the passport would.
 //
-// A decider needs to SEE the target: a staging against an organization is
+// A decider needs to SEE the target: a staging against a company is
 // refused as not-found for anyone whose row scope does not reach that row
 // (approvals/targetvisibility.go), which is existence-hiding working correctly
 // and not the property under test here.
@@ -89,7 +89,7 @@ func (e *stagingEnv) approve(t *testing.T, id ids.ApprovalID) {
 			RoleKeys: []string{"admin"},
 			RowScope: principal.RowScopeAll,
 			Objects: map[string]principal.ObjectGrant{
-				"organization": {Create: true, Read: true, Update: true, Delete: true},
+				"company": {Create: true, Read: true, Update: true, Delete: true},
 				"approval":     {Create: true, Read: true, Update: true, Delete: true},
 				// A merge staging targets tags, and a decider who cannot see
 				// the target is answered not-found — existence-hiding working
@@ -109,7 +109,7 @@ func (e *stagingEnv) approve(t *testing.T, id ids.ApprovalID) {
 // id anyway, but only after the agent had been sent to present it.
 func TestAnAgentCallIsOnlyOfferedApprovalsItsOwnCredentialHolds(t *testing.T) {
 	e := setupStaging(t)
-	target := e.seedOrg(t)
+	target := e.seedCompany(t)
 	in := e.agentCall(target)
 	mine, theirs := e.seedPassport(t), e.seedPassport(t)
 
@@ -175,7 +175,7 @@ func (e *stagingEnv) agentWithoutPassport() context.Context {
 // decision the redemption will refuse.
 func TestAnAgentCallWhoseApprovalOutlivedItsWindowIsAskedAgain(t *testing.T) {
 	e := setupStaging(t)
-	target := e.seedOrg(t)
+	target := e.seedCompany(t)
 	in := e.agentCall(target)
 	passport := e.seedPassport(t)
 
@@ -218,7 +218,7 @@ func TestAnAgentCallWhoseApprovalOutlivedItsWindowIsAskedAgain(t *testing.T) {
 // offered until it happens to be spent.
 func TestLegacyDuplicateApprovalsAreOfferedOnceEachAndOldestFirst(t *testing.T) {
 	e := setupStaging(t)
-	target := e.seedOrg(t)
+	target := e.seedCompany(t)
 	in := e.agentCall(target)
 	passport := e.seedPassport(t)
 	ctx := e.asPassport(passport)
@@ -291,7 +291,7 @@ func (e *stagingEnv) stageDuplicateInTx(ctx context.Context, t *testing.T, in St
 // proposal to release.
 func TestAStagedAgentCallCarriesThePassportThatMadeIt(t *testing.T) {
 	e := setupStaging(t)
-	target := e.seedOrg(t)
+	target := e.seedCompany(t)
 	passport := e.seedPassport(t)
 
 	id, _, err := e.svc.StageAgentCall(e.asPassport(passport), e.agentCall(target))
@@ -321,7 +321,7 @@ func TestAStagedAgentCallCarriesThePassportThatMadeIt(t *testing.T) {
 // the ROW's own writer rather than by every caller having been careful.
 func TestAnAgentWithNoPassportIsRefusedTheStaging(t *testing.T) {
 	e := setupStaging(t)
-	target := e.seedOrg(t)
+	target := e.seedCompany(t)
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -352,7 +352,7 @@ func TestAnAgentWithNoPassportIsRefusedTheStaging(t *testing.T) {
 // at the entry point, it is handed nothing and writes nothing.
 func TestAPassportLessAgentIsRefusedTheSecondTimeToo(t *testing.T) {
 	e := setupStaging(t)
-	target := e.seedOrg(t)
+	target := e.seedCompany(t)
 	in := e.agentCall(target)
 
 	// The row it would have joined, staged by a credential that may make one.

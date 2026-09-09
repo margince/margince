@@ -23,7 +23,7 @@ func project360Project(p crmcontracts.Project) Project360Project {
 		Key:            orBlank(p.Key),
 		ClosedReason:   orBlank(p.ClosedReason),
 		Description:    orBlank(p.Description),
-		OrganizationID: (*ids.UUID)(p.OrganizationId),
+		CompanyID: (*ids.UUID)(p.CompanyId),
 		OwnerID:        (*ids.UUID)(p.OwnerId),
 		StartedAt:      dateTime(p.StartedAt),
 		TargetEndDate:  dateTime(p.TargetEndDate),

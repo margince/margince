@@ -85,7 +85,7 @@ func TestAPersonalVerdictMakesNoRecordAtAll(t *testing.T) {
 	// domain a family member might write from something to publish a verdict
 	// about.
 	if n := countIn(t, e, `
-		SELECT count(*) FROM organization_domain_disposition
+		SELECT count(*) FROM company_domain_disposition
 		 WHERE domain = 'webmail.example' AND status = 'suppressed'`); n != 0 {
 		t.Fatal("a personal verdict suppressed the sender's domain — that is a claim about a company, not about a family member")
 	}

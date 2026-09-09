@@ -33,8 +33,8 @@ func TestAnArchiveAskedOnlyForAnUntouchedRecordRefusesATouchedOne(t *testing.T) 
 	e := Setup(t)
 	admin := e.Admin()
 
-	org := e.SeedOrg(t, "Imported Ltd", nil)
-	orgID := ids.From[ids.OrganizationKind](org)
+	company := e.SeedCompany(t, "Imported Ltd", nil)
+	companyID := ids.From[ids.CompanyKind](company)
 	person := e.SeedPerson(t, "Imported Contact", nil)
 	personID := ids.From[ids.PersonKind](person)
 
@@ -49,7 +49,7 @@ func TestAnArchiveAskedOnlyForAnUntouchedRecordRefusesATouchedOne(t *testing.T) 
 	// point: somebody who independently archived an imported row is exactly
 	// who this protects, and a narrower filter would reverse their act too.
 	name := "Imported Ltd (renamed by a person)"
-	if _, err := e.People.UpdateOrganization(admin, orgID, people.UpdateOrganizationInput{
+	if _, err := e.People.UpdateCompany(admin, companyID, people.UpdateCompanyInput{
 		DisplayName: &name,
 	}); err != nil {
 		t.Fatalf("the human edit: %v", err)
@@ -60,7 +60,7 @@ func TestAnArchiveAskedOnlyForAnUntouchedRecordRefusesATouchedOne(t *testing.T) 
 	}
 
 	var touched *people.HumanTouchedError
-	if _, err := e.People.ArchiveOrganization(admin, orgID, nil,
+	if _, err := e.People.ArchiveCompany(admin, companyID, nil,
 		people.NotTouchedByHumanSince(imported)); !errors.As(err, &touched) {
 		t.Errorf("archiving a company a person edited → %v, want the touched refusal — an undo "+
 			"reversing it would take away the edit they made", err)
@@ -72,7 +72,7 @@ func TestAnArchiveAskedOnlyForAnUntouchedRecordRefusesATouchedOne(t *testing.T) 
 
 	// The record survives the refusal: a precondition that failed must leave
 	// the row exactly as the person left it.
-	after, err := e.People.GetOrganization(admin, orgID, storekit.LiveOnly)
+	after, err := e.People.GetCompany(admin, companyID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("reading the company back: %v", err)
 	}
@@ -88,15 +88,15 @@ func TestAnArchiveWithNoPreconditionOrAnUnbrokenOneStillLands(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	untouched := e.SeedOrg(t, "Untouched Ltd", nil)
+	untouched := e.SeedCompany(t, "Untouched Ltd", nil)
 	imported := seedInstant(t)
-	if _, err := e.People.ArchiveOrganization(admin, ids.From[ids.OrganizationKind](untouched), nil,
+	if _, err := e.People.ArchiveCompany(admin, ids.From[ids.CompanyKind](untouched), nil,
 		people.NotTouchedByHumanSince(imported)); err != nil {
 		t.Errorf("archiving a company nobody touched → %v, want it to land", err)
 	}
 
-	plain := e.SeedOrg(t, "Plain Ltd", nil)
-	if _, err := e.People.ArchiveOrganization(admin, ids.From[ids.OrganizationKind](plain), nil); err != nil {
+	plain := e.SeedCompany(t, "Plain Ltd", nil)
+	if _, err := e.People.ArchiveCompany(admin, ids.From[ids.CompanyKind](plain), nil); err != nil {
 		t.Errorf("archiving with no precondition at all → %v, want the behaviour every other caller "+
 			"of this verb has always had", err)
 	}

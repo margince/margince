@@ -108,11 +108,11 @@ type laneOutcome struct {
 // no completed lanes, which the writer reads as "change nothing" — the honest
 // outcome, and one the next pass simply retries.
 func (e *TechnicalEnricher) Read(
-	ctx context.Context, orgID ids.OrganizationID, domain string,
+	ctx context.Context, companyID ids.CompanyID, domain string,
 ) (people.TechnicalEnrichment, []laneOutcome) {
 	domain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(domain, ".")))
 	result := people.TechnicalEnrichment{
-		OrganizationID: orgID,
+		CompanyID: companyID,
 		ObservedAt:     e.now().UTC(),
 	}
 	if domain == "" {

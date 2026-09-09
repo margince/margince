@@ -27,10 +27,10 @@ const (
 	// this report reads, guaranteed by the deal_closed_at CHECK.
 	colClosedAt = "t.closed_at"
 	colSource   = "t.source"
-	// The company's size band, read over win-loss's join to organization. The
-	// alias is `org` because `t` is the deal and `ref` is what the row-scope
+	// The company's size band, read over win-loss's join to company. The
+	// alias is `company` because `t` is the deal and `ref` is what the row-scope
 	// clause binds its own subquery to.
-	colOrgSizeBand = "org.size_band"
+	colCompanySizeBand = "company.size_band"
 
 	// fieldDaysToClose is named because it is spelled in the measure map and
 	// in the default aggregates, and a name written twice can come to be
@@ -250,7 +250,7 @@ func winLossSpec() reportSpec {
 		fieldSource:         colSource,
 		fieldOwnerID:        colOwnerID,
 		fieldPipelineID:     colPipelineID,
-		fieldOrganizationID: colOrganizationID,
+		fieldCompanyID: colCompanyID,
 		fieldCurrency:       colCurrency,
 		// WHY we lost, beside how much and how long. Two CHECK constraints on
 		// the table bind this column to the loss: deal_lost_reason wants one
@@ -263,25 +263,25 @@ func winLossSpec() reportSpec {
 		// How big the company was, so "who do we actually win against" is one
 		// question rather than a company-by-company read.
 		//
-		// The band is an attribute of the ORGANIZATION, not of the deal, so it
+		// The band is an attribute of the COMPANY, not of the deal, so it
 		// arrives over the join below and carries scopeVia rather than
 		// referenceScopes: the latter renders `ref.id = <column>` and a size
 		// band is not an id, so it would match nothing and the dimension would
 		// carry no row scope at all.
-		fieldSizeBand: colOrgSizeBand,
+		fieldSizeBand: colCompanySizeBand,
 	}
 	maps.Copy(dimensions, periodDimensions(colClosedAt))
 
 	return reportSpec{
 		entity: datasource.EntityDeal,
 		table:  tableDeal,
-		// LEFT, and to-one on both counts: organization.id is its primary key,
+		// LEFT, and to-one on both counts: company.id is its primary key,
 		// so a deal matches at most one row and the grain stays one row per
 		// deal. LEFT rather than inner because a deal with no company is still
 		// a deal that was won or lost — an inner join would drop it from the
 		// totals silently, which is the shape where a report quietly stops
 		// counting some of the business.
-		joins:     []string{"LEFT JOIN organization org ON org.id = t.organization_id"},
+		joins:     []string{"LEFT JOIN company company ON company.id = t.company_id"},
 		baseWhere: "t.archived_at IS NULL AND t.status IN ('won','lost')",
 		basePlain: "live (unarchived) deals that have been won or lost, bucketed by when they closed " +
 			"in the installation's reporting timezone (an open deal is absent from this report, not a zero in it)",
@@ -327,12 +327,12 @@ func winLossSpec() reportSpec {
 		// The company a won or lost deal points at is row-scoped and masked on
 		// a normal deal read, so grouping by it carries the same obligation the
 		// partner dimension does on deals-by-stage.
-		referenceScopes: map[string]string{colOrganizationID: tableOrganization},
+		referenceScopes: map[string]string{colCompanyID: tableCompany},
 		// size_band reads the joined company, so it inherits the scope the
 		// company id carries above. Without this the dimension is a hole rather
 		// than a feature: a seat excluded from an account could group by that
 		// account's size and read its win count off the row.
-		scopeVia:  map[string]string{fieldSizeBand: colOrganizationID},
+		scopeVia:  map[string]string{fieldSizeBand: colCompanyID},
 		defaultBy: moneyDefaultBy(fieldStatus),
 		// The count and the native sum keep their names and their places: they
 		// are what every caller of this report already reads, and renaming or

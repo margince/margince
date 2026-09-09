@@ -42,14 +42,14 @@ var derivedColumns = map[string]bool{
 // They are dropped for the same reason as derivedColumns — undo puts the value
 // back, and what wrote it is history — but they are keyed by entity type
 // because the same word is a stamp on one record and a field on another.
-// `source` is the worked example: on an organization it is the lifecycle
+// `source` is the worked example: on a company it is the lifecycle
 // move's provenance, and on a LEAD it is a value a rep types and can edit
 // (UpdateLeadRequest.Source). Dropping it globally would silently omit a lead's
 // own source from its restore, which is the silent-drop failure this file's
 // refusal set exists to prevent.
 //
 // Filtering these is what makes their records reversible at all. An
-// organization rename records `name_source` in BOTH images, so before this
+// company rename records `name_source` in BOTH images, so before this
 // entry the before-image filtered to nothing spellable and the whole entry
 // refused with not_restorable_by_this_path — every promoted rename permanently
 // un-undoable, the same limit the address folding below exists to avoid, and a
@@ -57,7 +57,7 @@ var derivedColumns = map[string]bool{
 //
 //nolint:goconst // as namedByTheShapeButNotWrittenByThePatch below: the rows are wire names read as data
 var provenanceStamps = map[string]map[string]bool{
-	"organization": {"name_source": true, "source": true},
+	"company": {"name_source": true, "source": true},
 }
 
 // addressColumns maps the address_* columns an audit image carries onto the

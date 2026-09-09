@@ -31,13 +31,13 @@ import (
 // every case in this file measures a Team1 manager against.
 func seedUnownedProject(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
-	orgID := ids.NewV7()
-	e.WsExec(t, `INSERT INTO organization (id, display_name, source, captured_by)
-		VALUES ($1, 'Unowned Co', 'manual', 'human:x')`, orgID)
+	companyID := ids.NewV7()
+	e.WsExec(t, `INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, 'Unowned Co', 'manual', 'human:x')`, companyID)
 	projectID := ids.NewV7()
-	e.WsExec(t, `INSERT INTO project (id, name, organization_id, phase, source, captured_by)
+	e.WsExec(t, `INSERT INTO project (id, name, company_id, phase, source, captured_by)
 		VALUES ($1, 'Unowned Delivery', $2, 'delivering', 'manual', 'human:x')`,
-		projectID, orgID)
+		projectID, companyID)
 	return projectID
 }
 

@@ -80,23 +80,23 @@ func assertPersonWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	assertWireCF(t, list.Data[0], col, "silver")
 }
 
-func assertOrganizationWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
+func assertCompanyWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
-	created, id := createWithCF(t, e, "/v1/organizations", integration.AnyMap{
+	created, id := createWithCF(t, e, "/v1/companies", integration.AnyMap{
 		"display_name": "Acme GmbH", "source": "ui", col: "emea",
 	})
 	assertWireCF(t, created, col, "emea")
 
 	var got integration.AnyMap
-	if status := e.Call(t, "GET", "/v1/organizations/"+id, nil, nil, &got); status != http.StatusOK {
-		t.Fatalf("get organization status = %d", status)
+	if status := e.Call(t, "GET", "/v1/companies/"+id, nil, nil, &got); status != http.StatusOK {
+		t.Fatalf("get company status = %d", status)
 	}
 	assertWireCF(t, got, col, "emea")
 }
 
 // assertDealWireRoundTrip mirrors assertPersonWireRoundTrip's full
 // create/get/update/list shape for the deal object — one of the four
-// core objects the fieldcatalog seam rides (person/organization/deal/lead).
+// core objects the fieldcatalog seam rides (person/company/deal/lead).
 func assertDealWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -268,10 +268,10 @@ func TestCustomFieldValuesHTTP(t *testing.T) {
 		t.Fatalf("create person field status = %d: %+v", status, problem)
 	}
 	status, region, problem := createCustomField(t, e, integration.AnyMap{
-		"object": "organization", "label": "Region", "type": "text", "source": "ui",
+		"object": "company", "label": "Region", "type": "text", "source": "ui",
 	})
 	if status != http.StatusCreated {
-		t.Fatalf("create organization field status = %d: %+v", status, problem)
+		t.Fatalf("create company field status = %d: %+v", status, problem)
 	}
 	status, segment, problem := createCustomField(t, e, integration.AnyMap{
 		"object": "deal", "label": "Segment", "type": "text", "source": "ui",
@@ -289,8 +289,8 @@ func TestCustomFieldValuesHTTP(t *testing.T) {
 	t.Run("person create/get/update/list carry the key top-level", func(t *testing.T) {
 		assertPersonWireRoundTrip(t, e, tier.ColumnName)
 	})
-	t.Run("organization round trip carries the key top-level", func(t *testing.T) {
-		assertOrganizationWireRoundTrip(t, e, region.ColumnName)
+	t.Run("company round trip carries the key top-level", func(t *testing.T) {
+		assertCompanyWireRoundTrip(t, e, region.ColumnName)
 	})
 	t.Run("deal create/get/update/list carry the key top-level", func(t *testing.T) {
 		assertDealWireRoundTrip(t, e, segment.ColumnName)

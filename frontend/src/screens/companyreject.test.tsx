@@ -29,11 +29,11 @@ function SnapshotResolved() {
 // left to hold here is that the control asks for it ONCE, asks only when both
 // halves are available, and reports the answer the server actually gave.
 
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 
 // Typed, not asserted: a fixture cast into the contract type can drop a
 // required field and go on compiling while the wire shape moves under it.
-const ORG: Organization = {
+const ORG: Company = {
   writable: true,
   id: "o-1",
   display_name: "Expensify Ltd",
@@ -99,7 +99,7 @@ function stub(allow: GrantSpec, reject: (body: unknown) => Response): Sent[] {
 const rejected = () =>
   new Response(
     JSON.stringify({
-      organization: { ...ORG, archived_at: "2026-09-08T10:00:00Z" },
+      company: { ...ORG, archived_at: "2026-09-08T10:00:00Z" },
       domain: {
         // Deliberately NOT the domain the fixture above shows. The server reads
         // the company's current primary inside the transaction, so the two can
@@ -134,8 +134,8 @@ function render(ui: ReactNode) {
 // version the page was holding.
 it("rejects a company in one request and reports the domain the server refused", async () => {
   const user = userEvent.setup();
-  const sent = stub({ organization: ["read", "update", "delete"] }, rejected);
-  render(<CompanyRejectAction org={ORG} />);
+  const sent = stub({ company: ["read", "update", "delete"] }, rejected);
+  render(<CompanyRejectAction company={ORG} />);
 
   await user.click(await screen.findByTestId("reject-company"));
   await user.type(
@@ -150,7 +150,7 @@ it("rejects a company in one request and reports the domain the server refused",
   expect(await screen.findByRole("status")).toBeInTheDocument();
   expect(sent).toHaveLength(1);
   expect(sent[0]?.method).toBe("POST");
-  expect(sent[0]?.url).toBe("/v1/organizations/o-1/reject");
+  expect(sent[0]?.url).toBe("/v1/companies/o-1/reject");
   // The reason travels; the DOMAIN does not. A domain in the body is the stale
   // snapshot defect, and this is the case that fails if one is added back.
   expect(sent[0]?.body).toEqual({ reason: "a tool we use" });
@@ -171,13 +171,13 @@ it("rejects a company in one request and reports the domain the server refused",
 // The grant defect, both halves. A seat holding one of them saw the control,
 // pressed it, and was refused after the first of two writes had landed.
 it.each([
-  ["only the archive grant", { organization: ["read", "delete"] }],
-  ["only the domain grant", { organization: ["read", "update"] }],
+  ["only the archive grant", { company: ["read", "delete"] }],
+  ["only the domain grant", { company: ["read", "update"] }],
 ])("draws nothing for a seat holding %s", async (_name, allow) => {
   stub(allow as GrantSpec, rejected);
   render(
     <>
-      <CompanyRejectAction org={ORG} />
+      <CompanyRejectAction company={ORG} />
       <SnapshotResolved />
     </>,
   );
@@ -190,10 +190,10 @@ it.each([
 // nothing a refusal would stop. The server refuses it; a control that is only
 // ever refused should not be drawn.
 it("draws nothing for a company with no primary domain", async () => {
-  stub({ organization: ["read", "update", "delete"] }, rejected);
+  stub({ company: ["read", "update", "delete"] }, rejected);
   render(
     <>
-      <CompanyRejectAction org={{ ...ORG, domains: [] }} />
+      <CompanyRejectAction company={{ ...ORG, domains: [] }} />
       <SnapshotResolved />
     </>,
   );
@@ -206,8 +206,8 @@ it("draws nothing for a company with no primary domain", async () => {
 // server has to.
 it("will not send until a reason is written", async () => {
   const user = userEvent.setup();
-  const sent = stub({ organization: ["read", "update", "delete"] }, rejected);
-  render(<CompanyRejectAction org={ORG} />);
+  const sent = stub({ company: ["read", "update", "delete"] }, rejected);
+  render(<CompanyRejectAction company={ORG} />);
 
   await user.click(await screen.findByTestId("reject-company"));
   expect(screen.getByTestId("reject-company-confirm")).toBeDisabled();
@@ -223,8 +223,8 @@ it("will not send until a reason is written", async () => {
 // one's recorded answer, which is the opposite of what a fresh decision means.
 it("mints a new idempotency key for each confirmation", async () => {
   const user = userEvent.setup();
-  const sent = stub({ organization: ["read", "update", "delete"] }, rejected);
-  render(<CompanyRejectAction org={ORG} />);
+  const sent = stub({ company: ["read", "update", "delete"] }, rejected);
+  render(<CompanyRejectAction company={ORG} />);
 
   for (const reason of ["a tool we use", "still a tool we use"]) {
     await user.click(await screen.findByTestId("reject-company"));

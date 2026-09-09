@@ -74,7 +74,7 @@ echo "== verify-boot 2/6: the installation describes itself =="
 # The expected name is read out of the seeder rather than repeated, so renaming
 # the company there cannot leave this asserting the old one. Scoped to
 # describe_company's own body: `display_name` is a field the seeder sends for
-# organizations too, and the first one in the file is only the right one until
+# companies too, and the first one in the file is only the right one until
 # somebody adds a record above it.
 seeded_company="$(awk '/^describe_company\(\) \{/,/^\}/' "$REPO_DIR/scripts/seed-dev.sh" \
   | sed -n 's/.*"display_name":"\([^"]*\)".*/\1/p' | head -1)"
@@ -200,12 +200,12 @@ done <<< "$seeded_people"
 # default makes "who are our customers?" answer with everything.
 #
 # Looked up by the DOMAIN the seeder writes, from the seeder's own line, for the
-# same reason the people above are looked up by name: `/v1/organizations` is a
+# same reason the people above are looked up by name: `/v1/companies` is a
 # page, this installation may carry hundreds of companies from the demo dataset,
 # and a check that reads the first hundred of them is a check that stops finding
 # what it is looking for the day the dataset grows.
-seeded_org_bodies="$(seeded_payloads organization)"
-[[ -n "$seeded_org_bodies" ]] || fail "found no 'ensure \"organization …\"' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
+seeded_company_bodies="$(seeded_payloads company)"
+[[ -n "$seeded_company_bodies" ]] || fail "found no 'ensure \"company …\"' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
 
 # The stage the seeder actually writes, read from the seeder. "Anything but the
 # default" would accept a stage nobody wrote — a boot proof reads the state the
@@ -214,18 +214,18 @@ seeded_lifecycle="$(sed -n 's/.*{"lifecycle":"\([a-z_]*\)"}.*/\1/p' "$REPO_DIR/s
 [[ -n "$seeded_lifecycle" ]] || fail "scripts/seed-dev.sh writes no {\"lifecycle\":\"…\"} body — this check has no stage to hold the account to"
 
 while IFS= read -r body; do
-  org_name="$(printf '%s' "$body" | jq -r '.display_name')"
-  org_domain="$(printf '%s' "$body" | jq -r 'first(.domains[]?.domain) // empty')"
-  [[ -n "$org_domain" ]] || fail "the seeder creates '$org_name' with no domain, so this check has no way to find it"
-  org="$(find_first "/organizations?domain=$(jq -rn --arg v "$org_domain" '$v|@uri')" \
-    '.display_name == $name' --arg name "$org_name")"
-  if [[ -z "$org" ]]; then
-    fail "seeded account '$org_name' missing from GET /v1/organizations — seed absent or stale (make seed-dev)"
+  company_name="$(printf '%s' "$body" | jq -r '.display_name')"
+  company_domain="$(printf '%s' "$body" | jq -r 'first(.domains[]?.domain) // empty')"
+  [[ -n "$company_domain" ]] || fail "the seeder creates '$company_name' with no domain, so this check has no way to find it"
+  company="$(find_first "/companies?domain=$(jq -rn --arg v "$company_domain" '$v|@uri')" \
+    '.display_name == $name' --arg name "$company_name")"
+  if [[ -z "$company" ]]; then
+    fail "seeded account '$company_name' missing from GET /v1/companies — seed absent or stale (make seed-dev)"
   fi
-  lifecycle="$(printf '%s' "$org" | jq -r '.lifecycle // "unknown"')"
-  [[ "$lifecycle" = "$seeded_lifecycle" ]] || fail "seeded account '$org_name' stands at '$lifecycle' where the seed writes '$seeded_lifecycle' — an account off the stage it was seeded to answers the wrong question about who the customers are, and the demo dataset's verify pass refuses a default lifecycle outright"
-  echo "  OK: '$org_name' stands at '$lifecycle'"
-done <<< "$seeded_org_bodies"
+  lifecycle="$(printf '%s' "$company" | jq -r '.lifecycle // "unknown"')"
+  [[ "$lifecycle" = "$seeded_lifecycle" ]] || fail "seeded account '$company_name' stands at '$lifecycle' where the seed writes '$seeded_lifecycle' — an account off the stage it was seeded to answers the wrong question about who the customers are, and the demo dataset's verify pass refuses a default lifecycle outright"
+  echo "  OK: '$company_name' stands at '$lifecycle'"
+done <<< "$seeded_company_bodies"
 
 echo "== verify-boot 4/6: the seeded conversations are conversations =="
 # A LINK IS NOT A CONVERSATION. Everything network-shaped — the person graph's

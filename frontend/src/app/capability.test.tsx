@@ -381,20 +381,20 @@ describe("useCanWriteRecord", () => {
   // Each case holds the object grant AND a full seat, so the only thing moving
   // is the row. A test that varied two axes at once could not say which one
   // produced the answer.
-  const granted = { allow: { organization: ["read", "update"] } } as const;
+  const granted = { allow: { company: ["read", "update"] } } as const;
 
   it("admits a record the server marked writable", async () => {
     stubMe(meFixture(granted));
 
-    expect(await canWriteRecord("organization", { writable: true })).toBe(true);
+    expect(await canWriteRecord("company", { writable: true })).toBe(true);
   });
 
   it("refuses a record the server marked not writable, grant and seat notwithstanding", async () => {
-    // The case the whole field exists for: a rep holds organization.update on
+    // The case the whole field exists for: a rep holds company.update on
     // the OBJECT and still may not edit a colleague's company.
     stubMe(meFixture(granted));
 
-    expect(await canWriteRecord("organization", { writable: false })).toBe(
+    expect(await canWriteRecord("company", { writable: false })).toBe(
       false,
     );
   });
@@ -405,21 +405,21 @@ describe("useCanWriteRecord", () => {
     // in this file gives.
     stubMe(meFixture(granted));
 
-    expect(await canWriteRecord("organization", {})).toBe(false);
+    expect(await canWriteRecord("company", {})).toBe(false);
   });
 
   it("refuses while the record has not arrived", async () => {
     stubMe(meFixture(granted));
 
-    expect(await canWriteRecord("organization", undefined)).toBe(false);
+    expect(await canWriteRecord("company", undefined)).toBe(false);
   });
 
   it("refuses a writable record when the OBJECT grant is missing", async () => {
     // The row half cannot buy the object half. A seat with no
-    // organization.update writes no company, however the row is marked.
-    stubMe(meFixture({ allow: { organization: ["read"] } } as const));
+    // company.update writes no company, however the row is marked.
+    stubMe(meFixture({ allow: { company: ["read"] } } as const));
 
-    expect(await canWriteRecord("organization", { writable: true })).toBe(
+    expect(await canWriteRecord("company", { writable: true })).toBe(
       false,
     );
   });

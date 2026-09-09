@@ -10,7 +10,7 @@
 #
 # Pure client: the stack must already be running (`make dev`). Idempotent:
 # a re-run logs in instead of re-bootstrapping, and re-creating a record
-# that already exists answers 409 on its natural key (person email, org
+# that already exists answers 409 on its natural key (person email, company
 # domain, deal name checked via list), which counts as "already seeded".
 #
 # Bootstrap happens at api boot from the deployment configuration
@@ -53,7 +53,7 @@ trap 'rm -rf "$workdir"' EXIT
 
 SESSION=""
 
-# One installation serves one organization (A107/ADR-0061): the server
+# One installation serves one company (A107/ADR-0061): the server
 # resolves the tenant itself — no header selects it.
 # A transport failure (refused, timeout) prints status 000 and must not
 # trip set -e — the caller's status handling owns the error message.
@@ -130,7 +130,7 @@ sign_in_as_admin() {
   if [[ "$status" != "200" ]]; then
     echo "  response body:" >&2
     cat "$workdir/body" >&2
-    fail "login as $ADMIN_EMAIL returned HTTP $status for both the chosen and the operator-supplied password — the api bootstraps the demo organization at boot from its margince.yaml (make dev writes it); if the credentials changed, reset the dev database and restart the stack"
+    fail "login as $ADMIN_EMAIL returned HTTP $status for both the chosen and the operator-supplied password — the api bootstraps the demo company at boot from its margince.yaml (make dev writes it); if the credentials changed, reset the dev database and restart the stack"
   fi
   capture_session
   echo "  OK: signed in with the operator-supplied password; replacing it"
@@ -172,7 +172,7 @@ rotate_admin_password_via_detour() {
   if [[ "$status" != "200" ]]; then
     echo "  response body:" >&2
     cat "$workdir/body" >&2
-    fail "login as $ADMIN_EMAIL returned HTTP $status — the api bootstraps the demo organization at boot from its margince.yaml (make dev writes it); if the credentials changed, reset the dev database and restart the stack"
+    fail "login as $ADMIN_EMAIL returned HTTP $status — the api bootstraps the demo company at boot from its margince.yaml (make dev writes it); if the credentials changed, reset the dev database and restart the stack"
   fi
   capture_session
 
@@ -218,7 +218,7 @@ echo "  OK: $API_BASE is up"
 echo "== seed-dev: demo installation =="
 sign_in_as_admin
 
-# The installation's own company — the anchor organization, and the one row the
+# The installation's own company — the anchor company, and the one row the
 # app shell gates on. GET /company 404s until it exists, and that 404 IS the
 # "this installation has not described itself yet" signal onboarding reads, so
 # a stack this script has finished seeding still lands every login in
@@ -335,7 +335,7 @@ ensure_activity() { # ensure_activity <label> <subject> <source-id> <json-body>
 #
 # 200 is the endpoint answering idempotently with the row that stands — see
 # LogActivity's `http.StatusOK // idempotent capture replay`. Accepting it in
-# `ensure` itself would be wrong: a 200 from creating a person, an organization
+# `ensure` itself would be wrong: a 200 from creating a person, a company
 # or a deal is not a replay, and reading one as "already present" would let a
 # contract regression pass as a seeded fixture nobody wrote.
 ensure_keyed() { # ensure_keyed <label> <path> <json-body>
@@ -374,8 +374,8 @@ ensure "person Bob Schmidt" /people \
 ensure "person Carol Wagner" /people \
   '{"full_name":"Carol Wagner","emails":[{"email":"carol@demo.test","is_primary":true}],"source":"seed"}'
 
-echo "== seed-dev: demo organization =="
-ensure "organization Demo GmbH" /organizations \
+echo "== seed-dev: demo company =="
+ensure "company Demo GmbH" /companies \
   '{"display_name":"Demo GmbH","domains":[{"domain":"demo.test","is_primary":true}],"source":"seed"}'
 
 # What these records are FOR is being looked at, so they are held to the bar the
@@ -445,8 +445,8 @@ person_id() { # person_id <full-name> <email> — prints the id, empty when abse
     | jq -r '.id // empty'
 }
 
-org_id="$(find_first '/organizations?domain=demo.test' '.display_name == "Demo GmbH"' | jq -r '.id // empty')"
-[[ -n "$org_id" ]] || fail "Demo GmbH is not in the installation the seed just wrote to"
+company_id="$(find_first '/companies?domain=demo.test' '.display_name == "Demo GmbH"' | jq -r '.id // empty')"
+[[ -n "$company_id" ]] || fail "Demo GmbH is not in the installation the seed just wrote to"
 
 # The roles are the demo's own: a company page whose three contacts have no
 # titles reads as a page that failed to load them.
@@ -467,13 +467,13 @@ employ() { # employ <full-name> <email> <role>
   id="$(person_id "$name" "$email")"
   [[ -n "$id" ]] || fail "$name <$email> is not in the installation the seed just wrote to"
   edges="/relationships?kind=employment&person_id=$id"
-  if [[ -n "$(find_first "$edges" ".organization_id == \$org and $CURRENT_PRIMARY_JQ" --arg org "$org_id")" ]]; then
+  if [[ -n "$(find_first "$edges" ".company_id == \$company and $CURRENT_PRIMARY_JQ" --arg company "$company_id")" ]]; then
     echo "  OK: $name already employed at Demo GmbH"
     return
   fi
   standing="$(find_first "$edges" \
-    '.organization_id == $org and (.ended_at == null or (.ended_at | tostring) >= $today)' \
-    --arg org "$org_id")"
+    '.company_id == $company and (.ended_at == null or (.ended_at | tostring) >= $today)' \
+    --arg company "$company_id")"
   if [[ -n "$standing" ]]; then
     rel_id="$(printf '%s' "$standing" | jq -r '.id')"
     rel_version="$(printf '%s' "$standing" | jq -r '.version // ""')"
@@ -493,8 +493,8 @@ employ() { # employ <full-name> <email> <role>
   # primary when the person has no other current one, and stating it here would
   # be this script deciding something it has not read.
   ensure "employment $name at Demo GmbH" /relationships \
-    "$(jq -n --arg p "$id" --arg o "$org_id" --arg r "$role" \
-      '{kind:"employment",person_id:$p,organization_id:$o,role:$r,source:"seed"}')"
+    "$(jq -n --arg p "$id" --arg o "$company_id" --arg r "$role" \
+      '{kind:"employment",person_id:$p,company_id:$o,role:$r,source:"seed"}')"
 }
 
 employ "Alice Müller" "alice@demo.test" "Head of Operations"
@@ -502,21 +502,21 @@ employ "Bob Schmidt" "bob@demo.test" "Procurement Lead"
 employ "Carol Wagner" "carol@demo.test" "Managing Director"
 
 echo "== seed-dev: demo account lifecycle =="
-status="$(api GET "/organizations/$org_id")"
-[[ "$status" = "200" ]] || fail "GET /v1/organizations/$org_id returned HTTP $status"
-org_lifecycle="$(jq -r '.lifecycle // ""' "$workdir/body")"
-org_version="$(jq -r '.version // ""' "$workdir/body")"
-if [[ "$org_lifecycle" = "customer" ]]; then
+status="$(api GET "/companies/$company_id")"
+[[ "$status" = "200" ]] || fail "GET /v1/companies/$company_id returned HTTP $status"
+company_lifecycle="$(jq -r '.lifecycle // ""' "$workdir/body")"
+company_version="$(jq -r '.version // ""' "$workdir/body")"
+if [[ "$company_lifecycle" = "customer" ]]; then
   echo "  OK: Demo GmbH is already a customer"
 else
-  [[ -n "$org_version" ]] || fail "GET /v1/organizations/$org_id answered without a version to write against"
-  status="$(api_if_match PATCH "/organizations/$org_id" "$org_version" '{"lifecycle":"customer"}')"
+  [[ -n "$company_version" ]] || fail "GET /v1/companies/$company_id answered without a version to write against"
+  status="$(api_if_match PATCH "/companies/$company_id" "$company_version" '{"lifecycle":"customer"}')"
   case "$status" in
     200) echo "  OK: Demo GmbH is a customer" ;;
     *)
       echo "  response body:" >&2
       cat "$workdir/body" >&2
-      fail "PATCH /v1/organizations/$org_id (lifecycle) returned HTTP $status"
+      fail "PATCH /v1/companies/$company_id (lifecycle) returned HTTP $status"
       ;;
   esac
 fi
@@ -553,7 +553,7 @@ ensure_deal "Acme Expansion" "$stage_id_qualified" 2500000
 ensure_deal "Globex Renewal" "$stage_id_proposal" 1200000
 
 # The Worklist needs WORK to show, and nothing above produces any: people,
-# organizations and deals are records, and the queue ranks obligations. A demo
+# companies and deals are records, and the queue ranks obligations. A demo
 # database with none of those renders the surface as an honest empty page, which
 # is the one state a demo must not open on — and it is why two shipped changes
 # to that queue could not be demonstrated at all.

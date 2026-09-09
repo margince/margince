@@ -60,7 +60,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	dealsH := deals.NewHandlers(InstallationDB(pool), DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil))
 	// Bootstrap happens at boot from deployment configuration
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever
-	// serves the already-bound singleton organization.
+	// serves the already-bound singleton company.
 	identitySvc := identity.NewService(pool)
 	// The standing-grant edge: identity mints the credential, agents/runner
 	// stores the answer, and neither may import the other. Both halves of one
@@ -233,7 +233,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// learns the door is taken before writing the ask rather than from the
 		// 409 after it.
 		Reads:             NewPersonGraphReads(pool, InstallationDB(pool)),
-		orgRollupHandlers: orgRollupHandlers{pool: pool, now: time.Now},
+		companyRollupHandlers: companyRollupHandlers{pool: pool, now: time.Now},
 		strengthHandlers: strengthHandlers{
 			people: people.NewStore(InstallationDB(pool)), pool: pool, now: time.Now,
 		},

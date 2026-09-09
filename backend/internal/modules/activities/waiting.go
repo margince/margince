@@ -49,7 +49,7 @@ type WaitingReply struct {
 	OccurredAt time.Time
 	// The record the thread is filed under, when it names one.
 	PersonID       ids.UUID
-	OrganizationID ids.UUID
+	CompanyID ids.UUID
 	DealID         ids.UUID
 	// HasOpenDeal reports whether an open deal is on this thread. It is what
 	// lets a caller keep an old wait that still has money behind it, and drop
@@ -82,7 +82,7 @@ type WaitingReply struct {
 	// OwnerID is who owes this reply, resolved from the record the thread is
 	// filed under. Zero when no record on it names an owner.
 	//
-	// PRECEDENCE, first owner found: deal, lead, person, organization. It is the
+	// PRECEDENCE, first owner found: deal, lead, person, company. It is the
 	// order of how specific the claim is — a thread on a deal is that deal
 	// owner's to answer whatever else it touches, and a person outranks their
 	// company because the company owner is answerable for the account rather
@@ -281,7 +281,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		for rows.Next() {
 			var row WaitingReply
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
-				&row.PersonID, &row.OrganizationID, &row.DealID,
+				&row.PersonID, &row.CompanyID, &row.DealID,
 				&row.HasOpenDeal, &row.OwedVerdict, &row.Engaged, &row.OwnerID); err != nil {
 				return err
 			}

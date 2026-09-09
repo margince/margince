@@ -11,7 +11,7 @@ package main
 // The database-lifecycle verbs are the integration lane's clone machinery
 // (scripts/lib-testdb.sh db_admin): recreate-db/drop-db own destructive
 // DROP/CREATE DATABASE, and db-exists prints the literal answer the lane's
-// ensure_template string-compares. org-exists is the same kind of contract for
+// ensure_template string-compares. company-exists is the same kind of contract for
 // a different caller: scripts/deploy/api-entrypoint.sh branches on its answer
 // to decide whether a plaintext bootstrap credential is written at all.
 
@@ -357,23 +357,23 @@ func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
 	}
 }
 
-// TestOrgExistsAnswersTheEntrypointsQuestion pins the three states the deploy
+// TestCompanyExistsAnswersTheEntrypointsQuestion pins the three states the deploy
 // entrypoint distinguishes before it decides whether to materialize a bootstrap
 // credential. The archived case is the one worth having: the api counts
-// organizations with `archived_at IS NULL`, and a probe that merely counted rows
+// companies with `archived_at IS NULL`, and a probe that merely counted rows
 // would call an archived-only installation provisioned and withhold the
 // credential that could still bootstrap it.
-func TestOrgExistsAnswersTheEntrypointsQuestion(t *testing.T) {
+func TestCompanyExistsAnswersTheEntrypointsQuestion(t *testing.T) {
 	maint, base, withDB := testDSNs(t)
-	name := base + "_org_probe"
+	name := base + "_company_probe"
 	t.Cleanup(func() { mustMigrate(t, "drop-db", "--dsn", maint, "--name", name) })
 	mustMigrate(t, "recreate-db", "--dsn", maint, "--name", name)
 
 	dsn := withDB(name)
 	mustMigrate(t, "up", "--dsn", dsn)
 
-	if out := mustMigrate(t, "org-exists", "--dsn", dsn); out != "false\n" {
-		t.Fatalf("org-exists against a migrated but unbootstrapped installation printed %q, want %q", out, "false\n")
+	if out := mustMigrate(t, "company-exists", "--dsn", dsn); out != "false\n" {
+		t.Fatalf("company-exists against a migrated but unbootstrapped installation printed %q, want %q", out, "false\n")
 	}
 
 	ctx := context.Background()
@@ -391,8 +391,8 @@ func TestOrgExistsAnswersTheEntrypointsQuestion(t *testing.T) {
 	if err := conn.QueryRow(ctx, `INSERT INTO workspace DEFAULT VALUES RETURNING id`).Scan(&probeWS); err != nil {
 		t.Fatalf("seeding a workspace: %v", err)
 	}
-	if out := mustMigrate(t, "org-exists", "--dsn", dsn); out != "true\n" {
-		t.Fatalf("org-exists against a bootstrapped installation printed %q, want %q", out, "true\n")
+	if out := mustMigrate(t, "company-exists", "--dsn", dsn); out != "true\n" {
+		t.Fatalf("company-exists against a bootstrapped installation printed %q, want %q", out, "true\n")
 	}
 
 	// By id, not table-wide: the probe archives the row it seeded. The database
@@ -405,8 +405,8 @@ func TestOrgExistsAnswersTheEntrypointsQuestion(t *testing.T) {
 	if tag.RowsAffected() != 1 {
 		t.Fatalf("archiving the seeded workspace touched %d rows, want 1", tag.RowsAffected())
 	}
-	if out := mustMigrate(t, "org-exists", "--dsn", dsn); out != "false\n" {
-		t.Fatalf("org-exists counted an ARCHIVED organization as present (printed %q); the api's boot count ignores it, so the two disagree", out)
+	if out := mustMigrate(t, "company-exists", "--dsn", dsn); out != "false\n" {
+		t.Fatalf("company-exists counted an ARCHIVED company as present (printed %q); the api's boot count ignores it, so the two disagree", out)
 	}
 }
 

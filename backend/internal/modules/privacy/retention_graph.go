@@ -26,7 +26,7 @@ import (
 // arm it stops checking reads exactly like a hold arm that passes.
 //
 // They carry the transitive hold exclusion the eraser's carry, which this sweep
-// did NOT have before. A legal hold on a linked deal, organization, lead or
+// did NOT have before. A legal hold on a linked deal, company, lead or
 // project freezes the evidence about it, and a clock has less claim on that
 // evidence than a subject's own Art. 17 request does — so the path nobody asks
 // for may not be the one that deletes what the requested path refuses to.

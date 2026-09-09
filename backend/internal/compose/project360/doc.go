@@ -7,7 +7,7 @@
 // contracts and documents, the open commitments filed under it, its
 // timeline, how well its correspondence is filed, and the header figures.
 //
-// It is the organization 360's sibling (compose/org360) and keeps its two
+// It is the company 360's sibling (compose/company360) and keeps its two
 // rules. It lives in compose because it spans deals, people, contracts and
 // activities — the composition layer's charter — and it owns no table.
 //

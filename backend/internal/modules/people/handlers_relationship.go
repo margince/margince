@@ -50,7 +50,7 @@ func (h Handlers) ListRelationships(w http.ResponseWriter, r *http.Request, para
 		in.Kind = &kind
 	}
 	in.PersonID = idArg[ids.PersonKind](params.PersonId)
-	in.OrganizationID = idArg[ids.OrganizationKind](params.OrganizationId)
+	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
 	in.DealID = idArg[ids.DealKind](params.DealId)
 	if params.Cursor != nil {
 		in.Cursor = *params.Cursor
@@ -122,7 +122,7 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 		return
 	}
 	in := UpsertPartnerInput{
-		OrganizationID: pathID[ids.OrganizationKind](id),
+		CompanyID: pathID[ids.CompanyKind](id),
 		PartnerRole:    string(req.PartnerRole),
 		IfVersion:      ifVersion,
 	}
@@ -170,7 +170,7 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 }
 
 func (h Handlers) GetPartner(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	partner, err := h.store.GetPartner(r.Context(), pathID[ids.OrganizationKind](id))
+	partner, err := h.store.GetPartner(r.Context(), pathID[ids.CompanyKind](id))
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

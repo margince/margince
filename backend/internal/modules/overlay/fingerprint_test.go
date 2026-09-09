@@ -56,7 +56,7 @@ func TestFingerprintChangesWithEveryDeclarationDetail(t *testing.T) {
 		mutate func(*overlay.ObjectMapping)
 	}{
 		{"source", func(m *overlay.ObjectMapping) { m.Source = "companies" }},
-		{"target", func(m *overlay.ObjectMapping) { m.Target = "organization" }},
+		{"target", func(m *overlay.ObjectMapping) { m.Target = "company" }},
 		{"external key", func(m *overlay.ObjectMapping) { m.ExternalKey = "id" }},
 		{"baseline", func(m *overlay.ObjectMapping) { m.Baseline = "hs_lastmodifieddate" }},
 		{"unmapped policy", func(m *overlay.ObjectMapping) { m.UnmappedPolicy = "drop" }},

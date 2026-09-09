@@ -41,7 +41,7 @@ type pageMenu struct {
 // makes NO call (boilerplate and unclassified pages state few facts and
 // their calls would dominate cost, not quality).
 func menuForKind(kind crmcontracts.SiteReadPageKind) (pageMenu, bool) {
-	company := people.OrganizationFactFields[companyWord]
+	company := people.CompanyFactFields[companyWord]
 	offeringAndMarket := factFields("offering", "market")
 	switch kind {
 	case crmcontracts.SiteReadPageKindImpressum:
@@ -92,7 +92,7 @@ func menuForKind(kind crmcontracts.SiteReadPageKind) (pageMenu, bool) {
 func factFields(categories ...string) []string {
 	var out []string
 	for _, category := range categories {
-		out = append(out, people.OrganizationFactFields[category]...)
+		out = append(out, people.CompanyFactFields[category]...)
 	}
 	return out
 }
@@ -104,7 +104,7 @@ var factCategoryByField = invertFactFields()
 
 func invertFactFields() map[string]string {
 	byField := map[string]string{}
-	for category, fields := range people.OrganizationFactFields {
+	for category, fields := range people.CompanyFactFields {
 		for _, field := range fields {
 			byField[field] = category
 		}
@@ -343,7 +343,7 @@ func gatePageFactList(parsed pageFactsReply, page crawlPage, menu pageMenu, idx 
 		// to know that.
 		value := strings.TrimSpace(f.V)
 		valueKey := ""
-		if people.OrganizationFactMultiValue[f.F] {
+		if people.CompanyFactMultiValue[f.F] {
 			valueKey = people.NormalizeFactValueKey(value)
 			if valueKey == "" {
 				drop(lanePageFacts, f.F, f.V, dropEmptyValueKey)

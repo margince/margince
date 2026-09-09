@@ -317,7 +317,7 @@ func TestAcceptance_AC_OV_8_IncumbentWinsConflict(t *testing.T) {
 		t.Fatalf("mapping the acting user to owner-1: %v", err)
 	}
 
-	const objectClass = "organization"
+	const objectClass = "company"
 	const winsExternalID = "61655665900"
 	const reverseExternalID = "61655665901"
 	oldBaseline := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
@@ -557,7 +557,7 @@ func TestAcceptance_OVA_AC_1_TeardownPurges(t *testing.T) {
 	dealRec.OwnerExternalID = "owner-1"
 	fakeInc.Seed(overlaymod.IncumbentClassDeals, dealRec)
 	fakeInc.SeedAssoc(overlaymod.IncumbentClassDeals, "700001", overlaymod.IncumbentClassCompanies, overlaymod.Assoc{
-		FromType: "deal", FromID: "700001", ToType: "organization", ToID: "800001",
+		FromType: "deal", FromID: "700001", ToType: "company", ToID: "800001",
 		TypeID: 5, Category: "HUBSPOT_DEFINED", Direction: "forward",
 	})
 	if _, err := overlaymod.Backfill(adminCtx, fakeInc, mirror, overlaymod.IncumbentClassDeals, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)); err != nil {

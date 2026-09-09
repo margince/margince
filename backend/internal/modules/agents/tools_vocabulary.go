@@ -15,7 +15,7 @@ package agents
 //
 // It is not hypothetical. On 2026-08-26 a client asked which companies were
 // near Cologne, probed four spellings of the geo field, was correctly refused
-// four times, and told its user that organizations in this workspace carry no
+// four times, and told its user that companies in this workspace carry no
 // address at all — while `address` with `within_radius` sat in the vocabulary
 // it had no door to. The refusals were honest and the conclusion was wrong,
 // which is the worst pairing available: a caller reasoning carefully from what

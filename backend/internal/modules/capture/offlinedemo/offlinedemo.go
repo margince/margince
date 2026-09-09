@@ -56,7 +56,7 @@ const Name = "offline_demo"
 // never updated — so a change to the templates reaches only companies that
 // have not been synced yet.
 // Version 2 re-dates the correspondence BACKWARD from the run. Version 1
-// anchored it on the organization's created_at, which in a fresh installation
+// anchored it on the company's created_at, which in a fresh installation
 // is today — so every message landed in the future, the sink refused them all,
 // and the cursor those runs wrote carries a `through` two months ahead. A
 // version bump is exactly the tool for that: the cursor no longer matches, the
@@ -99,7 +99,7 @@ type Mailbox struct {
 // Account is one company the seat owns, with the parties and facts a thread
 // can be written from.
 type Account struct {
-	OrganizationID string
+	CompanyID string
 	Name           string
 	Domain         string
 	Lifecycle      string
@@ -116,7 +116,7 @@ type Account struct {
 	ContractNumber     string
 	// Now is when the sync runs. The correspondence is dated BACKWARD from
 	// it, because a captured message in the future is refused — and the
-	// organization's own created_at is today in a fresh installation, which
+	// company's own created_at is today in a fresh installation, which
 	// is what made the first version generate nothing at all.
 	Now time.Time
 }

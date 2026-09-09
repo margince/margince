@@ -76,7 +76,7 @@ var FieldTypes = []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePick
 // travels in.
 var FieldObjects = []string{
 	string(datasource.EntityPerson),
-	string(datasource.EntityOrganization),
+	string(datasource.EntityCompany),
 	string(datasource.EntityDeal),
 	string(datasource.EntityLead),
 	string(datasource.EntityProject),

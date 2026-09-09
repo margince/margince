@@ -39,7 +39,7 @@ const ANCHOR_ORDER: readonly RelinkKind[] = [
   "deal",
   "lead",
   "project",
-  "organization",
+  "company",
 ];
 
 /**

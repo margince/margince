@@ -184,9 +184,9 @@ describe("the stakeholders on a deal", () => {
       role: "economic_buyer",
       source: "manual",
     });
-    // The deal is the anchor, so no organization travels: an endpoint shape the
+    // The deal is the anchor, so no company travels: an endpoint shape the
     // rel_*_shape CHECKs refuse earns a 422 rather than a row.
-    expect(posted[0]).not.toHaveProperty("organization_id");
+    expect(posted[0]).not.toHaveProperty("company_id");
   });
 
   it("says nobody is on the deal rather than nothing at all", async () => {

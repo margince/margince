@@ -130,10 +130,10 @@ function supersededBase(shown: boolean): PluralBase {
 }
 
 export function CompanyDocumentsCard({
-  orgId,
+  companyId,
   refusedReasonId,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   // The id of the page's sentence about why this account takes no changes,
   // while it does not. The upload hangs a file on the account through the
   // account's own write gate, so it is refused by the same fact as Edit.
@@ -161,10 +161,10 @@ export function CompanyDocumentsCard({
   // made from a request that never asked about the other kinds. The account's
   // library is a page of rows, not a feed.
   const query = useQuery({
-    queryKey: ["orgDocuments", orgId],
+    queryKey: ["companyDocuments", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/documents", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.GET("/companies/{id}/documents", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -235,7 +235,7 @@ export function CompanyDocumentsCard({
       }
     >
       <AddDocumentDialog
-        anchor={{ record: "organization", id: orgId }}
+        anchor={{ record: "company", id: companyId }}
         open={adding}
         onClose={() => setAdding(false)}
       />

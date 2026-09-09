@@ -177,7 +177,7 @@ incomplete trace. `Emit` runs it **before** the outbox insert, so a malformed ev
 
 The enumerable set of `<entity>.<verb>` types, each mapped to its stream + payload version:
 
-- **Ten V1 streams**, prefix `gw:events:crm:` — `person, organization, deal, lead, activity,
+- **Ten V1 streams**, prefix `gw:events:crm:` — `person, company, deal, lead, activity,
   approval, capture, coldstart, audit, identity`. Workspace is an envelope field, never a stream
   (per-tenant streams would explode key count).
 - **Family routing:** a type whose entity segment isn't itself a stream rides its family — e.g.
@@ -240,7 +240,7 @@ broken and nothing at runtime says a word about it.
 | `cg:ai-activity` | project every AI-backed occurrence into `ai_task_run`, the table the rail will read once the read moves onto it | **live** (worker) |
 | `cg:person-auto-enrich` | fill a contact from what their employer's site already published | **live** (worker) |
 | `cg:person-data` | fill a contact from a licensed provider, spending credits | **live** (worker) |
-| `cg:org-auto-enrich` | queue a company's auto-enrich pass the moment it appears, instead of on the next daily sweep | **live** (worker) |
+| `cg:company-auto-enrich` | queue a company's auto-enrich pass the moment it appears, instead of on the next daily sweep | **live** (worker) |
 | `cg:overnight-agent` | on `approval.decided`, resume the parked Surface-B run with the human's answer | **live** (worker; only when a model is configured) |
 | `cg:workflows` | dispatch the automation/workflow engine off matching events | **live** (worker) |
 | `cg:webhooks` | deliver subscribed events to outbound endpoints | **live** (api's inline relay) |

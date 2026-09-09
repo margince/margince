@@ -129,11 +129,11 @@ func fillEmployment(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerNa
 	if v.companyDomain == "" {
 		return nothingFilled, nil
 	}
-	org, found, err := organizationByDomain(ctx, tx, v.companyDomain)
+	company, found, err := companyByDomain(ctx, tx, v.companyDomain)
 	if err != nil || !found {
 		return nothingFilled, err
 	}
-	edge, planted, err := plantProviderEmploymentEdge(ctx, tx, subject, org, providerName)
+	edge, planted, err := plantProviderEmploymentEdge(ctx, tx, subject, company, providerName)
 	if err != nil || !planted {
 		return nothingFilled, err
 	}

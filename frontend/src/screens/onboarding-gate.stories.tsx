@@ -61,7 +61,7 @@ const facts: CompanySiteRead["facts"] = [
 const reading: CompanySiteRead = {
   id: "018f3a1b-0000-7000-8000-0000000000b2",
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: "https://gradion.com",
   status: "reading",
   status_code: null,

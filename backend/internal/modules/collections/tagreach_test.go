@@ -25,7 +25,7 @@ func TestCountingATagsReachNeedsTheVocabularyRead(t *testing.T) {
 	t.Parallel()
 	ctx := taggerWith(map[string]principal.ObjectGrant{
 		"person":       {Read: true},
-		"organization": {Read: true},
+		"company": {Read: true},
 		"deal":         {Read: true},
 	})
 
@@ -64,7 +64,7 @@ func TestTheVocabularyReadGetsPastTheDoor(t *testing.T) {
 	ctx := taggerWith(map[string]principal.ObjectGrant{
 		"tag":          {Read: true},
 		"person":       {Read: true},
-		"organization": {Read: true},
+		"company": {Read: true},
 		"deal":         {Read: true},
 	})
 

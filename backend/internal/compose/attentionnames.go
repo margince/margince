@@ -89,8 +89,8 @@ func (n attentionNames) read(ctx context.Context, entityType string, want []ids.
 	switch entityType {
 	case flipObjectPerson:
 		return n.people.PersonLabels(ctx, want)
-	case flipObjectOrganization:
-		return n.people.OrganizationLabels(ctx, want)
+	case flipObjectCompany:
+		return n.people.CompanyLabels(ctx, want)
 	case flipObjectLead:
 		return n.people.LeadLabels(ctx, want)
 	case string(datasource.RecordDeal):

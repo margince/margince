@@ -76,7 +76,7 @@ func TestMeetingBriefRefusesACallerWithNoActivityGrant(t *testing.T) {
 	perms.Objects = map[string]principal.ObjectGrant{
 		// Everything the brief touches EXCEPT the activity it is about.
 		"person":       {Read: true},
-		"organization": {Read: true},
+		"company": {Read: true},
 		"relationship": {Read: true},
 		"deal":         {Read: true},
 	}
@@ -212,11 +212,11 @@ func seatInRoom(t *testing.T, owner *pgx.Conn, ws, activity, person ids.UUID) {
 func TestMeetingBriefNamesTheEngagementItIsFiledUnder(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	org := e.SeedOrg(t, "Northwind", &e.Rep1)
+	company := e.SeedCompany(t, "Northwind", &e.Rep1)
 	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
 
-	project := SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, phase, organization_id, source, captured_by)
-		VALUES ($1, $2, 'ERP rollout', 'ERP-27', 'delivering', $3, 'manual', 'human:x')`, e.Rep1, org)
+	project := SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, phase, company_id, source, captured_by)
+		VALUES ($1, $2, 'ERP rollout', 'ERP-27', 'delivering', $3, 'manual', 'human:x')`, e.Rep1, company)
 
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
@@ -258,12 +258,12 @@ func TestMeetingBriefNamesTheEngagementItIsFiledUnder(t *testing.T) {
 func TestMeetingBriefCountsNoLastTouchFromAnotherEngagement(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	org := e.SeedOrg(t, "Northwind", &e.Rep1)
+	company := e.SeedCompany(t, "Northwind", &e.Rep1)
 	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
 
 	newProject := func(name, key string) ids.UUID {
-		return SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, organization_id, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`, e.Rep1, name, key, org)
+		return SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, company_id, source, captured_by)
+			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`, e.Rep1, name, key, company)
 	}
 	erp := newProject("ERP rollout", "ERP-27")
 	migration := newProject("Datacentre migration", "DC-4")
@@ -314,10 +314,10 @@ func TestMeetingBriefCountsNoLastTouchFromAnotherEngagement(t *testing.T) {
 func TestMeetingBriefWithholdsTheEngagementFromACallerWithNoProjectGrant(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	org := e.SeedOrg(t, "Northwind", &e.Rep1)
+	company := e.SeedCompany(t, "Northwind", &e.Rep1)
 	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
-	project := SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, phase, organization_id, source, captured_by)
-		VALUES ($1, $2, 'ERP rollout', 'ERP-27', 'delivering', $3, 'manual', 'human:x')`, e.Rep1, org)
+	project := SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, phase, company_id, source, captured_by)
+		VALUES ($1, $2, 'ERP rollout', 'ERP-27', 'delivering', $3, 'manual', 'human:x')`, e.Rep1, company)
 
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
@@ -405,12 +405,12 @@ func TestMeetingBriefRecallsWhenThisRoomLastMet(t *testing.T) {
 func TestMeetingBriefRecallsNoMeetingFromAnotherEngagement(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	org := e.SeedOrg(t, "Northwind", &e.Rep1)
+	company := e.SeedCompany(t, "Northwind", &e.Rep1)
 	ours := e.SeedPerson(t, "Ana Roth", &e.Rep1)
 
 	newProject := func(name, key string) ids.UUID {
-		return SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, organization_id, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`, e.Rep1, name, key, org)
+		return SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, company_id, source, captured_by)
+			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`, e.Rep1, name, key, company)
 	}
 	erp := newProject("ERP rollout", "ERP-27")
 	migration := newProject("Datacentre migration", "DC-4")
@@ -523,11 +523,11 @@ func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 func TestMeetingBriefReportsNoCommitmentFromAnotherEngagement(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	org := e.SeedOrg(t, "Northwind", &e.Rep1)
+	company := e.SeedCompany(t, "Northwind", &e.Rep1)
 	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
 	newProject := func(name, key string) ids.UUID {
-		return SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, organization_id, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`, e.Rep1, name, key, org)
+		return SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, company_id, source, captured_by)
+			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`, e.Rep1, name, key, company)
 	}
 	erp := newProject("ERP rollout", "ERP-27")
 	migration := newProject("Datacentre migration", "DC-4")

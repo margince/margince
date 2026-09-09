@@ -102,8 +102,8 @@ const granted: Person360 = {
     data: [
       {
         relationship_id: "rel-1",
-        organization_id: "o-1",
-        organization_name: "Brandt Automotive GmbH",
+        company_id: "o-1",
+        company_name: "Brandt Automotive GmbH",
         role: "Head of Fleet",
         is_current_primary: true,
         started_at: "2022-03-01T00:00:00Z",
@@ -211,9 +211,9 @@ function mount(view: Person360) {
           page,
         });
       }
-      // The employer picker searches organizations; without a candidate the
+      // The employer picker searches companies; without a candidate the
       // modal's Save stays disabled and there is no request to inspect.
-      if (url.pathname.endsWith("/organizations")) {
+      if (url.pathname.endsWith("/companies")) {
         return json({
           data: [{ id: "o-9", display_name: "Employer GmbH" }],
           page,
@@ -726,7 +726,7 @@ describe("which employer is the current one", () => {
   function withEmployments(
     rows: Array<{
       relationship_id: string;
-      organization_name: string;
+      company_name: string;
       is_current_primary: boolean;
       ended_at: string | null;
     }>,
@@ -736,8 +736,8 @@ describe("which employer is the current one", () => {
       employments: {
         data: rows.map((row) => ({
           relationship_id: row.relationship_id,
-          organization_id: `o-${row.relationship_id}`,
-          organization_name: row.organization_name,
+          company_id: `o-${row.relationship_id}`,
+          company_name: row.company_name,
           role: "Head of Fleet",
           is_current_primary: row.is_current_primary,
           started_at: "2022-03-01T00:00:00Z",
@@ -754,7 +754,7 @@ describe("which employer is the current one", () => {
 
   function employerOrder(): string[] {
     return Array.from(
-      section("Companies").querySelectorAll(".pe-employment-org"),
+      section("Companies").querySelectorAll(".pe-employment-company"),
     ).map((node) => node.textContent ?? "");
   }
 
@@ -763,13 +763,13 @@ describe("which employer is the current one", () => {
       withEmployments([
         {
           relationship_id: "rel-old",
-          organization_name: "Former GmbH",
+          company_name: "Former GmbH",
           is_current_primary: false,
           ended_at: past,
         },
         {
           relationship_id: "rel-now",
-          organization_name: "Notice GmbH",
+          company_name: "Notice GmbH",
           is_current_primary: true,
           ended_at: future,
         },
@@ -793,13 +793,13 @@ describe("which employer is the current one", () => {
       withEmployments([
         {
           relationship_id: "rel-gone",
-          organization_name: "Former GmbH",
+          company_name: "Former GmbH",
           is_current_primary: true,
           ended_at: past,
         },
         {
           relationship_id: "rel-older",
-          organization_name: "Earlier GmbH",
+          company_name: "Earlier GmbH",
           is_current_primary: false,
           ended_at: past,
         },
@@ -820,7 +820,7 @@ describe("which employer is the current one", () => {
       withEmployments([
         {
           relationship_id: "rel-now",
-          organization_name: "Brandt Automotive GmbH",
+          company_name: "Brandt Automotive GmbH",
           is_current_primary: true,
           ended_at: null,
         },

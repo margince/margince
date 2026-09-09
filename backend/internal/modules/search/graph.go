@@ -69,7 +69,7 @@ const graphExpansionLimit = 50
 // anchorLinkColumn names the activity_link column an anchor type walks.
 var anchorLinkColumn = map[string]string{
 	string(datasource.EntityPerson):       "person_id",
-	string(datasource.EntityOrganization): "organization_id",
+	string(datasource.EntityCompany): "company_id",
 	string(datasource.EntityDeal):         "deal_id",
 	string(datasource.EntityProject):      "project_id",
 }
@@ -157,7 +157,7 @@ func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType 
 	// on the person page while the model answering "who should introduce
 	// me" has no access to it at all, and confidently says nobody.
 	//
-	// Person anchors only. An organization's or a deal's colleagues are a
+	// Person anchors only. A company's or a deal's colleagues are a
 	// join across its contacts, which is a compose read — and a module
 	// never imports a sibling to make one.
 	if anchorType == string(datasource.EntityPerson) {
@@ -181,7 +181,7 @@ func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType 
 		graphSection{name: "open_tasks", items: openTasks})
 
 	// Hop 2: the other ends of those activities' links — the people
-	// and organizations in the same conversations. Each is
+	// and companies in the same conversations. Each is
 	// visibility-probed: the walk widens context, never authority.
 	related, err := s.relatedViaLinks(ctx, tx, anchorType, anchorID, activityIDs, maxItems)
 	if err != nil {
@@ -231,8 +231,8 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 	// one that cannot exist.
 	join := "JOIN activity_link l ON l.activity_id = a.id"
 	reach := fmt.Sprintf("l.%s = $%d", linkCol, anchorPos)
-	if linkCol == anchorLinkColumn[string(datasource.EntityOrganization)] {
-		join, reach = "", activityReachesOrg(anchorPos)
+	if linkCol == anchorLinkColumn[string(datasource.EntityCompany)] {
+		join, reach = "", activityReachesCompany(anchorPos)
 	}
 	activitySQL := fmt.Sprintf(`
 		SELECT a.id, coalesce(a.subject, a.kind), a.kind, a.is_done, a.occurred_at, coalesce(a.captured_by, '')
@@ -260,7 +260,7 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 		}
 		activityIDs = append(activityIDs, id)
 		// graphItem.id is the polymorphic result column (activity here,
-		// person/organization/deal on the hop-2 sections), so it carries
+		// person/company/deal on the hop-2 sections), so it carries
 		// the untyped UUID.
 		item := graphItem{
 			entityType: string(datasource.EntityActivity), id: id.UUID, summary: summary,
@@ -364,7 +364,7 @@ func MemberNames(ctx context.Context, tx pgx.Tx, edges []InteractionEdge) (map[i
 // catch-up on that account is about.
 var relatedSectionOrder = []string{
 	string(datasource.EntityPerson),
-	string(datasource.EntityOrganization),
+	string(datasource.EntityCompany),
 	string(datasource.EntityDeal),
 	string(datasource.EntityProject),
 }

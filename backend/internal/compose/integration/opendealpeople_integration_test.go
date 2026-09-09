@@ -53,7 +53,7 @@ func fundedReaderPermsWithout(dropped string, scope principal.RowScope) principa
 	objects := map[string]principal.ObjectGrant{
 		"deal":         {Read: true},
 		"person":       {Read: true},
-		"organization": {Read: true},
+		"company": {Read: true},
 	}
 	delete(objects, dropped)
 	return principal.Permissions{
@@ -92,8 +92,8 @@ func fundedOrFail(
 
 func TestOnlyContactsOnAnOpenDealTheReaderMaySeeAreReportedAsFunded(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Kessler Systems", nil)
-	orgID := ids.From[ids.OrganizationKind](org)
+	company := e.SeedCompany(t, "Kessler Systems", nil)
+	companyID := ids.From[ids.CompanyKind](company)
 
 	seated := ids.From[ids.PersonKind](e.SeedPerson(t, "Seated Contact", nil))
 	// A contact on NO deal, so the answer has something to be wrong about. A
@@ -109,7 +109,7 @@ func TestOnlyContactsOnAnOpenDealTheReaderMaySeeAreReportedAsFunded(t *testing.T
 	owner := ids.From[ids.UserKind](e.Rep2)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Retrofit", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, OwnerID: &owner, Source: "manual",
+		CompanyID: &companyID, OwnerID: &owner, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
@@ -196,14 +196,14 @@ func TestOnlyContactsOnAnOpenDealTheReaderMaySeeAreReportedAsFunded(t *testing.T
 // business that is already decided.
 func TestAContactWhoseOnlyDealHasClosedCarriesNoOpenDeal(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Kessler Systems", nil)
-	orgID := ids.From[ids.OrganizationKind](org)
+	company := e.SeedCompany(t, "Kessler Systems", nil)
+	companyID := ids.From[ids.CompanyKind](company)
 	seated := ids.From[ids.PersonKind](e.SeedPerson(t, "Seated Contact", nil))
 
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Retrofit", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, Source: "manual",
+		CompanyID: &companyID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)

@@ -94,9 +94,9 @@ func TestApplyingAnApprovedMatchPutsTheLinkedInURLOnTheContact(t *testing.T) {
 	// automatic exact-name path performs — the difference is only who released
 	// it, a string comparison there and a person here.
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	andreas := e.seedContact(t, "Andreas Muller")
-	e.employ(t, andreas, org)
+	e.employ(t, andreas, company)
 	e.importAndMatch(t)
 
 	if err := e.store.ApplyLinkedInMatch(e.as(), e.ghostID(t), e.rep, andreas.UUID); err != nil {
@@ -118,9 +118,9 @@ func TestApplyingAMatchNeverOverwritesAHandleTheContactAlreadyHad(t *testing.T) 
 	// A value already on a record is somebody's statement, and approving a
 	// match is not grounds to replace it.
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	andreas := e.seedContact(t, "Andreas Muller")
-	e.employ(t, andreas, org)
+	e.employ(t, andreas, company)
 	existing := "https://www.linkedin.com/in/the-one-we-already-had"
 	ctx := e.as()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -148,9 +148,9 @@ func TestApplyingAMatchNeverOverwritesAHandleTheContactAlreadyHad(t *testing.T) 
 
 func TestTheMatchesAwaitingADecisionAreTheCallersOwnAndCarryTheExportsSpelling(t *testing.T) {
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	andreas := e.seedContact(t, "Andreas Muller")
-	e.employ(t, andreas, org)
+	e.employ(t, andreas, company)
 	e.importAndMatch(t)
 
 	pending, err := e.store.PendingLinkedInMatches(e.as())
@@ -173,12 +173,12 @@ func TestTheMatchesAwaitingADecisionAreTheCallersOwnAndCarryTheExportsSpelling(t
 
 func TestReachCountsConnectionsPerAccountAndSaysWhatItCannotShow(t *testing.T) {
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	dana := e.seedContact(t, "Dana Buyer")
 	e.seedEmail(t, dana, "dana@acme.test")
-	e.employ(t, dana, org)
+	e.employ(t, dana, company)
 	andreas := e.seedContact(t, "Andreas Müller")
-	e.employ(t, andreas, org)
+	e.employ(t, andreas, company)
 	e.importAndMatch(t)
 
 	reach, err := e.store.MyLinkedInReach(e.as(), nil)
@@ -189,8 +189,8 @@ func TestReachCountsConnectionsPerAccountAndSaysWhatItCannotShow(t *testing.T) {
 		t.Fatalf("reach lists %d accounts (%+v), want the one on file", len(reach.Accounts), reach.Accounts)
 	}
 	acme := reach.Accounts[0]
-	if acme.OrganizationID != org.UUID {
-		t.Errorf("reach names account %s, want %s", acme.OrganizationID, org)
+	if acme.CompanyID != company.UUID {
+		t.Errorf("reach names account %s, want %s", acme.CompanyID, company)
 	}
 	// Two of the three exported connections work at Acme.
 	if acme.Connections != 2 {
@@ -216,11 +216,11 @@ func TestReachCountsConnectionsPerAccountAndSaysWhatItCannotShow(t *testing.T) {
 
 func TestCollapseNeverLetsAMachineGuessOverrideAHumanConfirmation(t *testing.T) {
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	guessed := e.seedContact(t, "Guessed Person")
 	confirmed := e.seedContact(t, "Confirmed Person")
-	e.employ(t, guessed, org)
-	e.employ(t, confirmed, org)
+	e.employ(t, guessed, company)
+	e.employ(t, confirmed, company)
 
 	// Two rows for ONE connection, the state a normalizer change leaves behind.
 	// The OLDER carries the matcher's guess; the NEWER carries a human's
@@ -247,7 +247,7 @@ func TestCollapseNeverLetsAMachineGuessOverrideAHumanConfirmation(t *testing.T) 
 				     source, synced_at)
 				VALUES ($1,
 				        $2, 'Dup Person', 'dup person', $3, $4, $5, $6, 'csv_export', $7::date)`,
-				row.id, e.rep, row.company, NormalizeOrgName(row.company),
+				row.id, e.rep, row.company, NormalizeCompanyName(row.company),
 				row.person.UUID, row.status, row.syncedAt); err != nil {
 				return err
 			}
@@ -273,14 +273,14 @@ func TestCollapseNeverLetsAMachineGuessOverrideAHumanConfirmation(t *testing.T) 
 
 func TestAConnectionNeverMatchesAContactItsOwnerMayNotSee(t *testing.T) {
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	// A contact somebody ELSE captured privately. Capture privacy makes it
 	// theirs alone — not even an admin reads it — and the matcher runs as a
 	// system principal, which is exempt from that rule by design. Without the
 	// boundary carried on the match itself, this ghost would link to it and the
 	// review list would report the link back to a member who cannot open it.
 	private := e.seedContact(t, "Andreas Müller")
-	e.employ(t, private, org)
+	e.employ(t, private, company)
 	// Owned by a DIFFERENT member. Owned by the importer it would rightly
 	// match — capture privacy is about whose record it is, not about hiding it
 	// from everybody.
@@ -313,9 +313,9 @@ func TestAConnectionNeverMatchesAContactItsOwnerMayNotSee(t *testing.T) {
 // than reporting a link it did not make.
 func TestApplyingAMatchRefusesAConnectionTheProposalDoesNotDescribe(t *testing.T) {
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	andreas := e.seedContact(t, "Andreas Muller")
-	e.employ(t, andreas, org)
+	e.employ(t, andreas, company)
 	e.importAndMatch(t)
 	ghost := e.ghostID(t)
 
@@ -384,9 +384,9 @@ func TestApplyingAMatchRefusesAConnectionTheProposalDoesNotDescribe(t *testing.T
 // a fixture of the old format rather than against the behaviour.
 func TestAProposalWithNoOwnerStillAppliesAgainstItsConnection(t *testing.T) {
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	andreas := e.seedContact(t, "Andreas Muller")
-	e.employ(t, andreas, org)
+	e.employ(t, andreas, company)
 	e.importAndMatch(t)
 
 	if err := e.store.ApplyLinkedInMatch(e.as(), e.ghostID(t), ids.Nil, andreas.UUID); err != nil {
@@ -413,9 +413,9 @@ func TestAProposalWithNoOwnerStillAppliesAgainstItsConnection(t *testing.T) {
 // the webhooks suite's own subject, and it covers all three self-only events.
 func TestTheDecidedEventCarriesTheMembersOwnID(t *testing.T) {
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	andreas := e.seedContact(t, "Andreas Muller")
-	e.employ(t, andreas, org)
+	e.employ(t, andreas, company)
 	e.importAndMatch(t)
 	ghost := e.ghostID(t)
 

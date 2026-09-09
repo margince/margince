@@ -4,7 +4,7 @@
 package storekit
 
 // The list sort/filter vocabulary (data-model §13, CF-T05 AC-OPEN-1):
-// the three record lists (people, organizations, deals) validate their
+// the three record lists (people, companies, deals) validate their
 // `sort` spec and cf_* equality filters against a closed per-resource
 // vocabulary — a fixed core set each store declares plus the workspace's
 // ACTIVE custom columns (fieldcatalog seam), so a retired or unknown

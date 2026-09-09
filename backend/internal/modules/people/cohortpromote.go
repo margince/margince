@@ -216,7 +216,7 @@ func linkCapturedCohort(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (
 		        WHERE l.activity_id = a.id AND l.person_id IS NOT NULL)
 		   -- The same ceiling its sibling arm applies, and for the same reason.
 		   -- This arm guarded only on "no person link exists", so a message
-		   -- already filed under twenty-five organizations, deals or projects
+		   -- already filed under twenty-five companies, deals or projects
 		   -- took a twenty-sixth here: which ceiling held depended on which arm
 		   -- ran. The trigger now refuses the row either way; this keeps the
 		   -- sweep SKIPPING an over-full message rather than aborting its batch
@@ -370,9 +370,9 @@ func (s *Store) DomainsOwedTheirPeople(ctx context.Context, limit int) ([]Domain
 	var out []DomainBacklog
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT DISTINCT od.organization_id, od.domain
-			  FROM organization_domain od
-			  JOIN organization o ON o.id = od.organization_id
+			SELECT DISTINCT od.company_id, od.domain
+			  FROM company_domain od
+			  JOIN company o ON o.id = od.company_id
 			  JOIN person_email pe
 			    ON pe.archived_at IS NULL
 			    -- The SAME two arms the plant matches on, subdomain included. A
@@ -389,15 +389,15 @@ func (s *Store) DomainsOwedTheirPeople(ctx context.Context, limit int) ([]Domain
 			       SELECT 1 FROM relationship r
 			        WHERE r.person_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
 			   -- And not a person the index will refuse anyway. uq_rel_employment
-			   -- admits ONE live employment per (person, organization), so
+			   -- admits ONE live employment per (person, company), so
 			   -- somebody already holding a non-primary edge to this company is a
 			   -- row the plant's ON CONFLICT silently drops — offering them again
 			   -- is a domain that can never drain.
 			   AND NOT EXISTS (
 			       SELECT 1 FROM relationship held
-			        WHERE held.person_id = p.id AND held.organization_id = od.organization_id
+			        WHERE held.person_id = p.id AND held.company_id = od.company_id
 			          AND `+employment.LiveSlotSQL("held")+`)
-			 ORDER BY od.organization_id, od.domain
+			 ORDER BY od.company_id, od.domain
 			 LIMIT $1`, limit)
 		if err != nil {
 			return fmt.Errorf("people: listing the domains owed their people: %w", err)
@@ -405,7 +405,7 @@ func (s *Store) DomainsOwedTheirPeople(ctx context.Context, limit int) ([]Domain
 		defer rows.Close()
 		for rows.Next() {
 			var owed DomainBacklog
-			if err := rows.Scan(&owed.OrganizationID, &owed.Domain); err != nil {
+			if err := rows.Scan(&owed.CompanyID, &owed.Domain); err != nil {
 				return fmt.Errorf("people: listing the domains owed their people: %w", err)
 			}
 			out = append(out, owed)
@@ -420,7 +420,7 @@ func (s *Store) DomainsOwedTheirPeople(ctx context.Context, limit int) ([]Domain
 
 // DomainBacklog names one company domain whose people are not attached yet.
 type DomainBacklog struct {
-	OrganizationID ids.OrganizationID
+	CompanyID ids.CompanyID
 	Domain         string
 }
 
@@ -437,14 +437,14 @@ func (s *Store) AttachDomainBacklog(ctx context.Context, owed DomainBacklog) (in
 		// merge in between would otherwise attach a domain's people to a record
 		// no read returns, which is the failure this whole sweep exists to
 		// repair rather than create.
-		live, err := organizationIsLive(ctx, tx, owed.OrganizationID)
+		live, err := companyIsLive(ctx, tx, owed.CompanyID)
 		if err != nil {
 			return err
 		}
 		if !live {
 			return nil
 		}
-		planted, err = plantDomainEmployment(ctx, tx, owed.Domain, owed.OrganizationID)
+		planted, err = plantDomainEmployment(ctx, tx, owed.Domain, owed.CompanyID)
 		return err
 	})
 	if err != nil {

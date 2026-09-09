@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 function scan(state: AccountScan["state"]): AccountScan {
-  return { organization_id: "o-1", state, findings: [], findings_dropped: 0 };
+  return { company_id: "o-1", state, findings: [], findings_dropped: 0 };
 }
 
 function Probe({ enabled }: Readonly<{ enabled: boolean }>) {
@@ -65,7 +65,7 @@ describe("useAccountScan", () => {
       expect(screen.getByRole("status").textContent).toBe("queued"),
     );
     expect(calls.filter((call) => call.startsWith("POST"))).toEqual([
-      "POST /v1/organizations/o-1/scan",
+      "POST /v1/companies/o-1/scan",
     ]);
   });
 
@@ -116,10 +116,10 @@ describe("useAccountScan", () => {
     );
     mount(true);
     await waitFor(() =>
-      expect(calls).toContain("POST /v1/organizations/o-1/scan"),
+      expect(calls).toContain("POST /v1/companies/o-1/scan"),
     );
     await waitFor(() =>
-      expect(calls).toContain("GET /v1/organizations/o-1/scan"),
+      expect(calls).toContain("GET /v1/companies/o-1/scan"),
     );
     await act(async () => {});
     expect(screen.getByRole("status").textContent).toBe("none");

@@ -4,7 +4,7 @@
 package people
 
 // The people slice of the SoR-mode SystemOfRecordProvider (interfaces.md
-// §3): person, organization and lead verbs over the module store — the
+// §3): person, company and lead verbs over the module store — the
 // same entry points the HTTP handlers use, with the same RBAC, row
 // scope, audit and event shape. The composition root assembles the
 // module providers into the one datasource seam the MCP surface binds.
@@ -23,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// Provider answers the datasource verbs for person|organization|lead|
+// Provider answers the datasource verbs for person|company|lead|
 // relationship|partner.
 type Provider struct {
 	store *Store
@@ -62,8 +62,8 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 			return datasource.Record{}, err
 		}
 		return datasource.NewRecord(r, v, v.Version)
-	case datasource.EntityOrganization:
-		v, err := p.store.GetOrganization(ctx, ids.From[ids.OrganizationKind](r.ID), storekit.LiveOnly)
+	case datasource.EntityCompany:
+		v, err := p.store.GetCompany(ctx, ids.From[ids.CompanyKind](r.ID), storekit.LiveOnly)
 		if err != nil {
 			return datasource.Record{}, err
 		}
@@ -81,12 +81,12 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 		}
 		return datasource.NewRecord(r, wireRelationship(row), &row.Version)
 	case datasource.EntityPartner:
-		// The ref carries the ORGANIZATION's id: a partner row is the 1:1
+		// The ref carries the COMPANY's id: a partner row is the 1:1
 		// extension of one company and has no id of its own to be addressed
-		// by. GetPartner gates on both the partner and organization objects
-		// and checks the organization is visible, so a caller who cannot open
+		// by. GetPartner gates on both the partner and company objects
+		// and checks the company is visible, so a caller who cannot open
 		// the company cannot read its partner terms either.
-		row, err := p.store.GetPartner(ctx, ids.From[ids.OrganizationKind](r.ID))
+		row, err := p.store.GetPartner(ctx, ids.From[ids.CompanyKind](r.ID))
 		if err != nil {
 			return datasource.Record{}, err
 		}
@@ -117,14 +117,14 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		return pageOf(datasource.EntityPerson, rows, page, err, func(v crmcontracts.Person) (openapi_types.UUID, *int64) {
 			return v.Id, v.Version
 		})
-	case datasource.EntityOrganization:
-		in := ListOrganizationsInput{Query: text, Limit: &limit, Cursor: cursor}
-		if err := organizationListFilters.Apply(&in, filters); err != nil {
+	case datasource.EntityCompany:
+		in := ListCompaniesInput{Query: text, Limit: &limit, Cursor: cursor}
+		if err := companyListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
-		rows, page, err := p.store.ListOrganizations(ctx, in)
-		return pageOf(datasource.EntityOrganization, rows, page, err,
-			func(v crmcontracts.Organization) (openapi_types.UUID, *int64) { return v.Id, v.Version })
+		rows, page, err := p.store.ListCompanies(ctx, in)
+		return pageOf(datasource.EntityCompany, rows, page, err,
+			func(v crmcontracts.Company) (openapi_types.UUID, *int64) { return v.Id, v.Version })
 	case datasource.EntityLead:
 		in := ListLeadsInput{Query: text, Limit: &limit, Cursor: cursor}
 		if err := leadListFilters.Apply(&in, filters); err != nil {
@@ -140,7 +140,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		// which would answer an unfiltered page and read as "no matches".
 		if text != nil && *text != "" {
 			return nil, "", false, fmt.Errorf(
-				"people: partner has no text index; narrow by partner_role or cert_status, or search organization instead")
+				"people: partner has no text index; narrow by partner_role or cert_status, or search company instead")
 		}
 		in := ListPartnersInput{Limit: &limit}
 		if cursor != nil {
@@ -155,7 +155,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		}
 		return pageOf(datasource.EntityPartner, mapRows(rows, wirePartner), page, nil,
 			func(v crmcontracts.Partner) (openapi_types.UUID, *int64) {
-				return v.OrganizationId, (*int64)(v.Version)
+				return v.CompanyId, (*int64)(v.Version)
 			})
 	default:
 		return nil, "", false, &datasource.UnsupportedEntityError{Type: string(t)}
@@ -212,18 +212,18 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		}
 		v, err := p.store.CreatePerson(ctx, mapped)
 		return ref(datasource.EntityPerson, v.Id), err
-	case datasource.EntityOrganization:
-		var req crmcontracts.CreateOrganizationRequest
+	case datasource.EntityCompany:
+		var req crmcontracts.CreateCompanyRequest
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
 		req.Source = in.Source
-		mapped, err := organizationCreateInput(req)
+		mapped, err := companyCreateInput(req)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
-		v, err := p.store.CreateOrganization(ctx, mapped)
-		return ref(datasource.EntityOrganization, v.Id), err
+		v, err := p.store.CreateCompany(ctx, mapped)
+		return ref(datasource.EntityCompany, v.Id), err
 	case datasource.EntityLead:
 		var req crmcontracts.CreateLeadRequest
 		if err := datasource.StrictDecode(raw, &req); err != nil {
@@ -267,16 +267,16 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		update.Clear = in.Clear
 		v, err := p.store.UpdatePerson(ctx, ids.From[ids.PersonKind](in.Ref.ID), update)
 		return ref(datasource.EntityPerson, v.Id), err
-	case datasource.EntityOrganization:
-		var req crmcontracts.UpdateOrganizationRequest
+	case datasource.EntityCompany:
+		var req crmcontracts.UpdateCompanyRequest
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
-		update := organizationUpdateInput(req, in.IfVersion)
+		update := companyUpdateInput(req, in.IfVersion)
 		update.Trail = in.Trail
 		update.Clear = in.Clear
-		v, err := p.store.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](in.Ref.ID), update)
-		return ref(datasource.EntityOrganization, v.Id), err
+		v, err := p.store.UpdateCompany(ctx, ids.From[ids.CompanyKind](in.Ref.ID), update)
+		return ref(datasource.EntityCompany, v.Id), err
 	case datasource.EntityLead:
 		var req LeadUpdateRequest
 		if err := datasource.StrictDecode(raw, &req); err != nil {
@@ -307,7 +307,7 @@ func (p *Provider) Archive(ctx context.Context, r datasource.EntityRef) (datasou
 // switch below actually serves.
 func (p *Provider) ArchivableTypes(context.Context) ([]datasource.EntityType, error) {
 	return []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityRelationship,
+		datasource.EntityPerson, datasource.EntityCompany, datasource.EntityRelationship,
 	}, nil
 }
 
@@ -317,8 +317,8 @@ func (p *Provider) RefuseArchive(ctx context.Context, r datasource.EntityRef) er
 	switch r.Type {
 	case datasource.EntityPerson:
 		return p.store.RefuseArchivePerson(ctx, ids.From[ids.PersonKind](r.ID))
-	case datasource.EntityOrganization:
-		return p.store.RefuseArchiveOrganization(ctx, ids.From[ids.OrganizationKind](r.ID))
+	case datasource.EntityCompany:
+		return p.store.RefuseArchiveCompany(ctx, ids.From[ids.CompanyKind](r.ID))
 	case datasource.EntityRelationship:
 		return p.store.RefuseArchiveRelationship(ctx, r.ID)
 	default:
@@ -332,9 +332,9 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 	case datasource.EntityPerson:
 		v, err := p.store.ArchivePerson(ctx, ids.From[ids.PersonKind](in.Ref.ID), in.IfVersion)
 		return ref(datasource.EntityPerson, v.Id), err
-	case datasource.EntityOrganization:
-		v, err := p.store.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](in.Ref.ID), in.IfVersion)
-		return ref(datasource.EntityOrganization, v.Id), err
+	case datasource.EntityCompany:
+		v, err := p.store.ArchiveCompany(ctx, ids.From[ids.CompanyKind](in.Ref.ID), in.IfVersion)
+		return ref(datasource.EntityCompany, v.Id), err
 	case datasource.EntityRelationship:
 		row, err := p.store.ArchiveRelationship(ctx, in.Ref.ID, in.IfVersion)
 		return edgeRef(row.ID), err
@@ -343,7 +343,7 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 	}
 }
 
-// Merge folds source into target for person/organization and returns the
+// Merge folds source into target for person/company and returns the
 // survivor's ref. The store owns the collision-aware relink, the
 // restrictive consent rule, and the single audit transaction.
 func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasource.EntityRef, error) {
@@ -351,9 +351,9 @@ func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasou
 	case datasource.EntityPerson:
 		v, err := p.store.MergePerson(ctx, ids.From[ids.PersonKind](in.SourceID), ids.From[ids.PersonKind](in.TargetID))
 		return ref(datasource.EntityPerson, v.Id), err
-	case datasource.EntityOrganization:
-		v, err := p.store.MergeOrganization(ctx, ids.From[ids.OrganizationKind](in.SourceID), ids.From[ids.OrganizationKind](in.TargetID))
-		return ref(datasource.EntityOrganization, v.Id), err
+	case datasource.EntityCompany:
+		v, err := p.store.MergeCompany(ctx, ids.From[ids.CompanyKind](in.SourceID), ids.From[ids.CompanyKind](in.TargetID))
+		return ref(datasource.EntityCompany, v.Id), err
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Type)}
 	}

@@ -115,7 +115,7 @@ func TestDownloadingWithoutTheDocumentGrantIsRefused(t *testing.T) {
 }
 
 // An id that names no document is 404, and the body says nothing about whether
-// some other organization holds one — existence stays hidden.
+// some other company holds one — existence stays hidden.
 func TestDownloadingAnUnknownDocumentIs404(t *testing.T) {
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)

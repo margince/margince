@@ -350,7 +350,7 @@ describe("log activity from a 360", () => {
     // zone is the installation's record zone because a note's day is the timeline heading it will
     // file under, and the timeline groups there.
     const dayBeforeRender = calendarDay(new Date(), INSTALLATION_ZONE);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     const dayAfterRender = calendarDay(new Date(), INSTALLATION_ZONE);
     // A note's date is the day it happened, live from the start and showing
     // the today that would otherwise be assumed invisibly at submit.
@@ -372,7 +372,7 @@ describe("log activity from a 360", () => {
   it("posts a backdated note's occurred_at inside the picked day", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     fireEvent.change(screen.getByLabelText("Date"), {
       target: { value: PICKED_DAY },
     });
@@ -417,7 +417,7 @@ describe("log activity from a 360", () => {
     const user = userEvent.setup();
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     const noteDay = screen.getByLabelText<HTMLInputElement>("Date");
     expect(noteDay.value).toBe("2026-08-22");
     // The ceiling moves with the offer, so the box does not refuse the day it
@@ -458,7 +458,7 @@ describe("log activity from a 360", () => {
         "POST /activities": createdActivity,
         "GET /people": () => jsonResponse(contacts),
       });
-      render(<LogActivity entityType="organization" entityId="o1" />);
+      render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
       await user.type(screen.getByLabelText("Subject *"), "Kickoff");
 
@@ -483,7 +483,7 @@ describe("log activity from a 360", () => {
         },
         captured,
       );
-      render(<LogActivity entityType="organization" entityId="o1" />);
+      render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
       await user.type(screen.getByLabelText("Subject *"), "Kickoff");
       await user.type(screen.getByLabelText("Who was there"), "Fré");
@@ -502,7 +502,7 @@ describe("log activity from a 360", () => {
       const links = (
         post.body as { links: { entity_type: string; entity_id: string }[] }
       ).links;
-      // One link, the person. An organization link alongside it is refused by
+      // One link, the person. A company link alongside it is refused by
       // the database trigger whatever else is present, and a frontend test
       // whose POST is stubbed cannot see that refusal — so the shape is
       // asserted here rather than trusted to a green submit.
@@ -519,7 +519,7 @@ describe("log activity from a 360", () => {
         },
         captured,
       );
-      render(<LogActivity entityType="organization" entityId="o1" />);
+      render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
       await user.type(screen.getByLabelText("Who was there"), "Fré");
       await user.click(
@@ -546,12 +546,12 @@ describe("log activity from a 360", () => {
       // The company, not the contact. A note carries no person rule, so a
       // stale attendee would file it against the contact and take it off the
       // company screen the reader wrote it on.
-      expect(links).toEqual([{ entity_type: "organization", entity_id: "o1" }]);
+      expect(links).toEqual([{ entity_type: "company", entity_id: "o1" }]);
     });
 
     it("asks nobody for a note, which a company can hold on its own", async () => {
       stubApi({ "POST /activities": createdActivity });
-      render(<LogActivity entityType="organization" entityId="o1" />);
+      render(<LogActivity entityType="company" entityId="o1" />);
       expect(screen.queryByLabelText("Who was there")).toBeNull();
     });
 
@@ -562,7 +562,7 @@ describe("log activity from a 360", () => {
         "GET /people": () =>
           jsonResponse({ data: [], page: { next_cursor: null } }),
       });
-      render(<LogActivity entityType="organization" entityId="o1" />);
+      render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
       await user.type(screen.getByLabelText("Who was there"), "any");
       // The picker's own empty-search wording, so a company with nobody on it
@@ -583,7 +583,7 @@ describe("log activity from a 360", () => {
     const user = userEvent.setup();
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     const writersOwnToday = "2026-08-21";
     fireEvent.change(screen.getByLabelText("Date"), {
       target: { value: writersOwnToday },
@@ -604,7 +604,7 @@ describe("log activity from a 360", () => {
   it("refuses a future day for a note but not for a task's due date", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     // Nothing has occurred in the future: for a note the input is capped at
     // today, and a value forced past the cap fails the form's own validation,
     // so the POST never leaves.
@@ -624,7 +624,7 @@ describe("log activity from a 360", () => {
   it("posts a task's due_at as the END of the picked day in the record's zone", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     await pickOption(userEvent.setup(), screen.getByLabelText("Type"), "Task");
     fireEvent.change(screen.getByLabelText("Due date"), {
       target: { value: PICKED_DAY },
@@ -640,7 +640,7 @@ describe("log activity from a 360", () => {
     expect(post?.body).toMatchObject({
       kind: "task",
       subject: "Send proposal",
-      links: [{ entity_type: "organization", entity_id: "o1" }],
+      links: [{ entity_type: "company", entity_id: "o1" }],
       source: "manual",
     });
     if (!post) throw new Error("expected a POST /activities to be captured");
@@ -662,7 +662,7 @@ describe("log activity from a 360", () => {
   it("posts a due date the tasks list then buckets as today, not as overdue", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     await pickOption(userEvent.setup(), screen.getByLabelText("Type"), "Task");
     fireEvent.change(screen.getByLabelText("Due date"), {
       target: { value: PICKED_DAY },

@@ -31,7 +31,7 @@ const ORG_ID = "00000000-0000-7000-8000-0000000000a1";
 const NUMBER = "DE811907980";
 
 const CHECKED = {
-  organization_id: ORG_ID,
+  company_id: ORG_ID,
   vat_number: NUMBER,
   status: "valid",
   consultation_number: "WAPIAAAAXk3rN2p9",
@@ -70,7 +70,7 @@ function stubFetch(answer: (request: Request) => Promise<Response>) {
 function answerWith(body: unknown, status = 200) {
   return stubFetch(async (request) =>
     new URL(request.url).pathname.endsWith("/me")
-      ? jsonResponse(meFixture({ allow: { organization: ["read", "update"] } }))
+      ? jsonResponse(meFixture({ allow: { company: ["read", "update"] } }))
       : jsonResponse(body, status),
   );
 }
@@ -87,7 +87,7 @@ function render(ui: ReactNode) {
 }
 
 function mark(stated = NUMBER, canAsk = true) {
-  return <VatMark orgId={ORG_ID} stated={stated} canAsk={canAsk} />;
+  return <VatMark companyId={ORG_ID} stated={stated} canAsk={canAsk} />;
 }
 
 describe("the VAT mark beside the number", () => {
@@ -187,7 +187,7 @@ describe("the VAT mark beside the number", () => {
         calls.some(
           (one) =>
             one.method === "POST" &&
-            one.pathname === `/v1/organizations/${ORG_ID}/vat-check`,
+            one.pathname === `/v1/companies/${ORG_ID}/vat-check`,
         ),
       ).toBe(true);
     });
@@ -202,7 +202,7 @@ describe("the VAT mark beside the number", () => {
       const { pathname } = new URL(request.url);
       if (pathname.endsWith("/me")) {
         return jsonResponse(
-          meFixture({ allow: { organization: ["read", "update"] } }),
+          meFixture({ allow: { company: ["read", "update"] } }),
         );
       }
       if (request.method === "POST") {
@@ -245,7 +245,7 @@ describe("the VAT mark beside the number", () => {
   });
 
   it("offers no ask to a reader who cannot change the company", async () => {
-    // Two different reasons converge on one answer here: no `organization:
+    // Two different reasons converge on one answer here: no `company:
     // update` grant at all, and the grant held over a company this reader may
     // not write. The caller tells them apart — this component is told.
     //
@@ -255,7 +255,7 @@ describe("the VAT mark beside the number", () => {
     stubFetch(async (request) =>
       new URL(request.url).pathname.endsWith("/me")
         ? jsonResponse(
-            meFixture({ allow: { organization: ["read", "update"] } }),
+            meFixture({ allow: { company: ["read", "update"] } }),
           )
         : jsonResponse(CHECKED),
     );
@@ -339,7 +339,7 @@ describe("the VAT mark beside the number", () => {
       const { pathname } = new URL(request.url);
       if (pathname.endsWith("/me")) {
         return jsonResponse(
-          meFixture({ allow: { organization: ["read", "update"] } }),
+          meFixture({ allow: { company: ["read", "update"] } }),
         );
       }
       if (request.method === "POST") {
@@ -389,7 +389,7 @@ describe("the VAT mark beside the number", () => {
       const { pathname } = new URL(request.url);
       if (pathname.endsWith("/me")) {
         return jsonResponse(
-          meFixture({ allow: { organization: ["read", "update"] } }),
+          meFixture({ allow: { company: ["read", "update"] } }),
         );
       }
       if (request.method === "POST") {
@@ -436,7 +436,7 @@ describe("the VAT mark beside the number", () => {
       const { pathname } = new URL(request.url);
       if (pathname.endsWith("/me")) {
         return jsonResponse(
-          meFixture({ allow: { organization: ["read", "update"] } }),
+          meFixture({ allow: { company: ["read", "update"] } }),
         );
       }
       if (request.method === "POST") {
@@ -494,7 +494,7 @@ describe("the VAT mark beside the number", () => {
       const { pathname } = new URL(request.url);
       if (pathname.endsWith("/me")) {
         return jsonResponse(
-          meFixture({ allow: { organization: ["read", "update"] } }),
+          meFixture({ allow: { company: ["read", "update"] } }),
         );
       }
       if (request.method === "POST") {
@@ -535,7 +535,7 @@ describe("the VAT mark beside the number", () => {
       const { pathname } = new URL(request.url);
       if (pathname.endsWith("/me")) {
         return jsonResponse(
-          meFixture({ allow: { organization: ["read", "update"] } }),
+          meFixture({ allow: { company: ["read", "update"] } }),
         );
       }
       if (request.method === "POST") {

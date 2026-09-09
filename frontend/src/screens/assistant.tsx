@@ -20,13 +20,13 @@ import { AskSection } from "./company360";
  * this record.
  */
 export function AssistantPanel({
-  orgId,
+  companyId,
   enabled,
   onOpenRecord,
   onOpenEmail,
   projects,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   // Opens a cited message in the page's email drawer; see `Citations`.
@@ -49,7 +49,7 @@ export function AssistantPanel({
     >
       <PanelBody>
         <AskSection
-          orgId={orgId}
+          companyId={companyId}
           enabled={enabled}
           onOpenRecord={onOpenRecord}
           onOpenEmail={onOpenEmail}

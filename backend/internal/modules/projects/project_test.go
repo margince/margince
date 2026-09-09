@@ -126,7 +126,7 @@ func TestProjectCheckErrorNamesEachRule(t *testing.T) {
 // enforced.
 func TestProjectCreateInputRequiresAName(t *testing.T) {
 	_, err := projectCreateInput(crmcontracts.CreateProjectRequest{
-		OrganizationId: openapi_types.UUID{},
+		CompanyId: openapi_types.UUID{},
 		Source:         "ui",
 	})
 	var missing *RequiredFieldError

@@ -18,7 +18,7 @@ import { type BriefSentence, SentenceList, WrittenBy } from "./record360";
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
 
-type GrowthFit = components["schemas"]["OrganizationGrowthFit"];
+type GrowthFit = components["schemas"]["CompanyGrowthFit"];
 type Band = GrowthFit["band"];
 
 type SubScoreDimension = NonNullable<
@@ -62,12 +62,12 @@ const BAND_TONES: Partial<Record<Band, "success" | "warn">> = {
  * identically.
  */
 export function GrowthFitPanel({
-  orgId,
+  companyId,
   enabled,
   onOpenRecord,
   onOpenEmail,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   // Opens a cited message in the page's email drawer; see `Citations`.
@@ -78,11 +78,11 @@ export function GrowthFitPanel({
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const fit = useQuery({
-    queryKey: ["org-growth-fit", orgId],
+    queryKey: ["company-growth-fit", companyId],
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/growth-fit", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.GET("/companies/{id}/growth-fit", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -92,8 +92,8 @@ export function GrowthFitPanel({
   });
   const reassess = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/organizations/{id}/growth-fit", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.POST("/companies/{id}/growth-fit", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -101,7 +101,7 @@ export function GrowthFitPanel({
       return data;
     },
     onSuccess: (data) =>
-      queryClient.setQueryData(["org-growth-fit", orgId], data),
+      queryClient.setQueryData(["company-growth-fit", companyId], data),
   });
 
   // A workspace reading from an incumbent mirror has none of the facts this is

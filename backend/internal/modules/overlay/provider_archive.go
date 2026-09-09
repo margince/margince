@@ -36,7 +36,7 @@ import (
 // caller asks the ROUTED executor instead of assuming either.
 var archivableTypes = map[datasource.EntityType]bool{
 	datasource.EntityPerson:       true,
-	datasource.EntityOrganization: true,
+	datasource.EntityCompany: true,
 	datasource.EntityDeal:         true,
 }
 

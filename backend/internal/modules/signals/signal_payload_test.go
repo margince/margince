@@ -29,7 +29,7 @@ import (
 
 var (
 	signalPayloadTestSignalID = openapi_types.UUID(ids.MustParse("11111111-1111-1111-1111-111111111111"))
-	signalPayloadTestOrgID    = openapi_types.UUID(ids.MustParse("22222222-2222-2222-2222-222222222222"))
+	signalPayloadTestCompanyID    = openapi_types.UUID(ids.MustParse("22222222-2222-2222-2222-222222222222"))
 )
 
 // TestDetectedPayload_Unresolved proves the raw (no subject yet) shape: no
@@ -97,7 +97,7 @@ func TestDetectedPayload_Unresolved(t *testing.T) {
 // TestDetectedPayload_WithSubject proves a signal created ABOUT a known
 // record carries entity_type/entity_id (created already resolved).
 func TestDetectedPayload_WithSubject(t *testing.T) {
-	entityType := crmcontracts.SignalEntityType("organization")
+	entityType := crmcontracts.SignalEntityType("company")
 	confidence := float32(0.95)
 	sig := crmcontracts.Signal{
 		Id:                   signalPayloadTestSignalID,
@@ -106,7 +106,7 @@ func TestDetectedPayload_WithSubject(t *testing.T) {
 		ResolutionState:      "resolved",
 		Severity:             "warn",
 		EntityType:           &entityType,
-		EntityId:             &signalPayloadTestOrgID,
+		EntityId:             &signalPayloadTestCompanyID,
 		ResolutionConfidence: &confidence,
 	}
 	payload := detectedPayload(sig)
@@ -114,14 +114,14 @@ func TestDetectedPayload_WithSubject(t *testing.T) {
 	if payload.SubjectEntityType == nil {
 		t.Fatalf("expected non-nil value")
 	}
-	if !reflect.DeepEqual(*payload.SubjectEntityType, "organization") {
-		t.Errorf("got %v, want %v", *payload.SubjectEntityType, "organization")
+	if !reflect.DeepEqual(*payload.SubjectEntityType, "company") {
+		t.Errorf("got %v, want %v", *payload.SubjectEntityType, "company")
 	}
 	if payload.SubjectEntityId == nil {
 		t.Fatalf("expected non-nil value")
 	}
-	if !reflect.DeepEqual(*payload.SubjectEntityId, signalPayloadTestOrgID) {
-		t.Errorf("got %v, want %v", *payload.SubjectEntityId, signalPayloadTestOrgID)
+	if !reflect.DeepEqual(*payload.SubjectEntityId, signalPayloadTestCompanyID) {
+		t.Errorf("got %v, want %v", *payload.SubjectEntityId, signalPayloadTestCompanyID)
 	}
 	if payload.ResolutionConfidence == nil {
 		t.Fatalf("expected non-nil value")
@@ -144,7 +144,7 @@ func TestDetectedPayload_WithSubject(t *testing.T) {
 }
 
 // TestResolvedPayload_Dropped proves the zero-candidate (dropped) shape: no
-// resolved_org_id/resolved_person_id, no matched_on/match_confidence.
+// resolved_company_id/resolved_person_id, no matched_on/match_confidence.
 func TestResolvedPayload_Dropped(t *testing.T) {
 	sig := crmcontracts.Signal{
 		Id:              signalPayloadTestSignalID,
@@ -164,8 +164,8 @@ func TestResolvedPayload_Dropped(t *testing.T) {
 	if !reflect.DeepEqual(payload.ResolutionState, "dropped") {
 		t.Errorf("got %v, want %v", payload.ResolutionState, "dropped")
 	}
-	if payload.ResolvedOrgId != nil {
-		t.Errorf("expected nil, got %v", payload.ResolvedOrgId)
+	if payload.ResolvedCompanyId != nil {
+		t.Errorf("expected nil, got %v", payload.ResolvedCompanyId)
 	}
 	if payload.ResolvedPersonId != nil {
 		t.Errorf("expected nil, got %v", payload.ResolvedPersonId)
@@ -193,23 +193,23 @@ func TestResolvedPayload_Dropped(t *testing.T) {
 	}
 }
 
-// TestResolvedPayload_ResolvedToOrg proves the single-candidate (resolved)
-// shape: resolved_org_id, matched_on/match_confidence all set.
-func TestResolvedPayload_ResolvedToOrg(t *testing.T) {
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(signalPayloadTestOrgID))
+// TestResolvedPayload_ResolvedToCompany proves the single-candidate (resolved)
+// shape: resolved_company_id, matched_on/match_confidence all set.
+func TestResolvedPayload_ResolvedToCompany(t *testing.T) {
+	companyID := ids.From[ids.CompanyKind](ids.UUID(signalPayloadTestCompanyID))
 	sig := crmcontracts.Signal{
 		Id:              signalPayloadTestSignalID,
 		ResolutionState: "resolved",
-		ResolvedOrgId:   &signalPayloadTestOrgID,
+		ResolvedCompanyId:   &signalPayloadTestCompanyID,
 	}
-	candidates := []candidate{{OrgID: orgID, MatchedOn: "domain", Confidence: 0.95}}
+	candidates := []candidate{{CompanyID: companyID, MatchedOn: "domain", Confidence: 0.95}}
 	payload := resolvedPayload(sig, candidates)
 
-	if payload.ResolvedOrgId == nil {
+	if payload.ResolvedCompanyId == nil {
 		t.Fatalf("expected non-nil value")
 	}
-	if !reflect.DeepEqual(*payload.ResolvedOrgId, signalPayloadTestOrgID) {
-		t.Errorf("got %v, want %v", *payload.ResolvedOrgId, signalPayloadTestOrgID)
+	if !reflect.DeepEqual(*payload.ResolvedCompanyId, signalPayloadTestCompanyID) {
+		t.Errorf("got %v, want %v", *payload.ResolvedCompanyId, signalPayloadTestCompanyID)
 	}
 	if payload.MatchedOn == nil {
 		t.Fatalf("expected non-nil value")

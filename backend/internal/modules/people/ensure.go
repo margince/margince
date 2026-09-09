@@ -7,7 +7,7 @@ package people
 // this ensures a person — and, unless suppressed, their company and the
 // employment edge — exists for it, all through the ONE dedupe chokepoint
 // (PO-F-1/PO-F-2) in one transaction (the §9 single-tx exception: person +
-// organization + relationship + link are one atomic decision here).
+// company + relationship + link are one atomic decision here).
 // Exact match reuses; fuzzy CREATES ANYWAY and records a dedupe_candidate
 // for the review queue (capture never blocks on a human,
 // DEDUPE_FUZZY_AUTOMERGE is pinned never); no match creates.
@@ -53,7 +53,7 @@ const (
 	evidenceSignalOneSided = "one_sided"
 
 	entityPerson       = "person"
-	entityOrganization = "organization"
+	entityCompany = "company"
 	fieldFullName      = "full_name"
 	fieldDisplayName   = "display_name"
 	fieldEmail         = "email"
@@ -81,10 +81,10 @@ type EnsureCounterpartyInput struct {
 	Source     string         // provenance channel, e.g. "gmail:<message-id>"
 	CapturedBy string         // "connector:<name>"
 
-	// SuppressOrg skips company derivation (free-mail counterparty): the
+	// SuppressCompany skips company derivation (free-mail counterparty): the
 	// person is still created — alice@gmail.com is a person, "Gmail" is
 	// not her employer.
-	SuppressOrg bool
+	SuppressCompany bool
 
 	// OwnerScoped births the person visible to their OWNER alone rather than to
 	// the workspace.
@@ -107,18 +107,18 @@ type EnsureCounterpartyInput struct {
 type EnsureCounterpartyResult struct {
 	PersonID      ids.PersonID
 	PersonCreated bool
-	// OrganizationID is the company this counterparty was ATTACHED to, never
-	// one this ensure made: capture no longer creates organizations at all, so
+	// CompanyID is the company this counterparty was ATTACHED to, never
+	// one this ensure made: capture no longer creates companies at all, so
 	// there is no created-flag to report. A domain with no company yet reports
 	// TriagePending instead.
-	OrganizationID *ids.OrganizationID
+	CompanyID *ids.CompanyID
 	DedupeRecorded bool
 	// NameFilled reports that this ensure completed an incumbent's split name
 	// that was previously unknown — the fill-only-if-empty path, never an
 	// overwrite. Counting it separately keeps "created a person" honest.
 	NameFilled bool
 
-	// TriagePending reports that this ensure OPENED a domain's organization
+	// TriagePending reports that this ensure OPENED a domain's company
 	// question, and TriageDomain names the domain to ask about. A later message
 	// that merely finds the question still open reports nothing: it is the same
 	// question, it needs no second crawl, and counting it again would report a
@@ -177,8 +177,8 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 	if err := s.ensurePerson(ctx, tx, in, &res); err != nil {
 		return EnsureCounterpartyResult{}, err
 	}
-	if !in.SuppressOrg && in.Domain != "" {
-		if err := s.ensureOrgAndEmployment(ctx, tx, in, &res); err != nil {
+	if !in.SuppressCompany && in.Domain != "" {
+		if err := s.ensureCompanyAndEmployment(ctx, tx, in, &res); err != nil {
 			return EnsureCounterpartyResult{}, err
 		}
 	}
@@ -287,21 +287,21 @@ func (s *Store) ensurePerson(ctx context.Context, tx pgx.Tx, in EnsureCounterpar
 	return nil
 }
 
-// ensureOrgAndEmployment decides what this mail domain may create, and creates
+// ensureCompanyAndEmployment decides what this mail domain may create, and creates
 // only that. It runs PO-F-2 on the domain, and where the domain is not yet
 // understood it creates NOTHING and opens the question instead — the person
-// already exists, and an organization invented from a domain label is the
+// already exists, and a company invented from a domain label is the
 // defect this ladder exists to stop.
 //
 // The order is load-bearing at every step:
 //
 //	a suppressed domain                     → no company, no question, ever
-//	an organization already on this domain  → attach; a human's row always wins
+//	a company already on this domain  → attach; a human's row always wins
 //	consumer mail                           → no company, and no question to ask
 //	a settled verdict                       → obey it
 //	anything else                           → open the question, create nothing
-func (s *Store) ensureOrgAndEmployment(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, res *EnsureCounterpartyResult) error {
-	if err := auth.Require(ctx, entityOrganization, principal.ActionCreate); err != nil {
+func (s *Store) ensureCompanyAndEmployment(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, res *EnsureCounterpartyResult) error {
+	if err := auth.Require(ctx, entityCompany, principal.ActionCreate); err != nil {
 		return err
 	}
 	// A From: header is forgeable and net/mail parses far more loosely than DNS
@@ -319,7 +319,7 @@ func (s *Store) ensureOrgAndEmployment(ctx context.Context, tx pgx.Tx, in Ensure
 	// "company". The refusal is therefore a decision about the DOMAIN, and it
 	// has to be consulted before anything can attach a person to a company on
 	// it: consulted later, a named employee writing from that domain would find
-	// the organization a previous message created and quietly re-employ
+	// the company a previous message created and quietly re-employ
 	// everyone onto it.
 	suppressed, err := domainSuppressedTx(ctx, tx, base)
 	if err != nil {
@@ -328,30 +328,30 @@ func (s *Store) ensureOrgAndEmployment(ctx context.Context, tx pgx.Tx, in Ensure
 	if suppressed {
 		return nil
 	}
-	match, err := DedupeOrganization(ctx, tx, OrganizationCandidate{Domains: []string{in.Domain, base}})
+	match, err := DedupeCompany(ctx, tx, CompanyCandidate{Domains: []string{in.Domain, base}})
 	if err != nil {
 		return err
 	}
 	if match.Decision != DecisionExactCollision {
-		// No organization yet. Whether one may be created is not this path's
+		// No company yet. Whether one may be created is not this path's
 		// call any more.
-		return s.deferOrgToTriage(ctx, tx, in, base, res)
+		return s.deferCompanyToTriage(ctx, tx, in, base, res)
 	}
-	orgID := match.OrganizationID
-	res.OrganizationID = &orgID
+	companyID := match.CompanyID
+	res.CompanyID = &companyID
 	// A human put a company on this domain. That overrides whatever a crawl
 	// concluded — including a refusal — and the ledger records it as theirs, so
 	// the next message stops re-asking and the trail says who overruled what.
-	if err := adoptDispositionForOrg(ctx, tx, base, orgID); err != nil {
+	if err := adoptDispositionForCompany(ctx, tx, base, companyID); err != nil {
 		return err
 	}
 
-	return plantEmploymentEdge(ctx, tx, in, res.PersonID, orgID)
+	return plantEmploymentEdge(ctx, tx, in, res.PersonID, companyID)
 }
 
 // linkActivityToPerson attaches the captured activity to the person —
-// person-only by decision (the org rolls up through employment, a direct
-// org link would double-count the same mail). Shared with the channel ensure,
+// person-only by decision (the company rolls up through employment, a direct
+// company link would double-count the same mail). Shared with the channel ensure,
 // which links the same way: it takes the activity id rather than either
 // path's input so neither has to know the other's shape.
 //
@@ -401,8 +401,8 @@ func recordDedupeCandidate(ctx context.Context, tx pgx.Tx, entityType string, a,
 	}
 	leftCol, rightCol := "left_person_id", "right_person_id"
 	switch entityType {
-	case entityOrganization:
-		leftCol, rightCol = "left_org_id", "right_org_id"
+	case entityCompany:
+		leftCol, rightCol = "left_company_id", "right_company_id"
 	case entityLead:
 		leftCol, rightCol = "left_lead_id", "right_lead_id"
 	}

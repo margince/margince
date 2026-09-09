@@ -39,12 +39,12 @@ import (
 
 func TestLastActivityAudience_NarrowingTheNewestMessageMovesTheClockBack(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Held Clock Org", nil)
+	company := e.SeedCompany(t, "Held Clock Company", nil)
 	person := e.SeedPerson(t, "Held Clock Contact", nil)
 	personID := ids.From[ids.PersonKind](person)
-	orgID := ids.From[ids.OrganizationKind](org)
+	companyID := ids.From[ids.CompanyKind](company)
 	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &orgID,
+		Kind: "employment", PersonID: &personID, CompanyID: &companyID,
 		IsCurrentPrimary: boolPtr(true), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
@@ -52,18 +52,18 @@ func TestLastActivityAudience_NarrowingTheNewestMessageMovesTheClockBack(t *test
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Held Clock Deal", AmountMinor: int64Ptr(100), Currency: strPtr("EUR"),
-		PipelineID: pipeline, StageID: open, OrganizationID: &orgID, Source: "manual",
+		PipelineID: pipeline, StageID: open, CompanyID: &companyID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	project := e.seedProjectFor(t, orgID)
+	project := e.seedProjectFor(t, companyID)
 
 	older := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
 	newest := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
 	links := []activities.ActivityLinkInput{
 		{EntityType: "person", EntityID: person},
-		{EntityType: "organization", EntityID: org},
+		{EntityType: "company", EntityID: company},
 		{EntityType: "deal", EntityID: ids.UUID(deal.Id)},
 		{EntityType: "project", EntityID: project},
 	}
@@ -73,7 +73,7 @@ func TestLastActivityAudience_NarrowingTheNewestMessageMovesTheClockBack(t *test
 	// Every clock sits on the newest message while it is open. Asserted before
 	// narrowing, so a later "the clock is at `older`" cannot pass because the
 	// newest message never registered at all.
-	for name, got := range e.everyClock(t, personID, orgID, ids.From[ids.DealKind](ids.UUID(deal.Id)), project) {
+	for name, got := range e.everyClock(t, personID, companyID, ids.From[ids.DealKind](ids.UUID(deal.Id)), project) {
 		if got == nil || !got.Equal(newest) {
 			t.Fatalf("%s clock = %v before narrowing, want %v — the fixture never took effect",
 				name, got, newest)
@@ -85,7 +85,7 @@ func TestLastActivityAudience_NarrowingTheNewestMessageMovesTheClockBack(t *test
 		t.Fatalf("narrowing the newest message: %v", err)
 	}
 
-	for name, got := range e.everyClock(t, personID, orgID, ids.From[ids.DealKind](ids.UUID(deal.Id)), project) {
+	for name, got := range e.everyClock(t, personID, companyID, ids.From[ids.DealKind](ids.UUID(deal.Id)), project) {
 		if got == nil || !got.Equal(older) {
 			t.Errorf("%s clock = %v after narrowing the newest message, want %v: a colleague "+
 				"who cannot read that message is still told it happened", name, got, older)
@@ -97,12 +97,12 @@ func TestLastActivityAudience_WideningTheMessageMovesTheClockForward(t *testing.
 	// The admit case, and the round trip. Without it a helper that counted
 	// nothing at all would pass the test above.
 	e := Setup(t)
-	org := e.SeedOrg(t, "Widen Clock Org", nil)
+	company := e.SeedCompany(t, "Widen Clock Company", nil)
 	person := e.SeedPerson(t, "Widen Clock Contact", nil)
 	personID := ids.From[ids.PersonKind](person)
-	orgID := ids.From[ids.OrganizationKind](org)
+	companyID := ids.From[ids.CompanyKind](company)
 	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &orgID,
+		Kind: "employment", PersonID: &personID, CompanyID: &companyID,
 		IsCurrentPrimary: boolPtr(true), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
@@ -178,7 +178,7 @@ func TestLastActivityAudience_AClockMoveIsNotAnEdit(t *testing.T) {
 	// four tables and suppresses itself only inside a clock move's own guard
 	// setting, which move_last_activity sets and a bare UPDATE does not. A
 	// recompute written as a plain UPDATE would bump version on every deal,
-	// organization, person and project in the installation, invalidating every
+	// company, person and project in the installation, invalidating every
 	// If-Match a client holds.
 	//
 	// Its sibling next door asserts the same property for an ordinary clock
@@ -237,10 +237,10 @@ func (e *Env) logAt(t *testing.T, when time.Time, links ...activities.ActivityLi
 // everyClock reads all four stored last_activity_at values, keyed by the table
 // they came from so a failure names which helper is wrong.
 func (e *Env) everyClock(
-	t *testing.T, person ids.PersonID, org ids.OrganizationID, deal ids.DealID, project ids.UUID,
+	t *testing.T, person ids.PersonID, company ids.CompanyID, deal ids.DealID, project ids.UUID,
 ) map[string]*time.Time {
 	t.Helper()
-	organization, err := e.People.GetOrganization(e.Admin(), org, storekit.LiveOnly)
+	company, err := e.People.GetCompany(e.Admin(), company, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -250,7 +250,7 @@ func (e *Env) everyClock(
 	}
 	return map[string]*time.Time{
 		"person":       e.personClock(t, person),
-		"organization": organization.LastActivityAt,
+		"company": company.LastActivityAt,
 		"deal":         got.LastActivityAt,
 		"project":      e.projectClock(t, project),
 	}
@@ -279,11 +279,11 @@ func (e *Env) projectClock(t *testing.T, id ids.UUID) *time.Time {
 	return at
 }
 
-func (e *Env) seedProjectFor(t *testing.T, org ids.OrganizationID) ids.UUID {
+func (e *Env) seedProjectFor(t *testing.T, company ids.CompanyID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	e.WsExec(t, `
-		INSERT INTO project (id, name, organization_id, source, captured_by)
-		VALUES ($1, 'Held Clock Project', $2, 'manual', 'human:test')`, id, org)
+		INSERT INTO project (id, name, company_id, source, captured_by)
+		VALUES ($1, 'Held Clock Project', $2, 'manual', 'human:test')`, id, company)
 	return id
 }

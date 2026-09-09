@@ -18,7 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
-	"github.com/margince/margince/backend/internal/compose/org360"
+	"github.com/margince/margince/backend/internal/compose/company360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -33,7 +33,7 @@ import (
 // form is what a draft about one project reads: correspondence filed under
 // another project is not in the view to be drawn on.
 type Assembler interface {
-	AssembleScoped(ctx context.Context, orgID ids.OrganizationID, opts org360.AssembleOptions) (crmcontracts.Organization360, error)
+	AssembleScoped(ctx context.Context, companyID ids.CompanyID, opts company360.AssembleOptions) (crmcontracts.Company360, error)
 }
 
 // Request is the transport's body, narrowed to what the writer needs.
@@ -64,7 +64,7 @@ type Request struct {
 // the workspace's model budget on something nobody requested. A cold cache
 // answers nothing and the draft is written without these facts.
 type Dossier interface {
-	CachedSections(ctx context.Context, orgID ids.OrganizationID) []string
+	CachedSections(ctx context.Context, companyID ids.CompanyID) []string
 }
 
 // Service writes one draft per call.
@@ -111,11 +111,11 @@ func (s *Service) WithDossier(dossier Dossier) *Service {
 }
 
 // facts is what this account is known to be, or nothing.
-func (s *Service) facts(ctx context.Context, orgID ids.OrganizationID) []string {
+func (s *Service) facts(ctx context.Context, companyID ids.CompanyID) []string {
 	if s.dossier == nil {
 		return nil
 	}
-	return s.dossier.CachedSections(ctx, orgID)
+	return s.dossier.CachedSections(ctx, companyID)
 }
 
 // WithEnvelope replaces the resolver that answers what language to write in,
@@ -138,7 +138,7 @@ func (s *Service) WithEnvelope(resolver *draftfloor.Resolver) *Service {
 // account we have corresponded with for a year that we are writing for the
 // first time, which is as false as the "just following up" this program set out
 // to remove, only in the other direction.
-func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Organization360) draftfloor.Envelope {
+func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360) draftfloor.Envelope {
 	// The account's own correspondence, already bounded and scoped by the view.
 	// No stored language: an account history is many messages, and the language
 	// of whichever one sorted first is not the language of the exchange.
@@ -156,7 +156,7 @@ func NewService(view Assembler, lane Completer) *Service {
 
 // Draft writes one email. It performs no write of any kind.
 func (s *Service) Draft(
-	ctx context.Context, orgID ids.OrganizationID, req Request,
+	ctx context.Context, companyID ids.CompanyID, req Request,
 ) (crmcontracts.AccountEmailDraft, error) {
 	// Human-only: drafting spends the workspace's model budget on prose for a
 	// person to send under their own name.
@@ -167,7 +167,7 @@ func (s *Service) Draft(
 	// account they cannot read refuses before a word is written, a contact
 	// or deal they cannot see is not in the view to be found, and a project
 	// they cannot see refuses the scoped read itself (activities.RequireProjectScope).
-	view, err := s.view.AssembleScoped(ctx, orgID, org360.AssembleOptions{ProjectID: req.ProjectID})
+	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: req.ProjectID})
 	if err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
 	}
@@ -176,7 +176,7 @@ func (s *Service) Draft(
 	if err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
 	}
-	in.Dossier = s.facts(ctx, orgID)
+	in.Dossier = s.facts(ctx, companyID)
 	// Loaded after the 360 read, so a caller who may not read this account is
 	// refused before their voice profile is touched at all.
 	voice := draftvoice.Load(ctx, s.voice, s.log)
@@ -234,8 +234,8 @@ func wireReasons(reasons []Reason) []crmcontracts.AccountDraftReason {
 				out = append(out, wired)
 				continue
 			}
-			wired.EvidenceRef = &crmcontracts.OrganizationBriefEvidence{
-				EntityType: crmcontracts.OrganizationBriefEvidenceEntityType(reason.EntityType),
+			wired.EvidenceRef = &crmcontracts.CompanyBriefEvidence{
+				EntityType: crmcontracts.CompanyBriefEvidenceEntityType(reason.EntityType),
 				EntityId:   openapi_types.UUID(id),
 			}
 		}

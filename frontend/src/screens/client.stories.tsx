@@ -29,11 +29,11 @@ const person = {
 };
 
 // A company hit in the same payload: the surface is a SENDER lookup, so it keeps
-// only the people. Leaving the organization in the fixture is what proves the
+// only the people. Leaving the company in the fixture is what proves the
 // filter, rather than a payload that could not have shown the bug.
-const organization = {
+const company = {
   id: "o-1",
-  type: "organization",
+  type: "company",
   title: "Brandt Automotive GmbH",
   snippet: "Automotive · Munich",
 };
@@ -74,7 +74,7 @@ export const Resting: Story = { render: story({}) };
 
 // A recognized sender: the mini record, with the way through to the full 360.
 export const RecognizedSender: Story = {
-  render: story({ [SEARCH]: searchPage([person, organization]) }),
+  render: story({ [SEARCH]: searchPage([person, company]) }),
   play: lookUpSender,
 };
 
@@ -94,7 +94,7 @@ export const UnknownSender: Story = {
 // grounds on trial.
 export const RecognizedSenderDark: Story = {
   globals: { theme: "dark" },
-  render: story({ [SEARCH]: searchPage([person, organization]) }),
+  render: story({ [SEARCH]: searchPage([person, company]) }),
   play: lookUpSender,
 };
 

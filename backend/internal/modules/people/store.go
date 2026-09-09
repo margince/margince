@@ -18,7 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// ownerIDColumn is the owner reference column person and organization
+// ownerIDColumn is the owner reference column person and company
 // rows share — their sortable vocabularies (DM-VOCAB-1/2) and ownership
 // patches name it in one spelling.
 const ownerIDColumn = "owner_id"
@@ -96,7 +96,7 @@ func (s *Store) consumerMailMatcher(ctx context.Context, tx pgx.Tx) (*freemail.M
 // WithFieldCatalog wires the workspace custom-field catalog in
 // (compose injects modules/customfields' Service here — ADR-0054: a
 // module never imports a sibling), making active cf_* columns
-// participate in person/organization reads and writes.
+// participate in person/company reads and writes.
 func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
 	s.catalog = catalog
 	return s

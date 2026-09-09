@@ -183,10 +183,10 @@ describe("the first-run setup gate", () => {
   // The models bound and no app yet: the platform question, asked once of
   // the person running the cold start. Google is the answer it opens on, with
   // the two fields an OAuth client has.
-  it("asks what the organization runs on once the models are bound", async () => {
+  it("asks what the company runs on once the models are bound", async () => {
     mount(setupReport(true, false));
     expect(
-      await screen.findByText("What does your organization run on?"),
+      await screen.findByText("What does your company run on?"),
     ).toBeTruthy();
     expect(
       screen.getByRole("radio", { name: /Google Workspace/ }),

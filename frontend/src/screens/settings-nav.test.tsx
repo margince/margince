@@ -184,11 +184,11 @@ const SEEDED_READS: GrantSpec = {
   knowledge_corpus: ["read"],
   offer_template: ["read"],
   // The write, because the seeded roles really hold it: rep carries
-  // `organization` create+update and manager carries all four. It is what keeps
+  // `company` create+update and manager carries all four. It is what keeps
   // Company profile open for them — the company profile the AI reads is a thing
   // a rep legitimately edits, which is why that page did not follow the other
   // three out of her rail.
-  organization: ["read", "create", "update"],
+  company: ["read", "create", "update"],
   overlay_connection: ["read"],
   pipeline: ["read"],
   product: ["read"],
@@ -233,7 +233,7 @@ const SEEDED_READ_PAGES = pagesNamed(
   "agents",
   "connections",
   "capture-activity",
-  // `company` is NOT here: its requirement ANDs the organization write with the
+  // `company` is NOT here: its requirement ANDs the company write with the
   // `company_context` deployment flag, and this fixture leaves that flag off.
   // The page's own availability cases are the ones that turn it on.
   //

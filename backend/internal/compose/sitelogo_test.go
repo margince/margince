@@ -107,7 +107,7 @@ func TestLogoCandidatesAreCappedAndTheDropIsReported(t *testing.T) {
 	}
 
 	site := &assetSite{assets: map[string][]byte{}}
-	_, attempts := resolveOrganizationLogo(context.Background(), site, logoSeed, declaredAssets{icons: icons})
+	_, attempts := resolveCompanyLogo(context.Background(), site, logoSeed, declaredAssets{icons: icons})
 	if len(site.asked) != logoMaxCandidates {
 		t.Fatalf("fetched %d assets, want the cap of %d", len(site.asked), logoMaxCandidates)
 	}
@@ -156,7 +156,7 @@ func TestResolveLogoTakesTheFirstSquareCandidate(t *testing.T) {
 		"https://acme.example/touch.png":   logoFixture(t, 180, 180),
 		"https://acme.example/favicon.ico": logoFixture(t, 32, 32),
 	}}
-	logo, attempts := resolveOrganizationLogo(context.Background(), site, logoSeed, declaredAssets{
+	logo, attempts := resolveCompanyLogo(context.Background(), site, logoSeed, declaredAssets{
 		icons: []webread.IconRef{{URL: "https://acme.example/touch.png", Rel: webread.RelAppleTouchIcon}},
 	})
 	if logo.SourceURL != "https://acme.example/touch.png" {
@@ -181,7 +181,7 @@ func TestResolveLogoPassesOverASharingBannerForTheRealIcon(t *testing.T) {
 		"https://acme.example/share.png": logoFixture(t, 1200, 630),
 		"https://acme.example/touch.png": logoFixture(t, 180, 180),
 	}}
-	logo, attempts := resolveOrganizationLogo(context.Background(), site, logoSeed, declaredAssets{
+	logo, attempts := resolveCompanyLogo(context.Background(), site, logoSeed, declaredAssets{
 		ogImage: "https://acme.example/share.png",
 		icons:   []webread.IconRef{{URL: "https://acme.example/touch.png", Rel: webread.RelAppleTouchIcon}},
 	})
@@ -205,7 +205,7 @@ func TestResolveLogoPrefersADeclaredIconOverASquarishPhoto(t *testing.T) {
 		"https://acme.example/hero.jpg":  logoFixture(t, 1200, 1000),
 		"https://acme.example/touch.png": logoFixture(t, 180, 180),
 	}}
-	logo, _ := resolveOrganizationLogo(context.Background(), site, logoSeed, declaredAssets{
+	logo, _ := resolveCompanyLogo(context.Background(), site, logoSeed, declaredAssets{
 		ogImage: "https://acme.example/hero.jpg",
 		icons:   []webread.IconRef{{URL: "https://acme.example/touch.png", Rel: webread.RelAppleTouchIcon}},
 	})
@@ -220,7 +220,7 @@ func TestResolveLogoKeepsAWideMarkWhenNothingSquarerExists(t *testing.T) {
 	site := &assetSite{assets: map[string][]byte{
 		"https://acme.example/wordmark.png": logoFixture(t, 400, 200),
 	}}
-	logo, _ := resolveOrganizationLogo(context.Background(), site, logoSeed, declaredAssets{
+	logo, _ := resolveCompanyLogo(context.Background(), site, logoSeed, declaredAssets{
 		ogImage: "https://acme.example/wordmark.png",
 	})
 	if logo.SourceURL != "https://acme.example/wordmark.png" {
@@ -241,7 +241,7 @@ func TestResolveLogoRefusesTheCandidatesThatWouldRenderBadly(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			site := &assetSite{assets: map[string][]byte{"https://acme.example/x.png": tc.asset}}
-			logo, attempts := resolveOrganizationLogo(context.Background(), site, logoSeed, declaredAssets{
+			logo, attempts := resolveCompanyLogo(context.Background(), site, logoSeed, declaredAssets{
 				ogImage: "https://acme.example/x.png",
 			})
 			if logo.PNG != nil {
@@ -268,7 +268,7 @@ func TestResolveLogoSurvivesASiteThatServesNoAssetAtAll(t *testing.T) {
 		assets:  map[string][]byte{},
 		failing: map[string]bool{"https://acme.example/favicon.ico": true},
 	}
-	logo, attempts := resolveOrganizationLogo(context.Background(), site, logoSeed, declaredAssets{})
+	logo, attempts := resolveCompanyLogo(context.Background(), site, logoSeed, declaredAssets{})
 	if logo.PNG != nil {
 		t.Fatal("nothing resolved, yet bytes came back")
 	}
@@ -287,7 +287,7 @@ func TestResolveLogoNormalizesToOneSquareUnderTheStoredCeiling(t *testing.T) {
 	site := &assetSite{assets: map[string][]byte{
 		"https://acme.example/touch.png": logoFixture(t, 1024, 1024),
 	}}
-	logo, _ := resolveOrganizationLogo(context.Background(), site, logoSeed, declaredAssets{
+	logo, _ := resolveCompanyLogo(context.Background(), site, logoSeed, declaredAssets{
 		icons: []webread.IconRef{{URL: "https://acme.example/touch.png", Rel: webread.RelAppleTouchIcon}},
 	})
 	stored, err := png.Decode(bytes.NewReader(logo.PNG))
@@ -332,7 +332,7 @@ func TestReclaimSurvivesTheDeadlineThatCausedIt(t *testing.T) {
 	expired, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	key := "ws/organization_logo/org/attempt"
+	key := "ws/company_logo/company/attempt"
 	w.reclaimLogoObject(expired, ids.NewV7(), &key)
 
 	if len(blob.deletedDead) != 0 {

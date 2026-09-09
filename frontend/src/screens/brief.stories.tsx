@@ -120,10 +120,10 @@ function brief({
         overnight ? jsonResponse(overnight) : jsonResponse(NOT_FOUND, 404),
       "GET /deals": () =>
         jsonResponse({ data: deals, page: { next_cursor: null } }),
-      "GET /organizations/org-nordwind": () =>
-        jsonResponse({ id: "org-nordwind", display_name: "Nordwind Logistik" }),
-      "GET /organizations/org-acme": () =>
-        jsonResponse({ id: "org-acme", display_name: "Acme Fördertechnik" }),
+      "GET /companies/company-nordwind": () =>
+        jsonResponse({ id: "company-nordwind", display_name: "Nordwind Logistik" }),
+      "GET /companies/company-acme": () =>
+        jsonResponse({ id: "company-acme", display_name: "Acme Fördertechnik" }),
       "GET /projects/01a00000-0000-7000-8000-000000000001": () =>
         jsonResponse({
           id: "01a00000-0000-7000-8000-000000000001",

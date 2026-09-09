@@ -10,8 +10,8 @@ package gates
 // A record's history includes the links made and removed on it, and `relationship`
 // carries FIVE endpoint columns for SEVEN kinds. privacy.edgeEndpoints is the read's
 // whole knowledge of that shape, and the failure mode of forgetting a column is
-// precise rather than diffuse: a co-sell edge sits in organization_id for one company
-// and counterparty_org_id for the other, so a read that knows only the first shows
+// precise rather than diffuse: a co-sell edge sits in company_id for one company
+// and counterparty_company_id for the other, so a read that knows only the first shows
 // the edge on ONE of the two companies. Nothing errors. The company that made the
 // link has no line saying so, and the company that didn't has one.
 //
@@ -48,7 +48,7 @@ const (
 	edgeEndpointsDecl = "edgeEndpoints"
 	// edgeEndpointColumnField is the struct field inside that declaration holding
 	// the column name. The census reads THIS and not the file's text, because
-	// "counterparty_org_id" also appears in the file's prose — a substring match
+	// "counterparty_company_id" also appears in the file's prose — a substring match
 	// would pass a tree whose read had dropped the column and kept the comment.
 	edgeEndpointColumnField = "column"
 	// coreMigrations is where the shape constraints are declared and restated.
@@ -115,7 +115,7 @@ func endpointColumnsFromShapeConstraints(t *testing.T) ([]string, []string) {
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
-		for name, body := range shapeCheckBodies(t, path, string(raw)) {
+		for name, body := range shapeCheckBodies(t, path, withCurrentNames(string(raw))) {
 			bodies[name] = body
 		}
 	}

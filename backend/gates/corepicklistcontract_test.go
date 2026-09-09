@@ -21,7 +21,7 @@ package gates
 // YAML dependency to hold a claim about a document it does not own.
 //
 // Reading the document also lets the null be dropped deliberately. oapi-codegen
-// emits a `<nil>` member for a nullable enum (OrganizationSizeBandLessThannil is
+// emits a `<nil>` member for a nullable enum (CompanySizeBandLessThannil is
 // real), so a set derived from the generated constants would carry a value no
 // human should be offered; a null in the contract is the COLUMN's nullability,
 // and `exists: false` is how a filter asks for empty.
@@ -57,26 +57,26 @@ const contractDocument = "api/crm.yaml"
 // picklist added tomorrow is covered the day it lands — by forcing whoever adds
 // it to say where the contract admits its values.
 var picklistInContract = map[string]struct{ schema, property string }{
-	"organization.lifecycle":         {"Organization", "lifecycle"},
-	"organization.size_band":         {"Organization", "size_band"},
-	"organization.relationship_type": {"Organization", "relationship_types"},
+	"company.lifecycle":         {"Company", "lifecycle"},
+	"company.size_band":         {"Company", "size_band"},
+	"company.relationship_type": {"Company", "relationship_types"},
 	"deal.status":                    {"Deal", "status"},
 	"deal.forecast_category":         {"Deal", "forecast_category"},
 	"lead.status":                    {"Lead", "status"},
 	"project.phase":                  {"Project", "phase"},
 	// A deal filters on its customer's account through a link leaf, so two of the
 	// sets above appear a second time under the deal engine. Both entries name the
-	// Organization property they reach, which is the point: a link leaf offering a
+	// Company property they reach, which is the point: a link leaf offering a
 	// different set from the field it reads is exactly the drift this catches.
-	"deal.organization_lifecycle": {"Organization", "lifecycle"},
-	"deal.organization_size_band": {"Organization", "size_band"},
-	// The technical leaves read `organization_fact.value_key`, which is a bare
+	"deal.company_lifecycle": {"Company", "lifecycle"},
+	"deal.company_size_band": {"Company", "size_band"},
+	// The technical leaves read `company_fact.value_key`, which is a bare
 	// string on the fact schema and cannot carry three different enums. Each
 	// names the dedicated schema that publishes ITS set instead — which is what
 	// makes a client able to offer the values at all.
-	"organization.mail_provider":    {"TechnicalMailProvider", ""},
-	"organization.hosting_provider": {"TechnicalHostingProvider", ""},
-	"organization.operated_service": {"TechnicalOperatedService", ""},
+	"company.mail_provider":    {"TechnicalMailProvider", ""},
+	"company.hosting_provider": {"TechnicalHostingProvider", ""},
+	"company.operated_service": {"TechnicalOperatedService", ""},
 }
 
 func TestEveryOfferedPicklistMatchesTheContractsValues(t *testing.T) {

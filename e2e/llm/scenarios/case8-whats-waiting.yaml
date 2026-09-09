@@ -72,7 +72,7 @@ must_call_with:
 must_mention:
   # CRITERION 1, and the sharpest assertion in this case. "Werkzeugbau" sits
   # past the 48-byte cut in the staged description, so it appears in the inbox
-  # listing nowhere, on the organization record nowhere (the record still holds
+  # listing nowhere, on the company record nowhere (the record still holds
   # the human's own line), and in read_approval's proposed_change only. An
   # answer carrying it opened the item; an answer without it did not.
   - "Werkzeugbau"

@@ -51,21 +51,21 @@ func TestTheSquareBadgeIsStoredWithoutDisturbingTheWideMark(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	uploadMark(t, e, handlers, logoFixture(t, 800, 200), "acme-wordmark.png")
-	wide, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide)
+	wide, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the company wears no wide mark after its own upload: %v", err)
 	}
 
 	uploadIcon(t, e, handlers, logoFixture(t, 256, 256), "acme-badge.png")
 
-	icon, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoIcon)
+	icon, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoIcon)
 	if err != nil {
 		t.Fatalf("the company wears no badge after its own upload: %v", err)
 	}
 	if icon == wide {
 		t.Fatal("both slots name one object, so the badge upload overwrote the wordmark")
 	}
-	if stillWide, keyErr := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide); keyErr != nil || stillWide != wide {
+	if stillWide, keyErr := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide); keyErr != nil || stillWide != wide {
 		t.Fatalf("the wide mark is now %q (%v), want the untouched %q", stillWide, keyErr, wide)
 	}
 	// Both objects are in the store: the badge's bytes were written, and the
@@ -87,11 +87,11 @@ func TestTheSquareBadgeIsStoredWithoutDisturbingTheWideMark(t *testing.T) {
 		t.Fatalf("reading the company back: %v", err)
 	}
 	profile := toContractCompany(read)
-	wantIcon := *people.LogoURL(company.OrganizationID.UUID, &icon, people.LogoIcon)
+	wantIcon := *people.LogoURL(company.CompanyID.UUID, &icon, people.LogoIcon)
 	if profile.LogoIconUrl == nil || *profile.LogoIconUrl != wantIcon {
 		t.Fatalf("logo_icon_url = %v, want %q", profile.LogoIconUrl, wantIcon)
 	}
-	wantWide := *people.LogoURL(company.OrganizationID.UUID, &wide, people.LogoWide)
+	wantWide := *people.LogoURL(company.CompanyID.UUID, &wide, people.LogoWide)
 	if profile.LogoUrl == nil || *profile.LogoUrl != wantWide {
 		t.Fatalf("logo_url = %v, want the untouched %q", profile.LogoUrl, wantWide)
 	}
@@ -102,11 +102,11 @@ func TestTheSquareBadgeIsStoredWithoutDisturbingTheWideMark(t *testing.T) {
 	// compared against each other rather than merely inspected.
 	serve := people.NewHandlers(e.DB()).WithBlobstore(blob)
 	badge := streamedMark(ctx, t, func(recorder *httptest.ResponseRecorder, request *http.Request) {
-		serve.GetOrganizationLogoIcon(recorder, request, crmcontracts.Id(company.OrganizationID.UUID))
-	}, "/v1/organizations/"+company.OrganizationID.String()+"/logo/icon")
+		serve.GetCompanyLogoIcon(recorder, request, crmcontracts.Id(company.CompanyID.UUID))
+	}, "/v1/companies/"+company.CompanyID.String()+"/logo/icon")
 	wordmark := streamedMark(ctx, t, func(recorder *httptest.ResponseRecorder, request *http.Request) {
-		serve.GetOrganizationLogo(recorder, request, crmcontracts.Id(company.OrganizationID.UUID))
-	}, "/v1/organizations/"+company.OrganizationID.String()+"/logo")
+		serve.GetCompanyLogo(recorder, request, crmcontracts.Id(company.CompanyID.UUID))
+	}, "/v1/companies/"+company.CompanyID.String()+"/logo")
 	if bytes.Equal(badge, wordmark) {
 		t.Fatal("the two endpoints stream identical bytes — one of them is reading the other's column")
 	}
@@ -135,7 +135,7 @@ func TestRemovingTheBadgeLeavesTheWideMarkStanding(t *testing.T) {
 
 	uploadMark(t, e, handlers, logoFixture(t, 800, 200), "acme-wordmark.png")
 	uploadIcon(t, e, handlers, logoFixture(t, 256, 256), "acme-badge.png")
-	icon, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoIcon)
+	icon, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoIcon)
 	if err != nil {
 		t.Fatalf("reading the uploaded badge: %v", err)
 	}

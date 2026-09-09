@@ -103,7 +103,7 @@ export function PersonTimelineTab({
     loadMore: timeline,
     // No name resolver yet: a uuid in a change row still renders untouched
     // rather than guessed at, which is the correct fallback while nothing
-    // here resolves people/org ids to names.
+    // here resolves people/company ids to names.
     // What a stored value needs to be read as what it MEANS: this record holds
     // no money of its own, so the currency is absent and a minor-unit column
     // says so rather than printing a bare integer.
@@ -368,7 +368,7 @@ function MeetingBriefAction({
 /**
  * PersonMeetingsTab puts the meeting that has not happened yet above the ones
  * that have. The booked meeting is the server's own next-meeting read, taken
- * through this person's activity link rather than their account's — the org's
+ * through this person's activity link rather than their account's — the company's
  * answer names a meeting this person may not be in.
  */
 export function PersonMeetingsTab({

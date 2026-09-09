@@ -31,7 +31,7 @@ var coreFamilyStreams = []string{
 	"gw:events:crm:deal",
 	"gw:events:crm:identity",
 	"gw:events:crm:lead",
-	"gw:events:crm:organization",
+	"gw:events:crm:company",
 	"gw:events:crm:overlay",
 	"gw:events:crm:person",
 	"gw:events:crm:voice",
@@ -212,7 +212,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 	// TestNoCoreGroupCarriesTheExtensionStream.
 	all := coreFamilyStreams
 	want := map[string][]string{
-		"cg:context-graph": {"gw:events:crm:activity", "gw:events:crm:deal", "gw:events:crm:lead", "gw:events:crm:organization", "gw:events:crm:person"},
+		"cg:context-graph": {"gw:events:crm:activity", "gw:events:crm:deal", "gw:events:crm:lead", "gw:events:crm:company", "gw:events:crm:person"},
 		// The interaction-edge projection (ADR-0078): activity events move an
 		// edge, person events (merge, archive, restore) move every edge to
 		// that contact.
@@ -224,16 +224,16 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// The LinkedIn ghost matcher (ADR-0078 §8b): a contact appearing is a
 		// chance to attach a ghost, and so is an account appearing — employer
 		// resolution is what most unmatched ghosts are waiting on.
-		"cg:linkedin-match": {"gw:events:crm:organization", "gw:events:crm:person"},
+		"cg:linkedin-match": {"gw:events:crm:company", "gw:events:crm:person"},
 		// The captured-cohort repair: a person's earlier mail is linked when the
 		// person appears or gains an address. Its own group so a slow enrichment
 		// cannot delay a record becoming complete.
 		"cg:cohort-promote":     {"gw:events:crm:person"},
 		"cg:person-auto-enrich": {"gw:events:crm:person"},
-		// The prompt half of captured-organization auto-enrich: an
-		// organization appearing or changing queues the workspace's enrich
+		// The prompt half of captured-company auto-enrich: an
+		// company appearing or changing queues the workspace's enrich
 		// pass now rather than on the next daily sweep.
-		"cg:org-auto-enrich": {"gw:events:crm:organization"},
+		"cg:company-auto-enrich": {"gw:events:crm:company"},
 		// Automatic enrichment from a licensed provider (ADR-0101). Its own
 		// group rather than a second handler on the pass above: that one
 		// reads pages already crawled, this one SPENDS credits, and a

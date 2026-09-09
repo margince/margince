@@ -35,7 +35,7 @@ import {
   throwProblem,
 } from "./common";
 
-// The installation settings surface (ADR-0090/A135): the organization's name,
+// The installation settings surface (ADR-0090/A135): the company's name,
 // the IANA zone every reporting period is computed in, the ISO-4217 base
 // currency every roll-up converts to, the language AI writes the shared record
 // in, and the month its business year begins. Every role reads them — a rep reading amounts benefits from
@@ -46,7 +46,7 @@ import {
 // cannot act on it either way.
 //
 // FIVE ROWS AND ONE FORM. The card is a list of decisions — what the
-// organization is called, when its periods start, which currency every amount
+// company is called, when its periods start, which currency every amount
 // is re-expressed in, which language AI writes for the whole team in, and when
 // its financial year turns over — so each
 // is a row that shows its own answer, which is what lets a reader audit the
@@ -348,9 +348,9 @@ function InstallationSettingsForm({
   );
 
   return (
-    <Panel title={t("installationSettings.orgTitle")}>
+    <Panel title={t("installationSettings.companyTitle")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("installationSettings.orgSub")}</p>
+        <p className="settings-panel-sub">{t("installationSettings.companySub")}</p>
         {!canManage && (
           <p className="t-caption" id={denialId}>
             {t("installationSettings.readOnly")}
@@ -514,7 +514,7 @@ function InstallationProfileDialog({
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
       <h2 id={titleId} className="t-h2 modal-title">
-        {t("installationSettings.orgTitle")}
+        {t("installationSettings.companyTitle")}
       </h2>
       <form
         ref={form}

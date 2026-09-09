@@ -72,7 +72,7 @@ function deal(overrides: Partial<Deal> = {}): Deal {
     pipeline_id: "pl",
     stage_id: "s1",
     status: "open",
-    organization_id: "o-1",
+    company_id: "o-1",
     source: "manual",
     captured_by: "u-me",
     // The caller's own deal: absent means NOT writable per the contract.
@@ -170,7 +170,7 @@ function dealBackend(opts: {
           page: { next_cursor: null },
         });
       }
-      if (pathname.endsWith("/organizations")) {
+      if (pathname.endsWith("/companies")) {
         return jsonResponse({
           data: opts.companies ?? [
             { id: "o-1", display_name: "Brandt Automotive" },
@@ -178,7 +178,7 @@ function dealBackend(opts: {
           page: { next_cursor: null },
         });
       }
-      if (pathname.endsWith("/organizations/o-1")) {
+      if (pathname.endsWith("/companies/o-1")) {
         return jsonResponse({ id: "o-1", display_name: "Brandt Automotive" });
       }
       if (pathname.endsWith("/projects")) {
@@ -187,13 +187,13 @@ function dealBackend(opts: {
         // just the anchor — the whole reason the narrowing cannot be done in
         // the browser — so a fixture may name the others through
         // `projectCompanies`, and falls back to the anchor when it does not.
-        const asked = new URL(url).searchParams.get("organization_id");
+        const asked = new URL(url).searchParams.get("company_id");
         const rows = (opts.projects ?? []).filter((row) => {
           if (!asked) {
             return true;
           }
           const on = opts.projectCompanies?.[row.id];
-          return on ? on.includes(asked) : row.organization_id === asked;
+          return on ? on.includes(asked) : row.company_id === asked;
         });
         return jsonResponse({
           data: rows,
@@ -227,7 +227,7 @@ describe("the deal form's project picker", () => {
       projects: [
         project({ id: "pr-1", name: "CRM rollout" }),
         project({ id: "pr-closed", name: "Old one", phase: "closed" }),
-        project({ id: "pr-other", name: "Elsewhere", organization_id: "o-2" }),
+        project({ id: "pr-other", name: "Elsewhere", company_id: "o-2" }),
       ],
     });
     render(<DealsScreen />);
@@ -251,7 +251,7 @@ describe("the deal form's project picker", () => {
     const posted = writes.find((write) => write.url.endsWith("/deals"));
     expect(posted?.body).toMatchObject({
       name: "Phase two",
-      organization_id: "o-1",
+      company_id: "o-1",
       project_id: "pr-1",
     });
     expect(writes.some((write) => write.url.endsWith("/projects"))).toBe(false);
@@ -279,7 +279,7 @@ describe("the deal form's project picker", () => {
       method: "POST",
       body: {
         name: "Born here",
-        organization_id: "o-1",
+        company_id: "o-1",
         source: "manual",
       },
     });
@@ -302,7 +302,7 @@ describe("the deal form's project picker", () => {
         project({
           id: "pr-joint",
           name: "Joint rollout",
-          organization_id: "o-customer",
+          company_id: "o-customer",
         }),
       ],
       projectCompanies: { "pr-1": ["o-1"], "pr-joint": ["o-customer", "o-2"] },
@@ -340,7 +340,7 @@ describe("the deal form's project picker", () => {
     dealBackend({
       projects: [
         project({ id: "pr-1", name: "CRM rollout" }),
-        project({ id: "pr-other", name: "Elsewhere", organization_id: "o-2" }),
+        project({ id: "pr-other", name: "Elsewhere", company_id: "o-2" }),
       ],
       companies: [
         { id: "o-1", display_name: "Brandt Automotive" },
@@ -508,7 +508,7 @@ describe("the deal page", () => {
   // The bug Lars hit: many projects exist, and editing a deal offers only "New
   // project…".
   //
-  // The picker used to fetch EVERY project and filter on organization_id, which
+  // The picker used to fetch EVERY project and filter on company_id, which
   // names a project's CUSTOMER. A deal on a company that is on the project as a
   // PARTNER matched nothing, so the list came back empty on an installation
   // full of projects.
@@ -524,8 +524,8 @@ describe("the deal page", () => {
       id: "pr-1",
       name: "Joint rollout",
       // The CUSTOMER is a different company: this deal's company is on the
-      // project as a partner, which organization_id cannot say.
-      organization_id: "o-customer",
+      // project as a partner, which company_id cannot say.
+      company_id: "o-customer",
     });
     const t = (key: string) => key;
 
@@ -537,19 +537,19 @@ describe("the deal page", () => {
     );
     const asked = narrowed.find((field) => field.key === "project_id");
     expect(
-      asked?.optionsFor?.({ organization_id: "o-partner" }).map((o) => o.label),
+      asked?.optionsFor?.({ company_id: "o-partner" }).map((o) => o.label),
     ).toContain("Joint rollout");
 
     // A list read for NO company answers about no company. That is the state
     // before the form has named one — not a list to filter, which is the
-    // shortcut a project row cannot support: organization_id names only the
+    // shortcut a project row cannot support: company_id names only the
     // CUSTOMER, so filtering on it hides every project this company is on as a
     // partner, which is the defect above in the other direction.
     const unread = dealProjectFields(t, [partnerProject]);
     const client = unread.find((field) => field.key === "project_id");
     expect(
       client
-        ?.optionsFor?.({ organization_id: "o-partner" })
+        ?.optionsFor?.({ company_id: "o-partner" })
         .map((o) => o.label),
     ).not.toContain("Joint rollout");
   });
@@ -558,7 +558,7 @@ describe("the deal page", () => {
     const partnerProject = project({
       id: "pr-1",
       name: "Joint rollout",
-      organization_id: "o-customer",
+      company_id: "o-customer",
     });
     const t = (key: string) => key;
     // The list was read for o-partner; the reader has since changed the form's
@@ -566,7 +566,7 @@ describe("the deal page", () => {
     // project row says whether o-other is on this project, so the only honest
     // answer for that moment is none — offering the old company's projects is
     // what lets a save carry a pairing the server refuses
-    // (deal_project_same_org, 422).
+    // (deal_project_same_company, 422).
     const fields = dealProjectFields(
       t,
       [partnerProject],
@@ -575,7 +575,7 @@ describe("the deal page", () => {
     );
     const asked = fields.find((field) => field.key === "project_id");
     const labels = asked
-      ?.optionsFor?.({ organization_id: "o-other" })
+      ?.optionsFor?.({ company_id: "o-other" })
       .map((o) => o.label);
     expect(labels).not.toContain("Joint rollout");
     // The current-project fallback is withdrawn too, so `submittedValues`
@@ -583,7 +583,7 @@ describe("the deal page", () => {
     expect(labels).toEqual(["deal.projectNew"]);
 
     // Same list, same company it was read for: still offered.
-    const same = asked?.optionsFor?.({ organization_id: "o-partner" });
+    const same = asked?.optionsFor?.({ company_id: "o-partner" });
     expect(same?.map((o) => o.label)).toContain("Joint rollout");
   });
 });

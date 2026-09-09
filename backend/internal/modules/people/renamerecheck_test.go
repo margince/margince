@@ -13,10 +13,10 @@ import (
 )
 
 // The name shapes that put one company in a workspace twice, each pinned above
-// the review threshold. They are the premise the organization-name lock rests
+// the review threshold. They are the premise the company-name lock rests
 // on: if one stopped colliding, the lock would be serializing writers over a
 // pair the matcher no longer files.
-func TestNearDuplicateOrgNamesScoreAboveTheReviewThreshold(t *testing.T) {
+func TestNearDuplicateCompanyNamesScoreAboveTheReviewThreshold(t *testing.T) {
 	pairs := []struct {
 		name        string
 		left, right string
@@ -31,7 +31,7 @@ func TestNearDuplicateOrgNamesScoreAboveTheReviewThreshold(t *testing.T) {
 	}
 	for _, p := range pairs {
 		t.Run(p.name, func(t *testing.T) {
-			score := nameSimilarity(NormalizeOrgName(p.left), NormalizeOrgName(p.right))
+			score := nameSimilarity(NormalizeCompanyName(p.left), NormalizeCompanyName(p.right))
 			if score < dedupeReviewThreshold {
 				t.Errorf("%q vs %q scores %.4f, below the %.2f threshold — this pair no longer needs serializing",
 					p.left, p.right, score, dedupeReviewThreshold)
@@ -41,14 +41,14 @@ func TestNearDuplicateOrgNamesScoreAboveTheReviewThreshold(t *testing.T) {
 
 	// And the control: an unrelated pair must stay below, or the threshold is
 	// matching everything and the guard's cost buys nothing.
-	if score := nameSimilarity(NormalizeOrgName("Baqend"), NormalizeOrgName("Zorbatron Heavy Industry")); score >= dedupeReviewThreshold {
+	if score := nameSimilarity(NormalizeCompanyName("Baqend"), NormalizeCompanyName("Zorbatron Heavy Industry")); score >= dedupeReviewThreshold {
 		t.Errorf("unrelated names score %.4f, at or above the threshold", score)
 	}
 }
 
 // The similarity metric is quadratic in the longer name and runs inside the
-// writing transaction while the organization-name lock is held, so an unbounded
-// name would pin a pool connection and every organization-name writer in the
+// writing transaction while the company-name lock is held, so an unbounded
+// name would pin a pool connection and every company-name writer in the
 // workspace behind it. `display_name` is `text` with no maxLength in the
 // contract, so the bound lives in the metric.
 func TestNameScoringIsBoundedAgainstAnAbsurdName(t *testing.T) {
@@ -126,8 +126,8 @@ func TestAnEvidenceApplyOwesTheNameLockWheneverItCarriesANameField(t *testing.T)
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := carriesOrgName(tc.fields); got != tc.owes {
-				t.Errorf("carriesOrgName = %v, want %v", got, tc.owes)
+			if got := carriesCompanyName(tc.fields); got != tc.owes {
+				t.Errorf("carriesCompanyName = %v, want %v", got, tc.owes)
 			}
 		})
 	}
@@ -139,7 +139,7 @@ func TestAnEvidenceApplyOwesTheNameLockWheneverItCarriesANameField(t *testing.T)
 // in the patch's after-image and both trigger the re-check, but only the
 // supplied value was ever asked about — so `Clear: ["legal_name"]` took the row
 // lock through the guarded write and then reached for the name lock inside the
-// re-check, which is the ordering lockOrgNameWrites exists to forbid.
+// re-check, which is the ordering lockCompanyNameWrites exists to forbid.
 //
 // The clearable fields are read from the map that decides what is clearable at
 // all, rather than listed here: a name that becomes clearable later is covered
@@ -147,11 +147,11 @@ func TestAnEvidenceApplyOwesTheNameLockWheneverItCarriesANameField(t *testing.T)
 func TestAnUpdateOwesTheNameLockThroughEitherChannelThatWritesAName(t *testing.T) {
 	t.Run("a supplied name", func(t *testing.T) {
 		display, legal := "Baqend", "Baqend GmbH"
-		for name, in := range map[string]UpdateOrganizationInput{
+		for name, in := range map[string]UpdateCompanyInput{
 			"display": {DisplayName: &display},
 			"legal":   {LegalName: &legal},
 		} {
-			if !renamesAnOrganization(in) {
+			if !renamesAnCompany(in) {
 				t.Errorf("a supplied %s name owes the lock and was not asked for it", name)
 			}
 		}
@@ -159,9 +159,9 @@ func TestAnUpdateOwesTheNameLockThroughEitherChannelThatWritesAName(t *testing.T
 
 	t.Run("a cleared name", func(t *testing.T) {
 		names := 0
-		for field, clearable := range clearableOrganizationColumns(crmcontracts.Organization{}) {
-			owes := renamesAnOrganization(UpdateOrganizationInput{Clear: []string{field}})
-			if !orgNameColumns[clearable.Column] {
+		for field, clearable := range clearableCompanyColumns(crmcontracts.Company{}) {
+			owes := renamesAnCompany(UpdateCompanyInput{Clear: []string{field}})
+			if !companyNameColumns[clearable.Column] {
 				// The other end: the lock is workspace-wide, so a clear that
 				// writes no name must NOT pay for it.
 				if owes {
@@ -185,7 +185,7 @@ func TestAnUpdateOwesTheNameLockThroughEitherChannelThatWritesAName(t *testing.T
 
 	t.Run("an edit that touches no name", func(t *testing.T) {
 		owner := "somebody"
-		if renamesAnOrganization(UpdateOrganizationInput{
+		if renamesAnCompany(UpdateCompanyInput{
 			Industry: &owner, Clear: []string{"description", "industry"},
 		}) {
 			t.Error("an edit writing no name column took the workspace-wide lock")

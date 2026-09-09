@@ -25,7 +25,7 @@ expect:
     business, and hers is the one kind that becomes a contact record.
     "spam" and "newsletter" are the failure this scenario exists to catch and
     score zero regardless of stated confidence, because both hide a genuine
-    prospect's first mail. "organization_sender" and "role_mailbox" are wrong in
+    prospect's first mail. "company_sender" and "role_mailbox" are wrong in
     a milder way — they keep the correspondence visible and withhold only the
     contact record — so they score in the middle, above the hiding kinds and
     well below the right answer: Priya signs with her own name from her own

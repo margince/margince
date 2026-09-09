@@ -3936,7 +3936,7 @@
           "candidates_truncated": {
             "type": "boolean"
           },
-          "organization_id": {
+          "company_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -3982,7 +3982,7 @@
         },
         "required": [
           "candidates_truncated",
-          "organization_id",
+          "company_id",
           "routes"
         ]
       },
@@ -6241,7 +6241,7 @@
               ]
             }
           },
-          "organization_id": {
+          "company_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -8137,20 +8137,20 @@
               "unattributed_nearby"
             ]
           },
-          "organization": {
+          "company": {
             "type": "object",
             "properties": {
               "name": {
                 "type": "string"
               },
-              "organization_id": {
+              "company_id": {
                 "type": "string",
                 "format": "uuid"
               }
             },
             "required": [
               "name",
-              "organization_id"
+              "company_id"
             ]
           },
           "phase_history": {
@@ -8236,7 +8236,7 @@
               "name": {
                 "type": "string"
               },
-              "organization_id": {
+              "company_id": {
                 "type": "string",
                 "format": "uuid"
               },

@@ -170,14 +170,14 @@ func TestSubjectsEnumeratesInADeterministicOrder(t *testing.T) {
 func TestSubjectsOfAWaiverSetKeyedByANamedStringTypeAreOrderedToo(t *testing.T) {
 	type recordType string
 	w := Waive(map[recordType]string{
-		"organization": "the third subject, ratified for the reason stated right here",
+		"company": "the third subject, ratified for the reason stated right here",
 		"deal":         "the first subject, ratified for the reason stated right here",
 		"person":       "the second subject, ratified for the reason stated right here",
 	})
 	for range 8 {
 		got := w.Subjects()
-		if len(got) != 3 || got[0] != "deal" || got[1] != "organization" || got[2] != "person" {
-			t.Fatalf("Subjects() = %v, want deal,organization,person in every call", got)
+		if len(got) != 3 || got[0] != "deal" || got[1] != "company" || got[2] != "person" {
+			t.Fatalf("Subjects() = %v, want deal,company,person in every call", got)
 		}
 	}
 }

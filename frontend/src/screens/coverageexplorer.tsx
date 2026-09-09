@@ -13,7 +13,7 @@ import { forReader } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { type StrengthBucket, useOrganizationGraph } from "./organizationgraph";
+import { type StrengthBucket, useCompanyGraph } from "./companygraph";
 import { incompleteGraph } from "./record360";
 
 // Comparing a chosen few colleagues against the account's contacts.
@@ -53,7 +53,7 @@ const BAND_LABELS: Record<StrengthBucket, MessageKey> = {
   none: "co.routeIn.band.unknown",
 };
 
-export function CoverageExplorer({ orgId }: Readonly<{ orgId: string }>) {
+export function CoverageExplorer({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const titleId = useId();
@@ -71,7 +71,7 @@ export function CoverageExplorer({ orgId }: Readonly<{ orgId: string }>) {
           <h2 id={titleId} className="t-h2 modal-title">
             {t("acctCoverage.title")}
           </h2>
-          <CoverageGrid orgId={orgId} />
+          <CoverageGrid companyId={companyId} />
         </Modal>
       )}
     </>
@@ -85,12 +85,12 @@ type ColleagueCoverage = {
   bands: Map<string, StrengthBucket>;
 };
 
-function CoverageGrid({ orgId }: Readonly<{ orgId: string }>) {
+function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   // Read only when somebody opens the explorer: a graph query on every company
   // page load is what the on-demand route-in read already avoids.
-  const query = useOrganizationGraph(orgId);
+  const query = useCompanyGraph(companyId);
   const graph = Array.isArray(query.data?.nodes) ? query.data : undefined;
   const [contactFilter, setContactFilter] = useState("");
   const [selected, setSelected] = useState<readonly string[]>([]);
@@ -263,7 +263,7 @@ function CoverageGrid({ orgId }: Readonly<{ orgId: string }>) {
 // what has nothing to say.
 /** accountContacts is every person the account's graph names. */
 function accountContacts(
-  graph: ReturnType<typeof useOrganizationGraph>["data"],
+  graph: ReturnType<typeof useCompanyGraph>["data"],
 ): Contact[] {
   if (!graph || !Array.isArray(graph.nodes)) {
     return [];
@@ -274,7 +274,7 @@ function accountContacts(
 }
 
 function colleaguesFrom(
-  graph: ReturnType<typeof useOrganizationGraph>["data"],
+  graph: ReturnType<typeof useCompanyGraph>["data"],
   locale: Locale,
 ): ColleagueCoverage[] {
   if (!graph || !Array.isArray(graph.nodes)) {

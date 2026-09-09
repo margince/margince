@@ -32,7 +32,7 @@ A role is a row in the `role` table (`migrations/core/0002_identity.up.sql`), sc
 workspace. Its `permissions` JSONB holds two things:
 
 - **`objects`** — a per-object-type grant of `{create, read, update, delete}` over the 29 core
-  objects (`person`, `organization`, `deal`, `lead`, `activity`, `pipeline`, `list`, `custom_field`,
+  objects (`person`, `company`, `deal`, `lead`, `activity`, `pipeline`, `list`, `custom_field`,
   `offer_template`, …). The closed set is `policy.coreObjects`, published cell-by-cell in
   [reference/rbac-matrix.md](../reference/rbac-matrix.md).
 - **`row_scope`** — `own` | `team` | `all` (see below).
@@ -76,7 +76,7 @@ classes of table (`platform/auth/tableclass.go`).
 
 ### Reads: customer identity is shared, commercial work is scoped
 
-**Identity tables — `person`, `organization`, `lead`, `deal`, `project` — are readable by every seat
+**Identity tables — `person`, `company`, `lead`, `deal`, `project` — are readable by every seat
 that holds the object grant, whatever its row scope.** The decision behind this (2026-08-19): the model
 that hid customer records per team made a rep miss that a company was already a customer of another
 team and contact it again. A rep now finds the company, sees who owns it and when it was last
@@ -118,7 +118,7 @@ or an unbounded seat. Being in somebody's team is not by itself permission to re
 **For a `manager` it grants exactly one thing: their teammates.** A Team Lead is `team`-scoped, so the
 owner predicate resolves to themselves plus everyone sharing a live team with them. That is the seat's
 purpose — a lead who cannot work their team's records is a lead in name only — and it is bounded by
-membership rather than by the org chart: an archived team grants nothing, and `parent_team_id` is not
+membership rather than by the company chart: an archived team grants nothing, and `parent_team_id` is not
 walked, so leading a parent team reaches a child team's members only by belonging to that team too.
 
 A record grant may still name a **team**, so sharing with a group is one act rather than one per
@@ -128,7 +128,7 @@ An **ownerless** row (`owner_id IS NULL`) is nobody's to change until somebody c
 (`EnsureClaimable`, `POST /v1/records/{record_type}/{id}/claim`); claiming makes the claimer the
 owner. It stays readable by everyone throughout.
 
-A record carries the answer on the wire: `writable` on a person, organization, lead, deal or project
+A record carries the answer on the wire: `writable` on a person, company, lead, deal or project
 says whether **this** caller may change **this** row, so a client draws its edit affordances from the
 same question the server answers. It is a UX signal and never the enforcement.
 
@@ -251,7 +251,7 @@ How it composes with everything above:
   needs a role granting the verb on that object type. Share a deal with a user whose role lacks
   `deal.read` and they still can't open it — the grant is inert until their role clears the object
   gate.
-- **It applies only to shareable tables** — `person`, `organization`, `deal`, `lead`, `project`
+- **It applies only to shareable tables** — `person`, `company`, `deal`, `lead`, `project`
   (`rowscope.go` `shareableTables`; the `record_grant` CHECK is the schema-side twin). Config and
   other objects have no per-record share. On an identity table a `read` grant only matters for an
   owner-private captured row; a `write` grant is what widens editing.

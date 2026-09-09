@@ -125,7 +125,7 @@ type archivePinCase struct {
 }
 
 // archivePinCases seeds one record of every type the native provider archives
-// through a pin — person, organization and deal.
+// through a pin — person, company and deal.
 //
 // project and relationship are deliberately absent, and the reason is worth
 // stating: both are reached by a create this harness does not have a one-line
@@ -136,7 +136,7 @@ func archivePinCases(as context.Context, t *testing.T, e *integration.Env, p *Pr
 	t.Helper()
 	person := seedForArchivePin(as, t, p, datasource.EntityPerson,
 		`{"full_name":"Pin Probe","owner_id":"`+e.AdminUser.String()+`"}`)
-	org := seedForArchivePin(as, t, p, datasource.EntityOrganization,
+	company := seedForArchivePin(as, t, p, datasource.EntityCompany,
 		`{"display_name":"Pin Probe GmbH","owner_id":"`+e.AdminUser.String()+`"}`)
 
 	pipeline, open, _ := integration.DealFixture(t, e)
@@ -146,7 +146,7 @@ func archivePinCases(as context.Context, t *testing.T, e *integration.Env, p *Pr
 
 	return []archivePinCase{
 		{ref: person, table: "person", version: versionOf(t, e, "person", person.ID)},
-		{ref: org, table: "organization", version: versionOf(t, e, "organization", org.ID)},
+		{ref: company, table: "company", version: versionOf(t, e, "company", company.ID)},
 		{ref: deal, table: "deal", version: versionOf(t, e, "deal", deal.ID)},
 	}
 }
@@ -168,7 +168,7 @@ func seedForArchivePin(as context.Context, t *testing.T, p *Provider,
 // provider, which moves the row's version exactly as a racing human would.
 //
 // The version is read either side and the MOVE is asserted, which is not
-// belt-and-braces: this test caught itself passing for person and organization
+// belt-and-braces: this test caught itself passing for person and company
 // because the patch named `job_title` and `website`, fields those update
 // requests do not carry. Neither errored — both requests carry an
 // AdditionalProperties map, so an unknown field is absorbed rather than
@@ -182,7 +182,7 @@ func bumpVersion(as context.Context, t *testing.T, e *integration.Env, p *Provid
 	before := versionOf(t, e, table, ref.ID)
 	patch := map[datasource.EntityType]string{
 		datasource.EntityPerson:       `{"title":"changed under the approval"}`,
-		datasource.EntityOrganization: `{"description":"changed under the approval"}`,
+		datasource.EntityCompany: `{"description":"changed under the approval"}`,
 		datasource.EntityDeal:         `{"name":"changed under the approval"}`,
 	}[ref.Type]
 	if _, err := p.Update(as, datasource.UpdateInput{
@@ -291,6 +291,6 @@ func archiveOverREST(as context.Context, t *testing.T, e *integration.Env,
 }
 
 // No geocode fixture lives here. #2173 records why, and carries what a future
-// one has to prove: while organization.workspace_id is missing, a fixture
+// one has to prove: while company.workspace_id is missing, a fixture
 // cannot tell "the workspace guard refused" from "the query cannot run", so it
 // would read GREEN exactly when the subject is most broken.

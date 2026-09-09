@@ -233,8 +233,8 @@ func TestImportingTwoCardsFromOneCompanyCreatesOneCompany(t *testing.T) {
 			t.Fatalf("card %d outcome = %q, want created", i, r.Outcome)
 		}
 	}
-	if got := countOrganizationsNamed(ctx, t, e, "One Acme GmbH"); got != 1 {
-		t.Errorf("organizations named One Acme GmbH = %d, want 1", got)
+	if got := countCompaniesNamed(ctx, t, e, "One Acme GmbH"); got != 1 {
+		t.Errorf("companies named One Acme GmbH = %d, want 1", got)
 	}
 }
 
@@ -252,7 +252,7 @@ func TestImportingRefusesACallerWhoMayNotUpdatePeople(t *testing.T) {
 			Objects: map[string]principal.ObjectGrant{
 				// Create but not update.
 				"person":       {Create: true, Read: true},
-				"organization": {Create: true, Read: true, Update: true},
+				"company": {Create: true, Read: true, Update: true},
 				"relationship": {Create: true, Read: true},
 			},
 			RowScope: principal.RowScopeAll,
@@ -271,21 +271,21 @@ func TestImportingRefusesACallerWhoMayNotUpdatePeople(t *testing.T) {
 	}
 }
 
-func assertVCardEmployment(ctx context.Context, t *testing.T, e *dedupeEnv, personID ids.PersonID, orgName string) {
+func assertVCardEmployment(ctx context.Context, t *testing.T, e *dedupeEnv, personID ids.PersonID, companyName string) {
 	t.Helper()
 	var found int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM relationship r
-			  JOIN organization o ON o.id = r.organization_id
+			  JOIN company o ON o.id = r.company_id
 			 WHERE r.kind = 'employment' AND r.person_id = $1
 			   AND o.display_name = $2 AND r.archived_at IS NULL`,
-			personID, orgName).Scan(&found)
+			personID, companyName).Scan(&found)
 	}); err != nil {
 		t.Fatalf("reading the employment edge: %v", err)
 	}
 	if found != 1 {
-		t.Errorf("employment edges to %q = %d, want 1", orgName, found)
+		t.Errorf("employment edges to %q = %d, want 1", companyName, found)
 	}
 }
 

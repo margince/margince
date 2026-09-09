@@ -36,7 +36,7 @@ func clearableDealColumns(current crmcontracts.Deal) map[string]storekit.Clearab
 		"forecast_category":   {Column: "forecast_category", Current: current.ForecastCategory},
 		"wait_until":          {Column: "wait_until", Current: current.WaitUntil},
 		"owner_id":            {Column: "owner_id", Current: current.OwnerId},
-		"organization_id":     {Column: "organization_id", Current: current.OrganizationId},
+		"company_id":     {Column: "company_id", Current: current.CompanyId},
 		"project_id":          {Column: "project_id", Current: current.ProjectId},
 	}
 }
@@ -57,11 +57,11 @@ func clearableDealColumns(current crmcontracts.Deal) map[string]storekit.Clearab
 // the store.
 func dealClearPairs(current crmcontracts.Deal) map[string][]storekit.Clearable {
 	partner := []storekit.Clearable{
-		{Column: "partner_org_id", Current: current.PartnerOrgId},
+		{Column: "partner_company_id", Current: current.PartnerCompanyId},
 		{Column: "partner_attribution", Current: current.PartnerAttribution},
 	}
 	return map[string][]storekit.Clearable{
-		"partner_org_id":      partner,
+		"partner_company_id":      partner,
 		"partner_attribution": partner,
 	}
 }
@@ -93,12 +93,12 @@ func splitDealClears(p *storekit.Patch, fields []string, current crmcontracts.De
 // ensureClearedLinksVisible refuses to forget a link to a record the caller
 // could not open.
 //
-// The read path withholds a deal's organization and partner from a reader whose
+// The read path withholds a deal's company and partner from a reader whose
 // row scope cannot reach them (unreadableReferences), and the write path refuses
 // to SET either to a target they cannot see. Between the two sat this hole: a
 // reader told "you may not see which company this is" could still detach it, and
 // with the partner they could destroy the attribution a commission accrues on —
-// a write about an organization they were not allowed to name.
+// a write about a company they were not allowed to name.
 //
 // A miss reads as not-found, which is what EnsureLinkTarget already answers, so
 // existence stays hidden.
@@ -111,12 +111,12 @@ func ensureClearedLinksVisible(ctx context.Context, tx pgx.Tx, current crmcontra
 	for _, field := range cleared {
 		var target *openapi_types.UUID
 		switch field {
-		case filterOrganizationID:
-			target = current.OrganizationId
+		case filterCompanyID:
+			target = current.CompanyId
 		// Either name reaches the pair, and the permission is the partner's
-		// either way: the claim is a statement about that organization.
-		case filterPartnerOrgID, partnerAttributionField:
-			target = current.PartnerOrgId
+		// either way: the claim is a statement about that company.
+		case filterPartnerCompanyID, partnerAttributionField:
+			target = current.PartnerCompanyId
 		default:
 			continue
 		}
@@ -124,7 +124,7 @@ func ensureClearedLinksVisible(ctx context.Context, tx pgx.Tx, current crmcontra
 		if target == nil {
 			continue
 		}
-		if err := auth.EnsureLinkTarget(ctx, tx, "organization", ids.UUID(*target)); err != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, "company", ids.UUID(*target)); err != nil {
 			return err
 		}
 	}

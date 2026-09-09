@@ -63,27 +63,27 @@ import "./company360.css";
 // its own overlay, and the rail standing behind it would only be two things
 // competing for the same glance.
 
-type Organization = components["schemas"]["Organization"];
-type Organization360 = components["schemas"]["Organization360"];
-type Contact = components["schemas"]["Organization360Contact"];
-type Deal = components["schemas"]["Organization360Deal"];
+type Company = components["schemas"]["Company"];
+type Company360 = components["schemas"]["Company360"];
+type Contact = components["schemas"]["Company360Contact"];
+type Deal = components["schemas"]["Company360Deal"];
 type Signal = components["schemas"]["Signal"];
 
 export function CompanyRail({
-  orgId,
-  org,
+  companyId,
+  company,
   view,
   loading,
   composerOpen,
   onTab,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   // The page's own resolved record, read regardless of how the composite
   // read below is doing — Details draws from this whenever the composite
-  // has no organization slice yet (still loading, or failed), rather than
+  // has no company slice yet (still loading, or failed), rather than
   // going blank on a read the page already has the answer to.
-  org?: Organization;
-  view?: Organization360;
+  company?: Company;
+  view?: Company360;
   // The composite read `view` comes off is still in flight. Threaded to the
   // sections that read `view` straight (Deals, People, Tags) so their
   // `sectionState` calls can tell "still loading" apart from "the read
@@ -122,7 +122,7 @@ export function CompanyRail({
           summary={<SectionSummary title={t("co.details.title")} />}
         >
           <PanelBody>
-            <DetailsGrid organization={view?.organization ?? org} />
+            <DetailsGrid company={view?.company ?? company} />
           </PanelBody>
           <div className="card-actions">
             {/* "All fields", not "Profile": the Profile TAB carries that name a
@@ -140,15 +140,15 @@ export function CompanyRail({
             tab is not a duplicate of it, a full copy would be. */}
         <DealsSection view={view} loading={loading} onTab={onTab} />
         <PeopleSection view={view} loading={loading} onTab={onTab} />
-        <CompanyHoldSection organization={view?.organization ?? org} />
+        <CompanyHoldSection company={view?.company ?? company} />
         <Disclosure
           className="co-sect"
           open
           summary={<SectionSummary title={t("tags.panelTitle")} />}
         >
           <CompanyTagsSection
-            organization={view?.organization ?? org}
-            orgId={orgId}
+            company={view?.company ?? company}
+            companyId={companyId}
             bare
           />
         </Disclosure>
@@ -170,10 +170,10 @@ const RAIL_ROW_LIMIT = 3;
 // a hold has to name something, and `website_url` is derived from the primary
 // domain row, so its absence means there is nothing to name.
 function CompanyHoldSection({
-  organization,
-}: Readonly<{ organization: Organization | undefined }>) {
+  company,
+}: Readonly<{ company: Company | undefined }>) {
   const t = useT();
-  const host = hostOf(organization?.website_url);
+  const host = hostOf(company?.website_url);
   if (!host) {
     return null;
   }
@@ -225,7 +225,7 @@ function DealsSection({
   loading,
   onTab,
 }: Readonly<{
-  view?: Organization360;
+  view?: Company360;
   loading: boolean;
   onTab: (tab: "deals") => void;
 }>) {
@@ -277,9 +277,9 @@ function DealsSection({
           >
             {null}
           </SurfaceState>
-          {state === "empty" && view?.organization && (
+          {state === "empty" && view?.company && (
             <DealsEmptyVerb
-              organization={view.organization}
+              company={view.company}
               betweenCycles={hasClosedHistory}
               onTab={onTab}
             />
@@ -304,20 +304,20 @@ function DealsSection({
 // who may not write, gets the way to the Deals tab instead. Never both — two
 // verbs under one empty state is a choice the reader has no basis to make.
 // Gated on writability the same way TagsSection's own add-tag verb is:
-// `useCompanyReadOnlyReason` needs a resolved Organization, so this is its
+// `useCompanyReadOnlyReason` needs a resolved Company, so this is its
 // own component mounted only once one exists, rather than a conditional
 // hook call inside DealsSection itself.
 function DealsEmptyVerb({
-  organization,
+  company,
   betweenCycles,
   onTab,
 }: Readonly<{
-  organization: Organization;
+  company: Company;
   betweenCycles: boolean;
   onTab: (tab: "deals") => void;
 }>) {
   const t = useT();
-  const readOnlyReason = useCompanyReadOnlyReason(organization);
+  const readOnlyReason = useCompanyReadOnlyReason(company);
   if (betweenCycles || readOnlyReason) {
     return (
       <div className="card-actions">
@@ -330,8 +330,8 @@ function DealsEmptyVerb({
   return (
     <div className="card-actions">
       <NewDealAction
-        orgId={organization.id}
-        orgName={organization.display_name}
+        companyId={company.id}
+        companyName={company.display_name}
       />
     </div>
   );
@@ -430,7 +430,7 @@ function PeopleSection({
   loading,
   onTab,
 }: Readonly<{
-  view?: Organization360;
+  view?: Company360;
   loading: boolean;
   onTab: (tab: "contacts") => void;
 }>) {
@@ -597,16 +597,16 @@ function SourcePageLink({ signal }: Readonly<{ signal: Signal }>) {
  * account's other readings, and the company record's overview stack mounts it
  * there.
  */
-export function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
+export function SignalsSection({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const query = useQuery({
-    queryKey: ["signals", "organization", orgId],
+    queryKey: ["signals", "company", companyId],
     queryFn: async () => {
       const { data, error } = await api.GET("/signals", {
         params: {
-          query: { organization_id: orgId, status: "open", limit: 10 },
+          query: { company_id: companyId, status: "open", limit: 10 },
         },
       });
       if (error) {

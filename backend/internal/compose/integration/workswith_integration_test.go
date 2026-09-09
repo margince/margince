@@ -29,7 +29,7 @@ var worksWithPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"person":                {Read: true, Update: true},
-		"organization":          {Read: true},
+		"company":          {Read: true},
 		"relationship":          {Read: true, Create: true},
 		"activity":              {Read: true},
 		"installation_settings": {Read: true},
@@ -118,7 +118,7 @@ func TestPeerSuggestionNeedsTheRelationshipReadGrant(t *testing.T) {
 	noEdgeRead := worksWithPerms
 	noEdgeRead.Objects = map[string]principal.ObjectGrant{
 		"person":                {Read: true},
-		"organization":          {Read: true},
+		"company":          {Read: true},
 		"activity":              {Read: true},
 		"installation_settings": {Read: true},
 	}
@@ -183,7 +183,7 @@ func TestWorksWithFollowsArchiveAndMergeOnEitherColumn(t *testing.T) {
 	archivist := worksWithPerms
 	archivist.Objects = map[string]principal.ObjectGrant{
 		"person":                {Read: true, Update: true, Delete: true},
-		"organization":          {Read: true},
+		"company":          {Read: true},
 		"relationship":          {Read: true, Create: true},
 		"activity":              {Read: true},
 		"installation_settings": {Read: true},

@@ -172,12 +172,12 @@ func decideTx(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID, in Decid
 func insertReversal(ctx context.Context, tx pgx.Tx, original crmcontracts.CommissionEntry, reason, by string) error {
 	id := ids.New[ids.CommissionEntryKind]()
 	_, err := tx.Exec(ctx,
-		`INSERT INTO commission_entry (id, deal_id, partner_org_id, status,
+		`INSERT INTO commission_entry (id, deal_id, partner_company_id, status,
 		                               attribution_at_accrual, margin_tier_at_accrual, rate_bps,
 		                               basis_amount_minor, currency, fx_rate_to_base, amount_minor,
 		                               reversal_of, void_reason, captured_by)
 		 VALUES ($1, $2, $3, 'void', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-		id, ids.UUID(original.DealId), ids.UUID(original.PartnerOrgId),
+		id, ids.UUID(original.DealId), ids.UUID(original.PartnerCompanyId),
 		original.AttributionAtAccrual, original.MarginTierAtAccrual, original.RateBps,
 		original.BasisAmountMinor, original.Currency, original.FxRateToBase, original.AmountMinor,
 		ids.UUID(original.Id), reason, by)

@@ -147,7 +147,7 @@ func (h Handlers) CreateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 	}
 	in := CreateOfferInput{
 		Currency:   req.Currency,
-		BuyerOrgID: idArg[ids.OrganizationKind](req.BuyerOrgId),
+		BuyerCompanyID: idArg[ids.CompanyKind](req.BuyerCompanyId),
 		IntroText:  req.IntroText,
 		TermsText:  req.TermsText,
 		TemplateID: idArg[ids.OfferTemplateKind](req.TemplateId),
@@ -195,7 +195,7 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 	}
 	in := UpdateOfferInput{
 		Currency:   req.Currency,
-		BuyerOrgID: idArg[ids.OrganizationKind](req.BuyerOrgId),
+		BuyerCompanyID: idArg[ids.CompanyKind](req.BuyerCompanyId),
 		IntroText:  req.IntroText,
 		TermsText:  req.TermsText,
 		TemplateID: idArg[ids.OfferTemplateKind](req.TemplateId),

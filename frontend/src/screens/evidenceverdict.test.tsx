@@ -37,7 +37,7 @@ const field: components["schemas"]["CompanyProfileField"] = {
   version: 3,
 };
 
-const fact: components["schemas"]["OrganizationFact"] = {
+const fact: components["schemas"]["CompanyFact"] = {
   category: "company",
   field: "phone",
   value: "+49 30 1234",
@@ -94,7 +94,7 @@ describe("a human's verdict on a machine's claim", () => {
     const calls = recordCalls();
     wrap(
       <EvidenceVerdict
-        orgId={ORG}
+        companyId={ORG}
         claim={profileFieldClaim(ORG, field)}
         canEdit
       />,
@@ -107,7 +107,7 @@ describe("a human's verdict on a machine's claim", () => {
     await waitFor(() => expect(calls.length).toBe(1));
     expect(calls[0].method).toBe("POST");
     expect(calls[0].path).toBe(
-      "/v1/organizations/o-1/profile-fields/industry/confirm",
+      "/v1/companies/o-1/profile-fields/industry/confirm",
     );
     expect(calls[0].body).toBeUndefined();
     // A confirmation is a person agreeing with a value they READ. Unpinned, it
@@ -120,7 +120,7 @@ describe("a human's verdict on a machine's claim", () => {
     const calls = recordCalls();
     wrap(
       <EvidenceVerdict
-        orgId={ORG}
+        companyId={ORG}
         claim={profileFieldClaim(ORG, field)}
         canEdit
       />,
@@ -134,14 +134,14 @@ describe("a human's verdict on a machine's claim", () => {
 
     await waitFor(() => expect(calls.length).toBe(1));
     expect(calls[0].method).toBe("PATCH");
-    expect(calls[0].path).toBe("/v1/organizations/o-1/profile-fields/industry");
+    expect(calls[0].path).toBe("/v1/companies/o-1/profile-fields/industry");
     expect(calls[0].body).toEqual({ value: "Automotive" });
     expect(calls[0].ifMatch).toBe("3");
   });
 
   it("addresses a single-value fact by its bare-colon key", async () => {
     const calls = recordCalls();
-    wrap(<EvidenceVerdict orgId={ORG} claim={factClaim(ORG, fact)} canEdit />);
+    wrap(<EvidenceVerdict companyId={ORG} claim={factClaim(ORG, fact)} canEdit />);
 
     await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
@@ -149,13 +149,13 @@ describe("a human's verdict on a machine's claim", () => {
     // lost either half addresses a different row or none at all, and the server
     // answers 404 or 422 for what looks to the user like a working button.
     await waitFor(() => expect(calls.length).toBe(1));
-    expect(calls[0].path).toBe("/v1/organizations/o-1/facts/phone%3A/confirm");
+    expect(calls[0].path).toBe("/v1/companies/o-1/facts/phone%3A/confirm");
   });
 
   it("offers no verdict to a reader who cannot update the company", () => {
     wrap(
       <EvidenceVerdict
-        orgId={ORG}
+        companyId={ORG}
         claim={profileFieldClaim(ORG, field)}
         canEdit={false}
       />,
@@ -167,7 +167,7 @@ describe("a human's verdict on a machine's claim", () => {
   it("says who stood behind a value rather than offering to confirm it again", () => {
     wrap(
       <EvidenceVerdict
-        orgId={ORG}
+        companyId={ORG}
         claim={profileFieldClaim(ORG, {
           ...field,
           source: "human",

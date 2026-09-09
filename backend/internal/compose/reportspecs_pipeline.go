@@ -43,7 +43,7 @@ func pipelineCurrentSpec() reportSpec {
 			// money answering it is still converted, so the total under each
 			// currency is comparable with the others.
 			fieldCurrency:     colCurrency,
-			fieldPartnerOrgID: colPartnerOrgID,
+			fieldPartnerCompanyID: colPartnerCompanyID,
 		},
 		// BASE-CURRENCY measures only, and the native ones are deliberately
 		// absent.
@@ -61,19 +61,19 @@ func pipelineCurrentSpec() reportSpec {
 		filters: map[string]string{
 			fieldPipelineID:     colPipelineID,
 			fieldOwnerID:        colOwnerID,
-			fieldOrganizationID: colOrganizationID,
+			fieldCompanyID: colCompanyID,
 			fieldCurrency:       colCurrency,
-			fieldPartnerOrgID:   colPartnerOrgID,
+			fieldPartnerCompanyID:   colPartnerCompanyID,
 			fieldProjectID:      colProjectID,
 		},
 		filterScopes: projectFilterScope,
-		// Both organization references. organization_id is a filter and not a
+		// Both company references. company_id is a filter and not a
 		// dimension here, and a count filtered to one company answers whether
 		// that company exists and has a deal — the disclosure does not need
 		// the id to be printed.
 		referenceScopes: map[string]string{
-			colPartnerOrgID:   tableOrganization,
-			colOrganizationID: tableOrganization,
+			colPartnerCompanyID:   tableCompany,
+			colCompanyID: tableCompany,
 		},
 		// By STAGE alone. deals-by-stage groups by stage and currency, so a
 		// stage trading in three currencies draws three rows and no total —

@@ -24,7 +24,7 @@ import (
 // SiteReadClaim is what BeginSiteRead's CAS hands the worker: the claimed
 // dossier's own identity, so the crawl derives from the row, not the job.
 type SiteReadClaim struct {
-	OrganizationID *ids.UUID
+	CompanyID *ids.UUID
 	TargetKind     string
 	SeedURL        string
 	RequestedBy    string

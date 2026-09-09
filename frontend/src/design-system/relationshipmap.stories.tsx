@@ -42,7 +42,7 @@ const FULL: RelationshipMapModel = {
     { id: "u-3", kind: "user", label: "Mei Kato", sublabel: "1 contact here" },
     {
       id: "o-1",
-      kind: "organization",
+      kind: "company",
       label: "Brandt GmbH",
       sublabel: "Account",
     },

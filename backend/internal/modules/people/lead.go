@@ -26,7 +26,7 @@ type CreateLeadInput struct {
 	Email           *string
 	Title           *string
 	CompanyName     *string
-	CandidateOrgKey *string
+	CandidateCompanyKey *string
 	LinkedInURL     *string
 	Status          string
 	OwnerID         *ids.UserID
@@ -203,11 +203,11 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	// behavioral history yet; signal recompute moves it later.
 	fit := ScoreLeadDetail(deref(in.Title), intents.Of(in.Source), nil, time.Now().UTC())
 	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
-		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateOrgKey,
+		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateCompanyKey,
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
 	})
 	_, err = tx.Exec(ctx,
-		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_org_key,
+		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
 		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by`+cfCols+`)
 		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15`+cfHolders+`)`,
 		args...)
@@ -369,7 +369,7 @@ type ListLeadsInput struct {
 	Status *string
 	// OwnerID, OwnerTeamID and Unassigned are the ONE ownership dial every
 	// owner-scoped list carries (DM-VOCAB-OWN-1), bound through the shared
-	// listFilters.ownershipClause exactly as person and organization bind it.
+	// listFilters.ownershipClause exactly as person and company bind it.
 	OwnerID         *ids.UserID
 	OwnerTeamID     *ids.TeamID
 	Unassigned      *bool

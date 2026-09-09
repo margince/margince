@@ -5,7 +5,7 @@ package agents
 
 // Who owns a record the caller was handed, said in a way a reader can act on.
 //
-// A company is readable across the whole workspace by design: `organization`
+// A company is readable across the whole workspace by design: `company`
 // is an identity table, so the ownership arm of its row scope renders TRUE and
 // a rep sees every account. auth/tableclass.go states the reason — a rep who
 // cannot see that a company already belongs to another team contacts it again.

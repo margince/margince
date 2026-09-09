@@ -89,8 +89,8 @@ const project360TruncatedMessage = "At least one section of this page was cut at
 // row. Naming a record to an agent is handing that record over.
 func chargeProject360(ctx context.Context, r Project360Result) {
 	noteEvidence(ctx, datasource.EntityProject, r.Project.ProjectID)
-	if r.Organization != nil {
-		noteEvidence(ctx, datasource.EntityOrganization, r.Organization.OrganizationID)
+	if r.Company != nil {
+		noteEvidence(ctx, datasource.EntityCompany, r.Company.CompanyID)
 	}
 	if r.Deals != nil {
 		for _, d := range r.Deals.Items {

@@ -483,7 +483,7 @@ func TestRegisterCommsToolsDistinguishesTheTwoAbsences(t *testing.T) {
 // abbreviation. The REST admission gate enumerates every body field for this
 // reason; both transports stage the same operation.
 func TestAStagedSummaryNamesEveryArgumentItReleases(t *testing.T) {
-	host, deal, org := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	host, deal, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
 
 	t.Run("a send names its cc, not only its to", func(t *testing.T) {
 		got := describeSend(SendEmailCommand{
@@ -503,7 +503,7 @@ func TestAStagedSummaryNamesEveryArgumentItReleases(t *testing.T) {
 			End:   time.Date(2026, 8, 10, 9, 30, 0, 0, time.UTC),
 		}
 		got := describeBooking(cmd, []RecordLink{
-			{EntityType: "deal", EntityID: deal}, {EntityType: "organization", EntityID: org},
+			{EntityType: "deal", EntityID: deal}, {EntityType: "company", EntityID: company},
 		})
 		for _, want := range []string{host.String(), "2 record(s)", `"Review"`} {
 			if !strings.Contains(got, want) {
@@ -521,12 +521,12 @@ func TestAStagedSummaryNamesEveryArgumentItReleases(t *testing.T) {
 // assistant asked for one fell back on a note nobody can send.
 func TestDraftEmailComposesAFirstMessageFromLinksAlone(t *testing.T) {
 	comms := &recordingComms{}
-	org := ids.NewV7()
-	// A provider that can SEE the organization: the first-message path reads
+	company := ids.NewV7()
+	// A provider that can SEE the company: the first-message path reads
 	// every link before drafting, the same guard the send path applies.
-	out, err := draftEmailTool{comms: comms, p: oneRecord(datasource.EntityOrganization, org, `{}`, 1)}.
+	out, err := draftEmailTool{comms: comms, p: oneRecord(datasource.EntityCompany, company, `{}`, 1)}.
 		Handle(context.Background(),
-			json.RawMessage(`{"links":[{"entity_type":"organization","entity_id":"`+org.String()+`"}],`+
+			json.RawMessage(`{"links":[{"entity_type":"company","entity_id":"`+company.String()+`"}],`+
 				`"intent":"thank them for the meeting and propose a small first package"}`))
 	if err != nil {
 		t.Fatalf("drafting a first message answered %v, want a draft", err)
@@ -540,8 +540,8 @@ func TestDraftEmailComposesAFirstMessageFromLinksAlone(t *testing.T) {
 	}
 	// The links are echoed because send_account_email takes them: a caller
 	// re-deriving them can file the conversation under the wrong record.
-	if len(got.Links) != 1 || got.Links[0].EntityID != org {
-		t.Errorf("draft echoed links %+v, want the organization it was given", got.Links)
+	if len(got.Links) != 1 || got.Links[0].EntityID != company {
+		t.Errorf("draft echoed links %+v, want the company it was given", got.Links)
 	}
 	// And it reached the account-started seam, not the threaded one.
 	if len(comms.accountDrafted) != 1 {
@@ -555,7 +555,7 @@ func TestDraftEmailRefusesNeitherShapeAndBothAtOnce(t *testing.T) {
 	for name, args := range map[string]string{
 		"neither": `{"intent":"say hello"}`,
 		"both": `{"activity_id":"` + ids.NewV7().String() + `",` +
-			`"links":[{"entity_type":"organization","entity_id":"` + ids.NewV7().String() + `"}]}`,
+			`"links":[{"entity_type":"company","entity_id":"` + ids.NewV7().String() + `"}]}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := draftEmailTool{comms: &recordingComms{}, p: unreadableProvider{}}.Handle(
@@ -578,7 +578,7 @@ func TestDraftEmailRefusesNeitherShapeAndBothAtOnce(t *testing.T) {
 func TestDraftingAFirstMessageRefusesALinkTheCallerCannotRead(t *testing.T) {
 	comms := &recordingComms{}
 	_, err := draftEmailTool{comms: comms, p: unreadableProvider{}}.Handle(context.Background(),
-		json.RawMessage(`{"links":[{"entity_type":"organization","entity_id":"`+
+		json.RawMessage(`{"links":[{"entity_type":"company","entity_id":"`+
 			ids.NewV7().String()+`"}],"intent":"hello"}`))
 	if err == nil {
 		t.Fatal("drafting against an unreadable record answered a draft, want a refusal")
@@ -595,7 +595,7 @@ func TestDraftingAFirstMessageRefusesALinkTheCallerCannotRead(t *testing.T) {
 func TestDraftingAFirstMessageAppliesTheSendsLinkCap(t *testing.T) {
 	links := make([]string, 0, maxRecordLinks+1)
 	for range maxRecordLinks + 1 {
-		links = append(links, `{"entity_type":"organization","entity_id":"`+ids.NewV7().String()+`"}`)
+		links = append(links, `{"entity_type":"company","entity_id":"`+ids.NewV7().String()+`"}`)
 	}
 	_, err := draftEmailTool{comms: &recordingComms{}, p: unreadableProvider{}}.Handle(
 		context.Background(),

@@ -268,7 +268,7 @@ func TestAFailedWritabilityCheckIsAFaultAndNotARefusal(t *testing.T) {
 // Without the fold every address key reads as unspellable and an edit that
 // touched an address becomes permanently un-undoable.
 func TestAnAddressIsFoldedIntoTheFieldTheUpdatePathAccepts(t *testing.T) {
-	patch, unspellable, err := filterImage("organization",
+	patch, unspellable, err := filterImage("company",
 		json.RawMessage(`{"address_city":"Hanoi","address_line1":null,"display_name":"Acme"}`))
 	if err != nil {
 		t.Fatalf("filter: %v", err)
@@ -430,21 +430,21 @@ func TestSettingACustomFieldFromEmptyIsRefusedRatherThanSilentlyDropped(t *testi
 // A provenance stamp is dropped for the record type that STAMPS it, and never
 // for one that treats the same word as a field.
 //
-// `source` is the case this exists for. An organization's lifecycle move writes
+// `source` is the case this exists for. A company's lifecycle move writes
 // it as machine provenance, so a restore must not replay it. A LEAD's source is
 // a value a rep types and can edit, and dropping it would leave the tampered
 // value in place while reporting the undo a success — the silent-drop failure
 // the whole refusal set exists to prevent.
 func TestAProvenanceStampIsDroppedOnlyForTheRecordThatStampsIt(t *testing.T) {
-	orgPatch, unspellable, err := filterImage("organization",
+	companyPatch, unspellable, err := filterImage("company",
 		json.RawMessage(`{"display_name":"Weber GmbH","name_source":"domain"}`))
 	if err != nil {
-		t.Fatalf("filter the organization image: %v", err)
+		t.Fatalf("filter the company image: %v", err)
 	}
-	if _, kept := orgPatch["name_source"]; kept {
+	if _, kept := companyPatch["name_source"]; kept {
 		t.Error("a rename's provenance stamp travelled back into the record")
 	}
-	if _, kept := orgPatch["display_name"]; !kept {
+	if _, kept := companyPatch["display_name"]; !kept {
 		t.Error("the name the entry actually changed did not survive the filter")
 	}
 	// Dropped, not refused: an unspellable key would make the whole entry

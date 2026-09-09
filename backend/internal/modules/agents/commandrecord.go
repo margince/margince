@@ -5,7 +5,7 @@ package agents
 
 // The two commands one tool serves through TWO contract operations
 // (margince/margince#928 task 7): merge_records is mergePerson and
-// mergeOrganization, and enrich is scrapeCompany and deepReadCompany. Both are
+// mergeCompany, and enrich is scrapeCompany and deepReadCompany. Both are
 // where the seam has to carry meaning rather than shape.
 //
 // A merge is the only command here that names TWO records, and which is which
@@ -61,7 +61,7 @@ type mergeResolver struct {
 	// on what the reads found and Subject pins and names it, and two readings
 	// are two moments those answers are free to describe differently. A pair
 	// rather than two anchoredRecords because the record TYPE is the command's,
-	// not the resolver's — a merge is person-to-person or org-to-org, and the
+	// not the resolver's — a merge is person-to-person or company-to-company, and the
 	// type arrives with the call.
 	// seen is the command the pair was read for, so a resolver asked about a
 	// second merge reads that merge — the same key archiveResolver's own memo
@@ -182,33 +182,33 @@ func (r *mergeResolver) Guards(ctx context.Context, cmd MergeCommand) error {
 // the REST door from which of its two routes was taken. A string here would be
 // a place for scrapeCompany to be described to a human as a whole-site crawl.
 //
-// URL is the caller's override for the organization's own domain, empty when
+// URL is the caller's override for the company's own domain, empty when
 // they named none.
 type EnrichCommand struct {
-	OrganizationID ids.UUID
+	CompanyID ids.UUID
 	URL            string
 	Depth          EnrichDepth
 }
 
 // NewEnrichCall binds one site read to the resolver that answers for it,
-// reading the organization through the record seam.
+// reading the company through the record seam.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
 func NewEnrichCall(records datasource.SystemOfRecordProvider, cmd EnrichCommand) GovernedCall {
 	return bind[EnrichCommand](&enrichResolver{
-		organization: anchoredRecord{records: records, entityType: datasource.EntityOrganization},
+		company: anchoredRecord{records: records, entityType: datasource.EntityCompany},
 	}, cmd)
 }
 
 type enrichResolver struct {
-	organization anchoredRecord
+	company anchoredRecord
 }
 
-// Subject names the ORGANIZATION the approval binds to, pins its version, and
+// Subject names the COMPANY the approval binds to, pins its version, and
 // says WHICH read is being released — a human approving a whole-site crawl
 // must not read a line that says "page".
 func (r *enrichResolver) Subject(ctx context.Context, cmd EnrichCommand) (StageInfo, error) {
-	rec, err := r.organization.row(ctx, cmd.OrganizationID)
+	rec, err := r.company.row(ctx, cmd.CompanyID)
 	if err != nil {
 		return StageInfo{}, err
 	}
@@ -217,8 +217,8 @@ func (r *enrichResolver) Subject(ctx context.Context, cmd EnrichCommand) (StageI
 		target = cmd.URL
 	}
 	return StageInfo{
-		TargetType:    string(datasource.EntityOrganization),
-		TargetID:      cmd.OrganizationID,
+		TargetType:    string(datasource.EntityCompany),
+		TargetID:      cmd.CompanyID,
 		TargetVersion: &rec.Version,
 		Summary: fmt.Sprintf("Read %s from %s and propose enrichment of %s",
 			cmd.Depth, target, recordLabel(rec)),
@@ -226,19 +226,19 @@ func (r *enrichResolver) Subject(ctx context.Context, cmd EnrichCommand) (StageI
 }
 
 // Guards refuses an override URL the fetch could never take, then the
-// organization itself. It does not admit the DEPTH: the field's type is the
+// company itself. It does not admit the DEPTH: the field's type is the
 // admission, so there is no invalid value for a check to answer.
 func (r *enrichResolver) Guards(ctx context.Context, cmd EnrichCommand) error {
 	if err := requireEnrichURL(cmd.URL); err != nil {
 		return err
 	}
-	return r.organization.refuse(ctx, cmd.OrganizationID)
+	return r.company.refuse(ctx, cmd.CompanyID)
 }
 
 // requireEnrichURL admits the override target: the same admission the REST
 // route applies before it fetches, so a scheme-less or hostless target is a bad
 // argument rather than a thin page. An empty override is not a target at all —
-// the organization's own domain is read instead — so it passes.
+// the company's own domain is read instead — so it passes.
 //
 // One function for both doors: the staging path asks it through Guards above
 // and the execution path through readEnrichArgs, so a URL refused before a

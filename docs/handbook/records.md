@@ -8,7 +8,7 @@ more usefully — how they connect, and which connections are required.
 **Contact** — a person. In the app's navigation this is **Contacts**; on a few
 screens the underlying word "person" shows through.
 
-**Company** — an organization you deal with. Navigation calls this
+**Company** — a company you deal with. Navigation calls this
 **Companies**.
 
 **Lead** — a prospect you have not qualified yet. Deliberately kept apart from
@@ -255,7 +255,7 @@ Use **Log activity** to add a note or a task straight onto a timeline.
 
 One activity can link to several records at once — a contact and a deal, for
 example. An activity with no links at all is visible to everyone in the
-organization.
+company.
 
 A meeting carries a status: **booked, held, no-show, canceled.**
 
@@ -263,12 +263,12 @@ A meeting carries a status: **booked, held, no-show, canceled.**
 filed against the wrong record, the fix is **Relink**, not delete.
 
 On top of visibility inherited from linked records, an activity carries an
-audience: everyone in the organization, the participants, or a named few. That
+audience: everyone in the company, the participants, or a named few. That
 audience is not overridden by seniority — someone who can see every record still
 does not read a message they were not an audience for.
 
 Where the audience comes from depends on how the row arrived. A note or a call
-you log is shared with the organization unless you say otherwise. **A message
+you log is shared with the company unless you say otherwise. **A message
 captured from a mailbox is not**: its audience is derived from what each
 importing mailbox asks for, and a new mailbox holds its mail until a classifier
 judges the thread ordinary. You change a captured message's audience by sharing

@@ -25,7 +25,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/compose/org360"
+	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -138,14 +138,14 @@ func TestPerson360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 	}
 }
 
-func TestOrganization360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
+func TestCompany360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
-	svc := org360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()),
+	svc := company360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()),
 		func() time.Time { return roomFixedNow })
-	orgID := orgIDOf(f.org)
+	companyID := companyIDOf(f.org)
 
-	scoped, err := svc.AssembleScoped(e.Admin(), orgID, org360.AssembleOptions{ProjectID: &f.erp})
+	scoped, err := svc.AssembleScoped(e.Admin(), companyID, company360.AssembleOptions{ProjectID: &f.erp})
 	if err != nil {
 		t.Fatalf("assemble scoped: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestOrganization360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) 
 	}
 	assertScopedNeighbours(t, f, tasks, nextMeeting, scoped.SinceLastVisit.NewActivities)
 
-	wide, err := svc.Assemble(e.Admin(), orgID)
+	wide, err := svc.Assemble(e.Admin(), companyID)
 	if err != nil {
 		t.Fatalf("assemble unscoped: %v", err)
 	}
@@ -211,11 +211,11 @@ func TestAProjectScopeIsGatedLikeAReadOfTheProject(t *testing.T) {
 		t.Errorf("person page scoped to a project that does not exist: err = %v, want not found", err)
 	}
 
-	orgSvc := org360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()), func() time.Time { return roomFixedNow })
-	if _, err := orgSvc.AssembleScoped(rep, orgIDOf(f.org), org360.AssembleOptions{ProjectID: &f.erp}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	companySvc := company360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()), func() time.Time { return roomFixedNow })
+	if _, err := companySvc.AssembleScoped(rep, companyIDOf(f.org), company360.AssembleOptions{ProjectID: &f.erp}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("company page scoped without a project grant: err = %v, want permission denied", err)
 	}
-	if _, err := orgSvc.AssembleScoped(e.Admin(), orgIDOf(f.org), org360.AssembleOptions{ProjectID: &nobodyID}); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := companySvc.AssembleScoped(e.Admin(), companyIDOf(f.org), company360.AssembleOptions{ProjectID: &nobodyID}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("company page scoped to a project that does not exist: err = %v, want not found", err)
 	}
 }

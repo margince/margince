@@ -165,7 +165,7 @@ deps:
     canUse: [pgx, oapi]
   people:
     mayDependOn: [contracts, platform]
-    # xnet: publicsuffix registrable-label derivation for org display names (ADR-0072).
+    # xnet: publicsuffix registrable-label derivation for company display names (ADR-0072).
     canUse: [pgx, oapi, xtext, xnet]
   privacy:
     mayDependOn: [contracts, platform]

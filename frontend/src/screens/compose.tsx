@@ -59,7 +59,7 @@ import {
   throwProblem,
   useViewerId,
 } from "./common";
-import { recordNamesIn, useOrganization360 } from "./company360";
+import { recordNamesIn, useCompany360 } from "./company360";
 import {
   asksWhy,
   type CommunicationContext,
@@ -127,7 +127,7 @@ type DraftProvenance = Pick<
 // picker below has to decide at RUNTIME whether a search hit is one of these.
 export const RELINK_KINDS = [
   "person",
-  "organization",
+  "company",
   "deal",
   "lead",
   "project",
@@ -175,7 +175,7 @@ function useSearchTargets() {
 }
 
 // A 🟢 internal association (no autonomy dot): move or also-link a captured
-// activity's typed link to the right person/org/deal/lead. Idempotent on the
+// activity's typed link to the right person/company/deal/lead. Idempotent on the
 // backend — re-relinking the same target is a no-op that still answers 200.
 // `threadKey` is the activity's conversation key when it has one. With it the
 // dialog offers to move the whole thread through `relinkThread`, which applies
@@ -860,11 +860,11 @@ async function draftFromAccount({
   // A deal grounds nothing here: writing to a contact from whatever account
   // sits nearby would be a conversation the rep never chose, and no deal-side
   // route exists to answer it.
-  if (entityType !== "organization" || !recipientId) {
+  if (entityType !== "company" || !recipientId) {
     return { available: false as const, reason: "unsupported_origin" as const };
   }
   const { data, error, response } = await api.POST(
-    "/organizations/{id}/draft-email",
+    "/companies/{id}/draft-email",
     {
       params: { path: { id: entityId } },
       body: {
@@ -986,7 +986,7 @@ function useAccountGrounding(
 //
 // The anchor alone is not enough. A rep who picks "Related to → Acme Renewal"
 // has said what the message is about, and a send that files only under the
-// organization loses that: the deal's own timeline never sees the message, and
+// company loses that: the deal's own timeline never sees the message, and
 // nothing downstream can attribute the correspondence to the work it belongs
 // to. The grounding choices ARE the attribution — they are the same statement,
 // so they travel together.
@@ -1053,20 +1053,20 @@ function composedLinks(
 // of the account, so a contact this picker offers that the view does not carry
 // would be one the draft then refuses.
 function AccountDraftContext({
-  orgId,
+  companyId,
   recipientId,
   onRecipientChange,
   dealId,
   onDealChange,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   recipientId: string;
   onRecipientChange: (next: string) => void;
   dealId: string;
   onDealChange: (next: string) => void;
 }>) {
   const t = useT();
-  const query = useOrganization360(orgId);
+  const query = useCompany360(companyId);
   // An overlay workspace has no native 360 to ground from; the endpoint
   // refuses there too, so the pickers simply have nothing to offer.
   const view = query.data?.state === "ready" ? query.data.view : undefined;
@@ -2007,8 +2007,8 @@ function useAnchorProject(
     // about.
     companyId:
       entityType === "deal"
-        ? (query.data?.organization_id ?? undefined)
-        : entityType === "organization"
+        ? (query.data?.company_id ?? undefined)
+        : entityType === "company"
           ? entityId
           : undefined,
     // A read that failed says nothing about this deal's project. Reporting it
@@ -2636,8 +2636,8 @@ export function ComposeModal({
   // read is already in cache there, so this costs the composer nothing on the
   // page it opens over.
   const roster = useRoster("user", open);
-  const namesOrg = useOrganization360(
-    entityType === "organization" ? entityId : "",
+  const namesCompany = useCompany360(
+    entityType === "company" ? entityId : "",
   );
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>
@@ -2645,7 +2645,7 @@ export function ComposeModal({
     ),
   );
   const records = recordNamesIn(
-    namesOrg.data?.state === "ready" ? namesOrg.data.view : undefined,
+    namesCompany.data?.state === "ready" ? namesCompany.data.view : undefined,
   );
   const nameOf = (linkType: string, linkId: string) =>
     linkType === "user" ? colleagues.get(linkId) : records(linkType, linkId);
@@ -2718,7 +2718,7 @@ export function ComposeModal({
   // composer there means — the account path asked them to name a recipient the
   // thread already knows, in front of a To field the draft would have filled.
   const groundable =
-    !answering && entityType === "organization" && !isChannelReply;
+    !answering && entityType === "company" && !isChannelReply;
   // What SHAPE the composer takes, split from what it GROUNDS. One flag used to
   // answer both, so a reply inherited the account path's box — and an account
   // that had mail lost the drawer that path was given. The shape is every
@@ -2774,7 +2774,7 @@ export function ComposeModal({
   // names none.
   //
   // The chosen recipient wins where there is one: on an account draft the record
-  // the composer was opened from is the organization, and the person is whoever
+  // the composer was opened from is the company, and the person is whoever
   // the reader just picked.
   //
   // Nothing at all for a channel reply. Its recipient is resolved server-side
@@ -2804,9 +2804,9 @@ export function ComposeModal({
   // The project set already includes the projects the company works as a partner
   // or a subcontractor, because the 360's own section is built from the company
   // edges rather than from a project's anchor column.
-  const anchorCompany = useOrganization360(
+  const anchorCompany = useCompany360(
     (entityType === "project"
-      ? ownProject.project?.organization_id
+      ? ownProject.project?.company_id
       : anchorProject.companyId) ?? "",
   );
   // Which projects this message may be filed under, per record kind. A deal and
@@ -3173,7 +3173,7 @@ export function ComposeModal({
   // that say what the message IS, above the words themselves.
   const accountContext = groundable ? (
     <AccountDraftContext
-      orgId={entityId}
+      companyId={entityId}
       recipientId={account.recipientId}
       onRecipientChange={account.setRecipientId}
       dealId={account.dealId}
@@ -3205,7 +3205,7 @@ export function ComposeModal({
   // names none, and warns about nothing.
   //
   // The chosen recipient wins where there is one: on an account draft the
-  // record the composer was opened from is the organization, and the person is
+  // record the composer was opened from is the company, and the person is
   // whoever the reader just picked.
   //
   // Nothing at all for a channel reply. MailOnlyFields is not rendered for one

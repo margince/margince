@@ -255,12 +255,12 @@ Counts are of the core catalog above; an enabled unit's verbs add to them
 | `send` | 3 | The three egress verbs. All three are 🟡, so the scope buys the right to *ask*, never the right to send unattended. |
 | `enrich` | 1 | `enrich` — the one verb that fetches from a third party. 🟡 and `Egress: true`, like the `send` three: the cap buys the right to ask. |
 
-The `enrich` cap governs the two organization read routes — `scrapeCompany`
-(`POST /v1/organizations/{id}/enrich`) and `deepReadCompany`
-(`POST /v1/organizations/{id}/deep-read`) — on REST, and the `enrich` tool that
+The `enrich` cap governs the two company read routes — `scrapeCompany`
+(`POST /v1/companies/{id}/enrich`) and `deepReadCompany`
+(`POST /v1/companies/{id}/deep-read`) — on REST, and the `enrich` tool that
 composes them on `/mcp`, under ADR-0055's rule that a passport is a Bearer
 credential for `/v1` governed exactly like `/mcp`. The cold-start routes spent
-it once; they are human-only now, because they create the organization rather
+it once; they are human-only now, because they create the company rather
 than enrich one. Grant the cap when the agent's job is outward-looking research
 on a record that already exists.
 
@@ -276,7 +276,7 @@ differ enough to be worth reading:
 
 | Operation | Why no agent may call it |
 |---|---|
-| `coldStartReadback`, `coldStartPreview` | They CREATE the organization, so there is no record for a record-shaped verb to target. The `enrich` tool keeps the two organization routes. |
+| `coldStartReadback`, `coldStartPreview` | They CREATE the company, so there is no record for a record-shaped verb to target. The `enrich` tool keeps the two company routes. |
 | `createRecordGrant`, `revokeRecordGrant` | The grant verbs refuse a non-human principal at redemption, so an agent-staged, human-approved share was refused every time it would have applied. |
 | `connectOverlay`, `disconnectOverlay` | Sealing a credential and flipping the system-of-record mode is an installation decision, not an act an agent performs. |
 | `reconcileOverlay`, `renderOffer`, `regenerateOffer` | No tool backs them, and none can today. |

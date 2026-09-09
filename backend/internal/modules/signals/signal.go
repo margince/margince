@@ -35,7 +35,7 @@ type CreateSignalInput struct {
 	SourceChannel string
 	RawRef        *string
 	// note: entity_type + entity_id are the polymorphic subject seam (deal
-	// | organization | person), so the id stays untyped — it is validated
+	// | company | person), so the id stays untyped — it is validated
 	// against signalEntityTables and the link-target probe, not a kind.
 	EntityType *string
 	EntityID   *ids.UUID
@@ -157,7 +157,7 @@ func deriveSignalDefaults(in CreateSignalInput) (signalDefaults, error) {
 
 // detectedPayload is the events.md §5.11 signal.detected shape. The
 // entity_type/entity_id fields it carries are the signal's SUBJECT (deal |
-// organization | person) — payload data, present only when the signal was
+// company | person) — payload data, present only when the signal was
 // created already resolved — distinct from the envelope's own entity ref,
 // which is always the signal itself (contract x-entity-type: signal).
 func detectedPayload(sig crmcontracts.Signal) crmcontracts.PublicEventSignalDetected {
@@ -199,22 +199,22 @@ type ListSignalsInput struct {
 	Status          *string
 	Kind            *string
 	ResolutionState *string
-	// OrganizationID narrows the list to one account. The id is an
-	// organization's, but it is compared against BOTH the resolver's
-	// resolved_org_id and the polymorphic (entity_type, entity_id) subject
+	// CompanyID narrows the list to one account. The id is an
+	// company's, but it is compared against BOTH the resolver's
+	// resolved_company_id and the polymorphic (entity_type, entity_id) subject
 	// pair, so it stays untyped here (rule 6).
-	OrganizationID  *ids.UUID
+	CompanyID  *ids.UUID
 	IncludeArchived bool
 }
 
-// OfOrganizationWhere is the ONE spelling of "this signal belongs to this
-// account", for a query that aliases signal as s. orgPos is the bind position
-// carrying the organization id; both arms read the same one.
+// OfCompanyWhere is the ONE spelling of "this signal belongs to this
+// account", for a query that aliases signal as s. companyPos is the bind position
+// carrying the company id; both arms read the same one.
 //
-// Two arms, because a signal reaches an organization two ways: the resolver
-// stamps resolved_org_id on the item it attributed, and a signal created
-// directly ABOUT the organization carries the subject pair and no
-// resolved_org_id at all. Both belong to the account.
+// Two arms, because a signal reaches a company two ways: the resolver
+// stamps resolved_company_id on the item it attributed, and a signal created
+// directly ABOUT the company carries the subject pair and no
+// resolved_company_id at all. Both belong to the account.
 //
 // A deal-subject signal belongs to its DEAL, even when the resolver attributed
 // it to this account, so the resolved arm excludes it.
@@ -223,10 +223,10 @@ type ListSignalsInput struct {
 // connections card cites the account's active signal, and a second spelling
 // would let the card name a signal the account's own signal list refuses to
 // show — or miss one it does.
-func OfOrganizationWhere(orgPos int) string {
+func OfCompanyWhere(companyPos int) string {
 	return storekit.SQLf(
-		`((s.entity_type IS DISTINCT FROM 'deal' AND s.resolved_org_id = $%[1]d)
-		  OR (s.entity_type = 'organization' AND s.entity_id = $%[1]d))`, orgPos)
+		`((s.entity_type IS DISTINCT FROM 'deal' AND s.resolved_company_id = $%[1]d)
+		  OR (s.entity_type = 'company' AND s.entity_id = $%[1]d))`, companyPos)
 }
 
 func (s *Store) ListSignals(ctx context.Context, in ListSignalsInput) ([]crmcontracts.Signal, storekit.Page, error) {
@@ -250,8 +250,8 @@ func (s *Store) ListSignals(ctx context.Context, in ListSignalsInput) ([]crmcont
 	if in.ResolutionState != nil {
 		where = append(where, storekit.SQLf("s.resolution_state = $%d", arg(*in.ResolutionState)))
 	}
-	if in.OrganizationID != nil {
-		where = append(where, OfOrganizationWhere(arg(*in.OrganizationID)))
+	if in.CompanyID != nil {
+		where = append(where, OfCompanyWhere(arg(*in.CompanyID)))
 	}
 	scope, err := auth.SignalScopeClause(ctx, "s", arg)
 	if err != nil {
@@ -402,7 +402,7 @@ func (s *Store) ArchiveSignal(ctx context.Context, id ids.SignalID) (crmcontract
 func signalColumns(alias string) string {
 	cols := []string{
 		"id", "kind", "source_channel", "raw_ref", "entity_type", "entity_id",
-		"resolution_state", "resolution_confidence::float8", "resolved_org_id", "resolved_person_id",
+		"resolution_state", "resolution_confidence::float8", "resolved_company_id", "resolved_person_id",
 		"severity", "summary", "evidence", "status", "detected_at", "source", "captured_by",
 		"version", "created_at", "updated_at", "archived_at",
 	}
@@ -429,14 +429,14 @@ func scanSignal(row pgx.Row) (crmcontracts.Signal, error) {
 	var id ids.UUID
 	var kind, sourceChannel, resolutionState, severity, status string
 	var entityType *string
-	var entityID, resolvedOrgID, resolvedPersonID *ids.UUID
+	var entityID, resolvedCompanyID, resolvedPersonID *ids.UUID
 	var confidence *float64
 	var evidenceJSON []byte
 	var capturedBy string
 	var version int64
 
 	err := row.Scan(&id, &kind, &sourceChannel, &sig.RawRef, &entityType, &entityID,
-		&resolutionState, &confidence, &resolvedOrgID, &resolvedPersonID,
+		&resolutionState, &confidence, &resolvedCompanyID, &resolvedPersonID,
 		&severity, &sig.Summary, &evidenceJSON, &status, &sig.DetectedAt, &sig.Source, &capturedBy,
 		&version, &sig.CreatedAt, &sig.UpdatedAt, &sig.ArchivedAt)
 	if err != nil {
@@ -456,7 +456,7 @@ func scanSignal(row pgx.Row) (crmcontracts.Signal, error) {
 		sig.EntityType = &converted
 	}
 	sig.EntityId = uuidPtr(entityID)
-	sig.ResolvedOrgId = uuidPtr(resolvedOrgID)
+	sig.ResolvedCompanyId = uuidPtr(resolvedCompanyID)
 	sig.ResolvedPersonId = uuidPtr(resolvedPersonID)
 	if confidence != nil {
 		converted := float32(*confidence)

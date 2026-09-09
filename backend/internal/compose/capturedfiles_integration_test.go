@@ -142,7 +142,7 @@ type capturedFile struct {
 	byteSize     int64
 	partID       *string
 	sourceID     *string
-	organization *string
+	company *string
 }
 
 func withFiles(rec connector.NormalizedRecord, parts ...connector.Part) connector.NormalizedRecord {
@@ -179,7 +179,7 @@ func filesFrom(ctx context.Context, t *testing.T, db *database.DB, system, sourc
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT filename, content_type, declared_type, category, storage_key,
-			       byte_size, external_part_id, external_source_id, organization_id::text
+			       byte_size, external_part_id, external_source_id, company_id::text
 			  FROM attachment
 			 WHERE external_source_id = $1
 			 ORDER BY external_part_id`, system+":"+sourceID)
@@ -190,7 +190,7 @@ func filesFrom(ctx context.Context, t *testing.T, db *database.DB, system, sourc
 		for rows.Next() {
 			var f capturedFile
 			if err := rows.Scan(&f.filename, &f.contentType, &f.declaredType, &f.category,
-				&f.storageKey, &f.byteSize, &f.partID, &f.sourceID, &f.organization); err != nil {
+				&f.storageKey, &f.byteSize, &f.partID, &f.sourceID, &f.company); err != nil {
 				return err
 			}
 			out = append(out, f)
@@ -371,19 +371,19 @@ func TestACapturedFileRollsUpToTheCompanyItsMessageIsFiledUnder(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
 
-	orgID := ids.NewV7()
+	companyID := ids.NewV7()
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO organization (id, display_name, source, captured_by)
+			INSERT INTO company (id, display_name, source, captured_by)
 			VALUES ($1, 'Voltaq', 'manual', 'human:test')`,
-			orgID)
+			companyID)
 		return err
 	}); err != nil {
 		t.Fatalf("seed the company: %v", err)
 	}
 
 	rec := withFiles(mailRecord("msg-filed-"+tag), onePDF())
-	rec.Links = []datasource.EntityRef{{Type: datasource.EntityOrganization, ID: orgID}}
+	rec.Links = []datasource.EntityRef{{Type: datasource.EntityCompany, ID: companyID}}
 	if _, err := sink.Upsert(ctx, rec); err != nil {
 		t.Fatalf("capture: %v", err)
 	}
@@ -392,9 +392,9 @@ func TestACapturedFileRollsUpToTheCompanyItsMessageIsFiledUnder(t *testing.T) {
 	if len(files) != 1 {
 		t.Fatalf("stored %d files, want 1", len(files))
 	}
-	if files[0].organization == nil || *files[0].organization != orgID.String() {
-		t.Errorf("organization_id = %v, want the company the message is filed under (%s)",
-			files[0].organization, orgID)
+	if files[0].company == nil || *files[0].company != companyID.String() {
+		t.Errorf("company_id = %v, want the company the message is filed under (%s)",
+			files[0].company, companyID)
 	}
 }
 
@@ -413,9 +413,9 @@ func TestACapturedFileFiledAgainstNobodyRollsUpToNothing(t *testing.T) {
 	if len(files) != 1 {
 		t.Fatalf("stored %d files, want 1", len(files))
 	}
-	if files[0].organization != nil {
-		t.Errorf("organization_id = %v, want none — this message names no company",
-			*files[0].organization)
+	if files[0].company != nil {
+		t.Errorf("company_id = %v, want none — this message names no company",
+			*files[0].company)
 	}
 }
 

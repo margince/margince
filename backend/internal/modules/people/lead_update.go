@@ -30,7 +30,7 @@ type UpdateLeadInput struct {
 	Email           *string
 	Title           *string
 	CompanyName     *string
-	CandidateOrgKey *string
+	CandidateCompanyKey *string
 	Status          *string // only new ↔ working here; terminal states have their own paths
 	// Source corrects where the lead came from; the score follows it.
 	Source *string
@@ -347,8 +347,8 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 	if in.CompanyName != nil {
 		p.Set("company_name", current.CompanyName, *in.CompanyName)
 	}
-	if in.CandidateOrgKey != nil {
-		p.Set("candidate_org_key", current.CandidateOrgKey, *in.CandidateOrgKey)
+	if in.CandidateCompanyKey != nil {
+		p.Set("candidate_company_key", current.CandidateCompanyKey, *in.CandidateCompanyKey)
 	}
 	if in.ProjectID != nil {
 		p.Set("project_id", current.ProjectId, *in.ProjectID)

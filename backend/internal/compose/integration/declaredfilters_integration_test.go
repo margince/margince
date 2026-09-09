@@ -90,16 +90,16 @@ func TestThePersonListNarrowsByTagID(t *testing.T) {
 	}
 }
 
-func TestTheOrganizationListNarrowsByDomain(t *testing.T) {
+func TestTheCompanyListNarrowsByDomain(t *testing.T) {
 	e := Setup(t)
-	held, err := e.People.CreateOrganization(e.Admin(), people.CreateOrganizationInput{
-		DisplayName: "Acme", Domains: []people.OrgDomainInput{{Domain: "acme.example", IsPrimary: true}},
+	held, err := e.People.CreateCompany(e.Admin(), people.CreateCompanyInput{
+		DisplayName: "Acme", Domains: []people.CompanyDomainInput{{Domain: "acme.example", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("seeding the account that holds the domain: %v", err)
 	}
-	if _, err := e.People.CreateOrganization(e.Admin(), people.CreateOrganizationInput{
-		DisplayName: "Other", Domains: []people.OrgDomainInput{{Domain: "other.example", IsPrimary: true}},
+	if _, err := e.People.CreateCompany(e.Admin(), people.CreateCompanyInput{
+		DisplayName: "Other", Domains: []people.CompanyDomainInput{{Domain: "other.example", IsPrimary: true}},
 	}); err != nil {
 		t.Fatalf("seeding the account that does not: %v", err)
 	}
@@ -108,9 +108,9 @@ func TestTheOrganizationListNarrowsByDomain(t *testing.T) {
 	// for a caller who typed the domain out of an email signature and for one
 	// who pasted the link out of a browser.
 	for _, asked := range []string{"acme.example", "ACME.example", "https://www.acme.example/careers"} {
-		page, _, err := e.People.ListOrganizations(e.Admin(), people.ListOrganizationsInput{Domain: &asked})
+		page, _, err := e.People.ListCompanies(e.Admin(), people.ListCompaniesInput{Domain: &asked})
 		if err != nil {
-			t.Fatalf("listing organizations by domain %q: %v", asked, err)
+			t.Fatalf("listing companies by domain %q: %v", asked, err)
 		}
 		if len(page) != 1 || page[0].Id != held.Id {
 			t.Fatalf("domain=%q returned %d accounts, want only the one that lists it", asked, len(page))
@@ -118,9 +118,9 @@ func TestTheOrganizationListNarrowsByDomain(t *testing.T) {
 	}
 
 	unheld := "nobody.example"
-	page, _, err := e.People.ListOrganizations(e.Admin(), people.ListOrganizationsInput{Domain: &unheld})
+	page, _, err := e.People.ListCompanies(e.Admin(), people.ListCompaniesInput{Domain: &unheld})
 	if err != nil {
-		t.Fatalf("listing organizations by an unheld domain: %v", err)
+		t.Fatalf("listing companies by an unheld domain: %v", err)
 	}
 	if len(page) != 0 {
 		t.Fatalf("a domain no account lists returned %d accounts — a dropped filter answers the whole list", len(page))
@@ -133,30 +133,30 @@ func TestTheOrganizationListNarrowsByDomain(t *testing.T) {
 // "no account ever held this". The two dials are one question.
 func TestTheDomainFilterFindsAnArchivedAccountWhenAskedForOne(t *testing.T) {
 	e := Setup(t)
-	held, err := e.People.CreateOrganization(e.Admin(), people.CreateOrganizationInput{
-		DisplayName: "Gone", Domains: []people.OrgDomainInput{{Domain: "gone.example", IsPrimary: true}},
+	held, err := e.People.CreateCompany(e.Admin(), people.CreateCompanyInput{
+		DisplayName: "Gone", Domains: []people.CompanyDomainInput{{Domain: "gone.example", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("seeding the account: %v", err)
 	}
-	if _, err := e.People.ArchiveOrganization(e.Admin(), ids.From[ids.OrganizationKind](ids.UUID(held.Id)), nil); err != nil {
+	if _, err := e.People.ArchiveCompany(e.Admin(), ids.From[ids.CompanyKind](ids.UUID(held.Id)), nil); err != nil {
 		t.Fatalf("archiving the account: %v", err)
 	}
 
 	asked := "gone.example"
-	live, _, err := e.People.ListOrganizations(e.Admin(), people.ListOrganizationsInput{Domain: &asked})
+	live, _, err := e.People.ListCompanies(e.Admin(), people.ListCompaniesInput{Domain: &asked})
 	if err != nil {
-		t.Fatalf("listing live organizations by the domain: %v", err)
+		t.Fatalf("listing live companies by the domain: %v", err)
 	}
 	if len(live) != 0 {
 		t.Fatalf("the live page returned %d accounts, want none — the holder is archived", len(live))
 	}
 
-	withArchived, _, err := e.People.ListOrganizations(e.Admin(), people.ListOrganizationsInput{
+	withArchived, _, err := e.People.ListCompanies(e.Admin(), people.ListCompaniesInput{
 		Domain: &asked, IncludeArchived: true,
 	})
 	if err != nil {
-		t.Fatalf("listing archived organizations by the domain: %v", err)
+		t.Fatalf("listing archived companies by the domain: %v", err)
 	}
 	if len(withArchived) != 1 || withArchived[0].Id != held.Id {
 		t.Fatalf("include_archived with a domain returned %d accounts, want the archived holder — a page that "+
@@ -338,7 +338,7 @@ func teamScopedRep(e *Env, user ids.UUID, teams []ids.UUID) context.Context {
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"person":       {Read: true},
-			"organization": {Read: true},
+			"company": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	})
@@ -374,34 +374,34 @@ func TestTheTeamFilterCannotReachAnotherTeamsPrivateCapture(t *testing.T) {
 	}
 }
 
-func TestTheOrganizationListNarrowsToOneTeamAndToTheUnownedQueue(t *testing.T) {
+func TestTheCompanyListNarrowsToOneTeamAndToTheUnownedQueue(t *testing.T) {
 	e := Setup(t)
-	held := e.SeedOrg(t, "Owned By Rep1", &e.Rep1)
-	e.SeedOrg(t, "Owned By Rep3", &e.Rep3)
-	unowned := e.SeedOrg(t, "Owned By Nobody", nil)
+	held := e.SeedCompany(t, "Owned By Rep1", &e.Rep1)
+	e.SeedCompany(t, "Owned By Rep3", &e.Rep3)
+	unowned := e.SeedCompany(t, "Owned By Nobody", nil)
 	// The create stamps the seeding seat as owner; null it for the unowned queue.
-	e.WsExec(t, `UPDATE organization SET owner_id = NULL WHERE id = $1`, unowned)
+	e.WsExec(t, `UPDATE company SET owner_id = NULL WHERE id = $1`, unowned)
 
 	team := ids.From[ids.TeamKind](e.Team1)
-	page, _, err := e.People.ListOrganizations(e.Admin(), people.ListOrganizationsInput{OwnerTeamID: &team})
+	page, _, err := e.People.ListCompanies(e.Admin(), people.ListCompaniesInput{OwnerTeamID: &team})
 	if err != nil {
-		t.Fatalf("listing organizations by owner team: %v", err)
+		t.Fatalf("listing companies by owner team: %v", err)
 	}
 	if len(page) != 1 || ids.UUID(page[0].Id) != held {
-		t.Fatalf("owner_team_id returned %d organizations, want only the one Team1 owns", len(page))
+		t.Fatalf("owner_team_id returned %d companies, want only the one Team1 owns", len(page))
 	}
 
 	yes := true
-	queue, _, err := e.People.ListOrganizations(e.Admin(), people.ListOrganizationsInput{Unassigned: &yes})
+	queue, _, err := e.People.ListCompanies(e.Admin(), people.ListCompaniesInput{Unassigned: &yes})
 	if err != nil {
-		t.Fatalf("listing the unowned organizations: %v", err)
+		t.Fatalf("listing the unowned companies: %v", err)
 	}
 	if len(queue) != 1 || ids.UUID(queue[0].Id) != unowned {
-		t.Fatalf("unassigned=true returned %d organizations, want only the unowned one", len(queue))
+		t.Fatalf("unassigned=true returned %d companies, want only the unowned one", len(queue))
 	}
 }
 
-// The lead list carries the SAME ownership dial as person and organization
+// The lead list carries the SAME ownership dial as person and company
 // (DM-VOCAB-OWN-1) — bound through the one shared clause, so the three cannot
 // drift. Its absence here is what once made the UI grow a second owner chip.
 func TestTheLeadListNarrowsToOneTeamAndToTheUnownedQueue(t *testing.T) {
@@ -438,22 +438,22 @@ func TestTheLeadListNarrowsToOneTeamAndToTheUnownedQueue(t *testing.T) {
 
 func TestThePersonListNarrowsToOneEmployer(t *testing.T) {
 	e := Setup(t)
-	acme := e.SeedOrg(t, "Acme", nil)
-	other := e.SeedOrg(t, "Other", nil)
+	acme := e.SeedCompany(t, "Acme", nil)
+	other := e.SeedCompany(t, "Other", nil)
 	staff := e.SeedPerson(t, "Works At Acme", nil)
 	leaver := e.SeedPerson(t, "Left Acme", nil)
 	elsewhere := e.SeedPerson(t, "Works Elsewhere", nil)
 
 	// Seeded through the real writer, so the edge carries whatever that writer
 	// stamps: a hand-inserted row proves nothing about the rows production makes.
-	employ := func(person ids.UUID, org ids.UUID, ended *time.Time) {
+	employ := func(person ids.UUID, company ids.UUID, ended *time.Time) {
 		t.Helper()
 		personID := ids.From[ids.PersonKind](person)
-		orgID := ids.From[ids.OrganizationKind](org)
+		companyID := ids.From[ids.CompanyKind](company)
 		if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
 			Kind:             "employment",
 			PersonID:         &personID,
-			OrganizationID:   &orgID,
+			CompanyID:   &companyID,
 			IsCurrentPrimary: boolPtr(ended == nil),
 			EndedAt:          ended,
 			Source:           "manual",
@@ -471,8 +471,8 @@ func TestThePersonListNarrowsToOneEmployer(t *testing.T) {
 	employ(leaver, acme, &left)
 	employ(elsewhere, other, nil)
 
-	orgID := ids.From[ids.OrganizationKind](acme)
-	page, _, err := e.People.ListPeople(e.Admin(), people.ListPeopleInput{OrganizationID: &orgID})
+	companyID := ids.From[ids.CompanyKind](acme)
+	page, _, err := e.People.ListPeople(e.Admin(), people.ListPeopleInput{CompanyID: &companyID})
 	if err != nil {
 		t.Fatalf("listing people by employer: %v", err)
 	}
@@ -481,31 +481,31 @@ func TestThePersonListNarrowsToOneEmployer(t *testing.T) {
 		for _, person := range page {
 			got = append(got, person.FullName)
 		}
-		t.Fatalf("organization_id returned %v, want only the current employee", got)
+		t.Fatalf("company_id returned %v, want only the current employee", got)
 	}
 }
 
 // setFirmographics writes industry and size through the store the product
 // writes them with, so the rows under test are the rows production makes.
-func setFirmographics(t *testing.T, e *Env, org ids.UUID, industry, band string) {
+func setFirmographics(t *testing.T, e *Env, company ids.UUID, industry, band string) {
 	t.Helper()
-	if _, err := e.People.UpdateOrganization(e.Admin(), ids.From[ids.OrganizationKind](org),
-		people.UpdateOrganizationInput{Industry: &industry, SizeBand: &band}); err != nil {
+	if _, err := e.People.UpdateCompany(e.Admin(), ids.From[ids.CompanyKind](company),
+		people.UpdateCompanyInput{Industry: &industry, SizeBand: &band}); err != nil {
 		t.Fatalf("setting firmographics: %v", err)
 	}
 }
 
-func TestTheOrganizationListNarrowsByIndustryAndSizeBand(t *testing.T) {
+func TestTheCompanyListNarrowsByIndustryAndSizeBand(t *testing.T) {
 	e := Setup(t)
-	small := e.SeedOrg(t, "Small Software", nil)
-	big := e.SeedOrg(t, "Big Software", nil)
-	e.SeedOrg(t, "Small Logistics", nil)
+	small := e.SeedCompany(t, "Small Software", nil)
+	big := e.SeedCompany(t, "Big Software", nil)
+	e.SeedCompany(t, "Small Logistics", nil)
 
 	setFirmographics(t, e, small, "Software", "1-10")
 	setFirmographics(t, e, big, "Software", "1001-5000")
 
 	industry := "Software"
-	page, _, err := e.People.ListOrganizations(e.Admin(), people.ListOrganizationsInput{Industry: &industry})
+	page, _, err := e.People.ListCompanies(e.Admin(), people.ListCompaniesInput{Industry: &industry})
 	if err != nil {
 		t.Fatalf("listing by industry: %v", err)
 	}
@@ -514,7 +514,7 @@ func TestTheOrganizationListNarrowsByIndustryAndSizeBand(t *testing.T) {
 	}
 
 	band := "1-10"
-	sized, _, err := e.People.ListOrganizations(e.Admin(), people.ListOrganizationsInput{SizeBand: &band})
+	sized, _, err := e.People.ListCompanies(e.Admin(), people.ListCompaniesInput{SizeBand: &band})
 	if err != nil {
 		t.Fatalf("listing by size band: %v", err)
 	}
@@ -525,7 +525,7 @@ func TestTheOrganizationListNarrowsByIndustryAndSizeBand(t *testing.T) {
 	// An unknown band is refused rather than answered with an empty page:
 	// empty reads as "no accounts that size", which is a different claim.
 	unknown := "12-13"
-	if _, _, err := e.People.ListOrganizations(e.Admin(), people.ListOrganizationsInput{SizeBand: &unknown}); err == nil {
+	if _, _, err := e.People.ListCompanies(e.Admin(), people.ListCompaniesInput{SizeBand: &unknown}); err == nil {
 		t.Fatal("an unknown size band was accepted; want a validation refusal")
 	}
 }

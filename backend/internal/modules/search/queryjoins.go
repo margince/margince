@@ -13,8 +13,8 @@ package search
 //
 // What makes one rule enough for both join tables in this schema is that they
 // are the same shape physically. `activity_link` carries `person_id`,
-// `organization_id`, `deal_id` and `lead_id`; `relationship` carries
-// `person_id`, `organization_id`, `deal_id` and `project_id`. The contract's
+// `company_id`, `deal_id` and `lead_id`; `relationship` carries
+// `person_id`, `company_id`, `deal_id` and `project_id`. The contract's
 // `ActivityLink{entity_id, entity_type}` is the WIRE shape of a link and not
 // its storage — the columns are typed, and a CHECK constraint says which one
 // each row fills. So the rule reads columns, exactly as the field vocabulary
@@ -42,12 +42,12 @@ import (
 // against the schema is not that.
 var joinTables = []joinTable{
 	// Every kind this hub reaches pairs a person with one arm: employment is
-	// person+organization, deal_stakeholder is person+deal,
+	// person+company, deal_stakeholder is person+deal,
 	// project_stakeholder is person+project (core 0007, 0131).
 	//
 	// It does NOT reach every legal row. The partner kinds (partner_of,
-	// referred_by, co_sell_with) pair organization_id with counterparty_org_id
-	// and require person_id IS NULL, so they are an organization↔organization
+	// referred_by, co_sell_with) pair company_id with counterparty_company_id
+	// and require person_id IS NULL, so they are a company↔company
 	// edge with no person in it — a shape one hub cannot express, on a column
 	// arms cannot read. Those rows stay untraversable, which is stated here and
 	// gated by TestAReferenceNamedForItsRoleYieldsNoHop rather than left to be
@@ -83,9 +83,9 @@ const (
 //
 // The hub is what makes the derivation exact rather than combinatorial. A join
 // table's record references are not interchangeable — `relationship` holds
-// `organization_id` and `deal_id` and no row ever fills both, because they
+// `company_id` and `deal_id` and no row ever fills both, because they
 // belong to different kinds. Pairing every column with every other would
-// publish `organization → deals` through this table, a hop no row can satisfy
+// publish `company → deals` through this table, a hop no row can satisfy
 // and which a caller would read as "no data" rather than "not a thing".
 //
 // So one column is named and the rest are arms, and the edges are hub↔arm.
@@ -146,7 +146,7 @@ var notAnEdge = map[string]string{
 	"sdr_handoff": "a decision ABOUT a prospect, not a path from one record to another. Its four " +
 		"references are the subject that was handed on (a lead or a person, never both), the company " +
 		"it belongs to, and the deal an acceptance produced — a hop through it would answer \"which " +
-		"deals came from leads\" by way of somebody's routing decision, when deal.organization_id " +
+		"deals came from leads\" by way of somebody's routing decision, when deal.company_id " +
 		"already answers that about the records themselves. The same ground activity_retention_evidence " +
 		"sits on: it relates a record to a judgement made about it",
 	"contract": "a finance record in its own right. Its references are the scalar kind any record " +
@@ -261,9 +261,9 @@ func (j joinTable) edges(stored *storage, entity string) []joinEdge {
 //
 // A column is a reference only when stripping `_id` leaves the name of a record
 // type this module searches — the same test contractRelations applies, and it
-// is what keeps `relationship.counterparty_org_id` out. That column names its
-// ROLE (the partner org on an org↔org edge) rather than its target, so
-// org↔org partner edges stay untraversable. Special-casing the name here would
+// is what keeps `relationship.counterparty_company_id` out. That column names its
+// ROLE (the partner company on a company↔company edge) rather than its target, so
+// company↔company partner edges stay untraversable. Special-casing the name here would
 // make this derivation carry one table's naming history; the honest fix is in
 // the contract, and until it happens the gap is visible rather than papered
 // over.
@@ -282,8 +282,8 @@ func (j joinTable) arms(stored *storage) []string {
 // joinVia renders the published explanation of a join edge.
 //
 // It is prose, not a parse target. The two SCALAR spellings of Via are read
-// back apart by newHopBinding — a bare `organization_id` against a qualified
-// `deal.organization_id` — and a join edge is told apart from both by carrying
+// back apart by newHopBinding — a bare `company_id` against a qualified
+// `deal.company_id` — and a join edge is told apart from both by carrying
 // a JoinEdge, never by its text. The arrow is what keeps a reader from trying:
 // no scalar Via has ever contained one.
 func joinVia(table, from, to string) string {
@@ -293,8 +293,8 @@ func joinVia(table, from, to string) string {
 // pluralRelationName is the ONE spelling of a hop that may land on many rows.
 //
 // Both derivations that produce one use it: the inverse of a scalar reference
-// (`organization` → `deals`) and either direction of a join edge
-// (`person` → `organizations`). A second pluralization rule beside this one is
+// (`company` → `deals`) and either direction of a join edge
+// (`person` → `companies`). A second pluralization rule beside this one is
 // how a vocabulary comes to answer to two names for one hop.
 func pluralRelationName(entity string) string {
 	if plural, irregular := irregularPlurals[entity]; irregular {
@@ -315,7 +315,7 @@ var irregularPlurals = map[string]string{entityActivity: "activities"}
 //
 // No pair collides on today's schema, and that is a property of the hub rule
 // rather than of the namespace: an arm reaches only the hub, so `relationship`
-// never offers `organization → deals` beside the scalar edge of that name. This
+// never offers `company → deals` beside the scalar edge of that name. This
 // stays because the two derivations share ONE namespace and neither knows what
 // the other produced — the day a second hub, a same-type edge or a new join
 // table makes a name contested, which of them ran would otherwise depend on the
@@ -346,7 +346,7 @@ func mergeRelations(direct, joined []Relation) []Relation {
 //
 // The tenant is not named, and the reason is not RLS: ADR-0091 retired every
 // policy (core 0217) and dropped workspace_id from both join tables (the
-// activity-spine and records sweeps). One installation serves one organization,
+// activity-spine and records sweeps). One installation serves one company,
 // so there is no tenant predicate anywhere on this read — the outer statement
 // and the lateral hop carry none either. What bounds this subquery is what
 // bounds them: the caller's row scope and object RBAC, applied to the records at

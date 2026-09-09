@@ -13,7 +13,7 @@ const (
 	domainColumn = "domain"
 	// The FK each identifier table names its record by.
 	personFK = "person_id"
-	orgFK    = "organization_id"
+	companyFK    = "company_id"
 )
 
 // SenderPredicate renders "this person WROTE this message", as opposed to the

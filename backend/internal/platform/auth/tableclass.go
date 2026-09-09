@@ -16,7 +16,7 @@ import "github.com/margince/margince/backend/internal/shared/kernel/principal"
 // is already a customer of another team contacts it again. Row scope and
 // record grants keep governing WRITES to these tables (writescope.go), and
 // capture privacy — a row a connector minted as `visibility='owner'` — still
-// narrows person and organization for everyone but its owner until it is
+// narrows person and company for everyone but its owner until it is
 // promoted.
 //
 // A project reads like the rest of them. It used to keep the own/team/all
@@ -28,7 +28,7 @@ import "github.com/margince/margince/backend/internal/shared/kernel/principal"
 
 // identityTables are read by every seat of the workspace: the own/team owner
 // predicate renders TRUE for them and only the capture-privacy and grant arms
-// (person, organization) remain.
+// (person, company) remain.
 //
 // Every shareable table is in this set today. The set stays spelled out rather
 // than collapsed into shareableTables because the two answer different
@@ -36,7 +36,7 @@ import "github.com/margince/margince/backend/internal/shared/kernel/principal"
 // widen — and a record type that arrives scoped will join one without the
 // other.
 var identityTables = map[string]bool{
-	tablePerson: true, tableOrganization: true, tableLead: true, tableDeal: true, tableProject: true,
+	tablePerson: true, tableCompany: true, tableLead: true, tableDeal: true, tableProject: true,
 }
 
 // readsEveryRow reports whether the principal's READ of the table carries no
@@ -47,7 +47,7 @@ var identityTables = map[string]bool{
 // true for a seated actor and false for a buyer: a Deal Room participant's
 // reads are bounded by their room, and no identity table carries that bound. So
 // the kind is answered before the table is, or a buyer would read every person,
-// organization, lead, deal and project in the installation.
+// company, lead, deal and project in the installation.
 func readsEveryRow(p principal.Principal, table string) bool {
 	if p.Type == principal.PrincipalBuyer {
 		return false

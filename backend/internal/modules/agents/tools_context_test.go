@@ -217,12 +217,12 @@ func TestTheRequestedRecordTypesReachTheRetriever(t *testing.T) {
 	tool := searchContext{p: &queryProbeProvider{}, retriever: probe}
 
 	if _, err := tool.Handle(t.Context(), json.RawMessage(
-		`{"query":"renewal risk","record_types":["deal","organization"],"limit":3}`,
+		`{"query":"renewal risk","record_types":["deal","company"],"limit":3}`,
 	)); err != nil {
 		t.Fatalf("handling the search: %v", err)
 	}
 
-	want := []datasource.EntityType{datasource.EntityDeal, datasource.EntityOrganization}
+	want := []datasource.EntityType{datasource.EntityDeal, datasource.EntityCompany}
 	if !slices.Equal(probe.seen.EntityTypes, want) {
 		t.Errorf("the retriever was asked for %v, want the caller's own %v", probe.seen.EntityTypes, want)
 	}

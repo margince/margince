@@ -89,7 +89,7 @@ const STATES: ReadonlyArray<{ caption: string; entry: AuditLogEntry }> = [
   {
     caption:
       "No grant presented — a background pass nobody's context ran, so no gap to report",
-    entry: row({ actor_type: "agent", actor_id: "agent:org_name_promotion" }),
+    entry: row({ actor_type: "agent", actor_id: "agent:company_name_promotion" }),
   },
   {
     caption:

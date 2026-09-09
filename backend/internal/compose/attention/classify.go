@@ -314,8 +314,8 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		row.Subject = subjectOf(subjectDeal, waiting.DealID)
 	case !waiting.PersonID.IsZero():
 		row.Subject = subjectOf("person", waiting.PersonID)
-	case !waiting.OrganizationID.IsZero():
-		row.Subject = subjectOf("organization", waiting.OrganizationID)
+	case !waiting.CompanyID.IsZero():
+		row.Subject = subjectOf("company", waiting.CompanyID)
 	}
 	if openableSubject(row.Subject) {
 		row.Actions = append(row.Actions, crmcontracts.WorklistItemActions(actionOpen))

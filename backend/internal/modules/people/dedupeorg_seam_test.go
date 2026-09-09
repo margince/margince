@@ -13,11 +13,11 @@ import (
 	"testing"
 )
 
-// Every path that mints an organization runs the dedupe ladder first.
+// Every path that mints a company runs the dedupe ladder first.
 //
-// `createOrganization` is the one INSERT INTO organization, and it takes the
+// `createCompany` is the one INSERT INTO company, and it takes the
 // match as an argument rather than computing it — which makes the agreement
-// checkable but does not enforce it: a caller may pass a zero OrganizationMatch
+// checkable but does not enforce it: a caller may pass a zero CompanyMatch
 // and mint a twin nobody detected. That is not hypothetical. The CSV import was
 // believed for most of a day to have bypassed this seam entirely, and settling
 // the question took reading four call sites by hand.
@@ -25,10 +25,10 @@ import (
 // So the rule is held here instead of in a comment: a caller of the one INSERT
 // must obtain its match from the ladder, in the same function. CLAUDE.md's own
 // reuse rule is that a uniqueness claim without a test is worth nothing.
-func TestEveryOrganizationCreatePathRunsTheDedupeLadder(t *testing.T) {
+func TestEveryCompanyCreatePathRunsTheDedupeLadder(t *testing.T) {
 	const (
-		theInsert = "createOrganization"
-		ladderTx  = "DedupeOrganizationForCreate"
+		theInsert = "createCompany"
+		ladderTx  = "DedupeCompanyForCreate"
 	)
 
 	entries, err := os.ReadDir(".")
@@ -64,7 +64,7 @@ func TestEveryOrganizationCreatePathRunsTheDedupeLadder(t *testing.T) {
 							mentionsInsert = true
 						} else if strings.Contains(name, "Dedupe") {
 							// The ladder, or one of the wrappers whose whole
-							// job is to run it (manualDedupeOrganization).
+							// job is to run it (manualDedupeCompany).
 							callsLadder = true
 						}
 						// The insert named anywhere OTHER than as the callee —
@@ -95,7 +95,7 @@ func TestEveryOrganizationCreatePathRunsTheDedupeLadder(t *testing.T) {
 				}
 				if mentionsInsert && !callsLadder {
 					t.Errorf("%s: %s calls %s without running the dedupe ladder in the same function; "+
-						"every path that mints an organization must obtain its match from %s",
+						"every path that mints a company must obtain its match from %s",
 						path, fn.Name.Name, theInsert, ladderTx)
 				}
 			}

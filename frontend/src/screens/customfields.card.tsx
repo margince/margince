@@ -1,5 +1,5 @@
 // The read-only custom fields on a record 360. Mirrors the firmographics card
-// (organizations.tsx): a labeled section + a `dl.firmo` list, evidence-or-omit
+// (companies.tsx): a labeled section + a `dl.firmo` list, evidence-or-omit
 // — a field with no stored value is absent, and a record with no custom values
 // renders nothing at all rather than an empty card.
 

@@ -42,7 +42,7 @@ Read before touching a stylesheet. Each gate is exact, not fuzzy.
 | e2e `company-record.spec.ts` | "KPI strip above the tab strip", "one Company 360 card", "left rail carries the account's context as one panel of named sections", "lifecycle control is a control, not a tag", "logo not favicon" | These assertions describe the old shape. Rewrite them **in the company PR**, in the same commit as the layout, to the new shape (readings under the tab strip, the 360 as the first pane, the context panel on the right) |
 | e2e `perf-mobile.spec.ts` | The record's `<h1>` renders from the router before any record read returns, p95 under 300 ms on Fast 3G | The head keeps drawing from route state; nothing in the head may wait on the 360 |
 | `history.spec.ts` | A record's tab is an address | Keep tabs in the URL; the deal's tabs move there (§5) |
-| 500-line file cap | `organizations.tsx`, `company360.tsx`, `companyheader.tsx`, `deals.tsx`, `leads.tsx` are already over | New code goes in new files; do not grow these |
+| 500-line file cap | `companies.tsx`, `company360.tsx`, `companyheader.tsx`, `deals.tsx`, `leads.tsx` are already over | New code goes in new files; do not grow these |
 | `i18n.test.ts` | `en.ts`, `de.ts`, `vi.ts` carry the same keys | Every new key lands in all three |
 
 ## 2. The design system

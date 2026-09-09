@@ -125,9 +125,9 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 		},
 		{
 			"enrich",
-			oneRecord(datasource.EntityOrganization, id, `{"name":"Acme"}`, 3),
+			oneRecord(datasource.EntityCompany, id, `{"name":"Acme"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
-				return NewEnrichCall(p, EnrichCommand{OrganizationID: id, Depth: EnrichDepthPage})
+				return NewEnrichCall(p, EnrichCommand{CompanyID: id, Depth: EnrichDepthPage})
 			},
 		},
 		{
@@ -181,7 +181,7 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 // instead would spend a human's one-shot approval on the way past.
 func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 	id, other := ids.NewV7(), ids.NewV7()
-	link := RecordLink{EntityType: "organization", EntityID: other}
+	link := RecordLink{EntityType: "company", EntityID: other}
 	cases := []struct {
 		name  string
 		call  GovernedCall
@@ -206,19 +206,19 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 		},
 		{
 			"an account-started send with no addressee",
-			NewSendAccountEmailCall(oneRecord(datasource.EntityOrganization, other, `{}`, 1),
+			NewSendAccountEmailCall(oneRecord(datasource.EntityCompany, other, `{}`, 1),
 				SendAccountEmailCommand{Links: []RecordLink{link}}),
 			"`to`",
 		},
 		{
 			"an account-started send filed under nothing",
-			NewSendAccountEmailCall(oneRecord(datasource.EntityOrganization, other, `{}`, 1),
+			NewSendAccountEmailCall(oneRecord(datasource.EntityCompany, other, `{}`, 1),
 				SendAccountEmailCommand{To: []string{"a@example.test"}}),
 			"`links`",
 		},
 		{
 			"a booking whose end does not follow its start",
-			NewBookMeetingCall(oneRecord(datasource.EntityOrganization, other, `{}`, 1), BookMeetingCommand{
+			NewBookMeetingCall(oneRecord(datasource.EntityCompany, other, `{}`, 1), BookMeetingCommand{
 				Start: time.Date(2026, 8, 10, 9, 30, 0, 0, time.UTC),
 				End:   time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC),
 				Links: []RecordLink{link},
@@ -227,7 +227,7 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 		},
 		{
 			"a booking attached to nothing",
-			NewBookMeetingCall(oneRecord(datasource.EntityOrganization, other, `{}`, 1), BookMeetingCommand{
+			NewBookMeetingCall(oneRecord(datasource.EntityCompany, other, `{}`, 1), BookMeetingCommand{
 				Start: time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC),
 				End:   time.Date(2026, 8, 10, 9, 30, 0, 0, time.UTC),
 			}),
@@ -235,7 +235,7 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 		},
 		{
 			"a booking over the per-call link cap",
-			NewBookMeetingCall(oneRecord(datasource.EntityOrganization, other, `{}`, 1), BookMeetingCommand{
+			NewBookMeetingCall(oneRecord(datasource.EntityCompany, other, `{}`, 1), BookMeetingCommand{
 				Start: time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC),
 				End:   time.Date(2026, 8, 10, 9, 30, 0, 0, time.UTC),
 				Links: distinctLinks(maxRecordLinks + 1),
@@ -283,8 +283,8 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 		},
 		{
 			"an enrich of a target that is not an absolute http(s) URL",
-			NewEnrichCall(oneRecord(datasource.EntityOrganization, id, `{}`, 1),
-				EnrichCommand{OrganizationID: id, URL: "acme.test/about", Depth: EnrichDepthPage}),
+			NewEnrichCall(oneRecord(datasource.EntityCompany, id, `{}`, 1),
+				EnrichCommand{CompanyID: id, URL: "acme.test/about", Depth: EnrichDepthPage}),
 			"absolute http(s) URL",
 		},
 		{
@@ -326,12 +326,12 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 	}
 }
 
-// distinctLinks builds n links to distinct organizations, so only the CAP can
+// distinctLinks builds n links to distinct companies, so only the CAP can
 // refuse them — a repeated id would be deduplicated instead and prove nothing.
 func distinctLinks(n int) []RecordLink {
 	links := make([]RecordLink, 0, n)
 	for range n {
-		links = append(links, RecordLink{EntityType: "organization", EntityID: ids.NewV7()})
+		links = append(links, RecordLink{EntityType: "company", EntityID: ids.NewV7()})
 	}
 	return links
 }
@@ -413,9 +413,9 @@ func TestAMergeRefusesEitherHalfHeldElsewhere(t *testing.T) {
 // which — approving a site crawl off a line that reads "page" is the failure
 // this typing exists to make unreachable.
 func TestTheTwoEnrichDepthsAreDistinctCommandsWithDistinctSummaries(t *testing.T) {
-	org := ids.NewV7()
-	page := EnrichCommand{OrganizationID: org, Depth: EnrichDepthPage}
-	site := EnrichCommand{OrganizationID: org, Depth: EnrichDepthSite}
+	company := ids.NewV7()
+	page := EnrichCommand{CompanyID: company, Depth: EnrichDepthPage}
+	site := EnrichCommand{CompanyID: company, Depth: EnrichDepthSite}
 
 	if page == site {
 		t.Fatal("the two enrich operations build the same command; one of them would then be described " +
@@ -425,7 +425,7 @@ func TestTheTwoEnrichDepthsAreDistinctCommandsWithDistinctSummaries(t *testing.T
 	summaries := map[EnrichDepth]string{}
 	for _, cmd := range []EnrichCommand{page, site} {
 		info, err := StageSubject(context.Background(),
-			NewEnrichCall(oneRecord(datasource.EntityOrganization, org, `{"name":"Acme"}`, 1), cmd))
+			NewEnrichCall(oneRecord(datasource.EntityCompany, company, `{"name":"Acme"}`, 1), cmd))
 		if err != nil {
 			t.Fatalf("staging depth %q answered %v", cmd.Depth, err)
 		}
@@ -515,8 +515,8 @@ func TestASecondCallOnTheSameResolverIsReadAfresh(t *testing.T) {
 		links := &namedLinks{records: p}
 		ctx := context.Background()
 
-		first := []RecordLink{{EntityType: string(datasource.EntityOrganization), EntityID: linkFixture(p)}}
-		second := []RecordLink{{EntityType: string(datasource.EntityOrganization), EntityID: linkFixture(p)}}
+		first := []RecordLink{{EntityType: string(datasource.EntityCompany), EntityID: linkFixture(p)}}
+		second := []RecordLink{{EntityType: string(datasource.EntityCompany), EntityID: linkFixture(p)}}
 		if _, _, err := links.stageable(ctx, first); err != nil {
 			t.Fatalf("the first read answered %v", err)
 		}
@@ -546,10 +546,10 @@ func mergeFixture(p *tallyingProvider) MergeCommand {
 	return MergeCommand{RecordType: "person", SourceID: source, TargetID: survivor}
 }
 
-// linkFixture adds one authoritative organization to p and returns its id.
+// linkFixture adds one authoritative company to p and returns its id.
 func linkFixture(p *tallyingProvider) ids.UUID {
 	id := ids.NewV7()
-	ref := datasource.EntityRef{Type: datasource.EntityOrganization, ID: id}
+	ref := datasource.EntityRef{Type: datasource.EntityCompany, ID: id}
 	p.records[ref] = nativeRecord(datasource.Record{Ref: ref, Fields: json.RawMessage(`{}`)})
 	return id
 }
@@ -603,7 +603,7 @@ func TestTheArchiveToolStagesEveryRecordTypeItsWritePathServes(t *testing.T) {
 	// iterates the list it is asserting on cannot notice the list shrinking,
 	// which is the regression it exists to catch.
 	for _, recordType := range []string{
-		"person", "organization", "deal", "project", "relationship", "activity",
+		"person", "company", "deal", "project", "relationship", "activity",
 	} {
 		t.Run(recordType, func(t *testing.T) {
 			id := ids.NewV7()
@@ -627,12 +627,12 @@ func TestTheArchiveToolStagesEveryRecordTypeItsWritePathServes(t *testing.T) {
 // calendar and would otherwise spend a human's approval on a booking the
 // store can only refuse.
 func TestBookingAnotherHostStagesOnlyForAnAdmin(t *testing.T) {
-	self, host, org := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	self, host, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	window := time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC)
 	call := func(hostID *ids.UUID) GovernedCall {
-		return NewBookMeetingCall(oneRecord(datasource.EntityOrganization, org, `{}`, 1), BookMeetingCommand{
+		return NewBookMeetingCall(oneRecord(datasource.EntityCompany, company, `{}`, 1), BookMeetingCommand{
 			HostUserID: hostID, Start: window, End: window.Add(30 * time.Minute),
-			Links: []RecordLink{{EntityType: "organization", EntityID: org}},
+			Links: []RecordLink{{EntityType: "company", EntityID: company}},
 		})
 	}
 	as := func(roles []string, scope principal.RowScope) context.Context {
@@ -670,17 +670,17 @@ func TestBookingAnotherHostStagesOnlyForAnAdmin(t *testing.T) {
 // this the verb would book onto a colleague's calendar for any passport holding
 // `send`.
 func TestBookingAnotherHostExecutesOnlyForAnAdmin(t *testing.T) {
-	self, host, org := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	self, host, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	window := time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC)
 	tool := bookMeetingTool{
 		comms: &recordingComms{},
-		p:     oneRecord(datasource.EntityOrganization, org, `{}`, 1),
+		p:     oneRecord(datasource.EntityCompany, company, `{}`, 1),
 	}
 	args := func(hostID *ids.UUID) json.RawMessage {
 		in := map[string]any{
 			"start": window.Format(time.RFC3339), "end": window.Add(30 * time.Minute).Format(time.RFC3339),
 			"subject": "Review",
-			"links":   []map[string]string{{"entity_type": "organization", "entity_id": org.String()}},
+			"links":   []map[string]string{{"entity_type": "company", "entity_id": company.String()}},
 		}
 		if hostID != nil {
 			in["host_user_id"] = hostID.String()

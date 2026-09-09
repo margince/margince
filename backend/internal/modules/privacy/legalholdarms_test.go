@@ -73,7 +73,7 @@ func personArmWaivers(selectors ...string) map[holdArm]string {
 func TestEveryLegalHoldColumnIsReadByEveryActivityHoldSelector(t *testing.T) {
 	held := tablesCarryingLegalHoldReachableFromActivityLink(t)
 	if len(held) < 4 {
-		t.Fatalf("expected at least person/organization/deal/lead to carry legal_hold and an activity_link column, catalog yielded %v", held)
+		t.Fatalf("expected at least person/company/deal/lead to carry legal_hold and an activity_link column, catalog yielded %v", held)
 	}
 	for name, sql := range activityHoldSelectors() {
 		for _, table := range held {

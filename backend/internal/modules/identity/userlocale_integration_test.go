@@ -32,7 +32,7 @@ func seatChoosingALanguage(t *testing.T) (*Service, context.Context, ids.UUID) {
 	name := "locale-" + ids.NewV7().String()
 	wsID, _, _, err := svc.BootstrapInstallation(context.Background(), func() (InstallationBootstrap, error) {
 		return InstallationBootstrap{
-			OrganizationName: name,
+			CompanyName: name,
 			BaseCurrency:     "EUR",
 			BaseLanguage:     "en",
 			Timezone:         "Europe/Berlin",

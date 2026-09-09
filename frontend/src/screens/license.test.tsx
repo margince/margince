@@ -37,7 +37,7 @@ type Entitlement = {
     expiry: string;
     in_grace: boolean;
     renewal_due: boolean;
-    org?: string;
+    company?: string;
     contact_name?: string;
     contact_email?: string;
   };
@@ -48,7 +48,7 @@ type Entitlement = {
 const HOLDER = {
   id: "0199c4f2-1d6e-7a41-9f0b-7b2a2c1d5e30",
   subject: "acme-prod",
-  org: "Acme GmbH",
+  company: "Acme GmbH",
   contact_name: "Ada Lovelace",
   contact_email: "ada@acme.example",
   expiry: "2027-08-14T09:00:00Z",
@@ -426,7 +426,7 @@ describe("the licensee", () => {
     render(<LicenseCard />);
 
     expect(await waitFor(() => screen.getByText("acme-prod"))).toBeTruthy();
-    expect(screen.queryByText("Organization")).toBeNull();
+    expect(screen.queryByText("Company")).toBeNull();
     expect(screen.queryByText("Contact")).toBeNull();
   });
 

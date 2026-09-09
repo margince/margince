@@ -304,7 +304,7 @@ func TestMirrorEventsEmitUseRuntimeEntityType(t *testing.T) {
 	}{
 		{name: "mirror.conflict/deal", entityType: "deal", payload: mirrorConflictPayload("deal", "ext-1", now, now)},
 		{name: "mirror.conflict/person", entityType: "person", payload: mirrorConflictPayload("person", "ext-2", now, now)},
-		{name: "mirror.budget_degraded/organization", entityType: "organization", payload: mirrorBudgetDegradedPayload(overlaybudget.BandShed)},
+		{name: "mirror.budget_degraded/company", entityType: "company", payload: mirrorBudgetDegradedPayload(overlaybudget.BandShed)},
 		{name: "mirror.deleted/lead", entityType: "lead", payload: mirrorDeletedPayload("lead", "ext-3", now)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

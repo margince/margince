@@ -82,7 +82,7 @@ func (v *v1Archiver) Archive(_ context.Context, ref datasource.EntityRef) (datas
 
 func threeTypes() []datasource.EntityType {
 	return []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityDeal,
+		datasource.EntityPerson, datasource.EntityCompany, datasource.EntityDeal,
 	}
 }
 

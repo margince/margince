@@ -34,10 +34,10 @@ import (
 // an empty page, tells the caller the company is there.
 func TestNarrowingTheTimelineToAnUnreadableCompanyAnswersNotFound(t *testing.T) {
 	e := setupPromises(t)
-	hiddenOrgID, visiblePersonID, activityID := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	hiddenCompanyID, visiblePersonID, activityID := ids.NewV7(), ids.NewV7(), ids.NewV7()
 
-	e.exec(t, `INSERT INTO organization (id, display_name, owner_id, visibility, source, captured_by)
-		VALUES ($1, 'Zeta GmbH', $2, 'owner', 'seed', 'system')`, hiddenOrgID, e.other)
+	e.exec(t, `INSERT INTO company (id, display_name, owner_id, visibility, source, captured_by)
+		VALUES ($1, 'Zeta GmbH', $2, 'owner', 'seed', 'system')`, hiddenCompanyID, e.other)
 	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Visible Contact', $2, 'seed', 'system')`,
 		visiblePersonID, e.rep)
@@ -49,13 +49,13 @@ func TestNarrowingTheTimelineToAnUnreadableCompanyAnswersNotFound(t *testing.T) 
 	// which is precisely the case a scope check alone cannot catch.
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
 		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), activityID, visiblePersonID)
-	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, organization_id)
-		VALUES ($1, $2, 'organization', $3)`, ids.NewV7(), activityID, hiddenOrgID)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, company_id)
+		VALUES ($1, $2, 'company', $3)`, ids.NewV7(), activityID, hiddenCompanyID)
 
-	orgType := "organization"
+	companyType := "company"
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	_, _, err := store.ListActivities(e.as(), ListActivitiesInput{
-		EntityType: &orgType, EntityID: &hiddenOrgID,
+		EntityType: &companyType, EntityID: &hiddenCompanyID,
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("narrowing the timeline to another rep's unpromoted capture → %v, want "+

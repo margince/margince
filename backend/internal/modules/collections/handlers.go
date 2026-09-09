@@ -137,7 +137,7 @@ func (h Handlers) RemoveTag(w http.ResponseWriter, r *http.Request, id crmcontra
 func (h Handlers) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params crmcontracts.GetFilterVocabularyParams) {
 	if !params.Resource.Valid() {
 		httperr.Write(w, r, httperr.Validation("resource", "invalid_enum",
-			"resource must be one of person, organization, deal, lead, project"))
+			"resource must be one of person, company, deal, lead, project"))
 		return
 	}
 	resource := string(params.Resource)

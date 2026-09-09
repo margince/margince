@@ -40,7 +40,7 @@ func demoMailbox() Mailbox {
 		Email: "lena.fischer@demo.test", ColleagueName: "Markus Steiner",
 		ColleagueEmail: "markus.steiner@demo.test",
 		Accounts: []Account{{
-			OrganizationID: "01a00000-0000-7000-8000-0000000000aa",
+			CompanyID: "01a00000-0000-7000-8000-0000000000aa",
 			Name:           "Acme GmbH", Domain: "acme.de", Lifecycle: "customer",
 			ContractNumber: "V-1234-ACME",
 			Now:            time.Date(2026, 8, 17, 9, 0, 0, 0, time.UTC),
@@ -190,12 +190,12 @@ func TestMailRecordsLinkTheAccount(t *testing.T) {
 		rec := m.record()
 		found := false
 		for _, link := range rec.Links {
-			if link.Type == datasource.EntityOrganization {
+			if link.Type == datasource.EntityCompany {
 				found = true
 			}
 		}
 		if !found {
-			t.Errorf("message %s links to no organization", m.MessageID)
+			t.Errorf("message %s links to no company", m.MessageID)
 		}
 	}
 }
@@ -253,7 +253,7 @@ func (s *countingSink) Upsert(context.Context, connector.NormalizedRecord) (data
 
 // TestNoMessageIsDatedInTheFuture is the bug that cost the most to find.
 //
-// The first version anchored an account's correspondence on the organization's
+// The first version anchored an account's correspondence on the company's
 // created_at. In a fresh installation that is TODAY for every company, so
 // "twenty days after the account existed" landed twenty days from now — and a
 // captured message that has not happened yet is refused. The generator

@@ -307,7 +307,7 @@ var schemaMoves = []struct {
 			  FROM pg_proc p
 			  JOIN pg_namespace n ON n.oid = p.pronamespace
 			 WHERE n.nspname = 'public' AND NOT p.prosecdef
-			   AND p.proname = 'organization_open_pipeline_rollup'
+			   AND p.proname = 'company_open_pipeline_rollup'
 			 ORDER BY p.proname LIMIT 1`)
 	}},
 	{"a trigger function's body is replaced", func(t *testing.T, conn *pgx.Conn) string {

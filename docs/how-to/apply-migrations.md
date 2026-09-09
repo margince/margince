@@ -72,7 +72,7 @@ Follow this checklist — several obligations are enforced by fitness tests, so 
    on `origin/main`, so a branch that sat while another migration merged re-runs
    `make migrate-create` and moves its SQL across. `make check` reports that
    (`scripts/check-migration-versions.sh`).
-2. **No table carries row-level security.** An installation holds one organization (ADR-0061), so a
+2. **No table carries row-level security.** An installation holds one company (ADR-0061), so a
    tenant predicate separates nothing; a schema fitness test derived from the live schema fails a
    table that declares a policy.
 3. **Keep enums in sync** — a new `CHECK (col IN (...))` that a Go enum mirrors means extending that Go

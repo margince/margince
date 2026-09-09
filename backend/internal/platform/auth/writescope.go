@@ -451,7 +451,7 @@ func linkTargetWritable(p principal.Principal, alias string, arg func(any) int) 
 	arms := make([]string, 0, len(linkTargetTables))
 	for _, t := range []struct{ column, table, probe string }{
 		{"person_id", tablePerson, "wp"},
-		{"organization_id", tableOrganization, "wo"},
+		{"company_id", tableCompany, "wo"},
 		{"deal_id", tableDeal, "wd"},
 		{"lead_id", tableLead, "wl"},
 		{"project_id", tableProject, "wpr"},

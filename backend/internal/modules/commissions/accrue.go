@@ -28,7 +28,7 @@ import (
 // read-back would answer a different question than the one being paid on.
 type AccrueInput struct {
 	DealID       ids.DealID
-	PartnerOrgID ids.OrganizationID
+	PartnerCompanyID ids.CompanyID
 	// TriggerEventID is the transition that produced this accrual. Stored
 	// unique, so a replayed event fails instead of paying twice; nil for an
 	// entry a human is creating by hand.
@@ -92,19 +92,19 @@ func accrueTx(ctx context.Context, tx pgx.Tx, in AccrueInput, by string) (crmcon
 	if err := auth.EnsureLinkTarget(ctx, tx, "deal", in.DealID.UUID); err != nil {
 		return crmcontracts.CommissionEntry{}, err
 	}
-	if err := auth.EnsureLinkTarget(ctx, tx, "organization", in.PartnerOrgID.UUID); err != nil {
+	if err := auth.EnsureLinkTarget(ctx, tx, "company", in.PartnerCompanyID.UUID); err != nil {
 		return crmcontracts.CommissionEntry{}, err
 	}
 
 	id := ids.New[ids.CommissionEntryKind]()
 	amount := commissionAmount(in.BasisMinor, in.RateBps)
 	_, err := tx.Exec(ctx,
-		`INSERT INTO commission_entry (id, deal_id, partner_org_id, trigger_event_id,
+		`INSERT INTO commission_entry (id, deal_id, partner_company_id, trigger_event_id,
 		                               attribution_at_accrual, margin_tier_at_accrual, rate_bps,
 		                               basis_amount_minor, currency, fx_rate_to_base, amount_minor,
 		                               captured_by)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-		id, in.DealID, in.PartnerOrgID, in.TriggerEventID,
+		id, in.DealID, in.PartnerCompanyID, in.TriggerEventID,
 		in.Attribution, in.MarginTier, in.RateBps,
 		in.BasisMinor, in.Currency, in.FxRateToBase, amount, by)
 	if err != nil {
@@ -118,7 +118,7 @@ func accrueTx(ctx context.Context, tx pgx.Tx, in AccrueInput, by string) (crmcon
 
 	auditID, err := storekit.Audit(ctx, tx, "accrue", commissionObject, id.UUID, nil,
 		map[string]any{
-			"deal_id": in.DealID.UUID, "partner_org_id": in.PartnerOrgID.UUID,
+			"deal_id": in.DealID.UUID, "partner_company_id": in.PartnerCompanyID.UUID,
 			"rate_bps": in.RateBps, "amount_minor": amount, "currency": in.Currency,
 		})
 	if err != nil {
@@ -126,7 +126,7 @@ func accrueTx(ctx context.Context, tx pgx.Tx, in AccrueInput, by string) (crmcon
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventCommissionAccrued{
 		DealId:       openapi_types.UUID(in.DealID.UUID),
-		PartnerOrgId: openapi_types.UUID(in.PartnerOrgID.UUID),
+		PartnerCompanyId: openapi_types.UUID(in.PartnerCompanyID.UUID),
 		AmountMinor:  amount,
 		Currency:     in.Currency,
 		RateBps:      in.RateBps,

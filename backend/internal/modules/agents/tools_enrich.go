@@ -8,7 +8,7 @@ package agents
 // fetch rather than to deliver, which is why it spends the `enrich` cap and not
 // `write` — a granting human who withheld `enrich` withheld exactly this.
 //
-// Nothing is written to the organization here. The proposal carries per-field
+// Nothing is written to the company here. The proposal carries per-field
 // evidence and lands in the approvals inbox; a human accepting it fills only
 // EMPTY fields and never overwrites a human-set value. Two approvals are in
 // play and they are not the same one: the transport gate stages the CALL
@@ -66,7 +66,7 @@ const (
 // EnrichDepthPage (one page, answers with the proposal) or EnrichDepthSite (a
 // queued multi-page crawl, answers with the read's id and queue state).
 type CompanyEnricher interface {
-	EnrichCompany(ctx context.Context, orgID ids.UUID, overrideURL string, depth EnrichDepth) (json.RawMessage, error)
+	EnrichCompany(ctx context.Context, companyID ids.UUID, overrideURL string, depth EnrichDepth) (json.RawMessage, error)
 }
 
 // RegisterEnrichTool wires the enrich verb over the site-read seam.
@@ -75,7 +75,7 @@ func RegisterEnrichTool(r *Registry, p datasource.SystemOfRecordProvider, enrich
 }
 
 type enrichArgs struct {
-	OrganizationID ids.UUID    `json:"organization_id"`
+	CompanyID ids.UUID    `json:"company_id"`
 	URL            string      `json:"url"`
 	Depth          EnrichDepth `json:"depth"`
 }
@@ -87,7 +87,7 @@ type enrichCompany struct {
 
 func (t enrichCompany) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "enrich", Title: "Enrich an organization from its website", Version: toolVersionV1,
+		Name: "enrich", Title: "Enrich a company from its website", Version: toolVersionV1,
 		Description: enrichCopy.render(),
 		// Stays confirm-first, against the general rule that a passport does
 		// what its holder could do unaided. The argument does not reach this
@@ -98,10 +98,10 @@ func (t enrichCompany) Spec() mcp.ToolSpec {
 		// the gate that says so, and it is about egress, not about authority.
 		RequiredScope: principal.ScopeEnrich, Tier: mcp.TierConfirmationRequired, Egress: true,
 		OpenAPIOp: "scrapeCompany/deepReadCompany/technicalEnrichCompany",
-		InputSchema: schema(`{"type":"object","required":["organization_id"],"properties":{
-			"organization_id":{"type":"string","format":"uuid","description":"The organization to enrich"},
+		InputSchema: schema(`{"type":"object","required":["company_id"],"properties":{
+			"company_id":{"type":"string","format":"uuid","description":"The company to enrich"},
 			"url":{"type":"string","format":"uri",
-				"description":"Absolute http(s) URL to read instead of the organization's own domain"},
+				"description":"Absolute http(s) URL to read instead of the company's own domain"},
 			"depth":{"type":"string","enum":["page","site","technical"],"default":"page",
 				"description":"page reads one page and returns a staged proposal; site queues a multi-page crawl and returns its read id; technical queues a lookup of what the company publicly runs (DNS, certificate logs, one homepage fingerprint) and returns its queue state"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
@@ -143,8 +143,8 @@ func (t enrichCompany) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	// A crawl reads a website. Whatever it answers with came from outside the
 	// workspace entirely, which is the plainest T2 there is.
 	noteDerivedContent(ctx)
-	noteEvidence(ctx, datasource.EntityOrganization, args.OrganizationID)
-	return t.enricher.EnrichCompany(ctx, args.OrganizationID, args.URL, args.Depth)
+	noteEvidence(ctx, datasource.EntityCompany, args.CompanyID)
+	return t.enricher.EnrichCompany(ctx, args.CompanyID, args.URL, args.Depth)
 }
 
 // readEnrichArgs decodes, defaults the depth and admits the override URL in one

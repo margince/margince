@@ -41,7 +41,7 @@ package compose
 // (--microsoft-signin-tenant) is an operator's explicit decision and wins
 // whenever it is set. Without one, a stored app pinned to a directory names
 // that directory — the admin who pinned it said whose mailboxes may connect,
-// and that is the same organization whose people sign in — while a stored app
+// and that is the same company whose people sign in — while a stored app
 // left on `common` names nothing and cannot sign anyone in, for the reason
 // above.
 
@@ -87,7 +87,7 @@ const (
 	// the consumer one. Used when the list names several work tenants and no
 	// personal accounts, so a private account is turned away at Microsoft's own
 	// screen instead of after a round trip.
-	microsoftWorkAuthority = "organizations"
+	microsoftWorkAuthority = "companies"
 	// microsoftConsumerAuthority is the alias for the consumer tenant, used
 	// when personal accounts are the ONLY thing listed.
 	//
@@ -108,7 +108,7 @@ type MicrosoftSignInConfig struct {
 	ClientSecret string
 	// Tenant is the Entra DIRECTORY IDS (GUIDs, comma-separated) this
 	// installation's people sign in from. Deliberately not the authority aliases
-	// Microsoft also accepts in this position (`common`, `organizations`,
+	// Microsoft also accepts in this position (`common`, `companies`,
 	// `consumers`) and not a domain name: the value is compared against the
 	// token's `tid` claim, which is always a GUID, so anything else would be a
 	// comparison that can only fail — or, worse, a check somebody later "fixes"
@@ -175,7 +175,7 @@ func tenantsOf(raw string) []string {
 //
 // One directory keeps its own authority, so Microsoft shows that tenant's
 // branding and turns away everybody else before a round trip. Several need a
-// shared one, and which shared one is worth getting right: `organizations`
+// shared one, and which shared one is worth getting right: `companies`
 // refuses personal accounts at Microsoft's screen, which is a better answer
 // than accepting the round trip and refusing the token afterwards. `common` is
 // used only when the list actually names consumer accounts.
@@ -215,7 +215,7 @@ func (cfg MicrosoftSignInConfig) MissingFields() []string {
 	// environment's own pair.
 	for _, id := range tenantsOf(cfg.Tenant) {
 		if !isDirectoryID(id) {
-			missing = append(missing, "tenant "+id+" (not an Entra directory id — sign-in cannot run on common/organizations/consumers)")
+			missing = append(missing, "tenant "+id+" (not an Entra directory id — sign-in cannot run on common/companies/consumers)")
 		}
 	}
 	return missing

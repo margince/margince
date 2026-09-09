@@ -187,7 +187,7 @@ func writePair(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	}
 }
 
-// The PromoteOrgNameTx shape: a helper reached by a probed wrapper AND by an
+// The PromoteCompanyNameTx shape: a helper reached by a probed wrapper AND by an
 // unprobed path. Suppressing on ANY guarded caller is what let that one through.
 func TestAHelperWithOneUnprobedCallerStaysAFinding(t *testing.T) {
 	t.Parallel()

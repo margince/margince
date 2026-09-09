@@ -71,7 +71,7 @@ describe("comparing the colleagues a reader chooses", () => {
   it("reads a cell with no connection as Untried, not as a blank", async () => {
     const user = userEvent.setup();
     stubGraph();
-    show(<CoverageExplorer orgId="o-1" />);
+    show(<CoverageExplorer companyId="o-1" />);
     await open(user);
 
     // Sam Silent has no edge. "Untried" says nobody has written to them, which
@@ -88,7 +88,7 @@ describe("comparing the colleagues a reader chooses", () => {
   it("carries each column's colleague on the cell, so a narrow layout can label it", async () => {
     const user = userEvent.setup();
     stubGraph();
-    show(<CoverageExplorer orgId="o-1" />);
+    show(<CoverageExplorer companyId="o-1" />);
     await open(user);
     await screen.findByText("Sam Silent");
 
@@ -107,7 +107,7 @@ describe("comparing the colleagues a reader chooses", () => {
   it("offers only colleagues who have actually reached this account", async () => {
     const user = userEvent.setup();
     stubGraph();
-    show(<CoverageExplorer orgId="o-1" />);
+    show(<CoverageExplorer companyId="o-1" />);
     await open(user);
 
     // A column the reader has to rule out is worse than no column, so a
@@ -119,7 +119,7 @@ describe("comparing the colleagues a reader chooses", () => {
   it("says a grid built from a capped read may be short", async () => {
     const user = userEvent.setup();
     stubGraph(7);
-    show(<CoverageExplorer orgId="o-1" />);
+    show(<CoverageExplorer companyId="o-1" />);
     await open(user);
 
     // "No connection" and "the read stopped short" are different claims, and a
@@ -130,7 +130,7 @@ describe("comparing the colleagues a reader chooses", () => {
   it("filters the contact rows without touching the columns", async () => {
     const user = userEvent.setup();
     stubGraph();
-    show(<CoverageExplorer orgId="o-1" />);
+    show(<CoverageExplorer companyId="o-1" />);
     await open(user);
     await screen.findByText("Dana Buyer");
 
@@ -150,7 +150,7 @@ describe("comparing the colleagues a reader chooses", () => {
   it("draws the matrix inside the shared scroll box", async () => {
     const user = userEvent.setup();
     stubGraph();
-    show(<CoverageExplorer orgId="o-1" />);
+    show(<CoverageExplorer companyId="o-1" />);
     await open(user);
     await screen.findByText("Sam Silent");
 

@@ -29,7 +29,7 @@ import (
 // exercises, so this suite carries its own.
 func exportReadGrants() map[string]principal.ObjectGrant {
 	grants := map[string]principal.ObjectGrant{}
-	for _, object := range []string{"person", "organization", "deal", "lead", "activity", "relationship"} {
+	for _, object := range []string{"person", "company", "deal", "lead", "activity", "relationship"} {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
 	return grants
@@ -57,7 +57,7 @@ func (e *SearchEnv) exportRep(user, team ids.UUID) context.Context {
 // own and none of the other's.
 type exportFixture struct {
 	rep1Person, rep3Person ids.UUID
-	rep1Org, rep3Org       ids.UUID
+	rep1Company, rep3Company       ids.UUID
 	rep1Deal, rep3Deal     ids.UUID
 	rep1Lead, rep3Lead     ids.UUID
 	rep1Activity           ids.UUID
@@ -78,25 +78,25 @@ func (e *SearchEnv) seedExportFixture(t *testing.T) exportFixture {
 		VALUES ($1, $2, 'linkedin', 'in/rep1')`, f.rep1Person)
 	f.rep3Person = e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
 		VALUES ($1, $2, 'Rep3 Person', 'manual', 'human:x')`, e.Rep3)
-	f.rep1Org = e.SeedID(t, `INSERT INTO organization (id, owner_id, display_name, source, captured_by)
-		VALUES ($1, $2, 'Rep1 Org', 'manual', 'human:x')`, e.Rep1)
-	f.rep3Org = e.SeedID(t, `INSERT INTO organization (id, owner_id, display_name, source, captured_by)
-		VALUES ($1, $2, 'Rep3 Org', 'manual', 'human:x')`, e.Rep3)
-	f.rep1Deal = e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, organization_id, amount_minor, currency, source, captured_by)
-		VALUES ($1, $2, 'Rep1 Deal', $3, $4, $5, 100000, 'EUR', 'manual', 'human:x')`, e.Rep1, pipelineID, stageID, f.rep1Org)
-	f.rep3Deal = e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, organization_id, amount_minor, currency, source, captured_by)
-		VALUES ($1, $2, 'Rep3 Deal', $3, $4, $5, 200000, 'EUR', 'manual', 'human:x')`, e.Rep3, pipelineID, stageID, f.rep3Org)
+	f.rep1Company = e.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
+		VALUES ($1, $2, 'Rep1 Company', 'manual', 'human:x')`, e.Rep1)
+	f.rep3Company = e.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
+		VALUES ($1, $2, 'Rep3 Company', 'manual', 'human:x')`, e.Rep3)
+	f.rep1Deal = e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, company_id, amount_minor, currency, source, captured_by)
+		VALUES ($1, $2, 'Rep1 Deal', $3, $4, $5, 100000, 'EUR', 'manual', 'human:x')`, e.Rep1, pipelineID, stageID, f.rep1Company)
+	f.rep3Deal = e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, company_id, amount_minor, currency, source, captured_by)
+		VALUES ($1, $2, 'Rep3 Deal', $3, $4, $5, 200000, 'EUR', 'manual', 'human:x')`, e.Rep3, pipelineID, stageID, f.rep3Company)
 	f.rep1Lead = e.SeedID(t, `INSERT INTO lead (id, owner_id, full_name, source, captured_by)
 		VALUES ($1, $2, 'Rep1 Lead', 'manual', 'human:x')`, e.Rep1)
 	f.rep3Lead = e.SeedID(t, `INSERT INTO lead (id, owner_id, full_name, source, captured_by)
 		VALUES ($1, $2, 'Rep3 Lead', 'manual', 'human:x')`, e.Rep3)
 
-	// Employment edges: each connects a rep's person to that rep's org, so
+	// Employment edges: each connects a rep's person to that rep's company, so
 	// the whole edge is visible only to that rep (both endpoints owned).
-	e.SeedID(t, `INSERT INTO relationship (id, kind, person_id, organization_id, source, captured_by)
-		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, f.rep1Person, f.rep1Org)
-	e.SeedID(t, `INSERT INTO relationship (id, kind, person_id, organization_id, source, captured_by)
-		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, f.rep3Person, f.rep3Org)
+	e.SeedID(t, `INSERT INTO relationship (id, kind, person_id, company_id, source, captured_by)
+		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, f.rep1Person, f.rep1Company)
+	e.SeedID(t, `INSERT INTO relationship (id, kind, person_id, company_id, source, captured_by)
+		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, f.rep3Person, f.rep3Company)
 
 	// Activities scope through their links.
 	f.rep1Activity = e.SeedID(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
@@ -134,7 +134,7 @@ func TestExportBundleCompleteAndValidOpenFormat(t *testing.T) {
 	// Every member CSV, the relational dump, the files manifest, and the
 	// bundle manifest are present.
 	for _, name := range []string{
-		"person.csv", "organization.csv", "deal.csv", "lead.csv", "activity.csv",
+		"person.csv", "company.csv", "deal.csv", "lead.csv", "activity.csv",
 		"relationship.csv", "pipeline.csv", "stage.csv", "attachment.csv", "audit_log.csv",
 		"data.json", "files-manifest.json", "manifest.json",
 	} {
@@ -199,7 +199,7 @@ func TestExportRowScopeExcludesInvisibleRecords(t *testing.T) {
 		table string
 		id    ids.UUID
 	}{
-		{"person", f.rep3Person}, {"organization", f.rep3Org},
+		{"person", f.rep3Person}, {"company", f.rep3Company},
 	} {
 		if _, err := e.Owner.Exec(context.Background(),
 			`UPDATE `+private.table+` SET visibility = 'owner' WHERE id = $1`, private.id); err != nil {
@@ -238,7 +238,7 @@ func TestExportRowScopeExcludesInvisibleRecords(t *testing.T) {
 		}
 	}
 	assertOnlyID("person.csv", f.rep1Person, f.rep3Person)
-	assertOnlyID("organization.csv", f.rep1Org, f.rep3Org)
+	assertOnlyID("company.csv", f.rep1Company, f.rep3Company)
 	assertBothIDs("deal.csv", f.rep1Deal, f.rep3Deal)
 	assertBothIDs("lead.csv", f.rep1Lead, f.rep3Lead)
 	assertOnlyID("activity.csv", f.rep1Activity, f.rep3Activity)
@@ -291,13 +291,13 @@ func TestExportOmitsObjectsWithoutReadGrant(t *testing.T) {
 	if _, ok := entries["person.csv"]; !ok {
 		t.Fatal("granted object person was omitted")
 	}
-	for _, denied := range []string{"deal.csv", "organization.csv", "lead.csv", "activity.csv", "relationship.csv"} {
+	for _, denied := range []string{"deal.csv", "company.csv", "lead.csv", "activity.csv", "relationship.csv"} {
 		if _, ok := entries[denied]; ok {
 			t.Fatalf("ungranted object %s was exported", denied)
 		}
 	}
 	omitted := strings.Join(summary.Omitted, ",")
-	for _, want := range []string{"deal", "organization", "lead", "activity", "relationship"} {
+	for _, want := range []string{"deal", "company", "lead", "activity", "relationship"} {
 		if !strings.Contains(omitted, want) {
 			t.Fatalf("summary.Omitted missing %q: %v", want, summary.Omitted)
 		}

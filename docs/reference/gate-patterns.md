@@ -149,7 +149,7 @@ an outbox event; a rename owes a duplicate check; a write owes a permission prob
 **Examples:** `writeshape_test.go` (audit row ⇒ outbox event on the same path) ·
 `writeauthorityreach_test.go` · `rbacgate_test.go` · `personscrub_test.go`
 (deleting and anonymising a person clear the same tables) · `dedupespine_test.go` ·
-`orgrenamerecheck_test.go` (every organisation rename reaches the duplicate check —
+`companyrenamerecheck_test.go` (every organisation rename reaches the duplicate check —
 the gate whose first version was vacuous, which is why the quantifier table above
 exists).
 
@@ -184,10 +184,10 @@ tables) · `errmatch_test.go` (classify DB errors by SQLSTATE, never by message
 text) · `positionalrowscan_test.go`.
 
 **⚠ How it silently passes:** a spelling the regex cannot see. Real example from
-this repo — `organization_profile_field_write.go` builds its query like this:
+this repo — `company_profile_field_write.go` builds its query like this:
 
 ```go
-`UPDATE organization SET ` + column + ` = $2`   // column is "display_name" at runtime
+`UPDATE company SET ` + column + ` = $2`   // column is "display_name" at runtime
 ```
 
 A regex looking for `display_name` finds nothing, so the gate does not see this
@@ -357,7 +357,7 @@ chokepoint makes the gate simple; the gate keeps the chokepoint the only door.**
 
 Two things a chokepoint usually can't absorb, both live in this codebase:
 
-- **Lock ordering.** `lockOrgNameWrites` must be taken *before* locking the row it
+- **Lock ordering.** `lockCompanyNameWrites` must be taken *before* locking the row it
   protects. A helper that takes it on entry takes it *after* the caller already
   locked the row — baking in the deadlock it was meant to prevent.
 - **Once-per-transaction timing.** A check that must run once after a whole

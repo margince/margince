@@ -16,7 +16,7 @@ package integration
 //
 // Two of the four are reachable today and are held here. The other two are
 // JOINED columns — a stage orders by its position in its pipeline, a partner by
-// the organization's name — and the list machinery renders one quoted
+// the company's name — and the list machinery renders one quoted
 // identifier of the row's own table, so they need the sort model to take an
 // expression first. That is why this file pins two rather than four, and it is
 // stated so a reader does not read the gap as an oversight.

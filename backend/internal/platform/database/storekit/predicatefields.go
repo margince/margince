@@ -32,7 +32,7 @@ const (
 	// `https://www.acme.example/careers` out of an email signature is asking
 	// about `acme.example`, which is what the column holds.
 	//
-	// The organization LIST already folds its `domain` parameter that way, so
+	// The company LIST already folds its `domain` parameter that way, so
 	// without a type here one product fact would answer two different questions
 	// depending on which surface asked — a saved view returning nothing for the
 	// URL the list matches.
@@ -104,7 +104,7 @@ const (
 	RefTag          Reference = "tag"
 	RefAppUser      Reference = "app_user"
 	RefTeam         Reference = "team"
-	RefOrganization Reference = "organization"
+	RefCompany Reference = "company"
 	RefPipeline     Reference = "pipeline"
 	RefStage        Reference = "stage"
 	RefProject      Reference = "project"
@@ -120,7 +120,7 @@ const (
 // pass on a stale copy of it, which is the one failure they exist to catch.
 func ReferenceTargets() []Reference {
 	return []Reference{
-		RefTag, RefAppUser, RefTeam, RefOrganization,
+		RefTag, RefAppUser, RefTeam, RefCompany,
 		RefPipeline, RefStage, RefProject,
 	}
 }

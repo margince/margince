@@ -123,7 +123,7 @@ export function CaptureActivityTab() {
     <>
       {/* What the reader keeps out, first and on this page: the addresses and
           domains whose mail the CRM never stores. It used to sit two tabs away
-          under Organization → Capture, beside the posture settings an admin
+          under Company → Capture, beside the posture settings an admin
           owns, which put the one control a rep actually reaches for behind a
           door most seats cannot open. Blocking a sender is not an
           administrator's job — it is the answer to what this page is asking

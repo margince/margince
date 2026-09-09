@@ -52,13 +52,13 @@ type ModelPath struct {
 	ColdStart       completer    // the website read-back extraction
 	SiteExtract     completer    // the deep read's profile lane (one premium-first call)
 	SiteFactExtract completer    // the deep read's page-parallel fact lane (fast tier)
-	// SiteTriage decides what a mail domain's site IS before any organization
+	// SiteTriage decides what a mail domain's site IS before any company
 	// is created from it. Its own task, not the profile lane's: it asks one
 	// cheap question of one page to stop a crawl early, so it must not bill the
 	// profile lane's premium-only ladder for it.
 	SiteTriage completer
 	// AccountScan reads one account for one reader and says what needs a
-	// person, quoting the exchanges it read (orgscan).
+	// person, quoting the exchanges it read (companyscan).
 	AccountScan  completer
 	RateExtract  completer // the model-cost refresh pricing-page extraction lane
 	BriefRanking completer // the Morning-Brief L2 re-order (B-E05.2)

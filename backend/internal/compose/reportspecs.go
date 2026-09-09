@@ -73,7 +73,7 @@ var prebuiltReports = map[string]reportSpec{
 		// nothing, so a currency split would multiply its rows while reporting
 		// no more than it does now.
 		dimensions: map[string]string{
-			fieldOrganizationID: colOrganizationID,
+			fieldCompanyID: colCompanyID,
 			fieldOwnerID:        colOwnerID,
 			fieldCurrency:       colCurrency,
 		},
@@ -89,8 +89,8 @@ var prebuiltReports = map[string]reportSpec{
 		// The company a deal points at is row-scoped and masked on a normal
 		// deal read, so grouping by it carries the same obligation the partner
 		// dimension does.
-		referenceScopes: map[string]string{colOrganizationID: tableOrganization},
-		defaultBy:       []string{fieldOrganizationID},
+		referenceScopes: map[string]string{colCompanyID: tableCompany},
+		defaultBy:       []string{fieldCompanyID},
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: "open_deals"},
 		},
@@ -171,7 +171,7 @@ var prebuiltReports = map[string]reportSpec{
 			// partner-sourced" into "what did this partner bring us" — the
 			// question the partner program is run on, and the one this report
 			// could not answer while partner_sourced was a filter alone.
-			fieldPartnerOrgID: colPartnerOrgID,
+			fieldPartnerCompanyID: colPartnerCompanyID,
 		},
 		measures: map[string]string{
 			fieldAmountMinor:         colAmountMinor,
@@ -189,27 +189,27 @@ var prebuiltReports = map[string]reportSpec{
 			fieldPipelineID:     colPipelineID,
 			fieldStatus:         colStatus,
 			fieldOwnerID:        colOwnerID,
-			fieldOrganizationID: colOrganizationID,
+			fieldCompanyID: colCompanyID,
 			fieldPartnerSourced: deals.PartnerSourcedSQL("t"),
 			// Narrowing to ONE partner, beside the boolean that asks whether
 			// there is one. The board's totals are read from this report with
 			// the deals screen's own filter dials, so a dial the screen offers
 			// and this report refuses answers 422 — and the board then falls
 			// back to counting loaded cards, which looks like a working total.
-			fieldPartnerOrgID: colPartnerOrgID,
+			fieldPartnerCompanyID: colPartnerCompanyID,
 			fieldStalled:      deals.StalledSQL("t"),
 			fieldCurrency:     colCurrency,
 			fieldProjectID:    colProjectID,
 		},
 		filterScopes: projectFilterScope,
-		// Both organization references, which a normal deal read masks per row
-		// when the caller cannot open them. organization_id is a FILTER here
+		// Both company references, which a normal deal read masks per row
+		// when the caller cannot open them. company_id is a FILTER here
 		// and not a dimension, and it needs the scope for that alone: a count
 		// filtered to one company answers whether that company exists and has
 		// a deal, which is the disclosure whether or not the id is printed.
 		referenceScopes: map[string]string{
-			colPartnerOrgID:   tableOrganization,
-			colOrganizationID: tableOrganization,
+			colPartnerCompanyID:   tableCompany,
+			colCompanyID: tableCompany,
 		},
 		defaultBy: moneyDefaultBy(fieldStageID),
 		defaultAggs: []reportAggregate{
@@ -355,7 +355,7 @@ var prebuiltReports = map[string]reportSpec{
 			// us THIS quarter. It was on one of the two deal reports and not
 			// the other, so "revenue by partner" could be read backwards and
 			// never forwards.
-			fieldPartnerOrgID: colPartnerOrgID,
+			fieldPartnerCompanyID: colPartnerCompanyID,
 		},
 		// Both denominations, and both earn their place.
 		//
@@ -393,13 +393,13 @@ var prebuiltReports = map[string]reportSpec{
 			// deals-by-stage: that report's filters mirror the board's dials,
 			// and a forecast asks which partner rather than whether there is
 			// one.
-			fieldPartnerOrgID: colPartnerOrgID,
+			fieldPartnerCompanyID: colPartnerCompanyID,
 		},
 		filterScopes: projectFilterScope,
-		// partner_org_id points at an organization a normal deal read masks
+		// partner_company_id points at a company a normal deal read masks
 		// per row when the caller cannot open it, so grouping by it must not
 		// name one they could not have seen.
-		referenceScopes: map[string]string{colPartnerOrgID: tableOrganization},
+		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany},
 		defaultBy:       moneyDefaultBy("forecast_category"),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},

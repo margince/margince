@@ -275,7 +275,7 @@ describe("AuditEntryLine", () => {
     expect(screen.queryByText(new RegExp(ME))).toBeNull();
   });
 
-  it("dates an entry on the organization's clock, not the reader's", () => {
+  it("dates an entry on the company's clock, not the reader's", () => {
     // 18:00Z on 21 August is 20:00 the same day in Berlin and 01:00 the NEXT
     // day in Ho Chi Minh City. An audit line is a fact in the shared book, so
     // two investigators must be able to quote it by the same day: reading it on

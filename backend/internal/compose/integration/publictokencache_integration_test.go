@@ -248,7 +248,7 @@ func TestEveryConfirmAnswerIsUncacheable(t *testing.T) {
 func TestANotBootstrappedInstallationAnswersUncacheable(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t)
 	// No BootstrapWorkspaceSession: the installation has no active
-	// organization, which is what makes the session middleware answer first.
+	// company, which is what makes the session middleware answer first.
 
 	for _, path := range []string{
 		"/v1/public/confirm/sometoken",

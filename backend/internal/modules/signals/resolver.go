@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The signal→company resolver (B-E08.2, features/07 §9): maps a raw
-// source pointer to a specific organization against the clean relational
-// core (P11) — the organization_domain index, exact display name, or a
+// source pointer to a specific company against the clean relational
+// core (P11) — the company_domain index, exact display name, or a
 // prior-interaction email match — and records the INSPECTABLE match basis
 // in signal_resolution. Three rules it never breaks (P12):
 // ambiguity is surfaced as low_confidence, never silently asserted; an
@@ -43,7 +43,7 @@ const (
 
 // rawAttribution is what the resolver could extract from a raw_ref: an
 // email (→ prior-interaction and domain matching), a domain (→ the
-// organization_domain index), and/or a free-text mention (→ exact name).
+// company_domain index), and/or a free-text mention (→ exact name).
 type rawAttribution struct {
 	Email  string
 	Domain string
@@ -92,15 +92,15 @@ func parseRawRef(raw string) rawAttribution {
 }
 
 // registrableHost lowercases and strips the www prefix, matching the
-// organization_domain storage convention ("lowercased, no scheme, no www").
+// company_domain storage convention ("lowercased, no scheme, no www").
 func registrableHost(host string) string {
 	host = strings.ToLower(strings.TrimSuffix(host, "."))
 	return strings.TrimPrefix(host, "www.")
 }
 
-// candidate is one plausible organization with its inspectable basis.
+// candidate is one plausible company with its inspectable basis.
 type candidate struct {
-	OrgID      ids.OrganizationID
+	CompanyID      ids.CompanyID
 	MatchedOn  string // domain | name | prior_interaction
 	Confidence float64
 	Detail     string
@@ -129,7 +129,7 @@ func (s *Store) Resolve(ctx context.Context, signalID ids.SignalID) (crmcontract
 
 // resolveTx runs the resolver over one signal inside the caller's
 // transaction: the visibility gate, the terminal-state guard, candidate
-// matching narrowed to visible orgs, the state stamp, and the write shape.
+// matching narrowed to visible companies, the state stamp, and the write shape.
 func (s *Store) resolveTx(ctx context.Context, tx pgx.Tx, actor principal.Principal, signalID ids.SignalID) (crmcontracts.Signal, error) {
 	if err := auth.EnsureSignalVisible(ctx, tx, signalID.UUID); err != nil {
 		return crmcontracts.Signal{}, err
@@ -159,8 +159,8 @@ func (s *Store) resolveTx(ctx context.Context, tx pgx.Tx, actor principal.Princi
 		return crmcontracts.Signal{}, err
 	}
 	// Row-scope the attribution: a resolver may only attribute a signal
-	// to an organization the caller can see. Stamping resolved_org_id
-	// (a read of that org) for an org outside the caller's scope would
+	// to a company the caller can see. Stamping resolved_company_id
+	// (a read of that company) for a company outside the caller's scope would
 	// leak its existence and id, so an invisible match is dropped —
 	// leaving the signal unattributable rather than disclosing it.
 	if candidates, err = visibleCandidates(ctx, tx, candidates); err != nil {
@@ -189,15 +189,15 @@ func (s *Store) resolveTx(ctx context.Context, tx pgx.Tx, actor principal.Princi
 // stampResolution applies the resolver's verdict for this candidate set and
 // returns the audit after-image. The count IS the verdict (P12): zero
 // candidates drop the signal and link no person; exactly one resolves it to
-// that org under the consent-gated person link; several surface it as
-// low_confidence for review — resolved_org_id stays NULL unless exactly one
-// org matched, and no branch ever creates a person.
+// that company under the consent-gated person link; several surface it as
+// low_confidence for review — resolved_company_id stays NULL unless exactly one
+// company matched, and no branch ever creates a person.
 func stampResolution(ctx context.Context, tx pgx.Tx, actor principal.Principal, signalID ids.SignalID, email string, candidates []candidate) (map[string]any, error) {
 	switch len(candidates) {
 	case 0:
 		return dropUnattributable(ctx, tx, actor, signalID)
 	case 1:
-		return resolveToOrg(ctx, tx, actor, signalID, email, candidates)
+		return resolveToCompany(ctx, tx, actor, signalID, email, candidates)
 	default:
 		return flagAmbiguous(ctx, tx, actor, signalID, candidates)
 	}
@@ -208,7 +208,7 @@ func stampResolution(ctx context.Context, tx pgx.Tx, actor principal.Principal, 
 // link. Returns the audit after-image.
 func dropUnattributable(ctx context.Context, tx pgx.Tx, actor principal.Principal, signalID ids.SignalID) (map[string]any, error) {
 	if err := appendMatchBasis(ctx, tx, actor, signalID, "none", nil, nil,
-		`{"candidates": [], "reason": "no organization matched the raw_ref"}`); err != nil {
+		`{"candidates": [], "reason": "no company matched the raw_ref"}`); err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(ctx,
@@ -219,13 +219,13 @@ func dropUnattributable(ctx context.Context, tx pgx.Tx, actor principal.Principa
 	return map[string]any{"resolution_state": "dropped"}, nil
 }
 
-// resolveToOrg stamps the single-candidate match: the consent-gated person
-// link (only an EXISTING person, only where the org match holds, only under
+// resolveToCompany stamps the single-candidate match: the consent-gated person
+// link (only an EXISTING person, only where the company match holds, only under
 // a recorded grant — never a person creation), the inspectable match basis,
 // and the resolved signal row. Returns the audit after-image.
-func resolveToOrg(ctx context.Context, tx pgx.Tx, actor principal.Principal, signalID ids.SignalID, email string, candidates []candidate) (map[string]any, error) {
+func resolveToCompany(ctx context.Context, tx pgx.Tx, actor principal.Principal, signalID ids.SignalID, email string, candidates []candidate) (map[string]any, error) {
 	chosen := candidates[0]
-	personID, err := consentedPerson(ctx, tx, email, chosen.OrgID)
+	personID, err := consentedPerson(ctx, tx, email, chosen.CompanyID)
 	if err != nil {
 		return nil, err
 	}
@@ -233,19 +233,19 @@ func resolveToOrg(ctx context.Context, tx pgx.Tx, actor principal.Principal, sig
 	if err != nil {
 		return nil, err
 	}
-	if err := appendMatchBasis(ctx, tx, actor, signalID, chosen.MatchedOn, &chosen.OrgID, &chosen.Confidence, detail); err != nil {
+	if err := appendMatchBasis(ctx, tx, actor, signalID, chosen.MatchedOn, &chosen.CompanyID, &chosen.Confidence, detail); err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE signal SET resolution_state = 'resolved', resolution_confidence = $2,
-		        resolved_org_id = $3, resolved_person_id = $4,
-		        entity_type = COALESCE(entity_type, 'organization'),
+		        resolved_company_id = $3, resolved_person_id = $4,
+		        entity_type = COALESCE(entity_type, 'company'),
 		        entity_id = COALESCE(entity_id, $3)
 		 WHERE id = $1`,
-		signalID, chosen.Confidence, chosen.OrgID, personID); err != nil {
+		signalID, chosen.Confidence, chosen.CompanyID, personID); err != nil {
 		return nil, fmt.Errorf("stamp resolved signal: %w", err)
 	}
-	after := map[string]any{"resolution_state": "resolved", "resolved_org_id": chosen.OrgID, "matched_on": chosen.MatchedOn}
+	after := map[string]any{"resolution_state": "resolved", "resolved_company_id": chosen.CompanyID, "matched_on": chosen.MatchedOn}
 	if personID != nil {
 		after["resolved_person_id"] = *personID
 	}
@@ -253,7 +253,7 @@ func resolveToOrg(ctx context.Context, tx pgx.Tx, actor principal.Principal, sig
 }
 
 // flagAmbiguous surfaces ambiguity rather than asserting it: several
-// plausible orgs flag the signal for review, resolved_org_id stays NULL,
+// plausible companies flag the signal for review, resolved_company_id stays NULL,
 // and no person is linked. Returns the audit after-image.
 func flagAmbiguous(ctx context.Context, tx pgx.Tx, actor principal.Principal, signalID ids.SignalID, candidates []candidate) (map[string]any, error) {
 	top := candidates[0]
@@ -272,28 +272,28 @@ func flagAmbiguous(ctx context.Context, tx pgx.Tx, actor principal.Principal, si
 	return map[string]any{"resolution_state": "low_confidence", "candidates": len(candidates)}, nil
 }
 
-// matchCandidates gathers the distinct plausible organizations, best
-// basis per org, ordered by confidence then id (deterministic).
+// matchCandidates gathers the distinct plausible companies, best
+// basis per company, ordered by confidence then id (deterministic).
 func matchCandidates(ctx context.Context, tx pgx.Tx, a rawAttribution) ([]candidate, error) {
-	byOrg := map[ids.OrganizationID]candidate{}
+	byCompany := map[ids.CompanyID]candidate{}
 	consider := func(c candidate) {
-		if have, ok := byOrg[c.OrgID]; !ok || c.Confidence > have.Confidence {
-			byOrg[c.OrgID] = c
+		if have, ok := byCompany[c.CompanyID]; !ok || c.Confidence > have.Confidence {
+			byCompany[c.CompanyID] = c
 		}
 	}
 
 	if a.Domain != "" {
 		rows, err := tx.Query(ctx,
-			`SELECT d.organization_id FROM organization_domain d
-			   JOIN organization o ON o.id = d.organization_id
+			`SELECT d.company_id FROM company_domain d
+			   JOIN company o ON o.id = d.company_id
 			  WHERE d.domain = $1 AND d.archived_at IS NULL AND NOT o.is_anchor`, a.Domain)
 		if err != nil {
 			return nil, fmt.Errorf("domain match: %w", err)
 		}
-		if err := eachID(rows, func(orgID ids.OrganizationID) {
+		if err := eachID(rows, func(companyID ids.CompanyID) {
 			consider(candidate{
-				OrgID: orgID, MatchedOn: "domain", Confidence: confidenceDomain,
-				Detail: "domain " + a.Domain + " is registered to the organization",
+				CompanyID: companyID, MatchedOn: "domain", Confidence: confidenceDomain,
+				Detail: "domain " + a.Domain + " is registered to the company",
 			})
 		}); err != nil {
 			return nil, err
@@ -301,26 +301,26 @@ func matchCandidates(ctx context.Context, tx pgx.Tx, a rawAttribution) ([]candid
 	}
 	if a.Email != "" {
 		// Prior interaction: the sender is already a person in our graph,
-		// currently employed at the org — our own relational core, no
+		// currently employed at the company — our own relational core, no
 		// external profiling.
 		// NOT o.is_anchor: our own staff are employed at the installation's own
 		// company, so without this every message from a colleague resolves to a
 		// signal about ourselves (ADR-0082/A127) — the same exclusion the domain
 		// and name arms carry.
 		rows, err := tx.Query(ctx, `
-			SELECT DISTINCT r.organization_id
+			SELECT DISTINCT r.company_id
 			FROM person_email pe
 			JOIN relationship r ON r.person_id = pe.person_id
 			 AND r.kind = 'employment' AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
-			JOIN organization o ON o.id = r.organization_id
+			JOIN company o ON o.id = r.company_id
 			WHERE pe.email = $1 AND NOT o.is_anchor`, a.Email)
 		if err != nil {
 			return nil, fmt.Errorf("prior-interaction match: %w", err)
 		}
-		if err := eachID(rows, func(orgID ids.OrganizationID) {
+		if err := eachID(rows, func(companyID ids.CompanyID) {
 			consider(candidate{
-				OrgID: orgID, MatchedOn: "prior_interaction", Confidence: confidencePriorInteraction,
-				Detail: "the sender is a known contact currently at the organization",
+				CompanyID: companyID, MatchedOn: "prior_interaction", Confidence: confidencePriorInteraction,
+				Detail: "the sender is a known contact currently at the company",
 			})
 		}); err != nil {
 			return nil, err
@@ -331,14 +331,14 @@ func matchCandidates(ctx context.Context, tx pgx.Tx, a rawAttribution) ([]candid
 			// NOT is_anchor: the workspace's own company name appears in more of
 			// its correspondence than any customer's, so matching it would make
 			// nearly every message a signal about ourselves (ADR-0082/A127).
-			`SELECT id FROM organization
+			`SELECT id FROM company
 			  WHERE lower(display_name) = lower($1) AND archived_at IS NULL AND NOT is_anchor`, a.Name)
 		if err != nil {
 			return nil, fmt.Errorf("name match: %w", err)
 		}
-		if err := eachID(rows, func(orgID ids.OrganizationID) {
+		if err := eachID(rows, func(companyID ids.CompanyID) {
 			consider(candidate{
-				OrgID: orgID, MatchedOn: "name", Confidence: confidenceName,
+				CompanyID: companyID, MatchedOn: "name", Confidence: confidenceName,
 				Detail: "display name matches the mention exactly",
 			})
 		}); err != nil {
@@ -346,8 +346,8 @@ func matchCandidates(ctx context.Context, tx pgx.Tx, a rawAttribution) ([]candid
 		}
 	}
 
-	out := make([]candidate, 0, len(byOrg))
-	for _, c := range byOrg {
+	out := make([]candidate, 0, len(byCompany))
+	for _, c := range byCompany {
 		out = append(out, c)
 	}
 	sortCandidates(out)
@@ -355,14 +355,14 @@ func matchCandidates(ctx context.Context, tx pgx.Tx, a rawAttribution) ([]candid
 }
 
 // visibleCandidates drops matches the caller cannot see under row-scope,
-// preserving order. A reference stamped onto the signal (resolved_org_id)
-// is a read of that org; auth.EnsureLinkTarget is the one visibility probe
+// preserving order. A reference stamped onto the signal (resolved_company_id)
+// is a read of that company; auth.EnsureLinkTarget is the one visibility probe
 // shared with every other cross-record link, so the resolver never
-// attributes to — nor discloses — an org outside the caller's scope.
+// attributes to — nor discloses — a company outside the caller's scope.
 func visibleCandidates(ctx context.Context, tx pgx.Tx, in []candidate) ([]candidate, error) {
 	out := in[:0]
 	for _, c := range in {
-		switch err := auth.EnsureLinkTarget(ctx, tx, "organization", c.OrgID.UUID); {
+		switch err := auth.EnsureLinkTarget(ctx, tx, "company", c.CompanyID.UUID); {
 		case err == nil:
 			out = append(out, c)
 		case errors.Is(err, apperrors.ErrNotFound):
@@ -381,14 +381,14 @@ func sortCandidates(cs []candidate) {
 		if cs[i].Confidence != cs[j].Confidence {
 			return cs[i].Confidence > cs[j].Confidence
 		}
-		return cs[i].OrgID.String() < cs[j].OrgID.String()
+		return cs[i].CompanyID.String() < cs[j].CompanyID.String()
 	})
 }
 
-func eachID(rows pgx.Rows, fn func(ids.OrganizationID)) error {
+func eachID(rows pgx.Rows, fn func(ids.CompanyID)) error {
 	defer rows.Close()
 	for rows.Next() {
-		var id ids.OrganizationID
+		var id ids.CompanyID
 		if err := rows.Scan(&id); err != nil {
 			return err
 		}
@@ -399,10 +399,10 @@ func eachID(rows pgx.Rows, fn func(ids.OrganizationID)) error {
 
 // consentedPerson returns the id of an EXISTING person the signal may be
 // linked to: the raw email must belong to a person currently employed at
-// the matched org, AND that person must hold a recorded consent grant
+// the matched company, AND that person must hold a recorded consent grant
 // (person_consent.state='granted'). Anything less stays company-level —
 // and no person is ever created here (P12).
-func consentedPerson(ctx context.Context, tx pgx.Tx, email string, orgID ids.OrganizationID) (*ids.PersonID, error) {
+func consentedPerson(ctx context.Context, tx pgx.Tx, email string, companyID ids.CompanyID) (*ids.PersonID, error) {
 	if email == "" {
 		return nil, nil
 	}
@@ -411,13 +411,13 @@ func consentedPerson(ctx context.Context, tx pgx.Tx, email string, orgID ids.Org
 		SELECT pe.person_id
 		FROM person_email pe
 		JOIN relationship r ON r.person_id = pe.person_id
-		 AND r.kind = 'employment' AND r.organization_id = $2
+		 AND r.kind = 'employment' AND r.company_id = $2
 		 AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 		WHERE pe.email = $1
 		  AND EXISTS (SELECT 1 FROM person_consent pc
 		              WHERE pc.person_id = pe.person_id AND pc.state = 'granted')
 		ORDER BY pe.is_primary DESC, pe.person_id
-		LIMIT 1`, email, orgID).Scan(&personID)
+		LIMIT 1`, email, companyID).Scan(&personID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -438,12 +438,12 @@ func consentedPerson(ctx context.Context, tx pgx.Tx, email string, orgID ids.Org
 
 // appendMatchBasis writes the append-only inspectable match record.
 func appendMatchBasis(ctx context.Context, tx pgx.Tx, actor principal.Principal, signalID ids.SignalID,
-	matchedOn string, orgID *ids.OrganizationID, confidence *float64, detail string,
+	matchedOn string, companyID *ids.CompanyID, confidence *float64, detail string,
 ) error {
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO signal_resolution (id, signal_id, matched_on, matched_org_id, match_confidence, match_detail, source, captured_by)
+		`INSERT INTO signal_resolution (id, signal_id, matched_on, matched_company_id, match_confidence, match_detail, source, captured_by)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		ids.NewV7(), signalID, matchedOn, orgID, confidence, detail,
+		ids.NewV7(), signalID, matchedOn, companyID, confidence, detail,
 		"resolver", actor.ID); err != nil {
 		return fmt.Errorf("append match basis: %w", err)
 	}
@@ -456,7 +456,7 @@ func candidateDetail(cs []candidate, chosen *candidate) (string, error) {
 	entries := make([]map[string]any, len(cs))
 	for i, c := range cs {
 		entries[i] = map[string]any{
-			"org_id":     c.OrgID,
+			"company_id":     c.CompanyID,
 			"matched_on": c.MatchedOn,
 			"confidence": c.Confidence,
 			"reason":     c.Detail,
@@ -464,10 +464,10 @@ func candidateDetail(cs []candidate, chosen *candidate) (string, error) {
 	}
 	detail := map[string]any{"candidates": entries}
 	if chosen != nil {
-		detail["chosen"] = chosen.OrgID
+		detail["chosen"] = chosen.CompanyID
 		detail["reason"] = chosen.Detail
 	} else {
-		detail["reason"] = "multiple plausible organizations — flagged for review, never silently asserted"
+		detail["reason"] = "multiple plausible companies — flagged for review, never silently asserted"
 	}
 	raw, err := json.Marshal(detail)
 	if err != nil {
@@ -482,8 +482,8 @@ func resolvedPayload(sig crmcontracts.Signal, candidates []candidate) crmcontrac
 		SignalId:        sig.Id,
 		ResolutionState: string(sig.ResolutionState),
 	}
-	if sig.ResolvedOrgId != nil {
-		payload.ResolvedOrgId = sig.ResolvedOrgId
+	if sig.ResolvedCompanyId != nil {
+		payload.ResolvedCompanyId = sig.ResolvedCompanyId
 	}
 	if sig.ResolvedPersonId != nil {
 		payload.ResolvedPersonId = sig.ResolvedPersonId

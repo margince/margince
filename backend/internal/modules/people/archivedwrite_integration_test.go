@@ -19,7 +19,7 @@ package people
 // auth.EnsureWritable, which omits the liveness filter and, for an actor with
 // unbounded row scope, skips the existence check outright. The signature
 // enricher asked nothing at all. So the apply landed on the retired record,
-// shipped an organization.updated event for a row PATCH /organizations/{id}
+// shipped a company.updated event for a row PATCH /companies/{id}
 // refuses, and (for the person paths) wrote declared-PII rows back onto a
 // subject Art. 17 erasure had just cleared.
 
@@ -35,21 +35,21 @@ import (
 func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	personID, orgID := e.seedEmployedPerson(ctx, t,
+	personID, companyID := e.seedEmployedPerson(ctx, t,
 		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
 
 	// Commissioned while the company is still live, because a deep-read fact
 	// carries a real site_read FK. Minted here rather than faked so the deep
 	// read below fails on the GATE when the gate is broken, instead of dying on
 	// a foreign key and reporting a refusal that never happened.
-	dossier, _, err := e.store.StartSiteRead(ctx, orgID, "https://voltaq.test/", "rep")
+	dossier, _, err := e.store.StartSiteRead(ctx, companyID, "https://voltaq.test/", "rep")
 	if err != nil {
 		t.Fatalf("commission the dossier while the company is live: %v", err)
 	}
 
 	archiver := e.asArchiver()
-	if _, err := e.store.ArchiveOrganization(archiver, orgID, nil); err != nil {
-		t.Fatalf("archive organization: %v", err)
+	if _, err := e.store.ArchiveCompany(archiver, companyID, nil); err != nil {
+		t.Fatalf("archive company: %v", err)
 	}
 	if _, err := e.store.ArchivePerson(archiver, personID, nil); err != nil {
 		t.Fatalf("archive person: %v", err)
@@ -66,7 +66,7 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 			name: "an accepted scrape enrichment",
 			why:  "ApplyEnrichment (enrich.go) — compose/scrapeaccept.go approves this after the archive",
 			call: func() error {
-				return e.store.ApplyEnrichment(ctx, orgID, ApplyColdStartProfileInput{
+				return e.store.ApplyEnrichment(ctx, companyID, ApplyColdStartProfileInput{
 					SourceURL: "https://voltaq.test/impressum",
 					Fields: []ColdStartFieldInput{{
 						Field: "legal_name", Value: "Voltaq Systems GmbH & Co. KG",
@@ -78,7 +78,7 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 		},
 		{
 			name: "an accepted deep read",
-			why:  "ApplyDeepReadTx (organizationfact.go) — reachable with no human in the loop via deepreadautoapply",
+			why:  "ApplyDeepReadTx (companyfact.go) — reachable with no human in the loop via deepreadautoapply",
 			call: func() error {
 				// Carries a FACT as well as a field, and specifically an
 				// employee_range one: size_band is filled from an applied fact
@@ -86,7 +86,7 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 				// that column empty however the gate behaved and the assertion
 				// on it below would pass over a broken branch.
 				return e.store.ApplyDeepRead(ctx, DeepReadProposal{
-					OrganizationID: orgID,
+					CompanyID: companyID,
 					SourceURL:      "https://voltaq.test/about",
 					SiteReadID:     dossier.ID,
 					Fields: []DeepReadField{{
@@ -106,7 +106,7 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 			name: "a dossier commissioned for the company",
 			why:  "StartSiteRead (siteread.go) — an archived company has no dossier to commission",
 			call: func() error {
-				_, _, err := e.store.StartSiteRead(ctx, orgID, "https://voltaq.test/", "rep")
+				_, _, err := e.store.StartSiteRead(ctx, companyID, "https://voltaq.test/", "rep")
 				return err
 			},
 		},
@@ -164,8 +164,8 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 	for column, want := range map[string]string{
 		"legal_name": "", "industry": "", "size_band": "",
 	} {
-		if got := orgColumn(ctx, t, e, orgID, column); got != want {
-			t.Errorf("organization.%s = %q after refused applies, want %q", column, got, want)
+		if got := companyColumn(ctx, t, e, companyID, column); got != want {
+			t.Errorf("company.%s = %q after refused applies, want %q", column, got, want)
 		}
 	}
 	// The person's own three, counted separately because they are three
@@ -223,12 +223,12 @@ func derefOrEmpty(value *string) string {
 func TestTheCompanyColumnStatementsRefuseAnArchivedCompany(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	_, orgID := e.seedEmployedPerson(ctx, t,
+	_, companyID := e.seedEmployedPerson(ctx, t,
 		"Rune Aasen", "rune@haldenkraft.test", "Halden Kraft GmbH", "haldenkraft.test")
 
 	// Live first, so a statement that refused everything could not pass this.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		filled, err := writeOrgColumn(ctx, tx, orgID, columnIndustry, "Energietechnik", false)
+		filled, err := writeCompanyColumn(ctx, tx, companyID, columnIndustry, "Energietechnik", false)
 		if err != nil || !filled {
 			t.Errorf("filling industry on a LIVE company: filled=%v err=%v", filled, err)
 		}
@@ -237,8 +237,8 @@ func TestTheCompanyColumnStatementsRefuseAnArchivedCompany(t *testing.T) {
 		t.Fatalf("live write: %v", err)
 	}
 
-	if _, err := e.store.ArchiveOrganization(e.asArchiver(), orgID, nil); err != nil {
-		t.Fatalf("archive organization: %v", err)
+	if _, err := e.store.ArchiveCompany(e.asArchiver(), companyID, nil); err != nil {
+		t.Fatalf("archive company: %v", err)
 	}
 
 	// Every arm of the shared table, both authorities, on the retired row.
@@ -254,7 +254,7 @@ func TestTheCompanyColumnStatementsRefuseAnArchivedCompany(t *testing.T) {
 			{"replace industry", columnIndustry, true},
 			{"replace description", columnDescription, true},
 		} {
-			filled, err := writeOrgColumn(ctx, tx, orgID, tc.column, "Halden Kraft AS", tc.overwrite)
+			filled, err := writeCompanyColumn(ctx, tx, companyID, tc.column, "Halden Kraft AS", tc.overwrite)
 			if err != nil {
 				t.Errorf("%s on an archived company: %v", tc.name, err)
 			}
@@ -273,7 +273,7 @@ func TestTheCompanyColumnStatementsRefuseAnArchivedCompany(t *testing.T) {
 	var industry, legalName *string
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT industry, legal_name FROM organization WHERE id = $1`, orgID).
+			`SELECT industry, legal_name FROM company WHERE id = $1`, companyID).
 			Scan(&industry, &legalName)
 	}); err != nil {
 		t.Fatalf("reading the columns back: %v", err)
@@ -295,22 +295,22 @@ func TestTheCompanyColumnStatementsRefuseAnArchivedCompany(t *testing.T) {
 func TestTheProfileFieldUpsertRefusesAnArchivedCompany(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	_, orgID := e.seedEmployedPerson(ctx, t,
+	_, companyID := e.seedEmployedPerson(ctx, t,
 		"Sigrid Berg", "sigrid@nordkraft.test", "Nordkraft AS", "nordkraft.test")
 
 	// One field stated while the company is live, so the conflict arm has a row
 	// to collide with after the archive.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, upsertOrgProfileField,
-			orgID, fieldIndustry, "Energietechnik", "", "", humanAuthoredConfidence,
+		_, err := tx.Exec(ctx, upsertCompanyProfileField,
+			companyID, fieldIndustry, "Energietechnik", "", "", humanAuthoredConfidence,
 			companySourceHuman, "human:seed", true)
 		return err
 	}); err != nil {
 		t.Fatalf("stating a field while the company is live: %v", err)
 	}
 
-	if _, err := e.store.ArchiveOrganization(e.asArchiver(), orgID, nil); err != nil {
-		t.Fatalf("archive organization: %v", err)
+	if _, err := e.store.ArchiveCompany(e.asArchiver(), companyID, nil); err != nil {
+		t.Fatalf("archive company: %v", err)
 	}
 
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -318,8 +318,8 @@ func TestTheProfileFieldUpsertRefusesAnArchivedCompany(t *testing.T) {
 			{"the insert arm", fieldLegalName, "Nordkraft Holding AS"},
 			{"the conflict arm", fieldIndustry, "Something else entirely"},
 		} {
-			tag, err := tx.Exec(ctx, upsertOrgProfileField,
-				orgID, tc.field, tc.value, "", "", humanAuthoredConfidence,
+			tag, err := tx.Exec(ctx, upsertCompanyProfileField,
+				companyID, tc.field, tc.value, "", "", humanAuthoredConfidence,
 				companySourceHuman, "human:seed", true)
 			if err != nil {
 				t.Errorf("%s on an archived company: %v", tc.name, err)
@@ -340,13 +340,13 @@ func TestTheProfileFieldUpsertRefusesAnArchivedCompany(t *testing.T) {
 	var industry string
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FROM organization_profile_field WHERE organization_id = $1`,
-			orgID).Scan(&fields); err != nil {
+			`SELECT count(*) FROM company_profile_field WHERE company_id = $1`,
+			companyID).Scan(&fields); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx,
-			`SELECT value FROM organization_profile_field WHERE organization_id = $1 AND field = $2`,
-			orgID, fieldIndustry).Scan(&industry)
+			`SELECT value FROM company_profile_field WHERE company_id = $1 AND field = $2`,
+			companyID, fieldIndustry).Scan(&industry)
 	}); err != nil {
 		t.Fatalf("reading the evidence back: %v", err)
 	}

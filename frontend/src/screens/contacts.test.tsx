@@ -77,7 +77,7 @@ const employmentRel = {
   id: "rel-1",
   kind: "employment",
   person_id: "p-1",
-  organization_id: "o-1",
+  company_id: "o-1",
   role: "cto",
   is_current_primary: true,
   started_at: "2024-01-01",
@@ -143,8 +143,8 @@ describe("ContactsScreen (B-EP09.10a)", () => {
             {
               ...anna,
               employer: {
-                organization_id: "o-1",
-                organization_name: "Brandt AG",
+                company_id: "o-1",
+                company_name: "Brandt AG",
               },
             },
             { ...anna, id: "p-2", full_name: "Bruno Klein" },
@@ -157,7 +157,7 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     await waitFor(() => expect(screen.getByText("Brandt AG")).toBeTruthy());
     // The name rides on the person row, so the column costs no second read:
     // one company per contact would otherwise be one fetch per row.
-    expect(urls.filter((url) => url.includes("/organizations"))).toHaveLength(
+    expect(urls.filter((url) => url.includes("/companies"))).toHaveLength(
       0,
     );
     // A contact whose employer the wire withheld — no edge grant, no grant on
@@ -184,8 +184,8 @@ describe("ContactsScreen (B-EP09.10a)", () => {
             {
               ...anna,
               employer: {
-                organization_id: "o-1",
-                organization_name: "Brandt AG",
+                company_id: "o-1",
+                company_name: "Brandt AG",
               },
             },
           ],
@@ -1040,7 +1040,7 @@ describe("PersonScreen — Relationships tab (P-5)", () => {
       if (url.includes("/relationships") && url.includes("person_id=p-1")) {
         return emptyPage();
       }
-      if (url.includes("/organizations?") && url.includes("q=brandt")) {
+      if (url.includes("/companies?") && url.includes("q=brandt")) {
         return jsonResponse({
           data: [{ id: "o-1", display_name: "Brandt Automotive GmbH" }],
           page: { next_cursor: null, has_more: false },
@@ -1077,7 +1077,7 @@ describe("PersonScreen — Relationships tab (P-5)", () => {
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toMatchObject({
       person_id: "p-1",
-      organization_id: "o-1",
+      company_id: "o-1",
       kind: "employment",
       source: "manual",
     });
@@ -1209,7 +1209,7 @@ describe("PersonScreen — archived is read-only (P-3)", () => {
 });
 
 describe("PersonScreen — relationship kinds by scope (P-5)", () => {
-  it("offers deal_stakeholder (not org↔org) from a person, searches deals, confirms, and POSTs deal_id", async () => {
+  it("offers deal_stakeholder (not company↔company) from a person, searches deals, confirms, and POSTs deal_id", async () => {
     const user = userEvent.setup();
     let posted: unknown = null;
     stubFetch(async (url, method, request) => {
@@ -1239,8 +1239,8 @@ describe("PersonScreen — relationship kinds by scope (P-5)", () => {
     );
     await user.click(screen.getByTestId("add-relationship"));
 
-    // A person can anchor employment + deal_stakeholder; the org↔org kinds
-    // (partner_of/…) need two orgs and must not be offered here. The kinds only
+    // A person can anchor employment + deal_stakeholder; the company↔company kinds
+    // (partner_of/…) need two companies and must not be offered here. The kinds only
     // exist in the DOM while the popup is open, hence the click before the
     // absence is asserted.
     await user.click(screen.getByLabelText("Kind"));
@@ -1275,7 +1275,7 @@ describe("PersonScreen — relationship kinds by scope (P-5)", () => {
       kind: "deal_stakeholder",
       source: "manual",
     });
-    expect(posted).not.toHaveProperty("organization_id");
+    expect(posted).not.toHaveProperty("company_id");
   });
 });
 

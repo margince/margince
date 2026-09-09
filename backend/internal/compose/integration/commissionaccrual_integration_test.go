@@ -40,7 +40,7 @@ var commissionAdminPerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"partner":      {Create: true, Read: true, Update: true, Delete: true},
 		"commission":   {Create: true, Read: true, Update: true, Delete: true},
-		"organization": {Create: true, Read: true, Update: true, Delete: true},
+		"company": {Create: true, Read: true, Update: true, Delete: true},
 		"deal":         {Create: true, Read: true, Update: true, Delete: true},
 		// Winning a deal freezes its FX rate, which reads the installation's
 		// base currency.
@@ -53,7 +53,7 @@ var commissionAdminPerms = principal.Permissions{
 // stages needed to win and reopen it.
 type accrualFixture struct {
 	deal    ids.DealID
-	partner ids.OrganizationID
+	partner ids.CompanyID
 	won     ids.StageID
 	open    ids.StageID
 	ledger  *commissions.Store
@@ -65,20 +65,20 @@ func seedAccrualFixture(t *testing.T, e *Env, tier string) accrualFixture {
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
 
-	partnerOrg := orgIDOf(e.SeedOrg(t, "Northgate Partners", nil))
+	partnerCompany := companyIDOf(e.SeedCompany(t, "Northgate Partners", nil))
 	if _, err := e.People.UpsertPartner(admin, people.UpsertPartnerInput{
-		OrganizationID: partnerOrg,
+		CompanyID: partnerCompany,
 		PartnerRole:    "consulting",
 		MarginTier:     &tier,
 	}); err != nil {
-		t.Fatalf("making the organization a partner on %s: %v", tier, err)
+		t.Fatalf("making the company a partner on %s: %v", tier, err)
 	}
 
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Northgate rollout", pipeline, open, &e.Rep1))
 	amount := int64(100_000)
 	currency := "EUR"
 	if _, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{
-		PartnerOrganizationID: &partnerOrg,
+		PartnerCompanyID: &partnerCompany,
 		AmountMinor:           &amount,
 		Currency:              &currency,
 	}); err != nil {
@@ -87,7 +87,7 @@ func seedAccrualFixture(t *testing.T, e *Env, tier string) accrualFixture {
 
 	ledger := commissions.NewStore(e.DB())
 	return accrualFixture{
-		deal: deal, partner: partnerOrg, won: won, open: open, ledger: ledger,
+		deal: deal, partner: partnerCompany, won: won, open: open, ledger: ledger,
 		gen: compose.NewCommissionGen(e.Pool, ledger,
 			people.NewStore(e.DB()), slog.New(slog.DiscardHandler)),
 	}
@@ -238,17 +238,17 @@ func TestAWinForAPartnerWithNoTierAccruesNothingAndDoesNotFail(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
-	partnerOrg := orgIDOf(e.SeedOrg(t, "Untiered Partners", nil))
+	partnerCompany := companyIDOf(e.SeedCompany(t, "Untiered Partners", nil))
 	if _, err := e.People.UpsertPartner(admin, people.UpsertPartnerInput{
-		OrganizationID: partnerOrg, PartnerRole: "consulting",
+		CompanyID: partnerCompany, PartnerRole: "consulting",
 	}); err != nil {
-		t.Fatalf("making the organization a partner with no tier: %v", err)
+		t.Fatalf("making the company a partner with no tier: %v", err)
 	}
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Untiered rollout", pipeline, open, &e.Rep1))
 	amount := int64(50_000)
 	currency := "EUR"
 	if _, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{
-		PartnerOrganizationID: &partnerOrg, AmountMinor: &amount, Currency: &currency,
+		PartnerCompanyID: &partnerCompany, AmountMinor: &amount, Currency: &currency,
 	}); err != nil {
 		t.Fatalf("pricing the deal: %v", err)
 	}

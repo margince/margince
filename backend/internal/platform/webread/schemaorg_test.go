@@ -25,7 +25,7 @@ func ldPage(block string) string {
 		`</script></head><body><div id="__next"></div></body></html>`
 }
 
-func TestAShellDeclaringAnOrganizationIsNotAnEmptyPage(t *testing.T) {
+func TestAShellDeclaringAnCompanyIsNotAnEmptyPage(t *testing.T) {
 	got := linkedDataClaims(ldPage(`{
 		"@context":"https://schema.org","@type":"Organization",
 		"name":"Intouch Sports","description":"Coaching for teams that travel."}`))
@@ -37,10 +37,10 @@ func TestAShellDeclaringAnOrganizationIsNotAnEmptyPage(t *testing.T) {
 }
 
 // The type is deliberately unfiltered, and this is the case that decides it:
-// schema.org's organization vocabulary is open, so a list of accepted types
+// schema.org's company vocabulary is open, so a list of accepted types
 // would read a site declaring itself a LocalBusiness subtype as declaring
 // nothing at all.
-func TestAnOrganizationSubtypeIsReadLikeAnyOther(t *testing.T) {
+func TestAnCompanySubtypeIsReadLikeAnyOther(t *testing.T) {
 	for _, kind := range []string{"Corporation", "NGO", "Dentist", "SportsActivityLocation"} {
 		got := linkedDataClaims(ldPage(fmt.Sprintf(
 			`{"@context":"https://schema.org","@type":%q,"name":"Nordic Works"}`, kind)))
@@ -118,7 +118,7 @@ func TestAFetchedShellCarriesWhatItDeclared(t *testing.T) {
 		t.Fatalf("page text = %q, want the empty body this case is about", page.Text)
 	}
 	if !slices.Contains(page.HeadText, "Intouch Sports") {
-		t.Errorf("head text = %q, want it to carry the organization the markup declared — "+
+		t.Errorf("head text = %q, want it to carry the company the markup declared — "+
 			"without it this page reads as having no readable text and settles as parked",
 			page.HeadText)
 	}

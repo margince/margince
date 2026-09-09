@@ -114,7 +114,7 @@ func TestSuggestMappingMatchesNormalizedNamesOnly(t *testing.T) {
 		{Header: "  first_name  "},
 		{Header: "Company"},
 	}}
-	targets := []string{"email_address", "first_name", "organization_id", "cf_region"}
+	targets := []string{"email_address", "first_name", "company_id", "cf_region"}
 
 	got := SuggestMapping(p, targets)
 
@@ -124,7 +124,7 @@ func TestSuggestMappingMatchesNormalizedNamesOnly(t *testing.T) {
 	if got["  first_name  "] != "first_name" {
 		t.Errorf("first_name → %q, want first_name", got["  first_name  "])
 	}
-	// "Company" is not "organization_id" by any rule this function is allowed
+	// "Company" is not "company_id" by any rule this function is allowed
 	// to apply. An absent suggestion is a blank the human fills; a wrong one is
 	// a mistake they must first notice.
 	if v, ok := got["Company"]; ok {

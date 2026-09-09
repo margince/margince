@@ -148,13 +148,13 @@ func (e *estEnv) seedConnection(t *testing.T, user ids.UserID, provider string) 
 
 // seedBackfill inserts a completed capture_backfill run — the connection's
 // representative yields.
-func (e *estEnv) seedBackfill(t *testing.T, connID ids.UUID, windowMonths int, scanned, captured, people, orgs int) {
+func (e *estEnv) seedBackfill(t *testing.T, connID ids.UUID, windowMonths int, scanned, captured, people, companies int) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO capture_backfill (connection_id, window_months, after_date, status,
-		  scanned, captured, people_created, organizations_created, started_at, completed_at)
+		  scanned, captured, people_created, companies_created, started_at, completed_at)
 		VALUES ($1, $2, $3, 'done', $4, $5, $6, $7, now(), now())`,
-		connID, windowMonths, rateDay, scanned, captured, people, orgs); err != nil {
+		connID, windowMonths, rateDay, scanned, captured, people, companies); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -210,7 +210,7 @@ func (e *estEnv) insertRate(t *testing.T, model string, in, out int64) {
 // priced at cloud-model, embeddings at embed-model, enrich at a real $0
 // local-model — every task observed and priced, yields present, over real PG.
 //
-// The fixture's people_created=10 / organizations_created=2 is what a completed
+// The fixture's people_created=10 / companies_created=2 is what a completed
 // run that minted counterparties leaves behind; the zero-yield case, which
 // floors the enrich estimate instead of pricing it, is
 // TestEstimatorEnrichFloorsWhenPeopleCreatedZero.
@@ -275,7 +275,7 @@ func TestEstimatorEnrichFloorsWhenPeopleCreatedZero(t *testing.T) {
 	ws, wsCtx := e.seedWorkspace(t)
 	user := e.seedUser(t, ws)
 	connID := e.seedConnection(t, user, "gmail")
-	e.seedBackfill(t, connID, 6, 100, 80, 0, 0) // people/orgs 0: the run minted no counterparty
+	e.seedBackfill(t, connID, 6, 100, 80, 0, 0) // people/companies 0: the run minted no counterparty
 
 	e.insertRate(t, "cloud-model", 1_000_000, 2_000_000)
 	e.insertRate(t, "embed-model", 500_000, 0)

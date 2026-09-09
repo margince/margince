@@ -506,7 +506,7 @@
    own overflow menu below. */
 /* The connection on the left, its verbs at the far right — the trigger sits at
    the row's end because its menu opens back towards the record it belongs to.
-   Anchored under the org name instead, the menu would open away from the page
+   Anchored under the company name instead, the menu would open away from the page
    and off the edge of the column. */
 .pe-employment {
   display: grid;
@@ -520,16 +520,16 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
-.pe-employment-org {
+.pe-employment-company {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   font-size: var(--fs-body);
 }
 
-/* The role sits under the org name, on its own line — it is the ONE thing
+/* The role sits under the company name, on its own line — it is the ONE thing
    in this row that is a control (InlineText), so it gets its own line
-   rather than fighting the org name and its badge for space. */
+   rather than fighting the company name and its badge for space. */
 .pe-employment-role {
   display: block;
   font-size: var(--fs-sm);

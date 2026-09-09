@@ -323,10 +323,10 @@ const DSR_KINDS: readonly DsrKind[] = ["access", "rectify", "erasure"];
 // The erasure fulfiller (consent/dsr.go) resolves subject_ref to a person id
 // and erases that record — free text there cannot be erased, so an erasure
 // request must be opened against a picked person, never typed in by hand.
-// No purpose-built person-search endpoint exists yet (offers.tsx's org/product
+// No purpose-built person-search endpoint exists yet (offers.tsx's company/product
 // pickers are RecordPicker's only other callers today), so this reuses the
-// person list's own full-text `q` param, exactly as searchOrganizationCandidates
-// reuses /organizations.
+// person list's own full-text `q` param, exactly as searchCompanyCandidates
+// reuses /companies.
 async function searchPersonCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {

@@ -248,11 +248,11 @@ func (r setCompanyResolver) Guards(ctx context.Context, cmd SetCompanyCommand) e
 	return r.target.refuse(ctx, cmd.ID)
 }
 
-// RemoveCompanyCommand is one project-company detach. OrganizationID is a
+// RemoveCompanyCommand is one project-company detach. CompanyID is a
 // second PATH parameter, not a body field.
 type RemoveCompanyCommand struct {
 	ID             ids.UUID
-	OrganizationID ids.UUID
+	CompanyID ids.UUID
 }
 
 // NewRemoveCompanyCall binds one detach to the resolver that answers for it.
@@ -274,7 +274,7 @@ func (r removeCompanyResolver) Subject(_ context.Context, cmd RemoveCompanyComma
 	return StageInfo{
 		TargetType: projectRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Take company %s off project %s", cmd.OrganizationID, cmd.ID),
+		Summary:    fmt.Sprintf("Take company %s off project %s", cmd.CompanyID, cmd.ID),
 	}, nil
 }
 

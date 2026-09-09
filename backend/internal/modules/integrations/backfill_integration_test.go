@@ -403,20 +403,20 @@ func TestAnEmployerLinkedAfterNoIdentifiersIsPickedUpAtOnce(t *testing.T) {
 func (e *runsEnv) linkEmployer(t *testing.T, personID ids.PersonID, archived bool) {
 	t.Helper()
 	ctx := context.Background()
-	var orgID ids.UUID
+	var companyID ids.UUID
 	if err := e.owner.QueryRow(ctx, `
-		INSERT INTO organization (display_name, source, captured_by)
+		INSERT INTO company (display_name, source, captured_by)
 		VALUES ('Sweep Employer', 'test', 'test:sweep')
-		RETURNING id`).Scan(&orgID); err != nil {
+		RETURNING id`).Scan(&companyID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO relationship
-		       (kind, person_id, organization_id, is_current_primary, source, captured_by,
+		       (kind, person_id, company_id, is_current_primary, source, captured_by,
 		        updated_at, archived_at)
 		VALUES ('employment', $1, $2, NOT $3, 'test', 'test:sweep',
 		        now() + interval '1 second', CASE WHEN $3 THEN now() END)`,
-		personID, orgID, archived); err != nil {
+		personID, companyID, archived); err != nil {
 		t.Fatal(err)
 	}
 }

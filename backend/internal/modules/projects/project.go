@@ -46,7 +46,7 @@ type CreateProjectInput struct {
 	// createProjectTx fills this in for the response. A caller-chosen key is a
 	// subject-line matcher a caller can get wrong.
 	Key            *string
-	OrganizationID ids.OrganizationID
+	CompanyID ids.CompanyID
 	OwnerID        *ids.UserID
 	Description    *string
 	StartedAt      *time.Time
@@ -69,7 +69,7 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 		return crmcontracts.Project{}, err
 	}
 	// A project with no requested owner belongs to its creator, the same
-	// default person/organization/deal births apply. Ownerless matters
+	// default person/company/deal births apply. Ownerless matters
 	// more here than elsewhere: write authority reads an unowned row as
 	// nobody's to change, so an ownerless project can never be attached to a
 	// deal by the rep who just created it (projects.EnsureAttachable).
@@ -98,7 +98,7 @@ func createProjectTx(
 	// record, so naming it is a read of it: the caller must be able to see
 	// the company before a project can be hung off it. The composite FK
 	// only proves same-workspace, which is a weaker claim.
-	if err := auth.EnsureLinkTarget(ctx, tx, "organization", in.OrganizationID.UUID); err != nil {
+	if err := auth.EnsureLinkTarget(ctx, tx, "company", in.CompanyID.UUID); err != nil {
 		return crmcontracts.Project{}, err
 	}
 
@@ -112,7 +112,7 @@ func createProjectTx(
 	// The company rides the SAME transaction as the row, so a project whose
 	// company edge failed to land cannot commit alone — a project no company
 	// page shows is a project a reader cannot find.
-	if err := attachCompany(ctx, tx, id, in.OrganizationID, CompanyRoleCustomer, by); err != nil {
+	if err := attachCompany(ctx, tx, id, in.CompanyID, CompanyRoleCustomer, by); err != nil {
 		return crmcontracts.Project{}, fmt.Errorf("put the project's company on it: %w", err)
 	}
 
@@ -131,7 +131,7 @@ func createProjectTx(
 	}
 	created := crmcontracts.PublicEventProjectCreated{
 		Name:           in.Name,
-		OrganizationId: openapi_types.UUID(in.OrganizationID.UUID),
+		CompanyId: openapi_types.UUID(in.CompanyID.UUID),
 		Phase:          PhaseInitiative,
 	}
 	if in.Key != nil {

@@ -40,7 +40,7 @@ const auditFieldProject = "project_id"
 // quietProject is one project the rule fired on.
 type quietProject struct {
 	ProjectID      ids.UUID
-	OrganizationID ids.UUID
+	CompanyID ids.UUID
 	Name           string
 	// QuietSince is the instant the silence is measured from — the last filed
 	// activity, or the project's creation when nothing was ever filed. It is
@@ -58,14 +58,14 @@ type quietProject struct {
 // a finding nobody can act on.
 func scanQuietProjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]quietProject, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT p.id, pc.organization_id, p.name, `+projects.ProjectQuietAnchorSQL("p")+`
+		SELECT p.id, pc.company_id, p.name, `+projects.ProjectQuietAnchorSQL("p")+`
 		  FROM project p
 		  JOIN relationship pc ON pc.kind = 'project_company' AND pc.project_id = p.id
 		                      AND pc.archived_at IS NULL
 		 WHERE p.archived_at IS NULL
 		   AND `+projects.ProjectInFlightSQL("p")+`
 		   AND `+projects.ProjectQuietSQL("p", "$1", 2)+`
-		 ORDER BY `+projects.ProjectQuietAnchorSQL("p")+`, p.id, pc.organization_id`,
+		 ORDER BY `+projects.ProjectQuietAnchorSQL("p")+`, p.id, pc.company_id`,
 		now, projects.DefaultProjectQuietDays)
 	if err != nil {
 		return nil, fmt.Errorf("scan quiet projects: %w", err)
@@ -74,7 +74,7 @@ func scanQuietProjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]quietPr
 	var out []quietProject
 	for rows.Next() {
 		var found quietProject
-		if err := rows.Scan(&found.ProjectID, &found.OrganizationID, &found.Name, &found.QuietSince); err != nil {
+		if err := rows.Scan(&found.ProjectID, &found.CompanyID, &found.Name, &found.QuietSince); err != nil {
 			return nil, err
 		}
 		out = append(out, found)
@@ -102,7 +102,7 @@ func WriteProjectQuietSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Gh
 		days := int(now.Sub(project.QuietSince).Hours() / 24)
 		raised, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind:           kindProjectGoneQuiet,
-			OrganizationID: project.OrganizationID,
+			CompanyID: project.CompanyID,
 			ProjectID:      project.ProjectID,
 			Summary:        fmt.Sprintf(said.projectQuiet, project.Name, days),
 			Severity:       severityWarn,

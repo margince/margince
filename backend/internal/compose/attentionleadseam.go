@@ -28,7 +28,7 @@ type attentionLeadResponses struct {
 	// teammates answers whether a lead's owner shares a live team with the
 	// reader. Required rather than optional: a lead is workspace-readable, so
 	// without this the team scope cannot be narrowed at all and would show the
-	// whole organization's inbound under a page headed `team`.
+	// whole company's inbound under a page headed `team`.
 	teammates attention.Teammates
 }
 
@@ -87,7 +87,7 @@ func (l attentionLeadResponses) Owed(
 		// not have. A lead is an IDENTITY record, so its read predicate is TRUE
 		// for every seat holding the grant (auth.identityTables): the store
 		// hands back every lead in the workspace, and a page headed `team`
-		// would be the whole organization's inbound.
+		// would be the whole company's inbound.
 		//
 		// The store's own dial cannot express it either — OwnerTeamID names ONE
 		// team and a reader may be in several — so the narrowing happens on the

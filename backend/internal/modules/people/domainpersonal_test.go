@@ -60,7 +60,7 @@ func TestDomainLooksPersonalNeedsEveryKnownPersonToExplainTheLabel(t *testing.T)
 			// Two unrelated family names on one domain is what a company IS.
 			// The employer stapled onto each display name must not read as
 			// their surname, or both would "match" and the company would be
-			// refused its organization.
+			// refused its company.
 			name:  "a shared domain is a company, and a stapled employer is not a surname",
 			label: "tvpartner",
 			persons: []DomainPerson{
@@ -108,7 +108,7 @@ func TestDomainLooksPersonalNeedsEveryKnownPersonToExplainTheLabel(t *testing.T)
 func TestDomainLooksPersonalMisjudgesAnEponymousAgency(t *testing.T) {
 	// baumert.example is Alexander Baumert's agency and the heuristic cannot tell
 	// it from a personal domain — the label IS his surname. It answers yes, and
-	// the organization is lost.
+	// the company is lost.
 	//
 	// That is why this heuristic runs ONLY when no site could be read: for
 	// baumert.example a site loads, states a company, and the crawl answers first.

@@ -22,20 +22,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// ownedOrg goes through CreateOrganization so the owner_id the team leaf joins on
+// ownedCompany goes through CreateCompany so the owner_id the team leaf joins on
 // is the one production stamps. A hand-inserted row could carry an owner no
 // membership edge reaches, and the join would then be proven against a shape the
 // product cannot produce.
-func (f fixture) ownedOrg(t *testing.T, name string, owner ids.UUID) ids.UUID {
+func (f fixture) ownedCompany(t *testing.T, name string, owner ids.UUID) ids.UUID {
 	t.Helper()
 	seat := ids.From[ids.UserKind](owner)
-	org, err := f.people.CreateOrganization(f.ctx, peoplemod.CreateOrganizationInput{
+	company, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{
 		DisplayName: name, OwnerID: &seat, Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("create organization %q: %v", name, err)
+		t.Fatalf("create company %q: %v", name, err)
 	}
-	return ids.UUID(org.Id)
+	return ids.UUID(company.Id)
 }
 
 // "Owned by my team" is the form a manager's saved view actually takes, and the
@@ -44,12 +44,12 @@ func (f fixture) ownedOrg(t *testing.T, name string, owner ids.UUID) ids.UUID {
 // not just a column comparison.
 func TestATeamFilterSelectsEveryMembersRecords(t *testing.T) {
 	f := setupFixture(t)
-	firstMember := f.ownedOrg(t, "Held by Rep1", f.e.Rep1)
-	secondMember := f.ownedOrg(t, "Held by Rep2", f.e.Rep2)
-	otherTeam := f.ownedOrg(t, "Held by Rep3", f.e.Rep3)
+	firstMember := f.ownedCompany(t, "Held by Rep1", f.e.Rep1)
+	secondMember := f.ownedCompany(t, "Held by Rep2", f.e.Rep2)
+	otherTeam := f.ownedCompany(t, "Held by Rep3", f.e.Rep3)
 
 	list, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
-		Name: "my team's accounts", EntityType: "organization", ListType: "dynamic",
+		Name: "my team's accounts", EntityType: "company", ListType: "dynamic",
 		Definition: map[string]any{
 			"field": "owner_team_id", "op": "eq", "value": f.e.Team1.String(),
 		},
@@ -78,19 +78,19 @@ func TestATeamFilterSelectsEveryMembersRecords(t *testing.T) {
 // change breaking one of the two reasons a record is uncovered names which one.
 func TestAnUnownedRecordIsCoveredByNoTeam(t *testing.T) {
 	f := setupFixture(t)
-	inATeam := f.ownedOrg(t, "Held by Rep1", f.e.Rep1)
-	unowned, err := f.people.CreateOrganization(f.ctx, peoplemod.CreateOrganizationInput{
+	inATeam := f.ownedCompany(t, "Held by Rep1", f.e.Rep1)
+	unowned, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{
 		DisplayName: "Nobody's account", Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("create unowned organization: %v", err)
+		t.Fatalf("create unowned company: %v", err)
 	}
 	// The create stamps the seeding seat as owner; this test wants the
 	// unowned state, so the owner is nulled explicitly.
-	f.e.WsExec(t, "UPDATE organization SET owner_id = NULL WHERE id = $1", ids.UUID(unowned.Id))
+	f.e.WsExec(t, "UPDATE company SET owner_id = NULL WHERE id = $1", ids.UUID(unowned.Id))
 
 	list, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
-		Name: "no team covers these", EntityType: "organization", ListType: "dynamic",
+		Name: "no team covers these", EntityType: "company", ListType: "dynamic",
 		Definition: map[string]any{
 			"field": "owner_team_id", "op": "exists", "value": false,
 		},
@@ -129,11 +129,11 @@ func TestARecordWhoseOwnerIsInNoTeamIsCoveredByNoTeam(t *testing.T) {
 		t.Fatalf("the admin seat now belongs to %d team(s), so it can no longer stand for a teamless owner — seed a seat with no team_membership row in integration.Setup and own the record below with it", memberships)
 	}
 
-	teamlessOwner := f.ownedOrg(t, "Held by a seat in no team", f.e.AdminUser)
-	inATeam := f.ownedOrg(t, "Held by Rep1", f.e.Rep1)
+	teamlessOwner := f.ownedCompany(t, "Held by a seat in no team", f.e.AdminUser)
+	inATeam := f.ownedCompany(t, "Held by Rep1", f.e.Rep1)
 
 	list, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
-		Name: "no team covers these either", EntityType: "organization", ListType: "dynamic",
+		Name: "no team covers these either", EntityType: "company", ListType: "dynamic",
 		Definition: map[string]any{
 			"field": "owner_team_id", "op": "exists", "value": false,
 		},
@@ -153,7 +153,7 @@ func TestARecordWhoseOwnerIsInNoTeamIsCoveredByNoTeam(t *testing.T) {
 	// the caller would leave the row owned by Rep1, who is in Team1, and this
 	// test would re-prove the in-a-team case under a name claiming otherwise.
 	if owned := f.e.WsCount(t,
-		"SELECT count(*) FROM organization WHERE id = $1 AND owner_id = $2",
+		"SELECT count(*) FROM company WHERE id = $1 AND owner_id = $2",
 		teamlessOwner, f.e.AdminUser); owned != 1 {
 		t.Error("the record under test is not owned by the teamless seat, so whatever it proves is not the teamless-owner arm")
 	}
@@ -168,7 +168,7 @@ func TestARelationshipFilterSelectsAccountsThatAreAtLeastThatType(t *testing.T) 
 	customerOnly := f.withRelationshipTypes(t, "Beta, customer only", []string{"customer"})
 
 	list, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
-		Name: "suppliers", EntityType: "organization", ListType: "dynamic",
+		Name: "suppliers", EntityType: "company", ListType: "dynamic",
 		Definition: map[string]any{
 			"field": "relationship_type", "op": "eq", "value": "supplier",
 		},
@@ -194,7 +194,7 @@ func TestAWithdrawnRelationshipStopsMatching(t *testing.T) {
 	account := f.customerAndSupplier(t, "Acme, both")
 
 	list, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
-		Name: "suppliers", EntityType: "organization", ListType: "dynamic",
+		Name: "suppliers", EntityType: "company", ListType: "dynamic",
 		Definition: map[string]any{
 			"field": "relationship_type", "op": "eq", "value": "supplier",
 		},
@@ -228,25 +228,25 @@ func (f fixture) customerAndSupplier(t *testing.T, name string) ids.UUID {
 
 func (f fixture) withRelationshipTypes(t *testing.T, name string, types []string) ids.UUID {
 	t.Helper()
-	org, err := f.people.CreateOrganization(f.ctx, peoplemod.CreateOrganizationInput{
+	company, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{
 		DisplayName: name, Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("create organization %q: %v", name, err)
+		t.Fatalf("create company %q: %v", name, err)
 	}
-	f.setRelationshipTypes(t, ids.UUID(org.Id), types)
-	return ids.UUID(org.Id)
+	f.setRelationshipTypes(t, ids.UUID(company.Id), types)
+	return ids.UUID(company.Id)
 }
 
 // setRelationshipTypes drives the real update path, so the rows under test are
 // the ones production writes — including the archive-not-delete behaviour a
 // withdrawal depends on.
-func (f fixture) setRelationshipTypes(t *testing.T, org ids.UUID, types []string) {
+func (f fixture) setRelationshipTypes(t *testing.T, company ids.UUID, types []string) {
 	t.Helper()
-	if _, err := f.people.UpdateOrganization(
+	if _, err := f.people.UpdateCompany(
 		f.ctx,
-		ids.From[ids.OrganizationKind](org),
-		peoplemod.UpdateOrganizationInput{RelationshipTypes: &types},
+		ids.From[ids.CompanyKind](company),
+		peoplemod.UpdateCompanyInput{RelationshipTypes: &types},
 	); err != nil {
 		t.Fatalf("set relationship types %v: %v", types, err)
 	}

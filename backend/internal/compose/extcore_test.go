@@ -170,7 +170,7 @@ func TestTheBridgeCarriesARequestWithItsLinks(t *testing.T) {
 func TestLinkToAppends(t *testing.T) {
 	request := crm.CreateActivityRequest{Kind: crm.CreateActivityRequestKindNote, Source: "extension:probe"}.
 		LinkTo(crm.CreateActivityRequestLinksEntityTypePerson, "7c9e6679-7425-40de-944b-e07fc1f90ae7").
-		LinkTo(crm.CreateActivityRequestLinksEntityTypeOrganization, "3f2504e0-4f89-41d3-9a0c-0305e82c3301")
+		LinkTo(crm.CreateActivityRequestLinksEntityTypeCompany, "3f2504e0-4f89-41d3-9a0c-0305e82c3301")
 	if request.Links == nil || len(*request.Links) != 2 {
 		t.Fatalf("links = %v, want both", request.Links)
 	}

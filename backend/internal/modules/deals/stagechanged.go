@@ -30,7 +30,7 @@ type StageChanged struct {
 	ToStatus           string
 	AmountMinor        *int64
 	Currency           *string
-	PartnerOrgID       *ids.UUID
+	PartnerCompanyID       *ids.UUID
 	PartnerAttribution *string
 	FxRateToBase       *string
 }
@@ -49,9 +49,9 @@ func DecodeStageChanged(payload json.RawMessage) (StageChanged, error) {
 		PartnerAttribution: wire.PartnerAttribution,
 		FxRateToBase:       wire.FxRateToBase,
 	}
-	if wire.PartnerOrgId != nil {
-		partner := ids.UUID(*wire.PartnerOrgId)
-		moved.PartnerOrgID = &partner
+	if wire.PartnerCompanyId != nil {
+		partner := ids.UUID(*wire.PartnerCompanyId)
+		moved.PartnerCompanyID = &partner
 	}
 	return moved, nil
 }

@@ -4,7 +4,7 @@
 package compose
 
 // The enrichment ACCEPT executor (EP05): a human approval of a staged
-// scrapeCompany proposal WRITES the accepted fields onto the org the proposal
+// scrapeCompany proposal WRITES the accepted fields onto the company the proposal
 // named — fill-empty-only, evidence queryable. Redeem-then-execute like every
 // 🟡 executor: the single-use redemption is the exactly-once claim, so a
 // replayed or re-driven decision applies nothing twice.
@@ -29,7 +29,7 @@ func scrapeAcceptEffect(svc *approvals.Service, store *people.Store) approvals.A
 		if _, _, err := svc.Redeem(ctx, approvalID, enrichProposalKind, diffHash); err != nil {
 			return err
 		}
-		orgID, sourceURL, fields, err := people.UnmarshalEnrichment(proposedChange)
+		companyID, sourceURL, fields, err := people.UnmarshalEnrichment(proposedChange)
 		if err != nil {
 			return err
 		}
@@ -47,7 +47,7 @@ func scrapeAcceptEffect(svc *approvals.Service, store *people.Store) approvals.A
 			UserID:     decider.UserID,
 			OnBehalfOf: decider.UserID,
 		})
-		return store.ApplyEnrichment(execCtx, orgID, people.ApplyColdStartProfileInput{
+		return store.ApplyEnrichment(execCtx, companyID, people.ApplyColdStartProfileInput{
 			SourceURL: sourceURL,
 			Fields:    fields,
 		})

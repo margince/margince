@@ -102,7 +102,7 @@ func ownerPredicate(p principal.Principal, arg func(any) int, unowned unownedRow
 // widen (A52/ADR-0039); grants on anything else cannot exist (the
 // record_grant CHECK is the schema-side twin of this set).
 var shareableTables = map[string]bool{
-	tablePerson: true, tableOrganization: true, tableDeal: true, tableLead: true, tableProject: true,
+	tablePerson: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
 }
 
 // ownerPrivateTables carry capture privacy (migration 0095): a row is either
@@ -128,7 +128,7 @@ var shareableTables = map[string]bool{
 // TestEveryTableThatCanHoldAnOwnerRowIsOwnerPrivate keeps the two in step: add
 // 'owner' back to a table's CHECK and that test demands this map learn about
 // it, so the pair cannot drift into a silent disclosure again.
-var ownerPrivateTables = map[string]bool{tablePerson: true, tableOrganization: true}
+var ownerPrivateTables = map[string]bool{tablePerson: true, tableCompany: true}
 
 // UnboundedFor reports whether the actor reads the named tables with NO
 // predicate at all: an unbounded actor, or an identity table (tableclass.go)
@@ -168,7 +168,7 @@ func UnboundedFor(p principal.Principal, tables ...string) bool {
 // names itself so a new caller that forwards an unvalidated string is
 // an error, never an injection.
 var ownerScopedTables = map[string]bool{
-	tablePerson: true, tableOrganization: true, tableDeal: true, tableLead: true, tableProject: true,
+	tablePerson: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
 	"list": true, "saved_view": true, "automation": true, "voice_profile": true,
 }
 

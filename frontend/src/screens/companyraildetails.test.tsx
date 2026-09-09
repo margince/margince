@@ -23,13 +23,13 @@ import { DetailsGrid } from "./companyraildetails";
 // an absence assertion phrased as a missing node would pass on markup that
 // shows the reader all six.
 
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 type ProfileField = components["schemas"]["CompanyProfileField"];
 
-// A COMPLETE Organization, not a cast one: a fixture asserted into the contract
+// A COMPLETE Company, not a cast one: a fixture asserted into the contract
 // type can drop a required field and still compile, so the test would go on
 // passing after the wire shape moved under it.
-const ORG: Organization = {
+const ORG: Company = {
   id: "o-1",
   // The server answers this per row; a fixture without it reads as NOT
   // writable, which is the correct fail-closed default and would strip the
@@ -49,7 +49,7 @@ const ORG: Organization = {
 // The same record with one address part filled — the state that keeps the
 // disclosure open. Typed, so a part name the wire stops carrying fails here
 // rather than quietly asserting on a field the grid no longer reads.
-const ORG_WITH_CITY: Organization = { ...ORG, address: { city: "Berlin" } };
+const ORG_WITH_CITY: Company = { ...ORG, address: { city: "Berlin" } };
 
 // The six part labels, in the order the grid draws them.
 const PART_LABELS = [
@@ -92,7 +92,7 @@ function stub(
         ifMatch: request.headers.get("If-Match"),
       });
       if (pathname.endsWith("/me")) {
-        return json(meFixture({ allow: { organization: ["read", "update"] } }));
+        return json(meFixture({ allow: { company: ["read", "update"] } }));
       }
       if (pathname.endsWith("/profile-fields")) {
         return json({ data: profileFields });
@@ -148,14 +148,14 @@ function profileField(
   };
 }
 
-function renderGrid(organization: Organization) {
+function renderGrid(company: Company) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <DetailsGrid organization={organization} />
+        <DetailsGrid company={company} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -166,12 +166,12 @@ function renderGrid(organization: Organization) {
 // The industry row is the anchor because it sits outside the disclosure and
 // carries a value in every fixture here.
 async function renderSettledGrid(
-  organization: Organization,
+  company: Company,
   profileFields: readonly ProfileField[] = [],
   answers: { patch?: () => Response; vatCheck?: () => Response } = {},
 ) {
   const calls = stub(profileFields, answers);
-  renderGrid(organization);
+  renderGrid(company);
   await screen.findByRole("button", { name: "Change Industry" });
   return calls;
 }
@@ -203,7 +203,7 @@ describe("the legal identity a person can state", () => {
       {
         vatCheck: () =>
           json({
-            organization_id: "o-1",
+            company_id: "o-1",
             vat_number: "DE811907980",
             status: "valid",
             checked_at: "2026-08-14T09:12:00Z",
@@ -218,8 +218,8 @@ describe("the legal identity a person can state", () => {
   });
 
   // The grant is held and the RECORD is not writable — the case the button's
-  // old gate could not see. POST /organizations/{id}/vat-check runs
-  // EnsureWritableLive on this organization, so a rep holding `organization:
+  // old gate could not see. POST /companies/{id}/vat-check runs
+  // EnsureWritableLive on this company, so a rep holding `company:
   // update` who does not own the account was offered a check that comes back
   // refused on click.
   //
@@ -234,7 +234,7 @@ describe("the legal identity a person can state", () => {
     stub([profileField("register_vat", "DE811907980")], {
       vatCheck: () =>
         json({
-          organization_id: "o-1",
+          company_id: "o-1",
           vat_number: "DE811907980",
           status: "valid",
           checked_at: "2026-08-14T09:12:00Z",
@@ -271,7 +271,7 @@ describe("the legal identity a person can state", () => {
         }
         if (url.pathname.endsWith("/me")) {
           return json(
-            meFixture({ allow: { organization: ["read", "update"] } }),
+            meFixture({ allow: { company: ["read", "update"] } }),
           );
         }
         if (url.pathname.endsWith("/vat-check")) {
@@ -283,7 +283,7 @@ describe("the legal identity a person can state", () => {
     renderGrid(ORG);
     await screen.findByRole("button", { name: "Change Industry" });
 
-    // The industry row edits (it reads the organization, which HAS answered);
+    // The industry row edits (it reads the company, which HAS answered);
     // the sidecar rows do not, because their own read has not.
     expect(
       screen.queryByRole("button", { name: "Change Register / VAT ID" }),
@@ -311,7 +311,7 @@ describe("the legal identity a person can state", () => {
       {
         vatCheck: () =>
           json({
-            organization_id: "o-1",
+            company_id: "o-1",
             vat_number: "DE811907980",
             status: "valid",
             checked_at: "2026-08-14T09:12:00Z",
@@ -350,14 +350,14 @@ describe("the legal identity a person can state", () => {
     await user.keyboard("{Enter}");
 
     // The endpoint matters as much as the value: this is the write that queues
-    // the VAT consultation, and PATCH /organizations/{id} would not.
+    // the VAT consultation, and PATCH /companies/{id} would not.
     const written = await waitFor(() => {
       const call = calls.find((one) => one.method === "PATCH");
       expect(call).toBeDefined();
       return call;
     });
     expect(written?.pathname).toBe(
-      "/v1/organizations/o-1/profile-fields/register_vat",
+      "/v1/companies/o-1/profile-fields/register_vat",
     );
     expect(JSON.parse(written?.body ?? "{}")).toEqual({
       value: "DE811907980",

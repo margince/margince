@@ -4,7 +4,7 @@
 package people
 
 // The §4 result's translation onto the contract shape. Three routes answer
-// it — the person strength read, the organization roll-up, and the company
+// it — the person strength read, the company roll-up, and the company
 // view's contact list — so a mislabeled bucket or a dropped factor is wrong
 // in three places at once.
 

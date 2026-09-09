@@ -13,7 +13,7 @@ package compose
 // What a run measures here is asymmetric, and the scenarios have to be read that
 // way. A wrong `company` answer costs one junk record, which is visible and
 // deletable. A wrong `personal` or `provider` answer costs a real customer their
-// organization, silently. So the corpus weighs a false refusal far more heavily
+// company, silently. So the corpus weighs a false refusal far more heavily
 // than a false company, and `unclear` is a correct answer whenever the page does
 // not actually say — the worker reads the whole site in that case and the
 // deterministic evidence decides.

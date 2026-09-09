@@ -169,11 +169,11 @@ func TestOnboardingSiteReadHandlersStayExplicitWithoutAConfiguredEngine(t *testi
 	readID := openapi_types.UUID(ids.NewV7())
 	tests := []func(http.ResponseWriter, *http.Request){
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.StartCompanySiteRead(w, r, crmcontracts.StartCompanySiteReadParams{})
+			handlers.StartCompanySiteRead(w, r, crmcontracts.StartAnchorCompanySiteReadParams{})
 		},
 		func(w http.ResponseWriter, r *http.Request) { handlers.GetCompanySiteRead(w, r, readID) },
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.ConfirmCompanySiteRead(w, r, readID, crmcontracts.ConfirmCompanySiteReadParams{})
+			handlers.ConfirmCompanySiteRead(w, r, readID, crmcontracts.ConfirmAnchorCompanySiteReadParams{})
 		},
 	}
 	for i, invoke := range tests {

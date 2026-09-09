@@ -28,15 +28,15 @@ import (
 // seedDomain gives an account one domain, live or removed. Written through the
 // owner connection because the filter's subject is the ROW, and what puts it
 // there is not what this test is about.
-func seedDomain(t *testing.T, owner *pgx.Conn, org ids.UUID, domain string, removed bool) {
+func seedDomain(t *testing.T, owner *pgx.Conn, company ids.UUID, domain string, removed bool) {
 	t.Helper()
 	archived := "NULL"
 	if removed {
 		archived = "now()"
 	}
 	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO organization_domain (organization_id, domain, source, captured_by, archived_at)
-		 VALUES ($1, $2, 'manual', 'human:x', `+archived+`)`, org, domain); err != nil {
+		`INSERT INTO company_domain (company_id, domain, source, captured_by, archived_at)
+		 VALUES ($1, $2, 'manual', 'human:x', `+archived+`)`, company, domain); err != nil {
 		t.Fatalf("seeding the %s domain: %v", domain, err)
 	}
 }
@@ -52,30 +52,30 @@ func TestASegmentSelectsAccountsByTheirDomain(t *testing.T) {
 	for object, grant := range perms.Objects {
 		grants[object] = grant
 	}
-	grants["organization"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
+	grants["company"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	perms.Objects = grants
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 
-	match := e.SeedOrg(t, "Acme", &e.Rep1)
+	match := e.SeedCompany(t, "Acme", &e.Rep1)
 	seedDomain(t, owner, match, "acme.test", false)
 	// A second domain on the SAME account: the leaf selects an account holding
 	// AT LEAST the named one, so a company that also runs a product site is
 	// still the account somebody searched for.
 	seedDomain(t, owner, match, "acme-labs.test", false)
 
-	other := e.SeedOrg(t, "Globex", &e.Rep1)
+	other := e.SeedCompany(t, "Globex", &e.Rep1)
 	seedDomain(t, owner, other, "globex.test", false)
 
 	// The account that USED to be at this domain. It must not be selected: a
 	// removed domain is a fact the account no longer carries.
-	former := e.SeedOrg(t, "Former Acme", &e.Rep1)
+	former := e.SeedCompany(t, "Former Acme", &e.Rep1)
 	seedDomain(t, owner, former, "acme.test", true)
 
 	// And one with no domain at all, which the EXISTS must simply not match.
-	bare := e.SeedOrg(t, "No Domain", &e.Rep1)
+	bare := e.SeedCompany(t, "No Domain", &e.Rep1)
 
 	created, err := store.CreateList(rep, collections.CreateListInput{
-		Name: "At acme.test", EntityType: "organization", ListType: "dynamic",
+		Name: "At acme.test", EntityType: "company", ListType: "dynamic",
 		Definition: map[string]any{"field": "domain", "op": "eq", "value": "acme.test"},
 	})
 	if err != nil {

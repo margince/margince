@@ -75,7 +75,7 @@ const CONNECTED: Connector = {
 
 const CANDIDATE = (id: string): Candidate => ({
   id,
-  entity_type: "organization",
+  entity_type: "company",
   left_id: "o-1",
   right_id: "o-2",
   confidence: 0.91,
@@ -171,7 +171,7 @@ const EMPTY_USAGE = {
 
 const ORG_360_VIEW = {
   as_of: "2026-08-01T09:00:00Z",
-  organization: {
+  company: {
     id: "o-1",
     display_name: "Brandt Automotive GmbH",
     captured_by: "human:u1",
@@ -1085,7 +1085,7 @@ describe("AgentRail", () => {
   // the app uses for that record — and following it is leaving for the
   // record, not opening the panel.
   it.each([
-    ["organization", "Acme", "#/companies/"],
+    ["company", "Acme", "#/companies/"],
     ["person", "Ana Roth", "#/contacts/"],
   ])(
     "links the %s a summary is about to its record",
@@ -1148,7 +1148,7 @@ describe("AgentRail", () => {
       RUN({
         kind: "account_scan",
         subject_label: "Brandt Automotive",
-        subject_type: "organization",
+        subject_type: "company",
         subject_id: id,
       }),
     );

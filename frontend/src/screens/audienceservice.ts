@@ -51,7 +51,7 @@ export type ThreadAudienceResult = {
  * records this screen is not on — so every read that could be drawing one is
  * refreshed here rather than left to each caller to remember. Refreshing only
  * the record on screen left the same message on a colleague's contact page, or
- * on the deal it also hangs off, still saying "Everyone in the organization"
+ * on the deal it also hangs off, still saying "Everyone in the company"
  * until a reload: the change did happen, and the second page was quietly wrong
  * about it, which is the harder version to trust.
  */

@@ -812,7 +812,7 @@ function CompanyIdentityCard({
       {/* The contract carries no logo/favicon field for a company; the
           monogram is the floor, not a fallback for a missing fetch. Tinted,
           because the floor is a DETERMINISTIC mark: the same company draws
-          the same colour here, in the organizations list and on the
+          the same colour here, in the companies list and on the
           connections graph, and a neutral chip would make the one company
           this whole surface is about the only anonymous one. */}
       <Avatar name={name} size="md" />

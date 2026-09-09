@@ -8,7 +8,7 @@ package gates
 // function of the same name.
 //
 // It lives on its own because there are two callers now — the privacy census
-// (which tables an erase and an anonymize each clear) and the organization
+// (which tables an erase and an anonymize each clear) and the company
 // rename census (whether every name write reaches the duplicate re-check) — and
 // a graph copied for the second drifts from the first. The narrower copy then
 // walks a smaller tree and says PASS, which is the failure a census cannot

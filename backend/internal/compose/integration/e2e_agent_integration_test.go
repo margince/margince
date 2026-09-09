@@ -165,7 +165,7 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		Detail string `json:"detail"`
 	}
 	status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
-		"target_url": "https://example.test/hook", "event_types": []string{"organization.created"},
+		"target_url": "https://example.test/hook", "event_types": []string{"company.created"},
 	}, bearer, &problem)
 	if status != 403 || problem.Code != "approval_required" {
 		t.Fatalf("🟡 REST mutation → %d %q, want 403 approval_required", status, problem.Code)
@@ -200,7 +200,7 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 	}
 	withToken := map[string]string{"Authorization": "Bearer " + minted.Token, "X-Approval-Token": approvalID}
 	body := AnyMap{
-		"target_url": "https://example.test/hook", "event_types": []string{"organization.created"},
+		"target_url": "https://example.test/hook", "event_types": []string{"company.created"},
 	}
 	// Past the gate is what the token buys. Where the create lands after that is
 	// the webhook module's business — this composition seals no signing key, so

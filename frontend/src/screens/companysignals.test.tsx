@@ -84,7 +84,7 @@ describe("SignalsSection", () => {
       }),
     ]);
 
-    render(<SignalsSection orgId="o-1" />);
+    render(<SignalsSection companyId="o-1" />);
 
     const link = await screen.findByRole("link", {
       name: "Read the announcement",
@@ -133,7 +133,7 @@ describe("SignalsSection", () => {
       }),
     ]);
 
-    render(<SignalsSection orgId="o-1" />);
+    render(<SignalsSection companyId="o-1" />);
 
     // Exactly one link, and it belongs to the row that cited a page.
     const links = await screen.findAllByRole("link", {
@@ -166,7 +166,7 @@ describe("SignalsSection", () => {
       }),
     ]);
 
-    render(<SignalsSection orgId="o-1" />);
+    render(<SignalsSection companyId="o-1" />);
 
     const link = await screen.findByRole("link", {
       name: "Read the announcement",
@@ -184,7 +184,7 @@ describe("SignalsSection", () => {
       signal({ summary: "Shape from a newer server", evidence: {} }),
     ]);
 
-    render(<SignalsSection orgId="o-1" />);
+    render(<SignalsSection companyId="o-1" />);
 
     expect(
       await screen.findByText("Shape from a newer server"),
@@ -206,7 +206,7 @@ describe("SignalsSection", () => {
       }),
     ]);
 
-    render(<SignalsSection orgId="o-1" />);
+    render(<SignalsSection companyId="o-1" />);
 
     expect(
       await screen.findByText("Brandt Automotive raises a Series B"),

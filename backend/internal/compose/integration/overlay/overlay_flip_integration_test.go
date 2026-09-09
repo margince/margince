@@ -75,7 +75,7 @@ import (
 )
 
 // flipEstate is the seeded fixture the flip tests share: a connected
-// overlay workspace whose mirror holds two organizations, two persons,
+// overlay workspace whose mirror holds two companies, two persons,
 // two deals (one open on an unmatched incumbent stage, one closedwon),
 // one lead, and one email activity — plus the association edges the
 // detangling asserts on.
@@ -110,7 +110,7 @@ func flipAdminPerms() principal.Permissions {
 	return principal.Permissions{
 		RoleKeys: []string{"admin"},
 		Objects: map[string]principal.ObjectGrant{
-			"person": crud, "organization": crud, "deal": crud, "lead": crud,
+			"person": crud, "company": crud, "deal": crud, "lead": crud,
 			"activity": crud, "relationship": crud, "pipeline": crud,
 			"overlay_connection": crud, "import_run": crud, "audit": {Read: true},
 			// The flip closes imported deals, and a close freezes a rate
@@ -197,13 +197,13 @@ func setupFlipEstate(t *testing.T) flipEstate {
 	// nested object, is a shape the mapper never produces, and seeding one
 	// would let a writer that reads that shape pass while dropping every real
 	// email.
-	seed(overlaymod.IncumbentClassCompanies, "organization", "org-1", map[string]any{
+	seed(overlaymod.IncumbentClassCompanies, "company", "company-1", map[string]any{
 		"display_name":        "BÄR Pharma",
-		"organization_domain": []map[string]any{{"domain": "baer-pharma.test", "is_primary": true, "position": 0}},
+		"company_domain": []map[string]any{{"domain": "baer-pharma.test", "is_primary": true, "position": 0}},
 	})
-	seed(overlaymod.IncumbentClassCompanies, "organization", "org-2", map[string]any{
+	seed(overlaymod.IncumbentClassCompanies, "company", "company-2", map[string]any{
 		"display_name":        "Gitex",
-		"organization_domain": []map[string]any{{"domain": "gitex.test", "is_primary": true, "position": 0}},
+		"company_domain": []map[string]any{{"domain": "gitex.test", "is_primary": true, "position": 0}},
 	})
 	seed(overlaymod.IncumbentClassContacts, "person", "p-1", map[string]any{
 		"full_name": "Mor Anders", "first_name": "Mor", "last_name": "Anders",
@@ -245,11 +245,11 @@ func setupFlipEstate(t *testing.T) flipEstate {
 	}
 
 	// The association edges (canonical vocabulary, the adapter's output
-	// shape): deal→organization FK, person→organization employment,
+	// shape): deal→company FK, person→company employment,
 	// activity→person link.
 	for _, a := range []overlaymod.Assoc{
-		{FromType: "deal", FromID: "d-open", ToType: "organization", ToID: "org-1", TypeID: 5, Category: "HUBSPOT_DEFINED", Direction: "forward"},
-		{FromType: "person", FromID: "p-1", ToType: "organization", ToID: "org-1", TypeID: 1, Category: "HUBSPOT_DEFINED", Label: "primary", Direction: "forward"},
+		{FromType: "deal", FromID: "d-open", ToType: "company", ToID: "company-1", TypeID: 5, Category: "HUBSPOT_DEFINED", Direction: "forward"},
+		{FromType: "person", FromID: "p-1", ToType: "company", ToID: "company-1", TypeID: 1, Category: "HUBSPOT_DEFINED", Label: "primary", Direction: "forward"},
 		{FromType: "activity", FromID: "emails:900", ToType: "person", ToID: "p-1", TypeID: 9, Category: "HUBSPOT_DEFINED", Direction: "forward"},
 	} {
 		if err := mirror.UpsertAssoc(adminCtx, a); err != nil {
@@ -297,7 +297,7 @@ func (f flipEstate) nativeEstateRows(t *testing.T) map[string]int {
 	counts := map[string]int{}
 	for object, query := range map[string]string{
 		"person":       `SELECT count(*) FROM person WHERE source LIKE 'mirror:hubspot:%'`,
-		"organization": `SELECT count(*) FROM organization WHERE source LIKE 'mirror:hubspot:%'`,
+		"company": `SELECT count(*) FROM company WHERE source LIKE 'mirror:hubspot:%'`,
 		"deal":         `SELECT count(*) FROM deal WHERE source LIKE 'mirror:hubspot:%'`,
 		"lead":         `SELECT count(*) FROM lead WHERE source_system = 'mirror:hubspot'`,
 		"activity":     `SELECT count(*) FROM activity WHERE source_system = 'mirror:hubspot'`,
@@ -408,7 +408,7 @@ func TestOverlayFlipPreflightBlocksHonestly(t *testing.T) {
 	for _, p := range *verdict.Parity {
 		parityByObject[p.Object] = p.WillCreate
 	}
-	want := map[string]int{"organization": 2, "person": 3, "deal": 2, "lead": 1, "activity": 1}
+	want := map[string]int{"company": 2, "person": 3, "deal": 2, "lead": 1, "activity": 1}
 	for object, n := range want {
 		if parityByObject[object] != n {
 			t.Errorf("parity will_create[%s] = %d, want %d", object, parityByObject[object], n)
@@ -471,7 +471,7 @@ func TestOverlayFlipFreshSyncExecute(t *testing.T) {
 
 	// Counts preserved (AC-OV-10 parity vs the frozen estate).
 	counts := f.nativeEstateRows(t)
-	for object, n := range map[string]int{"person": 3, "organization": 2, "deal": 2, "lead": 1, "activity": 1} {
+	for object, n := range map[string]int{"person": 3, "company": 2, "deal": 2, "lead": 1, "activity": 1} {
 		if counts[object] != n {
 			t.Errorf("native %s rows = %d, want %d", object, counts[object], n)
 		}
@@ -480,7 +480,7 @@ func TestOverlayFlipFreshSyncExecute(t *testing.T) {
 		t.Errorf("records_imported = %d, want %d", *accepted.RecordsImported, got)
 	}
 
-	// Relationships preserved: the deal→organization FK, the primary
+	// Relationships preserved: the deal→company FK, the primary
 	// employment row, the activity link (IEM-FORM-2's detangling), and
 	// the won deal closed through the real advance path.
 	assertOne := func(name, query string) {
@@ -493,9 +493,9 @@ func TestOverlayFlipFreshSyncExecute(t *testing.T) {
 			t.Errorf("%s = %d rows, want 1", name, n)
 		}
 	}
-	assertOne("deal→organization FK", `
-		SELECT count(*) FROM deal d JOIN organization o ON o.id = d.organization_id
-		WHERE d.source = 'mirror:hubspot:deal:d-open' AND o.source = 'mirror:hubspot:organization:org-1'`)
+	assertOne("deal→company FK", `
+		SELECT count(*) FROM deal d JOIN company o ON o.id = d.company_id
+		WHERE d.source = 'mirror:hubspot:deal:d-open' AND o.source = 'mirror:hubspot:company:company-1'`)
 	assertOne("primary employment relationship", `
 		SELECT count(*) FROM relationship r
 		JOIN person p ON p.id = r.person_id
@@ -514,10 +514,10 @@ func TestOverlayFlipFreshSyncExecute(t *testing.T) {
 		SELECT count(*) FROM person_email pe
 		JOIN person p ON p.id = pe.person_id
 		WHERE p.source = 'mirror:hubspot:person:p-1' AND pe.email = 'mor@baer-pharma.test'`)
-	assertOne("imported organization's domain", `
-		SELECT count(*) FROM organization_domain od
-		JOIN organization o ON o.id = od.organization_id
-		WHERE o.source = 'mirror:hubspot:organization:org-1' AND od.domain = 'baer-pharma.test'`)
+	assertOne("imported company's domain", `
+		SELECT count(*) FROM company_domain od
+		JOIN company o ON o.id = od.company_id
+		WHERE o.source = 'mirror:hubspot:company:company-1' AND od.domain = 'baer-pharma.test'`)
 	// Owners survive the flip: every estate row named incumbent owner
 	// "owner-1", which mirror_user_map binds to the admin.
 	var ownedByAdmin int

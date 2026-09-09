@@ -49,18 +49,18 @@ const UNPINNED_WRITES: readonly string[] = [
   // actions, so its archive is the one gesture in the product that removes a
   // screenful of rows at once, and it was the verb of three in that bar that
   // could not lose a race it should lose.
-  "screens/companyheader.tsx DELETE /organizations/{id}",
+  "screens/companyheader.tsx DELETE /companies/{id}",
   "screens/contacts.tsx DELETE /people/{id}",
   "screens/personrail.tsx DELETE /relationships/{id}",
   "screens/relationships.tsx DELETE /relationships/{id}",
   "screens/contractform.tsx PATCH /contracts/{id}",
   "screens/customfields.tsx PATCH /custom-fields/{id}",
-  // The two FACT writes stay: OrganizationFact carries no version on the wire,
+  // The two FACT writes stay: CompanyFact carries no version on the wire,
   // so no caller can pin one. Its sibling, CompanyProfileField, now does — the
   // profile-field lines that used to sit here are gone because both verbs send
   // the precondition.
-  "screens/evidenceverdict.tsx PATCH /organizations/{id}/facts/{factKey}",
-  "screens/evidenceverdict.tsx POST /organizations/{id}/facts/{factKey}/confirm",
+  "screens/evidenceverdict.tsx PATCH /companies/{id}/facts/{factKey}",
+  "screens/evidenceverdict.tsx POST /companies/{id}/facts/{factKey}/confirm",
   "screens/extension-access.tsx PATCH /roles/{key}/objects/{object}",
   "screens/settings.tsx DELETE /stages/{id}",
   "screens/share.tsx DELETE /record-grants/{id}",

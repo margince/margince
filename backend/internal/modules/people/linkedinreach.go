@@ -30,7 +30,7 @@ import (
 
 // LinkedInReachAccount is one account this member's network reaches.
 type LinkedInReachAccount struct {
-	OrganizationID ids.UUID
+	CompanyID ids.UUID
 	DisplayName    string
 	Connections    int
 	// ContactsOnFile counts the CONFIRMED matches only. The gap between it and
@@ -54,7 +54,7 @@ type LinkedInReach struct {
 
 // MyLinkedInReach reads the caller's own network, grouped by account.
 //
-// Organization row scope applies to the LIST, and a connection parked on an
+// Company row scope applies to the LIST, and a connection parked on an
 // account the caller may not read is counted as UNRESOLVED rather than dropped.
 //
 // That direction is load-bearing. The two numbers are differenceable: a
@@ -69,10 +69,10 @@ func (s *Store) MyLinkedInReach(ctx context.Context, limit *int) (LinkedInReach,
 	if !ok || actor.UserID == ids.Nil {
 		return LinkedInReach{}, apperrors.ErrPermissionDenied
 	}
-	// The payload names organizations, so it takes the organization read grant
+	// The payload names companies, so it takes the company read grant
 	// — a member who may not read accounts must not learn which ones exist by
 	// asking about their own address book.
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return LinkedInReach{}, err
 	}
 	capped := storekit.ClampLimit(limit)
@@ -97,7 +97,7 @@ func (s *Store) countUnresolved(ctx context.Context, tx pgx.Tx, owner ids.UUID, 
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	ownerPos := arg(owner)
-	scope, err := auth.ScopeClauseFor(ctx, "organization", "o", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
 	if err != nil {
 		return err
 	}
@@ -110,8 +110,8 @@ func (s *Store) countUnresolved(ctx context.Context, tx pgx.Tx, owner ids.UUID, 
 		  FROM linkedin_connection c
 		 WHERE c.owner_user_id = $%d AND c.tombstoned_at IS NULL
 		   AND NOT EXISTS (
-		       SELECT 1 FROM organization o
-		        WHERE o.id = c.matched_org_id AND o.archived_at IS NULL AND (%s))`,
+		       SELECT 1 FROM company o
+		        WHERE o.id = c.matched_company_id AND o.archived_at IS NULL AND (%s))`,
 		ownerPos, visible), args...).Scan(&out.UnresolvedConnections)
 }
 
@@ -119,7 +119,7 @@ func (s *Store) readReachAccounts(ctx context.Context, tx pgx.Tx, owner ids.UUID
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	ownerPos := arg(owner)
-	scope, err := auth.ScopeClauseFor(ctx, "organization", "o", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
 	if err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func (s *Store) readReachAccounts(ctx context.Context, tx pgx.Tx, owner ids.UUID
 		           count(*) AS connections,
 		           count(*) FILTER (WHERE c.match_status = 'confirmed') AS on_file
 		      FROM linkedin_connection c
-		      JOIN organization o ON o.id = c.matched_org_id AND o.archived_at IS NULL
+		      JOIN company o ON o.id = c.matched_company_id AND o.archived_at IS NULL
 		     WHERE c.owner_user_id = $%d AND c.tombstoned_at IS NULL AND (%s)
 		     GROUP BY o.id, o.display_name
 		)
@@ -152,7 +152,7 @@ func (s *Store) readReachAccounts(ctx context.Context, tx pgx.Tx, owner ids.UUID
 		var a LinkedInReachAccount
 		// Every row carries the same total; they agree because they come from
 		// one statement.
-		if err := rows.Scan(&a.OrganizationID, &a.DisplayName, &a.Connections,
+		if err := rows.Scan(&a.CompanyID, &a.DisplayName, &a.Connections,
 			&a.ContactsOnFile, &out.AccountsTotal); err != nil {
 			return err
 		}

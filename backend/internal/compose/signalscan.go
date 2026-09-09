@@ -48,7 +48,7 @@ const kindGhostedThread = "ghosted_thread"
 
 // ghostedCandidate is one account the deterministic rule fired on.
 type ghostedCandidate struct {
-	OrganizationID ids.UUID
+	CompanyID ids.UUID
 	ActivityID     ids.UUID
 	At             time.Time
 }
@@ -61,7 +61,7 @@ type ghostedCandidate struct {
 // about a relationship, it is the absence of one.
 //
 // The account behind an interaction comes from the three-arm walk
-// (activities.OrgReachSet), not a direct organization link. Capture files mail
+// (activities.CompanyReachSet), not a direct company link. Capture files mail
 // against the PERSON it was with, so a direct match resolves nothing on real
 // correspondence. Reaching through the contact is also what makes the rule
 // TRUE: a reply from a colleague at the same account answers us, and a rule
@@ -76,10 +76,10 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 	cutoff := now.AddDate(0, 0, -ghostedThresholdDays)
 	rows, err := tx.Query(ctx, `
 		WITH newest AS (
-			SELECT DISTINCT ON (ro.organization_id)
-			       ro.organization_id, a.id, a.direction, a.occurred_at
+			SELECT DISTINCT ON (ro.company_id)
+			       ro.company_id, a.id, a.direction, a.occurred_at
 			  FROM activity a
-			  JOIN (`+activities.OrgReachSet()+`) ro ON ro.activity_id = a.id
+			  JOIN (`+activities.CompanyReachSet()+`) ro ON ro.activity_id = a.id
 			 WHERE a.archived_at IS NULL
 			   AND a.kind IN `+relstrength.InteractionKindSQLGroup()+`
 			   -- An interaction with no recorded direction cannot say who spoke
@@ -87,16 +87,16 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 			   -- PO-F-4 applies to the engagement state.
 			   AND a.direction IS NOT NULL
 			   AND a.occurred_at <= $1
-			 ORDER BY ro.organization_id, a.occurred_at DESC, a.id DESC
+			 ORDER BY ro.company_id, a.occurred_at DESC, a.id DESC
 		)
-		SELECT n.organization_id, n.id, n.occurred_at
+		SELECT n.company_id, n.id, n.occurred_at
 		  FROM newest n
-		  JOIN organization o ON o.id = n.organization_id AND o.archived_at IS NULL
+		  JOIN company o ON o.id = n.company_id AND o.archived_at IS NULL
 		 WHERE n.direction = 'outbound'
 		   AND n.occurred_at < $2
 		   AND (o.lifecycle IN ('prospect','opportunity','customer')
 		        OR EXISTS (SELECT 1 FROM deal d
-		                    WHERE d.organization_id = o.id AND d.status = 'open'
+		                    WHERE d.company_id = o.id AND d.status = 'open'
 		                      AND d.archived_at IS NULL))`,
 		now, cutoff)
 	if err != nil {
@@ -106,7 +106,7 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 	var out []ghostedCandidate
 	for rows.Next() {
 		var found ghostedCandidate
-		if err := rows.Scan(&found.OrganizationID, &found.ActivityID, &found.At); err != nil {
+		if err := rows.Scan(&found.CompanyID, &found.ActivityID, &found.At); err != nil {
 			return nil, err
 		}
 		out = append(out, found)
@@ -117,8 +117,8 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 // signalFingerprint identifies a signal by what it fired ON, so a producer that
 // runs hourly raises nothing new on an unchanged account, and a dismissal
 // survives every later pass over the same evidence.
-func signalFingerprint(kind string, orgID ids.UUID, evidence ...ids.UUID) string {
-	parts := []string{kind, orgID.String()}
+func signalFingerprint(kind string, companyID ids.UUID, evidence ...ids.UUID) string {
+	parts := []string{kind, companyID.String()}
 	for _, id := range evidence {
 		parts = append(parts, id.String())
 	}
@@ -151,7 +151,7 @@ type GhostedPass struct {
 
 // WriteGhostedSignals is the deterministic producer pass: compose computes
 // WHICH accounts the rule fired on — a question that spans activity,
-// organization and deal, which is why it lives here — and the signals module
+// company and deal, which is why it lives here — and the signals module
 // writes the rows, because a module owns its own table.
 func WriteGhostedSignals(ctx context.Context, tx pgx.Tx, now time.Time) (GhostedPass, error) {
 	candidates, err := scanGhostedThreads(ctx, tx, now)
@@ -164,10 +164,10 @@ func WriteGhostedSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Ghosted
 		days := int(now.Sub(found.At).Hours() / 24)
 		raised, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind:           kindGhostedThread,
-			OrganizationID: found.OrganizationID,
+			CompanyID: found.CompanyID,
 			Summary:        fmt.Sprintf(said.ghostedThread, days),
 			Severity:       severityWarn,
-			Fingerprint:    signalFingerprint(kindGhostedThread, found.OrganizationID, found.ActivityID),
+			Fingerprint:    signalFingerprint(kindGhostedThread, found.CompanyID, found.ActivityID),
 			// The message is CITED, not quoted. This finding is shared with
 			// everyone who can see the account, while the message it points at
 			// may be readable by one person — capture files mail against

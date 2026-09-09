@@ -32,7 +32,7 @@ func NewHandlers(svc *Service, overlay OverlayMode) Handlers {
 	return Handlers{svc: svc, overlay: overlay}
 }
 
-// DraftAccountEmail implements POST /organizations/{id}/draft-email.
+// DraftAccountEmail implements POST /companies/{id}/draft-email.
 func (h Handlers) DraftAccountEmail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	overlay, err := h.overlay(r.Context())
 	if err != nil {
@@ -57,7 +57,7 @@ func (h Handlers) DraftAccountEmail(w http.ResponseWriter, r *http.Request, id c
 		return
 	}
 	draft, err := h.svc.Draft(r.Context(),
-		ids.From[ids.OrganizationKind](ids.UUID(id)), req)
+		ids.From[ids.CompanyKind](ids.UUID(id)), req)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

@@ -49,15 +49,15 @@ func summary(t *testing.T, id openapi_types.UUID, subject string) crmcontracts.E
 	return crmcontracts.EmailSummary{ActivityId: id, Subject: &subject}
 }
 
-func cited(kind crmcontracts.OrganizationBriefEvidenceEntityType, id openapi_types.UUID) crmcontracts.OrganizationBriefEvidence {
-	return crmcontracts.OrganizationBriefEvidence{EntityType: kind, EntityId: id}
+func cited(kind crmcontracts.CompanyBriefEvidenceEntityType, id openapi_types.UUID) crmcontracts.CompanyBriefEvidence {
+	return crmcontracts.CompanyBriefEvidence{EntityType: kind, EntityId: id}
 }
 
 const (
-	activity     = crmcontracts.OrganizationBriefEvidenceEntityTypeActivity
-	deal         = crmcontracts.OrganizationBriefEvidenceEntityTypeDeal
-	person       = crmcontracts.OrganizationBriefEvidenceEntityTypePerson
-	factEvidence = crmcontracts.OrganizationBriefEvidenceEntityTypeFact
+	activity     = crmcontracts.CompanyBriefEvidenceEntityTypeActivity
+	deal         = crmcontracts.CompanyBriefEvidenceEntityTypeDeal
+	person       = crmcontracts.CompanyBriefEvidenceEntityTypePerson
+	factEvidence = crmcontracts.CompanyBriefEvidenceEntityTypeFact
 )
 
 // Two sentences citing one message ask for it once, and both are filled. The
@@ -66,9 +66,9 @@ const (
 func TestOneMessageCitedTwiceIsReadOnceAndFillsBoth(t *testing.T) {
 	t.Parallel()
 	id := uuid(t, 1)
-	sentences := []crmcontracts.OrganizationBriefSentence{
-		{Text: "They asked about fallbacks.", Evidence: []crmcontracts.OrganizationBriefEvidence{cited(activity, id)}},
-		{Text: "Nobody has answered.", Evidence: []crmcontracts.OrganizationBriefEvidence{cited(activity, id)}},
+	sentences := []crmcontracts.CompanyBriefSentence{
+		{Text: "They asked about fallbacks.", Evidence: []crmcontracts.CompanyBriefEvidence{cited(activity, id)}},
+		{Text: "Nobody has answered.", Evidence: []crmcontracts.CompanyBriefEvidence{cited(activity, id)}},
 	}
 	reader := &fakeReader{answer: map[ids.UUID]crmcontracts.EmailSummary{
 		ids.UUID(id): summary(t, id, "Translation fallback"),
@@ -100,9 +100,9 @@ func TestOneMessageCitedTwiceIsReadOnceAndFillsBoth(t *testing.T) {
 // that always read.
 func TestEvidenceWithNoActivityReadsNothing(t *testing.T) {
 	t.Parallel()
-	sentences := []crmcontracts.OrganizationBriefSentence{{
+	sentences := []crmcontracts.CompanyBriefSentence{{
 		Text: "The deal is open and the champion is named.",
-		Evidence: []crmcontracts.OrganizationBriefEvidence{
+		Evidence: []crmcontracts.CompanyBriefEvidence{
 			cited(deal, uuid(t, 2)),
 			cited(person, uuid(t, 3)),
 			cited(factEvidence, uuid(t, 4)),
@@ -130,8 +130,8 @@ func TestEvidenceWithNoActivityReadsNothing(t *testing.T) {
 func TestAnUnansweredIdLeavesTheCitationBare(t *testing.T) {
 	t.Parallel()
 	readable, withheld := uuid(t, 5), uuid(t, 6)
-	suggestions := []crmcontracts.Organization360Suggestion{{
-		Evidence: []crmcontracts.OrganizationBriefEvidence{cited(activity, readable), cited(activity, withheld)},
+	suggestions := []crmcontracts.Company360Suggestion{{
+		Evidence: []crmcontracts.CompanyBriefEvidence{cited(activity, readable), cited(activity, withheld)},
 	}}
 	reader := &fakeReader{answer: map[ids.UUID]crmcontracts.EmailSummary{
 		ids.UUID(readable): summary(t, readable, "Yours to read"),
@@ -157,7 +157,7 @@ func TestAReaderErrorFailsTheResponseAndTouchesNothing(t *testing.T) {
 	id := uuid(t, 7)
 	reasons := []crmcontracts.AccountDraftReason{{
 		Kind: crmcontracts.AccountDraftReasonKindConversation, Label: "They asked",
-		EvidenceRef: &crmcontracts.OrganizationBriefEvidence{EntityType: activity, EntityId: id},
+		EvidenceRef: &crmcontracts.CompanyBriefEvidence{EntityType: activity, EntityId: id},
 	}}
 	sentinel := errors.New("the connection went away")
 	reader := &fakeReader{err: sentinel}
@@ -177,8 +177,8 @@ func TestAReaderErrorFailsTheResponseAndTouchesNothing(t *testing.T) {
 // holds that every production construction wires one.
 func TestANilReaderChangesNothing(t *testing.T) {
 	t.Parallel()
-	sentences := []crmcontracts.OrganizationBriefSentence{{
-		Evidence: []crmcontracts.OrganizationBriefEvidence{cited(activity, uuid(t, 8))},
+	sentences := []crmcontracts.CompanyBriefSentence{{
+		Evidence: []crmcontracts.CompanyBriefEvidence{cited(activity, uuid(t, 8))},
 	}}
 
 	if err := briefevidence.Attach(context.Background(), nil, briefevidence.FromSentences(sentences)); err != nil {
@@ -228,7 +228,7 @@ func TestFromActivitiesAnswersHeldRowsAndSkipsNonEmails(t *testing.T) {
 		{Id: mail, EmailSummary: &held},
 		{Id: note},
 	}
-	evidence := []crmcontracts.OrganizationBriefEvidence{cited(activity, mail), cited(activity, note)}
+	evidence := []crmcontracts.CompanyBriefEvidence{cited(activity, mail), cited(activity, note)}
 
 	if err := briefevidence.Attach(context.Background(), briefevidence.FromActivities(rows), briefevidence.FromEvidence(evidence)); err != nil {
 		t.Fatalf("attaching: %v", err)
@@ -249,8 +249,8 @@ func TestFromActivitiesAnswersHeldRowsAndSkipsNonEmails(t *testing.T) {
 func TestStripClearsWhatAttachFilled(t *testing.T) {
 	t.Parallel()
 	id := uuid(t, 12)
-	sentences := []crmcontracts.OrganizationBriefSentence{{
-		Evidence: []crmcontracts.OrganizationBriefEvidence{cited(activity, id)},
+	sentences := []crmcontracts.CompanyBriefSentence{{
+		Evidence: []crmcontracts.CompanyBriefEvidence{cited(activity, id)},
 	}}
 	reader := &fakeReader{answer: map[ids.UUID]crmcontracts.EmailSummary{
 		ids.UUID(id): summary(t, id, "Not for the cache"),

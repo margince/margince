@@ -343,12 +343,12 @@ func (e *Env) AgentCtxWithPassport(passportID ids.UUID) context.Context {
 	})
 }
 
-// AgentWithOrgRead binds an agent principal holding the same object grants
+// AgentWithCompanyRead binds an agent principal holding the same object grants
 // the rep does, unbounded, and CARRYING the granting human's user id — the
 // shape identity/passport.go actually mints, where OnBehalfOf becomes
 // UserID for row scope. An agent with no user id would be refused for the
 // wrong reason and would prove nothing about the human-only rule.
-func AgentWithOrgRead(e *Env) context.Context {
+func AgentWithCompanyRead(e *Env) context.Context {
 	// Deep copy, not `perms := AccountRepPerms`: a plain struct copy shares the
 	// Objects map, and this fixture is now read from other packages. A later
 	// grant added here would widen it for every suite at once, which is exactly

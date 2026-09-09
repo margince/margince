@@ -135,7 +135,7 @@ func cardFields(entry VCardEntry) []cardField {
 		}
 	}
 	add(fieldTitle, entry.Title)
-	add(fieldOrgName, entry.Organization)
+	add(fieldCompanyName, entry.Company)
 	add(fieldAddress, entry.Address)
 	if u := strings.TrimSpace(entry.URL); u != "" {
 		if isLinkedinURL(u) {

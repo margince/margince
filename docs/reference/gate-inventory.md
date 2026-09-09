@@ -278,7 +278,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `liveprobelock_test.go` | H2 | A live-probed write of a HELD row locks its subject. |
 | `messagingpackreach_test.go` | H2 | Every messaging rule set a shipped unit declares is one the boot registers. |
 | `moduleaudits_test.go` | H2 | A module that owns tables writes their history. |
-| `orgrenamerecheck_test.go` | H2 | A company's NAME is the axis on which two records of one company converge, so every rename has to ask whether it just created a duplicate. |
+| `companyrenamerecheck_test.go` | H2 | A company's NAME is the axis on which two records of one company converge, so every rename has to ask whether it just created a duplicate. |
 | `personscrub_test.go` | H2 | Erasing a person and anonymizing one are the same act with one difference: the erased subject goes on a suppression list, and the anonymized subject may lawfully return. |
 | `rbacgate_test.go` | H2 | The store-entry-point admission rule as a fitness function: every exported method on a module's \*Store or \*Service — the seam both the HTTP handlers and the MCP tool surface call through — references the platform auth gate (object RBAC and/or the row-scope spellings), directly or through a same-package helper. |
 | `relaywiring_test.go` | H2 | Every option that wires the mail relay is wired by a role binary. |
@@ -295,7 +295,7 @@ The eight shapes, what each is for, and how each one silently passes:
 |---|---|---|
 | `capturedbytyping_test.go` | H2 | `captured\_by` records the PRINCIPAL, and a principal is not a user row. |
 | `cursorrefusal_test.go` | H2 | A page token a caller hands back is either one this server minted or it is not, and that is ONE question with one answer on the wire: the contract's `422 code: malformed\_cursor`, which tells the caller to re-issue the request without the token. |
-| `domainclaimprobe_test.go` | H2 | A domain maps to at most one organization (data-model §4.2), so "is this domain taken?" is one question — and answering it discloses something either way. |
+| `domainclaimprobe_test.go` | H2 | A domain maps to at most one company (data-model §4.2), so "is this domain taken?" is one question — and answering it discloses something either way. |
 | `enrichmentpool_test.go` | H2 | A provider handler set that can queue a RUN must carry the pool its visibility check reads through. |
 | `extensionsqlscope_test.go` | H1 | A unit's SQL addresses the unit's own tables. |
 | `fieldnames_test.go` | H2 | A field name published to a caller has to BE a field name. |

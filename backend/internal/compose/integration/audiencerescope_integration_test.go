@@ -91,7 +91,7 @@ func TestAnAudienceChangeNarrowsTheDerivedSignalAndMakesTheThreadDue(t *testing.
 	ctx := context.Background()
 	captureOwner := e.Rep1
 
-	org := e.SeedOrg(t, "Acme GmbH", &e.Rep1)
+	company := e.SeedCompany(t, "Acme GmbH", &e.Rep1)
 	activity := ids.NewV7()
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO activity (id, kind, subject, occurred_at, direction, thread_key, source, captured_by)
@@ -109,7 +109,7 @@ func TestAnAudienceChangeNarrowsTheDerivedSignalAndMakesTheThreadDue(t *testing.
 	extractor := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 	if err := database.WithWorkspaceTx(extractor, e.Pool, func(tx pgx.Tx) error {
 		written, err := signals.RecordDerived(extractor, tx, signals.DerivedSignal{
-			Kind: "risk", OrganizationID: org, Summary: "renewal at risk per the thread",
+			Kind: "risk", CompanyID: company, Summary: "renewal at risk per the thread",
 			Severity: "warn", Fingerprint: "thr-1:risk",
 			Evidence: []signals.DerivedEvidence{{Snippet: "we may not renew", ActivityID: activity}},
 		}, time.Now().UTC())
@@ -169,7 +169,7 @@ func TestOwnerlessAndCrossOwnerCitationsArchiveTheSignal(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := context.Background()
-	org := e.SeedOrg(t, "Acme GmbH", &e.Rep1)
+	company := e.SeedCompany(t, "Acme GmbH", &e.Rep1)
 
 	agentActivity := ids.NewV7()
 	if _, err := owner.Exec(ctx, `
@@ -191,7 +191,7 @@ func TestOwnerlessAndCrossOwnerCitationsArchiveTheSignal(t *testing.T) {
 		t.Helper()
 		if err := database.WithWorkspaceTx(extractor, e.Pool, func(tx pgx.Tx) error {
 			_, err := signals.RecordDerived(extractor, tx, signals.DerivedSignal{
-				Kind: "risk", OrganizationID: org, Summary: "s", Severity: "warn",
+				Kind: "risk", CompanyID: company, Summary: "s", Severity: "warn",
 				Fingerprint: fingerprint, PrivateTo: privateTo,
 				Evidence: []signals.DerivedEvidence{{Snippet: "x", ActivityID: activity}},
 			}, time.Now().UTC())

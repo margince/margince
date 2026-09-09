@@ -4,7 +4,7 @@
 package compose
 
 // The workspace capture-settings surface (CAP-WIRE-7, ADR-0072/A118): read the
-// captured-organization auto-enrich posture (every role), toggle it (admin/ops,
+// captured-company auto-enrich posture (every role), toggle it (admin/ops,
 // human-only). Thin transport — the capture store owns the RBAC gate and the
 // audit-only write.
 

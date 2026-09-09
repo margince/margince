@@ -23,18 +23,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func matchGhostOrganizations(ctx context.Context, tx pgx.Tx) error {
+func matchGhostCompanies(ctx context.Context, tx pgx.Tx) error {
 	// Resolved in Go rather than SQL because the account key is
-	// NormalizeOrgName — case- and accent-folded AND stripped of its trailing
+	// NormalizeCompanyName — case- and accent-folded AND stripped of its trailing
 	// legal suffix, so a connection at "Acme GmbH" reaches the account stored
 	// as "Acme". Reproducing that strip in SQL would be a second spelling of
 	// the PO-PARAM-1 suffix list, and two spellings of a normalizer drift
 	// until they disagree about a customer's name.
-	orgs, err := orgKeys(ctx, tx)
+	companies, err := companyKeys(ctx, tx)
 	if err != nil {
 		return err
 	}
-	if len(orgs) == 0 {
+	if len(companies) == 0 {
 		return nil
 	}
 	rows, err := tx.Query(ctx, `
@@ -43,7 +43,7 @@ func matchGhostOrganizations(ctx context.Context, tx pgx.Tx) error {
 	if err != nil {
 		return fmt.Errorf("people: reading LinkedIn connections to place: %w", err)
 	}
-	var ghostIDs, orgIDs []ids.UUID
+	var ghostIDs, companyIDs []ids.UUID
 	for rows.Next() {
 		var ghost, ghostOwner ids.UUID
 		var company string
@@ -53,10 +53,10 @@ func matchGhostOrganizations(ctx context.Context, tx pgx.Tx) error {
 		}
 		// The SAME cleaner the import applies, then the narrow fallbacks. A
 		// fallback is accepted only when it resolves to exactly one account —
-		// orgKeys already drops every ambiguous key — so a looser lookup can
+		// companyKeys already drops every ambiguous key — so a looser lookup can
 		// widen what is FOUND without ever widening what is GUESSED.
-		for _, key := range orgMatchKeys(company) {
-			org, known := orgs[key]
+		for _, key := range companyMatchKeys(company) {
+			company, known := companies[key]
 			if !known {
 				continue
 			}
@@ -64,9 +64,9 @@ func matchGhostOrganizations(ctx context.Context, tx pgx.Tx) error {
 			// told about stops the search rather than falling through to a
 			// looser key: the looser key is a weaker claim, and answering a
 			// privacy refusal with a worse guess is not an improvement.
-			if org.reachableBy(ghostOwner) {
+			if company.reachableBy(ghostOwner) {
 				ghostIDs = append(ghostIDs, ghost)
-				orgIDs = append(orgIDs, org.id)
+				companyIDs = append(companyIDs, company.id)
 			}
 			break
 		}
@@ -80,18 +80,18 @@ func matchGhostOrganizations(ctx context.Context, tx pgx.Tx) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE linkedin_connection g
-		   SET matched_org_id = t.org_id, updated_at = now()
-		  FROM unnest($1::uuid[], $2::uuid[]) AS t(ghost_id, org_id)
-		 WHERE g.id = t.ghost_id AND g.matched_org_id IS DISTINCT FROM t.org_id`,
-		ghostIDs, orgIDs); err != nil {
+		   SET matched_company_id = t.org_id, updated_at = now()
+		  FROM unnest($1::uuid[], $2::uuid[]) AS t(ghost_id, company_id)
+		 WHERE g.id = t.ghost_id AND g.matched_company_id IS DISTINCT FROM t.org_id`,
+		ghostIDs, companyIDs); err != nil {
 		return fmt.Errorf("people: attaching LinkedIn connections to accounts: %w", err)
 	}
 	return nil
 }
 
-// orgCandidate is one account a ghost could be placed at, with what capture
+// companyCandidate is one account a ghost could be placed at, with what capture
 // privacy needs to decide whether THIS ghost's owner may be told about it.
-type orgCandidate struct {
+type companyCandidate struct {
 	id      ids.UUID
 	private bool
 	owner   ids.UUID
@@ -106,21 +106,21 @@ type orgCandidate struct {
 // existence to them through a reach count — the arithmetic on that payload is
 // differenceable, so an account in neither the visible list nor the unresolved
 // total would itself be the disclosure.
-func (c orgCandidate) reachableBy(member ids.UUID) bool {
+func (c companyCandidate) reachableBy(member ids.UUID) bool {
 	return !c.private || c.owner == member
 }
 
-// orgKeys is every live account by its normalized name. An ambiguous key —
+// companyKeys is every live account by its normalized name. An ambiguous key —
 // two accounts that normalize the same — is dropped rather than picked
 // between: attaching a colleague's network to the wrong account is a worse
 // answer than attaching it to none.
-func orgKeys(ctx context.Context, tx pgx.Tx) (map[string]orgCandidate, error) {
-	// The caller's org row scope, because this pass now runs under the ghost
+func companyKeys(ctx context.Context, tx pgx.Tx) (map[string]companyCandidate, error) {
+	// The caller's company row scope, because this pass now runs under the ghost
 	// OWNER's own authority: an account outside their scope must not become a
 	// placement, or a reach count reports an account they may not read.
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	scope, err := auth.ScopeClauseFor(ctx, "organization", "o", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
 	if err != nil {
 		return nil, err
 	}
@@ -131,20 +131,20 @@ func orgKeys(ctx context.Context, tx pgx.Tx) (map[string]orgCandidate, error) {
 	rows, err := tx.Query(ctx, storekit.SQLf(`
 		SELECT o.id, o.display_name, o.visibility = 'owner',
 		       coalesce(o.owner_id, '00000000-0000-0000-0000-000000000000'::uuid)
-		  FROM organization o WHERE o.archived_at IS NULL AND (%s)`, visible), args...)
+		  FROM company o WHERE o.archived_at IS NULL AND (%s)`, visible), args...)
 	if err != nil {
 		return nil, fmt.Errorf("people: reading accounts for LinkedIn placement: %w", err)
 	}
 	defer rows.Close()
-	out := map[string]orgCandidate{}
+	out := map[string]companyCandidate{}
 	ambiguous := map[string]bool{}
 	for rows.Next() {
-		var c orgCandidate
+		var c companyCandidate
 		var name string
 		if err := rows.Scan(&c.id, &name, &c.private, &c.owner); err != nil {
 			return nil, err
 		}
-		key := NormalizeOrgName(name)
+		key := NormalizeCompanyName(name)
 		if key == "" {
 			continue
 		}

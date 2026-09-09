@@ -30,7 +30,7 @@ import (
 // create runs, and an email already belonging to someone else refuses the row.
 const (
 	ObjectLead         = "lead"
-	ObjectOrganization = "organization"
+	ObjectCompany = "company"
 	ObjectPerson       = "person"
 	// ConnectorCSV is the direct migrate-in connector this source serves
 	// (UC-E11-03). Its sibling constants name the flip's own sources.

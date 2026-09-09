@@ -17,7 +17,7 @@ export function project(overrides: Partial<Project> = {}): Project {
     id: "pr-1",
     name: "CRM rollout",
     key: "ACME-CRM",
-    organization_id: ORG.id,
+    company_id: ORG.id,
     owner_id: "u-me",
     // The caller owns this project, so the server sends writable: true. Stated
     // rather than left out: absent means NOT writable per the contract, so a
@@ -49,7 +49,7 @@ export function project360(overrides: Partial<Project360> = {}): Project360 {
     as_of: "2026-07-02T10:00:00Z",
     project: project(),
     sections_omitted: [],
-    organization: { id: ORG.id, name: ORG.display_name },
+    company: { id: ORG.id, name: ORG.display_name },
     phase_history: {
       data: [
         {

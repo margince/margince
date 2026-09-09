@@ -8,7 +8,7 @@ package compose
 // the field back when they ask for the mark to go.
 //
 // Two slots, four routes, ONE body each way. A company is drawn at two widths
-// and needs a picture for each (people/orglogowrite.go), but nothing about the
+// and needs a picture for each (people/companylogowrite.go), but nothing about the
 // transport differs between them: the same formats decode, the same ceiling
 // bounds the body, the same object store takes the bytes. So the slot is an
 // argument rather than a second pair of handlers, and the refusals a person
@@ -51,14 +51,14 @@ const companyLogoEdge = 512
 // file is called is under the control of whoever made it.
 const companyLogoNameMax = 120
 
-func (h companyHandlers) UploadCompanyLogo(w http.ResponseWriter, r *http.Request) {
+func (h companyHandlers) UploadAnchorCompanyLogo(w http.ResponseWriter, r *http.Request) {
 	h.uploadCompanyMark(w, r, people.LogoWide, "uploadCompanyLogo")
 }
 
 // UploadCompanyLogoIcon takes the square badge a collapsed sidebar draws. Same
 // decode, same storage, same precedence — a different slot on the record, which
 // is the whole difference between the two routes.
-func (h companyHandlers) UploadCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
+func (h companyHandlers) UploadAnchorCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
 	h.uploadCompanyMark(w, r, people.LogoIcon, "uploadCompanyLogoIcon")
 }
 
@@ -76,7 +76,7 @@ func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Reques
 	// Read the company BEFORE taking the upload apart: an installation that has
 	// not described itself yet has no record to give a mark to, and that 404 is
 	// worth answering before an image is decoded.
-	company, err := h.store.GetCompany(r.Context())
+	company, err := h.store.GetAnchorCompany(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -94,12 +94,12 @@ func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Reques
 	// writers of one company's mark must never write the same object, or the
 	// stored image and the record's provenance end up describing different
 	// pictures.
-	key := organizationLogoKey(ids.From[ids.WorkspaceKind](workspace), company.OrganizationID)
+	key := companyLogoKey(ids.From[ids.WorkspaceKind](workspace), company.CompanyID)
 	if err := h.blob.Put(r.Context(), key, bytes.NewReader(png), int64(len(png)), imagenorm.ContentType); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	superseded, setErr := h.store.SetCompanyLogo(r.Context(), slot, key, filename)
+	superseded, setErr := h.store.SetAnchorCompanyLogo(r.Context(), slot, key, filename)
 	if setErr != nil {
 		// The bytes stay. A failed write here does not prove the transaction
 		// did not commit — a cancelled context, a dropped connection — and
@@ -112,11 +112,11 @@ func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Reques
 	h.writeCompany(w, r)
 }
 
-func (h companyHandlers) DeleteCompanyLogo(w http.ResponseWriter, r *http.Request) {
+func (h companyHandlers) DeleteAnchorCompanyLogo(w http.ResponseWriter, r *http.Request) {
 	h.clearCompanyMark(w, r, people.LogoWide, "deleteCompanyLogo")
 }
 
-func (h companyHandlers) DeleteCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
+func (h companyHandlers) DeleteAnchorCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
 	h.clearCompanyMark(w, r, people.LogoIcon, "deleteCompanyLogoIcon")
 }
 
@@ -138,7 +138,7 @@ func (h companyHandlers) clearCompanyMark(w http.ResponseWriter, r *http.Request
 // caller renders the company's new face from the response it already has
 // rather than from a second read that may not see its own write yet.
 func (h companyHandlers) writeCompany(w http.ResponseWriter, r *http.Request) {
-	company, err := h.store.GetCompany(r.Context())
+	company, err := h.store.GetAnchorCompany(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

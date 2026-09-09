@@ -224,7 +224,7 @@ func TestStageUpdatedWireSnapshot(t *testing.T) {
 }
 
 // personSnapshotSource/personSnapshotTarget are fixed, memorable UUIDs so
-// the person/organization family's golden snapshots (webhooks Task
+// the person/company family's golden snapshots (webhooks Task
 // 5b-personorg) are stable across test runs — a real ids.NewV7() would
 // churn the fixtures on every regeneration for no reason.
 var (
@@ -259,30 +259,30 @@ func TestPersonUpdatedWireSnapshot(t *testing.T) {
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }
 
-// TestOrganizationCreatedWireSnapshot pins the organization.created wire
+// TestCompanyCreatedWireSnapshot pins the company.created wire
 // shape — the UNION struct, sampled with the direct-create subset
 // (display_name only; the other four sites' fields are exercised by the
 // people-package payload-builder unit tests).
-func TestOrganizationCreatedWireSnapshot(t *testing.T) {
+func TestCompanyCreatedWireSnapshot(t *testing.T) {
 	displayName := "Acme GmbH"
-	sample := crmcontracts.PublicEventOrganizationCreated{DisplayName: &displayName}
+	sample := crmcontracts.PublicEventCompanyCreated{DisplayName: &displayName}
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }
 
-// TestOrganizationMergedWireSnapshot pins the organization.merged wire shape.
-func TestOrganizationMergedWireSnapshot(t *testing.T) {
-	sample := crmcontracts.PublicEventOrganizationMerged{
+// TestCompanyMergedWireSnapshot pins the company.merged wire shape.
+func TestCompanyMergedWireSnapshot(t *testing.T) {
+	sample := crmcontracts.PublicEventCompanyMerged{
 		MergedFromId: personSnapshotSource,
 		MergedIntoId: personSnapshotTarget,
 	}
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }
 
-// TestOrganizationUpdatedWireSnapshot pins the organization.updated wire
+// TestCompanyUpdatedWireSnapshot pins the company.updated wire
 // shape — the OPEN changed_fields envelope, sampled with a flat column
 // patch.
-func TestOrganizationUpdatedWireSnapshot(t *testing.T) {
-	sample := crmcontracts.PublicEventOrganizationUpdated{
+func TestCompanyUpdatedWireSnapshot(t *testing.T) {
+	sample := crmcontracts.PublicEventCompanyUpdated{
 		ChangedFields: map[string]any{"industry": "software"},
 	}
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
@@ -398,12 +398,12 @@ func TestRetentionAppliedWireSnapshot(t *testing.T) {
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }
 
-// signalSnapshotID/signalSnapshotOrgID are fixed, memorable UUIDs so the
+// signalSnapshotID/signalSnapshotCompanyID are fixed, memorable UUIDs so the
 // signals family's golden snapshots are stable across test runs — a real
 // ids.NewV7() would churn the fixtures on every regeneration for no reason.
 var (
 	signalSnapshotID    = openapi_types.UUID(ids.MustParse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"))
-	signalSnapshotOrgID = openapi_types.UUID(ids.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"))
+	signalSnapshotCompanyID = openapi_types.UUID(ids.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"))
 )
 
 // TestSignalDetectedWireSnapshot pins the signal.detected wire shape —
@@ -413,7 +413,7 @@ var (
 // consent.changed/retention.applied: entity_type/entity_id here are DATA
 // fields naming the signal's SUBJECT, not the envelope's own entity ref.
 func TestSignalDetectedWireSnapshot(t *testing.T) {
-	entityType := "organization"
+	entityType := "company"
 	confidence := float32(0.95)
 	sample := crmcontracts.PublicEventSignalDetected{
 		SignalId:             signalSnapshotID,
@@ -422,14 +422,14 @@ func TestSignalDetectedWireSnapshot(t *testing.T) {
 		ResolutionState:      "resolved",
 		Severity:             "warn",
 		SubjectEntityType:    &entityType,
-		SubjectEntityId:      &signalSnapshotOrgID,
+		SubjectEntityId:      &signalSnapshotCompanyID,
 		ResolutionConfidence: &confidence,
 	}
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }
 
 // TestSignalResolvedWireSnapshot pins the signal.resolved wire shape —
-// sampled with the single-candidate (resolved-to-org) shape, the branch
+// sampled with the single-candidate (resolved-to-company) shape, the branch
 // that sets every optional field.
 func TestSignalResolvedWireSnapshot(t *testing.T) {
 	matchedOn := "domain"
@@ -437,7 +437,7 @@ func TestSignalResolvedWireSnapshot(t *testing.T) {
 	sample := crmcontracts.PublicEventSignalResolved{
 		SignalId:        signalSnapshotID,
 		ResolutionState: "resolved",
-		ResolvedOrgId:   &signalSnapshotOrgID,
+		ResolvedCompanyId:   &signalSnapshotCompanyID,
 		MatchedOn:       &matchedOn,
 		MatchConfidence: &confidence,
 	}

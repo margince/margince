@@ -8,18 +8,18 @@ package contracts
 // withhold the one its reader could not open, or the record becomes an
 // existence oracle over rows that reader's own reads would refuse.
 //
-// A contract is admitted by its deal OR its organization (visibility.go), and
+// A contract is admitted by its deal OR its company (visibility.go), and
 // that disjunction is about ADMISSION — it says nothing about disclosure. A
-// contract admitted through its deal still hands back an organization_id whose
+// contract admitted through its deal still hands back a company_id whose
 // company may be capture-private to the colleague who captured it, and a
 // project_id whose delivery keeps its own own/team row scope.
 //
 // The deal reference is masked on the same footing. It is the anchor the
-// admission arm tested, so a contract admitted through its ORGANIZATION was
+// admission arm tested, so a contract admitted through its COMPANY was
 // never asked anything about the deal it names.
 //
-// Why this closes a hole the deal mask left open: `deal_project_same_org`
-// forces a deal's project and its organization to name one company, so a caller
+// Why this closes a hole the deal mask left open: `deal_project_same_company`
+// forces a deal's project and its company to name one company, so a caller
 // who reads the project and not the company recovered, in one hop through the
 // contract, the id the deal read had just withheld.
 
@@ -38,7 +38,7 @@ import (
 // The masked_fields names for the three references. They are the wire members'
 // own names, which is what a client reads the mask against.
 const (
-	filterOrganizationID = "organization_id"
+	filterCompanyID = "company_id"
 	filterDealID         = "deal_id"
 	filterProjectID      = "project_id"
 )
@@ -58,8 +58,8 @@ type maskedReference struct {
 
 var maskedReferences = []maskedReference{
 	{
-		table: organizationTable, field: filterOrganizationID,
-		ref: func(c *crmcontracts.Contract) **openapi_types.UUID { return &c.OrganizationId },
+		table: companyTable, field: filterCompanyID,
+		ref: func(c *crmcontracts.Contract) **openapi_types.UUID { return &c.CompanyId },
 	},
 	{
 		table: dealTable, field: filterDealID,

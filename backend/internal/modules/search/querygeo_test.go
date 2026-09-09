@@ -77,7 +77,7 @@ func TestARecordTypeWithNoPlaceAnswersUnavailable(t *testing.T) {
 func TestAnUnknownPlaceAnswersANoteRatherThanLeavingTheWorkspace(t *testing.T) {
 	km := 50.0
 	bound, note, err := bindGeo(context.Background(), stubPlaces{},
-		"organization", "address", radiusOperand{Center: "Atlantis", RadiusKM: &km})
+		"company", "address", radiusOperand{Center: "Atlantis", RadiusKM: &km})
 	if err != nil {
 		t.Fatalf("binding: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestAnUnknownPlaceAnswersANoteRatherThanLeavingTheWorkspace(t *testing.T) {
 func TestAPointGivenDirectlyNeedsNoCache(t *testing.T) {
 	km, lat, lon := 50.0, 48.7758, 9.1829
 	bound, note, err := bindGeo(context.Background(), nil,
-		"organization", "address", radiusOperand{Lat: &lat, Lon: &lon, RadiusKM: &km})
+		"company", "address", radiusOperand{Lat: &lat, Lon: &lon, RadiusKM: &km})
 	if err != nil {
 		t.Fatalf("binding: %v", err)
 	}
@@ -200,7 +200,7 @@ func TestARadiusOnlyReadsCoordinatesThatMatchTheAddress(t *testing.T) {
 	distance, where := c.radius("t", geoBinding{
 		Center:   Point{Lat: 48.7758, Lon: 9.1829},
 		RadiusKM: 50,
-		Columns:  geoCapableTargets["organization"],
+		Columns:  geoCapableTargets["company"],
 		Field:    "address",
 	})
 	joined := strings.Join(where, " AND ")
@@ -234,7 +234,7 @@ func TestARadiusBindsEveryValueRatherThanInterpolatingIt(t *testing.T) {
 	_, where := c.radius("t", geoBinding{
 		Center:   Point{Lat: 48.7758, Lon: 9.1829},
 		RadiusKM: 50,
-		Columns:  geoCapableTargets["organization"],
+		Columns:  geoCapableTargets["company"],
 	})
 	joined := strings.Join(where, " AND ")
 	if strings.Contains(joined, "48.7758") || strings.Contains(joined, "9.1829") {
@@ -263,7 +263,7 @@ func TestARadiusInsideATraversalRefusesRatherThanBeingDropped(t *testing.T) {
 	clauses := []Predicate{{Field: "address", Op: OpWithinRadius, Value: operand}}
 
 	fragments, refusals := c.predicates("h", unfilteredStorage(),
-		TargetVocabulary{Target: "organization"}, "traverse.where", clauses, false)
+		TargetVocabulary{Target: "company"}, "traverse.where", clauses, false)
 	if len(fragments) != 0 {
 		t.Errorf("a hop radius compiled to %v; nothing binds it there", fragments)
 	}
@@ -278,7 +278,7 @@ func TestARadiusInsideATraversalRefusesRatherThanBeingDropped(t *testing.T) {
 	// The ROOT is the opposite: skipped here on purpose, because radius()
 	// renders it. Neither a fragment nor a refusal.
 	fragments, refusals = c.predicates("t", unfilteredStorage(),
-		TargetVocabulary{Target: "organization"}, "where", clauses, true)
+		TargetVocabulary{Target: "company"}, "where", clauses, true)
 	if len(fragments) != 0 || len(refusals) != 0 {
 		t.Errorf("the root radius produced fragments %v and refusals %v; radius() renders it",
 			fragments, refusals)

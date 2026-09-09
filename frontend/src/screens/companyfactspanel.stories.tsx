@@ -12,7 +12,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-type OrganizationFact = components["schemas"]["OrganizationFact"];
+type CompanyFact = components["schemas"]["CompanyFact"];
 
 // What we know about an account, and where each claim came from.
 //
@@ -30,7 +30,7 @@ type OrganizationFact = components["schemas"]["OrganizationFact"];
 
 const ORG = "01a04298-1971-7076-8076-8064da20fdff";
 
-function fact(over: Partial<OrganizationFact> = {}): OrganizationFact {
+function fact(over: Partial<CompanyFact> = {}): CompanyFact {
   return {
     id: "01a04298-2000-7000-8000-000000000001",
     category: "company",
@@ -49,10 +49,10 @@ function fact(over: Partial<OrganizationFact> = {}): OrganizationFact {
     updated_at: "2026-08-30T10:00:00Z",
     version: 1,
     ...over,
-  } as OrganizationFact;
+  } as CompanyFact;
 }
 
-const FACTS: readonly OrganizationFact[] = [
+const FACTS: readonly CompanyFact[] = [
   fact(),
   fact({
     id: "01a04298-2000-7000-8000-000000000002",
@@ -93,7 +93,7 @@ const FACTS: readonly OrganizationFact[] = [
 /** A phone number filed as a location: the row is well-formed and still wrong.
  *  It is FLAGGED rather than hidden — a heuristic that dropped data would be
  *  worse than one that points at it. */
-const SUSPECT: OrganizationFact = fact({
+const SUSPECT: CompanyFact = fact({
   id: "01a04298-2000-7000-8000-000000000005",
   field: "location",
   value: "+49 89 1234 5678",
@@ -105,13 +105,13 @@ const SUSPECT: OrganizationFact = fact({
 });
 
 function frame(
-  facts: readonly OrganizationFact[],
+  facts: readonly CompanyFact[],
   canEdit: boolean,
   reasonId?: string,
 ) {
   const routes: RouteMap = {
     "GET /me": meRoute({}),
-    [`GET /organizations/${ORG}/facts`]: () => jsonResponse({ data: facts }),
+    [`GET /companies/${ORG}/facts`]: () => jsonResponse({ data: facts }),
   };
   installFetchStub(routes);
   return (
@@ -121,7 +121,7 @@ function frame(
           Your seat may read this account and not correct it.
         </p>
       )}
-      <CompanyFactsPanel orgId={ORG} canEdit={canEdit} reasonId={reasonId} />
+      <CompanyFactsPanel companyId={ORG} canEdit={canEdit} reasonId={reasonId} />
     </StoryProviders>
   );
 }

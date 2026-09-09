@@ -306,7 +306,7 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	"ai_task.state_changed <- internal/modules/agents":     "a scheduled run announces the same way; source=agent_runner keys its occurrences, and one trigger occurrence is one row because the key carries the spec and the trigger ref",
 	"ai_task.state_changed <- internal/modules/ai":         "the router announces the settled outcome of every task ai.RailOwner leaves to it; source=ai_router keys its occurrences, and one request or job pass is one row because the key carries the correlation id and the task",
 	"ai_task.state_changed <- internal/modules/people":     "a website read announces its own transitions from the dossier row; source=site_read keys its occurrences, one per crawl, beside the router's lines for the model calls the crawl makes",
-	"ai_task.state_changed <- internal/compose/orgscan":    "an account scan announces its own transitions from the row that carries the read; source=account_scan keys its occurrences on the row id, so one reader's read of one account is one line that moves from queued to settled",
+	"ai_task.state_changed <- internal/compose/companyscan":    "an account scan announces its own transitions from the row that carries the read; source=account_scan keys its occurrences on the row id, so one reader's read of one account is one line that moves from queued to settled",
 
 	// Structure 1 — the overlay write-back announces the NATIVE module's event.
 	// overlay/writeaudit.go switches on datasource.EntityRef and emits the
@@ -318,8 +318,8 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	// that deliberately does not say.
 	"person.updated <- internal/modules/overlay":        "the write-back's update path: a person changed, and the overlay wrote it",
 	"person.archived <- internal/modules/overlay":       "the write-back's archive path, one of the three archivable types",
-	"organization.updated <- internal/modules/overlay":  "the write-back's update path",
-	"organization.archived <- internal/modules/overlay": "the write-back's archive path",
+	"company.updated <- internal/modules/overlay":  "the write-back's update path",
+	"company.archived <- internal/modules/overlay": "the write-back's archive path",
 	"deal.updated <- internal/modules/overlay":          "the write-back's update path",
 	"deal.archived <- internal/modules/overlay":         "the write-back's archive path",
 	"lead.updated <- internal/modules/overlay":          "the write-back's update path; lead is one of its five updatable types",
@@ -329,8 +329,8 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	// module losing its own event is as visible as one gaining somebody else's.
 	"person.updated <- internal/modules/people":        "the record's own module, natively and for a relationship anchored on a person",
 	"person.archived <- internal/modules/people":       "the record's own module",
-	"organization.updated <- internal/modules/people":  "the record's own module, natively and for a relationship anchored on an organization",
-	"organization.archived <- internal/modules/people": "the record's own module",
+	"company.updated <- internal/modules/people":  "the record's own module, natively and for a relationship anchored on a company",
+	"company.archived <- internal/modules/people": "the record's own module",
 	"deal.updated <- internal/modules/deals":           "the record's own module",
 	"deal.archived <- internal/modules/deals":          "the record's own module",
 	"lead.updated <- internal/modules/people":          "the record's own module",
@@ -339,7 +339,7 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	// Structure 2 — a relationship emits its ANCHOR's event.
 	// people/relationshipUpdatedPayload wraps one delta in whichever anchor's
 	// envelope the edge points at. An employment edge changing IS a change to
-	// the person and to the organization it joins; there is no relationship.*
+	// the person and to the company it joins; there is no relationship.*
 	// type, and inventing one would make every consumer of the anchor subscribe
 	// to a second name to learn that their record moved.
 	"deal.updated <- internal/modules/people":      "a relationship anchored on a deal moved, so the deal changed",

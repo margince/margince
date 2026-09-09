@@ -83,11 +83,11 @@ describe("PersonAccess", () => {
     expect(await screen.findByText(/private to its owner/i)).toBeTruthy();
   });
 
-  it("says a promoted contact is the organization's", async () => {
+  it("says a promoted contact is the company's", async () => {
     stub();
     draw({ ...base, visibility: "workspace", writable: true });
     expect(
-      await screen.findByText(/everyone in the organization/i),
+      await screen.findByText(/everyone in the company/i),
     ).toBeTruthy();
   });
 
@@ -97,7 +97,7 @@ describe("PersonAccess", () => {
     draw({ ...base, visibility: "owner", writable: true, owner_id: "u1" });
     await userEvent.click(
       await screen.findByRole("button", {
-        name: /share with the organization/i,
+        name: /share with the company/i,
       }),
     );
     expect(sent).toContain("PATCH /people/p-1");
@@ -126,7 +126,7 @@ describe("PersonAccess", () => {
     });
     expect(await screen.findByText(/private to its owner/i)).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: /share with the organization/i }),
+      screen.queryByRole("button", { name: /share with the company/i }),
     ).toBeNull();
   });
 
@@ -144,7 +144,7 @@ describe("PersonAccess", () => {
     });
     await userEvent.click(
       await screen.findByRole("button", {
-        name: /share with the organization/i,
+        name: /share with the company/i,
       }),
     );
     expect(sent).toContain("PATCH /people/p-1");
@@ -154,7 +154,7 @@ describe("PersonAccess", () => {
     stub();
     draw({ ...base, visibility: "workspace", writable: false, owner_id: "u1" });
     expect(
-      await screen.findByText(/everyone in the organization/i),
+      await screen.findByText(/everyone in the company/i),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /make private/i })).toBeNull();
   });

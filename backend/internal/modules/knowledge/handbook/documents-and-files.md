@@ -7,7 +7,7 @@ Knowing which is which saves a lot of confusion.
 2. **Files** on a deal — everything the deal has picked up, including
    attachments that arrived with email.
 3. **Document sets** in Settings → Knowledge — bodies of text the whole
-   organization can ask questions of.
+   company can ask questions of.
 
 ## Documents
 
@@ -125,7 +125,7 @@ not be on the deal at all.
 ## Document sets — asking your documents questions
 
 This is a separate feature with a separate purpose. A **document set** is a
-body of text the organization files so that anyone here can ask it questions in
+body of text the company files so that anyone here can ask it questions in
 plain language.
 
 You find them at **Settings → Knowledge**, and you ask them at **Ask your

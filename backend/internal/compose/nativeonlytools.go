@@ -158,7 +158,7 @@ func (r nativeOnlyRetriever) AssembleContext(ctx context.Context, anchor datasou
 // mirror holds — so in overlay mode it would answer "nobody here can get you in",
 // which is a believable answer rather than a visible failure.
 func nativeOnlyIntroPath(mode overlayModeChecker, list agents.IntroPathLister) agents.IntroPathLister {
-	return func(ctx context.Context, orgID ids.UUID) ([]agents.IntroRoute, bool, error) {
+	return func(ctx context.Context, companyID ids.UUID) ([]agents.IntroRoute, bool, error) {
 		overlay, err := mode.isOverlayUncached(ctx)
 		if err != nil {
 			return nil, false, err
@@ -166,7 +166,7 @@ func nativeOnlyIntroPath(mode overlayModeChecker, list agents.IntroPathLister) a
 		if overlay {
 			return nil, false, apperrors.ErrUnsupportedBySoR
 		}
-		return list(ctx, orgID)
+		return list(ctx, companyID)
 	}
 }
 
@@ -338,7 +338,7 @@ func (g demoterGuard) DemoteLead(ctx context.Context, id ids.UUID, reason string
 }
 
 // nativeOnlyResolver guards resolve_entities. The match ladder reads the native
-// person and organization tables, and an overlay workspace's records are not in
+// person and company tables, and an overlay workspace's records are not in
 // them — so unguarded it would answer `unresolved` for every candidate. That is
 // the most damaging well-formed empty answer on this surface: `unresolved` is
 // the one decision that tells a caller creating a record is safe, so the tool

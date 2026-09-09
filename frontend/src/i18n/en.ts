@@ -107,7 +107,7 @@ export const en = {
   "history.field.emails": "Email addresses",
   "history.field.phones": "Phone numbers",
   "history.field.meeting_status": "Meeting outcome",
-  "history.field.candidate_org_key": "Matched company",
+  "history.field.candidate_company_key": "Matched company",
   "history.field.communication_basis": "Legal basis",
   "history.field.company_name": "Company name",
   "history.field.confirm_submission": "Confirmation kind",
@@ -138,12 +138,12 @@ export const en = {
   "history.field.name": "Name",
   "history.field.note": "Note",
   "history.field.occurred_at": "Occurred",
-  "history.field.organization_id": "Company",
+  "history.field.company_id": "Company",
   "history.field.owner_id": "Owner",
   "history.field.visibility": "Visibility",
-  "history.field.parent_org_id": "Parent company",
+  "history.field.parent_company_id": "Parent company",
   "history.field.partner_attribution": "Partner attribution",
-  "history.field.partner_org_id": "Partner",
+  "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",
   "history.field.qualifying_event": "Qualifying event",
   "history.field.reason": "Reason",
@@ -256,7 +256,7 @@ export const en = {
   "search.prompt": "Type what you are looking for.",
   "search.empty": "No matches for “{q}”.",
   "search.group.person": "Contacts",
-  "search.group.organization": "Organizations",
+  "search.group.company": "Companies",
   "search.group.deal": "Deals",
   "search.group.project": "Projects",
   "search.group.product": "Products",
@@ -265,7 +265,7 @@ export const en = {
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
   "search.kind.contact": "Contact",
-  "search.kind.organization": "Organization",
+  "search.kind.company": "Company",
   "search.kind.deal": "Deal",
   "search.kind.project": "Project",
   "search.kind.product": "Product",
@@ -489,7 +489,7 @@ export const en = {
   "partner.setup": "Make this a partner",
   "partner.edit": "Edit partner",
   "partner.none": "Not a partner yet",
-  "partner.organization": "Organization",
+  "partner.company": "Company",
   "partner.role": "Partner role",
   "partner.roleAll": "All roles",
   "partner.certStatus": "Certification status",
@@ -697,13 +697,13 @@ export const en = {
   "overlay.filterUnsupported":
     "This filter or sort isn't available while reading from HubSpot — remove it and try again.",
   "overlay.emptyOwnerHint":
-    "An empty list here usually means the owner's HubSpot email doesn't match a user in this organization, not an empty HubSpot portal.",
+    "An empty list here usually means the owner's HubSpot email doesn't match a user in this company, not an empty HubSpot portal.",
   "overlay.partialWriteBack":
     "Only the fields HubSpot accepts are written back — anything else here, including custom fields and owner, is not applied at all; HubSpot's current value is kept.",
 
   "overlay.title": "HubSpot mirror",
   "overlay.sub":
-    "Connect the organization's incumbent CRM so records read from its mirror instead of native tables.",
+    "Connect the company's incumbent CRM so records read from its mirror instead of native tables.",
   "overlay.loading": "Loading the incumbent connection…",
   "overlay.notConfigured": "Overlay mode isn't configured in this deployment.",
   "overlay.loadFailed": "Couldn't load the incumbent connection.",
@@ -720,9 +720,9 @@ export const en = {
   "overlay.tokenHint": "Sealed into the vault; never shown again.",
   "overlay.connect": "Connect HubSpot",
   "overlay.reconnect": "Reconnect",
-  "overlay.connectConfirmTitle": "Connect HubSpot for the whole organization?",
+  "overlay.connectConfirmTitle": "Connect HubSpot for the whole company?",
   "overlay.reconnectConfirmTitle":
-    "Reconnect HubSpot for the whole organization?",
+    "Reconnect HubSpot for the whole company?",
   "overlay.connectConfirmBody":
     "This switches every seat's reads to HubSpot's mirror immediately, and records become read-only wherever the mirror can't serve a write. This affects the whole installation, not just your own session.",
   "overlay.statusActive": "Connected",
@@ -758,11 +758,11 @@ export const en = {
   "overlay.disconnect": "Disconnect",
   "overlay.disconnectTitle": "Disconnect HubSpot?",
   "overlay.disconnectBody":
-    "This purges the mirrored data and switches the organization back to native records. The audit trail is kept.",
+    "This purges the mirrored data and switches the company back to native records. The audit trail is kept.",
 
   "overlay.userMap.title": "Mirror user mapping",
   "overlay.userMap.sub":
-    "Who each user in this organization is as a {principal} user. This mapping is the whole of their mirror visibility.",
+    "Who each user in this company is as a {principal} user. This mapping is the whole of their mirror visibility.",
   "overlay.userMap.cost":
     "A user with no mapping sees no mirrored records at all — their lists come back empty.",
   "overlay.userMap.loading": "Loading the user mapping…",
@@ -770,10 +770,10 @@ export const en = {
   "overlay.userMap.adminOnly":
     "You do not have permission to review who is mapped.",
   "overlay.userMap.notOverlay":
-    "This organization reads from native tables, so there is nothing to map.",
+    "This company reads from native tables, so there is nothing to map.",
   "overlay.userMap.notConfigured":
     "Overlay mode isn't configured in this deployment.",
-  "overlay.userMap.empty": "This organization has no users to map.",
+  "overlay.userMap.empty": "This company has no users to map.",
   "overlay.userMap.view": "Grouping",
   "overlay.userMap.viewByUser": "By user",
   "overlay.userMap.viewByOwner": "By {principal} user",
@@ -846,9 +846,9 @@ export const en = {
   "list.viewMine": "Mine",
   "list.viewCustomers": "Customers",
   "list.viewProspects": "Prospects",
-  "org.filterLifecycleAll": "Any stage",
-  "org.filterRelTypeAll": "Any type",
-  "org.filterSizeBandAll": "Any size",
+  "company.filterLifecycleAll": "Any stage",
+  "company.filterRelTypeAll": "Any type",
+  "company.filterSizeBandAll": "Any size",
   "person.consent": "Consent",
   "consent.grant": "Grant",
   // Submitted as the proof row's wording when an operator records a grant
@@ -869,7 +869,7 @@ export const en = {
     "The link was created for {address} but this installation sends no mail, so nobody was sent it.",
   "consent.askExpires": "The link works until",
   "consent.noRecord": "no record",
-  "consent.noPurposes": "This organization tracks no consent purposes yet.",
+  "consent.noPurposes": "This company tracks no consent purposes yet.",
   "consent.defaultDeny":
     "Outbound is default-deny per purpose: a send is blocked unless an active, proven grant exists for that purpose. A grant for one purpose never authorizes another.",
   "consent.basis": "Basis: {basis}",
@@ -885,40 +885,40 @@ export const en = {
   "consent.purposesUnavailable":
     "Couldn't load the consent purpose catalogue, so which purposes need a double opt-in can't be shown right now.",
 
-  "org.reject": "Not a company",
-  "org.rejectConfirm":
+  "company.reject": "Not a company",
+  "company.rejectConfirm":
     "This archives “{name}” and refuses {domain} as a company, so the next message from that domain will not create it again. An administrator can let the domain back in from Settings → Capture.",
-  "org.rejectReasonLabel": "Why is this not a company?",
-  "org.rejectReasonHint":
+  "company.rejectReasonLabel": "Why is this not a company?",
+  "company.rejectReasonHint":
     "One sentence somebody reviewing the blocked-domain list can act on. The refusal outlives the record.",
-  "org.rejectDone":
+  "company.rejectDone":
     "“{name}” archived, and {domain} will not create a company again",
-  "org.name": "Company",
-  "org.description": "What they do",
-  "org.website": "Website",
-  "org.contactCount": "Contacts",
-  "org.openDealCount": "Open deals",
+  "company.name": "Company",
+  "company.description": "What they do",
+  "company.website": "Website",
+  "company.contactCount": "Contacts",
+  "company.openDealCount": "Open deals",
   // Offered only where there is no partner programme yet: the tab that holds
   // the form appears once one exists, so this is how the first one is made.
   // Where the account stands with us, and what it is to us — the two
   // questions the retired classification answered with one value.
-  "org.lifecycle": "Account lifecycle",
-  "org.relationshipTypes": "Relationship to us",
-  "org.sizeBand": "Company size",
-  "org.lifecycle.unknown": "Not assessed",
-  "org.lifecycle.target": "Target",
-  "org.lifecycle.prospect": "Prospect",
-  "org.lifecycle.opportunity": "Opportunity",
-  "org.lifecycle.customer": "Customer",
-  "org.lifecycle.former_customer": "Former customer",
-  "org.lifecycle.disqualified": "Disqualified",
-  "org.relType.customer": "Customer",
-  "org.relType.partner": "Partner",
-  "org.relType.supplier": "Supplier",
-  "org.relType.investor": "Investor",
-  "org.relType.portfolio_company": "Portfolio company",
-  "org.relType.competitor": "Competitor",
-  "org.relType.other": "Other",
+  "company.lifecycle": "Account lifecycle",
+  "company.relationshipTypes": "Relationship to us",
+  "company.sizeBand": "Company size",
+  "company.lifecycle.unknown": "Not assessed",
+  "company.lifecycle.target": "Target",
+  "company.lifecycle.prospect": "Prospect",
+  "company.lifecycle.opportunity": "Opportunity",
+  "company.lifecycle.customer": "Customer",
+  "company.lifecycle.former_customer": "Former customer",
+  "company.lifecycle.disqualified": "Disqualified",
+  "company.relType.customer": "Customer",
+  "company.relType.partner": "Partner",
+  "company.relType.supplier": "Supplier",
+  "company.relType.investor": "Investor",
+  "company.relType.portfolio_company": "Portfolio company",
+  "company.relType.competitor": "Competitor",
+  "company.relType.other": "Other",
   // Why a stored fact contradicts its own field. The fact is still shown
   // with its evidence — a reader can tell, and hiding it would be worse.
   "co.factSuspect.phoneShapedLocation": "Looks like a phone number",
@@ -1071,7 +1071,7 @@ export const en = {
   "co.health.payment.late": "Typically pays {days} days after due.",
   "co.health.payment.onTime": "Pays on time.",
   "co.health.sinceInbound": "They last wrote {days} days ago",
-  "org.partnerSetUp": "Set up partner programme",
+  "company.partnerSetUp": "Set up partner programme",
   "signal.kind.stalled_deal": "Deal stalled",
   "signal.kind.champion_left": "Champion left",
   "signal.kind.reengagement": "Worth re-engaging",
@@ -1469,7 +1469,7 @@ export const en = {
   "co.brief.cite.deal": "deal",
   "co.brief.cite.activity": "activity",
   "co.brief.cite.person": "contact",
-  "co.brief.cite.organization": "account",
+  "co.brief.cite.company": "account",
   "co.brief.cite.fact": "fact",
   "co.brief.cite.profile_field": "profile field",
   // Several sources of one kind that have no screen to open collapse into one
@@ -1477,7 +1477,7 @@ export const en = {
   "co.brief.cite.deal.many": "{count} deals",
   "co.brief.cite.activity.many": "{count} activities",
   "co.brief.cite.person.many": "{count} contacts",
-  "co.brief.cite.organization.many": "{count} accounts",
+  "co.brief.cite.company.many": "{count} accounts",
   "co.brief.cite.fact.many": "{count} facts",
   "co.brief.cite.profile_field.many": "{count} profile fields",
   "approval.kind.advance_deal": "Move a deal forward",
@@ -1642,7 +1642,7 @@ export const en = {
   "linkedinImport.choose": "Choose Connections.csv",
   "linkedinImport.importLabel": "Connections export",
   "linkedinImport.noMatchesYet":
-    "No matches yet, which is normal in a new organization: your connections are matched against contacts the CRM knows, and those arrive as your mail is read. This runs again every hour, so matches appear as the CRM fills up.",
+    "No matches yet, which is normal in a new company: your connections are matched against contacts the CRM knows, and those arrive as your mail is read. This runs again every hour, so matches appear as the CRM fills up.",
   "linkedinImport.working": "Reading your export…",
   "linkedinImport.imported": "Connections imported",
   "linkedinImport.confirmed": "Matched to a contact",
@@ -1702,13 +1702,13 @@ export const en = {
   "timeline.withheld": "Content for participants only",
   "compose.deadRecipients":
     "Mail to {addresses} is bouncing. The last delivery there was refused, and no delivery since has got through. Send anyway, or use another address.",
-  "compose.threadShare": "Share with the organization",
+  "compose.threadShare": "Share with the company",
   "compose.threadMakePrivate": "Make private",
   "compose.threadScope": "Applies to the whole thread.",
   "compose.threadStillHeld":
     "Still held: {count} other seat(s) on this thread have not shared it.",
   "compose.reason.posture": "Held by your setting",
-  "compose.reason.workspaceFloor": "Held by the organization",
+  "compose.reason.workspaceFloor": "Held by the company",
   "compose.reason.noRecord": "Held, no record",
   "compose.reason.pendingVerdict": "Held until classified",
   "compose.reason.manual": "Kept private",
@@ -1729,7 +1729,7 @@ export const en = {
   "email.received": "Received",
   "email.sentTo": "Sent to {who}",
   "email.sent": "Sent",
-  "email.access.sentence.team": "Everyone in the organization can read this.",
+  "email.access.sentence.team": "Everyone in the company can read this.",
   "email.access.sentence.participants":
     "Only the people on this message can read it.",
   "email.access.sentence.selected":
@@ -1760,7 +1760,7 @@ export const en = {
   "email.detail.when": "Sent",
   "email.detail.bccWithheld":
     "Some recipients were blind-copied and are not shown to you",
-  "compose.audienceWorkspace": "Everyone in the organization",
+  "compose.audienceWorkspace": "Everyone in the company",
   "compose.audienceWorkspaceHint":
     "Anyone who may see the contact reads this message too.",
   "compose.audienceParticipants": "Participants only",
@@ -2011,10 +2011,10 @@ export const en = {
   "co.recent.reNamed": "on {name}",
   "tagAdmin.title": "Tags",
   "tagAdmin.sub":
-    "The words this organization files records under. Anyone can apply one; only admin and ops seats add, rename or retire them.",
+    "The words this company files records under. Anyone can apply one; only admin and ops seats add, rename or retire them.",
   "tagAdmin.listLabel": "Vocabulary",
   "tagAdmin.empty":
-    "No tags yet. Add the first word this organization files records under.",
+    "No tags yet. Add the first word this company files records under.",
   "import.contextTag": "File this batch under a tag",
   "import.contextTagChosen":
     "Records this import creates will be filed under {name}.",
@@ -2046,7 +2046,7 @@ export const en = {
   "tagAdmin.usage": "{count} records",
   "tagAdmin.usagePending": "Counting…",
   "tagAdmin.nearMatch":
-    "Close to a word this organization already has: {names}. Apply that one instead unless this is a different thing.",
+    "Close to a word this company already has: {names}. Apply that one instead unless this is a different thing.",
   "tagAdmin.mergeTitle": "Merge {name} into another tag",
   "tagAdmin.mergeIntoLabel": "Keep this tag",
   "tagAdmin.mergeIntoNone": "Choose a tag",
@@ -2060,7 +2060,7 @@ export const en = {
   "tagAdmin.noVersion":
     "This tag was read without a version, so it cannot be saved. Reopen the page and try again.",
   "tagAdmin.withheld":
-    "You do not have access to this organization's tag vocabulary.",
+    "You do not have access to this company's tag vocabulary.",
   "tagAdmin.truncated":
     "This list is shortened. Words past the limit are not shown here and cannot be edited or merged into.",
   "tagAdmin.usageFailed": "Count unavailable",
@@ -2081,7 +2081,7 @@ export const en = {
   "tags.options": "Options for {name}",
   "tags.addedBy": "Added by {who} · {when}",
   "tags.addedOn": "Added {when}",
-  "tags.visibleWorkspaceWide": "Tag names are visible across the organization.",
+  "tags.visibleWorkspaceWide": "Tag names are visible across the company.",
   "tags.removeFromRecord": "Remove from this record",
   "tags.withheld": "Hidden — your role cannot read the tag vocabulary",
   "tags.emptyTitle": "No tags yet",
@@ -2109,11 +2109,11 @@ export const en = {
   "co.timeline.empty": "Nothing logged on this account yet.",
   "co.overlayFallback":
     "This account is served from the connected system of record, so the company view is not assembled here. Open it in that system to see the full picture.",
-  "org.domains": "Domains",
-  "org.factCategory.company": "Company",
-  "org.factCategory.offering": "Offering",
-  "org.factCategory.market": "Market",
-  "org.factCategory.signal": "Signals",
+  "company.domains": "Domains",
+  "company.factCategory.company": "Company",
+  "company.factCategory.offering": "Offering",
+  "company.factCategory.market": "Market",
+  "company.factCategory.signal": "Signals",
 
   "lead.score": "Score",
   "lead.status": "Status",
@@ -2456,7 +2456,7 @@ export const en = {
   "deal.ownerKeep": "Keep current owner",
   "deal.ownerMe": "Assign to me",
   "deal.ownerUnassign": "Unassign",
-  "deal.partnerOrg": "via Partner",
+  "deal.partnerCompany": "via Partner",
   // A reference the reader may not read, on a surface with no room for the
   // mask glyph: a Kanban card's company line, and the one entry a withheld
   // picker offers. Both have to say WHICH thing is withheld, because a card
@@ -2540,7 +2540,7 @@ export const en = {
   "deals.filterForecastAll": "Any forecast category",
   "deals.filterPartnerSourced": "Partner-sourced",
   "deals.filterStageAll": "All stages",
-  "deals.filterOrgAll": "All companies",
+  "deals.filterCompanyAll": "All companies",
   "deals.filterStalledAll": "All deals",
   "deals.filterOwnerAll": "All owners",
   "deals.filterPartnerAll": "All sources",
@@ -2578,8 +2578,8 @@ export const en = {
   "offer.gross": "Gross",
   "offer.edit": "Edit header",
   "offer.currency": "Currency",
-  "offer.buyerOrg": "Buyer organization",
-  "offer.buyerOrgConfirm": "Buyer organization: {name}",
+  "offer.buyerCompany": "Buyer company",
+  "offer.buyerCompanyConfirm": "Buyer company: {name}",
   "offer.template": "Template",
   "offer.validUntil": "Valid until",
   "offer.introText": "Intro text",
@@ -2935,7 +2935,7 @@ export const en = {
   "brief.digestFor": "digest for {date}",
   "brief.digestSynced": "Emails synced",
   "brief.digestContacts": "Contacts created",
-  "brief.digestOrgs": "Companies created",
+  "brief.digestCompanies": "Companies created",
   "brief.digestDedupe": "Duplicates to review",
   "brief.digestClassify":
     "Classified overnight: {commitments} commitments · {meetings} meetings · {noise} noise",
@@ -2976,7 +2976,7 @@ export const en = {
   "brief.readings.decisions": "Decisions waiting",
   "brief.readings.decisionsBasis": "somebody is blocked until you answer",
   "brief.readings.pipeline": "Pipeline outlook",
-  "brief.readings.pipelineWorkspace": "Pipeline outlook · whole organization",
+  "brief.readings.pipelineWorkspace": "Pipeline outlook · whole company",
   "brief.readings.pipelineBasis":
     "{period} · {weighted} weighted · {priced} of {eligible} priced",
   "brief.readings.pipelineUnread": "the pipeline could not be read",
@@ -3157,7 +3157,7 @@ export const en = {
   "create.amount": "Value",
   "create.currency": "Currency",
   "create.stage": "Stage",
-  "create.organization": "Company",
+  "create.company": "Company",
   "create.expectedClose": "Expected close",
 
   "field.unset": "Not set",
@@ -3416,11 +3416,11 @@ export const en = {
 
   "personAccess.title": "Who can see this contact",
   "personAccess.privateToYou":
-    "Private to its owner. Nobody else in the organization can see this contact — not the team, and not an admin.",
-  "personAccess.organization":
-    "Everyone in the organization can see this contact.",
-  "personAccess.share": "Share with the organization",
-  "personAccess.published": "The organization can see this contact now.",
+    "Private to its owner. Nobody else in the company can see this contact — not the team, and not an admin.",
+  "personAccess.company":
+    "Everyone in the company can see this contact.",
+  "personAccess.share": "Share with the company",
+  "personAccess.published": "The company can see this contact now.",
   "personAccess.makePrivate": "Make private",
   "personAccess.madePrivate":
     "This contact is the owner's again. Anyone the record was explicitly shared with keeps their access.",
@@ -3610,7 +3610,7 @@ export const en = {
     "This purpose carries an unsubscribe link, so a send to more than one addressee will be refused. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
   "compose.relinkTarget":
-    "Search a contact, organization, deal, lead, or project",
+    "Search a contact, company, deal, lead, or project",
   "compose.relinkNoVersion":
     "This activity was read without a version, so a relink cannot say what it is changing. Reopen it and try again.",
   "compose.relinkReplace": "Move instead of also-link",
@@ -3834,7 +3834,7 @@ export const en = {
     "New custom fields, webhook subscriptions and paid enrichment stage into the inbox first. Most record changes and sends run instantly, within the scopes you granted.",
   "ai.connect": "Connect an agent",
   "ai.connectDetail":
-    "Point any MCP-capable agent at your organization and approve the access it asks for. There is nothing to set up first.",
+    "Point any MCP-capable agent at your company and approve the access it asks for. There is nothing to set up first.",
   "ai.paletteHint": "Ask from anywhere with",
 
   "settings.accountCard": "Your account",
@@ -4122,11 +4122,11 @@ export const en = {
   "import.start": "Start an import",
   "import.objectLabel": "What the rows are",
   "import.object.lead": "Prospects",
-  "import.object.organization": "Companies",
+  "import.object.company": "Companies",
   "import.object.person": "Contacts",
   "import.objectHint.lead":
     "An unworked list lands as leads for a human to qualify before anyone treats them as contacts.",
-  "import.objectHint.organization":
+  "import.objectHint.company":
     "Companies are matched by the name you map, so a re-upload corrects rather than duplicates.",
   "import.objectHint.person":
     "For contacts you already deal with. Matched by email, so a re-upload corrects rather than duplicates, and an address already held is left alone.",
@@ -4191,15 +4191,15 @@ export const en = {
   "settings.dangerZoneSub":
     "Non-production only — irreversible on this installation.",
   "settings.resetDataDesc":
-    "Reset this installation to its first-boot state. Domain and configuration data is wiped; the organization and its users are preserved and stay signed in.",
+    "Reset this installation to its first-boot state. Domain and configuration data is wiped; the company and its users are preserved and stay signed in.",
   "settings.resetDataButton": "Reset data",
   "settings.resetDataLabel": "Reset all data",
   "settings.resetDataConfirmButton": "Reset everything",
   "settings.resetDataConfirmTitle": "Reset all data?",
   "settings.resetDataConfirmBody":
-    "Type your organization's name to confirm. This cannot be undone.",
-  "settings.resetDataConfirmName": "Type this organization name:",
-  "settings.resetDataConfirmLabel": "Confirm organization name",
+    "Type your company's name to confirm. This cannot be undone.",
+  "settings.resetDataConfirmName": "Type this company name:",
+  "settings.resetDataConfirmLabel": "Confirm company name",
   "settings.resetDataResult":
     "Cleared {tables} tables, {jobs} job rows, {streams} event streams, {keys} cache keys and {objects} stored files.",
   "settings.resetDataDrainWarning":
@@ -4211,12 +4211,12 @@ export const en = {
     "Seeing background-job health needs permission your seat does not hold. It reports work across the whole installation, so it is not open to everyone.",
   "jobs.empty":
     "Nothing in the background queue — no work waiting, running, retrying or dead.",
-  "jobs.workspaceKinds": "This organization",
+  "jobs.workspaceKinds": "This company",
   "jobs.workspaceEmpty":
-    "No background work of any kind for this organization.",
+    "No background work of any kind for this company.",
   "jobs.dispatcherKinds": "Fleet dispatchers",
   "jobs.dispatcherSub":
-    "Rows that carry no organization: a dispatcher fans work out to every organization and does none of its own. Their counts belong to the installation, not to you.",
+    "Rows that carry no company: a dispatcher fans work out to every company and does none of its own. Their counts belong to the installation, not to you.",
   "jobs.dispatcherEmpty":
     "No dispatcher rows. The periodic ticks re-insert them, so an empty list means none is scheduled right now.",
   "jobs.count.waiting": "{count} waiting",
@@ -4312,7 +4312,7 @@ export const en = {
   "privacy.dueAt": "Due",
   "privacy.openRequest": "Open request",
   "privacy.erasureNeedsContact":
-    "An erasure request must name a contact in this organization — fulfilling it erases that record. A free-text subject cannot be erased.",
+    "An erasure request must name a contact in this company — fulfilling it erases that record. A free-text subject cannot be erased.",
   "privacy.accessManual":
     "An access request is fulfilled by hand: record what you sent in the resolution. This system does not assemble or export the data for you.",
   "privacy.fulfilErasureTitle": "Fulfil erasure request",
@@ -4604,7 +4604,7 @@ export const en = {
   "ob.s1.sub":
     "I filled only what I could support from your website. Please correct anything that is wrong.",
   "ob.s1.urlPlaceholder": "yourcompany.com",
-  "ob.s1.identityLabel": "Legal organization",
+  "ob.s1.identityLabel": "Legal company",
   "ob.s1.offerLabel": "Products and offer",
   "ob.s1.customerLabel": "Customer",
   "ob.s1.salesLabel": "Positioning and sales context",
@@ -4613,13 +4613,13 @@ export const en = {
   "ob.s1.saving": "Saving…",
   "ob.s1.saveFailed": "Couldn't save your company",
   "ob.s1.savedNote":
-    "Saved to your organization. Change anything here and continue to save it again.",
+    "Saved to your company. Change anything here and continue to save it again.",
   "ob.readGo": "Read my website",
   "ob.urlWillRead": "I'll read {host}",
   "ob.readFromSite": "read from site",
   "ob.failTitle": "I couldn't read enough from this website",
 
-  "ob.manualChapterLegal": "Your legal organization",
+  "ob.manualChapterLegal": "Your legal company",
   "ob.manualChapterOffer": "Products and offer",
   "ob.manualChapterCustomer": "Ideal customer",
   "ob.manualChapterSales": "How you sell",
@@ -4942,7 +4942,7 @@ export const en = {
   "senders.keepOutConfirm": "Keep out and destroy",
   "senders.kind.person": "A person",
   "senders.kind.roleMailbox": "A role mailbox",
-  "senders.kind.organizationSender": "An organization",
+  "senders.kind.companySender": "A company",
   "senders.kind.newsletter": "A newsletter",
   "senders.kind.transactional": "An automated tool",
   "senders.kind.spam": "Spam",
@@ -4968,7 +4968,7 @@ export const en = {
   "mailSharing.sharedPosture.help":
     "Lets a colleague put their own mailbox in the shared posture, where a captured message is readable by the team the moment it lands, before anything has judged it. Off by default.",
   "mailSharing.sharedPosture.warning":
-    "Reading an employee's mailbox into a shared CRM is what a works-council agreement covers in Germany and Austria. Turning this on says your organization holds one. Margince does not check.",
+    "Reading an employee's mailbox into a shared CRM is what a works-council agreement covers in Germany and Austria. Turning this on says your company holds one. Margince does not check.",
   "mailSharing.save": "Save",
   "connectors.originLabel": "Address used in emailed links",
   "connectors.originReachable": "Answering",
@@ -5010,9 +5010,9 @@ export const en = {
   "connectors.contextTag.archived":
     "{name} has been archived, so nothing is being filed under it. Choose another tag, or none.",
   "connectors.signatureEnrich.followingDefault":
-    "Following your organization's setting. Change it here and this mailbox keeps its own answer.",
+    "Following your company's setting. Change it here and this mailbox keeps its own answer.",
   "connectors.signatureEnrich.ownAnswer":
-    "This mailbox's own answer, kept whatever your organization's setting becomes.",
+    "This mailbox's own answer, kept whatever your company's setting becomes.",
   "hold.sectionTitle": "Private correspondence",
   "hold.notHeld": "Mail with this contact follows your mailbox setting.",
   "hold.heldByAddress": "You keep mail with this address to the people on it.",
@@ -5041,7 +5041,7 @@ export const en = {
   "connectors.mailPosture.held": "Always held",
   "connectors.mailPosture.shared": "Shared with the team",
   "connectors.mailPosture.sharedNeedsAdmin":
-    "“Shared with the team” needs an admin to allow it for this organization.",
+    "“Shared with the team” needs an admin to allow it for this company.",
   "connectors.mailPosture.help.classified":
     "A new message is held to the people on it until a classifier judges the thread ordinary. Colleagues see nothing before that.",
   "connectors.mailPosture.help.held":
@@ -5145,7 +5145,7 @@ export const en = {
   "connectors.provTelegram": "Telegram",
   "connectors.telegramTitle": "Telegram bot",
   "connectors.telegramSub":
-    "One bot receives and sends messages for the whole organization.",
+    "One bot receives and sends messages for the whole company.",
   "connectors.telegramNotConfigured":
     "Messaging channels aren't configured in this deployment.",
   "connectors.telegramConnectCta": "Connect a Telegram bot",
@@ -5249,7 +5249,7 @@ export const en = {
   "ob.s4.scope2Lead": "Sending is part of this permission.",
   "ob.s4.scope2Rest":
     "Margince can send from this mailbox — when you send, and when you give an agent a passport that allows sending. That grant is your approval, given once. You can withdraw it at any time.",
-  "ob.s4.scope3Lead": "Your data stays in your organization.",
+  "ob.s4.scope3Lead": "Your data stays in your company.",
   "ob.s4.scope3Rest": "Own-your-data — export or delete everything anytime.",
   "ob.s4.scope4Lead": "Disconnect in one click.",
   "ob.s4.scope4Rest": "The CRM keeps working; it just stops capturing.",
@@ -5458,9 +5458,9 @@ export const en = {
   "ob.conv.connect.dialogHeadlineAccess": "{name} access needed",
   "ob.conv.connect.dialogHeadlineImap": "Connect your mail host",
   "ob.conv.connect.appMissingCard":
-    "Your organization has not registered its {name} app yet.",
+    "Your company has not registered its {name} app yet.",
   "ob.conv.connect.appUnusableCard":
-    "Your organization's {name} app cannot be opened right now. It needs an admin, not a new app.",
+    "Your company's {name} app cannot be opened right now. It needs an admin, not a new app.",
   "ob.conv.connect.unsupportedCard": "This installation does not serve {name}.",
   "ob.conv.connect.appSetupLink": "Set it up in Settings",
   "ob.conv.connect.dialogIntro":
@@ -5732,7 +5732,7 @@ export const en = {
     "You can save up to {max} facts. Clear one to make room for another.",
 
   // --- the handoff into the app -----------------------------------------
-  "ob.enter.assembling": "Assembling your organization",
+  "ob.enter.assembling": "Assembling your company",
 
   // --- the mailbox backread ---------------------------------------------
   // A separate operation from connecting, and the copy has to keep them
@@ -5811,7 +5811,7 @@ export const en = {
   "auth.coreModeDevelopment": "offline development path",
   // The shortest label that still names the field (VOICE-RULE-1), pinned by the
   // login spec §7.1/§7.2 (Amendment 4) and reconciling
-  // single-organization-auth-concept.md §12, which already drew "Email".
+  // single-company-auth-concept.md §12, which already drew "Email".
   "auth.email": "Email",
   // A placeholder is an EXAMPLE, never an instruction and never the label
   // again. "Enter your email" in a placeholder is a label that disappears.
@@ -5832,13 +5832,13 @@ export const en = {
   // Labels the password path, not the provider buttons above it: where the
   // installation runs SSO, the form beneath this divider is the fallback door.
   "auth.orDivider": "or",
-  // §7.1 verbatim. The noun is "organization", not "workspace": ADR-0061
+  // §7.1 verbatim. The noun is "company", not "workspace": ADR-0061
   // keeps `workspace` internal and §7.3 removed it from authentication. And the
   // line states that ACCESS is restricted, never that data is safe, encrypted or
   // compliant — VOICE-RULE-7 rules those out here, because they are outcome
   // claims the installation's own configuration can contradict, on the screen a
   // CISO reads on the way in.
-  "auth.legalProtected": "Access to this organization is restricted.",
+  "auth.legalProtected": "Access to this company is restricted.",
   "auth.legalTerms": "Terms",
   "auth.legalPrivacy": "Privacy",
   "auth.signingIn": "Signing in…",
@@ -5893,11 +5893,11 @@ export const en = {
   "setup.pageTitle": "Set up Margince",
   "setup.title": "Claim this installation",
   "setup.body":
-    "This Margince installation has no organization yet. Your operator has a one-time setup token from the token file the server wrote at first start.",
+    "This Margince installation has no company yet. Your operator has a one-time setup token from the token file the server wrote at first start.",
   "setup.token": "Setup token",
   "setup.tokenHint":
     "From the token file the server wrote at first start — the server log names its path, and carries the token itself if that file could not be written.",
-  "setup.organization": "Organization name",
+  "setup.company": "Company name",
   "setup.baseCurrency": "Base currency",
   "setup.baseCurrencyHint":
     "Every amount in the product is converted to this currency. It can be changed in Settings, but only until the first amount converts against it — so it is worth getting right now.",
@@ -5916,12 +5916,12 @@ export const en = {
   "setup.passwordShort": "Too short. Use at least 12 characters.",
   "setup.rootWarning":
     "This creates the administrator account for the whole installation. It has every permission, including managing everyone else.",
-  "setup.claim": "Create the organization",
+  "setup.claim": "Create the company",
   "setup.claiming": "Creating…",
   "setup.errorToken":
     "That setup token isn't valid for this installation. Check the token file the server named in its log at first start.",
   "setup.errorAlready":
-    "This installation already has an organization. Sign in instead, or ask your operator to reset it.",
+    "This installation already has a company. Sign in instead, or ask your operator to reset it.",
   "setup.errorFields":
     "Something in the form needs fixing. Check the fields and try again.",
   "setup.errorServer":
@@ -5972,11 +5972,11 @@ export const en = {
   "client.sender": "Sender",
   "client.lookup": "Look up",
   "client.open360": "Open the 360",
-  "client.unknown": "Not in your organization yet.",
+  "client.unknown": "Not in your company yet.",
   "client.unknownDetail":
     "This sender matches no contact you can see. Nothing was fetched from anywhere else.",
   "client.createLead": "Capture as lead",
-  "client.isolation": "talks only to YOUR organization",
+  "client.isolation": "talks only to YOUR company",
   "client.attribution": "Every capture is attributed and auditable.",
 
   "book.title": "Book a meeting",
@@ -6297,7 +6297,7 @@ export const en = {
     "Add a simple typed field to an object you already have — at runtime, no developer, no deploy. New objects and relationships still go through code.",
   "cf.object": "Object",
   "cf.obj.deal": "Deal",
-  "cf.obj.organization": "Company",
+  "cf.obj.company": "Company",
   "cf.obj.person": "Contact",
   "cf.obj.lead": "Lead",
   "cf.listLabel": "Fields on {object}",
@@ -6308,7 +6308,7 @@ export const en = {
   "cf.addedByAdmin": "Admin",
   "cf.empty.deal":
     "No custom fields on Deal yet. Add one if you track something we didn't ship.",
-  "cf.empty.organization":
+  "cf.empty.company":
     "No custom fields on Company yet. Add one if you track something we didn't ship.",
   "cf.empty.person":
     "No custom fields on Contact yet. Core fields cover the contact record; add one if you track more.",
@@ -6364,7 +6364,7 @@ export const en = {
     "You have read-only access to custom fields — adding, editing and archiving are not yours to do here.",
   "cf.retired": "Retired",
   // The settings level, in the order the sidebar prints it. "General" rather
-  // than "Organization" for the first org entry: the group heading above it
+  // than "Company" for the first company entry: the group heading above it
   // already says that word, and a row repeating its own heading names nothing.
   // The same reason keeps the possessive off "Agents" — the group is "You".
   //
@@ -6386,7 +6386,7 @@ export const en = {
   "settings.home.reachLabel": "Records you reach",
   "settings.home.reach.own": "Your own records",
   "settings.home.reach.team": "Your team\u2019s records",
-  "settings.home.reach.all": "Every record in the organization",
+  "settings.home.reach.all": "Every record in the company",
   "settings.home.access": "Your access",
   "settings.boundary.deniedTitle": "This settings page is not yours to open",
   "settings.boundary.deniedBody":
@@ -6501,7 +6501,7 @@ export const en = {
   "settings.tab.knowledge": "Knowledge",
   "corpusAsk.title": "Ask your documents",
   "corpusAsk.sub":
-    "A question in your own words, answered only from one set of documents this organization filed. What the set does not cover is refused rather than guessed at, and every sentence carries the passage it rests on.",
+    "A question in your own words, answered only from one set of documents this company filed. What the set does not cover is refused rather than guessed at, and every sentence carries the passage it rests on.",
   "corpusAsk.whichSet": "Which set",
   "corpusAsk.question": "Your question",
   "corpusAsk.submit": "Ask",
@@ -6519,7 +6519,7 @@ export const en = {
     "{name} was searched in full and holds nothing close enough to answer this. It covers:",
   "knowledge.title": "Document sets",
   "knowledge.sub":
-    "Bodies of text this organization can be asked questions of. An answer comes only from what is filed here, and a question they do not cover is refused rather than guessed at.",
+    "Bodies of text this company can be asked questions of. An answer comes only from what is filed here, and a question they do not cover is refused rather than guessed at.",
   "knowledge.withheld": "Which document sets exist is not yours to see.",
   "knowledge.coverage":
     "{documents} documents · {embedded} of {total} passages searchable",
@@ -6727,7 +6727,7 @@ export const en = {
   "license.over.body":
     "{used} seats are in use and the license grants {granted}. Nobody loses access and no seat is taken away — but no new member can be invited until you are back inside the entitlement. Deactivate a member, or raise the entitlement.",
   "license.holder.title": "Licensed to",
-  "license.holder.org": "Organization",
+  "license.holder.org": "Company",
   "license.holder.contact": "Contact",
   "license.holder.installation": "Installation",
   "license.holder.validUntil": "Valid until",
@@ -6995,7 +6995,7 @@ export const en = {
   "users.createTeam": "Create team",
   "users.access.title": "What this user sees",
   "users.access.identity":
-    "Reads every contact, company, lead and deal in the organization.",
+    "Reads every contact, company, lead and deal in the company.",
   "users.access.writesAll": "Edits every record.",
   "users.access.writesTeam":
     "Edits their own records and those of the teams {teams}.",
@@ -7007,7 +7007,7 @@ export const en = {
   "users.access.write": "write",
   "users.access.delete": "delete",
   "users.access.object.person": "Contacts",
-  "users.access.object.organization": "Companies",
+  "users.access.object.company": "Companies",
   "users.access.object.lead": "Leads",
   "users.access.object.deal": "Deals",
   "users.access.object.project": "Projects",
@@ -7031,7 +7031,7 @@ export const en = {
   "users.deactivateConfirmBody":
     "They'll be signed out everywhere and their agent passports revoked immediately. You can reactivate them later, but they'll need to sign in again.",
   "users.deactivateAgentConfirmBody":
-    "This is the organization's agent identity. It signs in nowhere and no person loses access. Scheduled extension jobs keep running: each one acts as the job it is, and captures under the authority of the member whose connection produced the record.",
+    "This is the company's agent identity. It signs in nowhere and no person loses access. Scheduled extension jobs keep running: each one acts as the job it is, and captures under the authority of the member whose connection produced the record.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Acts under a passport, not a role",
   "users.roleLabel": "Role for the new user",
@@ -7067,7 +7067,7 @@ export const en = {
   "users.link.done": "Done",
   "settings.companyTitle": "What Margince knows about your company",
   "settings.companyReadOnly":
-    "Read-only view — changing the company profile needs an organization write.",
+    "Read-only view — changing the company profile needs a company write.",
   "settings.companySub":
     "Keep the shared business context behind drafting, offers, search, and governed agents accurate. Every statement stays tied to who supplied it and where it came from.",
   "settings.companyTrust":
@@ -7277,18 +7277,18 @@ export const en = {
   "countdown.minutesSeconds": "{minutes}m {seconds}s",
   "countdown.expired": "Expired",
 
-  "installationSettings.orgTitle": "Installation",
-  "installationSettings.orgSub":
+  "installationSettings.companyTitle": "Installation",
+  "installationSettings.companySub":
     "What this installation is called, and the zone every reporting period is computed in.",
   "installationSettings.currencyTitle": "Currency",
   "installationSettings.currencySub":
     "The one currency every roll-up converts amounts to.",
-  "installationSettings.name": "Organization name",
+  "installationSettings.name": "Company name",
   "installationSettings.nameHint":
-    "Shown wherever the product names your organization.",
+    "Shown wherever the product names your company.",
   "installationSettings.timezone": "Reporting timezone",
   "installationSettings.timezoneHint":
-    "IANA zone name (for example Europe/Berlin). Your organization's own clock: report period boundaries are computed in it, and every record date — close dates, invoice days, timeline headings — is shown in it, so a date reads the same for the whole team. Separate from your own display timezone.",
+    "IANA zone name (for example Europe/Berlin). Your company's own clock: report period boundaries are computed in it, and every record date — close dates, invoice days, timeline headings — is shown in it, so a date reads the same for the whole team. Separate from your own display timezone.",
   "installationSettings.fiscalYearStart": "Financial year starts",
   "installationSettings.fiscalYearStartHint":
     "The month your business year begins. Reports group by this year and quarter — a year that does not start in January is labelled with both calendar years it spans, like FY2026/27. Changing it re-labels every report at once, and a saved report view filtered on a period will then ask for different months.",
@@ -7349,7 +7349,7 @@ export const en = {
     "This deployment has no external provider configured, so there is nothing to offer besides a password.",
   "oauthApp.google.title": "Google app",
   "oauthApp.google.sub":
-    "Mailboxes are connected, and people sign in with Google, through a Google OAuth app you own. Your organization’s own credentials are used rather than ours.",
+    "Mailboxes are connected, and people sign in with Google, through a Google OAuth app you own. Your company’s own credentials are used rather than ours.",
   "oauthApp.google.absent":
     "No app is available from any source. Gmail and Calendar cannot be connected, and Google sign-in cannot be offered.",
   "oauthApp.google.redirectSub":
@@ -7361,7 +7361,7 @@ export const en = {
     "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app. Microsoft and IMAP mailboxes are not affected. First-run setup will ask for one again.",
   "oauthApp.microsoft.title": "Microsoft app",
   "oauthApp.microsoft.sub":
-    "Outlook mailboxes and calendars are connected, and people sign in with Microsoft, through an Entra app registration you own. Your organization’s own credentials are used rather than ours.",
+    "Outlook mailboxes and calendars are connected, and people sign in with Microsoft, through an Entra app registration you own. Your company’s own credentials are used rather than ours.",
   "oauthApp.microsoft.absent":
     "No app is available from any source. Outlook mail and calendar cannot be connected, and Microsoft sign-in cannot be offered.",
   "oauthApp.microsoft.redirectSub":
@@ -7390,7 +7390,7 @@ export const en = {
   "oauthApp.clientSecret": "Client secret",
   "oauthApp.tenant": "Directory (tenant) ID",
   "oauthApp.tenantHint":
-    "Optional. Pins the app to one Entra directory: only its members may connect a mailbox, and Microsoft sign-in runs on it. Leave it empty to let any organization connect; sign-in then waits for the server to name your directories.",
+    "Optional. Pins the app to one Entra directory: only its members may connect a mailbox, and Microsoft sign-in runs on it. Leave it empty to let any company connect; sign-in then waits for the server to name your directories.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
@@ -7470,7 +7470,7 @@ export const en = {
   "aiRouting.sub":
     "Which model serves each tier. Changes take effect without a restart, and every process picks them up within a minute.",
   "aiRouting.unboundUnkeyed":
-    "This installation has no models bound, so its AI features are off. Add a model provider key below, then bind the tiers here. A deployment can also declare its first binding under seeds.ai_routing in margince.yaml, which is read once when the organization is created.",
+    "This installation has no models bound, so its AI features are off. Add a model provider key below, then bind the tiers here. A deployment can also declare its first binding under seeds.ai_routing in margince.yaml, which is read once when the company is created.",
   "aiRouting.unboundKeyed":
     "This installation has no models bound, so its AI features are off. Start from a keyed provider's defaults, adjust anything you like, then save.",
   "aiRouting.unboundStart": "Start from {provider}",
@@ -7552,13 +7552,13 @@ export const en = {
     "When on, each new company created from captured mail gets an automatic web dossier — its site is read and its profile filled in. Runs under a daily limit.",
   "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
-    "When on, Margince reads what a person states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
+    "When on, Margince reads what a person states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the company's default; a mailbox that set its own switch keeps it.",
   "captureSettings.adminOnly": "Only an admin or ops can change this.",
 
   "ownDomains.companyTitle": "Company domains",
   "captureExclusions.title": "Keep out of capture",
   "captureExclusions.sub":
-    "Addresses and domains whose messages never enter the CRM. Your own rules bind only the mailboxes you connected; the organization's rules bind everyone.",
+    "Addresses and domains whose messages never enter the CRM. Your own rules bind only the mailboxes you connected; the company's rules bind everyone.",
   "captureExclusions.notRetroactive":
     "Takes effect from the next message. Messages already captured stay.",
   "captureExclusions.current": "Rules in effect",
@@ -7588,7 +7588,7 @@ export const en = {
   "ownerIdentities.addressPlaceholder": "you@example.com",
   "ownerIdentities.domainPlaceholder": "example.com",
   "captureExclusions.scope.user": "Only me",
-  "captureExclusions.scope.workspace": "Whole organization",
+  "captureExclusions.scope.workspace": "Whole company",
   "captureExclusions.kind.address": "Address",
   "captureExclusions.kind.domain": "Domain",
   "captureExclusions.kind.container": "Label, folder or mailbox",
@@ -8037,13 +8037,13 @@ export const en = {
   "person.rail.noEmployment": "No employment on record.",
   "person.rail.addEmployment": "Add company",
   "person.rail.employer": "Employer",
-  "person.rail.allOrgsConnected":
+  "person.rail.allCompaniesConnected":
     "Every match is already connected to this contact.",
   "person.rail.isCurrentEmployer": "This is their current employer",
   "person.rail.markEnded": "Mark as ended",
   "person.rail.removeEmploymentTitle": "Remove this company connection?",
   "person.rail.removeEmploymentBody":
-    "The link to {org} and the history hanging off it disappear, and this cannot be undone. {org} itself stays. If they simply left, mark it ended instead.",
+    "The link to {company} and the history hanging off it disappear, and this cannot be undone. {company} itself stays. If they simply left, mark it ended instead.",
   "person.timeline.empty": "Nothing has been logged with them yet.",
   "person.deals.empty": "They are not recorded on any deal.",
   "person.deals.untitled": "Untitled deal",
@@ -8274,7 +8274,7 @@ export const en = {
   "person.meeting.background": "Background and sources",
   "person.meeting.omittedSource": "Not in this brief",
   "person.meeting.preparedFor": "Prepared for {name}",
-  "person.meeting.preparedForAt": "Prepared for {name} · {org}",
+  "person.meeting.preparedForAt": "Prepared for {name} · {company}",
 
   "today.source.suggestions": "the advice",
 
@@ -8926,7 +8926,7 @@ export const en = {
     "A colleague, not a customer. A mistyped domain hides a real one.",
   "worklist.hidden.notSales": "Judged not sales work",
   "worklist.hidden.notSales.detail":
-    "Hidden from the whole organization, and it does not lift.",
+    "Hidden from the whole company, and it does not lift.",
   "worklist.hidden.setAside": "Set aside by you",
   "worklist.hidden.setAside.detail":
     "Snoozed or marked not yours. A snooze comes back on its own.",
@@ -9241,10 +9241,10 @@ export const en = {
   "firstRun.step.model": "The model",
   "firstRun.step.platform": "Your platform",
   "firstRun.google.eyebrow": "It thinks. It cannot reach anyone yet",
-  "firstRun.platform.title": "What does your organization run on?",
+  "firstRun.platform.title": "What does your company run on?",
   "firstRun.platform.sub":
     "One answer decides how mail reaches Margince and how people sign in. You can change it later under Settings.",
-  "firstRun.platform.legend": "The platform this organization runs on",
+  "firstRun.platform.legend": "The platform this company runs on",
   "firstRun.platform.google": "Google Workspace",
   "firstRun.platform.googleWhat":
     "Mail, calendar and sign-in through one Google app you own.",
@@ -9279,7 +9279,7 @@ export const en = {
   "firstRun.microsoft.note":
     "Register an app in Microsoft Entra with the redirect URIs above, then paste its client id and secret here. Pin it to your directory: that is whose mailboxes connect through it, and whose people sign in with it.",
   "firstRun.microsoft.helpSignIn":
-    "The directory is what puts Microsoft on the login page, so it is asked for here rather than left to chance. To register an app without one — any organization may connect a mailbox, and nobody signs in with Microsoft — use Settings instead.",
+    "The directory is what puts Microsoft on the login page, so it is asked for here rather than left to chance. To register an app without one — any company may connect a mailbox, and nobody signs in with Microsoft — use Settings instead.",
   "firstRun.microsoft.tenantHint":
     "The Entra directory your people are in. Mailboxes connect through it, and it is the directory Microsoft sign-in runs on.",
   "firstRun.ai.rankedHint":

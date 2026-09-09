@@ -308,11 +308,11 @@ func personFromVCard(entry VCardEntry) CreatePersonInput {
 // edge to it. A card with no ORG leaves the person unemployed, which is a
 // person.
 func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, personID ids.PersonID, entry VCardEntry) error {
-	name := strings.TrimSpace(entry.Organization)
+	name := strings.TrimSpace(entry.Company)
 	if name == "" {
 		return nil
 	}
-	orgID, err := s.employerByName(ctx, tx, name)
+	companyID, err := s.employerByName(ctx, tx, name)
 	if err != nil {
 		return err
 	}
@@ -320,7 +320,7 @@ func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, personID ids
 	edge := CreateRelationshipInput{
 		Kind:           employmentKind,
 		PersonID:       &personID,
-		OrganizationID: orgID,
+		CompanyID: companyID,
 		Source:         vcardSource,
 	}
 	if role != "" {
@@ -335,10 +335,10 @@ func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, personID ids
 // Without the lookup, two cards from the same company create two companies:
 // every employee of Acme arrives with `ORG:Acme`, and a create-only path turns
 // a ten-card export into ten Acmes that a human then has to merge.
-func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*ids.OrganizationID, error) {
-	var existing ids.OrganizationID
+func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*ids.CompanyID, error) {
+	var existing ids.CompanyID
 	err := tx.QueryRow(ctx, `
-		SELECT id FROM organization
+		SELECT id FROM company
 		 WHERE lower(display_name) = lower($1) AND archived_at IS NULL AND merged_into_id IS NULL
 		 ORDER BY created_at
 		 LIMIT 1`, name).Scan(&existing)
@@ -346,14 +346,14 @@ func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*id
 	case err == nil:
 		return &existing, nil
 	case errors.Is(err, pgx.ErrNoRows):
-		org, createErr := s.CreateOrganizationTx(ctx, tx, CreateOrganizationInput{
+		company, createErr := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
 			DisplayName: name,
 			Source:      vcardSource,
 		})
 		if createErr != nil {
 			return nil, createErr
 		}
-		made := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+		made := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 		return &made, nil
 	default:
 		return nil, fmt.Errorf("looking for the card's employer: %w", err)
@@ -451,8 +451,8 @@ func vcardEvidence(entry VCardEntry) string {
 	if entry.Title != "" {
 		parts = append(parts, entry.Title)
 	}
-	if entry.Organization != "" {
-		parts = append(parts, entry.Organization)
+	if entry.Company != "" {
+		parts = append(parts, entry.Company)
 	}
 	return strings.Join(parts, " · ")
 }

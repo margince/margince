@@ -175,7 +175,7 @@ func TestTransformAmountToMinorRejectsNonStringAndUnparsable(t *testing.T) {
 // unparsable-int guard clauses.
 func TestTransformEmployeesToSizeBandBuckets(t *testing.T) {
 	m := overlay.ObjectMapping{
-		Source: "companies", Target: "organization",
+		Source: "companies", Target: "company",
 		Fields: []overlay.FieldMapping{{From: []string{"numberofemployees"}, To: "size_band", Kind: overlay.TargetColumn, Transform: "employees_to_size_band"}},
 	}
 	tests := []struct {

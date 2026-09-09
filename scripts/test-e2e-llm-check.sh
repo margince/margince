@@ -666,7 +666,7 @@ judges case10-finish-the-import.yaml case10 reports-the-skips-in-german 0 "!forb
 judges case10-finish-the-import.yaml case10 german-report-that-skipped-a-row 1 "never said anything matching" "!forbids"
 # And criterion 1 had nothing that could fail: the two counts read the same
 # before the commit and after it, so a run that stopped at the dry run and
-# reported "4 organizations, 0 skipped" passed every assertion this case had.
+# reported "4 companies, 0 skipped" passed every assertion this case had.
 # The commit is now required to be reported as done, and the table that only
 # says what the import WOULD do reaches none of it.
 judges case10-finish-the-import.yaml case10 stops-at-the-dry-run 1 "never said anything matching" "!forbids"

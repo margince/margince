@@ -84,7 +84,7 @@ export const singles: Approval[] = [
   }),
   proposal("ap-3", "Promote Kilian Wenzel to a contact", {
     kind: "promote_lead",
-    proposed_change: { name: "Kilian Wenzel", organization: "Nordwind" },
+    proposed_change: { name: "Kilian Wenzel", company: "Nordwind" },
   }),
 ];
 
@@ -116,23 +116,23 @@ export function deal(id: string, name: string, over: Partial<Deal> = {}): Deal {
 }
 
 export const deals: Deal[] = [
-  deal("d-1", "Fleet retrofit", { organization_id: "org-nordwind" }),
+  deal("d-1", "Fleet retrofit", { company_id: "company-nordwind" }),
   deal("d-2", "PIM rollout", {
     amount_minor: 2_650_000,
-    organization_id: "org-acme",
+    company_id: "company-acme",
   }),
   deal("d-3", "Depot lighting", { amount_minor: 890_000, currency: "USD" }),
   // The two that have gone quiet: open, stalled, and named — the rail resolves
   // the company through the same naming the pipeline board uses.
   deal("d-9", "Ostwind refit", {
     amount_minor: 1_200_000,
-    organization_id: "org-nordwind",
+    company_id: "company-nordwind",
     stalled: true,
     last_activity_at: "2026-06-02T08:00:00Z",
   }),
   deal("d-10", "Cold store retrofit", {
     amount_minor: 3_400_000,
-    organization_id: "org-acme",
+    company_id: "company-acme",
     stalled: true,
     last_activity_at: "2026-05-28T08:00:00Z",
   }),
@@ -187,7 +187,7 @@ export const digest: MorningDigest = {
     messages_synced: 42,
     activities_created: 42,
     people_created: 5,
-    organizations_created: 2,
+    companies_created: 2,
   },
   review: {
     dedupe_open: 3,

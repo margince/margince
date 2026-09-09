@@ -121,7 +121,7 @@ function renderCard(site: CompanySiteRead | null) {
         authorizing={false}
         error={null}
       />
-      {/* The same mark the organizations list and the connections graph draw
+      {/* The same mark the companies list and the connections graph draw
           for this company, rendered beside the board so the claim under test
           is "the two agree" rather than a hash recomputed in the test. */}
       <span data-testid="reference-mark">

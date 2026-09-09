@@ -120,7 +120,7 @@ func (p projectPhaseAdvancer) AdvanceProjectPhase(
 type companyEnricher struct{ srv *Server }
 
 func (c companyEnricher) EnrichCompany(
-	ctx context.Context, orgID ids.UUID, overrideURL string, depth agents.EnrichDepth,
+	ctx context.Context, companyID ids.UUID, overrideURL string, depth agents.EnrichDepth,
 ) (json.RawMessage, error) {
 	// Routed on the seam's own constants, and an unknown depth is REFUSED
 	// rather than falling through to the cheaper read: both doors resolve the
@@ -133,7 +133,7 @@ func (c companyEnricher) EnrichCompany(
 		if c.srv == nil || c.srv.siteReadHandlers.engine == nil {
 			return nil, fmt.Errorf("enrich: depth %q needs a crawl runner, which this deployment has not configured", depth)
 		}
-		started, err := c.srv.siteReadHandlers.engine.startSiteRead(ctx, orgID, overrideURL)
+		started, err := c.srv.siteReadHandlers.engine.startSiteRead(ctx, companyID, overrideURL)
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +142,7 @@ func (c companyEnricher) EnrichCompany(
 		if c.srv == nil || c.srv.scrapeHandlers.engine == nil {
 			return nil, fmt.Errorf("enrich: depth %q needs a model path, which this deployment has not configured", depth)
 		}
-		proposal, err := c.srv.scrapeHandlers.engine.Propose(ctx, orgID, overrideURL)
+		proposal, err := c.srv.scrapeHandlers.engine.Propose(ctx, companyID, overrideURL)
 		if err != nil {
 			return nil, err
 		}
@@ -154,7 +154,7 @@ func (c companyEnricher) EnrichCompany(
 		// The override is deliberately NOT passed on: this depth reads the
 		// domain the record holds and has no way to be pointed elsewhere,
 		// which is the guardrail that keeps it from becoming company discovery.
-		started, err := c.srv.startTechnicalEnrich(ctx, orgID)
+		started, err := c.srv.startTechnicalEnrich(ctx, companyID)
 		if err != nil {
 			return nil, err
 		}

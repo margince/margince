@@ -56,7 +56,7 @@ func NotMineRearmWorkflows(store *Store) []workflow.Handler {
 var handOffTriggers = []string{
 	"deal.owner_changed",
 	"person.updated",
-	"organization.updated",
+	"company.updated",
 	"lead.updated",
 }
 
@@ -69,7 +69,7 @@ var handOffTriggers = []string{
 // and the name reaches SQL through pgx.Identifier.Sanitize below.
 var ownerBearing = map[datasource.EntityType]bool{
 	datasource.EntityPerson:       true,
-	datasource.EntityOrganization: true,
+	datasource.EntityCompany: true,
 	datasource.EntityDeal:         true,
 	datasource.EntityLead:         true,
 }

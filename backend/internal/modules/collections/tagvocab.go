@@ -56,7 +56,7 @@ const nameField = "name"
 
 const (
 	typePerson       = "person"
-	typeOrganization = "organization"
+	typeCompany = "company"
 	typeDeal         = "deal"
 )
 
@@ -103,7 +103,7 @@ func tagUsage(ctx context.Context, tx pgx.Tx, id ids.TagID) (TagUsage, error) {
 		into       *int
 	}{
 		{typePerson, &out.People},
-		{typeOrganization, &out.Companies},
+		{typeCompany, &out.Companies},
 		{typeDeal, &out.Deals},
 	} {
 		n, err := countVisibleTagged(ctx, tx, id, c.entityType)
@@ -176,7 +176,7 @@ func CountTagReachBatch(ctx context.Context, tx pgx.Tx, tagIDs []ids.TagID) (map
 	if len(tagIDs) == 0 {
 		return out, nil
 	}
-	for _, entityType := range []string{typePerson, typeOrganization, typeDeal} {
+	for _, entityType := range []string{typePerson, typeCompany, typeDeal} {
 		counts, err := countVisibleTaggedBatch(ctx, tx, tagIDs, entityType)
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			// Same rule as tagUsage: a type this caller may not read

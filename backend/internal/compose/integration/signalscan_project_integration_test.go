@@ -42,16 +42,16 @@ func quietProjectPass(t *testing.T, e *Env, now time.Time) compose.GhostedPass {
 // projectSignals reads the signals whose SUBJECT is the project, through the
 // real signal list as a team-scoped rep holding the signal and project grants
 // — the reader the company page's signal section runs as.
-func projectSignals(t *testing.T, e *Env, org ids.UUID, project ids.ProjectID) []crmcontracts.Signal {
+func projectSignals(t *testing.T, e *Env, company ids.UUID, project ids.ProjectID) []crmcontracts.Signal {
 	t.Helper()
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
-			"signal": {Read: true}, "project": {Read: true}, "organization": {Read: true},
+			"signal": {Read: true}, "project": {Read: true}, "company": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	})
 	store := signals.NewStore(e.DB(), nil)
-	listed, _, err := store.ListSignals(reader, signals.ListSignalsInput{OrganizationID: &org})
+	listed, _, err := store.ListSignals(reader, signals.ListSignalsInput{CompanyID: &company})
 	if err != nil {
 		t.Fatalf("listing the account's signals: %v", err)
 	}
@@ -68,24 +68,24 @@ func TestAQuietProjectIsRaisedOncePerQuietEpisode(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 	now := time.Now().UTC()
-	org := e.SeedOrg(t, "Quiet Client", nil)
-	erp := seedProject(admin, t, e, "ERP replacement", org, &e.Rep1)
+	company := e.SeedCompany(t, "Quiet Client", nil)
+	erp := seedProject(admin, t, e, "ERP replacement", company, &e.Rep1)
 	advanceProject(admin, t, e, erp.ID, projects.PhaseDelivering)
 	fileActivity(admin, t, e, "meeting", now.AddDate(0, 0, -45), &erp.ID)
 	// Not in flight: an initiative nobody has touched is not a finding.
-	idea := seedProject(admin, t, e, "Someday", org, nil)
+	idea := seedProject(admin, t, e, "Someday", company, nil)
 	fileActivity(admin, t, e, "note", now.AddDate(0, 0, -45), &idea.ID)
 
 	pass := quietProjectPass(t, e, now)
 	if pass.Considered != 1 || pass.Raised != 1 {
 		t.Fatalf("first pass considered %d and raised %d, want 1 and 1 (the delivering project alone)", pass.Considered, pass.Raised)
 	}
-	raised := projectSignals(t, e, org, erp.ID)
+	raised := projectSignals(t, e, company, erp.ID)
 	if len(raised) != 1 || string(raised[0].Kind) != "project_gone_quiet" || raised[0].Status != "open" {
 		t.Fatalf("the team-scoped reader's list = %+v, want one open project_gone_quiet signal on the project", raised)
 	}
-	if raised[0].ResolvedOrgId == nil || ids.UUID(*raised[0].ResolvedOrgId) != org {
-		t.Fatalf("the signal is attributed to %v, want the project's company %s", raised[0].ResolvedOrgId, org)
+	if raised[0].ResolvedCompanyId == nil || ids.UUID(*raised[0].ResolvedCompanyId) != company {
+		t.Fatalf("the signal is attributed to %v, want the project's company %s", raised[0].ResolvedCompanyId, company)
 	}
 
 	// The producer runs hourly: the same silence raises nothing new.
@@ -102,7 +102,7 @@ func TestAQuietProjectIsRaisedOncePerQuietEpisode(t *testing.T) {
 	if later := quietProjectPass(t, e, now.AddDate(0, 0, 40)); later.Raised != 1 {
 		t.Fatalf("the next quiet episode raised %d, want 1", later.Raised)
 	}
-	if got := projectSignals(t, e, org, erp.ID); len(got) != 2 {
+	if got := projectSignals(t, e, company, erp.ID); len(got) != 2 {
 		t.Fatalf("signals on the project after two episodes = %d, want 2", len(got))
 	}
 }
@@ -114,22 +114,22 @@ func TestAProjectSignalIsWithheldFromASeatWithoutTheProjectGrant(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 	now := time.Now().UTC()
-	org := e.SeedOrg(t, "Quiet Client", nil)
-	erp := seedProject(admin, t, e, "ERP replacement", org, nil)
+	company := e.SeedCompany(t, "Quiet Client", nil)
+	erp := seedProject(admin, t, e, "ERP replacement", company, nil)
 	advanceProject(admin, t, e, erp.ID, projects.PhaseDelivering)
 	fileActivity(admin, t, e, "meeting", now.AddDate(0, 0, -45), &erp.ID)
 	if pass := quietProjectPass(t, e, now); pass.Raised != 1 {
 		t.Fatalf("raised %d, want 1", pass.Raised)
 	}
-	if got := projectSignals(t, e, org, erp.ID); len(got) != 1 {
+	if got := projectSignals(t, e, company, erp.ID); len(got) != 1 {
 		t.Fatalf("a seat WITH project.read lists %d project signals, want 1", len(got))
 	}
 
 	noProject := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
-		Objects:  map[string]principal.ObjectGrant{"signal": {Read: true}, "organization": {Read: true}},
+		Objects:  map[string]principal.ObjectGrant{"signal": {Read: true}, "company": {Read: true}},
 		RowScope: principal.RowScopeAll,
 	})
-	listed, _, err := signals.NewStore(e.DB(), nil).ListSignals(noProject, signals.ListSignalsInput{OrganizationID: &org})
+	listed, _, err := signals.NewStore(e.DB(), nil).ListSignals(noProject, signals.ListSignalsInput{CompanyID: &company})
 	if err != nil {
 		t.Fatalf("listing without project.read: %v", err)
 	}

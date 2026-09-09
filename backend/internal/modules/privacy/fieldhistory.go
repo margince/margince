@@ -78,7 +78,7 @@ const entityTypeActivity = "activity"
 // The record kinds whose field history is readable — the audit spine's
 // entity_type is free text, so the surface pins the vocabulary.
 var fieldHistoryEntityTypes = map[string]bool{
-	"person": true, "organization": true, "deal": true, "lead": true, "project": true, entityTypeActivity: true,
+	"person": true, "company": true, "deal": true, "lead": true, "project": true, entityTypeActivity: true,
 }
 
 // fieldHistoryEntityTypeList is fieldHistoryEntityTypes spelled for a

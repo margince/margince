@@ -7,7 +7,7 @@ package integration
 
 // The claim surface over HTTP (ADR-0105). The service-level rules are proven in
 // identity's own suite; what these cases add is the edge — that the routes are
-// reachable with no organization at all, that each refusal arrives as the status
+// reachable with no company at all, that each refusal arrives as the status
 // a client can act on, and that nothing here needs a session.
 
 import (
@@ -30,7 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
-// unprovisionedServer is an installation with no organization and one
+// unprovisionedServer is an installation with no company and one
 // outstanding setup token — the state a first boot leaves behind.
 func unprovisionedServer(t *testing.T) (*httptest.Server, string) {
 	t.Helper()
@@ -45,7 +45,7 @@ func unprovisionedServerWithOwner(t *testing.T) (*httptest.Server, string, *pgx.
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
 	if _, err := e.Owner.Exec(ctx, `UPDATE workspace SET archived_at = now() WHERE archived_at IS NULL`); err != nil {
-		t.Fatalf("clearing the harness organization: %v", err)
+		t.Fatalf("clearing the harness company: %v", err)
 	}
 	token, err := identity.NewService(e.Pool).MintSetupToken(ctx)
 	if err != nil {
@@ -73,12 +73,12 @@ func claimStatus(t *testing.T, srv *httptest.Server, body string) int {
 // A claim names what the installation is measured in — the form asks for both,
 // and the server refuses a claim that leaves either out.
 func claimBody(token string) string {
-	return `{"setup_token":"` + token + `","organization_name":"Claimed Co","timezone":"Europe/Berlin",` +
+	return `{"setup_token":"` + token + `","company_name":"Claimed Co","timezone":"Europe/Berlin",` +
 		`"base_currency":"EUR","base_language":"en",` +
 		`"admin_email":"ops@claimed.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 }
 
-func TestSetupStatusIsReachableWithNoOrganization(t *testing.T) {
+func TestSetupStatusIsReachableWithNoCompany(t *testing.T) {
 	srv, _ := unprovisionedServer(t)
 
 	// Every /v1 route answers 503 in this state. The claim surface must not,
@@ -120,11 +120,11 @@ func TestAClaimOverHTTPProvisionsTheInstallation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if created.WorkspaceID == "" {
-		t.Error("the claim response names no organization, so a client cannot tell what it created")
+		t.Error("the claim response names no company, so a client cannot tell what it created")
 	}
 
 	// And the surface closes behind it: status flips, and a replay of the same
-	// body is refused as a conflict rather than creating a second organization.
+	// body is refused as a conflict rather than creating a second company.
 	status, err := srv.Client().Get(srv.URL + "/setup/status")
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +152,7 @@ func TestAClaimWithTheWrongTokenIsUnauthorized(t *testing.T) {
 	}
 	// A missing token is the same answer, not a different one: distinguishing
 	// them tells an unauthenticated caller whether guessing is worthwhile.
-	if got := claimStatus(t, srv, `{"organization_name":"X"}`); got != http.StatusUnauthorized {
+	if got := claimStatus(t, srv, `{"company_name":"X"}`); got != http.StatusUnauthorized {
 		t.Errorf("an absent token answered %d, want 401", got)
 	}
 }
@@ -167,7 +167,7 @@ func TestAWrongTokenIsRefusedBeforeTheBodyIsJudged(t *testing.T) {
 
 	// A body that would fail validation twice over, presented with a token that
 	// does not match. The answer must be about the TOKEN.
-	nonsense := `{"setup_token":"not-the-token","organization_name":"X","timezone":"Europe/Berlin",` +
+	nonsense := `{"setup_token":"not-the-token","company_name":"X","timezone":"Europe/Berlin",` +
 		`"base_currency":"EURO","base_language":"fr",` +
 		`"admin_email":"ops@x.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, nonsense); got != http.StatusUnauthorized {
@@ -186,12 +186,12 @@ func TestAClaimWithoutABasisIsRefused(t *testing.T) {
 	// now asked on the form, so a claim that omits either is a client that
 	// stopped asking — and defaulting it would put this installation
 	// permanently on a currency nobody chose.
-	noLanguage := `{"setup_token":"` + token + `","organization_name":"Silent Co","timezone":"Europe/Berlin",` +
+	noLanguage := `{"setup_token":"` + token + `","company_name":"Silent Co","timezone":"Europe/Berlin",` +
 		`"base_currency":"EUR","admin_email":"ops@silent.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, noLanguage); got != http.StatusUnprocessableEntity {
 		t.Errorf("a claim naming no base language answered %d, want 422", got)
 	}
-	noCurrency := `{"setup_token":"` + token + `","organization_name":"Silent Co","timezone":"Europe/Berlin",` +
+	noCurrency := `{"setup_token":"` + token + `","company_name":"Silent Co","timezone":"Europe/Berlin",` +
 		`"base_language":"en","admin_email":"ops@silent.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, noCurrency); got != http.StatusUnprocessableEntity {
 		t.Errorf("a claim naming no base currency answered %d, want 422", got)
@@ -207,7 +207,7 @@ func TestAClaimWithoutABasisIsRefused(t *testing.T) {
 func TestAClaimedInstallationKeepsTheBasisItWasGiven(t *testing.T) {
 	srv, token, owner := unprovisionedServerWithOwner(t)
 
-	body := `{"setup_token":"` + token + `","organization_name":"Zurich Co","timezone":"Europe/Zurich",` +
+	body := `{"setup_token":"` + token + `","company_name":"Zurich Co","timezone":"Europe/Zurich",` +
 		`"base_currency":"CHF","base_language":"de",` +
 		`"admin_email":"ops@zurich.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, body); got != http.StatusCreated {
@@ -232,7 +232,7 @@ func TestAClaimedInstallationKeepsTheBasisItWasGiven(t *testing.T) {
 func TestAClaimWithAWeakPasswordIsRefusedAsValidation(t *testing.T) {
 	srv, token := unprovisionedServer(t)
 
-	body := `{"setup_token":"` + token + `","organization_name":"Weak Co","timezone":"Europe/Berlin",` +
+	body := `{"setup_token":"` + token + `","company_name":"Weak Co","timezone":"Europe/Berlin",` +
 		`"base_currency":"EUR","base_language":"en",` +
 		`"admin_email":"ops@weak.test","admin_name":"Ops","admin_password":""}`
 	if got := claimStatus(t, srv, body); got != http.StatusUnprocessableEntity {

@@ -71,7 +71,7 @@ var connectionAcquirers = map[string]string{
 	// calling one from inside a borrowed transaction reinstates the defect
 	// they were introduced to remove.
 	"ActivePersonColumns":       "reads the person custom-field catalog, which opens a transaction of its own",
-	"ActiveOrganizationColumns": "reads the organization custom-field catalog, which opens a transaction of its own",
+	"ActiveCompanyColumns": "reads the company custom-field catalog, which opens a transaction of its own",
 	"ActiveDealColumns":         "reads the deal custom-field catalog, which opens a transaction of its own",
 	// The drill-through's display names, resolved through each module's own
 	// gated label read — every one of which opens a transaction. It exists to
@@ -830,7 +830,7 @@ func TestTheHeldTransactionRuleHasARealSubject(t *testing.T) {
 // which is the blindness this rule was widened to remove, one file over.
 //
 // It was not hypothetical either: dropping that early return immediately found
-// project360's organization section reading the custom-field catalog inside the
+// project360's company section reading the custom-field catalog inside the
 // page's own transaction, fixed in the same change.
 func TestTheGateJudgesAHolderMethodInAFileThatNeverNamesPgx(t *testing.T) {
 	t.Parallel()

@@ -214,8 +214,8 @@
   "sites": [
     {
       "task": "account_scan",
-      "site": "org_scan",
-      "key": "account_scan/org_scan",
+      "site": "company_scan",
+      "key": "account_scan/company_scan",
       "scope": "full_invocation",
       "missing_context_scopes": [
         "identity"
@@ -1006,7 +1006,7 @@
         {
           "name": "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
           "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/organization_sender_01.yaml"
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_sender_01.yaml"
         },
         {
           "name": "a_department_display_name_is_not_somebodys_name",
@@ -1031,7 +1031,7 @@
         {
           "name": "a_trade_offices_city_mailbox_names_a_place_not_a_person",
           "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/organization_city_mailbox_01.yaml"
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_city_mailbox_01.yaml"
         },
         {
           "name": "a_two_sided_thread_is_a_conversation",
@@ -4324,8 +4324,8 @@
     },
     {
       "task": "summarize",
-      "site": "org_ask",
-      "key": "summarize/org_ask",
+      "site": "company_ask",
+      "key": "summarize/company_ask",
       "scope": "full_invocation",
       "missing_context_scopes": [
         "identity"
@@ -4407,8 +4407,8 @@
     },
     {
       "task": "summarize",
-      "site": "org_brief",
-      "key": "summarize/org_brief",
+      "site": "company_brief",
+      "key": "summarize/company_brief",
       "scope": "full_invocation",
       "missing_context_scopes": [
         "identity"
@@ -4498,8 +4498,8 @@
     },
     {
       "task": "summarize",
-      "site": "org_dossier",
-      "key": "summarize/org_dossier",
+      "site": "company_dossier",
+      "key": "summarize/company_dossier",
       "scope": "full_invocation",
       "missing_context_scopes": [
         "identity"

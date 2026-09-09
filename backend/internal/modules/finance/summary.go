@@ -34,31 +34,31 @@ import (
 // job; `truncated` says there are more.
 const recentInvoiceLimit = 5
 
-// SummaryFor answers the finance card for one organization.
+// SummaryFor answers the finance card for one company.
 func (s *Store) SummaryFor(
-	ctx context.Context, orgID ids.OrganizationID,
-) (crmcontracts.OrganizationFinanceSummary, error) {
+	ctx context.Context, companyID ids.CompanyID,
+) (crmcontracts.CompanyFinanceSummary, error) {
 	if err := auth.Require(ctx, "finance", principal.ActionRead); err != nil {
-		return crmcontracts.OrganizationFinanceSummary{}, err
+		return crmcontracts.CompanyFinanceSummary{}, err
 	}
-	out := crmcontracts.OrganizationFinanceSummary{
-		OrganizationId: openapi_types.UUID(orgID.UUID),
+	out := crmcontracts.CompanyFinanceSummary{
+		CompanyId: openapi_types.UUID(companyID.UUID),
 		State:          crmcontracts.FinanceSummaryStateNoConnection,
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// The account itself is row-scoped, and a finance grant is not a
-		// licence to learn that an organization exists: an account the caller
+		// licence to learn that a company exists: an account the caller
 		// cannot see answers 404 before any figure is read.
 		//
 		// EnsureVisible alone is not enough. Under row_scope=all it skips the
 		// query entirely — correctly, since everything is visible — so an id
-		// naming no organization would come back as a summary of the
+		// naming no company would come back as a summary of the
 		// workspace's provider rather than a 404. The existence probe is what
 		// makes a made-up id answer the same way a hidden one does.
-		if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
-		if err := organizationExists(ctx, tx, orgID); err != nil {
+		if err := companyExists(ctx, tx, companyID); err != nil {
 			return err
 		}
 		conn, connected, err := readConnection(ctx, tx)
@@ -72,7 +72,7 @@ func (s *Store) SummaryFor(
 		}
 		out.Provider = &conn.provider
 		out.LastSyncedAt = conn.lastSuccessAt
-		linked, err := organizationIsLinked(ctx, tx, orgID, conn.id)
+		linked, err := companyIsLinked(ctx, tx, companyID, conn.id)
 		if err != nil {
 			return err
 		}
@@ -90,10 +90,10 @@ func (s *Store) SummaryFor(
 			// label of the whole one. The state is the answer until it does.
 			return nil
 		}
-		return s.fillFigures(ctx, tx, orgID, conn, &out)
+		return s.fillFigures(ctx, tx, companyID, conn, &out)
 	})
 	if err != nil {
-		return crmcontracts.OrganizationFinanceSummary{}, err
+		return crmcontracts.CompanyFinanceSummary{}, err
 	}
 	return out, nil
 }
@@ -130,38 +130,38 @@ func readConnection(ctx context.Context, tx pgx.Tx) (conn connection, found bool
 	return conn, true, nil
 }
 
-// organizationIsLinked answers whether anyone has mapped an accounting
-// customer onto this organization. A link is a deliberate act and never
+// companyIsLinked answers whether anyone has mapped an accounting
+// customer onto this company. A link is a deliberate act and never
 // inferred from a name match — FIN-AC-7's unmapped state exists because
 // guessing which customer is which company is how money lands on the wrong
 // account.
 // Scoped to the LIVE connection: rows from a source that was disconnected and
 // replaced stay in the mirror, and mixing them into the current source's
 // totals would report money the connected system has never heard of.
-func organizationIsLinked(
-	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, connectionID ids.UUID,
+func companyIsLinked(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, connectionID ids.UUID,
 ) (bool, error) {
 	var exists bool
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM finance_customer_link
-			 WHERE organization_id = $1 AND connection_id = $2
-			   AND archived_at IS NULL)`, orgID, connectionID).Scan(&exists)
+			 WHERE company_id = $1 AND connection_id = $2
+			   AND archived_at IS NULL)`, companyID, connectionID).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("read the customer link: %w", err)
 	}
 	return exists, nil
 }
 
-// organizationExists answers the id that names nobody with the same 404 a
+// companyExists answers the id that names nobody with the same 404 a
 // hidden account gets. Existence-hiding cuts both ways: a caller must not be
 // able to tell "no such account" from "not yours".
-func organizationExists(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) error {
+func companyExists(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
 	var exists bool
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM organization WHERE id = $1 AND archived_at IS NULL)`,
-		orgID).Scan(&exists)
+			SELECT 1 FROM company WHERE id = $1 AND archived_at IS NULL)`,
+		companyID).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("read the account: %w", err)
 	}
@@ -199,10 +199,10 @@ func connectionState(conn connection, now time.Time) crmcontracts.FinanceSummary
 // conversion rate withholds the whole total rather than reporting the sum of
 // the rows that happened to convert.
 func (s *Store) fillFigures(
-	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, conn connection,
-	out *crmcontracts.OrganizationFinanceSummary,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, conn connection,
+	out *crmcontracts.CompanyFinanceSummary,
 ) error {
-	invoices, err := readInvoices(ctx, tx, orgID, conn.id)
+	invoices, err := readInvoices(ctx, tx, companyID, conn.id)
 	if err != nil {
 		return err
 	}
@@ -252,7 +252,7 @@ func (s *Store) fillFigures(
 		out.MedianDaysAfterDue = &median
 		out.PaymentBehaviour = paymentBehaviour(invoices, now)
 	}
-	return s.fillRecent(ctx, tx, orgID, conn.id, out)
+	return s.fillRecent(ctx, tx, companyID, conn.id, out)
 }
 
 // paymentBehaviour is the sparkline's series: days late per settled invoice,
@@ -285,16 +285,16 @@ func money(minor int64, currency string) *crmcontracts.Money {
 // there are more. A capped list that stays silent about the cap reads as the
 // whole ledger.
 func (s *Store) fillRecent(
-	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, connectionID ids.UUID,
-	out *crmcontracts.OrganizationFinanceSummary,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, connectionID ids.UUID,
+	out *crmcontracts.CompanyFinanceSummary,
 ) error {
 	rows, err := tx.Query(ctx, `
 		SELECT id, number, issued_at, due_at, fully_paid_at, status, currency,
 		       gross_minor, open_minor
 		  FROM finance_invoice
-		 WHERE organization_id = $1 AND connection_id = $2 AND archived_at IS NULL
+		 WHERE company_id = $1 AND connection_id = $2 AND archived_at IS NULL
 		 ORDER BY issued_at DESC, id DESC
-		 LIMIT $3`, orgID, connectionID, recentInvoiceLimit+1)
+		 LIMIT $3`, companyID, connectionID, recentInvoiceLimit+1)
 	if err != nil {
 		return fmt.Errorf("read recent invoices: %w", err)
 	}
@@ -378,7 +378,7 @@ func scanRecentInvoice(rows pgx.Rows, now time.Time) (crmcontracts.FinanceInvoic
 // invoice, not of the account, and a caller labelling a converted total needs
 // the currency it converted TO — which is the installation's base currency.
 func readInvoices(
-	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, connectionID ids.UUID,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, connectionID ids.UUID,
 ) ([]Invoice, error) {
 	// The amounts are converted HERE, at each invoice's own frozen rate
 	// (FIN-PARAM-7/DM-FX-4), because the formulas' fields are base-currency by
@@ -397,8 +397,8 @@ func readInvoices(
 		       credits_invoice_id IS NOT NULL, disputed_at IS NOT NULL,
 		       fx_rate_to_base IS NULL
 		  FROM finance_invoice
-		 WHERE organization_id = $1 AND connection_id = $2 AND archived_at IS NULL
-		 ORDER BY issued_at ASC, id ASC`, orgID, connectionID)
+		 WHERE company_id = $1 AND connection_id = $2 AND archived_at IS NULL
+		 ORDER BY issued_at ASC, id ASC`, companyID, connectionID)
 	if err != nil {
 		return nil, fmt.Errorf("read invoices: %w", err)
 	}

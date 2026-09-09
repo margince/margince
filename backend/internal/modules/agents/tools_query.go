@@ -203,7 +203,7 @@ func (t queryWorkspace) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 // tier, the envelope would not name it among the records the answer rests on,
 // and nothing would re-check that the caller may still read it. It is read
 // back like any other record, through a cache — a page of deals at one
-// organization is one hop read, not one per row.
+// company is one hop read, not one per row.
 //
 // READING AND SERVING ARE SEPARATE STEPS, and that is the whole shape of this
 // function. A row is admitted only when its target AND every hop behind it came
@@ -273,7 +273,7 @@ func (t queryWorkspace) admit(ctx context.Context, ref QueryRef, served *servedR
 	}
 	// A hop that can no longer be read takes its row with it. The hop is part
 	// of why the row was selected, so serving the row without it would tell the
-	// caller that a deal sits at an organization they may not know exists — the
+	// caller that a deal sits at a company they may not know exists — the
 	// disclosure the hop's own row scope refused at selection.
 	hops := make([]datasource.Record, 0, len(ref.Evidence))
 	for _, hop := range ref.Evidence {
@@ -290,7 +290,7 @@ func (t queryWorkspace) admit(ctx context.Context, ref QueryRef, served *servedR
 
 // serve stamps an admitted row's records, which is where they are counted and
 // where the envelope learns of them. Each distinct record is stamped ONCE: a
-// page of deals sharing one organization spends that organization once, not
+// page of deals sharing one company spends that company once, not
 // once per row.
 func (t queryWorkspace) serve(ctx context.Context, ref QueryRef, row admittedRow, served *servedRecords) QueryWorkspaceRow {
 	out := QueryWorkspaceRow{

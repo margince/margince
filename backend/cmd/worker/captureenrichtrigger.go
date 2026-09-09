@@ -32,7 +32,7 @@ import (
 //
 // The runner is insert-only: the consumer queues the pass, and this worker's
 // River side works it like any sweep-scheduled one. A failed inserter fails
-// the boot, like the organization trigger's — it only fails when a River
+// the boot, like the company trigger's — it only fails when a River
 // client cannot be built against the pool, which is a process-wide
 // misconfiguration rather than one lane's weather.
 func startCaptureEnrichTrigger(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, background *sync.WaitGroup, logger *slog.Logger, stdout io.Writer) error {

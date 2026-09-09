@@ -20,11 +20,11 @@ import {
   emptyPage,
   emptySection,
   jsonResponse,
-  org,
-  org360,
+  company,
+  company360,
   stubFetch,
 } from "./company.fixtures";
-import { CompanyScreen } from "./organizations";
+import { CompanyScreen } from "./companies";
 
 // The company record's Tasks tab: tick-to-complete without leaving the
 // account, a withheld section that says so, an archived account that offers no
@@ -82,7 +82,7 @@ const openTask = {
 // the record itself.
 const openTaskActivity = {
   id: openTask.activity_id,
-  organization_id: "o-1",
+  company_id: "o-1",
   type: "task",
   subject: openTask.subject,
   occurred_at: "2026-08-01T09:00:00Z",
@@ -93,8 +93,8 @@ const openTaskActivity = {
   version: 1,
 };
 
-const org360WithOpenTask = {
-  ...org360,
+const company360WithOpenTask = {
+  ...company360,
   next_steps: { ...emptySection, data: [openTask] },
 };
 
@@ -109,8 +109,8 @@ const preparedStep = {
   source: "ui",
   links: [{ entity_type: "deal", entity_id: "d-1" }],
 };
-const org360WithRecommendedStep = {
-  ...org360,
+const company360WithRecommendedStep = {
+  ...company360,
   suggestions: [
     {
       kind: "no_next_step",
@@ -136,8 +136,8 @@ const WRITERS_ZONE = "America/Los_Angeles";
 const PICKED_DAY = "Due 21/08/2026";
 const DAY_AFTER = "Due 22/08/2026";
 
-const org360WithStraddlingTask = {
-  ...org360,
+const company360WithStraddlingTask = {
+  ...company360,
   next_steps: {
     ...emptySection,
     data: [{ ...openTask, due_at: STRADDLING_DUE_AT }],
@@ -146,8 +146,8 @@ const org360WithStraddlingTask = {
 
 // The section the reader's role cannot read: absent from the payload and named
 // in `sections_omitted`, which is a different fact from an empty one.
-const org360WithheldTasks = {
-  ...org360,
+const company360WithheldTasks = {
+  ...company360,
   next_steps: undefined,
   sections_omitted: ["next_steps"],
 };
@@ -173,7 +173,7 @@ describe("CompanyScreen — the Tasks tab", () => {
         }
         return companyBackstop(url);
       },
-      { org360: org360WithOpenTask },
+      { company360: company360WithOpenTask },
     );
     render(<CompanyScreen id="o-1" />);
     await openTasksTab(user);
@@ -188,7 +188,7 @@ describe("CompanyScreen — the Tasks tab", () => {
 
   it("dates a task's deadline on the record's clock, the same day on the row and in the detail", async () => {
     // A deadline IS a fact about the record: the stored instant is minted as
-    // the end of the picked day on the organization's clock, and every
+    // the end of the picked day on the company's clock, and every
     // colleague reads back the day that was agreed. Reading it on the viewer's
     // clock instead named a different day for everyone outside that zone —
     // which is how a proposal approved for 9 September became a task due the
@@ -205,7 +205,7 @@ describe("CompanyScreen — the Tasks tab", () => {
         }
         return companyBackstop(url);
       },
-      { org360: org360WithStraddlingTask },
+      { company360: company360WithStraddlingTask },
     );
     render(<CompanyScreen id="o-1" />);
     await openTasksTab(user);
@@ -239,7 +239,7 @@ describe("CompanyScreen — the Tasks tab", () => {
         }
         return companyBackstop(url);
       },
-      { org360: org360WithRecommendedStep },
+      { company360: company360WithRecommendedStep },
     );
     render(<CompanyScreen id="o-1" />);
     await openTasksTab(user);
@@ -268,12 +268,12 @@ describe("CompanyScreen — the Tasks tab", () => {
     const user = userEvent.setup();
     stubFetch(
       async (url) => {
-        if (url.endsWith("/organizations/o-1")) {
+        if (url.endsWith("/companies/o-1")) {
           return jsonResponse({ ...org, archived_at: "2026-07-13T00:00:00Z" });
         }
         return companyBackstop(url);
       },
-      { org360: org360WithRecommendedStep },
+      { company360: company360WithRecommendedStep },
     );
     render(<CompanyScreen id="o-1" />);
     await openTasksTab(user);
@@ -289,7 +289,7 @@ describe("CompanyScreen — the Tasks tab", () => {
 
   it("says the section is withheld rather than rendering it as empty", async () => {
     const user = userEvent.setup();
-    stubFetch(companyBackstop, { org360: org360WithheldTasks });
+    stubFetch(companyBackstop, { company360: company360WithheldTasks });
     render(<CompanyScreen id="o-1" />);
     await openTasksTab(user);
 
@@ -317,7 +317,7 @@ describe("CompanyScreen — the Tasks tab", () => {
     // verb rather than offering a button that can only 404.
     stubFetch(
       async (url) => {
-        if (url.endsWith("/organizations/o-1")) {
+        if (url.endsWith("/companies/o-1")) {
           return jsonResponse({ ...org, archived_at: "2026-07-13T00:00:00Z" });
         }
         if (url.endsWith("/activities/a-1")) {
@@ -325,7 +325,7 @@ describe("CompanyScreen — the Tasks tab", () => {
         }
         return emptyPage();
       },
-      { org360: org360WithOpenTask },
+      { company360: company360WithOpenTask },
     );
     render(<CompanyScreen id="o-1" />);
     await openTasksTab(user);
@@ -363,7 +363,7 @@ describe("CompanyScreen — the Tasks tab", () => {
         }
         return companyBackstop(url);
       },
-      { org360: org360WithOpenTask },
+      { company360: company360WithOpenTask },
     );
     render(<CompanyScreen id="o-1" />);
     await openTasksTab(user);

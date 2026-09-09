@@ -104,9 +104,9 @@ func (s *Store) PrepareRender(ctx context.Context, id ids.OfferID) (RenderIngred
 
 // resolveRenderBuyerBlock answers the buyer legal block the renderer
 // shows: the frozen buyer_snapshot once sent (SendOffer already froze it
-// as the legal record), the LIVE organization read fresh while still
+// as the legal record), the LIVE company read fresh while still
 // draft (so an offer edited but never sent never shows a stale block), or
-// nil when the offer carries no buyer org at all. This is deliberately a
+// nil when the offer carries no buyer company at all. This is deliberately a
 // fresh, independent query rather than a refactor of offer_lifecycle.go's
 // sendSnapshots — the plan's boundary keeps Send/Accept/Reject/Regenerate
 // and their snapshot logic untouched.
@@ -114,22 +114,22 @@ func resolveRenderBuyerBlock(ctx context.Context, tx pgx.Tx, offer crmcontracts.
 	if offer.BuyerSnapshot != nil {
 		return *offer.BuyerSnapshot, nil
 	}
-	if offer.BuyerOrgId == nil {
+	if offer.BuyerCompanyId == nil {
 		return block, err
 	}
 	var displayName string
 	var legalName *string
 	scanErr := tx.QueryRow(ctx,
-		`SELECT display_name, legal_name FROM organization WHERE id = $1`,
-		ids.UUID(*offer.BuyerOrgId)).Scan(&displayName, &legalName)
+		`SELECT display_name, legal_name FROM company WHERE id = $1`,
+		ids.UUID(*offer.BuyerCompanyId)).Scan(&displayName, &legalName)
 	if errors.Is(scanErr, pgx.ErrNoRows) {
 		return block, err
 	}
 	if scanErr != nil {
-		return nil, fmt.Errorf("render: read buyer organization: %w", scanErr)
+		return nil, fmt.Errorf("render: read buyer company: %w", scanErr)
 	}
 	block = map[string]any{
-		"organization_id": offer.BuyerOrgId.String(),
+		"company_id": offer.BuyerCompanyId.String(),
 		"display_name":    displayName,
 	}
 	if legalName != nil {

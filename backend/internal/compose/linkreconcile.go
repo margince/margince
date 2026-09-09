@@ -269,7 +269,7 @@ func (w *linkReconcileWorker) attachDomainBacklogs(sweepCtx context.Context, ws 
 	for _, domain := range owed {
 		got, err := w.store.AttachDomainBacklog(sweepCtx, domain)
 		if err != nil {
-			failed = errors.Join(failed, fmt.Errorf("attaching %s: %w", domain.OrganizationID, err))
+			failed = errors.Join(failed, fmt.Errorf("attaching %s: %w", domain.CompanyID, err))
 			continue
 		}
 		planted += got

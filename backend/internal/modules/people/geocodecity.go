@@ -37,7 +37,7 @@ import (
 )
 
 // LookupCity answers a point for a city NAME, derived from the located
-// organizations whose address names that city.
+// companies whose address names that city.
 //
 // The comparison folds case and surrounding space, so "cologne", "Cologne" and
 // " COLOGNE " are one question. It deliberately does NOT fold "Köln" onto
@@ -69,9 +69,9 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 	// The object grant, before the row scope below composes anything. The scope
 	// clause narrows to the companies this caller could list; it does not ask
 	// whether they may list companies at all, and scopeOrAllRows answers ALL
-	// ROWS for an unbounded principal — so a caller holding no organization
+	// ROWS for an unbounded principal — so a caller holding no company
 	// grant would learn a city's centroid from every company in it.
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return CachedPlace{}, false, err
 	}
 	var lat, lon, latSpread, lonSpread *float64
@@ -85,7 +85,7 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 		// in a city — an existence answer about records they were not granted,
 		// one city name at a time. Scoped, the centroid is composed only from
 		// the companies this caller could have listed themselves.
-		scope, err := scopeOrAllRows(ctx, "organization", "", arg)
+		scope, err := scopeOrAllRows(ctx, "company", "", arg)
 		if err != nil {
 			return err
 		}
@@ -105,7 +105,7 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 			       max(geocode_lat) - min(geocode_lat),
 			       max(geocode_lon) - min(geocode_lon),
 			       count(*)
-			  FROM organization
+			  FROM company
 			 WHERE archived_at IS NULL
 			   AND geocode_status = 'ok'
 			   AND geocode_lat IS NOT NULL

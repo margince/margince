@@ -31,7 +31,7 @@ import (
 // newsroomLaneBudget is the whole lane's deadline — discovery, fetch and the
 // row writes together. A newsroom is worth a few seconds and never worth the
 // time the job budget reserves for CLOSING the dossier: a read cancelled before
-// its outcome is recorded stays running forever, squatting the organization's
+// its outcome is recorded stays running forever, squatting the company's
 // one in-flight slot.
 const newsroomLaneBudget = 20 * time.Second
 
@@ -47,7 +47,7 @@ var newsroomPaths = []string{"/feed", "/rss", "/news/feed", "/blog/feed", "/feed
 // a read that has already succeeded, and a feed nobody could reach is not a
 // failed enrichment.
 func (w *siteDeepReadWorker) readNewsroom(ctx context.Context, claim people.SiteReadClaim, crawl siteCrawl) {
-	if w.fetch == nil || claim.OrganizationID == nil {
+	if w.fetch == nil || claim.CompanyID == nil {
 		return
 	}
 	laneCtx, cancel := context.WithTimeout(ctx, newsroomLaneBudget)
@@ -57,7 +57,7 @@ func (w *siteDeepReadWorker) readNewsroom(ctx context.Context, claim people.Site
 	if len(items) == 0 {
 		return
 	}
-	orgID := *claim.OrganizationID
+	companyID := *claim.CompanyID
 	events := make([]NewsroomItem, 0, len(items))
 	for _, item := range items {
 		events = append(events, NewsroomItem{
@@ -69,18 +69,18 @@ func (w *siteDeepReadWorker) readNewsroom(ctx context.Context, claim people.Site
 	}
 
 	if err := database.WithWorkspaceTx(laneCtx, w.pool, func(tx pgx.Tx) error {
-		raised, err := WriteNewsroomSignals(laneCtx, tx, orgID, events, time.Now())
+		raised, err := WriteNewsroomSignals(laneCtx, tx, companyID, events, time.Now())
 		if err != nil {
 			return err
 		}
 		if raised > 0 {
 			w.log.InfoContext(laneCtx, "newsroom signals filed",
-				"organization", orgID.String(), "raised", raised, "read", len(events))
+				"company", companyID.String(), "raised", raised, "read", len(events))
 		}
 		return nil
 	}); err != nil {
 		w.log.WarnContext(laneCtx, "the newsroom lane could not file its signals",
-			"organization", orgID.String(), "err", err)
+			"company", companyID.String(), "err", err)
 	}
 }
 

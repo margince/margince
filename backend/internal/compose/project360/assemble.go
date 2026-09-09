@@ -65,20 +65,20 @@ func NewService(
 // catalog opens a connection of its own, and the page holds the only
 // connection its sections have for as long as it runs.
 //
-// The organization catalog is NOT here: reading it takes organization:read,
+// The company catalog is NOT here: reading it takes company:read,
 // and a refusal above the transaction would fail the whole page for a caller
-// who may read the project but not its company. The organization section
+// who may read the project but not its company. The company section
 // reads it itself, so that refusal lands as an omission.
 type catalogs struct {
 	project projects.CustomColumns
 	deal    deals.CustomColumns
-	// organization is here for the same reason as the two above and was
-	// missing: the organization section read the catalog itself, from inside
+	// company is here for the same reason as the two above and was
+	// missing: the company section read the catalog itself, from inside
 	// the page's transaction, which is a second connection taken while this
 	// one is held. Under a loaded pool that waits on the connection it is
 	// already inside — a deadlock Postgres cannot break, because it sees two
 	// unrelated sessions rather than one goroutine waiting on itself.
-	organization people.CustomColumns
+	company people.CustomColumns
 }
 
 func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
@@ -90,11 +90,11 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 	if c.deal, err = s.deals.ActiveDealColumns(ctx); err != nil {
 		return catalogs{}, err
 	}
-	// The organization catalog is read HERE like the two above, and a caller
-	// without the organization grant is not refused the page for it.
+	// The company catalog is read HERE like the two above, and a caller
+	// without the company grant is not refused the page for it.
 	//
-	// That read is gated on organization:read — the same grant the section
-	// itself is gated on — so a refusal here is not news: readOrganization
+	// That read is gated on company:read — the same grant the section
+	// itself is gated on — so a refusal here is not news: readCompany
 	// still asks, still refuses, and the assembly still omits the section and
 	// names it. Propagating it would turn a NARROWED page into a refused one
 	// for every reader who may see the project and not its company.
@@ -102,7 +102,7 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 	// Only a denial is swallowed. Any other failure is a real one, and empty
 	// columns handed to a caller who does hold the grant would silently drop
 	// the company's custom fields from the page.
-	switch c.organization, err = s.people.ActiveOrganizationColumns(ctx); {
+	switch c.company, err = s.people.ActiveCompanyColumns(ctx); {
 	case err == nil, errors.Is(err, apperrors.ErrPermissionDenied):
 	default:
 		return catalogs{}, err
@@ -169,7 +169,7 @@ func (a *assembly) sections() error {
 		name crmcontracts.Project360Section
 		read func() error
 	}{
-		{crmcontracts.Project360SectionOrganization, a.readOrganization},
+		{crmcontracts.Project360SectionCompany, a.readCompany},
 		{crmcontracts.Project360SectionPhaseHistory, a.readPhaseHistory},
 		{crmcontracts.Project360SectionDeals, a.readDeals},
 		{crmcontracts.Project360SectionStakeholders, a.readStakeholders},

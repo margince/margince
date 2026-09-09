@@ -118,7 +118,7 @@ func dealCount(t *testing.T, answer AnalyticsAnswer) float64 {
 // A saved run is a citation, not a grant.
 //
 // The proof cannot use a row scope on this population, and that is a fact about
-// deals rather than a gap in the test: person, organization, lead, deal and
+// deals rather than a gap in the test: person, company, lead, deal and
 // project are identity tables (platform/auth/tableclass.go), readable by every
 // seat, so their row-scope clause renders TRUE and two readers with different
 // scopes legitimately count the same deals. Asserting a narrowing here would

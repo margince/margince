@@ -153,8 +153,8 @@ describe("what a reply from the drawer is filed under", () => {
   // hit, the worklist, a brief's citation — so the anchor comes from the
   // message's own filing rather than from where it was opened.
   const person: ActivityLink = { entity_type: "person", entity_id: ANA };
-  const organization: ActivityLink = {
-    entity_type: "organization",
+  const company: ActivityLink = {
+    entity_type: "company",
     entity_id: BRANDT,
   };
   const deal: ActivityLink = { entity_type: "deal", entity_id: DEAL };
@@ -162,15 +162,15 @@ describe("what a reply from the drawer is filed under", () => {
   it("prefers the contact, whose timeline reads as the conversation", () => {
     // Order in the list must not decide it: the server sends links in its own
     // order, and a precedence that came out of that would move with it.
-    expect(replyAnchor([organization, deal, person])).toEqual(person);
+    expect(replyAnchor([company, deal, person])).toEqual(person);
   });
 
   it("takes the work it is about when no contact is named", () => {
-    expect(replyAnchor([organization, deal])).toEqual(deal);
+    expect(replyAnchor([company, deal])).toEqual(deal);
   });
 
   it("takes the account last, being the broadest thing it could be", () => {
-    expect(replyAnchor([organization])).toEqual(organization);
+    expect(replyAnchor([company])).toEqual(company);
   });
 
   it("answers nothing for a message filed against nothing", () => {

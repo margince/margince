@@ -460,7 +460,7 @@ describe("SearchScreen", () => {
 describe("SearchScreen — every hit type the contract can return", () => {
   const KINDS = [
     { type: "person", heading: "Contacts" },
-    { type: "organization", heading: "Organizations" },
+    { type: "company", heading: "Companies" },
     { type: "deal", heading: "Deals" },
     { type: "project", heading: "Projects" },
     { type: "product", heading: "Products" },

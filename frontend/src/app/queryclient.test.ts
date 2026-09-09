@@ -153,7 +153,7 @@ describe("the mutation failure sink", () => {
 describe("names the chrome is showing", () => {
   function nameQuery(client: QueryClient, id: string): Promise<unknown> {
     return client.fetchQuery({
-      queryKey: ["organization", ENTITY_NAME_KEY, id],
+      queryKey: ["company", ENTITY_NAME_KEY, id],
       queryFn: () => Promise.resolve({ name: "Globex" }),
     });
   }
@@ -166,7 +166,7 @@ describe("names the chrome is showing", () => {
     const client = createQueryClient();
     await nameQuery(client, "o-1");
     expect(
-      client.getQueryState(["organization", ENTITY_NAME_KEY, "o-1"])
+      client.getQueryState(["company", ENTITY_NAME_KEY, "o-1"])
         ?.isInvalidated,
     ).toBe(false);
 
@@ -175,7 +175,7 @@ describe("names the chrome is showing", () => {
     }).mutate();
 
     expect(
-      client.getQueryState(["organization", ENTITY_NAME_KEY, "o-1"])
+      client.getQueryState(["company", ENTITY_NAME_KEY, "o-1"])
         ?.isInvalidated,
     ).toBe(true);
   });
@@ -186,7 +186,7 @@ describe("names the chrome is showing", () => {
   it("leaves a screen's own reads to the screen", async () => {
     const client = createQueryClient();
     await client.fetchQuery({
-      queryKey: ["organization360", "o-1"],
+      queryKey: ["company360", "o-1"],
       queryFn: () => Promise.resolve({ id: "o-1" }),
     });
 
@@ -195,7 +195,7 @@ describe("names the chrome is showing", () => {
     }).mutate();
 
     expect(
-      client.getQueryState(["organization360", "o-1"])?.isInvalidated,
+      client.getQueryState(["company360", "o-1"])?.isInvalidated,
     ).toBe(false);
   });
 });
@@ -208,8 +208,8 @@ describe("the history a reader is looking at", () => {
   it("brings a record's history back after any successful write", async () => {
     const client = createQueryClient();
     for (const key of [
-      ["record-history", "organization", "o-1"],
-      ["field-history", "organization", "o-1", "", ""],
+      ["record-history", "company", "o-1"],
+      ["field-history", "company", "o-1", "", ""],
     ]) {
       await client.fetchQuery({
         queryKey: key,
@@ -223,8 +223,8 @@ describe("the history a reader is looking at", () => {
     }).mutate();
 
     for (const key of [
-      ["record-history", "organization", "o-1"],
-      ["field-history", "organization", "o-1", "", ""],
+      ["record-history", "company", "o-1"],
+      ["field-history", "company", "o-1", "", ""],
     ]) {
       expect(client.getQueryState(key)?.isInvalidated).toBe(true);
     }
@@ -234,7 +234,7 @@ describe("the history a reader is looking at", () => {
   // and refetching it would spend a read to redraw the same list.
   it("leaves the history alone when the write failed", async () => {
     const client = createQueryClient();
-    const key = ["record-history", "organization", "o-2"];
+    const key = ["record-history", "company", "o-2"];
     await client.fetchQuery({
       queryKey: key,
       queryFn: () => Promise.resolve([]),

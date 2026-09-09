@@ -42,7 +42,7 @@ export function RecordCard({
    * is read: a person is round the way a face is, a company a rounded square
    * the way a logo is. `Avatar` owns the distinction; the card passes it on.
    */
-  kind: "person" | "organization";
+  kind: "person" | "company";
   name: string;
   // The record's own page.
   href: string;

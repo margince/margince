@@ -338,7 +338,7 @@ func MustWorkspace(ctx context.Context) ids.UUID {
 // transaction, so a caller that locked at its precondition read may write
 // through the same store path without deadlock.
 //
-// The key carries no workspace. One installation serves one organization
+// The key carries no workspace. One installation serves one company
 // (ADR-0061), so a workspace in the key distinguishes nothing (ADR-0091 §5).
 func LockWriteIdentity(ctx context.Context, tx pgx.Tx, entityType, identity string) error {
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(

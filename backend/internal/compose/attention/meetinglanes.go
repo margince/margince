@@ -101,7 +101,7 @@ type Meeting struct {
 
 	// NeedsPrep is true when nothing has been written down for a meeting that
 	// is about to happen: no agenda or notes body, and nobody outside this
-	// organization recorded on it.
+	// company recorded on it.
 	//
 	// It is a THREE-state answer squeezed into a bool plus its guard below, and
 	// the third state is why: a meeting whose content this reader may not read

@@ -638,8 +638,8 @@ func TestDisconnectResetsSyncCheckpointsSoAFreshBackfillRelistsFromTheStart(t *t
 	inc := &countingIncumbent{pagingCompanies: pagingCompanies{
 		records: []Record{{
 			ExternalID:  "1",
-			ObjectClass: "organization",
-			Fields:      map[string]any{"display_name": "Org 1"},
+			ObjectClass: "company",
+			Fields:      map[string]any{"display_name": "Company 1"},
 			ModifiedAt:  time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
 		}},
 		pageSize: 100,

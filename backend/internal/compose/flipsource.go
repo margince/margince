@@ -18,7 +18,7 @@ import (
 // The estate's object classes, named once so the source, the writers,
 // and the stage catalog cannot drift on a string literal.
 const (
-	flipObjectOrganization = "organization"
+	flipObjectCompany = "company"
 	flipObjectPerson       = "person"
 	flipObjectLead         = "lead"
 	flipObjectDeal         = "deal"
@@ -26,10 +26,10 @@ const (
 )
 
 // flipImportOrder is the canonical import order: parents before
-// dependents (organizations before the persons and deals that reference
+// dependents (companies before the persons and deals that reference
 // them; activities last so every link target already exists).
 var flipImportOrder = []string{
-	flipObjectOrganization, flipObjectPerson, flipObjectLead, flipObjectDeal, flipObjectActivity,
+	flipObjectCompany, flipObjectPerson, flipObjectLead, flipObjectDeal, flipObjectActivity,
 }
 
 type mirrorFlipSource struct {

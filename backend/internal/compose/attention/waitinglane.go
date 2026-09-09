@@ -107,7 +107,7 @@ type WaitingCustomer struct {
 	// The record the thread is filed under, most specific first. Any may be
 	// zero: a message from a stranger names nobody.
 	PersonID       ids.UUID
-	OrganizationID ids.UUID
+	CompanyID ids.UUID
 	DealID         ids.UUID
 	// HasOpenDeal reports whether money this reader can see is still on this
 	// thread. It is what keeps a long wait in execution instead of sending it

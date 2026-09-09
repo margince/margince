@@ -38,8 +38,8 @@ func relationshipCreateInput(req crmcontracts.CreateRelationshipRequest) CreateR
 		// field and an explicit false are different requests.
 		IsCurrentPrimary:     req.IsCurrentPrimary,
 		PersonID:             idArg[ids.PersonKind](req.PersonId),
-		OrganizationID:       idArg[ids.OrganizationKind](req.OrganizationId),
-		CounterpartyOrgID:    idArg[ids.OrganizationKind](req.CounterpartyOrgId),
+		CompanyID:       idArg[ids.CompanyKind](req.CompanyId),
+		CounterpartyCompanyID:    idArg[ids.CompanyKind](req.CounterpartyCompanyId),
 		CounterpartyPersonID: idArg[ids.PersonKind](req.CounterpartyPersonId),
 		DealID:               idArg[ids.DealKind](req.DealId),
 		ProjectID:            idArg[ids.ProjectKind](req.ProjectId),
@@ -94,8 +94,8 @@ func wireRelationship(rel relationshipRow) crmcontracts.Relationship {
 	out.Version = &version
 	out.IsCurrentPrimary = &rel.IsCurrentPrimary
 	out.PersonId = uuidPtr(untypedPtr(rel.PersonID))
-	out.OrganizationId = uuidPtr(untypedPtr(rel.OrganizationID))
-	out.CounterpartyOrgId = uuidPtr(untypedPtr(rel.CounterpartyOrgID))
+	out.CompanyId = uuidPtr(untypedPtr(rel.CompanyID))
+	out.CounterpartyCompanyId = uuidPtr(untypedPtr(rel.CounterpartyCompanyID))
 	out.CounterpartyPersonId = uuidPtr(untypedPtr(rel.CounterpartyPerson))
 	out.DealId = uuidPtr(untypedPtr(rel.DealID))
 	out.ProjectId = uuidPtr(untypedPtr(rel.ProjectID))

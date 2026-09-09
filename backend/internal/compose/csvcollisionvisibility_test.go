@@ -29,12 +29,12 @@ func TestEveryMatchedCandidateIsAskedAboutNotJustTheWinner(t *testing.T) {
 	// A fuzzy match ranks its candidates; every one of them is a company the row
 	// might mean, and a visibility question skipping any of them lets that one
 	// change the answer without being asked.
-	fuzzy := people.OrganizationMatch{
+	fuzzy := people.CompanyMatch{
 		Decision:       people.DecisionFuzzyReview,
-		OrganizationID: ids.From[ids.OrganizationKind](first),
-		Ranked: []people.OrganizationCandidateScore{
-			{OrganizationID: ids.From[ids.OrganizationKind](first), Confidence: 1},
-			{OrganizationID: ids.From[ids.OrganizationKind](second), Confidence: 1},
+		CompanyID: ids.From[ids.CompanyKind](first),
+		Ranked: []people.CompanyCandidateScore{
+			{CompanyID: ids.From[ids.CompanyKind](first), Confidence: 1},
+			{CompanyID: ids.From[ids.CompanyKind](second), Confidence: 1},
 		},
 	}
 	got := candidatesOf(fuzzy)
@@ -46,11 +46,11 @@ func TestEveryMatchedCandidateIsAskedAboutNotJustTheWinner(t *testing.T) {
 
 	// An exact (domain) collision carries no ranked set; its answer is the id
 	// itself, and dropping it would make a real collision invisible.
-	exact := people.OrganizationMatch{
+	exact := people.CompanyMatch{
 		Decision:       people.DecisionExactCollision,
-		OrganizationID: ids.From[ids.OrganizationKind](first),
+		CompanyID: ids.From[ids.CompanyKind](first),
 	}
-	if got := candidatesOf(exact); len(got) != 1 || got[0] != ids.From[ids.OrganizationKind](first) {
+	if got := candidatesOf(exact); len(got) != 1 || got[0] != ids.From[ids.CompanyKind](first) {
 		t.Errorf("candidatesOf answered %v for an exact collision, want the matched id — it carries "+
 			"no ranked set, so reading only Ranked would lose the collision entirely", got)
 	}

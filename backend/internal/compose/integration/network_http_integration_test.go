@@ -159,15 +159,15 @@ func TestDealCoverageHidesADealTheCallerCannotRead(t *testing.T) {
 func TestDealCoverageDistinguishesADepartedChampionFromADepartedStakeholder(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	org, deal := dealAtAnAccount(t, e, "Bär Pharma", "Renewal")
+	company, deal := dealAtAnAccount(t, e, "Bär Pharma", "Renewal")
 
 	// Two people who used to work there and one who still does. The rule
 	// demands EVIDENCE of a departure — an ended employment plus no live one —
 	// so the third person proves the flag is about leaving and not about
 	// having no employment row.
-	gone := contactAt(t, e, org, "Departed Champion", "2026-01-31")
-	alsoGone := contactAt(t, e, org, "Departed Legal", "2026-02-28")
-	stayed := contactAt(t, e, org, "Still There", "")
+	gone := contactAt(t, e, company, "Departed Champion", "2026-01-31")
+	alsoGone := contactAt(t, e, company, "Departed Legal", "2026-02-28")
+	stayed := contactAt(t, e, company, "Still There", "")
 
 	stakeholder(t, e, deal, gone, "champion")
 	stakeholder(t, e, deal, alsoGone, "legal")
@@ -202,14 +202,14 @@ func TestDealCoverageDistinguishesADepartedChampionFromADepartedStakeholder(t *t
 func TestDealCoverageDoesNotCallARehiredStakeholderDeparted(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	org, deal := dealAtAnAccount(t, e, "Voss Systems", "Expansion")
+	company, deal := dealAtAnAccount(t, e, "Voss Systems", "Expansion")
 
 	// A role change recorded as end-then-start, which is how most CRMs record
 	// a promotion. The closed row is real and so is the live one, and only the
 	// live one decides: flagging this would announce a resignation every time
 	// somebody changed job title.
-	person := contactAt(t, e, org, "Promoted Person", "2026-01-31")
-	employ(t, e, person, org, "2026-02-01", "")
+	person := contactAt(t, e, company, "Promoted Person", "2026-01-31")
+	employ(t, e, person, company, "2026-02-01", "")
 	stakeholder(t, e, deal, person, "champion")
 
 	risks := coverageRisks(t, e, deal)
@@ -298,17 +298,17 @@ func findRisk(risks []coverageRiskDTO, kind string) *coverageRiskDTO {
 	return nil
 }
 
-// dealAtAnAccount creates an organization and an open deal owned by it — the
+// dealAtAnAccount creates a company and an open deal owned by it — the
 // shape every departure rule needs, since a deal with no account has nobody to
 // have left.
-func dealAtAnAccount(t *testing.T, e *apptest.AppEnv, orgName, dealName string) (org, deal string) {
+func dealAtAnAccount(t *testing.T, e *apptest.AppEnv, companyName, dealName string) (company, deal string) {
 	t.Helper()
 	var created AnyMap
-	if status := e.Call(t, "POST", "/v1/organizations",
-		AnyMap{"display_name": orgName, "source": "ui"}, nil, &created); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/companies",
+		AnyMap{"display_name": companyName, "source": "ui"}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("creating the account: %d", status)
 	}
-	org, _ = created["id"].(string)
+	company, _ = created["id"].(string)
 
 	var pipelines AnyMap
 	if status := e.Call(t, "GET", "/v1/pipelines", nil, nil, &pipelines); status != http.StatusOK {
@@ -319,12 +319,12 @@ func dealAtAnAccount(t *testing.T, e *apptest.AppEnv, orgName, dealName string) 
 	var made AnyMap
 	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": dealName, "pipeline_id": pipeline, "stage_id": stage,
-		"organization_id": org, "source": "ui",
+		"company_id": company, "source": "ui",
 	}, nil, &made); status != http.StatusCreated {
 		t.Fatalf("creating the deal: %d", status)
 	}
 	deal, _ = made["id"].(string)
-	return org, deal
+	return company, deal
 }
 
 // hiredOn is when every fixture employee started. The start date is not what
@@ -334,7 +334,7 @@ const hiredOn = "2020-01-01"
 
 // contactAt creates a person and their employment at the account. An empty
 // endedAt means they still work there.
-func contactAt(t *testing.T, e *apptest.AppEnv, org, name, endedAt string) string {
+func contactAt(t *testing.T, e *apptest.AppEnv, company, name, endedAt string) string {
 	t.Helper()
 	var person AnyMap
 	if status := e.Call(t, "POST", "/v1/people",
@@ -342,14 +342,14 @@ func contactAt(t *testing.T, e *apptest.AppEnv, org, name, endedAt string) strin
 		t.Fatalf("creating %s: %d", name, status)
 	}
 	id, _ := person["id"].(string)
-	employ(t, e, id, org, hiredOn, endedAt)
+	employ(t, e, id, company, hiredOn, endedAt)
 	return id
 }
 
-func employ(t *testing.T, e *apptest.AppEnv, person, org, startedAt, endedAt string) {
+func employ(t *testing.T, e *apptest.AppEnv, person, company, startedAt, endedAt string) {
 	t.Helper()
 	body := AnyMap{
-		"kind": "employment", "person_id": person, "organization_id": org,
+		"kind": "employment", "person_id": person, "company_id": company,
 		"started_at": startedAt, "source": "ui",
 	}
 	if endedAt != "" {

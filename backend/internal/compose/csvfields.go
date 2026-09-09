@@ -23,10 +23,10 @@ const fieldFullName = "full_name"
 // recognizes a row by, and the one value the store canonicalizes on write.
 const fieldEmail = "email"
 
-// fieldDomain is an organization's identifying field, and the one a spreadsheet
+// fieldDomain is a company's identifying field, and the one a spreadsheet
 // most often carries as a Website column.
 //
-// A company's name describes it; its domain identifies it. DedupeOrganization
+// A company's name describes it; its domain identifies it. DedupeCompany
 // asks about the domain FIRST and treats a hit as an exact collision, where a
 // name match is only ever the fuzzy tier — so a file that carries domains is
 // matched on a real key, and one that does not is matched on a string two
@@ -54,7 +54,7 @@ const leadStatusNew = "new"
 // Every field here round-trips: the writer can both CREATE it and UPDATE it.
 // `linkedin_url` is deliberately absent from both lists even though the stores
 // know the field — a lead's patch input has no LinkedIn member and an
-// organization's CREATE input has none, so advertising it would accept a
+// company's CREATE input has none, so advertising it would accept a
 // column, report the row as written, and drop the value on one of the two
 // paths. A target that only half works is worse than one the screen never
 // offers.
@@ -65,7 +65,7 @@ var csvTargets = map[string][]string{
 	// falls back to matching names — which two real companies may legitimately
 	// share. It round-trips: the create input takes a domain set and the patch
 	// input takes the same set as a replace-set.
-	migration.ObjectOrganization: append([]string{fieldDisplayName, "legal_name", fieldIndustry, "size_band", "description", fieldDomain}, recordAddressTargets...),
+	migration.ObjectCompany: append([]string{fieldDisplayName, "legal_name", fieldIndustry, "size_band", "description", fieldDomain}, recordAddressTargets...),
 	// `phone`, `social` and `owner_id` are deliberately absent. A person's
 	// patch input carries no Phones member and no single-column spelling of
 	// Social, and an owner is a uuid a spreadsheet cannot honestly carry —
@@ -96,7 +96,7 @@ const csvTargetID = "id"
 //
 // They were absent until 2026-08-23, and their absence taught a model that a
 // company has no address at all: asked to import a City column it reported
-// that organizations know only display_name, legal_name, industry, size_band
+// that companies know only display_name, legal_name, industry, size_band
 // and description, then wrote "Standort: Hamburg" into the DESCRIPTION to
 // avoid losing the value. Every other door — read_record, create_record,
 // update_record — has carried the address the whole time.
@@ -104,7 +104,7 @@ const csvTargetID = "id"
 // Both halves of the round-trip rule this list is built on hold: the create
 // input and the patch input each take an *Address, so a mapped column is
 // written on the first import and rewritten on the second. That holds for a
-// person as well as an organization, which is why one list serves both — the
+// person as well as a company, which is why one list serves both — the
 // six names are the contract's, not either object's.
 var recordAddressTargets = []string{
 	"address.line1", "address.line2", "address.city",
@@ -116,7 +116,7 @@ var recordAddressTargets = []string{
 // Stated per object rather than guessed, and the report says which was used.
 var csvSourceKeyDefault = map[string]string{
 	migration.ObjectLead:         fieldEmail,
-	migration.ObjectOrganization: fieldDisplayName,
+	migration.ObjectCompany: fieldDisplayName,
 	migration.ObjectPerson:       fieldEmail,
 }
 
@@ -152,19 +152,19 @@ func importTargets(object string) ([]string, error) {
 
 // selectsByID reports whether an object's rows may name the record they are.
 //
-// Organizations only, for now. A lead is identified by its email and the store's
+// Companies only, for now. A lead is identified by its email and the store's
 // own unique key refuses a second one, so a lead row has no ambiguity for an id
 // to resolve — and advertising a column that changes nothing would be worse than
 // not offering it.
 func selectsByID(object string) bool {
-	return object == migration.ObjectOrganization
+	return object == migration.ObjectCompany
 }
 
 // linksEmployer reports whether an object's rows may name a company to be
 // linked to, rather than written.
 //
 // People only: a contact file's company column is the person's employer, which
-// is a RELATIONSHIP between two records. An organization row naming a company
+// is a RELATIONSHIP between two records. A company row naming a company
 // would be naming itself, and a lead holds its employer as free text on the lead
 // itself (`company_name`, an ordinary writable field) precisely because a lead is
 // not yet a record the estate links things to.
@@ -385,11 +385,11 @@ func unwritableReason(object string, fields map[string]string) string {
 		}
 		return ""
 	}
-	if object != migration.ObjectOrganization {
+	if object != migration.ObjectCompany {
 		return ""
 	}
 	// A company's domains are parsed before the write transaction opens
-	// (parseOrgDomains), so a value the parser refuses fails the row at commit.
+	// (parseCompanyDomains), so a value the parser refuses fails the row at commit.
 	// The same argument as the email arm above and the size_band one below: a dry
 	// run whose job is to say what WILL happen may not report the opposite.
 	if domain := strings.TrimSpace(fields[fieldDomain]); domain != "" {
@@ -409,13 +409,13 @@ func unwritableReason(object string, fields map[string]string) string {
 
 // importableSizeBands is the closed size_band vocabulary, off the contract.
 var importableSizeBands = map[string]bool{
-	string(crmcontracts.OrganizationSizeBandN110):      true,
-	string(crmcontracts.OrganizationSizeBandN1150):     true,
-	string(crmcontracts.OrganizationSizeBandN51200):    true,
-	string(crmcontracts.OrganizationSizeBandN201500):   true,
-	string(crmcontracts.OrganizationSizeBandN5011000):  true,
-	string(crmcontracts.OrganizationSizeBandN10015000): true,
-	string(crmcontracts.OrganizationSizeBandN5000):     true,
+	string(crmcontracts.CompanySizeBandN110):      true,
+	string(crmcontracts.CompanySizeBandN1150):     true,
+	string(crmcontracts.CompanySizeBandN51200):    true,
+	string(crmcontracts.CompanySizeBandN201500):   true,
+	string(crmcontracts.CompanySizeBandN5011000):  true,
+	string(crmcontracts.CompanySizeBandN10015000): true,
+	string(crmcontracts.CompanySizeBandN5000):     true,
 }
 
 // sizeBandVocabulary renders the bands in ascending order for a refusal to

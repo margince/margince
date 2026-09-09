@@ -353,8 +353,8 @@ func refuseUnpairedAmount(seen map[string]bool) error {
 // setAcceptedDealField coerces one accepted value onto its UpdateDealInput
 // slot. The switch IS the closed allowlist, derived from what the deals
 // partial-update path accepts as a plain document fact. Its remaining
-// fields are deliberately refused: the row references (organization_id,
-// owner_id, partner_org_id) are links to records, not facts a quote can
+// fields are deliberately refused: the row references (company_id,
+// owner_id, partner_company_id) are links to records, not facts a quote can
 // carry, and each demands its own link-target visibility gate;
 // forecast_category is a rep's pipeline judgment; wait_until is a
 // workflow timer; a cf_* passthrough would hand the extractor an open

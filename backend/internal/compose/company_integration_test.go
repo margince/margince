@@ -34,9 +34,9 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 	store := people.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
-	// A freshly bootstrapped installation (ADR-0061) has an organization row
+	// A freshly bootstrapped installation (ADR-0061) has a company row
 	// for nobody: the anchor is unset, and that IS the onboarding signal.
-	if _, err := store.GetCompany(ctx); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := store.GetAnchorCompany(ctx); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("GetCompany on a bare installation → %v, want ErrNotFound", err)
 	}
 
@@ -61,7 +61,7 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 		t.Fatal("the three semantic fields did not make the company minimum-complete")
 	}
 	// The website is stored as the bare domain — the same handle a read-back
-	// resolves organizations by — so a full URL normalises on the way in.
+	// resolves companies by — so a full URL normalises on the way in.
 	if saved.Website == nil || *saved.Website != "acme.example" {
 		t.Fatalf("saved website = %v, want acme.example", saved.Website)
 	}
@@ -70,13 +70,13 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 	}
 
 	// The mark is what makes the company findable; without it the row is just
-	// another organization.
+	// another company.
 	var anchors int
 	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM organization
+			`SELECT count(*) FROM company
 			  WHERE id = $1 AND is_anchor AND archived_at IS NULL`,
-			saved.OrganizationID).Scan(&anchors)
+			saved.CompanyID).Scan(&anchors)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -85,22 +85,22 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 		t.Fatalf("the saved company is not marked as the installation's own (%d anchor rows)", anchors)
 	}
 	if audits := e.WsCount(t,
-		`SELECT count(*) FROM audit_log WHERE entity_type = 'organization' AND entity_id = $1 AND action = 'create'`,
-		saved.OrganizationID.UUID); audits != 1 {
+		`SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = $1 AND action = 'create'`,
+		saved.CompanyID.UUID); audits != 1 {
 		t.Fatalf("company save wrote %d create audits, want 1", audits)
 	}
 	if outbox := e.WsCount(t,
-		`SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'organization.created' AND envelope#>>'{entity,id}' = $1`,
-		saved.OrganizationID.String()); outbox != 1 {
-		t.Fatalf("company save wrote %d organization.created events, want 1", outbox)
+		`SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'company.created' AND envelope#>>'{entity,id}' = $1`,
+		saved.CompanyID.String()); outbox != 1 {
+		t.Fatalf("company save wrote %d company.created events, want 1", outbox)
 	}
 
 	// Re-reading is the form's own round-trip.
-	got, err := store.GetCompany(ctx)
+	got, err := store.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("GetCompany after save: %v", err)
 	}
-	if got.OrganizationID != saved.OrganizationID || got.Fields["icp"] != "RevOps at SaaS scale-ups" {
+	if got.CompanyID != saved.CompanyID || got.Fields["icp"] != "RevOps at SaaS scale-ups" {
 		t.Fatalf("GetCompany = %+v, want the saved company", got)
 	}
 
@@ -111,15 +111,15 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("second SaveCompany: %v", err)
 	}
-	var orgs int
+	var companies int
 	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT count(*) FROM organization`).Scan(&orgs)
+		return tx.QueryRow(context.Background(), `SELECT count(*) FROM company`).Scan(&companies)
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if orgs != 1 {
-		t.Fatalf("saving twice created %d organizations, want the one anchor", orgs)
+	if companies != 1 {
+		t.Fatalf("saving twice created %d companies, want the one anchor", companies)
 	}
 
 	// A field sent empty is cleared, not stored as the empty answer.
@@ -135,8 +135,8 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 	}
 }
 
-// Editing the website has to actually move the primary domain. An organization
-// has at most one (uq_org_domain_primary), so a naive insert collides with the
+// Editing the website has to actually move the primary domain. A company
+// has at most one (uq_company_domain_primary), so a naive insert collides with the
 // old one — and a swallowed collision means the human changed their website,
 // saw a 200, and kept the old site.
 func TestCompanyWebsiteCanBeChangedAfterTheFirstSave(t *testing.T) {
@@ -176,15 +176,15 @@ func TestCompanyWebsiteCanBeChangedAfterTheFirstSave(t *testing.T) {
 	var primary string
 	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM organization_domain
-			  WHERE organization_id = $1 AND is_primary AND archived_at IS NULL`,
-			got.OrganizationID).Scan(&primaries); err != nil {
+			`SELECT count(*) FROM company_domain
+			  WHERE company_id = $1 AND is_primary AND archived_at IS NULL`,
+			got.CompanyID).Scan(&primaries); err != nil {
 			return err
 		}
 		return tx.QueryRow(context.Background(),
-			`SELECT domain FROM organization_domain
-			  WHERE organization_id = $1 AND is_primary AND archived_at IS NULL`,
-			got.OrganizationID).Scan(&primary)
+			`SELECT domain FROM company_domain
+			  WHERE company_id = $1 AND is_primary AND archived_at IS NULL`,
+			got.CompanyID).Scan(&primary)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -218,8 +218,8 @@ func TestCompanySavedByAHumanSurvivesALaterReadBack(t *testing.T) {
 	var capturedBy, source string
 	err = database.WithWorkspaceTx(human, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT captured_by, source FROM organization_profile_field
-			  WHERE organization_id = $1 AND field = 'icp'`, saved.OrganizationID).Scan(&capturedBy, &source)
+			`SELECT captured_by, source FROM company_profile_field
+			  WHERE company_id = $1 AND field = 'icp'`, saved.CompanyID).Scan(&capturedBy, &source)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -229,12 +229,12 @@ func TestCompanySavedByAHumanSurvivesALaterReadBack(t *testing.T) {
 	}
 
 	// Now an agent reads the same site back and its accept lands on the same
-	// organization (resolved by the domain the form recorded).
+	// company (resolved by the domain the form recorded).
 	agent := principal.WithActor(human, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "agent:coldstart",
 		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: integration.AdminPerms,
 	})
-	orgID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
+	companyID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
 		SourceURL: "https://acme.example",
 		Fields: []people.ColdStartFieldInput{{
 			Field: "icp", Value: "What the website says", EvidenceSnippet: "Built for RevOps",
@@ -244,12 +244,12 @@ func TestCompanySavedByAHumanSurvivesALaterReadBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ApplyColdStartProfile: %v", err)
 	}
-	if orgID != saved.OrganizationID {
+	if companyID != saved.CompanyID {
 		t.Fatalf("the read-back landed on %s, not the anchor %s — the form's domain should resolve to the company",
-			orgID, saved.OrganizationID)
+			companyID, saved.CompanyID)
 	}
 
-	got, err := store.GetCompany(human)
+	got, err := store.GetAnchorCompany(human)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,7 +276,7 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 		var description *string
 		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
-				`SELECT description FROM organization WHERE id = $1`, saved.OrganizationID).Scan(&description)
+				`SELECT description FROM company WHERE id = $1`, saved.CompanyID).Scan(&description)
 		}); err != nil {
 			t.Fatalf("reading description: %v", err)
 		}
@@ -287,10 +287,10 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 	}
 
 	// The header's inline edit is the one editor of a standing value.
-	if _, err := store.UpdateOrganization(ctx, saved.OrganizationID, people.UpdateOrganizationInput{
+	if _, err := store.UpdateCompany(ctx, saved.CompanyID, people.UpdateCompanyInput{
 		Description: strptr("The RevOps platform for manufacturers"),
 	}); err != nil {
-		t.Fatalf("UpdateOrganization: %v", err)
+		t.Fatalf("UpdateCompany: %v", err)
 	}
 
 	// A later form save re-sends the unchanged summary; the newer header line
@@ -315,9 +315,9 @@ func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: integration.AdminPerms,
 	})
 
-	// The header renders organization.description; an accepted offer_summary is
+	// The header renders company.description; an accepted offer_summary is
 	// the one-sentence answer, so the apply writes the column.
-	orgID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
+	companyID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
 		SourceURL: "https://summarized.example",
 		Fields: []people.ColdStartFieldInput{{
 			Field: "offer_summary", Value: "Revenue operations software for mid-market manufacturers",
@@ -332,7 +332,7 @@ func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 		var description *string
 		if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
-				`SELECT description FROM organization WHERE id = $1`, orgID).Scan(&description)
+				`SELECT description FROM company WHERE id = $1`, companyID).Scan(&description)
 		}); err != nil {
 			t.Fatalf("reading description: %v", err)
 		}
@@ -364,8 +364,8 @@ func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 	var evidenceValue string
 	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT value FROM organization_profile_field
-			  WHERE organization_id = $1 AND field = 'offer_summary'`, orgID).Scan(&evidenceValue)
+			`SELECT value FROM company_profile_field
+			  WHERE company_id = $1 AND field = 'offer_summary'`, companyID).Scan(&evidenceValue)
 	}); err != nil {
 		t.Fatalf("reading the evidence row: %v", err)
 	}
@@ -383,12 +383,12 @@ func TestOverlongOfferSummarySkipsTheColumnButKeepsTheEvidence(t *testing.T) {
 		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: integration.AdminPerms,
 	})
 
-	// organization_description_length caps the column at 500 CHARACTERS (0203).
+	// company_description_length caps the column at 500 CHARACTERS (0203).
 	// The pair below is the exact boundary: 501 must skip the fill (not abort
 	// the apply), and 500 must land — spelled in multibyte characters so a
 	// future byte-counting guard (octet_length) fails this test.
 	long := strings.Repeat("ü", 501)
-	orgID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
+	companyID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
 		SourceURL: "https://longwinded.example",
 		Fields: []people.ColdStartFieldInput{{
 			Field: "offer_summary", Value: long,
@@ -404,12 +404,12 @@ func TestOverlongOfferSummarySkipsTheColumnButKeepsTheEvidence(t *testing.T) {
 		var evidenceValue string
 		if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
 			if err := tx.QueryRow(context.Background(),
-				`SELECT description FROM organization WHERE id = $1`, orgID).Scan(&description); err != nil {
+				`SELECT description FROM company WHERE id = $1`, companyID).Scan(&description); err != nil {
 				return err
 			}
 			return tx.QueryRow(context.Background(),
-				`SELECT value FROM organization_profile_field
-				  WHERE organization_id = $1 AND field = 'offer_summary'`, orgID).Scan(&evidenceValue)
+				`SELECT value FROM company_profile_field
+				  WHERE company_id = $1 AND field = 'offer_summary'`, companyID).Scan(&evidenceValue)
 		}); err != nil {
 			t.Fatalf("reading the apply's result: %v", err)
 		}
@@ -449,11 +449,11 @@ func TestColdStartCreateWithoutLegalNameUsesDerivedDomainName(t *testing.T) {
 		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: integration.AdminPerms,
 	})
 
-	// A fresh domain with no existing org and no accepted legal_name: the create
-	// path must name the org from the domain's registrable label ("Docusign",
+	// A fresh domain with no existing company and no accepted legal_name: the create
+	// path must name the company from the domain's registrable label ("Docusign",
 	// not "eu.docusign.net") and mark it name_source='domain' so a later richer
 	// source may overwrite it (ADR-0072/A118).
-	orgID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
+	companyID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
 		SourceURL: "https://eu.docusign.net",
 		Fields: []people.ColdStartFieldInput{{
 			Field: "icp", Value: "eSignature buyers", EvidenceSnippet: "For every agreement",
@@ -467,12 +467,12 @@ func TestColdStartCreateWithoutLegalNameUsesDerivedDomainName(t *testing.T) {
 	var displayName, nameSource string
 	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT display_name, name_source FROM organization WHERE id = $1`, orgID).Scan(&displayName, &nameSource)
+			`SELECT display_name, name_source FROM company WHERE id = $1`, companyID).Scan(&displayName, &nameSource)
 	}); err != nil {
-		t.Fatalf("reading the created org: %v", err)
+		t.Fatalf("reading the created company: %v", err)
 	}
 	if displayName != "Docusign" || nameSource != "domain" {
-		t.Fatalf("created org = (%q, %q), want (Docusign, domain)", displayName, nameSource)
+		t.Fatalf("created company = (%q, %q), want (Docusign, domain)", displayName, nameSource)
 	}
 }
 
@@ -493,13 +493,13 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 		t.Fatal(err)
 	}
 	e.WsExec(t, `
-		INSERT INTO organization_fact (organization_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
+		INSERT INTO company_fact (company_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
 		VALUES ($1, 'offering', 'service', 'CRM rollout', 'crm rollout',
-		        '', '', 1, 'human', $2)`, saved.OrganizationID, "human:"+e.Rep1.String())
+		        '', '', 1, 'human', $2)`, saved.CompanyID, "human:"+e.Rep1.String())
 
 	// The cross-tenant arm is gone with the mechanism it tested. It seeded a
-	// second workspace with its own ANCHOR organization and asserted this
-	// tenant's context read did not reach it — and `uq_organization_anchor` is
+	// second workspace with its own ANCHOR company and asserted this
+	// tenant's context read did not reach it — and `uq_company_anchor` is
 	// installation-wide since ADR-0091 §8 phase B, so a second anchor cannot
 	// exist to be reached. What is left below is what the read is FOR: the
 	// scopes it assembles, the provenance it carries, and the fingerprint that
@@ -573,7 +573,7 @@ func TestTheCompanyReadSurvivesAFactNobodyScored(t *testing.T) {
 	// Written through the real lane, not planted: what makes this row reachable
 	// is that a production writer records no confidence for it.
 	if err := store.ApplyTechnicalEnrichment(ctx, people.TechnicalEnrichment{
-		OrganizationID: saved.OrganizationID,
+		CompanyID: saved.CompanyID,
 		Completed:      []people.TechnicalLane{people.LaneDNS},
 		Observations: []people.TechnicalObservation{{
 			Field: "mail_provider", ValueKey: "google", Value: "Google Workspace",
@@ -584,7 +584,7 @@ func TestTheCompanyReadSurvivesAFactNobodyScored(t *testing.T) {
 		t.Fatalf("record the technical signal: %v", err)
 	}
 
-	company, err := store.GetCompany(ctx)
+	company, err := store.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("read the company back: %v", err)
 	}

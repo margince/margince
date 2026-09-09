@@ -8,7 +8,7 @@ import type { MessageKey } from "./en";
 // Two terminology rules a later batch must not drift from, because nothing
 // automated can catch a synonym:
 //   - The tenant a reader belongs to is "tổ chức" throughout. A107 makes the
-//     installation and the organization one thing, so a second Vietnamese noun
+//     installation and the company one thing, so a second Vietnamese noun
 //     for it would read as a second concept the product does not have.
 //   - "tổ chức" is never the registered legal entity — that sense is
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
@@ -113,7 +113,7 @@ export const vi = {
   "history.field.emails": "Địa chỉ email",
   "history.field.phones": "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i",
   "history.field.meeting_status": "Kết quả cuộc họp",
-  "history.field.candidate_org_key": "Công ty khớp",
+  "history.field.candidate_company_key": "Công ty khớp",
   "history.field.communication_basis": "Căn cứ pháp lý",
   "history.field.company_name": "Tên công ty",
   "history.field.confirm_submission": "Loại xác nhận",
@@ -144,12 +144,12 @@ export const vi = {
   "history.field.name": "Tên",
   "history.field.note": "Ghi chú",
   "history.field.occurred_at": "Thời điểm",
-  "history.field.organization_id": "Công ty",
+  "history.field.company_id": "Công ty",
   "history.field.owner_id": "Người sở hữu",
   "history.field.visibility": "Phạm vi hiển thị",
-  "history.field.parent_org_id": "Công ty mẹ",
+  "history.field.parent_company_id": "Công ty mẹ",
   "history.field.partner_attribution": "Ghi nhận đối tác",
-  "history.field.partner_org_id": "Đối tác",
+  "history.field.partner_company_id": "Đối tác",
   "history.field.project_id": "Dự án",
   "history.field.qualifying_event": "Sự kiện đủ điều kiện",
   "history.field.reason": "Lý do",
@@ -241,7 +241,7 @@ export const vi = {
   "search.prompt": "Nhập nội dung bạn muốn tìm.",
   "search.empty": "Không có kết quả cho “{q}”.",
   "search.group.person": "Liên hệ",
-  "search.group.organization": "Tổ chức",
+  "search.group.company": "Tổ chức",
   "search.group.deal": "Deal",
   "search.group.project": "Dự án",
   "search.group.product": "Sản phẩm",
@@ -250,7 +250,7 @@ export const vi = {
   "search.group.lead": "Lead",
   "search.group.tag": "Tag",
   "search.kind.contact": "Liên hệ",
-  "search.kind.organization": "Tổ chức",
+  "search.kind.company": "Tổ chức",
   "search.kind.deal": "Deal",
   "search.kind.project": "Dự án",
   "search.kind.product": "Sản phẩm",
@@ -472,7 +472,7 @@ export const vi = {
   "partner.setup": "Đặt làm đối tác",
   "partner.edit": "Sửa đối tác",
   "partner.none": "Chưa phải đối tác",
-  "partner.organization": "Tổ chức",
+  "partner.company": "Tổ chức",
   "partner.role": "Vai trò đối tác",
   "partner.roleAll": "Tất cả vai trò",
   "partner.certStatus": "Trạng thái chứng nhận",
@@ -781,9 +781,9 @@ export const vi = {
   "list.viewMine": "Của tôi",
   "list.viewCustomers": "Khách hàng",
   "list.viewProspects": "Khách tiềm năng",
-  "org.filterLifecycleAll": "Mọi giai đoạn",
-  "org.filterRelTypeAll": "Mọi loại",
-  "org.filterSizeBandAll": "Mọi quy mô",
+  "company.filterLifecycleAll": "Mọi giai đoạn",
+  "company.filterRelTypeAll": "Mọi loại",
+  "company.filterSizeBandAll": "Mọi quy mô",
   "person.consent": "Chấp thuận",
   "consent.grant": "Cấp chấp thuận",
   "consent.operatorWording":
@@ -815,39 +815,39 @@ export const vi = {
   "consent.purposesUnavailable":
     "Không tải được danh mục mục đích chấp thuận, nên hiện chưa thể cho biết mục đích nào cần xác nhận kép.",
 
-  "org.reject": "Không phải công ty",
-  "org.rejectConfirm":
+  "company.reject": "Không phải công ty",
+  "company.rejectConfirm":
     "Thao tác này lưu trữ “{name}” và từ chối cấp công ty cho {domain}, nên thư tiếp theo từ tên miền đó sẽ không tạo lại nó. Quản trị viên có thể cho tên miền vào lại ở Cài đặt → Thu thập.",
-  "org.rejectReasonLabel": "Vì sao đây không phải công ty?",
-  "org.rejectReasonHint":
+  "company.rejectReasonLabel": "Vì sao đây không phải công ty?",
+  "company.rejectReasonHint":
     "Một câu đủ rõ để rà soát lại trong danh sách tên miền bị chặn. Quyết định từ chối tồn tại lâu hơn bản ghi.",
-  "org.rejectDone": "Đã lưu trữ “{name}”, và {domain} sẽ không tạo công ty nữa",
-  "org.name": "Công ty",
-  "org.description": "Họ làm gì",
-  "org.website": "Trang web",
-  "org.contactCount": "Liên hệ",
-  "org.openDealCount": "Deal đang mở",
+  "company.rejectDone": "Đã lưu trữ “{name}”, và {domain} sẽ không tạo công ty nữa",
+  "company.name": "Công ty",
+  "company.description": "Họ làm gì",
+  "company.website": "Trang web",
+  "company.contactCount": "Liên hệ",
+  "company.openDealCount": "Deal đang mở",
   // Offered only where there is no partner programme yet: the tab that holds
   // the form appears once one exists, so this is how the first one is made.
   // Where the account stands with us, and what it is to us — the two
   // questions the retired classification answered with one value.
-  "org.lifecycle": "Trạng thái tài khoản",
-  "org.relationshipTypes": "Quan hệ với chúng ta",
-  "org.sizeBand": "Quy mô công ty",
-  "org.lifecycle.unknown": "Chưa đánh giá",
-  "org.lifecycle.target": "Mục tiêu",
-  "org.lifecycle.prospect": "Tiềm năng",
-  "org.lifecycle.opportunity": "Cơ hội",
-  "org.lifecycle.customer": "Khách hàng",
-  "org.lifecycle.former_customer": "Khách hàng cũ",
-  "org.lifecycle.disqualified": "Đã loại",
-  "org.relType.customer": "Khách hàng",
-  "org.relType.partner": "Đối tác",
-  "org.relType.supplier": "Nhà cung cấp",
-  "org.relType.investor": "Nhà đầu tư",
-  "org.relType.portfolio_company": "Công ty trong danh mục",
-  "org.relType.competitor": "Đối thủ",
-  "org.relType.other": "Khác",
+  "company.lifecycle": "Trạng thái tài khoản",
+  "company.relationshipTypes": "Quan hệ với chúng ta",
+  "company.sizeBand": "Quy mô công ty",
+  "company.lifecycle.unknown": "Chưa đánh giá",
+  "company.lifecycle.target": "Mục tiêu",
+  "company.lifecycle.prospect": "Tiềm năng",
+  "company.lifecycle.opportunity": "Cơ hội",
+  "company.lifecycle.customer": "Khách hàng",
+  "company.lifecycle.former_customer": "Khách hàng cũ",
+  "company.lifecycle.disqualified": "Đã loại",
+  "company.relType.customer": "Khách hàng",
+  "company.relType.partner": "Đối tác",
+  "company.relType.supplier": "Nhà cung cấp",
+  "company.relType.investor": "Nhà đầu tư",
+  "company.relType.portfolio_company": "Công ty trong danh mục",
+  "company.relType.competitor": "Đối thủ",
+  "company.relType.other": "Khác",
   // Why a stored fact contradicts its own field. The fact is still shown
   // with its evidence — a reader can tell, and hiding it would be worse.
   "co.factSuspect.phoneShapedLocation": "Trông giống số điện thoại",
@@ -980,7 +980,7 @@ export const vi = {
   "co.health.payment.late": "Thường thanh toán trễ {days} ngày.",
   "co.health.payment.onTime": "Thanh toán đúng hạn.",
   "co.health.sinceInbound": "Họ viết lần cuối cách đây {days} ngày",
-  "org.partnerSetUp": "Thiết lập chương trình đối tác",
+  "company.partnerSetUp": "Thiết lập chương trình đối tác",
   "signal.kind.stalled_deal": "Deal đình trệ",
   "signal.kind.champion_left": "Người ủng hộ đã rời đi",
   "signal.kind.reengagement": "Đáng nối lại liên hệ",
@@ -1383,7 +1383,7 @@ export const vi = {
   "co.brief.cite.deal": "deal",
   "co.brief.cite.activity": "hoạt động",
   "co.brief.cite.person": "liên hệ",
-  "co.brief.cite.organization": "tài khoản",
+  "co.brief.cite.company": "tài khoản",
   "co.brief.cite.fact": "dữ kiện",
   "co.brief.cite.profile_field": "trường hồ sơ",
   // Several sources of one kind that have no screen to open collapse into one
@@ -1391,7 +1391,7 @@ export const vi = {
   "co.brief.cite.deal.many": "{count} deal",
   "co.brief.cite.activity.many": "{count} hoạt động",
   "co.brief.cite.person.many": "{count} liên hệ",
-  "co.brief.cite.organization.many": "{count} tài khoản",
+  "co.brief.cite.company.many": "{count} tài khoản",
   "co.brief.cite.fact.many": "{count} dữ kiện",
   "co.brief.cite.profile_field.many": "{count} trường hồ sơ",
   "approval.kind.advance_deal": "Chuyển giai đoạn của deal",
@@ -2009,11 +2009,11 @@ export const vi = {
   "co.timeline.empty": "Chưa ghi nhận gì trên tài khoản này.",
   "co.overlayFallback":
     "Tài khoản này được phục vụ từ hệ thống ghi nhận đã kết nối, nên màn hình công ty không được dựng ở đây. Hãy mở bên hệ thống đó để xem toàn cảnh.",
-  "org.domains": "Tên miền",
-  "org.factCategory.company": "Công ty",
-  "org.factCategory.offering": "Sản phẩm dịch vụ",
-  "org.factCategory.market": "Thị trường",
-  "org.factCategory.signal": "Tín hiệu",
+  "company.domains": "Tên miền",
+  "company.factCategory.company": "Công ty",
+  "company.factCategory.offering": "Sản phẩm dịch vụ",
+  "company.factCategory.market": "Thị trường",
+  "company.factCategory.signal": "Tín hiệu",
 
   "lead.score": "Điểm",
   "lead.status": "Trạng thái",
@@ -2366,7 +2366,7 @@ export const vi = {
   "deal.ownerKeep": "Giữ người phụ trách hiện tại",
   "deal.ownerMe": "Giao cho tôi",
   "deal.ownerUnassign": "Bỏ giao",
-  "deal.partnerOrg": "qua đối tác",
+  "deal.partnerCompany": "qua đối tác",
   "deal.companyWithheld": "Công ty bị ẩn",
   "deal.partnerWithheld": "Đối tác bị ẩn",
   "deal.forecastCategory": "Nhóm dự báo",
@@ -2442,7 +2442,7 @@ export const vi = {
   "deals.filterForecastAll": "Mọi hạng mục dự báo",
   "deals.filterPartnerSourced": "Do đối tác mang về",
   "deals.filterStageAll": "Mọi giai đoạn",
-  "deals.filterOrgAll": "Mọi công ty",
+  "deals.filterCompanyAll": "Mọi công ty",
   "deals.filterStalledAll": "Mọi deal",
   "deals.filterOwnerAll": "Mọi người phụ trách",
   "deals.filterPartnerAll": "Mọi nguồn",
@@ -2480,8 +2480,8 @@ export const vi = {
   "offer.gross": "Sau thuế",
   "offer.edit": "Sửa phần đầu",
   "offer.currency": "Tiền tệ",
-  "offer.buyerOrg": "Tổ chức mua",
-  "offer.buyerOrgConfirm": "Tổ chức mua: {name}",
+  "offer.buyerCompany": "Tổ chức mua",
+  "offer.buyerCompanyConfirm": "Tổ chức mua: {name}",
   "offer.template": "Mẫu",
   "offer.validUntil": "Hiệu lực đến",
   "offer.introText": "Lời mở đầu",
@@ -2812,7 +2812,7 @@ export const vi = {
   "brief.digestFor": "tổng hợp ngày {date}",
   "brief.digestSynced": "Email đã đồng bộ",
   "brief.digestContacts": "Liên hệ đã tạo",
-  "brief.digestOrgs": "Công ty đã tạo",
+  "brief.digestCompanies": "Công ty đã tạo",
   "brief.digestDedupe": "Trùng lặp cần rà",
   "brief.digestClassify":
     "Phân loại qua đêm: {commitments} cam kết · {meetings} cuộc họp · {noise} nhiễu",
@@ -3029,7 +3029,7 @@ export const vi = {
   "create.amount": "Giá trị",
   "create.currency": "Tiền tệ",
   "create.stage": "Giai đoạn",
-  "create.organization": "Công ty",
+  "create.company": "Công ty",
   "create.expectedClose": "Dự kiến chốt",
 
   "field.unset": "Chưa đặt",
@@ -3293,7 +3293,7 @@ export const vi = {
   "personAccess.title": "Ai xem được liên hệ này",
   "personAccess.privateToYou":
     "Riêng của bạn. Hộp thư của bạn đã tạo liên hệ này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
-  "personAccess.organization":
+  "personAccess.company":
     "Mọi người trong tổ chức đều xem được liên hệ này.",
   "personAccess.share": "Chia sẻ với tổ chức",
   "personAccess.published": "Tổ chức đã xem được liên hệ này.",
@@ -3966,11 +3966,11 @@ export const vi = {
   "import.start": "Bắt đầu nhập",
   "import.objectLabel": "Các dòng là gì",
   "import.object.lead": "Khách hàng tiềm năng",
-  "import.object.organization": "Công ty",
+  "import.object.company": "Công ty",
   "import.object.person": "Liên hệ",
   "import.objectHint.lead":
     "Danh sách chưa xử lý vào dạng lead để người thẩm định trước khi được xem là liên hệ trong CRM.",
-  "import.objectHint.organization":
+  "import.objectHint.company":
     "Công ty được nhận diện theo tên bạn ánh xạ, nên tải lên lại sẽ sửa chứ không nhân đôi.",
   "import.objectHint.person":
     "Dành cho những liên hệ bạn đã làm việc cùng. Nhận diện theo email, nên tải lên lại sẽ sửa chứ không nhân đôi, và địa chỉ đã có chủ sẽ được giữ nguyên.",
@@ -4776,7 +4776,7 @@ export const vi = {
   "senders.keepOutConfirm": "Chặn và hủy",
   "senders.kind.person": "Một người",
   "senders.kind.roleMailbox": "Hộp thư chức năng",
-  "senders.kind.organizationSender": "Một tổ chức",
+  "senders.kind.companySender": "Một tổ chức",
   "senders.kind.newsletter": "Bản tin",
   "senders.kind.transactional": "Công cụ tự động",
   "senders.kind.spam": "Thư rác",
@@ -5614,7 +5614,7 @@ export const vi = {
   "auth.coreModeDevelopment": "đường phát triển ngoại tuyến",
   // The shortest label that still names the field (VOICE-RULE-1), pinned by the
   // login spec §7.1/§7.2 (Amendment 4) and reconciling
-  // single-organization-auth-concept.md §12, which already drew "Email".
+  // single-company-auth-concept.md §12, which already drew "Email".
   "auth.email": "Email",
   // A placeholder is an EXAMPLE, never an instruction and never the label
   // again. "Enter your email" in a placeholder is a label that disappears.
@@ -5635,7 +5635,7 @@ export const vi = {
   // Labels the password path, not the provider buttons above it: where the
   // installation runs SSO, the form beneath this divider is the fallback door.
   "auth.orDivider": "hoặc",
-  // §7.1 verbatim. The noun is "organization", not "workspace": ADR-0061
+  // §7.1 verbatim. The noun is "company", not "workspace": ADR-0061
   // keeps `workspace` internal and §7.3 removed it from authentication. And the
   // line states that ACCESS is restricted, never that data is safe, encrypted or
   // compliant — VOICE-RULE-7 rules those out here, because they are outcome
@@ -5690,7 +5690,7 @@ export const vi = {
   "setup.token": "Mã thiết lập",
   "setup.tokenHint":
     "Lấy từ tệp chứa mã thiết lập mà máy chủ ghi ở lần khởi động đầu tiên — nhật ký máy chủ nêu đường dẫn của tệp, và chứa chính mã đó nếu không ghi được tệp.",
-  "setup.organization": "Tên tổ chức",
+  "setup.company": "Tên tổ chức",
   "setup.baseCurrency": "Đơn vị tiền tệ cơ sở",
   "setup.baseCurrencyHint":
     "Mọi số tiền trong sản phẩm đều được quy đổi về đơn vị này. Bạn có thể đổi trong phần Cài đặt, nhưng chỉ cho đến khi số tiền đầu tiên được quy đổi theo nó — vì vậy nên chọn đúng ngay bây giờ.",
@@ -6094,7 +6094,7 @@ export const vi = {
     "Thêm một trường có kiểu đơn giản vào đối tượng bạn đã có — ngay lúc chạy, không cần lập trình viên, không cần triển khai. Đối tượng mới và quan hệ mới thì vẫn phải qua mã nguồn.",
   "cf.object": "Đối tượng",
   "cf.obj.deal": "Deal",
-  "cf.obj.organization": "Công ty",
+  "cf.obj.company": "Công ty",
   "cf.obj.person": "Liên hệ",
   "cf.obj.lead": "Lead",
   "cf.listLabel": "Các trường trên {object}",
@@ -6105,7 +6105,7 @@ export const vi = {
   "cf.addedByAdmin": "Quản trị viên",
   "cf.empty.deal":
     "Chưa có trường tuỳ chỉnh nào trên Deal. Hãy thêm một trường nếu bạn theo dõi thứ mà bản gốc chưa có.",
-  "cf.empty.organization":
+  "cf.empty.company":
     "Chưa có trường tuỳ chỉnh nào trên Công ty. Hãy thêm một trường nếu bạn theo dõi thứ mà bản gốc chưa có.",
   "cf.empty.person":
     "Chưa có trường tuỳ chỉnh nào trên Liên hệ. Các trường lõi đã bao quát bản ghi liên hệ; hãy thêm một trường nếu bạn theo dõi thêm.",
@@ -6817,7 +6817,7 @@ export const vi = {
   "users.access.write": "ghi",
   "users.access.delete": "xóa",
   "users.access.object.person": "Liên hệ",
-  "users.access.object.organization": "Công ty",
+  "users.access.object.company": "Công ty",
   "users.access.object.lead": "Lead",
   "users.access.object.deal": "Deal",
   "users.access.object.project": "Dự án",
@@ -7090,8 +7090,8 @@ export const vi = {
   "countdown.minutesSeconds": "{minutes} phút {seconds} giây",
   "countdown.expired": "Đã hết hạn",
 
-  "installationSettings.orgTitle": "Bản cài đặt",
-  "installationSettings.orgSub":
+  "installationSettings.companyTitle": "Bản cài đặt",
+  "installationSettings.companySub":
     "Tên của bản cài đặt này và múi giờ dùng để tính mọi kỳ báo cáo.",
   "installationSettings.currencyTitle": "Tiền tệ",
   "installationSettings.currencySub":
@@ -7825,13 +7825,13 @@ export const vi = {
   "person.rail.noEmployment": "Chưa ghi nhận nơi làm việc.",
   "person.rail.addEmployment": "Thêm công ty",
   "person.rail.employer": "Nơi làm việc",
-  "person.rail.allOrgsConnected":
+  "person.rail.allCompaniesConnected":
     "Mọi kết quả đều đã liên kết với liên hệ này rồi.",
   "person.rail.isCurrentEmployer": "Đây là nơi làm việc hiện tại của họ",
   "person.rail.markEnded": "Đánh dấu đã kết thúc",
   "person.rail.removeEmploymentTitle": "Gỡ liên kết với công ty này?",
   "person.rail.removeEmploymentBody":
-    "Liên kết với {org} và toàn bộ lịch sử liên quan sẽ biến mất, không thể hoàn tác. Bản thân {org} vẫn được giữ lại. Nếu họ chỉ đơn giản là đã nghỉ việc, hãy đánh dấu là đã kết thúc thay vì gỡ.",
+    "Liên kết với {company} và toàn bộ lịch sử liên quan sẽ biến mất, không thể hoàn tác. Bản thân {company} vẫn được giữ lại. Nếu họ chỉ đơn giản là đã nghỉ việc, hãy đánh dấu là đã kết thúc thay vì gỡ.",
   "person.timeline.empty": "Chưa ghi nhận trao đổi nào với họ.",
   "person.deals.empty": "Họ chưa được ghi nhận trên deal nào.",
   "person.deals.untitled": "Deal chưa có tên",
@@ -8056,7 +8056,7 @@ export const vi = {
   "person.meeting.background": "Bối cảnh và nguồn",
   "person.meeting.omittedSource": "Không có trong bản tóm tắt này",
   "person.meeting.preparedFor": "Chuẩn bị cho {name}",
-  "person.meeting.preparedForAt": "Chuẩn bị cho {name} · {org}",
+  "person.meeting.preparedForAt": "Chuẩn bị cho {name} · {company}",
 
   "today.source.suggestions": "các đề xuất",
 

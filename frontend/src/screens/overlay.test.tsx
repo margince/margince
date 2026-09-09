@@ -298,7 +298,7 @@ describe("the overlay card", () => {
     const unknownSyncStatus = {
       objects: [
         {
-          object: "organization",
+          object: "company",
           lastSyncedAt: "2026-07-25T08:00:00Z",
           state: "syncing",
           backfillComplete: false,
@@ -319,7 +319,7 @@ describe("the overlay card", () => {
       "GET /overlay/budget": () => jsonResponse(unknownBandBudget),
     });
     render(<OverlayCard />);
-    expect(await screen.findByText("organization")).toBeTruthy();
+    expect(await screen.findByText("company")).toBeTruthy();
     expect(screen.getByText("syncing")).toBeTruthy();
     expect(screen.getByText("critical")).toBeTruthy();
     expect(screen.queryByText("undefined")).toBeNull();

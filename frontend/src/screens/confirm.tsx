@@ -32,7 +32,7 @@ import "./confirm.css";
 // Art. 4(11) and Recital 32, settled in Planet49.
 
 // The fields the page shows, in the order it shows them. `company` is
-// deliberately absent from the correctable set: which organization employs
+// deliberately absent from the correctable set: which company employs
 // somebody is a relationship the workspace maintains, and correcting it would
 // mean creating or merging a company record.
 const CORRECTABLE = ["full_name", "title", "email", "phone"] as const;

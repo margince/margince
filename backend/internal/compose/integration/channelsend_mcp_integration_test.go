@@ -61,25 +61,25 @@ func (c *channelSendEnv) sendMessageInvoker(t *testing.T, agentToken string) fun
 // on demand so the send tests carry none of it.
 func (c *channelSendEnv) enrichTarget(t *testing.T) string {
 	t.Helper()
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := c.Call(t, "POST", "/v1/organizations",
-		AnyMap{"display_name": "Approval Mechanism GmbH"}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create organization → %d", status)
+	if status := c.Call(t, "POST", "/v1/companies",
+		AnyMap{"display_name": "Approval Mechanism GmbH"}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
-	return org.ID
+	return company.ID
 }
 
 // enrichArgs is one enrich call, and the same call every time it is asked for:
 // the mechanism tests re-issue an identical call to prove one approval is
 // collected however often it is retried.
-func enrichArgs(orgID string) string {
-	return fmt.Sprintf(`{"organization_id":%q}`, orgID)
+func enrichArgs(companyID string) string {
+	return fmt.Sprintf(`{"company_id":%q}`, companyID)
 }
 
-func enrichRetry(orgID, approvalID string) string {
-	return fmt.Sprintf(`{"organization_id":%q,"approval_id":%q}`, orgID, approvalID)
+func enrichRetry(companyID, approvalID string) string {
+	return fmt.Sprintf(`{"company_id":%q,"approval_id":%q}`, companyID, approvalID)
 }
 
 // enrichInvoker calls the verb that still stages by default.

@@ -38,11 +38,11 @@ const VOCAB: VocabularyField[] = [
   {
     // An unbounded target: too many accounts to enumerate, so this one keeps the
     // plain box until the async picker exists.
-    name: "organization_id",
+    name: "company_id",
     type: "id",
     operators: ["eq", "neq", "in", "exists"],
     custom: false,
-    references: "organization",
+    references: "company",
   },
   {
     name: "full_name",
@@ -117,7 +117,7 @@ function stubSeats() {
 
 // The companies door as the search calls it, plus the seats every other picker
 // on this screen reads on mount.
-function stubOrganizations() {
+function stubCompanies() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -126,7 +126,7 @@ function stubOrganizations() {
         data: [],
         page: { next_cursor: null, has_more: false },
       };
-      if (url.includes("/organizations")) {
+      if (url.includes("/companies")) {
         // Answers only what the query narrows to, so a test asking for
         // something absent gets the empty answer rather than a stub that
         // always has a hit.
@@ -134,7 +134,7 @@ function stubOrganizations() {
         body = {
           data:
             "northgate".includes(q.toLowerCase()) && q !== ""
-              ? [{ id: "org-1", display_name: "Northgate" }]
+              ? [{ id: "company-1", display_name: "Northgate" }]
               : [],
           page: { next_cursor: null, has_more: false },
         };
@@ -234,11 +234,11 @@ describe("an id clause names a record, not a uuid", () => {
 
   it("searches for a target too large to enumerate, and only a hit becomes the value", async () => {
     resetIDsForTest();
-    stubOrganizations();
+    stubCompanies();
     const user = userEvent.setup();
     render(
       <Harness
-        start={newGroup("and", [newLeaf("organization_id", "eq", "")])}
+        start={newGroup("and", [newLeaf("company_id", "eq", "")])}
       />,
     );
 
@@ -255,14 +255,14 @@ describe("an id clause names a record, not a uuid", () => {
     // reach the engine as one.
     await user.type(box, "north");
     expect(wire()).toEqual({
-      and: [{ field: "organization_id", op: "eq", value: "" }],
+      and: [{ field: "company_id", op: "eq", value: "" }],
     });
 
     await user.click(await screen.findByRole("button", { name: "Northgate" }));
 
     // And what lands on the wire is the id, chosen rather than composed.
     expect(wire()).toEqual({
-      and: [{ field: "organization_id", op: "eq", value: "org-1" }],
+      and: [{ field: "company_id", op: "eq", value: "company-1" }],
     });
     // The name stands where the search box was, so the reader can see their
     // choice took rather than wondering whether it did.
@@ -271,11 +271,11 @@ describe("an id clause names a record, not a uuid", () => {
 
   it("says a search found nothing rather than showing an empty list", async () => {
     resetIDsForTest();
-    stubOrganizations();
+    stubCompanies();
     const user = userEvent.setup();
     render(
       <Harness
-        start={newGroup("and", [newLeaf("organization_id", "eq", "")])}
+        start={newGroup("and", [newLeaf("company_id", "eq", "")])}
       />,
     );
 
@@ -328,11 +328,11 @@ describe("an id clause names a record, not a uuid", () => {
 
   it("searches for each company a list clause names", async () => {
     resetIDsForTest();
-    stubOrganizations();
+    stubCompanies();
     const user = userEvent.setup();
     render(
       <Harness
-        start={newGroup("and", [newLeaf("organization_id", "in", [])])}
+        start={newGroup("and", [newLeaf("company_id", "in", [])])}
       />,
     );
 
@@ -346,7 +346,7 @@ describe("an id clause names a record, not a uuid", () => {
     await user.click(await screen.findByRole("button", { name: "Northgate" }));
 
     expect(wire()).toEqual({
-      and: [{ field: "organization_id", op: "in", value: ["org-1"] }],
+      and: [{ field: "company_id", op: "in", value: ["company-1"] }],
     });
     expect(
       screen.getByRole("textbox", { name: "Search companies" }),

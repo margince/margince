@@ -32,7 +32,7 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 	const companies = "Company,Website\n" +
 		"Northwind,https://www.northwind.example/\n" +
 		"Contoso,contoso.example\n"
-	profile, status := uploadCSV(t, e, "organization", companies)
+	profile, status := uploadCSV(t, e, "company", companies)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
@@ -41,7 +41,7 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 	}
 	mapping := map[string]string{"Company": "display_name", "Website": "domain"}
 
-	run, runStatus := createRunWithMapping(t, e, "organization", profile.SourceRef, mapping)
+	run, runStatus := createRunWithMapping(t, e, "company", profile.SourceRef, mapping)
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
@@ -50,7 +50,7 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 
-	var orgs struct {
+	var companies struct {
 		Data []struct {
 			DisplayName string `json:"display_name"`
 			Domains     []struct {
@@ -59,13 +59,13 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 			} `json:"domains"`
 		} `json:"data"`
 	}
-	if s := e.Call(t, http.MethodGet, "/v1/organizations?limit=100", nil, nil, &orgs); s != http.StatusOK {
-		t.Fatalf("GET /v1/organizations → %d, want 200", s)
+	if s := e.Call(t, http.MethodGet, "/v1/companies?limit=100", nil, nil, &companies); s != http.StatusOK {
+		t.Fatalf("GET /v1/companies → %d, want 200", s)
 	}
 	found := map[string]string{}
-	for _, org := range orgs.Data {
-		if len(org.Domains) > 0 {
-			found[org.DisplayName] = org.Domains[0].Domain
+	for _, company := range companies.Data {
+		if len(company.Domains) > 0 {
+			found[company.DisplayName] = company.Domains[0].Domain
 		}
 	}
 	if found["Northwind"] != "northwind.example" {
@@ -77,11 +77,11 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 
 	// The identical file again: nothing changed, so nothing is written. A domain
 	// the comparison could not read would report two updates instead.
-	second, secondStatus := uploadCSV(t, e, "organization", companies)
+	second, secondStatus := uploadCSV(t, e, "company", companies)
 	if secondStatus != http.StatusOK {
 		t.Fatalf("second upload → %d, want 200", secondStatus)
 	}
-	rerun, rerunStatus := createRunWithMapping(t, e, "organization", second.SourceRef, mapping)
+	rerun, rerunStatus := createRunWithMapping(t, e, "company", second.SourceRef, mapping)
 	if rerunStatus != http.StatusAccepted {
 		t.Fatalf("create re-run → %d, want 202", rerunStatus)
 	}
@@ -101,7 +101,7 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 // with a reason; the rest of the file lands.
 func TestCSVImportRefusesADomainAnotherCompanyHolds(t *testing.T) {
 	e := setupImportApp(t)
-	if status := e.Call(t, http.MethodPost, "/v1/organizations",
+	if status := e.Call(t, http.MethodPost, "/v1/companies",
 		map[string]any{"display_name": "Northwind Traders", "domains": []map[string]any{
 			{"domain": "northwind.example", "is_primary": true},
 		}}, nil, nil); status != http.StatusCreated {
@@ -111,11 +111,11 @@ func TestCSVImportRefusesADomainAnotherCompanyHolds(t *testing.T) {
 	const companies = "Company,Website\n" +
 		"Northwind Copy,northwind.example\n" +
 		"Contoso,contoso.example\n"
-	profile, status := uploadCSV(t, e, "organization", companies)
+	profile, status := uploadCSV(t, e, "company", companies)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, runStatus := createRunWithMapping(t, e, "organization", profile.SourceRef,
+	run, runStatus := createRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name", "Website": "domain"})
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
@@ -172,11 +172,11 @@ func TestCSVImportOfOneDomainKeepsTheCompanysOthers(t *testing.T) {
 	mapping := map[string]string{"Company": "display_name", "Website": "domain"}
 
 	const first = "Company,Website\nFabrikam,fabrikam.example\n"
-	profile, status := uploadCSV(t, e, "organization", first)
+	profile, status := uploadCSV(t, e, "company", first)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, runStatus := createRunWithMapping(t, e, "organization", profile.SourceRef, mapping)
+	run, runStatus := createRunWithMapping(t, e, "company", profile.SourceRef, mapping)
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
@@ -186,25 +186,25 @@ func TestCSVImportOfOneDomainKeepsTheCompanysOthers(t *testing.T) {
 	}
 
 	// A human adds a second domain the spreadsheet has no column for.
-	var orgs struct {
+	var companies struct {
 		Data []struct {
 			ID          string `json:"id"`
 			DisplayName string `json:"display_name"`
 		} `json:"data"`
 	}
-	if s := e.Call(t, http.MethodGet, "/v1/organizations?limit=100", nil, nil, &orgs); s != http.StatusOK {
-		t.Fatalf("GET /v1/organizations → %d, want 200", s)
+	if s := e.Call(t, http.MethodGet, "/v1/companies?limit=100", nil, nil, &companies); s != http.StatusOK {
+		t.Fatalf("GET /v1/companies → %d, want 200", s)
 	}
-	var orgID string
-	for _, org := range orgs.Data {
-		if org.DisplayName == "Fabrikam" {
-			orgID = org.ID
+	var companyID string
+	for _, company := range companies.Data {
+		if company.DisplayName == "Fabrikam" {
+			companyID = company.ID
 		}
 	}
-	if orgID == "" {
+	if companyID == "" {
 		t.Fatal("the imported company is not in the list")
 	}
-	if s := e.Call(t, http.MethodPatch, "/v1/organizations/"+orgID,
+	if s := e.Call(t, http.MethodPatch, "/v1/companies/"+companyID,
 		map[string]any{"domains": []map[string]any{
 			{"domain": "fabrikam.example", "is_primary": true},
 			{"domain": "fabrikam.co.example", "is_primary": false},
@@ -214,11 +214,11 @@ func TestCSVImportOfOneDomainKeepsTheCompanysOthers(t *testing.T) {
 
 	// The corrected file names only the primary. The hand-added one must survive.
 	const second = "Company,Website\nFabrikam,fabrikam-group.example\n"
-	profile2, status2 := uploadCSV(t, e, "organization", second)
+	profile2, status2 := uploadCSV(t, e, "company", second)
 	if status2 != http.StatusOK {
 		t.Fatalf("second upload → %d, want 200", status2)
 	}
-	run2, run2Status := createRunWithMapping(t, e, "organization", profile2.SourceRef, mapping)
+	run2, run2Status := createRunWithMapping(t, e, "company", profile2.SourceRef, mapping)
 	if run2Status != http.StatusAccepted {
 		t.Fatalf("create second run → %d, want 202", run2Status)
 	}
@@ -233,7 +233,7 @@ func TestCSVImportOfOneDomainKeepsTheCompanysOthers(t *testing.T) {
 			IsPrimary bool   `json:"is_primary"`
 		} `json:"domains"`
 	}
-	if s := e.Call(t, http.MethodGet, "/v1/organizations/"+orgID, nil, nil, &after); s != http.StatusOK {
+	if s := e.Call(t, http.MethodGet, "/v1/companies/"+companyID, nil, nil, &after); s != http.StatusOK {
 		t.Fatalf("re-reading the company → %d, want 200", s)
 	}
 	var held []string

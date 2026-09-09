@@ -4,7 +4,7 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
-import { useOrganization360 } from "./company360";
+import { useCompany360 } from "./company360";
 import { useDeal } from "./deals";
 import { useDealStatusCard } from "./dealstatus";
 import { usePerson360 } from "./person360";
@@ -113,8 +113,8 @@ describe("a record the reader has open", () => {
     ["a contact", () => usePerson360("p-1"), "/v1/people/p-1/360"],
     [
       "an account",
-      () => useOrganization360("o-1"),
-      "/v1/organizations/o-1/360",
+      () => useCompany360("o-1"),
+      "/v1/companies/o-1/360",
     ],
     ["a project", () => useProject360("pr-1"), "/v1/projects/pr-1/360"],
     // The deal reads its RECORD live and its briefing not at all: that one is

@@ -26,13 +26,13 @@ func clearablePersonColumns(current crmcontracts.Person) map[string]storekit.Cle
 	}
 }
 
-// clearableOrganizationColumns names the wire fields an organization restore may
+// clearableCompanyColumns names the wire fields a company restore may
 // set to NULL, with literal column names — nothing caller-supplied reaches the
 // UPDATE text. A field absent here cannot be cleared, and the reversal path
 // refuses rather than reporting a success it did not have.
 //
 //nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns
-func clearableOrganizationColumns(current crmcontracts.Organization) map[string]storekit.Clearable {
+func clearableCompanyColumns(current crmcontracts.Company) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
 		"legal_name":    {Column: "legal_name", Current: current.LegalName},
 		"description":   {Column: "description", Current: current.Description},
@@ -40,7 +40,7 @@ func clearableOrganizationColumns(current crmcontracts.Organization) map[string]
 		"size_band":     {Column: "size_band", Current: current.SizeBand},
 		"linkedin_url":  {Column: "linkedin_url", Current: current.LinkedinUrl},
 		"owner_id":      {Column: ownerIDColumn, Current: current.OwnerId},
-		"parent_org_id": {Column: "parent_org_id", Current: current.ParentOrgId},
+		"parent_company_id": {Column: "parent_company_id", Current: current.ParentCompanyId},
 	}
 }
 
@@ -55,7 +55,7 @@ func clearableLeadColumns(current crmcontracts.Lead) map[string]storekit.Clearab
 	return map[string]storekit.Clearable{
 		"title":             {Column: "title", Current: current.Title},
 		"company_name":      {Column: leadCompanyColumn, Current: current.CompanyName},
-		"candidate_org_key": {Column: "candidate_org_key", Current: current.CandidateOrgKey},
+		"candidate_company_key": {Column: "candidate_company_key", Current: current.CandidateCompanyKey},
 		"project_id":        {Column: "project_id", Current: current.ProjectId},
 		"owner_id":          {Column: ownerIDColumn, Current: current.OwnerId},
 	}

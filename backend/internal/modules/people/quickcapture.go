@@ -50,12 +50,12 @@ const phoneTypeWork = "work"
 type QuickCaptureInput struct {
 	FullName string
 	Title    *string
-	// OrganizationID attaches an existing employer, OrganizationName creates
+	// CompanyID attaches an existing employer, CompanyName creates
 	// one. Both may be absent: a person with no employer is a person.
 	// An id WINS over a name — a caller who picked a record from the list has
 	// answered the question the name was only guessing at.
-	OrganizationID   *ids.OrganizationID
-	OrganizationName *string
+	CompanyID   *ids.CompanyID
+	CompanyName *string
 	Role             *string
 	ProfileURL       *string
 	Email            *string
@@ -66,15 +66,15 @@ type QuickCaptureInput struct {
 // attached to and whether that employer is a record this call created.
 type QuickCaptureResult struct {
 	Person              crmcontracts.Person
-	OrganizationID      *ids.OrganizationID
-	OrganizationCreated bool
+	CompanyID      *ids.CompanyID
+	CompanyCreated bool
 }
 
 // QuickCapture writes the person, their employer and the edge between them, or
 // writes none of them.
 //
 // Each write keeps its own gates: CreatePersonTx takes person:create,
-// CreateOrganizationTx takes organization:create, and CreateRelationshipTx
+// CreateCompanyTx takes company:create, and CreateRelationshipTx
 // takes relationship:create plus person:update on the anchor. A seat holding
 // only the first gets a person and a refusal, not a half-written pair, because
 // the refusal rolls the transaction back.
@@ -106,21 +106,21 @@ func (s *Store) quickCaptureInTx(
 	}
 	out.Person = person
 
-	orgID, created, err := s.employerForQuickCapture(ctx, tx, in)
+	companyID, created, err := s.employerForQuickCapture(ctx, tx, in)
 	if err != nil {
 		return out, err
 	}
-	if orgID == nil {
+	if companyID == nil {
 		return out, nil
 	}
-	out.OrganizationID = orgID
-	out.OrganizationCreated = created
+	out.CompanyID = companyID
+	out.CompanyCreated = created
 
 	personID := ids.From[ids.PersonKind](ids.UUID(person.Id))
 	if _, err := s.CreateRelationshipTx(ctx, tx, CreateRelationshipInput{
 		Kind:           employmentKind,
 		PersonID:       &personID,
-		OrganizationID: orgID,
+		CompanyID: companyID,
 		Role:           in.Role,
 		Source:         quickCaptureSource,
 	}); err != nil {
@@ -131,31 +131,31 @@ func (s *Store) quickCaptureInTx(
 
 // employerForQuickCapture resolves the employer the caller named, creating one
 // only when they gave a name and no id. A blank name is not a company: it is a
-// field the reader left alone, and creating an organization called "" would put
+// field the reader left alone, and creating a company called "" would put
 // a record in the list that nobody can find or delete by name.
 func (s *Store) employerForQuickCapture(
 	ctx context.Context,
 	tx pgx.Tx,
 	in QuickCaptureInput,
-) (orgID *ids.OrganizationID, created bool, err error) {
-	if in.OrganizationID != nil {
-		return in.OrganizationID, false, nil
+) (companyID *ids.CompanyID, created bool, err error) {
+	if in.CompanyID != nil {
+		return in.CompanyID, false, nil
 	}
-	if in.OrganizationName == nil {
+	if in.CompanyName == nil {
 		return nil, false, nil
 	}
-	name := strings.TrimSpace(*in.OrganizationName)
+	name := strings.TrimSpace(*in.CompanyName)
 	if name == "" {
 		return nil, false, nil
 	}
-	org, err := s.CreateOrganizationTx(ctx, tx, CreateOrganizationInput{
+	company, err := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
 		DisplayName: name,
 		Source:      quickCaptureSource,
 	})
 	if err != nil {
 		return nil, false, err
 	}
-	made := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	made := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 	return &made, true, nil
 }
 

@@ -41,9 +41,9 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		httperr.Write(w, r, httperr.Validation("status", "invalid_status_transition", transition.Error()))
 		return
 	}
-	var crossOrg *CrossOrganizationLinkError
-	if errors.As(err, &crossOrg) {
-		httperr.Write(w, r, httperr.Validation(crossOrg.Field, "cross_organization_link", crossOrg.Error()))
+	var crossCompany *CrossCompanyLinkError
+	if errors.As(err, &crossCompany) {
+		httperr.Write(w, r, httperr.Validation(crossCompany.Field, "cross_company_link", crossCompany.Error()))
 		return
 	}
 	var check *ContractCheckError
@@ -58,10 +58,10 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, err)
 }
 
-// ListOrganizationContracts serves one account's agreements.
-func (h Handlers) ListOrganizationContracts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ListOrganizationContractsParams) {
+// ListCompanyContracts serves one account's agreements.
+func (h Handlers) ListCompanyContracts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ListCompanyContractsParams) {
 	in := ListContractsInput{
-		OrganizationID: ids.OrganizationID{UUID: ids.UUID(id)},
+		CompanyID: ids.CompanyID{UUID: ids.UUID(id)},
 		Cursor:         params.Cursor,
 		Limit:          params.Limit,
 	}
@@ -73,7 +73,7 @@ func (h Handlers) ListOrganizationContracts(w http.ResponseWriter, r *http.Reque
 		in.UnderContractOnly = *params.UnderContractOnly
 	}
 
-	page, err := h.store.ListOrganizationContracts(r.Context(), in)
+	page, err := h.store.ListCompanyContracts(r.Context(), in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -198,14 +198,14 @@ func (h Handlers) RenewContract(w http.ResponseWriter, r *http.Request, id crmco
 // here rather than taken from the body: how a record arrived is the server's
 // observation, not the caller's claim.
 func createInput(req crmcontracts.CreateContractRequest) (CreateContractInput, error) {
-	// An absent organization_id decodes to the zero UUID with no error, which
-	// would reach the lookup and answer "no such organization" for a company the
+	// An absent company_id decodes to the zero UUID with no error, which
+	// would reach the lookup and answer "no such company" for a company the
 	// caller never named. Refuse it by name instead.
-	if err := httperr.RequireBodyID("organization_id", ids.UUID(req.OrganizationId)); err != nil {
+	if err := httperr.RequireBodyID("company_id", ids.UUID(req.CompanyId)); err != nil {
 		return CreateContractInput{}, err
 	}
 	in := CreateContractInput{
-		OrganizationID: ids.OrganizationID{UUID: ids.UUID(req.OrganizationId)},
+		CompanyID: ids.CompanyID{UUID: ids.UUID(req.CompanyId)},
 		ContractNumber: req.ContractNumber,
 		Title:          req.Title,
 		ValueMinor:     req.ValueMinor,

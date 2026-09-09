@@ -201,7 +201,7 @@ const UNCATEGORISED = "";
 const REPORT_GROUP_BY: Record<ReportKey, string[]> = {
   "pipeline-current": ["stage_id"],
   forecast: ["forecast_category"],
-  "open-deals-per-company": ["organization_id", FIELD_CURRENCY],
+  "open-deals-per-company": ["company_id", FIELD_CURRENCY],
   "win-loss": ["status"],
   "stage-age": ["stage_id"],
   // The specs' own defaults: an empty plan takes each report's declared
@@ -526,7 +526,7 @@ function ForecastStrip({
  * one, which is the defect a figure-as-door has to avoid to be worth drawing.
  *
  * So the door survives exactly where it is exact. A key with a single currency
- * row has no sibling row to be confused with, and `organization_id` alone
+ * row has no sibling row to be confused with, and `company_id` alone
  * addresses precisely the deals that row counted. A key with two or more gets
  * the plain number — the same answer this table already gives a row whose
  * company is "none".
@@ -553,7 +553,7 @@ function CompanyTable({
   const t = useT();
   const addressable = singleCurrencyKeys(
     rows
-      .map((row) => row.organization_id)
+      .map((row) => row.company_id)
       .filter((id): id is string => typeof id === "string"),
   );
   return (
@@ -563,15 +563,15 @@ function CompanyTable({
         {
           key: "company",
           header: t("analytics.company"),
-          // The report answers with an organization id and nothing else, so the
+          // The report answers with a company id and nothing else, so the
           // column read `01a0131c-3154-74cb-…` for every row — a company report
           // nobody could read. One record lookup per row, cached by id for a
           // minute and shared with every other reference on screen. The cost is
           // per row and this table is one report page long; the alternative is a
           // table of uuids, which is not a cheaper report but an unusable one.
           render: (row: ReportRow) =>
-            typeof row.organization_id === "string" ? (
-              <EntityRef kind="organization" id={row.organization_id} />
+            typeof row.company_id === "string" ? (
+              <EntityRef kind="company" id={row.company_id} />
             ) : (
               // Deals with no company at all, grouped into one row. An empty
               // cell read as a rendering fault; this says what the row is, and
@@ -591,13 +591,13 @@ function CompanyTable({
           key: "count",
           header: t("analytics.openDeals"),
           render: (row: ReportRow) =>
-            typeof row.organization_id === "string" &&
-            addressable.has(row.organization_id) ? (
+            typeof row.company_id === "string" &&
+            addressable.has(row.company_id) ? (
               // `status`, because this report counts OPEN deals and the list
               // otherwise answers with every status the company ever had.
               <CountLink
                 count={rowCount(row, "deal_count")}
-                href={dealsFilteredBy("organization_id", row.organization_id, {
+                href={dealsFilteredBy("company_id", row.company_id, {
                   status: "open",
                 })}
                 title={t("analytics.openCompanyDeals")}
@@ -625,10 +625,10 @@ function CompanyTable({
       ]}
       rows={rows}
       // A company with deals in two currencies is two rows now, so the
-      // organization id alone no longer identifies one.
+      // company id alone no longer identifies one.
       rowKey={(row) =>
-        row.organization_id != null
-          ? `${String(row.organization_id)}:${rowCurrency(row) ?? ""}`
+        row.company_id != null
+          ? `${String(row.company_id)}:${rowCurrency(row) ?? ""}`
           : String(rows.indexOf(row))
       }
     />
@@ -768,8 +768,8 @@ const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
   stage_id: "explain.col.stage",
   owner_id: "explain.col.owner",
   pipeline_id: "explain.col.pipeline",
-  organization_id: "analytics.company",
-  partner_org_id: "analytics.company",
+  company_id: "analytics.company",
+  partner_company_id: "analytics.company",
 };
 
 // A column the vocabulary knows gets its word; anything else keeps the wire
@@ -838,8 +838,8 @@ function renderDerivationCell(
       );
     }
     if (col === "owner_id") return <EntityRef kind="user" id={value} />;
-    if (col === "organization_id" || col === "partner_org_id") {
-      return <EntityRef kind="organization" id={value} />;
+    if (col === "company_id" || col === "partner_company_id") {
+      return <EntityRef kind="company" id={value} />;
     }
   }
   if (col.endsWith("_minor") && typeof value === "number") {

@@ -11,7 +11,7 @@ import {
 import { StrengthCard } from "./strength";
 
 // StrengthCard fetches its own data (GET /people/{id}/strength or
-// /organizations/{id}/strength) — the shared fetch stub (story-utils.tsx)
+// /companies/{id}/strength) — the shared fetch stub (story-utils.tsx)
 // mirrors the strength fixtures already exercised in contacts.test.tsx.
 const meta: Meta = {
   title: "Records/Relationship strength",

@@ -67,7 +67,7 @@ const (
 	// the version-table whitelist, and a typo makes a target undecidable in the
 	// first and unpinnable in the last without announcing either.
 	tablePerson       = "person"
-	tableOrganization = "organization"
+	tableCompany = "company"
 	tableDeal         = "deal"
 	tableLead         = "lead"
 	tableProject      = "project"

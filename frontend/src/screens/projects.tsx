@@ -116,9 +116,9 @@ export function ProjectKeyChip({
  */
 export function useCompanyOptions(): ProjectCompanyOption[] {
   const companies = useQuery({
-    queryKey: ["organizations"],
+    queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations", {
+      const { data, error } = await api.GET("/companies", {
         params: { query: { limit: 50 } },
       });
       if (error) {
@@ -252,7 +252,7 @@ export function ProjectsScreen() {
             // reader who wanted the account behind it had to open the project
             // first and come back out.
             cell: (project: Project) => (
-              <EntityRef kind="organization" id={project.organization_id} />
+              <EntityRef kind="company" id={project.company_id} />
             ),
           },
           {

@@ -14,7 +14,7 @@ import (
 // anchor's authority is TWO questions, not one. `person.update` says this seat
 // may change people; whether it may change THIS person is the row half, and on
 // an anchor object it is the only half that decides anything: person,
-// organization, deal and project are identity tables, read by every seat in the
+// company, deal and project are identity tables, read by every seat in the
 // workspace, so the visibility probe an edge already takes passes for everyone.
 //
 // A verb that asks only the object grant is therefore not narrowly gated, it is

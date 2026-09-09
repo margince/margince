@@ -25,15 +25,15 @@ import (
 // The claim surface (ADR-0105). It sits on the operational mux beside the
 // health probes rather than under /v1, for the reason that shapes everything
 // else here: /v1 is fronted by the session middleware, which resolves the
-// singleton organization first and answers 503 when there is none. An endpoint
-// whose entire purpose is to run when no organization exists cannot live behind
+// singleton company first and answers 503 when there is none. An endpoint
+// whose entire purpose is to run when no company exists cannot live behind
 // a gate that requires one.
 //
 // It is unauthenticated because there is nobody to authenticate yet — the setup
 // token is the credential, and without it the route creates nothing.
 
 // setupStatusResponse tells a caller whether this installation is waiting to be
-// claimed. It discloses no token and no organization detail: a stranger already
+// claimed. It discloses no token and no company detail: a stranger already
 // learns as much from any request that answers 503.
 // setupLimiter throttles the pre-tenant edge per client IP, the way every other
 // unauthenticated edge on this mux does. Without it an anonymous caller opens a
@@ -45,7 +45,7 @@ import (
 // and a client retrying more than that is not the case being served.
 func newSetupLimiter() *ratelimit.Limiter { return ratelimit.New(20, time.Minute) }
 
-// setupClaimResponse names the organization a claim created, so the caller
+// setupClaimResponse names the company a claim created, so the caller
 // can go straight to signing in rather than probing for it.
 type setupClaimResponse struct {
 	WorkspaceID string `json:"workspace_id"`
@@ -60,7 +60,7 @@ type setupStatusResponse struct {
 // Go rather than the camelCase the generated contract types carry.
 type setupClaimRequest struct {
 	SetupToken       string `json:"setup_token"`
-	OrganizationName string `json:"organization_name"`
+	CompanyName string `json:"company_name"`
 	Timezone         string `json:"timezone"`
 	BaseCurrency     string `json:"base_currency"`
 	BaseLanguage     string `json:"base_language"`
@@ -85,7 +85,7 @@ func setupStatus(svc *identity.Service, limit *ratelimit.Limiter) http.HandlerFu
 	}
 }
 
-// setupClaim creates the organization and its first admin from a claim.
+// setupClaim creates the company and its first admin from a claim.
 func setupClaim(svc *identity.Service, pool *pgxpool.Pool, seeds deployconfig.Seeds, limit *ratelimit.Limiter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !limit.Allow(httpserver.ClientIP(r)) {
@@ -119,7 +119,7 @@ func setupClaim(svc *identity.Service, pool *pgxpool.Pool, seeds deployconfig.Se
 		// identity ones, so a shared slice would lose these.
 		var seedDiscards []string
 		wsID, discarded, err := svc.ClaimInstallation(r.Context(), in.SetupToken, identity.InstallationBootstrap{
-			OrganizationName: in.OrganizationName,
+			CompanyName: in.CompanyName,
 			BaseCurrency:     in.BaseCurrency,
 			BaseLanguage:     in.BaseLanguage,
 			Timezone:         in.Timezone,
@@ -132,7 +132,7 @@ func setupClaim(svc *identity.Service, pool *pgxpool.Pool, seeds deployconfig.Se
 			// The true reason, not a token failure: a caller holding a valid
 			// token deserves it, and that an installation is provisioned is
 			// already visible from any other request.
-			httperr.Write(w, r, fmt.Errorf("%w: this installation already has an organization; a claim is possible exactly once", apperrors.ErrConflict))
+			httperr.Write(w, r, fmt.Errorf("%w: this installation already has a company; a claim is possible exactly once", apperrors.ErrConflict))
 			return
 		case errors.Is(err, identity.ErrSetupTokenMismatch):
 			// Deliberately one answer for "wrong token" and "no token

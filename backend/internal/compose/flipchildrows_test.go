@@ -34,15 +34,15 @@ var twoEmailRowsMapping = overlay.ObjectMapping{
 // twoDomainRowsMapping is twoEmailRowsMapping's counterpart for a company that
 // answers on a second domain.
 var twoDomainRowsMapping = overlay.ObjectMapping{
-	Source: "companies", Target: "organization", ExternalKey: "hs_object_id",
+	Source: "companies", Target: "company", ExternalKey: "hs_object_id",
 	Fields: []overlay.FieldMapping{
 		{
-			From: []string{"domain"}, To: "organization_domain.domain",
+			From: []string{"domain"}, To: "company_domain.domain",
 			Kind: overlay.TargetChild, Transform: "lowercase",
 			Child: &overlay.ChildRow{Attrs: map[string]any{"is_primary": true}, Position: 0},
 		},
 		{
-			From: []string{"secondarydomain"}, To: "organization_domain.domain",
+			From: []string{"secondarydomain"}, To: "company_domain.domain",
 			Kind: overlay.TargetChild, Transform: "lowercase",
 			Child: &overlay.ChildRow{Attrs: map[string]any{"is_primary": false}, Position: 1},
 		},
@@ -78,8 +78,8 @@ func TestFlipCarriesEveryRowOfAChildCollection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Apply(companies with two domain rows): %v", err)
 	}
-	domains := flipOrgDomains(canonical)
-	wantDomains := []people.OrgDomainInput{
+	domains := flipCompanyDomains(canonical)
+	wantDomains := []people.CompanyDomainInput{
 		{Domain: "acme.io", IsPrimary: true},
 		{Domain: "acme.test", IsPrimary: false},
 	}
@@ -102,11 +102,11 @@ func TestFlipSkipsAValuelessChildRowAndKeepsTheRest(t *testing.T) {
 		t.Errorf("emails = %+v, want %+v — the blank rows drop out and the address behind them survives", emails, want)
 	}
 
-	domains := flipOrgDomains(map[string]any{"organization_domain": []any{
+	domains := flipCompanyDomains(map[string]any{"company_domain": []any{
 		map[string]any{"is_primary": true, "position": 0},
 		map[string]any{"domain": "acme.test", "position": 1},
 	}})
-	want2 := []people.OrgDomainInput{{Domain: "acme.test"}}
+	want2 := []people.CompanyDomainInput{{Domain: "acme.test"}}
 	if !reflect.DeepEqual(domains, want2) {
 		t.Errorf("domains = %+v, want %+v — the valueless row drops out and the host behind it survives", domains, want2)
 	}

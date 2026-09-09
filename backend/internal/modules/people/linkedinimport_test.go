@@ -22,7 +22,7 @@ func TestLinkedInCompanyHeadlinesReachTheAccount(t *testing.T) {
 		// A plain name survives untouched.
 		{"Acme", "acme"},
 	} {
-		if got := NormalizeOrgName(cleanLinkedInCompany(tc.headline)); got != tc.want {
+		if got := NormalizeCompanyName(cleanLinkedInCompany(tc.headline)); got != tc.want {
 			t.Errorf("%q → %q, want %q", tc.headline, got, tc.want)
 		}
 	}
@@ -31,7 +31,7 @@ func TestLinkedInCompanyHeadlinesReachTheAccount(t *testing.T) {
 // The company strings that reached no account on a real 5,064-row export, and
 // the key each one needs. Every case here is a company that EXISTS in the CRM
 // and was missed because a member wrote their employer the way people do.
-func TestOrgMatchKeysReachTheAccountsThatWereMissed(t *testing.T) {
+func TestCompanyMatchKeysReachTheAccountsThatWereMissed(t *testing.T) {
 	for _, tc := range []struct{ company, account string }{
 		{"Wortfilter.de", "wortfilter"},
 		{"The Sentry", "thesentry"},
@@ -41,17 +41,17 @@ func TestOrgMatchKeysReachTheAccountsThatWereMissed(t *testing.T) {
 		{"100 DAYS software projects GmbH", "100 days software projects"},
 		{"marcos software", "marcossoftware"},
 	} {
-		if !slices.Contains(orgMatchKeys(tc.company), tc.account) {
+		if !slices.Contains(companyMatchKeys(tc.company), tc.account) {
 			t.Errorf("%q → %v, missing the key %q that reaches its account",
-				tc.company, orgMatchKeys(tc.company), tc.account)
+				tc.company, companyMatchKeys(tc.company), tc.account)
 		}
 	}
 }
 
 // The exact key is always first, so a company whose full name IS an account
 // can never be resolved by a looser fallback to a different one.
-func TestOrgMatchKeysPutTheExactNameFirst(t *testing.T) {
-	keys := orgMatchKeys("Acme Consulting GmbH")
+func TestCompanyMatchKeysPutTheExactNameFirst(t *testing.T) {
+	keys := companyMatchKeys("Acme Consulting GmbH")
 	if len(keys) == 0 || keys[0] != "acme consulting" {
 		t.Fatalf("keys = %v, want the exact name first", keys)
 	}
@@ -61,9 +61,9 @@ func TestOrgMatchKeysPutTheExactNameFirst(t *testing.T) {
 // These are real values from the same export: a member between jobs, a
 // placeholder, a description. Matching them would attach a colleague's whole
 // network to whichever account happened to share a word.
-func TestOrgMatchKeysRefuseWhatIsNotACompany(t *testing.T) {
+func TestCompanyMatchKeysRefuseWhatIsNotACompany(t *testing.T) {
 	for _, notACompany := range []string{"", "   ", ".", "|", "..."} {
-		if keys := orgMatchKeys(notACompany); len(keys) != 0 {
+		if keys := companyMatchKeys(notACompany); len(keys) != 0 {
 			t.Errorf("%q → %v, want no keys at all", notACompany, keys)
 		}
 	}

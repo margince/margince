@@ -34,7 +34,7 @@ type MirrorSink interface {
 // drives, the toClass(es) design.md §9 explicitly calls for an
 // association fetch on:
 //
-//   - deals→companies ("assoc→company→organization_id")
+//   - deals→companies ("assoc→company→company_id")
 //   - each engagement class (calls/meetings/emails/notes/tasks) →
 //     {contacts,companies,deals,leads} (§9: "assocs→activity_link" —
 //     activity_link is a polymorphic pointer, so an engagement's association

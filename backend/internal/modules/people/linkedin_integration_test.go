@@ -92,9 +92,9 @@ func TestAnExactNameAtAMatchedEmployerConfirmsWithoutAsking(t *testing.T) {
 	// Asking a human about it teaches them to click through the queue without
 	// reading, which is what makes the uncertain ones dangerous.
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	andreas := e.seedContact(t, "Andreas Müller")
-	e.employ(t, andreas, org)
+	e.employ(t, andreas, company)
 
 	e.importExport(t)
 	if _, err := e.store.MatchLinkedInConnections(e.as(), e.rep); err != nil {
@@ -108,18 +108,18 @@ func TestAnExactNameAtAMatchedEmployerConfirmsWithoutAsking(t *testing.T) {
 
 func TestAnAddressMatchConfirmsAndANameMatchOnlySuggests(t *testing.T) {
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 
 	// Dana is a known contact WITH the address the export carries.
 	dana := e.seedContact(t, "Dana Buyer")
 	e.seedEmail(t, dana, "dana@acme.test")
-	e.employ(t, dana, org)
+	e.employ(t, dana, company)
 	// Andreas is a known contact at the same employer, but the export has no
 	// address for him — name and employer are all there is. The CRM spells him
 	// without the umlaut, so the fold finds the candidate and the strings still
 	// disagree: whether two spellings are one person is a human's judgement.
 	andreas := e.seedContact(t, "Andreas Muller")
-	e.employ(t, andreas, org)
+	e.employ(t, andreas, company)
 
 	e.importExport(t)
 	if _, err := e.store.MatchLinkedInConnections(e.as(), e.rep); err != nil {
@@ -143,12 +143,12 @@ func TestAnAddressMatchConfirmsAndANameMatchOnlySuggests(t *testing.T) {
 
 func TestTwoContactsOfTheSameNameAtOneEmployerAreNotGuessedBetween(t *testing.T) {
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	// The case the whole suggest/confirm split exists for.
 	first := e.seedContact(t, "Andreas Müller")
 	second := e.seedContact(t, "Andreas Müller")
-	e.employ(t, first, org)
-	e.employ(t, second, org)
+	e.employ(t, first, company)
+	e.employ(t, second, company)
 
 	e.importExport(t)
 	if _, err := e.store.MatchLinkedInConnections(e.as(), e.rep); err != nil {
@@ -181,19 +181,19 @@ func TestImportingConnectionsCreatesNoPeople(t *testing.T) {
 	}
 }
 
-// seedOrgNamed writes one account under the given display name.
-func (e *dedupeEnv) seedOrgNamed(t *testing.T, name string) ids.OrganizationID {
+// seedCompanyNamed writes one account under the given display name.
+func (e *dedupeEnv) seedCompanyNamed(t *testing.T, name string) ids.CompanyID {
 	t.Helper()
-	id := ids.New[ids.OrganizationKind]()
+	id := ids.New[ids.CompanyKind]()
 	ctx := e.as()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO organization (id, display_name, name_source, owner_id, source, captured_by, visibility)
+			INSERT INTO company (id, display_name, name_source, owner_id, source, captured_by, visibility)
 			VALUES ($1, $2, 'human', $3, 'manual', 'human:test', 'workspace')`,
 			id, name, e.rep)
 		return err
 	}); err != nil {
-		t.Fatalf("seeding org %s: %v", name, err)
+		t.Fatalf("seeding company %s: %v", name, err)
 	}
 	return id
 }
@@ -213,13 +213,13 @@ func (e *dedupeEnv) seedEmail(t *testing.T, person ids.PersonID, email string) {
 }
 
 // employ puts a contact on an account's payroll, live.
-func (e *dedupeEnv) employ(t *testing.T, person ids.PersonID, org ids.OrganizationID) {
+func (e *dedupeEnv) employ(t *testing.T, person ids.PersonID, company ids.CompanyID) {
 	t.Helper()
 	ctx := e.as()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO relationship (kind, person_id, organization_id, source, captured_by)
-			VALUES ('employment', $1, $2, 'manual', 'human:test')`, person, org)
+			INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
+			VALUES ('employment', $1, $2, 'manual', 'human:test')`, person, company)
 		return err
 	}); err != nil {
 		t.Fatalf("employing %s: %v", person, err)
@@ -228,13 +228,13 @@ func (e *dedupeEnv) employ(t *testing.T, person ids.PersonID, org ids.Organizati
 
 func TestAnUnmatchedGhostStillNamesTheSubject(t *testing.T) {
 	e := setupDedupe(t)
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	// Andreas is a contact at Acme. The export names him, but carries no
 	// address, so the matcher only SUGGESTS — it never confirms.
 	// Spelled without the umlaut, so the match stays a SUGGESTION: an exact
 	// name would confirm itself and this test is about the undecided case.
 	andreas := e.seedContact(t, "Andreas Muller")
-	e.employ(t, andreas, org)
+	e.employ(t, andreas, company)
 	e.importExport(t)
 	if _, err := e.store.MatchLinkedInConnections(e.as(), e.rep); err != nil {
 		t.Fatalf("matching: %v", err)
@@ -257,7 +257,7 @@ func TestAnUnmatchedGhostStillNamesTheSubject(t *testing.T) {
 			   AND g.normalized_name = (SELECT lower(f_unaccent(full_name)) FROM person WHERE id = $1)
 			   AND EXISTS (SELECT 1 FROM relationship r
 			                WHERE r.person_id = $1 AND r.kind = 'employment'
-			                  AND r.archived_at IS NULL AND r.organization_id = g.matched_org_id)`,
+			                  AND r.archived_at IS NULL AND r.company_id = g.matched_company_id)`,
 			andreas).Scan(&byName)
 	}); err != nil {
 		t.Fatal(err)
@@ -291,14 +291,14 @@ func TestAContactTheWorkspaceLearnsAboutLaterIsStillMatched(t *testing.T) {
 	}
 
 	// Capture then does its work: the account and the contact appear.
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedCompanyNamed(t, "Acme GmbH")
 	// Fold-only spelling keeps this one a SUGGESTION: an exact name confirms
 	// itself, and the sweep's two-tier report is what this test pins.
 	andreas := e.seedContact(t, "Andreas Muller")
-	e.employ(t, andreas, org)
+	e.employ(t, andreas, company)
 	dana := e.seedContact(t, "Dana Buyer")
 	e.seedEmail(t, dana, "dana@acme.test")
-	e.employ(t, dana, org)
+	e.employ(t, dana, company)
 
 	// The sweep runs workspace-wide (the zero owner) and catches both.
 	matched, err := e.store.MatchLinkedInConnections(e.as(), ids.Nil)
@@ -387,7 +387,7 @@ func TestAMemberOwnsAndCanCorrectTheirLinkedInProfile(t *testing.T) {
 // That is not hypothetical. Cleaning LinkedIn's headline company field
 // ("najahak.io | نجاحك" → "najahak.io") re-keyed every row carrying a tagline,
 // and re-importing the same export produced 209 duplicates on a real
-// workspace — double-counting every org-level reach those rows feed.
+// workspace — double-counting every company-level reach those rows feed.
 //
 // The backfill is what makes a normalizer change safe: recompute the stored
 // keys, collapse what collides, and keep the row a human has decided on.
@@ -440,7 +440,7 @@ func TestRenormalizingCollapsesTheDuplicatesAnOldKeyLeft(t *testing.T) {
 		t.Fatalf("reading back: %v", err)
 	}
 	if rows != 1 {
-		t.Fatalf("%d rows survive, want 1 — every org reach count these feed is multiplied by the duplicate", rows)
+		t.Fatalf("%d rows survive, want 1 — every company reach count these feed is multiplied by the duplicate", rows)
 	}
 	// The row carrying a human's judgement is the one to keep. Discarding it
 	// and keeping the undecided copy would silently re-ask a question somebody

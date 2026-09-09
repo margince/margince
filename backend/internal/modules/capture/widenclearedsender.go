@@ -47,7 +47,7 @@ const clearedSenderBatch = 500
 // statement that claims the rows, and every caller inherits it.
 //
 //   - a settled ledger row, status 'real' AND kind 'person' — never status
-//     alone. advisor, role_mailbox and organization_sender are all 'real' and
+//     alone. advisor, role_mailbox and company_sender are all 'real' and
 //     none of them is a person whose mail a posture should stop holding.
 //   - posture_at_import = 'classified' — never 'held'. A held mailbox promises
 //     to hold whatever any classifier concludes, so a verdict is not an answer

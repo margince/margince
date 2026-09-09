@@ -65,7 +65,7 @@ var txSeamPerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"custom_field":          {Create: true, Read: true, Update: true, Delete: true},
 		"person":                {Create: true, Read: true, Update: true, Delete: true},
-		"organization":          {Create: true, Read: true, Update: true, Delete: true},
+		"company":          {Create: true, Read: true, Update: true, Delete: true},
 		"deal":                  {Create: true, Read: true, Update: true, Delete: true},
 		"lead":                  {Create: true, Read: true, Update: true, Delete: true},
 		"pipeline":              {Create: true, Read: true, Update: true, Delete: true},
@@ -194,34 +194,34 @@ func TestGetPersonTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	}
 }
 
-func TestGetOrganizationTxRunsOnTheCallersOnlyConnection(t *testing.T) {
+func TestGetCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f := setupTxSeam(t)
-	col := f.defineTxSeamField(t, "organization", "Segment")
+	col := f.defineTxSeamField(t, "company", "Segment")
 
-	created, err := f.people.CreateOrganization(f.ctx, people.CreateOrganizationInput{
+	created, err := f.people.CreateCompany(f.ctx, people.CreateCompanyInput{
 		DisplayName: "Analytical Engines", Source: "ui",
 		CustomFields: map[string]any{col: "enterprise"},
 	})
 	if err != nil {
-		t.Fatalf("creating the organization: %v", err)
+		t.Fatalf("creating the company: %v", err)
 	}
 
-	active, err := f.people.ActiveOrganizationColumns(f.ctx)
+	active, err := f.people.ActiveCompanyColumns(f.ctx)
 	if err != nil {
-		t.Fatalf("reading the organization's active custom columns: %v", err)
+		t.Fatalf("reading the company's active custom columns: %v", err)
 	}
-	f.requireCatalogAnswers(t, "organization")
+	f.requireCatalogAnswers(t, "company")
 
 	var got map[string]any
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
-		org, err := f.people.GetOrganizationTx(f.ctx, tx, ids.From[ids.OrganizationKind](ids.UUID(created.Id)), storekit.LiveOnly, active)
+		company, err := f.people.GetCompanyTx(f.ctx, tx, ids.From[ids.CompanyKind](ids.UUID(created.Id)), storekit.LiveOnly, active)
 		if err != nil {
 			return err
 		}
-		got = org.AdditionalProperties
+		got = company.AdditionalProperties
 		return nil
 	}); err != nil {
-		t.Fatalf("reading the organization inside the caller's transaction: %v — a timeout here is the seam waiting for a second connection the caller's transaction holds", err)
+		t.Fatalf("reading the company inside the caller's transaction: %v — a timeout here is the seam waiting for a second connection the caller's transaction holds", err)
 	}
 	if got[col] != "enterprise" {
 		t.Errorf("the custom field the caller fetched did not ride the read: %s = %v, want \"enterprise\"", col, got[col])
@@ -300,27 +300,27 @@ func TestCreatePersonTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	}
 }
 
-func TestCreateOrganizationTxRunsOnTheCallersOnlyConnection(t *testing.T) {
+func TestCreateCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f := setupTxSeam(t)
-	col := f.defineTxSeamField(t, "organization", "Segment")
-	f.requireCatalogAnswers(t, "organization")
+	col := f.defineTxSeamField(t, "company", "Segment")
+	f.requireCatalogAnswers(t, "company")
 
-	var created crmcontracts.Organization
+	var created crmcontracts.Company
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
-		created, err = f.people.CreateOrganizationTx(f.ctx, tx, people.CreateOrganizationInput{
+		created, err = f.people.CreateCompanyTx(f.ctx, tx, people.CreateCompanyInput{
 			DisplayName: "Analytical Engines", Source: "ui",
 		})
 		return err
 	}); err != nil {
-		t.Fatalf("creating the organization inside the caller's transaction: %v — a timeout here is the seam waiting for a second connection the caller's transaction holds", err)
+		t.Fatalf("creating the company inside the caller's transaction: %v — a timeout here is the seam waiting for a second connection the caller's transaction holds", err)
 	}
 	if created.DisplayName != "Analytical Engines" {
-		t.Errorf("created organization = %+v, want the one the caller asked for", created)
+		t.Errorf("created company = %+v, want the one the caller asked for", created)
 	}
 
 	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
-		_, err := f.people.CreateOrganizationTx(f.ctx, tx, people.CreateOrganizationInput{
+		_, err := f.people.CreateCompanyTx(f.ctx, tx, people.CreateCompanyInput{
 			DisplayName: "Difference Engines", Source: "ui", CustomFields: map[string]any{col: "enterprise"},
 		})
 		return err

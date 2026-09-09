@@ -269,7 +269,7 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 	// — the spec's calendar_delegate grant (features/04 §1) is not yet
 	// adopted in this build. The admin ROLE, not an unbounded row scope:
 	// ops, read_only and management all read every row, and none of them is
-	// thereby a calendar delegate for everyone in the organization.
+	// thereby a calendar delegate for everyone in the company.
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return crmcontracts.Activity{}, apperrors.ErrPermissionDenied

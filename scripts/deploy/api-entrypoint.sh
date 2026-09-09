@@ -38,9 +38,9 @@ margince-migrate up
 
 # First-boot bootstrap admin password (from the environment) → the file the
 # mounted margince.yaml's `password_file` references. Written 0600, never baked
-# into the image, and ONLY while the installation has no organization: ADR-0061
+# into the image, and ONLY while the installation has no company: ADR-0061
 # §2 consumes bootstrap values exactly once and permits deleting the
-# `bootstrap_admin` secret once the organization exists, so a plaintext
+# `bootstrap_admin` secret once the company exists, so a plaintext
 # credential at rest past that point protects nothing. The probe runs AFTER
 # migrations because it reads a table migrations create.
 #
@@ -61,11 +61,11 @@ if [ -n "${MARGINCE_ADMIN_PASSWORD:-}" ] || [ -e "$admin_password_file" ]; then
     # directly: inside an `if` condition a command substitution is exempt from
     # `set -e`, so a failed probe would read as empty, miss the "true" branch,
     # and write the credential onto a provisioned installation — the one
-    # outcome this block exists to prevent. `org-exists` prints its answer
+    # outcome this block exists to prevent. `company-exists` prints its answer
     # precisely so a caller can tell "no" from "could not ask"; this is the
     # shape ensure_template in scripts/lib-testdb.sh already uses.
-    if ! provisioned="$(margince-migrate org-exists)"; then
-        echo "FAIL: could not determine whether this installation already has an organization — fix the error above; a failed probe is not 'unprovisioned', and treating it as one would write a plaintext credential onto a live installation" >&2
+    if ! provisioned="$(margince-migrate company-exists)"; then
+        echo "FAIL: could not determine whether this installation already has a company — fix the error above; a failed probe is not 'unprovisioned', and treating it as one would write a plaintext credential onto a live installation" >&2
         exit 1
     fi
     if [ "$provisioned" = "true" ]; then
@@ -74,10 +74,10 @@ if [ -n "${MARGINCE_ADMIN_PASSWORD:-}" ] || [ -e "$admin_password_file" ]; then
         # from margince.yaml is the action that actually retires it — unsetting only
         # this variable leaves the api reading a file nothing writes.
         if [ -n "${MARGINCE_ADMIN_PASSWORD:-}" ]; then
-            echo "entrypoint: MARGINCE_ADMIN_PASSWORD is set, but this installation already has an organization, so the bootstrap credential is neither written nor read. Remove the bootstrap_admin section from margince.yaml and unset MARGINCE_ADMIN_PASSWORD; use 'margince-migrate reset-password' to change an existing user's password." >&2
+            echo "entrypoint: MARGINCE_ADMIN_PASSWORD is set, but this installation already has a company, so the bootstrap credential is neither written nor read. Remove the bootstrap_admin section from margince.yaml and unset MARGINCE_ADMIN_PASSWORD; use 'margince-migrate reset-password' to change an existing user's password." >&2
         fi
         # Any copy left by an earlier boot is retired here. The invariant is that
-        # no plaintext bootstrap credential is at rest once the organization
+        # no plaintext bootstrap credential is at rest once the company
         # exists — not merely that this start did not add one.
         #
         # A failed removal warns and continues rather than refusing to start. The

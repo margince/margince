@@ -3,7 +3,7 @@
 
 package compose
 
-// The organization object's own claimed-key check.
+// The company object's own claimed-key check.
 //
 // A domain names ONE company across the estate, the same way an email names one
 // person, so the preview has to answer the same question the person path does:
@@ -20,7 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-// orgDomainAlreadyHeld answers whether the estate already holds this row's
+// companyDomainAlreadyHeld answers whether the estate already holds this row's
 // domain, WITHOUT regard to which company holds it.
 //
 // Not visibility-filtered, and that is the opposite of the name-collision check
@@ -32,8 +32,8 @@ import (
 // would simply be wrong.
 //
 // The reason text names the row's own value and never the incumbent.
-func (w *csvWriters) orgDomainAlreadyHeld(ctx context.Context, row migration.Row) (bool, error) {
-	if w.object != migration.ObjectOrganization {
+func (w *csvWriters) companyDomainAlreadyHeld(ctx context.Context, row migration.Row) (bool, error) {
+	if w.object != migration.ObjectCompany {
 		return false, nil
 	}
 	domain := strings.TrimSpace(textFields(row.Fields)[fieldDomain])
@@ -46,7 +46,7 @@ func (w *csvWriters) orgDomainAlreadyHeld(ctx context.Context, row migration.Row
 	var held bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM organization_domain WHERE domain = lower($1) AND archived_at IS NULL)`,
+			`SELECT EXISTS (SELECT 1 FROM company_domain WHERE domain = lower($1) AND archived_at IS NULL)`,
 			domain).Scan(&held)
 	}); err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", domain, err)

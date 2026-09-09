@@ -128,7 +128,7 @@ func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string,
 //
 // The anchor and not the record whose history was open, and the two are not
 // symmetric: an employment anchors the PERSON, so a seat holding
-// organization-write and not person-write is refused the button on the company's
+// company-write and not person-write is refused the button on the company's
 // page. Asking the record instead would light a button the write then refuses.
 //
 // The entry's action travels with it because the object grant the inverse asks

@@ -47,7 +47,7 @@ var project360RepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"project":               {Read: true},
-		"organization":          {Read: true},
+		"company":          {Read: true},
 		"person":                {Read: true},
 		"deal":                  {Read: true},
 		"activity":              {Read: true},
@@ -72,18 +72,18 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 	t.Helper()
 	admin := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
-	project := seedProject(admin, t, e, "ERP rollout", org, &e.Rep1).ID
-	other := seedProject(admin, t, e, "Datacentre migration", org, &e.Rep1).ID
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	project := seedProject(admin, t, e, "ERP rollout", company, &e.Rep1).ID
+	other := seedProject(admin, t, e, "Datacentre migration", company, &e.Rep1).ID
 	if _, err := e.Projects.AdvanceProjectPhase(admin, project, projects.AdvanceProjectPhaseInput{ToPhase: "pursuing"}); err != nil {
 		t.Fatalf("advance the project: %v", err)
 	}
 
 	amount := int64(100_000)
 	currency := "EUR"
-	orgID := orgIDOf(org)
+	companyID := companyIDOf(company)
 	deal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "ERP licences", PipelineID: pipeline, StageID: open, OrganizationID: &orgID,
+		Name: "ERP licences", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 		ProjectID: &project, AmountMinor: &amount, Currency: &currency, OwnerID: userIDPtr(&e.Rep1),
 	})
 	if err != nil {
@@ -181,8 +181,8 @@ func assertProject360History(t *testing.T, page crmcontracts.Project360, now tim
 // and the timeline reports that it was cut.
 func assertProject360Collections(t *testing.T, page crmcontracts.Project360, f project360Fixture) {
 	t.Helper()
-	if page.Organization == nil || page.Organization.Name != "Acme" {
-		t.Errorf("organization = %+v, want Acme", page.Organization)
+	if page.Company == nil || page.Company.Name != "Acme" {
+		t.Errorf("company = %+v, want Acme", page.Company)
 	}
 	if page.Deals == nil || len(page.Deals.Data) != 1 || ids.UUID(page.Deals.Data[0].Id) != f.deal || page.Deals.Page.HasMore {
 		t.Errorf("deals = %+v, want exactly the project's one deal", page.Deals)
@@ -279,7 +279,7 @@ func TestProject360RefusesACallerWithNoSightOfTheProject(t *testing.T) {
 		t.Errorf("assemble on an archived project → %v, want ErrNotFound (the live-only anchor read)", err)
 	}
 	// The positive control: the same call served the page a moment ago.
-	if _, err := project360Service(e, time.Now().UTC()).Assemble(ctx, seedProject(e.Admin(), t, e, "Fresh", e.SeedOrg(t, "Beta", &e.Rep1), nil).ID); err != nil {
+	if _, err := project360Service(e, time.Now().UTC()).Assemble(ctx, seedProject(e.Admin(), t, e, "Fresh", e.SeedCompany(t, "Beta", &e.Rep1), nil).ID); err != nil {
 		t.Errorf("assemble on a live project the caller may read: %v", err)
 	}
 }
@@ -313,19 +313,19 @@ func TestProject360CoverageCountsOnlyWhatTheCallerMaySee(t *testing.T) {
 	}
 }
 
-func TestProject360OmitsTheOrganizationForACallerWithoutThatGrant(t *testing.T) {
+func TestProject360OmitsTheCompanyForACallerWithoutThatGrant(t *testing.T) {
 	e := Setup(t)
 	f := seedProject360(t, e)
 	svc := project360Service(e, time.Now().UTC())
-	page, err := svc.Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(project360RepPerms, "organization")), f.project)
+	page, err := svc.Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(project360RepPerms, "company")), f.project)
 	if err != nil {
-		t.Fatalf("assemble as a rep without the organization grant: %v — the page must narrow, not refuse", err)
+		t.Fatalf("assemble as a rep without the company grant: %v — the page must narrow, not refuse", err)
 	}
-	if page.Organization != nil {
-		t.Error("organization section present for a rep who cannot read companies")
+	if page.Company != nil {
+		t.Error("company section present for a rep who cannot read companies")
 	}
-	if !slices.Contains(page.SectionsOmitted, crmcontracts.Project360SectionOrganization) {
-		t.Errorf("sections_omitted = %v, want it to name organization", page.SectionsOmitted)
+	if !slices.Contains(page.SectionsOmitted, crmcontracts.Project360SectionCompany) {
+		t.Errorf("sections_omitted = %v, want it to name company", page.SectionsOmitted)
 	}
 	if page.Deals == nil || page.Activities == nil || page.PhaseHistory == nil {
 		t.Error("the rest of the page must still be served")

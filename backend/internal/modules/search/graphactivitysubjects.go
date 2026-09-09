@@ -74,7 +74,7 @@ func (a activityLinkArm) title() string {
 // DDL's own enum rather than a sibling list in Go.
 var activityLinkArms = []activityLinkArm{
 	{entity: string(datasource.EntityPerson), column: "person_id"},
-	{entity: string(datasource.EntityOrganization), column: "organization_id"},
+	{entity: string(datasource.EntityCompany), column: "company_id"},
 	{entity: string(datasource.EntityDeal), column: "deal_id"},
 	{entity: string(datasource.EntityProject), column: "project_id"},
 	{entity: string(datasource.EntityLead), column: "lead_id"},
@@ -92,7 +92,7 @@ var activityLinkArms = []activityLinkArm{
 var subjectTier = map[string]int{
 	string(datasource.EntityDeal):         0,
 	string(datasource.EntityProject):      1,
-	string(datasource.EntityOrganization): 2,
+	string(datasource.EntityCompany): 2,
 	string(datasource.EntityPerson):       3,
 	string(datasource.EntityLead):         4,
 }
@@ -106,7 +106,7 @@ var subjectTier = map[string]int{
 // The employer hop is what lets a company be reached through the person who was
 // in the room, which is the model the activity_link refusal for meetings and
 // calls rests on: without it, forbidding the direct link would remove the only
-// path an organization had into a prep rather than a redundant one.
+// path a company had into a prep rather than a redundant one.
 const (
 	namedByLink        = 0
 	namedByParticipant = 1
@@ -214,7 +214,7 @@ func linkedSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]acti
 }
 
 // participantSubjects reads the people capture matched to the event's parties.
-// There is no project or organization half of activity_participant — those
+// There is no project or company half of activity_participant — those
 // reach a prep through activity_link like everything else.
 func participantSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]activitySubject, error) {
 	rows, err := tx.Query(ctx, `
@@ -250,7 +250,7 @@ func participantSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([
 //
 // This is the hop that makes "a company is reached through the person who was
 // in the room" true of the ASSEMBLY PATH rather than only of the model. Before
-// it, an organization reached a prep by activity_link alone, so forbidding the
+// it, a company reached a prep by activity_link alone, so forbidding the
 // direct link on a meeting removed the company from every surface that
 // assembles context rather than removing a redundancy.
 //
@@ -259,18 +259,18 @@ func participantSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([
 // against, activity_participant is the address it matched. A hop over one of
 // them would leave the other's company unreachable, which is the whole failure
 // this exists to prevent — and it is the same pair of arms
-// activities.OrgLinkedActivityExists already walks for the account timeline.
+// activities.CompanyLinkedActivityExists already walks for the account timeline.
 //
 // CURRENT employment only, and by design: an attendee's former employer is a
 // company they left, and naming it in a prep would put the reader in the wrong
 // room. A person with two current jobs contributes both — the primary first,
 // because that is the one the rest of the product treats as theirs.
 //
-// Every organization it proposes still goes through rankSubjects like every
+// Every company it proposes still goes through rankSubjects like every
 // other candidate, so an employer the caller may not read is ABSENT rather than
-// a refusal — the same treatment the organization link arm has always had.
+// a refusal — the same treatment the company link arm has always had.
 //
-// The EDGE carries its own gate, and it is not the organization's. "This
+// The EDGE carries its own gate, and it is not the company's. "This
 // attendee works at that company" is a fact about a pair, which is what
 // relationship.read governs and what neither endpoint's grant covers — so a
 // caller with no edge grant learns no employer here at all, and one with a
@@ -326,7 +326,7 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 			       ) onEvent
 			  JOIN person p ON p.id = onEvent.person_id
 			  JOIN relationship r ON r.person_id = p.id
-			  JOIN organization o ON o.id = r.organization_id
+			  JOIN company o ON o.id = r.company_id
 			 WHERE p.archived_at IS NULL
 			   AND r.kind = 'employment' AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 			   AND o.archived_at IS NULL
@@ -340,11 +340,11 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 	}
 	defer rows.Close()
 	var out []activitySubject
-	organization := string(datasource.EntityOrganization)
+	company := string(datasource.EntityCompany)
 	for rows.Next() {
 		subject := activitySubject{
-			entityType: organization,
-			tier:       subjectTier[organization], named: namedByEmployer,
+			entityType: company,
+			tier:       subjectTier[company], named: namedByEmployer,
 		}
 		if err := rows.Scan(&subject.id, &subject.title, &subject.role); err != nil {
 			return nil, err

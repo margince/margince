@@ -62,8 +62,8 @@ function quietDefault(
           },
         }),
       ),
-    "/v1/organizations": () => jsonResponse({ data: [ORG], page: listPage }),
-    [`/v1/organizations/${ORG.id}`]: () => jsonResponse(ORG),
+    "/v1/companies": () => jsonResponse({ data: [ORG], page: listPage }),
+    [`/v1/companies/${ORG.id}`]: () => jsonResponse(ORG),
     "/v1/projects": () => jsonResponse({ data: rows, page: listPage }),
   };
   const matched = Object.hasOwn(exact, pathname) ? exact[pathname] : undefined;

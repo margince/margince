@@ -653,7 +653,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     shellStyles = mountShellStyles();
     const client = newClient();
     client.setQueryData(["company"], TWO_MARKS);
-    const parts = [".company-logo", ".ws-org-text", ".ws-alpha"];
+    const parts = [".company-logo", ".ws-company-text", ".ws-alpha"];
     const plain = renderWith(
       client,
       <WorkspaceRail route={{ screen: "brief" }} />,
@@ -680,9 +680,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
   it("heads the rail with the full company logo and puts the product under it", () => {
     const client = newClient();
     client.setQueryData(["company"], {
-      organization_id: "11111111-1111-4111-8111-111111111111",
+      company_id: "11111111-1111-4111-8111-111111111111",
       display_name: "Demo GmbH",
-      logo_url: "/v1/organizations/11111111-1111-4111-8111-111111111111/logo",
+      logo_url: "/v1/companies/11111111-1111-4111-8111-111111111111/logo",
     });
     renderWith(client, <WorkspaceRail route={{ screen: "brief" }} />);
     const brand = screen.getByRole("link", {
@@ -695,7 +695,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(logo.classList.contains("company-logo")).toBe(true);
     // Beside the link rather than inside it: the attribution and the build badge
     // are one row of the head, and neither is somewhere a press should lead.
-    const attribution = document.querySelector(".ws-org");
+    const attribution = document.querySelector(".ws-company");
     expect(attribution?.textContent).toContain("Powered by");
     expect(attribution?.textContent).toContain("Margince");
     expect(within(brand).queryByText("Powered by")).toBeNull();
@@ -709,7 +709,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
   it("re-draws the head when a new mark is written into the company entry", async () => {
     const client = newClient();
     const profile = {
-      organization_id: "44444444-4444-4444-8444-444444444444",
+      company_id: "44444444-4444-4444-8444-444444444444",
       display_name: "Demo GmbH",
     };
     client.setQueryData(["company"], profile);
@@ -722,13 +722,13 @@ describe("Rail levels (a section's entries as the second level)", () => {
     act(() => {
       client.setQueryData(["company"], {
         ...profile,
-        logo_url: "/v1/organizations/44444444-4444-4444-8444-444444444444/logo",
+        logo_url: "/v1/companies/44444444-4444-4444-8444-444444444444/logo",
       });
     });
     await waitFor(() =>
       expect(
         container.querySelector(".company-logo img")?.getAttribute("src"),
-      ).toBe("/v1/organizations/44444444-4444-4444-8444-444444444444/logo"),
+      ).toBe("/v1/companies/44444444-4444-4444-8444-444444444444/logo"),
     );
   });
 
@@ -738,9 +738,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
   it("draws the company's resolved logo as the rail's mark", () => {
     const client = newClient();
     client.setQueryData(["company"], {
-      organization_id: "22222222-2222-4222-8222-222222222222",
+      company_id: "22222222-2222-4222-8222-222222222222",
       display_name: "Demo GmbH",
-      logo_url: "/v1/organizations/22222222-2222-4222-8222-222222222222/logo",
+      logo_url: "/v1/companies/22222222-2222-4222-8222-222222222222/logo",
     });
     const { container } = renderWith(
       client,
@@ -748,7 +748,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     );
     expect(
       container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe("/v1/organizations/22222222-2222-4222-8222-222222222222/logo");
+    ).toBe("/v1/companies/22222222-2222-4222-8222-222222222222/logo");
   });
 
   // A company whose site declared no icon has a face rather than a gap: the
@@ -757,7 +757,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
   it("draws the company's monogram when no logo resolved", () => {
     const client = newClient();
     client.setQueryData(["company"], {
-      organization_id: "33333333-3333-4333-8333-333333333333",
+      company_id: "33333333-3333-4333-8333-333333333333",
       display_name: "Demo GmbH",
     });
     const { container } = renderWith(
@@ -774,11 +774,11 @@ describe("Rail levels (a section's entries as the second level)", () => {
   // small reads as that company, where initials would not — so both directions
   // are asserted rather than only the interesting one.
   const TWO_MARKS = {
-    organization_id: "55555555-5555-4555-8555-555555555555",
+    company_id: "55555555-5555-4555-8555-555555555555",
     display_name: "Demo GmbH",
-    logo_url: "/v1/organizations/55555555-5555-4555-8555-555555555555/logo",
+    logo_url: "/v1/companies/55555555-5555-4555-8555-555555555555/logo",
     logo_icon_url:
-      "/v1/organizations/55555555-5555-4555-8555-555555555555/logo/icon",
+      "/v1/companies/55555555-5555-4555-8555-555555555555/logo/icon",
   };
 
   // Every brand branch carries it — the product's own mark, an installation's

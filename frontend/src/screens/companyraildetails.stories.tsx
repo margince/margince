@@ -18,12 +18,12 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 type ProfileField = components["schemas"]["CompanyProfileField"];
 
 const page = { has_more: false, next_cursor: null };
 
-const org: Organization = {
+const company: Company = {
   // Absent reads as NOT writable, which is the fail-closed default a real
   // response never relies on: the server answers this per row.
   writable: true,
@@ -51,7 +51,7 @@ const org: Organization = {
   version: 1,
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-01T08:00:00Z",
-} as unknown as Organization;
+} as unknown as Company;
 
 // The two sidecar claims the grid reads, as a crawl that found an imprint
 // leaves them. Stories that want the unstated case pass an empty list.
@@ -75,37 +75,37 @@ const sidecarFields: ProfileField[] = [
 ];
 
 function Details({
-  organization,
+  company,
   profileFields = sidecarFields,
 }: Readonly<{
-  organization: Organization;
+  company: Company;
   profileFields?: readonly ProfileField[];
 }>) {
   installFetchStub({
     "GET /me": () =>
       jsonResponse({
         user: { id: "u-1", display_name: "Mira Voss" },
-        authorization: { objects: { organization: { update: true } } },
+        authorization: { objects: { company: { update: true } } },
       }),
     "GET /users": () =>
       jsonResponse({
         data: [{ id: "u-1", display_name: "Mira Voss" }],
         page,
       }),
-    "GET /organizations/o-1/profile-fields": () =>
+    "GET /companies/o-1/profile-fields": () =>
       jsonResponse({ data: profileFields }),
   });
   return (
     <StoryProviders>
       <div style={{ maxWidth: 340 }}>
-        <DetailsGrid organization={organization} />
+        <DetailsGrid company={company} />
       </div>
     </StoryProviders>
   );
 }
 
 export const Editable: Story = {
-  render: () => <Details organization={org} />,
+  render: () => <Details company={company} />,
 };
 
 // The address a crawled record actually has: none of it. A company publishes a
@@ -117,7 +117,7 @@ export const Editable: Story = {
 export const AddressAbsent: Story = {
   render: () => (
     <Details
-      organization={{
+      company={{
         ...org,
         address: {
           line1: null,
@@ -140,7 +140,7 @@ export const AddressAbsent: Story = {
 export const AddressPartlyFilled: Story = {
   render: () => (
     <Details
-      organization={{ ...org, address: { city: "Munich", country: "DE" } }}
+      company={{ ...org, address: { city: "Munich", country: "DE" } }}
     />
   ),
 };
@@ -150,7 +150,7 @@ export const AddressPartlyFilled: Story = {
 // amount of RBAC grant in the Editable story above can reach.
 export const Archived: Story = {
   render: () => (
-    <Details organization={{ ...org, archived_at: "2026-07-15T00:00:00Z" }} />
+    <Details company={{ ...org, archived_at: "2026-07-15T00:00:00Z" }} />
   ),
 };
 
@@ -169,14 +169,14 @@ export const Archived: Story = {
 // and the VAT consultation a written number queues was unreachable for exactly
 // the companies a person would want to check.
 export const LegalIdentityUnstated: Story = {
-  render: () => <Details organization={org} profileFields={[]} />,
+  render: () => <Details company={company} profileFields={[]} />,
 };
 
 export const EmptyFields: Story = {
   render: () => (
     <Details
       profileFields={[]}
-      organization={{
+      company={{
         ...org,
         legal_name: null,
         industry: null,

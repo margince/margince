@@ -61,13 +61,13 @@ func (sr SiteRead) claim() SiteReadClaim {
 	if sr.StartedAt != nil {
 		claimedAt = *sr.StartedAt
 	}
-	var orgID *ids.UUID
-	if sr.OrganizationID != nil {
-		id := sr.OrganizationID.UUID
-		orgID = &id
+	var companyID *ids.UUID
+	if sr.CompanyID != nil {
+		id := sr.CompanyID.UUID
+		companyID = &id
 	}
 	return SiteReadClaim{
-		OrganizationID: orgID, TargetKind: sr.TargetKind, SeedURL: sr.SeedURL,
+		CompanyID: companyID, TargetKind: sr.TargetKind, SeedURL: sr.SeedURL,
 		RequestedBy: sr.RequestedBy, ClaimedAt: claimedAt,
 	}
 }
@@ -225,13 +225,13 @@ func emitSiteReadActivity(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, sr 
 	if reason := sr.activityDegradeReason(); reason != "" {
 		payload.DegradeReason = &reason
 	}
-	if sr.OrganizationID != nil {
-		label, err := siteReadSubjectLabel(ctx, tx, sr.OrganizationID.UUID)
+	if sr.CompanyID != nil {
+		label, err := siteReadSubjectLabel(ctx, tx, sr.CompanyID.UUID)
 		if err != nil {
 			return err
 		}
-		subject := openapi_types.UUID(sr.OrganizationID.UUID)
-		subjectType := entityOrganization
+		subject := openapi_types.UUID(sr.CompanyID.UUID)
+		subjectType := entityCompany
 		payload.SubjectType = &subjectType
 		payload.SubjectId = &subject
 		if label != "" {
@@ -247,12 +247,12 @@ func emitSiteReadActivity(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, sr 
 // siteReadSubjectLabel is what the read is ABOUT, named the way the product
 // titles the company everywhere else, so the rail and the record never call one
 // company two names. A read whose company is gone — an erasure can take the
-// organization while its read is still settling — goes out unnamed, and the
+// company while its read is still settling — goes out unnamed, and the
 // rail draws its generic sentence.
-func siteReadSubjectLabel(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (string, error) {
+func siteReadSubjectLabel(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (string, error) {
 	var label string
-	err := tx.QueryRow(ctx, `SELECT left(display_name, $2) FROM organization WHERE id = $1`,
-		orgID, siteReadSubjectLabelBound).Scan(&label)
+	err := tx.QueryRow(ctx, `SELECT left(display_name, $2) FROM company WHERE id = $1`,
+		companyID, siteReadSubjectLabelBound).Scan(&label)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}

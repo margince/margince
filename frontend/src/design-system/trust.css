@@ -137,7 +137,7 @@ button.evidence-chip:hover {
 }
 /* A buyer typed it, so the tag keeps the human arm's neutral chip fill and
    never the AI tint — a person did this. The ink is the accent rather than the
-   colleague teal because a buyer is a person from OUTSIDE the organization, and
+   colleague teal because a buyer is a person from OUTSIDE the company, and
    the accent is already how the product marks a buyer's own contribution (the
    stripe on their Deal Room comment). */
 .provenance-buyer {

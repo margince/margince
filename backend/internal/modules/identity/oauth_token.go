@@ -230,7 +230,7 @@ func (h Handlers) consumeAuthCode(r *http.Request, tx pgx.Tx, code, verifier str
 	// ADR-0091 §8 phase D took the tenant column off oauth_authorization_code,
 	// then off the human the code was issued to until phase D reached app_user.
 	// It is the installation's now — the same value each time, and the only one
-	// a single-organization installation has.
+	// a single-company installation has.
 	wsID, err := h.svc.InstallationWorkspace(r.Context())
 	if err != nil {
 		return redeemedCode{}, err

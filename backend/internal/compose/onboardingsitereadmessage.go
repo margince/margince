@@ -463,7 +463,7 @@ func contractCompanyReadReply(reply companyReadModelReply, evidence []companyRea
 	}
 }
 
-func (h siteReadHandlers) MessageCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
+func (h siteReadHandlers) MessageAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
 	if !companyContextReadEnabled(h.companyContextRollout) {
 		httperr.NotImplemented(w, r, "messageCompanySiteRead (company context read rollout is disabled)")
 		return

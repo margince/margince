@@ -36,8 +36,8 @@ func TestDeletingTwoSameNamedProjectsLeavesBothEvidenceRowsStanding(t *testing.T
 	// and only among unarchived rows — so two live projects called this is an
 	// ordinary state rather than a contrived one.
 	second := ids.NewV7()
-	e.WsExec(t, `INSERT INTO project (id, name, organization_id, phase, source, captured_by)
-		SELECT $1, name, organization_id, 'delivering', 'manual', 'human:x'
+	e.WsExec(t, `INSERT INTO project (id, name, company_id, phase, source, captured_by)
+		SELECT $1, name, company_id, 'delivering', 'manual', 'human:x'
 		  FROM project WHERE id = $2`, second, f.project)
 
 	for _, target := range []ids.UUID{f.project, second} {

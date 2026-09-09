@@ -136,7 +136,7 @@ afterEach(() => {
 });
 
 describe("JobHealthCard", () => {
-  it("reports every state of every kind, and which rows carry no organization", async () => {
+  it("reports every state of every kind, and which rows carry no company", async () => {
     stubRoutes();
     render(<JobHealthCard />);
     // All four counts, zeros included: "0 dead" is the reassurance an operator
@@ -154,11 +154,11 @@ describe("JobHealthCard", () => {
     // The dispatcher row is separated from the workspace's own work, and says
     // whose counts they are.
     expect(screen.getByText("retention_sweep_dispatch")).toBeInTheDocument();
-    expect(screen.getByText(/carry no organization/i)).toBeInTheDocument();
+    expect(screen.getByText(/carry no company/i)).toBeInTheDocument();
     // Each of the three readings is a NAMED row. The counts and the failures
     // are the same shape on screen, so a reading that lost its naming would
-    // leave an operator reading fleet work as this organization's.
-    expect(screen.getByText("This organization")).toBeInTheDocument();
+    // leave an operator reading fleet work as this company's.
+    expect(screen.getByText("This company")).toBeInTheDocument();
     expect(screen.getByText("Fleet dispatchers")).toBeInTheDocument();
     expect(screen.getByText("Recent failures")).toBeInTheDocument();
     // The stall signal, in a unit that survives the sub-hour case: 4500s reads as
@@ -373,7 +373,7 @@ describe("JobHealthCard", () => {
     // In its own words, INSTEAD of the readings — not three named rows each
     // saying it has nothing. That the background system is idle is one finding,
     // and a list of empty rows reports it three times as three.
-    expect(screen.queryByText("This organization")).not.toBeInTheDocument();
+    expect(screen.queryByText("This company")).not.toBeInTheDocument();
     expect(screen.queryByText("Recent failures")).not.toBeInTheDocument();
     // The stamp stands even here. An operator acting on "nothing is queued" is
     // trusting a reading, and a reading with no time on it cannot be trusted.

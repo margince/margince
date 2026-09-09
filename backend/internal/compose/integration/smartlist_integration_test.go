@@ -464,7 +464,7 @@ func TestSavedViewResourceCheckAgainstTheContractEnum(t *testing.T) {
 	declared := map[string]bool{}
 	for _, r := range []crmcontracts.SavedViewResource{
 		crmcontracts.SavedViewResourceActivities, crmcontracts.SavedViewResourceDeals,
-		crmcontracts.SavedViewResourceLeads, crmcontracts.SavedViewResourceOrganizations,
+		crmcontracts.SavedViewResourceLeads, crmcontracts.SavedViewResourceCompanies,
 		crmcontracts.SavedViewResourcePartners, crmcontracts.SavedViewResourcePeople,
 		crmcontracts.SavedViewResourceProjects,
 	} {

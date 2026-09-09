@@ -181,21 +181,21 @@ func personUpdateInput(req crmcontracts.UpdatePersonRequest, ifVersion *int64) U
 	return in
 }
 
-func organizationCreateInput(req crmcontracts.CreateOrganizationRequest) (CreateOrganizationInput, error) {
+func companyCreateInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
 	if req.DisplayName == "" {
-		return CreateOrganizationInput{}, &RequiredFieldError{Field: "display_name"}
+		return CreateCompanyInput{}, &RequiredFieldError{Field: "display_name"}
 	}
 	if err := provenance.Refuse("source", req.Source); err != nil {
-		return CreateOrganizationInput{}, err
+		return CreateCompanyInput{}, err
 	}
-	in := CreateOrganizationInput{
+	in := CreateCompanyInput{
 		DisplayName:  req.DisplayName,
 		LegalName:    req.LegalName,
 		Description:  req.Description,
 		Industry:     req.Industry,
 		Source:       req.Source,
 		OwnerID:      idArg[ids.UserKind](req.OwnerId),
-		ParentOrgID:  idArg[ids.OrganizationKind](req.ParentOrgId),
+		ParentCompanyID:  idArg[ids.CompanyKind](req.ParentCompanyId),
 		CustomFields: req.AdditionalProperties,
 	}
 	in.Address = req.Address
@@ -205,7 +205,7 @@ func organizationCreateInput(req crmcontracts.CreateOrganizationRequest) (Create
 	}
 	if req.Domains != nil {
 		for _, d := range *req.Domains {
-			in.Domains = append(in.Domains, OrgDomainInput{
+			in.Domains = append(in.Domains, CompanyDomainInput{
 				Domain:    d.Domain,
 				IsPrimary: d.IsPrimary != nil && *d.IsPrimary,
 			})
@@ -214,14 +214,14 @@ func organizationCreateInput(req crmcontracts.CreateOrganizationRequest) (Create
 	return in, nil
 }
 
-func organizationUpdateInput(req crmcontracts.UpdateOrganizationRequest, ifVersion *int64) UpdateOrganizationInput {
-	in := UpdateOrganizationInput{
+func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64) UpdateCompanyInput {
+	in := UpdateCompanyInput{
 		DisplayName:  req.DisplayName,
 		LegalName:    req.LegalName,
 		Description:  req.Description,
 		Industry:     req.Industry,
 		OwnerID:      idArg[ids.UserKind](req.OwnerId),
-		ParentOrgID:  idArg[ids.OrganizationKind](req.ParentOrgId),
+		ParentCompanyID:  idArg[ids.CompanyKind](req.ParentCompanyId),
 		IfVersion:    ifVersion,
 		CustomFields: req.AdditionalProperties,
 		LinkedInURL:  req.LinkedinUrl,
@@ -232,9 +232,9 @@ func organizationUpdateInput(req crmcontracts.UpdateOrganizationRequest, ifVersi
 		in.SizeBand = &band
 	}
 	if req.Domains != nil {
-		desired := make([]OrgDomainInput, 0, len(*req.Domains))
+		desired := make([]CompanyDomainInput, 0, len(*req.Domains))
 		for _, d := range *req.Domains {
-			desired = append(desired, OrgDomainInput{
+			desired = append(desired, CompanyDomainInput{
 				Domain:    d.Domain,
 				IsPrimary: d.IsPrimary != nil && *d.IsPrimary,
 			})
@@ -275,7 +275,7 @@ func leadCreateInput(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error
 		FullName:        req.FullName,
 		Title:           req.Title,
 		CompanyName:     req.CompanyName,
-		CandidateOrgKey: req.CandidateOrgKey,
+		CandidateCompanyKey: req.CandidateCompanyKey,
 		LinkedInURL:     req.LinkedinUrl,
 		SourceSystem:    req.SourceSystem,
 		SourceID:        req.SourceId,
@@ -332,7 +332,7 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		FullName:            req.FullName,
 		Title:               req.Title,
 		CompanyName:         req.CompanyName,
-		CandidateOrgKey:     req.CandidateOrgKey,
+		CandidateCompanyKey:     req.CandidateCompanyKey,
 		Source:              req.Source,
 		Score:               req.Score,
 		ScoreOverrideReason: req.ScoreOverrideReason,

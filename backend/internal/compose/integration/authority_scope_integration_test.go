@@ -7,7 +7,7 @@ package integration
 
 // Authority-scope invariants that only bind if EVERY path honors them:
 // an FK argument naming a row-scoped record is a READ of the target
-// (deal organization/partner, organization parent); the approval
+// (deal company/partner, company parent); the approval
 // surface honors the target row's own/team scope, not just object
 // grants; rejecting is a decision and demands the same authority as
 // approving; and a burst of undecidable stagings cannot starve older
@@ -27,14 +27,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// repPermsWithOrg extends the rep fixture with organization grants for
+// repPermsWithCompany extends the rep fixture with company grants for
 // the FK-target tests.
-func repPermsWithOrg() principal.Permissions {
+func repPermsWithCompany() principal.Permissions {
 	p := principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"person":                {Create: true, Read: true, Update: true},
-			"organization":          {Create: true, Read: true, Update: true},
+			"company":          {Create: true, Read: true, Update: true},
 			"deal":                  {Create: true, Read: true, Update: true},
 			"pipeline":              {Read: true},
 			"installation_settings": {Read: true},
@@ -45,66 +45,66 @@ func repPermsWithOrg() principal.Permissions {
 }
 
 // An FK argument to a visibility-gated record is a read of that record: a
-// rep must not be able to attach a deal or a child organization to an
-// organization they cannot read — composite FKs stop cross-tenant
+// rep must not be able to attach a deal or a child company to an
+// company they cannot read — composite FKs stop cross-tenant
 // corruption, but only the visibility probe proves the caller could read
 // the target. Accounts are readable by every seat, so the hidden target is
-// a capture-private organization of the other team's rep.
+// a capture-private company of the other team's rep.
 func TestFKTargetsRequireRowScopeVisibility(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 
-	foreignOrg := e.SeedOrg(t, "Their Org", &e.Rep3) // capture-private to Rep3
-	e.MakeCapturePrivate(t, "organization", foreignOrg, e.Rep3)
-	visibleOrg := e.SeedOrg(t, "Our Org", &e.Rep1) // rep1's own
+	foreignCompany := e.SeedCompany(t, "Their Company", &e.Rep3) // capture-private to Rep3
+	e.MakeCapturePrivate(t, "company", foreignCompany, e.Rep3)
+	visibleCompany := e.SeedCompany(t, "Our Company", &e.Rep1) // rep1's own
 	// A partner the rep CAN see, for the admit case: naming a partner needs
 	// the target to be visible AND to actually be a partner, and this test is
 	// about the first of those.
-	visiblePartner := e.SeedPartnerOrg(t, "Our Partner", nil, &e.Rep1)
-	foreignOrgID := ids.From[ids.OrganizationKind](foreignOrg)
-	visibleOrgID := ids.From[ids.OrganizationKind](visibleOrg)
-	visiblePartnerID := ids.From[ids.OrganizationKind](visiblePartner)
+	visiblePartner := e.SeedPartnerCompany(t, "Our Partner", nil, &e.Rep1)
+	foreignCompanyID := ids.From[ids.CompanyKind](foreignCompany)
+	visibleCompanyID := ids.From[ids.CompanyKind](visibleCompany)
+	visiblePartnerID := ids.From[ids.CompanyKind](visiblePartner)
 	myDeal := ids.From[ids.DealKind](e.SeedDeal(t, "Mine", pipeline, open, &e.Rep1))
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, repPermsWithOrg())
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, repPermsWithCompany())
 
 	// Create paths.
 	if _, err := e.Deals.CreateDeal(rep, deals.CreateDealInput{
-		Name: "Sneaky", PipelineID: pipeline, StageID: open, OrganizationID: &foreignOrgID,
+		Name: "Sneaky", PipelineID: pipeline, StageID: open, CompanyID: &foreignCompanyID,
 	}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("CreateDeal with out-of-scope organization → %v, want ErrNotFound", err)
+		t.Errorf("CreateDeal with out-of-scope company → %v, want ErrNotFound", err)
 	}
 	// Naming a partner at birth is the same disclosure as naming one on an
 	// update, so it carries the same gate: a rep may not attribute a deal to a
-	// partner organization they cannot read.
+	// partner company they cannot read.
 	if _, err := e.Deals.CreateDeal(rep, deals.CreateDealInput{
-		Name: "Sneaky Partner", PipelineID: pipeline, StageID: open, PartnerOrganizationID: &foreignOrgID,
+		Name: "Sneaky Partner", PipelineID: pipeline, StageID: open, PartnerCompanyID: &foreignCompanyID,
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("CreateDeal with out-of-scope partner → %v, want ErrNotFound", err)
 	}
-	if _, err := e.People.CreateOrganization(rep, people.CreateOrganizationInput{
-		DisplayName: "Sneaky Child", ParentOrgID: &foreignOrgID,
+	if _, err := e.People.CreateCompany(rep, people.CreateCompanyInput{
+		DisplayName: "Sneaky Child", ParentCompanyID: &foreignCompanyID,
 	}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("CreateOrganization with out-of-scope parent → %v, want ErrNotFound", err)
+		t.Errorf("CreateCompany with out-of-scope parent → %v, want ErrNotFound", err)
 	}
 
-	// Update paths — organization, partner, and parent reattachment.
-	if _, err := e.Deals.UpdateDeal(rep, myDeal, deals.UpdateDealInput{OrganizationID: &foreignOrgID}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("UpdateDeal attaching out-of-scope organization → %v, want ErrNotFound", err)
+	// Update paths — company, partner, and parent reattachment.
+	if _, err := e.Deals.UpdateDeal(rep, myDeal, deals.UpdateDealInput{CompanyID: &foreignCompanyID}); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("UpdateDeal attaching out-of-scope company → %v, want ErrNotFound", err)
 	}
-	if _, err := e.Deals.UpdateDeal(rep, myDeal, deals.UpdateDealInput{PartnerOrganizationID: &foreignOrgID}); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.Deals.UpdateDeal(rep, myDeal, deals.UpdateDealInput{PartnerCompanyID: &foreignCompanyID}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("UpdateDeal attaching out-of-scope partner → %v, want ErrNotFound", err)
 	}
-	if _, err := e.People.UpdateOrganization(rep, visibleOrgID, people.UpdateOrganizationInput{ParentOrgID: &foreignOrgID}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("UpdateOrganization reparenting under out-of-scope org → %v, want ErrNotFound", err)
+	if _, err := e.People.UpdateCompany(rep, visibleCompanyID, people.UpdateCompanyInput{ParentCompanyID: &foreignCompanyID}); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("UpdateCompany reparenting under out-of-scope company → %v, want ErrNotFound", err)
 	}
 
 	// The same references succeed when the target IS visible — the gate
 	// narrows scope, it does not break the feature.
-	if _, err := e.Deals.UpdateDeal(rep, myDeal, deals.UpdateDealInput{OrganizationID: &visibleOrgID}); err != nil {
-		t.Errorf("UpdateDeal attaching own-team organization → %v, want ok", err)
+	if _, err := e.Deals.UpdateDeal(rep, myDeal, deals.UpdateDealInput{CompanyID: &visibleCompanyID}); err != nil {
+		t.Errorf("UpdateDeal attaching own-team company → %v, want ok", err)
 	}
 	if _, err := e.Deals.CreateDeal(rep, deals.CreateDealInput{
-		Name: "Partner deal", PipelineID: pipeline, StageID: open, PartnerOrganizationID: &visiblePartnerID,
+		Name: "Partner deal", PipelineID: pipeline, StageID: open, PartnerCompanyID: &visiblePartnerID,
 	}); err != nil {
 		t.Errorf("CreateDeal naming a visible partner → %v, want ok", err)
 	}

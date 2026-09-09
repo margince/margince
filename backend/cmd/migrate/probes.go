@@ -8,7 +8,7 @@ package main
 // conflating "the answer is no" with "the command failed". They live together
 // because that output contract is the thing they share and the thing a caller
 // depends on -- scripts/lib-testdb.sh string-compares db-exists, and the deploy
-// entrypoint string-compares org-exists.
+// entrypoint string-compares company-exists.
 
 import (
 	"context"
@@ -40,23 +40,23 @@ func dbExists(ctx context.Context, conn *pgx.Conn, name string, stdout io.Writer
 	return nil
 }
 
-// orgExists answers whether this installation holds an active organization —
+// companyExists answers whether this installation holds an active company —
 // whether it is provisioned. A deployment asks before the api boots, to know
 // whether a bootstrap credential is still needed at all (ADR-0061 §2: bootstrap
 // values are consumed exactly once, and the section may be deleted once the
-// organization exists).
+// company exists).
 //
-// The predicate is the one the api itself applies when it counts organizations
+// The predicate is the one the api itself applies when it counts companies
 // at boot — archived_at IS NULL — rather than a second spelling of "active" that
 // could drift from it.
-func orgExists(ctx context.Context, conn *pgx.Conn, stdout io.Writer) error {
+func companyExists(ctx context.Context, conn *pgx.Conn, stdout io.Writer) error {
 	var exists bool
 	if err := conn.QueryRow(ctx,
 		`SELECT EXISTS (SELECT 1 FROM workspace WHERE archived_at IS NULL)`).Scan(&exists); err != nil {
-		return fmt.Errorf("migrate org-exists: probing for an organization: %w", err)
+		return fmt.Errorf("migrate company-exists: probing for a company: %w", err)
 	}
 	if _, err := fmt.Fprintf(stdout, "%t\n", exists); err != nil {
-		return fmt.Errorf("migrate org-exists: writing the answer: %w", err)
+		return fmt.Errorf("migrate company-exists: writing the answer: %w", err)
 	}
 	return nil
 }
@@ -84,7 +84,7 @@ func rotateSetupToken(ctx context.Context, dsn string, stdout io.Writer) error {
 
 	raw, err := identity.NewService(pool).RotateSetupToken(ctx)
 	if errors.Is(err, identity.ErrAlreadyProvisioned) {
-		return errors.New("migrate setup-token: this installation already has an organization — there is nothing left to claim; use `migrate reset-password` to recover an account")
+		return errors.New("migrate setup-token: this installation already has a company — there is nothing left to claim; use `migrate reset-password` to recover an account")
 	}
 	if err != nil {
 		return err

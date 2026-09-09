@@ -11,7 +11,7 @@ import (
 // ID is one entity's identifier: the UUID plus a phantom kind tag. Two
 // entities' IDs are distinct types — assignment AND conversion between
 // them are compile errors (the zero-size [0]K field blocks conversion),
-// so MergePerson(orgID, personID) stops compiling instead of silently
+// so MergePerson(companyID, personID) stops compiling instead of silently
 // merging the wrong records. Embedding keeps the UUID's String/IsZero/
 // text-marshalling; Value/Scan below carry it through pgx (pgtype falls
 // back to driver.Valuer / sql.Scanner for wrapper structs).
@@ -84,7 +84,7 @@ type (
 	UserKind         struct{}
 	TeamKind         struct{}
 	PersonKind       struct{}
-	OrganizationKind struct{}
+	CompanyKind struct{}
 	LeadKind         struct{}
 	DealKind         struct{}
 	ProjectKind      struct{}
@@ -107,7 +107,7 @@ func (WorkspaceKind) kind() string    { return "workspace" }
 func (UserKind) kind() string         { return "user" }
 func (TeamKind) kind() string         { return "team" }
 func (PersonKind) kind() string       { return "person" }
-func (OrganizationKind) kind() string { return "organization" }
+func (CompanyKind) kind() string { return "company" }
 func (LeadKind) kind() string         { return "lead" }
 func (DealKind) kind() string         { return "deal" }
 func (ProjectKind) kind() string      { return "project" }
@@ -130,7 +130,7 @@ type (
 	UserID         = ID[UserKind]
 	TeamID         = ID[TeamKind]
 	PersonID       = ID[PersonKind]
-	OrganizationID = ID[OrganizationKind]
+	CompanyID = ID[CompanyKind]
 	LeadID         = ID[LeadKind]
 	DealID         = ID[DealKind]
 	PipelineID     = ID[PipelineKind]

@@ -34,7 +34,7 @@ import (
 // LinkTargetVisibleClause answers, for ONE activity_link row, whether the
 // record it points at is visible under the caller's row scope. An empty
 // string means a caller for whom every target is visible — which, since
-// person and organization carry capture privacy, is the system principal
+// person and company carry capture privacy, is the system principal
 // alone.
 //
 // It exists because "may I read this activity" and "may I be told what this
@@ -63,7 +63,7 @@ func LinkTargetVisibleClause(ctx context.Context, alias string, arg func(any) in
 // of them silently renders a predicate that matches nothing.
 const (
 	tablePerson       = "person"
-	tableOrganization = "organization"
+	tableCompany = "company"
 	tableDeal         = "deal"
 	tableLead         = "lead"
 	tableProject      = "project"
@@ -74,7 +74,7 @@ const (
 // activity gate (ActivityDiscoverClause, inheritedscope.go) decide whether they
 // may skip their clause by asking UnboundedFor (rowscope.go) over this set, so
 // a record type that gains capture privacy tightens both at once.
-var linkTargetTables = []string{tablePerson, tableOrganization, tableDeal, tableLead, tableProject}
+var linkTargetTables = []string{tablePerson, tableCompany, tableDeal, tableLead, tableProject}
 
 // linkTargetVisible renders the per-arm "this link's target is visible"
 // disjunction over activity_link's polymorphic columns.
@@ -82,7 +82,7 @@ func linkTargetVisible(p principal.Principal, alias string, arg func(any) int) s
 	arms := make([]string, 0, len(linkTargetTables))
 	for _, t := range []struct{ column, table, probe string }{
 		{"person_id", tablePerson, "sp"},
-		{"organization_id", tableOrganization, "so"},
+		{"company_id", tableCompany, "so"},
 		{"deal_id", tableDeal, "sd"},
 		{"lead_id", tableLead, "sl"},
 		{"project_id", tableProject, "spr"},
@@ -142,7 +142,7 @@ func linkTargetArm(alias, column, table, probe, predicate string) string {
 // and the one that forgot would look exactly like the thirty-nine that did not.
 //
 // The few read paths that call this for its existence half — a contract listing
-// under an organization, a relationship read under its anchor — pay for it too:
+// under a company, a relationship read under its anchor — pay for it too:
 // they hold that one anchor for the length of a short read, which delays an
 // archive of it and blocks nothing else. That is the price of the probe having
 // one meaning.

@@ -92,7 +92,7 @@ describe("the custom-fields admin, at its address inside settings", () => {
         if (url.endsWith("/v1/company")) {
           return new Response(
             JSON.stringify({
-              organization_id: "018f3a1b-0000-7000-8000-0000000000a1",
+              company_id: "018f3a1b-0000-7000-8000-0000000000a1",
               display_name: "Gradion",
               website: "gradion.com",
               offer_summary: "Revenue software for manufacturers",
@@ -618,7 +618,7 @@ describe("password-reset deep link", () => {
         }
         if (url.endsWith("/v1/company")) {
           return new Response(
-            JSON.stringify({ organization_id: "o1", display_name: "Acme" }),
+            JSON.stringify({ company_id: "o1", display_name: "Acme" }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
         }
@@ -690,7 +690,7 @@ describe("password-reset deep link", () => {
         }
         if (url.endsWith("/v1/company")) {
           return new Response(
-            JSON.stringify({ organization_id: "o1", display_name: "Acme" }),
+            JSON.stringify({ company_id: "o1", display_name: "Acme" }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
         }
@@ -774,7 +774,7 @@ describe("onboarding gate", () => {
           return status === 200
             ? new Response(
                 JSON.stringify({
-                  organization_id: "o1",
+                  company_id: "o1",
                   display_name: "Acme GmbH",
                 }),
                 {

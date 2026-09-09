@@ -12,7 +12,7 @@ package gates
 // /v1/people?tag=vip` whose handler never reads `tag` returns EVERY person the
 // caller may see, with 200 OK and a well-formed page: the client cannot tell
 // that from a workspace where everyone carries the tag. Three of these were
-// live when the gate was written — `tag`, `organization.domain`,
+// live when the gate was written — `tag`, `company.domain`,
 // `activity.assignee_id` — plus one shadow, `deal.project_id`, that answered
 // the whole incumbent mirror to a caller who named one project.
 //
@@ -284,7 +284,7 @@ func TestTheDeclaredFilterCensusReadsTheGeneratedShape(t *testing.T) {
 	}
 	// The person list declares exactly these, and the three paging components
 	// it also declares are not among them.
-	want := "ai_written,captured_by_kind,include_archived,organization_id,owner_id,owner_team_id,q,tag_id,tag_mode,unassigned"
+	want := "ai_written,captured_by_kind,include_archived,company_id,owner_id,owner_team_id,q,tag_id,tag_mode,unassigned"
 	if got := strings.Join(wire, ","); got != want {
 		t.Errorf("listPeople's narrowing parameters = %q, want %q", got, want)
 	}

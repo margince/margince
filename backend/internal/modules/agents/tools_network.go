@@ -63,7 +63,7 @@ type WhoKnowsAnswer struct {
 // account, and whether the candidate set the warmth was computed over was
 // itself cut short.
 type IntroPathAnswer struct {
-	OrganizationID ids.UUID     `json:"organization_id"`
+	CompanyID ids.UUID     `json:"company_id"`
 	Routes         []IntroRoute `json:"routes"`
 	// CandidatesTruncated says the ranking was computed over a bounded slice of
 	// the account's contacts, so a warmer route may exist outside it. A ranked
@@ -178,7 +178,7 @@ type IntroRoute struct {
 //
 // The bool reports that the CANDIDATE set was cut before ranking, so the
 // answer may not contain the warmest route that exists.
-type IntroPathLister func(ctx context.Context, orgID ids.UUID) (routes []IntroRoute, candidatesTruncated bool, err error)
+type IntroPathLister func(ctx context.Context, companyID ids.UUID) (routes []IntroRoute, candidatesTruncated bool, err error)
 
 // AtRiskDeal is one deal the coverage rules have something to say about.
 type AtRiskDeal struct {
@@ -362,10 +362,10 @@ func (t introPathTool) Spec() mcp.ToolSpec {
 		Name: "intro_path_to", Title: "Find a warm introduction path", Version: toolVersionV1,
 		Description:   introPathToCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getOrganizationGraph",
+		OpenAPIOp: "getCompanyGraph",
 		InputSchema: schema(`{"type":"object","properties":{
-			"organization_id":{"type":"string","format":"uuid","description":"The account to find a warm route into"}},
-			"required":["organization_id"],"additionalProperties":false}`),
+			"company_id":{"type":"string","format":"uuid","description":"The account to find a warm route into"}},
+			"required":["company_id"],"additionalProperties":false}`),
 		OutputSchema: schemaFor[IntroPathAnswer](),
 	}
 }
@@ -374,17 +374,17 @@ func (t introPathTool) Spec() mcp.ToolSpec {
 // is computed after the fetch bound, so the genuinely warmest route can sit
 // outside the slice that was read — and a model told nothing reports "nobody
 // warmer exists" from a list that never looked.
-const introPathTruncatedMessage = "More contacts exist at this organization than were examined, " +
+const introPathTruncatedMessage = "More contacts exist at this company than were examined, " +
 	"so a warmer route may exist outside this list. Do not report these as the only ways in."
 
 func (t introPathTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
-		OrganizationID ids.UUID `json:"organization_id"`
+		CompanyID ids.UUID `json:"company_id"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	routes, truncated, err := t.list(ctx, args.OrganizationID)
+	routes, truncated, err := t.list(ctx, args.CompanyID)
 	if err != nil {
 		return nil, err
 	}
@@ -395,7 +395,7 @@ func (t introPathTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 		routes = []IntroRoute{}
 	}
 	noteDerivedContent(ctx)
-	noteEvidence(ctx, datasource.EntityOrganization, args.OrganizationID)
+	noteEvidence(ctx, datasource.EntityCompany, args.CompanyID)
 	for _, route := range routes {
 		noteEvidence(ctx, datasource.EntityPerson, route.PersonID)
 	}
@@ -403,7 +403,7 @@ func (t introPathTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 		noteWarning(ctx, warningSweepTruncated, introPathTruncatedMessage)
 	}
 	return json.Marshal(IntroPathAnswer{
-		OrganizationID: args.OrganizationID, Routes: routes,
+		CompanyID: args.CompanyID, Routes: routes,
 		// Warmth is computed AFTER the read, so an account with more contacts
 		// than the fetch bound contributes only the first slice of them and the
 		// genuinely warmest route can fall outside it. Saying so is the "no

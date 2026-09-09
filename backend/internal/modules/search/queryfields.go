@@ -35,7 +35,7 @@ import (
 // WHICH fields are askable is decided here.
 var contractRecords = map[string]reflect.Type{
 	entityPerson:        reflect.TypeOf(crmcontracts.Person{}),
-	entityOrganization:  reflect.TypeOf(crmcontracts.Organization{}),
+	entityCompany:  reflect.TypeOf(crmcontracts.Company{}),
 	entityDeal:          reflect.TypeOf(crmcontracts.Deal{}),
 	entityLead:          reflect.TypeOf(crmcontracts.Lead{}),
 	entityProject:       reflect.TypeOf(crmcontracts.Project{}),
@@ -199,7 +199,7 @@ const relationSuffix = "_id"
 
 // contractRelations answers the depth-1 hops declared BY this record type:
 // every scalar id member whose stripped name is itself a searchable record
-// type. `deal.organization_id` gives deal the relation `organization`;
+// type. `deal.company_id` gives deal the relation `company`;
 // `deal.owner_id` gives nothing, because a user is not a record type this
 // module searches.
 func contractRelations(entity string, fields []Field) []Relation {
@@ -219,12 +219,12 @@ func contractRelations(entity string, fields []Field) []Relation {
 
 // inverseRelations answers the hops that land ON this record type: for every
 // OTHER searchable record declaring a reference to it, the reverse edge,
-// named for the referring type. `deal.organization_id` gives organization the
+// named for the referring type. `deal.company_id` gives company the
 // relation `deals`.
 //
 // The inverse direction is derived rather than declared for the same reason
 // the forward one is — and it is the direction that carries most of the
-// questions worth asking ("organizations with an open deal"), which a
+// questions worth asking ("companies with an open deal"), which a
 // forward-only derivation would leave unaskable while looking complete.
 func inverseRelations(entity string) []Relation {
 	var relations []Relation

@@ -147,7 +147,7 @@ func validateHeader(header []string) error {
 // The timidity is the design. A screen shows a suggestion as a filled-in
 // destination, so a wrong one is a mistake the human must first NOTICE and
 // then undo, while a missing one is a blank they simply fill. "Company" does
-// not become organization_id here, and neither does anything else that needs a
+// not become company_id here, and neither does anything else that needs a
 // guess about meaning rather than a comparison of names.
 func SuggestMapping(p Profile, targets []string) map[string]string {
 	byNormal := make(map[string]string, len(targets))

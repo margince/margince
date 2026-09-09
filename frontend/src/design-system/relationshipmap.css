@@ -113,7 +113,7 @@
   fill: var(--bgCard);
 }
 
-.rmap-organization .rmap-box {
+.rmap-company .rmap-box {
   stroke: var(--borderControl);
   stroke-width: 2;
 }

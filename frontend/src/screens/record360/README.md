@@ -49,9 +49,9 @@ flag — which is the thing this kit exists to avoid, not an instance of it.
 
 ## The contract already agrees
 
-`OrganizationBriefSentence` is the sentence type for the org brief, the deal
+`CompanyBriefSentence` is the sentence type for the company brief, the deal
 status card, Person360 and the growth-fit panel alike. Only its NAME says
-"Organization". The kit types against it directly and calls it what it is, so a
+"Company". The kit types against it directly and calls it what it is, so a
 reader of `record360` is not told that a deal's sentence is a company's.
 
 ## The CSS keeps its `co-` prefix, for now

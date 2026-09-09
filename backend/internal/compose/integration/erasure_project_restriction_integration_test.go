@@ -36,7 +36,7 @@ type projectErasureFixture struct {
 
 func seedProjectErasureFixture(t *testing.T, e *Env) projectErasureFixture {
 	t.Helper()
-	org := e.SeedOrg(t, "Acme GmbH", nil)
+	company := e.SeedCompany(t, "Acme GmbH", nil)
 	f := projectErasureFixture{person: ids.NewV7(), email: ids.NewV7(), project: ids.NewV7()}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
@@ -51,9 +51,9 @@ func seedProjectErasureFixture(t *testing.T, e *Env) projectErasureFixture {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO project (id, name, key, organization_id, phase, source, captured_by)
+			`INSERT INTO project (id, name, key, company_id, phase, source, captured_by)
 			 VALUES ($1, 'ERP rollout', 'ERP27', $2, 'delivering', 'manual', 'human:x')`,
-			f.project, org); err != nil {
+			f.project, company); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,

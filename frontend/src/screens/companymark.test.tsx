@@ -17,11 +17,11 @@ import { CompanyMark } from "./companymark";
 type CompanyProfile = components["schemas"]["CompanyProfile"];
 
 const ORG = "00000000-0000-4000-8000-000000000010";
-const LOGO = `/v1/organizations/${ORG}/logo`;
-const ICON = `/v1/organizations/${ORG}/logo/icon`;
+const LOGO = `/v1/companies/${ORG}/logo`;
+const ICON = `/v1/companies/${ORG}/logo/icon`;
 
 const WITHOUT_MARK: CompanyProfile = {
-  organization_id: ORG,
+  company_id: ORG,
   display_name: "Acme GmbH",
 };
 const WITH_MARK: CompanyProfile = { ...WITHOUT_MARK, logo_url: LOGO };

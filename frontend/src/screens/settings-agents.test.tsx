@@ -93,7 +93,7 @@ function agentToolsBackend() {
             name: "search_records",
             title: "Search records",
             description:
-              'Find people, organizations, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
+              'Find people, companies, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
             required_scope: "read",
             tier: "auto_execute",
             egress: false,
@@ -163,7 +163,7 @@ describe("AgentToolsCard (IT-1)", () => {
     ).toBeTruthy();
     expect(
       searchRow &&
-        within(searchRow).getByText(/Find people, organizations, deals/),
+        within(searchRow).getByText(/Find people, companies, deals/),
     ).toBeTruthy();
     // Governance travels with it, because the server appends it to the same
     // string — the console must not show a shortened reading of what an agent

@@ -5,7 +5,7 @@ package people
 
 // The date the open-pipeline rollup converts at.
 //
-// It used to be the database's CURRENT_DATE, which made two clocks: org360
+// It used to be the database's CURRENT_DATE, which made two clocks: company360
 // samples Go's and honours an injected one, and this read asked Postgres. Two
 // readers of one account's pipeline could therefore select different FX rates in
 // the same response — a whole day apart at midnight in the database's zone.

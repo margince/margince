@@ -70,7 +70,7 @@ type EnsureChannelCounterpartyInput struct {
 }
 
 // EnsureChannelCounterpartyResult reports what the ensure did. It carries no
-// organization fields, unlike its mail sibling: this path never derives a
+// company fields, unlike its mail sibling: this path never derives a
 // company, so there would be nothing honest to put in them.
 type EnsureChannelCounterpartyResult struct {
 	PersonID       ids.PersonID
@@ -426,7 +426,7 @@ func handleImage(provider string, handle *string) map[string]any {
 }
 
 // emptyToNil mirrors the columns' NULLIF: absent is one state, not two. Shared
-// by the channel handle and the organization name columns, both of which read
+// by the channel handle and the company name columns, both of which read
 // NULL as "not set" and would otherwise grow a second, silent spelling of it.
 func emptyToNil(value string) *string {
 	if value == "" {

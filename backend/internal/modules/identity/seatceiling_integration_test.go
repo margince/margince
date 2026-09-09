@@ -42,7 +42,7 @@ func licenseFor(t *testing.T, e *revocationEnv, ceiling SeatCeiling) {
 // agree with a predicate the product does not have.
 //
 // The workspace predicate is the test's own, and the product needs none: an
-// installation serves exactly one organization, so every full seat in the
+// installation serves exactly one company, so every full seat in the
 // database is one of its seats. This suite seeds a workspace per environment
 // into a database that holds every other suite's, which is the one place that
 // assumption does not hold.

@@ -157,9 +157,9 @@ function PersonFacts({
             term: t("worklist.pane.company"),
             value: (
               <EntityRef
-                kind="organization"
-                id={employer.organization_id}
-                name={employer.organization_name}
+                kind="company"
+                id={employer.company_id}
+                name={employer.company_name}
               />
             ),
           },

@@ -182,9 +182,9 @@ describe("a citation that is not a message", () => {
     expect(onOpenRecord).toHaveBeenCalledWith("deal", "deal-1", []);
   });
 
-  it("leaves an organization flat, as the page the reader is already on", () => {
+  it("leaves a company flat, as the page the reader is already on", () => {
     renderCitations(
-      [{ entity_type: "organization", entity_id: "org-1", name: "Akeneo" }],
+      [{ entity_type: "company", entity_id: "company-1", name: "Akeneo" }],
       { onOpenRecord: vi.fn(), onOpenEmail: vi.fn() },
     );
 

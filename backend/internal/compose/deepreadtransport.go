@@ -44,7 +44,7 @@ type runTransparencyReader interface {
 
 // decodeSeedOverride reads the optional body override and validates it; it
 // writes the problem response itself and reports whether the caller may
-// proceed (an empty override with ok=true means "use the org's own domain").
+// proceed (an empty override with ok=true means "use the company's own domain").
 func decodeSeedOverride(w http.ResponseWriter, r *http.Request) (string, bool) {
 	if r.ContentLength == 0 {
 		return "", true
@@ -91,7 +91,7 @@ func (e *deepReadEngine) logger() *slog.Logger {
 	return e.log
 }
 
-// start resolves the seed URL (body override, else the org's own domain),
+// start resolves the seed URL (body override, else the company's own domain),
 // creates or joins the dossier, and — only for a fresh dossier — enqueues
 // the crawl job. 202 either way: the read to poll is the answer.
 func (e *deepReadEngine) start(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
@@ -118,10 +118,10 @@ func (e *deepReadEngine) start(w http.ResponseWriter, r *http.Request, id openap
 // The no-website case returns its DetailedError rather than writing one, so
 // either transport renders the same 422 from the same decision.
 func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, override string) (crmcontracts.SiteReadStarted, error) {
-	orgID := ids.From[ids.OrganizationKind](id)
+	companyID := ids.From[ids.CompanyKind](id)
 	seedURL := override
 	if seedURL == "" {
-		resolved, err := e.people.EnrichTargetURL(ctx, orgID)
+		resolved, err := e.people.EnrichTargetURL(ctx, companyID)
 		if errors.Is(err, people.ErrNoEnrichTarget) {
 			return crmcontracts.SiteReadStarted{}, &httperr.DetailedError{
 				Status: http.StatusUnprocessableEntity,
@@ -135,11 +135,11 @@ func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, overrid
 		seedURL = resolved
 	}
 
-	read, joined, err := e.people.StartSiteReadQueued(ctx, orgID, seedURL, requestedBy(ctx),
+	read, joined, err := e.people.StartSiteReadQueued(ctx, companyID, seedURL, requestedBy(ctx),
 		func(ctx context.Context, tx pgx.Tx, read people.SiteRead) error {
 			return e.enqueue.EnqueueTx(ctx, tx, SiteDeepReadArgs{
 				Workspace:      storekit.MustWorkspace(ctx),
-				OrganizationID: orgID.UUID,
+				CompanyID: companyID.UUID,
 				SiteReadID:     read.ID,
 				RequestedBy:    read.RequestedBy,
 			}, siteDeepReadInsertOpts())
@@ -162,7 +162,7 @@ func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, overrid
 
 // report answers the SPA's poll with the dossier as it stands.
 func (e *deepReadEngine) report(w http.ResponseWriter, r *http.Request, id, readID openapi_types.UUID) {
-	read, err := e.people.GetSiteRead(r.Context(), ids.From[ids.OrganizationKind](ids.UUID(id)), ids.UUID(readID))
+	read, err := e.people.GetSiteRead(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)), ids.UUID(readID))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -173,7 +173,7 @@ func (e *deepReadEngine) report(w http.ResponseWriter, r *http.Request, id, read
 // latestReport answers with the newest read on this account, for a page that
 // holds no read id — which is every load after the one that started the crawl.
 func (e *deepReadEngine) latestReport(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	read, err := e.people.LatestSiteRead(r.Context(), ids.From[ids.OrganizationKind](ids.UUID(id)))
+	read, err := e.people.LatestSiteRead(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -185,12 +185,12 @@ func (e *deepReadEngine) latestReport(w http.ResponseWriter, r *http.Request, id
 // always concrete (empty, never null): the report's whole point is an
 // explicit account.
 func siteReadReport(read people.SiteRead) crmcontracts.SiteReadReport {
-	if read.OrganizationID == nil {
+	if read.CompanyID == nil {
 		panic("siteReadReport called for an unbound onboarding dossier")
 	}
 	report := crmcontracts.SiteReadReport{
 		ReadId:         openapi_types.UUID(read.ID),
-		OrganizationId: openapi_types.UUID(read.OrganizationID.UUID),
+		CompanyId: openapi_types.UUID(read.CompanyID.UUID),
 		SeedUrl:        read.SeedURL,
 		Status:         crmcontracts.SiteReadReportStatus(read.Status),
 		Pages:          make([]crmcontracts.SiteReadPage, 0, len(read.Pages)),

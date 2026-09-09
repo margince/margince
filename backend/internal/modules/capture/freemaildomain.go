@@ -261,7 +261,7 @@ func (s *FreemailDomainStore) Remove(ctx context.Context, id ids.UUID) error {
 
 // lockFreemailDomain serializes decisions about ONE domain for the life of the
 // caller's transaction. Keyed on the domain alone since ADR-0091 §5 — one
-// installation, one organization (ADR-0061) — so two admins editing different
+// installation, one company (ADR-0061) — so two admins editing different
 // domains never wait on each other.
 func lockFreemailDomain(ctx context.Context, tx pgx.Tx, domain string) error {
 	if _, err := tx.Exec(ctx,

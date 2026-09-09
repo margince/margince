@@ -117,7 +117,7 @@ var invention = map[textlang.Lang][]string{
 // first contacted whom.
 //
 // The product holds no person-to-person referral record — referred_by is
-// constrained org-to-org — so a directed introduction fact in a draft is
+// constrained company-to-company — so a directed introduction fact in a draft is
 // necessarily read out of quoted correspondence, which is how the reported
 // defect got the direction backwards. Silence about introductions is the
 // correct behaviour today (DRAFT-AC-E-7), which makes this list a flat refusal

@@ -25,11 +25,11 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type View = components["schemas"]["Organization360"];
+type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
-const org = {
+const company = {
   id: "o-1",
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
@@ -50,7 +50,7 @@ const org = {
 
 const populated = {
   as_of: "2026-06-01T09:00:00Z",
-  organization: org,
+  company: company,
   sections_omitted: [],
   people: {
     data: [
@@ -104,18 +104,18 @@ const withheld = {
 
 function Rail({ view }: Readonly<{ view: View }>) {
   installFetchStub({
-    // Without a routed session useCan("organization","update") fails closed
+    // Without a routed session useCan("company","update") fails closed
     // (useMe's no-authorization fallback) and canEdit is false for every field
     // the DetailsGrid draws, contradicting this file's own claim that every
     // seeded demo account grants full RBAC.
-    "GET /me": meRoute({ organization: ["read", "update"] }),
+    "GET /me": meRoute({ company: ["read", "update"] }),
     // Payment is the third health meter, sourced from usePaymentHealth off
     // this endpoint rather than off view.health. A no_connection reply
     // leaves payment undefined and the meter never draws, so every story in
     // this file needs a connected summary to show the full three-meter card.
-    "GET /organizations/o-1/finance-summary": () =>
+    "GET /companies/o-1/finance-summary": () =>
       jsonResponse({
-        organization_id: "o-1",
+        company_id: "o-1",
         state: "connected",
         provider: "offline_demo",
         last_synced_at: "2026-08-10T06:00:00Z",
@@ -136,7 +136,7 @@ function Rail({ view }: Readonly<{ view: View }>) {
     <StoryProviders>
       <div style={{ maxWidth: 340 }}>
         <CompanyRail
-          orgId="o-1"
+          companyId="o-1"
           view={view}
           loading={false}
           composerOpen={false}

@@ -5,7 +5,7 @@ package compose
 
 // The overlay-mode human read surface (design.md §4.1: "Overlay does not
 // fork the data API"). Server shadows the contract read ops for the five
-// mirror entity types — get/list for person, organization, deal, lead,
+// mirror entity types — get/list for person, company, deal, lead,
 // activity, plus search — routing them through the same Dispatcher the
 // MCP/agent seam consumers already ride when the workspace runs in
 // overlay mode, and delegating to the native module handler otherwise.
@@ -54,7 +54,7 @@ const (
 	paramUnassigned       = "unassigned"
 	paramPipelineID       = "pipeline_id"
 	paramStageID          = "stage_id"
-	paramOrganizationID   = "organization_id"
+	paramCompanyID   = "company_id"
 	paramStatus           = "status"
 	paramForecastCategory = "forecast_category"
 	paramKind             = "kind"
@@ -225,8 +225,8 @@ func (s Server) ListPeople(w http.ResponseWriter, r *http.Request, params crmcon
 			{paramTagMode, params.TagMode != nil},
 			// Employment is OUR edge: the mirror holds the incumbent's own
 			// contact-to-company links, under their ids, so a margince
-			// organization id names nothing there.
-			{paramOrganizationID, params.OrganizationId != nil},
+			// company id names nothing there.
+			{paramCompanyID, params.CompanyId != nil},
 			{paramCapturedByKind, params.CapturedByKind != nil},
 			{paramAiWritten, params.AiWritten != nil},
 		},
@@ -236,16 +236,16 @@ func (s Server) ListPeople(w http.ResponseWriter, r *http.Request, params crmcon
 		})
 }
 
-// GetOrganization shadows the organization read.
-func (s Server) GetOrganization(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	overlayGet(s, w, r, datasource.EntityOrganization, id,
-		func() { s.peopleHandlers.GetOrganization(w, r, id) }, overlayWireOrganization)
+// GetCompany shadows the company read.
+func (s Server) GetCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	overlayGet(s, w, r, datasource.EntityCompany, id,
+		func() { s.peopleHandlers.GetCompany(w, r, id) }, overlayWireCompany)
 }
 
-// ListOrganizations shadows the organization list.
-func (s Server) ListOrganizations(w http.ResponseWriter, r *http.Request, params crmcontracts.ListOrganizationsParams) {
-	overlayList(s, w, r, datasource.EntityOrganization,
-		func() { s.peopleHandlers.ListOrganizations(w, r, params) },
+// ListCompanies shadows the company list.
+func (s Server) ListCompanies(w http.ResponseWriter, r *http.Request, params crmcontracts.ListCompaniesParams) {
+	overlayList(s, w, r, datasource.EntityCompany,
+		func() { s.peopleHandlers.ListCompanies(w, r, params) },
 		[]overlayParam{
 			{paramSort, params.Sort != nil},
 			{paramOwnerID, params.OwnerId != nil},
@@ -273,9 +273,9 @@ func (s Server) ListOrganizations(w http.ResponseWriter, r *http.Request, params
 			// would read as satisfied and is not (ADR-0082/A127).
 			{"include_anchor", params.IncludeAnchor != nil},
 		},
-		params.Q, params.Cursor, params.Limit, overlayWireOrganization,
-		func(data []crmcontracts.Organization, page crmcontracts.PageInfo) any {
-			return crmcontracts.OrganizationListResponse{Data: data, Page: page}
+		params.Q, params.Cursor, params.Limit, overlayWireCompany,
+		func(data []crmcontracts.Company, page crmcontracts.PageInfo) any {
+			return crmcontracts.CompanyListResponse{Data: data, Page: page}
 		})
 }
 
@@ -297,10 +297,10 @@ func (s Server) ListDeals(w http.ResponseWriter, r *http.Request, params crmcont
 			{paramPipelineID, params.PipelineId != nil},
 			{paramStageID, params.StageId != nil},
 			{paramOwnerID, params.OwnerId != nil},
-			{paramOrganizationID, params.OrganizationId != nil},
+			{paramCompanyID, params.CompanyId != nil},
 			{paramStatus, params.Status != nil},
 			{"stalled", params.Stalled != nil},
-			{"partner_org_id", params.PartnerOrgId != nil},
+			{"partner_company_id", params.PartnerCompanyId != nil},
 			{"partner_sourced", params.PartnerSourced != nil},
 			// The partner program is ours: a mirrored deal carries the
 			// incumbent's own partner arrangement, not an attribution

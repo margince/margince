@@ -20,7 +20,7 @@ import (
 )
 
 type companyProfileDTO struct {
-	OrganizationID    string  `json:"organization_id"`
+	CompanyID    string  `json:"company_id"`
 	DisplayName       string  `json:"display_name"`
 	Website           *string `json:"website"`
 	LegalName         *string `json:"legal_name"`
@@ -47,7 +47,7 @@ type companyProblem struct {
 }
 
 type companyContextDTO struct {
-	OrganizationID string `json:"organization_id"`
+	CompanyID string `json:"company_id"`
 	SchemaVersion  int    `json:"schema_version"`
 	Fingerprint    string `json:"fingerprint"`
 	Scopes         []struct {
@@ -96,7 +96,7 @@ func TestCompanyIs404UntilAHumanSavesItOverHTTP(t *testing.T) {
 		t.Fatalf("PUT /company → %d, want 200", status)
 	}
 	// The website is stored and returned as the bare domain — the same handle a
-	// read-back resolves organizations by — so a full URL normalises on the way in.
+	// read-back resolves companies by — so a full URL normalises on the way in.
 	if saved.Website == nil || *saved.Website != "acme.example" {
 		t.Fatalf("saved website = %s, want the bare domain acme.example", orAbsent(saved.Website))
 	}
@@ -105,7 +105,7 @@ func TestCompanyIs404UntilAHumanSavesItOverHTTP(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/company", nil, nil, &got); status != http.StatusOK {
 		t.Fatalf("GET /company after save → %d, want 200", status)
 	}
-	if got.OrganizationID != saved.OrganizationID || got.DisplayName != "Acme GmbH" {
+	if got.CompanyID != saved.CompanyID || got.DisplayName != "Acme GmbH" {
 		t.Fatalf("GET /company = %+v, want the company just saved", got)
 	}
 	if got.Icp == nil || *got.Icp != "RevOps at SaaS scale-ups" {
@@ -227,8 +227,8 @@ func TestCompanySavingTwiceUpdatesTheAnchorOverHTTP(t *testing.T) {
 	if status := e.Call(t, "PUT", "/v1/company", second, nil, &again); status != http.StatusOK {
 		t.Fatalf("second save → %d", status)
 	}
-	if again.OrganizationID != saved.OrganizationID {
-		t.Fatalf("the second save minted a rival company (%s != %s)", again.OrganizationID, saved.OrganizationID)
+	if again.CompanyID != saved.CompanyID {
+		t.Fatalf("the second save minted a rival company (%s != %s)", again.CompanyID, saved.CompanyID)
 	}
 	if again.DisplayName != "Acme SE" {
 		t.Fatalf("the second save did not update the name: %q", again.DisplayName)
@@ -243,16 +243,16 @@ func TestCompanySavingTwiceUpdatesTheAnchorOverHTTP(t *testing.T) {
 	// The anchor was updated, not duplicated. Asked for with include_anchor,
 	// because the plain list answers "which companies are we selling to" and
 	// the installation's own company is not one of them (ADR-0082/A127).
-	var orgs struct {
+	var companies struct {
 		Data []struct {
 			ID string `json:"id"`
 		} `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/organizations?include_anchor=true", nil, nil, &orgs); status != http.StatusOK {
-		t.Fatalf("list organizations → %d", status)
+	if status := e.Call(t, "GET", "/v1/companies?include_anchor=true", nil, nil, &companies); status != http.StatusOK {
+		t.Fatalf("list companies → %d", status)
 	}
-	if len(orgs.Data) != 1 || orgs.Data[0].ID != saved.OrganizationID {
-		t.Fatalf("saving twice left %d organizations, want the one anchor", len(orgs.Data))
+	if len(companies.Data) != 1 || companies.Data[0].ID != saved.CompanyID {
+		t.Fatalf("saving twice left %d companies, want the one anchor", len(companies.Data))
 	}
 
 	// And it is absent from the list a rep works, which is the point of the
@@ -262,11 +262,11 @@ func TestCompanySavingTwiceUpdatesTheAnchorOverHTTP(t *testing.T) {
 			ID string `json:"id"`
 		} `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/organizations", nil, nil, &selling); status != http.StatusOK {
-		t.Fatalf("list organizations → %d", status)
+	if status := e.Call(t, "GET", "/v1/companies", nil, nil, &selling); status != http.StatusOK {
+		t.Fatalf("list companies → %d", status)
 	}
 	if len(selling.Data) != 0 {
-		t.Fatalf("the accounts list holds %d organizations, want the own company excluded", len(selling.Data))
+		t.Fatalf("the accounts list holds %d companies, want the own company excluded", len(selling.Data))
 	}
 }
 
@@ -282,7 +282,7 @@ func TestCompanyContextScopesAreBoundedOverHTTP(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/company/context?scopes=offer,positioning", nil, nil, &context); status != http.StatusOK {
 		t.Fatalf("GET scoped company context → %d", status)
 	}
-	if context.OrganizationID != saved.OrganizationID || context.SchemaVersion != 1 || len(context.Fingerprint) != 64 {
+	if context.CompanyID != saved.CompanyID || context.SchemaVersion != 1 || len(context.Fingerprint) != 64 {
 		t.Fatalf("context metadata = %+v", context)
 	}
 	if len(context.Scopes) != 2 || context.Scopes[0].Scope != "positioning" || context.Scopes[1].Scope != "offer" {

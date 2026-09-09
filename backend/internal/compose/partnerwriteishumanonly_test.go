@@ -23,7 +23,7 @@ package compose
 
 import "testing"
 
-const upsertPartnerRoute = "PUT /v1/organizations/{id}/partner"
+const upsertPartnerRoute = "PUT /v1/companies/{id}/partner"
 
 func TestSettingPartnerTermsIsHumanOnly(t *testing.T) {
 	policy, declared := agentPolicies[upsertPartnerRoute]
@@ -48,9 +48,9 @@ func TestSettingPartnerTermsIsHumanOnly(t *testing.T) {
 // The read side stays open: an agent may look a partner up, and only the write
 // is closed. Asserting both together stops the fix being over-applied.
 func TestReadingAPartnerStaysOpenToAgents(t *testing.T) {
-	policy, declared := agentPolicies["GET /v1/organizations/{id}/partner"]
+	policy, declared := agentPolicies["GET /v1/companies/{id}/partner"]
 	if !declared {
-		t.Fatal("GET /v1/organizations/{id}/partner has no agent policy")
+		t.Fatal("GET /v1/companies/{id}/partner has no agent policy")
 	}
 	if policy.Access != accessTool {
 		t.Errorf("reading a partner is %q, want %q — the write was closed, not the read",

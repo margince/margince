@@ -71,7 +71,7 @@ const RUNNING: BackfillStatus = {
   counts: {
     captured: 128,
     people_created: 47,
-    organizations_created: 12,
+    companies_created: 12,
     messages_scanned: 150,
   },
   updated_at: new Date().toISOString(),
@@ -82,7 +82,7 @@ const DONE: BackfillStatus = {
   counts: {
     captured: 512,
     people_created: 90,
-    organizations_created: 20,
+    companies_created: 20,
     messages_scanned: 600,
   },
 };

@@ -29,16 +29,16 @@ type Deal = components["schemas"]["Deal"];
  *
  * Stopping at page one would under-report a productive partner silently, which
  * is the same failure the commission ledger walks its cursor to avoid. The
- * server filters on `partner_org_id`, so `sourced` and `influenced` both land
+ * server filters on `partner_company_id`, so `sourced` and `influenced` both land
  * here — a partner's page should show the deals they helped with, not only the
  * ones that earn them money, and the attribution column says which is which.
  */
-async function fetchPartnerDeals(organizationId: string): Promise<Deal[]> {
+async function fetchPartnerDeals(companyId: string): Promise<Deal[]> {
   const deals: Deal[] = [];
   let cursor: string | undefined;
   do {
     const { data, error } = await api.GET("/deals", {
-      params: { query: { partner_org_id: organizationId, limit: 50, cursor } },
+      params: { query: { partner_company_id: companyId, limit: 50, cursor } },
     });
     if (error) {
       throwProblem(error);
@@ -52,13 +52,13 @@ async function fetchPartnerDeals(organizationId: string): Promise<Deal[]> {
 }
 
 export function PartnerDeals({
-  organizationId,
-}: Readonly<{ organizationId: string }>) {
+  companyId,
+}: Readonly<{ companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const query = useQuery({
-    queryKey: ["partner-deals", organizationId],
-    queryFn: () => fetchPartnerDeals(organizationId),
+    queryKey: ["partner-deals", companyId],
+    queryFn: () => fetchPartnerDeals(companyId),
   });
 
   return (
@@ -108,7 +108,7 @@ function SourcedDeals({
             // company, so the customer is the fact that makes the row make
             // sense.
             //
-            // A WITHHELD customer arrives as a null `organization_id` with the
+            // A WITHHELD customer arrives as a null `company_id` with the
             // field named in `masked_fields`, and EntityRef draws any null id as
             // an em dash — so a customer this reader may not see used to be
             // indistinguishable from a deal nobody has linked. On a panel whose
@@ -117,10 +117,10 @@ function SourcedDeals({
             key: "customer",
             header: t("partnerDeals.column.customer"),
             render: (deal) =>
-              deal.masked_fields?.includes("organization_id") ? (
+              deal.masked_fields?.includes("company_id") ? (
                 <FieldGuard mode="masked" />
               ) : (
-                <EntityRef kind="organization" id={deal.organization_id} />
+                <EntityRef kind="company" id={deal.company_id} />
               ),
           },
           {

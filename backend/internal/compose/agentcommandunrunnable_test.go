@@ -156,7 +156,7 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"archiveTag":           malformedRoutedID(http.MethodDelete, "/tags"),
 	"archiveOffer":         malformedRoutedID(http.MethodDelete, "/offers"),
 	"archiveOfferTemplate": malformedRoutedID(http.MethodDelete, "/offer-templates"),
-	"archiveOrganization":  malformedRoutedID(http.MethodDelete, "/organizations"),
+	"archiveCompany":  malformedRoutedID(http.MethodDelete, "/companies"),
 	"archivePerson":        malformedRoutedID(http.MethodDelete, "/people"),
 	"archiveProduct":       malformedRoutedID(http.MethodDelete, "/products"),
 	"archiveProject":       malformedRoutedID(http.MethodDelete, "/projects"),
@@ -170,11 +170,11 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"retireCustomField":         malformedRoutedID(http.MethodPost, "/custom-fields"),
 	"updateCustomFieldOptions":  malformedRoutedID(http.MethodPatch, "/custom-fields"),
 	"updateWebhookSubscription": malformedRoutedID(http.MethodPatch, "/webhook-subscriptions"),
-	"scrapeCompany":             malformedRoutedID(http.MethodPost, "/organizations"),
-	"deepReadCompany":           malformedRoutedID(http.MethodPost, "/organizations"),
-	"technicalEnrichCompany":    malformedRoutedID(http.MethodPost, "/organizations"),
+	"scrapeCompany":             malformedRoutedID(http.MethodPost, "/companies"),
+	"deepReadCompany":           malformedRoutedID(http.MethodPost, "/companies"),
+	"technicalEnrichCompany":    malformedRoutedID(http.MethodPost, "/companies"),
 	"mergePerson":               malformedRoutedID(http.MethodPost, "/people"),
-	"mergeOrganization":         malformedRoutedID(http.MethodPost, "/organizations"),
+	"mergeCompany":         malformedRoutedID(http.MethodPost, "/companies"),
 
 	"updateProject": {
 		refusal: refusedArgument("nickname", "the patch names a member a project has no field for"),
@@ -235,7 +235,7 @@ var unrunnableCalls = map[string]unrunnableCall{
 		refusal: refusedArgument("to", "the send reaches nobody"),
 		build: func() (*http.Request, []byte) {
 			body := []byte(`{"to":[],"subject":"Q3","body":"hi","consent_purpose":"sales",` +
-				`"links":[{"entity_type":"organization","entity_id":"019ff000-0000-7000-8000-000000000022"}]}`)
+				`"links":[{"entity_type":"company","entity_id":"019ff000-0000-7000-8000-000000000022"}]}`)
 			return httptest.NewRequest(http.MethodPost, "/v1/emails", bytes.NewReader(body)), body
 		},
 	},
@@ -252,12 +252,12 @@ var unrunnableCalls = map[string]unrunnableCall{
 	// The operand family: the second path segment the router would have bound
 	// is absent, which is the shape a routing defect produces and the one thing
 	// these operations cannot run without.
-	"confirmOrganizationFact":         missingOperand(http.MethodPost, "/v1/organizations/%s/facts//confirm", "factKey"),
-	"updateOrganizationFact":          missingOperand(http.MethodPatch, "/v1/organizations/%s/facts/", "factKey"),
-	"confirmOrganizationProfileField": missingOperand(http.MethodPost, "/v1/organizations/%s/profile-fields//confirm", "field"),
-	"updateOrganizationProfileField":  missingOperand(http.MethodPatch, "/v1/organizations/%s/profile-fields/", "field"),
+	"confirmCompanyFact":         missingOperand(http.MethodPost, "/v1/companies/%s/facts//confirm", "factKey"),
+	"updateCompanyFact":          missingOperand(http.MethodPatch, "/v1/companies/%s/facts/", "factKey"),
+	"confirmCompanyProfileField": missingOperand(http.MethodPost, "/v1/companies/%s/profile-fields//confirm", "field"),
+	"updateCompanyProfileField":  missingOperand(http.MethodPatch, "/v1/companies/%s/profile-fields/", "field"),
 	"removeProjectStakeholder":        missingOperand(http.MethodDelete, "/v1/projects/%s/stakeholders/", "person_id"),
-	"removeProjectCompany":            missingOperand(http.MethodDelete, "/v1/projects/%s/companies/", "organization_id"),
+	"removeProjectCompany":            missingOperand(http.MethodDelete, "/v1/projects/%s/companies/", "company_id"),
 
 	"setProjectStakeholder": {
 		refusal: namedMember("person_id", "invalid",
@@ -270,12 +270,12 @@ var unrunnableCalls = map[string]unrunnableCall{
 	},
 
 	"setProjectCompany": {
-		refusal: namedMember("organization_id", "invalid",
-			"the organization_id in the body is not a uuid, so the edge names no company"),
+		refusal: namedMember("company_id", "invalid",
+			"the company_id in the body is not a uuid, so the edge names no company"),
 		build: func() (*http.Request, []byte) {
 			id := ids.NewV7().String()
 			return routedFixture(http.MethodPut, "/v1/projects/"+id+"/companies", id,
-				`{"organization_id":"not-a-uuid","role":"partner"}`)
+				`{"company_id":"not-a-uuid","role":"partner"}`)
 		},
 	},
 }

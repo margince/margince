@@ -7,7 +7,7 @@ package identity
 // context (the middleware refuses pre-bootstrap requests, but the
 // handlers must not depend on that). Each of them must answer its
 // protocol's client error, never a 500 — and the credential surfaces
-// must not disclose whether the organization exists: a login or code
+// must not disclose whether the company exists: a login or code
 // exchange against a not-yet-bootstrapped installation reads exactly
 // like one against bad credentials.
 

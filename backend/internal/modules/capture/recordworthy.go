@@ -106,13 +106,13 @@ func machineLocalpart(address string) bool {
 }
 
 // consumerMailSender answers T3: is this sender a personal mailbox rather than
-// somebody at a company? gmail.com is not an organization whatever else is true
-// of it, so its domain settles the ORGANIZATION question on its own — no
+// somebody at a company? gmail.com is not a company whatever else is true
+// of it, so its domain settles the COMPANY question on its own — no
 // company is named by a consumer mail domain.
 //
 // It settles nothing about the person. A customer writing from their private
 // address and a family member writing from theirs are the same shape here, so
-// the ladder suppresses the org and leaves the person to the verdict.
+// the ladder suppresses the company and leaves the person to the verdict.
 //
 // The workspace's own additions and carve-outs are read on the CALLER's
 // transaction, not cached at composition time: an admin correcting a wrong

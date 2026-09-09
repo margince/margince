@@ -83,7 +83,7 @@ type SDRHandoff struct {
 	ID             ids.UUID
 	LeadID         *ids.UUID
 	PersonID       *ids.UUID
-	OrganizationID *ids.UUID
+	CompanyID *ids.UUID
 	SubmittedBy    ids.UUID
 	AssignedTo     *ids.UUID
 	Status         string
@@ -103,7 +103,7 @@ type SDRHandoff struct {
 type NewSDRHandoff struct {
 	LeadID         *ids.UUID
 	PersonID       *ids.UUID
-	OrganizationID *ids.UUID
+	CompanyID *ids.UUID
 	// AssignedTo is optional. A handoff may be offered to a named AE or left for
 	// whoever picks it up, and the second is a real workflow rather than an
 	// unfinished first: a team with a shared queue has nobody to name yet.
@@ -141,10 +141,10 @@ func (s *Store) SubmitHandoff(ctx context.Context, in NewSDRHandoff) (ids.UUID, 
 		// request body — the write shape's rule, and the reason a handoff can be
 		// attributed at all.
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO sdr_handoff (lead_id, person_id, organization_id, submitted_by, assigned_to, note, captured_by)
+			INSERT INTO sdr_handoff (lead_id, person_id, company_id, submitted_by, assigned_to, note, captured_by)
 			VALUES ($1, $2, $3, $4, $5, nullif($6, ''), $7)
 			RETURNING id`,
-			in.LeadID, in.PersonID, in.OrganizationID, actor.UserID, in.AssignedTo, in.Note, actor.ID,
+			in.LeadID, in.PersonID, in.CompanyID, actor.UserID, in.AssignedTo, in.Note, actor.ID,
 		).Scan(&id); err != nil {
 			return fmt.Errorf("people: submitting the handoff: %w", err)
 		}
@@ -318,7 +318,7 @@ var (
 // through the target probe, in the transaction that is about to reference it.
 //
 // All three arrive from the request body. The subject — a lead or a person,
-// exactly one — is what the handoff is about, and the organization is the
+// exactly one — is what the handoff is about, and the company is the
 // company it is filed under; a reference to any of them is a read of it.
 func ensureHandoffTargetsVisible(ctx context.Context, tx pgx.Tx, in NewSDRHandoff) error {
 	targets := []struct {
@@ -327,7 +327,7 @@ func ensureHandoffTargetsVisible(ctx context.Context, tx pgx.Tx, in NewSDRHandof
 	}{
 		{"lead", in.LeadID},
 		{"person", in.PersonID},
-		{entityOrganization, in.OrganizationID},
+		{entityCompany, in.CompanyID},
 	}
 	for _, t := range targets {
 		if t.id == nil {

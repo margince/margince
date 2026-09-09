@@ -278,13 +278,13 @@ func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/organizations", integration.AnyMap{"display_name": "Unknown Co"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create organization → %d", status)
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Unknown Co"}, nil, &person); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
 
 	trigger := "overnight_at_risk_sweep:e2e-confirmation-required"
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"enrich","args":{"organization_id":"%s"}}`, person.ID),
+		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, person.ID),
 		`{"final":{"summary":"enrich executed after approval"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)
@@ -298,7 +298,7 @@ func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 	var parked struct {
 		ArchivedAt *string `json:"archived_at"`
 	}
-	if got := re.Call(t, "GET", "/v1/organizations/"+person.ID, nil, nil, &parked); got != http.StatusOK || parked.ArchivedAt != nil {
+	if got := re.Call(t, "GET", "/v1/companies/"+person.ID, nil, nil, &parked); got != http.StatusOK || parked.ArchivedAt != nil {
 		t.Fatalf("target mutated while approval pending: GET → %d archived_at=%v", got, parked.ArchivedAt)
 	}
 
@@ -336,13 +336,13 @@ func TestRunnerConfirmationRequiredRejectionReplansWithoutEffect(t *testing.T) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/organizations", integration.AnyMap{"display_name": "Keep Me"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create organization → %d", status)
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Keep Me"}, nil, &person); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
 
 	trigger := "overnight_at_risk_sweep:e2e-reject"
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"enrich","args":{"organization_id":"%s"}}`, person.ID),
+		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, person.ID),
 		`{"final":{"summary":"left the record alone after rejection"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)
@@ -425,8 +425,8 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/organizations", integration.AnyMap{"display_name": "Resume Once"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create organization → %d", status)
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Resume Once"}, nil, &person); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
 
 	trigger := "overnight_at_risk_sweep:e2e-resume-once"
@@ -434,7 +434,7 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 	// would run past the end of it, so the assertions below catch a
 	// duplicate resume by its outcome as well as by its trace.
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"enrich","args":{"organization_id":"%s"}}`, person.ID),
+		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, person.ID),
 		`{"final":{"summary":"enrich executed after approval"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)
@@ -555,15 +555,15 @@ func TestASuspendedRunWhoseAuthorityDiesIsClosedRatherThanParkedForever(t *testi
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/organizations", integration.AnyMap{
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{
 		"display_name": "Authority Dies Parked",
 	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create organization → %d", status)
+		t.Fatalf("create company → %d", status)
 	}
 
 	trigger := "overnight_at_risk_sweep:e2e-authority-died"
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"enrich","args":{"organization_id":"%s"}}`, person.ID),
+		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, person.ID),
 		`{"final":{"summary":"never reached"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)
@@ -612,18 +612,18 @@ func TestASuspendedRunWhoseAuthorityDiesIsClosedRatherThanParkedForever(t *testi
 // the row and half an hour apart for the person waiting.
 func TestATerminalWriteThatFailsLeavesTheRunResumable(t *testing.T) {
 	re := setupRunner(t)
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/organizations", integration.AnyMap{
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{
 		"display_name": "Close Failed Retriable",
-	}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create organization → %d", status)
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
 
 	trigger := "overnight_at_risk_sweep:e2e-close-failed"
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"enrich","args":{"organization_id":"%s"}}`, org.ID),
+		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, company.ID),
 		`{"final":{"summary":"never reached"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)

@@ -52,7 +52,7 @@ var testPerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"custom_field": fullGrant,
 		"person":       fullGrant,
-		"organization": fullGrant,
+		"company": fullGrant,
 		"deal":         fullGrant,
 		"lead":         fullGrant,
 		"project":      fullGrant,
@@ -324,20 +324,20 @@ func TestAProjectCustomFieldIsFilterable(t *testing.T) {
 	}
 	column := *field.ColumnName
 
-	org, err := f.people.CreateOrganization(f.ctx, peoplemod.CreateOrganizationInput{DisplayName: "Baer Pharma", Source: "manual"})
+	company, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{DisplayName: "Baer Pharma", Source: "manual"})
 	if err != nil {
-		t.Fatalf("create organization: %v", err)
+		t.Fatalf("create company: %v", err)
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 
 	matching, err := f.projects.CreateProject(f.ctx, projects.CreateProjectInput{
-		Name: "Match", OrganizationID: orgID, Source: "manual",
+		Name: "Match", CompanyID: companyID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create matching project: %v", err)
 	}
 	if _, err := f.projects.CreateProject(f.ctx, projects.CreateProjectInput{
-		Name: "Other", OrganizationID: orgID, Source: "manual",
+		Name: "Other", CompanyID: companyID, Source: "manual",
 	}); err != nil {
 		t.Fatalf("create non-matching project: %v", err)
 	}
@@ -508,7 +508,7 @@ func entityTypeCheckValues(t *testing.T, f fixture, table string) map[string]boo
 // Go-side taggable set is not just consistent with itself (the unit lane's job)
 // but COMPLETE against the schema's own CHECK (LVS-DDL-2) — the authority
 // every other spelling answers to. The CHECK admits five values: person,
-// organization, deal, lead and project (0131_project.up.sql's
+// company, deal, lead and project (0131_project.up.sql's
 // taggable_entity_type_check).
 //
 // The CONTRACT's enum is compared to the same set, because three vocabularies
@@ -642,12 +642,12 @@ func (f fixture) seedTaggablePair(t *testing.T, entity string, pipeline ids.Pipe
 			t.Fatal(err)
 		}
 		return ids.UUID(a.Id), ids.UUID(b.Id)
-	case "organization":
-		a, err := f.people.CreateOrganization(f.ctx, peoplemod.CreateOrganizationInput{DisplayName: "Tagged Org"})
+	case "company":
+		a, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{DisplayName: "Tagged Company"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, err := f.people.CreateOrganization(f.ctx, peoplemod.CreateOrganizationInput{DisplayName: "Plain Org"})
+		b, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{DisplayName: "Plain Company"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -694,7 +694,7 @@ func (f fixture) assertTagSegment(t *testing.T, entity, tagID string, tagged, pl
 
 // TestATagFilterSelectsTaggedRecordsPerEntityType proves the tag leaf
 // reaches the polymorphic taggable join for every entity type that can
-// carry one — person, organization, deal and lead — not just the one the
+// carry one — person, company, deal and lead — not just the one the
 // unit lane happened to exercise.
 func TestATagFilterSelectsTaggedRecordsPerEntityType(t *testing.T) {
 	f := setupFixture(t)
@@ -704,7 +704,7 @@ func TestATagFilterSelectsTaggedRecordsPerEntityType(t *testing.T) {
 	}
 	pipeline, open, _ := integration.DealFixture(t, f.e)
 
-	for _, entity := range []string{"person", "organization", "deal", "lead"} {
+	for _, entity := range []string{"person", "company", "deal", "lead"} {
 		tagged, plain := f.seedTaggablePair(t, entity, pipeline, open)
 		if _, err := f.lists.ApplyTag(f.ctx, tag.ID, entity, tagged); err != nil {
 			t.Fatalf("%s: apply tag: %v", entity, err)
@@ -756,15 +756,15 @@ func memberIDs(t *testing.T, f fixture, listID ids.ListID) map[ids.UUID]bool {
 	return got
 }
 
-// dealForCustomer seeds one deal against one organization through the real
-// writer, so the organization_id the filter joins on is the one CreateDeal
+// dealForCustomer seeds one deal against one company through the real
+// writer, so the company_id the filter joins on is the one CreateDeal
 // itself stamps.
 func (f fixture) dealForCustomer(
-	t *testing.T, name string, pipeline ids.PipelineID, stage ids.StageID, org *ids.OrganizationID,
+	t *testing.T, name string, pipeline ids.PipelineID, stage ids.StageID, company *ids.CompanyID,
 ) ids.UUID {
 	t.Helper()
 	deal, err := f.e.Deals.CreateDeal(f.ctx, dealsmod.CreateDealInput{
-		Name: name, PipelineID: pipeline, StageID: stage, OrganizationID: org, Source: "manual",
+		Name: name, PipelineID: pipeline, StageID: stage, CompanyID: company, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create deal %q: %v", name, err)
@@ -772,16 +772,16 @@ func (f fixture) dealForCustomer(
 	return ids.UUID(deal.Id)
 }
 
-// customerOrg seeds one organization with (or without) an industry.
-func (f fixture) customerOrg(t *testing.T, name string, industry *string) ids.OrganizationID {
+// customerCompany seeds one company with (or without) an industry.
+func (f fixture) customerCompany(t *testing.T, name string, industry *string) ids.CompanyID {
 	t.Helper()
-	org, err := f.people.CreateOrganization(f.ctx, peoplemod.CreateOrganizationInput{
+	company, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{
 		DisplayName: name, Industry: industry, Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("create organization %q: %v", name, err)
+		t.Fatalf("create company %q: %v", name, err)
 	}
-	return ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	return ids.From[ids.CompanyKind](ids.UUID(company.Id))
 }
 
 // "Show me the pipeline for manufacturing" — a deal filtered by an attribute of
@@ -794,14 +794,14 @@ func TestADealFilterReachesTheCustomersIndustry(t *testing.T) {
 	manufacturing, services := "manufacturing", "services"
 
 	inManufacturing := f.dealForCustomer(t, "Factory renewal", pipeline, open,
-		orgPtr(f.customerOrg(t, "Vulcan Works", &manufacturing)))
+		companyPtr(f.customerCompany(t, "Vulcan Works", &manufacturing)))
 	f.dealForCustomer(t, "Agency retainer", pipeline, open,
-		orgPtr(f.customerOrg(t, "Bright Consulting", &services)))
+		companyPtr(f.customerCompany(t, "Bright Consulting", &services)))
 
 	list, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
 		Name: "manufacturing pipeline", EntityType: "deal", ListType: "dynamic",
 		Definition: map[string]any{
-			"field": "organization_industry", "op": "eq", "value": manufacturing,
+			"field": "company_industry", "op": "eq", "value": manufacturing,
 		},
 	})
 	if err != nil {
@@ -813,7 +813,7 @@ func TestADealFilterReachesTheCustomersIndustry(t *testing.T) {
 // `exists: false` on a linked field asks about the COLUMN, and the answer spans
 // both ways a deal can fail to have a known industry: a customer with none, and
 // no customer at all. Pinned because the row reading — "does a linked
-// organization exist" — is the plausible wrong one, and it would silently drop
+// company exist" — is the plausible wrong one, and it would silently drop
 // every deal whose company simply has no industry recorded.
 func TestAnUnknownCustomerIndustryCoversBothWaysItCanBeUnknown(t *testing.T) {
 	f := setupFixture(t)
@@ -821,15 +821,15 @@ func TestAnUnknownCustomerIndustryCoversBothWaysItCanBeUnknown(t *testing.T) {
 	known := "manufacturing"
 
 	customerWithNoIndustry := f.dealForCustomer(t, "Unclassified account", pipeline, open,
-		orgPtr(f.customerOrg(t, "Quiet Holdings", nil)))
+		companyPtr(f.customerCompany(t, "Quiet Holdings", nil)))
 	noCustomerAtAll := f.dealForCustomer(t, "Inbound, unattributed", pipeline, open, nil)
 	classified := f.dealForCustomer(t, "Factory renewal", pipeline, open,
-		orgPtr(f.customerOrg(t, "Vulcan Works", &known)))
+		companyPtr(f.customerCompany(t, "Vulcan Works", &known)))
 
 	list, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
 		Name: "customer industry unknown", EntityType: "deal", ListType: "dynamic",
 		Definition: map[string]any{
-			"field": "organization_industry", "op": "exists", "value": false,
+			"field": "company_industry", "op": "exists", "value": false,
 		},
 	})
 	if err != nil {
@@ -850,7 +850,7 @@ func TestAnUnknownCustomerIndustryCoversBothWaysItCanBeUnknown(t *testing.T) {
 
 // Archiving the customer does not move the deal out of the filter.
 //
-// The organization's own segment engine excludes archived and anchor rows,
+// The company's own segment engine excludes archived and anchor rows,
 // because those answer "which of our accounts are segment MEMBERS". This leaf
 // answers a fact about the company a deal belongs to, and archiving does not
 // change that fact — so the exclusion is deliberately NOT carried over. Without
@@ -860,13 +860,13 @@ func TestArchivingTheCustomerLeavesItsDealsInTheIndustryFilter(t *testing.T) {
 	f := setupFixture(t)
 	pipeline, open, _ := integration.DealFixture(t, f.e)
 	manufacturing := "manufacturing"
-	org := f.customerOrg(t, "Vulcan Works", &manufacturing)
-	deal := f.dealForCustomer(t, "Factory renewal", pipeline, open, orgPtr(org))
+	company := f.customerCompany(t, "Vulcan Works", &manufacturing)
+	deal := f.dealForCustomer(t, "Factory renewal", pipeline, open, companyPtr(company))
 
 	list, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
 		Name: "manufacturing pipeline, archived customer", EntityType: "deal", ListType: "dynamic",
 		Definition: map[string]any{
-			"field": "organization_industry", "op": "eq", "value": manufacturing,
+			"field": "company_industry", "op": "eq", "value": manufacturing,
 		},
 	})
 	if err != nil {
@@ -874,10 +874,10 @@ func TestArchivingTheCustomerLeavesItsDealsInTheIndustryFilter(t *testing.T) {
 	}
 	assertSoleMember(t, f, list.ID, deal)
 
-	if _, err := f.people.ArchiveOrganization(f.ctx, org, nil); err != nil {
-		t.Fatalf("archive organization: %v", err)
+	if _, err := f.people.ArchiveCompany(f.ctx, company, nil); err != nil {
+		t.Fatalf("archive company: %v", err)
 	}
 	assertSoleMember(t, f, list.ID, deal)
 }
 
-func orgPtr(id ids.OrganizationID) *ids.OrganizationID { return &id }
+func companyPtr(id ids.CompanyID) *ids.CompanyID { return &id }

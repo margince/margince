@@ -192,10 +192,10 @@
   flex: none;
 }
 
-/* An organization's mark is a rounded square, not a circle. A logo is drawn on
+/* A company's mark is a rounded square, not a circle. A logo is drawn on
    a square and a face is not, and on a page carrying a company and its people
    the shape is what tells the two apart before a reader has read either. */
-.avatar-org {
+.avatar-company {
   border-radius: var(--r-sm);
 }
 
@@ -239,9 +239,9 @@
   font-size: var(--fs-h1);
 }
 /* A round mark keeps its circle at every rung: a person is a portrait, an
-   organization is a tile. `.avatar-org` squares the small rungs and this one
+   company is a tile. `.avatar-company` squares the small rungs and this one
    is square already, so the rule that has to be stated is the round one. */
-.avatar-xl:not(.avatar-org) {
+.avatar-xl:not(.avatar-company) {
   border-radius: var(--r-full);
   corner-shape: round;
 }
@@ -314,10 +314,10 @@
 
 /* A company's mark clips to the chip's OWN corner, not to a circle. The
    rounding lives on the image as well as on the chip because the image is
-   positioned over it — an organization whose logo actually resolved came out
+   positioned over it — a company whose logo actually resolved came out
    round while the one still showing its monogram was square, so the shape
    said "company" only for the companies with no logo. */
-.avatar-org .avatar-img {
+.avatar-company .avatar-img {
   border-radius: calc(var(--r-sm) - 2px);
 }
 

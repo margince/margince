@@ -1,6 +1,6 @@
 -- seed-dev.sql — the dev-database seed for demo data that has no public API.
 --
--- Companion to scripts/seed-dev.sh (the API seed for people/orgs/deals). This
+-- Companion to scripts/seed-dev.sh (the API seed for people/companies/deals). This
 -- file holds dev/demo data that can only be written directly to the database —
 -- reference tables and config the product intentionally exposes no REST/MCP
 -- endpoint for. It is part of the default dev-env init: `make dev` applies it on
@@ -115,7 +115,7 @@ BEGIN
     RETURN;
   END IF;
 
-  -- The API seed (seed-dev.sh) creates people/orgs/deals with NO owner, and an
+  -- The API seed (seed-dev.sh) creates people/companies/deals with NO owner, and an
   -- ownerless row is shared — visible at EVERY row scope. That would let the
   -- own-scoped Rep Two (below) see everything and make record sharing
   -- unobservable. Make Demo Admin the owner of every ownerless seeded record so
@@ -132,7 +132,7 @@ BEGIN
   -- never safe to point at real data; the tenant predicate narrowed the damage
   -- but was never what made it safe.
   UPDATE person       SET owner_id = admin_id WHERE owner_id IS NULL;
-  UPDATE organization SET owner_id = admin_id WHERE owner_id IS NULL;
+  UPDATE company SET owner_id = admin_id WHERE owner_id IS NULL;
   UPDATE deal         SET owner_id = admin_id WHERE owner_id IS NULL;
   UPDATE lead         SET owner_id = admin_id WHERE owner_id IS NULL;
 
@@ -246,7 +246,7 @@ DO $$
 DECLARE
   ws   uuid;
   conn uuid;
-  org  RECORD;
+  company  RECORD;
 BEGIN
   ws := pg_temp.installation_workspace();
   IF ws IS NULL THEN
@@ -266,15 +266,15 @@ BEGIN
   -- Customers only. A target or a prospect has never been invoiced, and the
   -- card is absent for them by design (FIN-AC-3) — linking one would put a
   -- ledger behind a company we have never billed.
-  FOR org IN
-    SELECT id, display_name FROM organization
+  FOR company IN
+    SELECT id, display_name FROM company
      WHERE archived_at IS NULL
        AND lifecycle = 'customer'
   LOOP
     INSERT INTO finance_customer_link
-           (connection_id, organization_id, external_customer_id,
+           (connection_id, company_id, external_customer_id,
             sync_hash, source, captured_by)
-    VALUES (conn, org.id, 'DEMO-' || left(replace(org.id::text, '-', ''), 8),
+    VALUES (conn, company.id, 'DEMO-' || left(replace(company.id::text, '-', ''), 8),
             'seed', 'system', 'system:seed')
     ON CONFLICT DO NOTHING;
   END LOOP;

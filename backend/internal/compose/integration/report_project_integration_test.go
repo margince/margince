@@ -25,16 +25,16 @@ import (
 
 // seedProjects plants an anchor company and n live projects in one phase,
 // owned by the given user (nil = ownerless, i.e. workspace-shared).
-func (e *SearchEnv) seedProjects(t *testing.T, phase string, owner *ids.UUID, n int) (orgID ids.UUID) {
+func (e *SearchEnv) seedProjects(t *testing.T, phase string, owner *ids.UUID, n int) (companyID ids.UUID) {
 	t.Helper()
-	orgID = e.SeedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
-		VALUES ($1, 'Project Org', 'manual', 'human:x')`)
+	companyID = e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, 'Project Company', 'manual', 'human:x')`)
 	for i := 0; i < n; i++ {
-		e.SeedID(t, `INSERT INTO project (id, name, organization_id, owner_id, phase, source, captured_by)
+		e.SeedID(t, `INSERT INTO project (id, name, company_id, owner_id, phase, source, captured_by)
 			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`,
-			fmt.Sprintf("%s Rollout %d", phase, i), orgID, owner, phase)
+			fmt.Sprintf("%s Rollout %d", phase, i), companyID, owner, phase)
 	}
-	return orgID
+	return companyID
 }
 
 // projectReader mints a human holding project.read at the given row scope —
@@ -44,11 +44,11 @@ func (e *SearchEnv) projectReader(user *ids.UUID, team *ids.UUID, scope principa
 	return e.scopedReaderOf("project", user, team, scope)
 }
 
-// orgReader is projectReader over organization — the record type that still
+// companyReader is projectReader over company — the record type that still
 // narrows a reader, because capture privacy holds an unpromoted capture to
 // its own owner (platform/auth rowscope.go).
-func (e *SearchEnv) orgReader(user *ids.UUID, team *ids.UUID, scope principal.RowScope) context.Context {
-	return e.scopedReaderOf("organization", user, team, scope)
+func (e *SearchEnv) companyReader(user *ids.UUID, team *ids.UUID, scope principal.RowScope) context.Context {
+	return e.scopedReaderOf("company", user, team, scope)
 }
 
 func (e *SearchEnv) scopedReaderOf(object string, user *ids.UUID, team *ids.UUID, scope principal.RowScope) context.Context {
@@ -89,7 +89,7 @@ func TestListFieldsServesTheProjectDescriptor(t *testing.T) {
 	for _, f := range fields {
 		names[f.Name] = true
 	}
-	for _, want := range []string{"name", "key", "organization_id", "owner_id", "phase", "created_at"} {
+	for _, want := range []string{"name", "key", "company_id", "owner_id", "phase", "created_at"} {
 		if !names[want] {
 			t.Errorf("project descriptor omits %q: %+v", want, fields)
 		}
@@ -98,7 +98,7 @@ func TestListFieldsServesTheProjectDescriptor(t *testing.T) {
 
 func TestAdHocProjectReportCountsUnderRowScope(t *testing.T) {
 	e := SetupSearch(t)
-	orgID := e.seedProjects(t, "delivering", &e.Rep3, 2)
+	companyID := e.seedProjects(t, "delivering", &e.Rep3, 2)
 	provider := compose.NewProvider(e.Pool)
 
 	// row_scope=all groups every project by phase.
@@ -115,7 +115,7 @@ func TestAdHocProjectReportCountsUnderRowScope(t *testing.T) {
 	// A descriptor field may filter as well as group.
 	res, err = provider.RunReport(e.projectReader(nil, nil, principal.RowScopeAll), datasource.ReportPlan{
 		Entity: datasource.EntityProject, GroupBy: []string{"phase"},
-		Filter: map[string]string{"organization_id": orgID.String()},
+		Filter: map[string]string{"company_id": companyID.String()},
 	})
 	if err != nil {
 		t.Fatalf("filtered project plan: %v", err)
@@ -142,8 +142,8 @@ func TestAdHocProjectReportCountsUnderRowScope(t *testing.T) {
 
 	// Adding the rep's own project moves the aggregate, so the answer above
 	// tracks the data rather than being a plan that always says the same thing.
-	e.SeedID(t, `INSERT INTO project (id, name, organization_id, owner_id, phase, source, captured_by)
-		VALUES ($1, 'Own Rollout', $2, $3, 'pursuing', 'manual', 'human:x')`, orgID, e.Rep1)
+	e.SeedID(t, `INSERT INTO project (id, name, company_id, owner_id, phase, source, captured_by)
+		VALUES ($1, 'Own Rollout', $2, $3, 'pursuing', 'manual', 'human:x')`, companyID, e.Rep1)
 	res, err = provider.RunReport(e.projectReader(&e.Rep1, &e.Team1, principal.RowScopeTeam), datasource.ReportPlan{
 		Entity: datasource.EntityProject, GroupBy: []string{"phase"},
 	})

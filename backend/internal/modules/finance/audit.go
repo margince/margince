@@ -21,7 +21,7 @@ package finance
 // catalog carries no finance verb at all, and neither of the two types that
 // look adjacent fits. `mirror.*` belongs to the overlay write-back stream, so
 // staging a mirrored invoice under it would route an accounting fact to
-// subscribers watching for something else entirely. `organization.updated`
+// subscribers watching for something else entirely. `company.updated`
 // would tell every subscriber that a company record changed when none did.
 // Publishing under either is worse than publishing nothing: a wrong envelope
 // is acted on, an absent one is not.
@@ -70,7 +70,7 @@ const (
 // it received arrives as `open_minor`, which is gross less paid, clamped at
 // nothing-owed.
 type invoiceImage struct {
-	OrganizationID ids.OrganizationID `json:"organization_id"`
+	CompanyID ids.CompanyID `json:"company_id"`
 	Number         *string            `json:"number"`
 	IssuedAt       time.Time          `json:"issued_at"`
 	DueAt          *time.Time         `json:"due_at"`
@@ -92,7 +92,7 @@ type invoiceImage struct {
 // including the invoice it settles: a payment reassigned to another invoice is
 // money moving between accounts, and the before image is where that shows.
 type paymentImage struct {
-	OrganizationID ids.OrganizationID `json:"organization_id"`
+	CompanyID ids.CompanyID `json:"company_id"`
 	InvoiceID      *ids.UUID          `json:"invoice_id"`
 	Currency       string             `json:"currency"`
 	AmountMinor    int64              `json:"amount_minor"`

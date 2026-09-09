@@ -25,10 +25,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seedOrganization writes a company as the table owner — the record a rep
+// seedCompany writes a company as the table owner — the record a rep
 // opens when they press "Write email", which the send path did not create.
 //
-// Written directly rather than through the organization writer, which this
+// Written directly rather than through the company writer, which this
 // module may not import (a module never imports a sibling). What is under
 // test is the SEND, and the only property of this row the send path reads is
 // whether the caller's row scope reaches it — owner_id and workspace_id,
@@ -36,25 +36,25 @@ import (
 // field the writer would have derived, so a hand-inserted row and a written
 // one are indistinguishable to everything this file asserts.
 //
-// The moment a case here depends on what the organization writer DOES —
+// The moment a case here depends on what the company writer DOES —
 // its validation, its audit row, its event — the case belongs in a compose
 // integration test with the real wiring, not in a widened fixture.
 // messageidentity_absorb_integration_test.go seeds the same way for the same
 // reason.
-func (e *sendEnv) seedOrganization(t *testing.T) ids.UUID {
+func (e *sendEnv) seedCompany(t *testing.T) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO organization (id, display_name, owner_id, source, captured_by)
+		`INSERT INTO company (id, display_name, owner_id, source, captured_by)
 		 VALUES ($1, 'Buyer GmbH', $2, 'manual', 'human:x')`,
 		id, e.rep); err != nil {
-		t.Fatalf("seeding the organization: %v", err)
+		t.Fatalf("seeding the company: %v", err)
 	}
 	return id
 }
 
-func accountOrigin(org ids.UUID) SendOrigin {
-	return FromAccount([]ActivityLinkInput{{EntityType: "organization", EntityID: org}})
+func accountOrigin(company ids.UUID) SendOrigin {
+	return FromAccount([]ActivityLinkInput{{EntityType: "company", EntityID: company}})
 }
 
 // knownRecipients answers that every address sendInput carries is on file —
@@ -82,21 +82,21 @@ func (e *sendEnv) accountStore() *Store {
 // started from rather than under nothing.
 func TestAnAccountStartedSendFilesItselfOnTheRecordItWasStartedFrom(t *testing.T) {
 	e := setupSend(t)
-	org := e.seedOrganization(t)
+	company := e.seedCompany(t)
 	stager := &recordingStager{}
 
 	sent, err := e.accountStore().SendEmail(
-		e.as(principal.RowScopeAll), accountOrigin(org), sendInput("transactional"), stubConsentGate{}, stager)
+		e.as(principal.RowScopeAll), accountOrigin(company), sendInput("transactional"), stubConsentGate{}, stager)
 	if err != nil {
 		t.Fatalf("account-started SendEmail: %v", err)
 	}
 
 	if sent.Links == nil || len(*sent.Links) != 1 {
-		t.Fatalf("account-started send wrote links %v, want exactly the organization it was started from", sent.Links)
+		t.Fatalf("account-started send wrote links %v, want exactly the company it was started from", sent.Links)
 	}
 	link := (*sent.Links)[0]
-	if string(link.EntityType) != "organization" || ids.UUID(link.EntityId) != org {
-		t.Fatalf("link = %s/%s, want organization/%s", link.EntityType, link.EntityId, org)
+	if string(link.EntityType) != "company" || ids.UUID(link.EntityId) != company {
+		t.Fatalf("link = %s/%s, want company/%s", link.EntityType, link.EntityId, company)
 	}
 	if sent.SourceId == nil {
 		t.Fatal("account-started send carries no source_id; the provider's echo would create a second timeline row")
@@ -108,11 +108,11 @@ func TestAnAccountStartedSendFilesItselfOnTheRecordItWasStartedFrom(t *testing.T
 // the mailbox, which is what lets a reply to this message join this thread.
 func TestAnAccountStartedSendRootsAFreshThreadAtItsOwnIdentity(t *testing.T) {
 	e := setupSend(t)
-	org := e.seedOrganization(t)
+	company := e.seedCompany(t)
 	stager := &recordingStager{}
 
 	sent, err := e.accountStore().SendEmail(
-		e.as(principal.RowScopeAll), accountOrigin(org), sendInput("transactional"), stubConsentGate{}, stager)
+		e.as(principal.RowScopeAll), accountOrigin(company), sendInput("transactional"), stubConsentGate{}, stager)
 	if err != nil {
 		t.Fatalf("account-started SendEmail: %v", err)
 	}
@@ -201,11 +201,11 @@ func TestASendWithNoOriginRefusesRatherThanStartingAConversation(t *testing.T) {
 // becomes a way to learn a stranger's consent state.
 func TestAnAccountStartedSendRefusesOnAuthorizationBeforeConsentAnswers(t *testing.T) {
 	e := setupSend(t)
-	org := e.seedOrganization(t)
+	company := e.seedCompany(t)
 	gate := &countingConsentGate{}
 
 	_, err := e.accountStore().SendEmail(
-		e.readOnly(), accountOrigin(org), sendInput("transactional"), gate, &recordingStager{})
+		e.readOnly(), accountOrigin(company), sendInput("transactional"), gate, &recordingStager{})
 
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("account-started send without create = %v, want ErrPermissionDenied", err)
@@ -220,13 +220,13 @@ func TestAnAccountStartedSendRefusesOnAuthorizationBeforeConsentAnswers(t *testi
 // say WHICH address, or the composer cannot offer the fix.
 func TestAnAccountStartedSendNamesTheAddressThatIsNotOnFile(t *testing.T) {
 	e := setupSend(t)
-	org := e.seedOrganization(t)
+	company := e.seedCompany(t)
 	stager := &recordingStager{}
 	// buyer@example.test resolves; boss@example.test does not.
 	directory := partialRecipients{known: map[string]bool{"buyer@example.test": true}}
 
 	_, err := e.store(stubUnsubscribeLinker{}).WithRecipientDirectory(directory).SendEmail(
-		e.as(principal.RowScopeAll), accountOrigin(org), sendInput("transactional"), stubConsentGate{}, stager)
+		e.as(principal.RowScopeAll), accountOrigin(company), sendInput("transactional"), stubConsentGate{}, stager)
 
 	var unresolved *UnresolvedRecipientError
 	if !errors.As(err, &unresolved) {
@@ -254,7 +254,7 @@ func TestAnAccountStartedSendNamesTheAddressThatIsNotOnFile(t *testing.T) {
 // merging would fail here rather than quietly ship a cc-shaped hole.
 func TestAnAccountStartedSendRefusesAnUnresolvableCcAddress(t *testing.T) {
 	e := setupSend(t)
-	org := e.seedOrganization(t)
+	company := e.seedCompany(t)
 	stager := &recordingStager{}
 	// The To: address resolves; the address that appears ONLY in Cc does not.
 	directory := partialRecipients{known: map[string]bool{"buyer@example.test": true}}
@@ -263,7 +263,7 @@ func TestAnAccountStartedSendRefusesAnUnresolvableCcAddress(t *testing.T) {
 	in.Cc = []string{"assistant@example.test"}
 
 	_, err := e.store(stubUnsubscribeLinker{}).WithRecipientDirectory(directory).SendEmail(
-		e.as(principal.RowScopeAll), accountOrigin(org), in, stubConsentGate{}, stager)
+		e.as(principal.RowScopeAll), accountOrigin(company), in, stubConsentGate{}, stager)
 
 	var unresolved *UnresolvedRecipientError
 	if !errors.As(err, &unresolved) {
@@ -301,11 +301,11 @@ func TestAReplyDoesNotRequireItsAddressesToBeOnFile(t *testing.T) {
 // the consent gate and the delivery stager follow.
 func TestAnAccountStartedSendRefusesWithNoRecipientDirectoryWired(t *testing.T) {
 	e := setupSend(t)
-	org := e.seedOrganization(t)
+	company := e.seedCompany(t)
 	stager := &recordingStager{}
 
 	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
-		e.as(principal.RowScopeAll), accountOrigin(org), sendInput("transactional"), stubConsentGate{}, stager)
+		e.as(principal.RowScopeAll), accountOrigin(company), sendInput("transactional"), stubConsentGate{}, stager)
 
 	var unwired *NoRecipientDirectoryError
 	if !errors.As(err, &unwired) {
@@ -362,11 +362,11 @@ func (g *countingConsentGate) RequireGrantedForEmails(context.Context, []string,
 // retry a 500 that had already consumed the human's one-shot approval.
 func TestARepeatedLinkIsFiledOnceRatherThanRaisingAUniqueViolation(t *testing.T) {
 	e := setupSend(t)
-	org := e.seedOrganization(t)
+	company := e.seedCompany(t)
 	stager := &recordingStager{}
 	repeated := FromAccount([]ActivityLinkInput{
-		{EntityType: "organization", EntityID: org},
-		{EntityType: "organization", EntityID: org},
+		{EntityType: "company", EntityID: company},
+		{EntityType: "company", EntityID: company},
 	})
 
 	sent, err := e.accountStore().SendEmail(
@@ -389,7 +389,7 @@ func TestASendFiledUnderMoreRecordsThanTheBoundIsRefusedBeforeItProbesAnything(t
 	stager := &recordingStager{}
 	links := make([]ActivityLinkInput, maxActivityLinks+1)
 	for i := range links {
-		links[i] = ActivityLinkInput{EntityType: "organization", EntityID: ids.NewV7()}
+		links[i] = ActivityLinkInput{EntityType: "company", EntityID: ids.NewV7()}
 	}
 
 	_, err := e.accountStore().SendEmail(
@@ -412,10 +412,10 @@ func TestASendFiledUnderMoreRecordsThanTheBoundIsRefusedBeforeItProbesAnything(t
 // probeLinkTargets — meets it too.
 func TestTheLinkBoundHoldsAtTheWriteItself(t *testing.T) {
 	e := setupSend(t)
-	org := e.seedOrganization(t)
+	company := e.seedCompany(t)
 	links := make([]ActivityLinkInput, maxActivityLinks+1)
 	for i := range links {
-		links[i] = ActivityLinkInput{EntityType: "organization", EntityID: org}
+		links[i] = ActivityLinkInput{EntityType: "company", EntityID: company}
 	}
 
 	_, _, err := e.store(stubUnsubscribeLinker{}).LogActivity(e.as(principal.RowScopeAll), LogActivityInput{
@@ -444,11 +444,11 @@ func TestAReplyIsFiledUnderTheRecordsItsAnchorCarriesPlusTheOnesTheCallerNames(t
 	inherited := e.linkPerson(t, anchor, "Mara Vogt")
 	// The record the anchor does not carry — the shape a project attached to
 	// the deal after the conversation began takes.
-	late := e.seedOrganization(t)
+	late := e.seedCompany(t)
 
 	sent, err := e.store(stubUnsubscribeLinker{}).SendEmail(
 		e.as(principal.RowScopeAll),
-		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "organization", EntityID: late}}),
+		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "company", EntityID: late}}),
 		sendInput("transactional"), stubConsentGate{}, &recordingStager{})
 	if err != nil {
 		t.Fatalf("reply SendEmail: %v", err)
@@ -464,7 +464,7 @@ func TestAReplyIsFiledUnderTheRecordsItsAnchorCarriesPlusTheOnesTheCallerNames(t
 		t.Errorf("the reply lost a link its anchor carried; filed = %v — naming a record must ADD to the "+
 			"conversation's own filing, never replace it", filed)
 	}
-	if !filed["organization/"+late.String()] {
+	if !filed["company/"+late.String()] {
 		t.Errorf("the reply was not filed under the record the caller named; filed = %v", filed)
 	}
 }
@@ -483,7 +483,7 @@ func TestAReplyRefusesAnAddedLinkTheCallerCannotSee(t *testing.T) {
 
 	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
 		e.as(principal.RowScopeAll),
-		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "organization", EntityID: unseen}}),
+		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "company", EntityID: unseen}}),
 		sendInput("transactional"), gate, stager)
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
@@ -539,13 +539,13 @@ func TestAReplyIsRefusedWhenItsAdditionsPushTheAnchorPastTheBound(t *testing.T) 
 	for i := 0; i < maxActivityLinks; i++ {
 		e.linkPerson(t, anchor, fmt.Sprintf("Person %d", i))
 	}
-	org := e.seedOrganization(t)
+	company := e.seedCompany(t)
 	gate := &countingConsentGate{}
 	stager := &recordingStager{}
 
 	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
 		e.as(principal.RowScopeAll),
-		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "organization", EntityID: org}}),
+		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "company", EntityID: company}}),
 		sendInput("transactional"), gate, stager)
 
 	var tooMany *TooManyLinksError

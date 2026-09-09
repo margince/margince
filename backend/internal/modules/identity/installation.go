@@ -3,7 +3,7 @@
 
 package identity
 
-// One installation serves one organization (A107/ADR-0061). The workspace
+// One installation serves one company (A107/ADR-0061). The workspace
 // row remains the internal singleton boundary: this file owns its
 // boot-time creation from deployment configuration and its resolution for
 // every request. The invariant is enforced here, at boot and at lookup —
@@ -26,33 +26,33 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// ErrNotBootstrapped means the database holds no active organization.
+// ErrNotBootstrapped means the database holds no active company.
 // The API refuses to serve (it bootstraps at boot or dies); the worker
 // retries until the API has bootstrapped; the MCP binary exits with this
 // as an operator error — pre-bootstrap no human exists who could have
 // granted a passport.
-var ErrNotBootstrapped = errors.New("identity: installation not bootstrapped — no active organization exists")
+var ErrNotBootstrapped = errors.New("identity: installation not bootstrapped — no active company exists")
 
 // ErrMultipleWorkspaces means the database violates the
-// single-organization invariant. Never auto-resolved — an operator
-// explicitly retains one organization and archives the rest (ADR-0061 §3).
-var ErrMultipleWorkspaces = errors.New("identity: more than one active workspace — the single-organization invariant requires an operator-led migration")
+// single-company invariant. Never auto-resolved — an operator
+// explicitly retains one company and archives the rest (ADR-0061 §3).
+var ErrMultipleWorkspaces = errors.New("identity: more than one active workspace — the single-company invariant requires an operator-led migration")
 
 // installationLockKey serializes bootstrap across concurrently starting
 // processes (pg_advisory_xact_lock). The value is arbitrary but fixed —
 // every binary of this installation must agree on it.
 const installationLockKey = int64(0x4d61726761_0001) // "Marga"+1
 
-// InstallationBootstrap is the creation input for the singleton organization.
+// InstallationBootstrap is the creation input for the singleton company.
 //
 // It arrives one of two ways and never both: from the deployment
 // configuration file when the operator configured a bootstrap admin, or from
 // the setup claim when a human claims an unprovisioned installation with the
 // setup token. The two paths are mutually exclusive — creating the
-// organization retires every setup token — so neither can correct the other
+// company retires every setup token — so neither can correct the other
 // afterwards.
 type InstallationBootstrap struct {
-	OrganizationName string
+	CompanyName string
 	BaseCurrency     string
 	BaseLanguage     string
 	Timezone         string
@@ -62,23 +62,23 @@ type InstallationBootstrap struct {
 }
 
 // BootstrapInstallation binds the installation to its singleton
-// organization, creating it when the database is empty. Under a
+// company, creating it when the database is empty. Under a
 // transaction-scoped advisory lock (so concurrent API starts cannot race
-// a second organization into existence) it applies the ADR-0061 state
-// machine: 0 active workspaces → create organization + first admin +
+// a second company into existence) it applies the ADR-0061 state
+// machine: 0 active workspaces → create company + first admin +
 // system roles + seeds atomically; 1 → bind to it; >1 → refuse.
 //
 // create is nil when no bootstrap_admin is configured — then an empty
 // database is ErrNotBootstrapped instead of being claimable. No session
 // is minted: the first admin signs in through the normal login, and
-// bootstrap values never reconcile into an existing organization
+// bootstrap values never reconcile into an existing company
 // (restart never resets a password, role, or seed).
 //
 // create is a FUNCTION, and it is called only on the branch that creates
-// the organization. Resolving the bootstrap input eagerly would read the
+// the company. Resolving the bootstrap input eagerly would read the
 // admin's password secret on every boot of an already-bootstrapped
 // installation — a secret ADR-0061 §2 says may be deleted once the
-// organization exists, so the read would fail on exactly the installations
+// company exists, so the read would fail on exactly the installations
 // that followed the ADR. What is only needed to CREATE is only resolved
 // when creating.
 // discarded names the identity settings the caller supplied that a previous
@@ -119,7 +119,7 @@ func (s *Service) BootstrapInstallation(ctx context.Context, create func() (Inst
 	return wsID, created, discarded, nil
 }
 
-// InstallationWorkspace resolves the singleton organization for a
+// InstallationWorkspace resolves the singleton company for a
 // request, cached after the first successful lookup — the resolution the
 // per-request slug used to provide. Pre-bootstrap lookups return
 // ErrNotBootstrapped (never cached: the worker polls this until the API
@@ -171,7 +171,7 @@ func activeWorkspaces(ctx context.Context, tx pgx.Tx) ([]ids.WorkspaceID, error)
 }
 
 // provisioningOrigin says which of ADR-0105's two paths created the
-// organization, and it decides two things that follow from the same fact —
+// company, and it decides two things that follow from the same fact —
 // whether a human was present. Who the creation is attributed to, and whether
 // the first admin owes a password rotation, are both answers to that. It is a
 // parameter rather than a field on InstallationBootstrap because it describes
@@ -188,7 +188,7 @@ const (
 	originClaimed
 )
 
-// createInstallation writes organization + first admin + system roles +
+// createInstallation writes company + first admin + system roles +
 // module seeds in the caller's transaction — either everything exists
 // afterwards or nothing does (the ADR-0043 bootstrap atomicity, kept).
 // discarded is an out-parameter rather than a third return value, and that is a
@@ -199,7 +199,7 @@ const (
 // a successful create, not a second result of the call.
 func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
 	boot := BootstrapInput{
-		WorkspaceName: in.OrganizationName,
+		WorkspaceName: in.CompanyName,
 		AdminEmail:    in.AdminEmail,
 		AdminName:     in.AdminName,
 		AdminPassword: in.AdminPassword,
@@ -256,9 +256,9 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 	// may be running on an installation that was minted a token by an earlier
 	// unprovisioned boot. Left alive, that token would sit in a log pipeline
 	// while /setup/status advertised the installation as claimable — inert only
-	// while an organization exists, and live again the moment one is archived or
-	// the database is restored empty. The organization is what retires it, not
-	// whichever path created the organization.
+	// while a company exists, and live again the moment one is archived or
+	// the database is restored empty. The company is what retires it, not
+	// whichever path created the company.
 	if err := retireSetupTokens(ctx, tx); err != nil {
 		return ids.WorkspaceID{}, err
 	}
@@ -267,7 +267,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 	// is the opposite: someone presented the operator's token and chose their
 	// own credential in that same request, so the record names the admin it
 	// created (ADR-0105 §4). The module seeds written inside this transaction
-	// stay `system:seed` on both paths (B37) — a claimant chose an organization
+	// stay `system:seed` on both paths (B37) — a claimant chose a company
 	// name, not a default pipeline's stages.
 	actorType, actorID := "system", "installation-bootstrap"
 	if origin == originClaimed {

@@ -423,6 +423,10 @@ const (
 	CommissionAccrued                     SubscribableEventType = "commission.accrued"
 	CommissionDecided                     SubscribableEventType = "commission.decided"
 	CommsDeliveryBounced                  SubscribableEventType = "comms.delivery_bounced"
+	CompanyArchived                       SubscribableEventType = "company.archived"
+	CompanyCreated                        SubscribableEventType = "company.created"
+	CompanyMerged                         SubscribableEventType = "company.merged"
+	CompanyUpdated                        SubscribableEventType = "company.updated"
 	ConsentChanged                        SubscribableEventType = "consent.changed"
 	ConsentSuppressed                     SubscribableEventType = "consent.suppressed"
 	ConsentSuppressionLifted              SubscribableEventType = "consent.suppression_lifted"
@@ -489,10 +493,6 @@ const (
 	OfferSent                             SubscribableEventType = "offer.sent"
 	OfferSuperseded                       SubscribableEventType = "offer.superseded"
 	OnboardingStateChanged                SubscribableEventType = "onboarding.state_changed"
-	OrganizationArchived                  SubscribableEventType = "organization.archived"
-	OrganizationCreated                   SubscribableEventType = "organization.created"
-	OrganizationMerged                    SubscribableEventType = "organization.merged"
-	OrganizationUpdated                   SubscribableEventType = "organization.updated"
 	PassportRevoked                       SubscribableEventType = "passport.revoked"
 	PersonArchived                        SubscribableEventType = "person.archived"
 	PersonCreated                         SubscribableEventType = "person.created"
@@ -563,6 +563,14 @@ func (e SubscribableEventType) Valid() bool {
 	case CommissionDecided:
 		return true
 	case CommsDeliveryBounced:
+		return true
+	case CompanyArchived:
+		return true
+	case CompanyCreated:
+		return true
+	case CompanyMerged:
+		return true
+	case CompanyUpdated:
 		return true
 	case ConsentChanged:
 		return true
@@ -696,14 +704,6 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case OnboardingStateChanged:
 		return true
-	case OrganizationArchived:
-		return true
-	case OrganizationCreated:
-		return true
-	case OrganizationMerged:
-		return true
-	case OrganizationUpdated:
-		return true
 	case PassportRevoked:
 		return true
 	case PersonArchived:
@@ -822,7 +822,7 @@ type PublicEventActivityCaptured struct {
 	SourceSystem *string `json:"source_system,omitempty"`
 }
 
-// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/organization/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
 type PublicEventActivityChangedFields struct {
 	// AssigneeId The activity's new assignee (absent when this update did not touch it).
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
@@ -877,13 +877,13 @@ type PublicEventActivityRelinkedRef struct {
 	// EntityId The relink target's id.
 	EntityId openapi_types.UUID `json:"entity_id"`
 
-	// EntityType The relink target's kind (person | organization | deal | lead).
+	// EntityType The relink target's kind (person | company | deal | lead).
 	EntityType string `json:"entity_type"`
 }
 
-// PublicEventActivityUpdated Payload for activity.updated — a BOUNDED delta (unlike the person/organization/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map.
+// PublicEventActivityUpdated Payload for activity.updated — a BOUNDED delta (unlike the person/company/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map.
 type PublicEventActivityUpdated struct {
-	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/organization/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
 	ChangedFields PublicEventActivityChangedFields `json:"changed_fields"`
 }
 
@@ -982,8 +982,8 @@ type PublicEventCommissionAccrued struct {
 	// DealId The won deal the entry was accrued on.
 	DealId openapi_types.UUID `json:"deal_id"`
 
-	// PartnerOrgId The partner who earned it.
-	PartnerOrgId openapi_types.UUID `json:"partner_org_id"`
+	// PartnerCompanyId The partner who earned it.
+	PartnerCompanyId openapi_types.UUID `json:"partner_company_id"`
 
 	// RateBps The rate applied, in basis points, frozen from the partner's tier at accrual.
 	RateBps int `json:"rate_bps"`
@@ -1014,6 +1014,51 @@ type PublicEventCommsDeliveryBounced struct {
 
 // PublicEventCommsDeliveryBouncedKind Whether the refusal is durable (`hard`) or temporary (`soft`).
 type PublicEventCommsDeliveryBouncedKind string
+
+// PublicEventCompanyArchived Payload for company.archived — a company was archived. Carries no data.
+type PublicEventCompanyArchived struct{}
+
+// PublicEventCompanyCreated Payload for company.created — a UNION across five emit sites (a direct create, the capture auto-create engine, the anchor company save, the site-read confirmation, and the cold-start profile apply), each of which sets only its own subset; every field is therefore optional.
+type PublicEventCompanyCreated struct {
+	// Anchor Whether this is the installation's own anchor company (company save only).
+	Anchor *bool `json:"anchor,omitempty"`
+
+	// CapturedBy The principal that created this company.
+	CapturedBy *string `json:"captured_by,omitempty"`
+
+	// Delta The fields the creating site applied (company save / site-read confirmation only).
+	Delta *map[string]interface{} `json:"delta,omitempty"`
+
+	// DisplayName The company's display name at creation (absent when the site never set one).
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// PrimaryDomain The company's primary domain (cold-start apply only).
+	PrimaryDomain *string `json:"primary_domain,omitempty"`
+
+	// SiteReadId The site-read that produced this company (site-read confirmation only).
+	SiteReadId *openapi_types.UUID `json:"site_read_id,omitempty"`
+
+	// Source Where this company originated (e.g. human, site_read).
+	Source *string `json:"source,omitempty"`
+
+	// SourceUrl The source page this company was read from (site-read confirmation only).
+	SourceUrl *string `json:"source_url,omitempty"`
+}
+
+// PublicEventCompanyMerged Payload for company.merged — two company records collapsed into one (the §1.3 merge); neither company.updated nor company.archived can say this, so it is its own verb.
+type PublicEventCompanyMerged struct {
+	// MergedFromId The merged-away (source) company, retired but still fetchable by id.
+	MergedFromId openapi_types.UUID `json:"merged_from_id"`
+
+	// MergedIntoId The survivor (target) company.
+	MergedIntoId openapi_types.UUID `json:"merged_into_id"`
+}
+
+// PublicEventCompanyUpdated Payload for company.updated — an OPEN envelope: eight emit sites carry divergent shapes (a flat column patch, the anchor company save's field delta, the partner extension's nested delta, enrichment/deep-read applies, a relationship delta), so the honest shape is a change-set map rather than a fixed field list.
+type PublicEventCompanyUpdated struct {
+	// ChangedFields What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form.
+	ChangedFields map[string]interface{} `json:"changed_fields"`
+}
 
 // PublicEventConsentChanged Payload for consent.changed — a subject's per-purpose consent state was recorded (consent/store.go's Record). The subject is a person XOR a lead (data-model §7, before promotion) — a RUNTIME choice Record resolves via consentSubject, not a fixed type this schema can name, so this is the first dynamic-entity event (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and the emit site supplies the real entity type through storekit.EmitEventForEntity.
 type PublicEventConsentChanged struct {
@@ -1062,19 +1107,19 @@ type PublicEventConsentSuppressionLifted struct {
 
 // PublicEventContractArchived Payload for contract.archived — the agreement left the surfaces that count it.
 type PublicEventContractArchived struct {
-	OrganizationId openapi_types.UUID `json:"organization_id"`
+	CompanyId openapi_types.UUID `json:"company_id"`
 }
 
 // PublicEventContractCreated Payload for contract.created — an agreement was recorded against a company.
 type PublicEventContractCreated struct {
+	// CompanyId The counterparty. A company holds many contracts.
+	CompanyId openapi_types.UUID `json:"company_id"`
+
 	// ContractNumber The counterparty's own number for the agreement, when one was given.
 	ContractNumber *string `json:"contract_number,omitempty"`
 
 	// DealId The deal this agreement came from, when it came from one.
 	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
-
-	// OrganizationId The counterparty. An organization holds many contracts.
-	OrganizationId openapi_types.UUID `json:"organization_id"`
 
 	// Status Always `draft` — an agreement is recorded before it is asserted active.
 	Status string `json:"status"`
@@ -1086,8 +1131,8 @@ type PublicEventContractCreated struct {
 
 // PublicEventContractStatusChanged Payload for contract.status_changed — a human or an approved proposal asserted a new status. No date ever produces this event.
 type PublicEventContractStatusChanged struct {
-	FromStatus     string              `json:"from_status"`
-	OrganizationId *openapi_types.UUID `json:"organization_id,omitempty"`
+	CompanyId  *openapi_types.UUID `json:"company_id,omitempty"`
+	FromStatus string              `json:"from_status"`
 
 	// SupersededById The successor, when the transition was a renewal.
 	SupersededById *openapi_types.UUID `json:"superseded_by_id,omitempty"`
@@ -1299,8 +1344,8 @@ type PublicEventDealStageChanged struct {
 	// PartnerAttribution What that partner did — sourced or influenced — at the moment of the move. Commission accrues on sourced only.
 	PartnerAttribution *string `json:"partner_attribution,omitempty"`
 
-	// PartnerOrgId The partner the deal named at the moment of the move, when it named one. Frozen here for the same reason the amount is: the commission a win earns is priced on what was true that day, and re-reading the deal later would price it on an attribution somebody edited afterwards.
-	PartnerOrgId *openapi_types.UUID `json:"partner_org_id,omitempty"`
+	// PartnerCompanyId The partner the deal named at the moment of the move, when it named one. Frozen here for the same reason the amount is: the commission a win earns is priced on what was true that day, and re-reading the deal later would price it on an attribution somebody edited afterwards.
+	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 
 	// ToStageId Stage the deal entered.
 	ToStageId openapi_types.UUID `json:"to_stage_id"`
@@ -1347,7 +1392,7 @@ type PublicEventEntityRef struct {
 	// Id Stable identifier of the entity.
 	Id openapi_types.UUID `json:"id"`
 
-	// Type Entity kind (e.g. deal, person, organization).
+	// Type Entity kind (e.g. deal, person, company).
 	Type string `json:"type"`
 }
 
@@ -1817,51 +1862,6 @@ type PublicEventOnboardingStateChanged struct {
 	VoiceSkipped bool `json:"voice_skipped"`
 }
 
-// PublicEventOrganizationArchived Payload for organization.archived — an organization was archived. Carries no data.
-type PublicEventOrganizationArchived struct{}
-
-// PublicEventOrganizationCreated Payload for organization.created — a UNION across five emit sites (a direct create, the capture auto-create engine, the anchor company save, the site-read confirmation, and the cold-start profile apply), each of which sets only its own subset; every field is therefore optional.
-type PublicEventOrganizationCreated struct {
-	// Anchor Whether this is the installation's own anchor organization (company save only).
-	Anchor *bool `json:"anchor,omitempty"`
-
-	// CapturedBy The principal that created this organization.
-	CapturedBy *string `json:"captured_by,omitempty"`
-
-	// Delta The fields the creating site applied (company save / site-read confirmation only).
-	Delta *map[string]interface{} `json:"delta,omitempty"`
-
-	// DisplayName The organization's display name at creation (absent when the site never set one).
-	DisplayName *string `json:"display_name,omitempty"`
-
-	// PrimaryDomain The organization's primary domain (cold-start apply only).
-	PrimaryDomain *string `json:"primary_domain,omitempty"`
-
-	// SiteReadId The site-read that produced this organization (site-read confirmation only).
-	SiteReadId *openapi_types.UUID `json:"site_read_id,omitempty"`
-
-	// Source Where this organization originated (e.g. human, site_read).
-	Source *string `json:"source,omitempty"`
-
-	// SourceUrl The source page this organization was read from (site-read confirmation only).
-	SourceUrl *string `json:"source_url,omitempty"`
-}
-
-// PublicEventOrganizationMerged Payload for organization.merged — two organization records collapsed into one (the §1.3 merge); neither organization.updated nor organization.archived can say this, so it is its own verb.
-type PublicEventOrganizationMerged struct {
-	// MergedFromId The merged-away (source) organization, retired but still fetchable by id.
-	MergedFromId openapi_types.UUID `json:"merged_from_id"`
-
-	// MergedIntoId The survivor (target) organization.
-	MergedIntoId openapi_types.UUID `json:"merged_into_id"`
-}
-
-// PublicEventOrganizationUpdated Payload for organization.updated — an OPEN envelope: eight emit sites carry divergent shapes (a flat column patch, the anchor company save's field delta, the partner extension's nested delta, enrichment/deep-read applies, a relationship delta), so the honest shape is a change-set map rather than a fixed field list.
-type PublicEventOrganizationUpdated struct {
-	// ChangedFields What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form.
-	ChangedFields map[string]interface{} `json:"changed_fields"`
-}
-
 // PublicEventPassportRevoked Payload for passport.revoked — an agent passport was hard-revoked (identity/passport.go's RevokePassport), so long-lived consumers drop it within one bus cycle.
 type PublicEventPassportRevoked struct {
 	// By The human who revoked it (the granting user, or an admin).
@@ -1954,15 +1954,15 @@ type PublicEventProjectArchived struct{}
 
 // PublicEventProjectCreated Payload for project.created — a body of work was opened on a company.
 type PublicEventProjectCreated struct {
+	// CompanyId The anchor company. A project has exactly one.
+	CompanyId openapi_types.UUID `json:"company_id"`
+
 	// Key The short handle inbound mail is matched against, when one was given.
 	Key *string `json:"key,omitempty"`
 
 	// Name The project's name at creation.
-	Name string `json:"name"`
-
-	// OrganizationId The anchor company. A project has exactly one.
-	OrganizationId openapi_types.UUID  `json:"organization_id"`
-	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
+	Name    string              `json:"name"`
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phase Always `initiative` — a project is born at the head of the ladder.
 	Phase string `json:"phase"`
@@ -2045,12 +2045,12 @@ type PublicEventRoleChanged struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
-// PublicEventSignalDetected Payload for signal.detected — a signal was created (signals/signal.go's CreateSignal). entity_type/entity_id are DATA fields naming the signal's subject (deal | organization | person) when one is already known at creation time — not the envelope's own entity ref, which is the signal itself (this event's entity type is the static "signal"). Both are absent on a raw signal (only a raw_ref), which enters unresolved and waits for the resolver; resolution_confidence is set only when the signal was created already resolved.
+// PublicEventSignalDetected Payload for signal.detected — a signal was created (signals/signal.go's CreateSignal). entity_type/entity_id are DATA fields naming the signal's subject (deal | company | person) when one is already known at creation time — not the envelope's own entity ref, which is the signal itself (this event's entity type is the static "signal"). Both are absent on a raw signal (only a raw_ref), which enters unresolved and waits for the resolver; resolution_confidence is set only when the signal was created already resolved.
 type PublicEventSignalDetected struct {
 	// SubjectEntityId The subject record's id — a payload data field, absent until a raw signal resolves.
 	SubjectEntityId *openapi_types.UUID `json:"entity_id,omitempty"`
 
-	// SubjectEntityType The subject record's type (deal | organization | person) — a payload data field, absent until a raw signal resolves (both entity fields set together). x-go-name avoids colliding with the generated EntityType() method, which names the ENVELOPE'S entity (always "signal"), not this data field.
+	// SubjectEntityType The subject record's type (deal | company | person) — a payload data field, absent until a raw signal resolves (both entity fields set together). x-go-name avoids colliding with the generated EntityType() method, which names the ENVELOPE'S entity (always "signal"), not this data field.
 	SubjectEntityType *string `json:"entity_type,omitempty"`
 
 	// Kind The signal kind (stalled_deal | champion_left | reengagement | buying_intent | risk | other).
@@ -2072,7 +2072,7 @@ type PublicEventSignalDetected struct {
 	SourceChannel string `json:"source_channel"`
 }
 
-// PublicEventSignalResolved Payload for signal.resolved — the resolver ran over a signal (signals/resolver.go's Resolve). The verdict IS the candidate count (P12): zero candidates drops the signal (resolved_org_id, resolved_person_id, matched_on, match_confidence all absent); exactly one resolves it to that org (resolved_org_id set, resolved_person_id set only under a recorded consent grant); several flags it low_confidence for review (matched_on/ match_confidence describe the top candidate, resolved_org_id stays absent).
+// PublicEventSignalResolved Payload for signal.resolved — the resolver ran over a signal (signals/resolver.go's Resolve). The verdict IS the candidate count (P12): zero candidates drops the signal (resolved_company_id, resolved_person_id, matched_on, match_confidence all absent); exactly one resolves it to that company (resolved_company_id set, resolved_person_id set only under a recorded consent grant); several flags it low_confidence for review (matched_on/ match_confidence describe the top candidate, resolved_company_id stays absent).
 type PublicEventSignalResolved struct {
 	// MatchConfidence The top candidate's match confidence (0–1).
 	MatchConfidence *float32 `json:"match_confidence,omitempty"`
@@ -2083,8 +2083,8 @@ type PublicEventSignalResolved struct {
 	// ResolutionState The state after resolving (resolved | low_confidence | dropped).
 	ResolutionState string `json:"resolution_state"`
 
-	// ResolvedOrgId The organization the signal resolved to (absent when dropped or ambiguous).
-	ResolvedOrgId *openapi_types.UUID `json:"resolved_org_id,omitempty"`
+	// ResolvedCompanyId The company the signal resolved to (absent when dropped or ambiguous).
+	ResolvedCompanyId *openapi_types.UUID `json:"resolved_company_id,omitempty"`
 
 	// ResolvedPersonId The consent-gated person the signal resolved to (absent unless an existing person under a recorded consent grant matched).
 	ResolvedPersonId *openapi_types.UUID `json:"resolved_person_id,omitempty"`
@@ -2384,7 +2384,7 @@ type PublicEventWeeklyPlanUpdated struct {
 	PlanId        openapi_types.UUID `json:"plan_id"`
 }
 
-// SubscribableEventType The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, person/organization, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
+// SubscribableEventType The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, person/company, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
 type SubscribableEventType string
 
 // UserReactivatedStatus The status a reactivated member was restored to.
@@ -2444,6 +2444,22 @@ func (PublicEventCommissionDecided) EntityType() string { return "commission" }
 func (PublicEventCommsDeliveryBounced) EventType() string { return "comms.delivery_bounced" }
 
 func (PublicEventCommsDeliveryBounced) EntityType() string { return "activity" }
+
+func (PublicEventCompanyArchived) EventType() string { return "company.archived" }
+
+func (PublicEventCompanyArchived) EntityType() string { return "company" }
+
+func (PublicEventCompanyCreated) EventType() string { return "company.created" }
+
+func (PublicEventCompanyCreated) EntityType() string { return "company" }
+
+func (PublicEventCompanyMerged) EventType() string { return "company.merged" }
+
+func (PublicEventCompanyMerged) EntityType() string { return "company" }
+
+func (PublicEventCompanyUpdated) EventType() string { return "company.updated" }
+
+func (PublicEventCompanyUpdated) EntityType() string { return "company" }
 
 func (PublicEventConsentChanged) EventType() string { return "consent.changed" }
 
@@ -2717,22 +2733,6 @@ func (PublicEventOnboardingStateChanged) EventType() string { return "onboarding
 
 func (PublicEventOnboardingStateChanged) EntityType() string { return "onboarding_wizard_state" }
 
-func (PublicEventOrganizationArchived) EventType() string { return "organization.archived" }
-
-func (PublicEventOrganizationArchived) EntityType() string { return "organization" }
-
-func (PublicEventOrganizationCreated) EventType() string { return "organization.created" }
-
-func (PublicEventOrganizationCreated) EntityType() string { return "organization" }
-
-func (PublicEventOrganizationMerged) EventType() string { return "organization.merged" }
-
-func (PublicEventOrganizationMerged) EntityType() string { return "organization" }
-
-func (PublicEventOrganizationUpdated) EventType() string { return "organization.updated" }
-
-func (PublicEventOrganizationUpdated) EntityType() string { return "organization" }
-
 func (PublicEventPassportRevoked) EventType() string { return "passport.revoked" }
 
 func (PublicEventPassportRevoked) EntityType() string { return "passport" }
@@ -2912,6 +2912,10 @@ var PublicEventVersions = map[string]int{
 	"commission.accrued":                        1,
 	"commission.decided":                        1,
 	"comms.delivery_bounced":                    1,
+	"company.archived":                          1,
+	"company.created":                           1,
+	"company.merged":                            1,
+	"company.updated":                           1,
 	"consent.changed":                           1,
 	"consent.suppressed":                        1,
 	"consent.suppression_lifted":                1,
@@ -2978,10 +2982,6 @@ var PublicEventVersions = map[string]int{
 	"offer.sent":                                1,
 	"offer.superseded":                          1,
 	"onboarding.state_changed":                  1,
-	"organization.archived":                     1,
-	"organization.created":                      1,
-	"organization.merged":                       1,
-	"organization.updated":                      1,
 	"passport.revoked":                          1,
 	"person.archived":                           1,
 	"person.created":                            1,

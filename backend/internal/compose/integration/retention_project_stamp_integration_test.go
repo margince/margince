@@ -25,7 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// projectStampFixture is one project on an organization and an email that is
+// projectStampFixture is one project on a company and an email that is
 // not yet filed under it.
 type projectStampFixture struct {
 	project ids.UUID
@@ -34,10 +34,10 @@ type projectStampFixture struct {
 
 func seedProjectStampFixture(t *testing.T, e *Env) projectStampFixture {
 	t.Helper()
-	org := e.SeedOrg(t, "Acme GmbH", nil)
+	company := e.SeedCompany(t, "Acme GmbH", nil)
 	project, email := ids.NewV7(), ids.NewV7()
-	e.WsExec(t, `INSERT INTO project (id, name, key, organization_id, phase, source, captured_by)
-		VALUES ($1, 'ERP rollout', 'ERP27', $2, 'delivering', 'manual', 'human:x')`, project, org)
+	e.WsExec(t, `INSERT INTO project (id, name, key, company_id, phase, source, captured_by)
+		VALUES ($1, 'ERP rollout', 'ERP27', $2, 'delivering', 'manual', 'human:x')`, project, company)
 	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
 		VALUES ($1, 'email', 'Milestone 3 sign-off', 'the acceptance test passed', now(), 'manual', 'human:x')`,
 		email)
@@ -140,8 +140,8 @@ func TestRelinkingAwayFromAProjectLeavesTheStampStanding(t *testing.T) {
 	e := Setup(t)
 	f := seedProjectStampFixture(t, e)
 	other := ids.NewV7()
-	e.WsExec(t, `INSERT INTO project (id, name, organization_id, phase, source, captured_by)
-		SELECT $1, 'Datacentre migration', organization_id, 'delivering', 'manual', 'human:x'
+	e.WsExec(t, `INSERT INTO project (id, name, company_id, phase, source, captured_by)
+		SELECT $1, 'Datacentre migration', company_id, 'delivering', 'manual', 'human:x'
 		  FROM project WHERE id = $2`, other, f.project)
 
 	for _, target := range []ids.UUID{f.project, other} {
@@ -300,8 +300,8 @@ func TestTheProjectEvidenceColumnsAreFrozenAtTheDatabase(t *testing.T) {
 		t.Fatalf("filing the email under its project: %v", err)
 	}
 	other := ids.NewV7()
-	e.WsExec(t, `INSERT INTO project (id, name, organization_id, phase, source, captured_by)
-		SELECT $1, 'Datacentre migration', organization_id, 'delivering', 'manual', 'human:x'
+	e.WsExec(t, `INSERT INTO project (id, name, company_id, phase, source, captured_by)
+		SELECT $1, 'Datacentre migration', company_id, 'delivering', 'manual', 'human:x'
 		  FROM project WHERE id = $2`, other, f.project)
 
 	for _, c := range []struct {

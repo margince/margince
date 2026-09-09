@@ -59,7 +59,7 @@ func asRep(ctx context.Context, userID ids.UUID) context.Context {
 			Objects: map[string]principal.ObjectGrant{
 				"deal":         {Read: true, Update: true},
 				"activity":     {Read: true},
-				"organization": {Read: true},
+				"company": {Read: true},
 				"person":       {Read: true},
 			},
 			RowScope: principal.RowScopeAll,

@@ -77,7 +77,7 @@ const fieldSubjectType = "subject_type"
 // the RBAC objects the write is gated on: correcting what the system says
 // about a contact requires the grant to edit that contact.
 var feedbackSubjects = map[string]bool{
-	"organization": true,
+	"company": true,
 	"person":       true,
 	"deal":         true,
 	"lead":         true,
@@ -307,7 +307,7 @@ func admitVerdict(ctx context.Context, in RecordInput) error {
 	if !feedbackSubjects[in.SubjectType] {
 		return &values.ParseError{
 			Field: fieldSubjectType, Code: "invalid_subject_type",
-			Message: "a claim is about an organization, person, deal or lead",
+			Message: "a claim is about a company, person, deal or lead",
 		}
 	}
 	if strings.TrimSpace(in.ClaimPath) == "" {
@@ -412,7 +412,7 @@ func (s *FeedbackStore) VerdictsForTx(ctx context.Context, tx pgx.Tx, subjectTyp
 	if !feedbackSubjects[subjectType] {
 		return nil, &values.ParseError{
 			Field: fieldSubjectType, Code: "invalid_subject_type",
-			Message: "a claim is about an organization, person, deal or lead",
+			Message: "a claim is about a company, person, deal or lead",
 		}
 	}
 	// A read grant on the subject, matching the read this consult decorates.

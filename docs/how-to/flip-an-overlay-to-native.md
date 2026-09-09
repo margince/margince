@@ -36,7 +36,7 @@ Connecting an overlay in the first place is [connect-a-hubspot-overlay.md](conne
 exercising the whole lifecycle against an isolated HubSpot test account (the safe place to rehearse
 this page) is [test-overlay-locally.md](test-overlay-locally.md).
 
-> **Single-organization installation.** One installation serves one organization and the server
+> **Single-company installation.** One installation serves one company and the server
 > resolves it itself, so the `curl`s below carry only the session cookie — no tenant header.
 
 ## 1. Who may run it
@@ -119,7 +119,7 @@ when green and `emergency` when the incumbent is unreachable:
   "unresolved_conflicts": [],
   "snapshot": { "id": "snap-2026-08-05T09:14:22Z-0198…", "frozen_at": "2026-08-05T09:14:22Z" },
   "parity": [
-    { "object": "organization", "mirror_count": 412, "will_create": 412, "will_update": 0 },
+    { "object": "company", "mirror_count": 412, "will_create": 412, "will_update": 0 },
     { "object": "person", "mirror_count": 3180, "will_create": 3176, "will_update": 0,
       "skipped": [ { "external_id": "701", "reason": "duplicate_email" } ] }
   ]
@@ -127,7 +127,7 @@ when green and `emergency` when the incumbent is unreachable:
 ```
 
 `parity` is the migration engine's zero-write dry-run over the sealed snapshot, in import order
-(organization → person → lead → deal → activity). It writes no CRM row; every row it cannot carry is
+(company → person → lead → deal → activity). It writes no CRM row; every row it cannot carry is
 listed with a reason rather than dropped.
 
 ### Blocking reasons

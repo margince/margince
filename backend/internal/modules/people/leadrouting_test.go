@@ -153,7 +153,7 @@ func TestParseRoutingConfigRoundTripsAndRejectsMalformedParams(t *testing.T) {
 // accessor handles but the set omits would let a config through that the
 // editor 422s. This binds the switch to the declared vocabulary.
 func TestFieldResolvesExactlyRoutableLeadFields(t *testing.T) {
-	facts := leadRoutingFacts{Source: "s", CompanyName: "c", CandidateOrgKey: "k"}
+	facts := leadRoutingFacts{Source: "s", CompanyName: "c", CandidateCompanyKey: "k"}
 	for _, name := range RoutableLeadFields {
 		if facts.field(name) == "" {
 			t.Errorf("routable field %q is not resolved by leadRoutingFacts.field", name)

@@ -224,7 +224,7 @@ func checkLink(recordType string, id ids.UUID) error {
 	if _, ok := linkTables[recordType]; !ok {
 		return &values.ParseError{
 			Field: "linked_record_type", Code: "unknown",
-			Message: "a commitment links a deal, a lead, a person, an organization or a project",
+			Message: "a commitment links a deal, a lead, a person, a company or a project",
 		}
 	}
 	return nil
@@ -242,7 +242,7 @@ var linkTables = map[string]string{
 	"deal":         "deal",
 	"lead":         "lead",
 	"person":       "person",
-	"organization": "organization",
+	"company": "company",
 	"project":      "project",
 }
 

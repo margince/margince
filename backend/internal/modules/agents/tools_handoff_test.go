@@ -35,7 +35,7 @@ func wholeHandoff() HandoffFacts {
 		AsOf: sweptAt(),
 		Project: HandoffProject{
 			ProjectID: ids.NewV7(), Name: "Acme ERP rollout", Key: "ERP", Phase: "delivering",
-			OrganizationID: &anchor, OwnerID: &owner, TargetEndDate: &target,
+			CompanyID: &anchor, OwnerID: &owner, TargetEndDate: &target,
 		},
 		Deals: []HandoffDeal{{
 			DealID: ids.NewV7(), Name: "Acme ERP licence", Status: "won", AmountMinor: &amount,
@@ -218,7 +218,7 @@ func TestAnEmptyHandoverAnswersEmptyListsNotNulls(t *testing.T) {
 	raw, err := json.Marshal(assembleHandoff(HandoffFacts{
 		AsOf: sweptAt(),
 		Project: HandoffProject{
-			ProjectID: ids.NewV7(), Name: "Bare", OrganizationID: &anchor,
+			ProjectID: ids.NewV7(), Name: "Bare", CompanyID: &anchor,
 			OwnerID: &owner, TargetEndDate: &target,
 		},
 		Deals:        []HandoffDeal{{DealID: ids.NewV7(), Status: "won", AmountMinor: &amount}},

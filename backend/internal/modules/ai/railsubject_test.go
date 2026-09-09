@@ -16,7 +16,7 @@ import (
 )
 
 func acmeRef() ids.Ref {
-	return ids.Ref{Type: "organization", ID: ids.NewV7()}
+	return ids.Ref{Type: "company", ID: ids.NewV7()}
 }
 
 // The subject is a fact about the calls under a context, so it must survive
@@ -30,7 +30,7 @@ func TestASubjectIsReadBackAsItWasDeclared(t *testing.T) {
 	if _, ok := SubjectOf(context.Background()); ok {
 		t.Error("a context nobody named a subject on reported one")
 	}
-	if _, ok := SubjectOf(WithSubject(context.Background(), ids.Ref{Type: "organization"}, "Acme")); ok {
+	if _, ok := SubjectOf(WithSubject(context.Background(), ids.Ref{Type: "company"}, "Acme")); ok {
 		t.Error("a subject with no id is not a record, and must not be reported as one")
 	}
 }
@@ -60,8 +60,8 @@ func TestASubjectStampsTheAnnouncementOrLeavesItUntouched(t *testing.T) {
 	ref := acmeRef()
 	var named crmcontracts.InternalEventAiTaskStateChanged
 	Subject{Ref: ref, Label: "Acme"}.stamp(&named)
-	if named.SubjectType == nil || *named.SubjectType != "organization" {
-		t.Errorf("subject_type = %v, want organization", named.SubjectType)
+	if named.SubjectType == nil || *named.SubjectType != "company" {
+		t.Errorf("subject_type = %v, want company", named.SubjectType)
 	}
 	if named.SubjectId == nil || ids.UUID(*named.SubjectId) != ref.ID {
 		t.Errorf("subject_id = %v, want %s", named.SubjectId, ref.ID)

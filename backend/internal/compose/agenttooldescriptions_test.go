@@ -122,7 +122,7 @@ func duplicateDescription(specs []mcp.ToolSpec) (first, second string, shared bo
 // spec carrying exactly one defect, so a rule that silently stopped detecting
 // its own subject fails here rather than passing over a clean tree forever.
 func TestTheDescriptionRulesFailOnTheDefectsTheyDescribe(t *testing.T) {
-	written := "Find people and organizations by name when you do not yet know which record you mean."
+	written := "Find people and companies by name when you do not yet know which record you mean."
 	for _, tc := range []struct {
 		name string
 		spec mcp.ToolSpec

@@ -7,7 +7,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
  * The first-run claim (ADR-0105).
  *
  * An installation whose deployment file names no `bootstrap_admin` holds no
- * organization. Its boundary would otherwise render "installation not ready" —
+ * company. Its boundary would otherwise render "installation not ready" —
  * true, and a dead end. This screen is what stands there when the installation
  * is instead WAITING to be claimed, and it is the only screen in the product
  * that creates an account without one.
@@ -50,7 +50,7 @@ async function fill(canvasElement: HTMLElement) {
     "9f2c-not-a-real-token",
   );
   await user.type(
-    canvas.getByLabelText(/organization name/i),
+    canvas.getByLabelText(/company name/i),
     "Brandt Automotive",
   );
   await user.type(canvas.getByLabelText(/your name/i), "Ilse Brandt");
@@ -69,7 +69,7 @@ async function submitAgainst(canvasElement: HTMLElement, status: number) {
   });
   const { canvas, user } = await fill(canvasElement);
   await user.click(
-    canvas.getByRole("button", { name: /create the organization/i }),
+    canvas.getByRole("button", { name: /create the company/i }),
   );
 }
 
@@ -103,7 +103,7 @@ export const PasswordTooShort: Story = {
       "9f2c-not-a-real-token",
     );
     await user.type(
-      canvas.getByLabelText(/organization name/i),
+      canvas.getByLabelText(/company name/i),
       "Brandt Automotive",
     );
     await user.type(canvas.getByLabelText(/your name/i), "Ilse Brandt");

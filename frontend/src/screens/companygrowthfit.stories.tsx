@@ -20,16 +20,16 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type GrowthFit = components["schemas"]["OrganizationGrowthFit"];
+type GrowthFit = components["schemas"]["CompanyGrowthFit"];
 
 const assessmentSentence = (
   text: string,
-): components["schemas"]["OrganizationBriefSentence"] => ({
+): components["schemas"]["CompanyBriefSentence"] => ({
   text,
   nature: "assessment",
   evidence: [
     {
-      entity_type: "organization",
+      entity_type: "company",
       entity_id: "o-1",
       name: "Brandt Automotive GmbH",
     },
@@ -39,7 +39,7 @@ const assessmentSentence = (
 // Every named dimension present, and every reason group non-empty: the
 // ceiling case, so nothing here is standing in for a gap.
 const strong: GrowthFit = {
-  organization_id: "o-1",
+  company_id: "o-1",
   band: "strong",
   band_capped_reason: null,
   data_completeness: { present: 7, expected: 7, missing: [] },
@@ -97,7 +97,7 @@ const strong: GrowthFit = {
 // The warn tone on the scale's other end, with fewer inputs available than
 // the ceiling case: a reason to weigh the band down, not a reason to hide it.
 const weak: GrowthFit = {
-  organization_id: "o-1",
+  company_id: "o-1",
   band: "weak",
   band_capped_reason: null,
   data_completeness: {
@@ -145,7 +145,7 @@ const weak: GrowthFit = {
 // the capped reason and the next step both name the fix, and `missing` is
 // partial rather than empty or complete.
 const capped: GrowthFit = {
-  organization_id: "o-1",
+  company_id: "o-1",
   band: "moderate",
   band_capped_reason:
     "our own offering context for this segment is not yet confirmed",
@@ -177,7 +177,7 @@ const capped: GrowthFit = {
 // Below the abstention floor: no sub_scores at all (never zeroes, DOSS-AC-18),
 // no reason groups, and `next_step` stands in for the score it is not making.
 const unknown: GrowthFit = {
-  organization_id: "o-1",
+  company_id: "o-1",
   band: "unknown",
   band_capped_reason: null,
   data_completeness: {
@@ -193,11 +193,11 @@ const unknown: GrowthFit = {
 function Panel({
   route,
 }: Readonly<{ route: (body: unknown) => Response | Promise<Response> }>) {
-  installFetchStub({ "GET /organizations/o-1/growth-fit": route });
+  installFetchStub({ "GET /companies/o-1/growth-fit": route });
   return (
     <StoryProviders>
       <div style={{ maxWidth: 760 }}>
-        <GrowthFitPanel orgId="o-1" enabled />
+        <GrowthFitPanel companyId="o-1" enabled />
       </div>
     </StoryProviders>
   );
@@ -230,7 +230,7 @@ export const Loading: Story = {
 export const Unavailable: Story = {
   render: () => (
     <Panel
-      route={() => jsonResponse({ organization_id: "o-1", band: "strong" })}
+      route={() => jsonResponse({ company_id: "o-1", band: "strong" })}
     />
   ),
 };

@@ -89,7 +89,7 @@ func TestTheTwoCompanyMarksAreWrittenAndClearedIndependently(t *testing.T) {
 		slot LogoSlot
 		key  string
 	}{{LogoWide, "logos/wide.png"}, {LogoIcon, "logos/icon.png"}} {
-		got, err := e.store.OrganizationLogoKey(e.ctx, e.anchorID, want.slot)
+		got, err := e.store.CompanyLogoKey(e.ctx, e.anchorID, want.slot)
 		if err != nil {
 			t.Fatalf("reading slot %d back: %v", want.slot, err)
 		}
@@ -132,7 +132,7 @@ func assertMarkColumns(t *testing.T, e *anchorEnv, keyColumn, originColumn, want
 		// of the code under test would agree with it about a column neither of
 		// them names correctly.
 		return tx.QueryRow(context.Background(),
-			fmt.Sprintf(`SELECT %s, %s FROM organization WHERE id = $1`, keyColumn, originColumn),
+			fmt.Sprintf(`SELECT %s, %s FROM company WHERE id = $1`, keyColumn, originColumn),
 			e.anchorID).Scan(&key, &origin)
 	}); err != nil {
 		t.Fatalf("reading the mark back: %v", err)

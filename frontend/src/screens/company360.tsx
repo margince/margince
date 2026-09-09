@@ -56,35 +56,35 @@ import { TaskCompleteCheck, type useTaskUpdate } from "./taskactions";
 
 // The company view's data layer and its right-rail cards.
 //
-// One read (GET /organizations/{id}/360) serves the whole page, and its
+// One read (GET /companies/{id}/360) serves the whole page, and its
 // `sections_omitted` is the thing that makes the page honest: a section the
 // caller's role cannot read is ABSENT from the payload and named there, so
 // every card below can say "hidden from you" instead of drawing an empty
 // list that reads as "there is none".
 
-type Organization360 = components["schemas"]["Organization360"];
-type Deal360 = components["schemas"]["Organization360Deal"];
-type NextStep = components["schemas"]["Organization360NextStep"];
+type Company360 = components["schemas"]["Company360"];
+type Deal360 = components["schemas"]["Company360Deal"];
+type NextStep = components["schemas"]["Company360NextStep"];
 const OVERLAY_REFUSAL = "unsupported_in_overlay_mode";
 
-export type Org360Result =
-  | { state: "ready"; view: Organization360 }
+export type Company360Result =
+  | { state: "ready"; view: Company360 }
   | { state: "overlay" };
 
 /**
- * useOrganization360 reads the whole company page in one round trip.
+ * useCompany360 reads the whole company page in one round trip.
  *
  * `enabled` exists for callers that are not the page: chrome mounted on every
  * screen has to hold the hook unconditionally and ask for nothing when there is
  * no record under it — an empty id is a 422, not an empty answer.
  */
-export function useOrganization360(id: string, enabled = true) {
-  return useQuery<Org360Result>({
-    queryKey: ["organization360", id],
+export function useCompany360(id: string, enabled = true) {
+  return useQuery<Company360Result>({
+    queryKey: ["company360", id],
     enabled: enabled && id !== "",
     queryFn: async () => {
       const { data, error, response } = await api.GET(
-        "/organizations/{id}/360",
+        "/companies/{id}/360",
         { params: { path: { id } } },
       );
       if (error) {
@@ -104,7 +104,7 @@ export function useOrganization360(id: string, enabled = true) {
 const VIEW_ACK_DWELL_MS = 5_000;
 
 /**
- * useAcknowledgeOrganizationView advances THIS reader's "last seen" baseline
+ * useAcknowledgeCompanyView advances THIS reader's "last seen" baseline
  * for the account — the thing that makes "N new since your last visit" mean
  * anything on the next visit. Without it the server keeps answering with no
  * baseline at all, so every visit reads as the first one.
@@ -119,11 +119,11 @@ const VIEW_ACK_DWELL_MS = 5_000;
  * describes the visit in progress; refetching it out from under the reader
  * would erase the very thing they opened the page to see.
  */
-export function useAcknowledgeOrganizationView(id: string, visited: boolean) {
+export function useAcknowledgeCompanyView(id: string, visited: boolean) {
   const ack = useMutation({
-    mutationFn: async (organizationId: string) => {
-      const { error } = await api.POST("/organizations/{id}/view-ack", {
-        params: { path: { id: organizationId } },
+    mutationFn: async (companyId: string) => {
+      const { error } = await api.POST("/companies/{id}/view-ack", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -174,7 +174,7 @@ export function DealsCard({
   extra,
   loading = false,
 }: Readonly<{
-  view?: Organization360;
+  view?: Company360;
   // The verbs that change this section, rendered under it. Absent on an
   // archived record, which takes no new deals.
   actions?: ReactNode;
@@ -220,7 +220,7 @@ export function DealsCard({
                 deals endpoint reads. */}
             <a
               className="link-button"
-              href={dealsFilteredBy("organization_id", view.organization.id, {
+              href={dealsFilteredBy("company_id", view.company.id, {
                 status: "lost",
               })}
             >
@@ -295,7 +295,7 @@ function DealRow({ deal }: Readonly<{ deal: Deal360 }>) {
  * tab keeps that card in full, and this is the shorter reading a rep gets
  * without leaving Overview.
  *
- * No open-pipeline total is drawn: nothing in Organization360 sums the open
+ * No open-pipeline total is drawn: nothing in Company360 sums the open
  * deals' amounts, and inventing one here would be exactly the fabricated
  * figure the deals section's own honesty rule forbids.
  */
@@ -307,7 +307,7 @@ export function CommercialPanel({
   loading = false,
   figuresOnly = false,
 }: Readonly<{
-  view?: Organization360;
+  view?: Company360;
   // The "new deal" verb, gated by the caller on the record being writable.
   titleAction?: ReactNode;
   // What else belongs to this account's commercial standing but is not read
@@ -367,7 +367,7 @@ export function CommercialPanel({
         value={
           <a
             className="link-button"
-            href={dealsFilteredBy("organization_id", view.organization.id, {
+            href={dealsFilteredBy("company_id", view.company.id, {
               status: "lost",
             })}
           >
@@ -518,7 +518,7 @@ export function NextSteps({
   onOpenTask,
   update,
 }: Readonly<{
-  view: Organization360;
+  view: Company360;
   // The steps nobody has accepted yet, drawn above the ones on the list. They
   // are the caller's rows because only a caller that can WRITE one should offer
   // it — a read-only account draws none — and they lead rather than follow: a
@@ -624,12 +624,12 @@ export function NextSteps({
   );
 }
 
-type Question = components["schemas"]["OrganizationQuestion"];
-type Suggestion = components["schemas"]["Organization360Suggestion"];
+type Question = components["schemas"]["CompanyQuestion"];
+type Suggestion = components["schemas"]["Company360Suggestion"];
 // The body an `add_task` suggestion carries, and the body POST /tasks takes —
 // one type, so a step the server prepared cannot be posted as something else.
 type CreateTaskRequest = components["schemas"]["CreateTaskRequest"];
-type Answer = components["schemas"]["OrganizationAnswer"];
+type Answer = components["schemas"]["CompanyAnswer"];
 // The prepared questions, in the order the card offers them: what is open now,
 // then what to walk in with, then what has moved.
 //
@@ -652,13 +652,13 @@ const QUESTIONS: readonly Question[] = Object.keys({
  * would look exactly like one that had searched everything.
  */
 export function AskSection({
-  orgId,
+  companyId,
   enabled,
   onOpenRecord,
   onOpenEmail,
   projects,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   // Opens a cited message in the page's email drawer; see `Citations`.
@@ -685,8 +685,8 @@ export function AskSection({
       question: Question;
       project: string;
     }) => {
-      const { data, error } = await api.POST("/organizations/{id}/ask", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.POST("/companies/{id}/ask", {
+        params: { path: { id: companyId } },
         body: { question, ...(project ? { project_id: project } : {}) },
       });
       if (error) {
@@ -785,7 +785,7 @@ export function AskSection({
  * dismissal is theirs alone and is keyed on the evidence, so the same advice
  * stays gone while the situation holds and comes back when it changes.
  */
-type Health = NonNullable<Organization360["health"]>;
+type Health = NonNullable<Company360["health"]>;
 // One rated dimension of the account's health: the rating, and the sentence it
 // was read from. Named here because three readings carry it as their basis.
 type HealthDimension = NonNullable<Health["relationship"]>;
@@ -806,7 +806,7 @@ type HealthDimension = NonNullable<Health["relationship"]>;
 // The rating vocabulary, worst first. The ORDER is the worst-of rule: a
 // verdict is the lowest-ranked rating among the dimensions that have one
 // (PO-AC-N-11).
-export type StateStrip = NonNullable<Organization360["state_strip"]>;
+export type StateStrip = NonNullable<Company360["state_strip"]>;
 
 // Whose move it is, in words. Exported (and no longer rendered by this file
 // as a strip tile) because the daily brief's context band reads the same
@@ -868,12 +868,12 @@ const UNASSESSED_READING: MessageKey = "co.strip.notAssessed";
 // cross-currency sum without its conversion source, and nothing called
 // "revenue" that is only a count of open deals.
 export function StateStrip({
-  orgId,
+  companyId,
   view,
   onOpenTab,
 }: Readonly<{
-  orgId: string;
-  view?: Organization360;
+  companyId: string;
+  view?: Company360;
   // The tab each reading is a reading OF. Optional, because a surface that
   // draws these outside the record page (the storybook, a mirror) has no tab
   // strip to send anybody to — and a door with nowhere behind it is not drawn
@@ -909,7 +909,7 @@ export function StateStrip({
   // reads as though the relationship were still running.
   const customer = strip.account.lifecycle === "customer";
   // The contract pairs an absent optional section with its name in
-  // `sections_omitted` (Organization360), so the reason `health` did not arrive
+  // `sections_omitted` (Company360), so the reason `health` did not arrive
   // is readable rather than guessable — and guessing is how a grant boundary
   // gets reported as an account nobody has assessed.
   const healthWithheld = view != null && omitted(view, "health");
@@ -931,7 +931,7 @@ export function StateStrip({
           have never billed it says so, which is a fact about the account,
           where an absent card is a hole the reader has to interpret. */}
       <MoneyStat
-        orgId={orgId}
+        companyId={companyId}
         locale={locale}
         customer={customer}
         dimension={view?.health?.payment}
@@ -976,7 +976,7 @@ function LastTouchStat({
   onOpen,
   t,
 }: Readonly<{
-  view?: Organization360;
+  view?: Company360;
   locale: Locale;
   recordZone: string;
   onOpen?: () => void;
@@ -1033,7 +1033,7 @@ function NextStat({
   onOpen,
   t,
 }: Readonly<{
-  view?: Organization360;
+  view?: Company360;
   locale: Locale;
   recordZone: string;
   onOpen?: () => void;
@@ -1187,14 +1187,14 @@ function financeDetailKey({
  * months and found nothing there.
  */
 function MoneyStat({
-  orgId,
+  companyId,
   locale,
   customer,
   dimension,
   onOpen,
   t,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   locale: Locale;
   // A CURRENT customer. Everyone else has never been invoiced, and the card
   // says exactly that rather than reporting a finance connection that has
@@ -1215,7 +1215,7 @@ function MoneyStat({
   // The SAME query the finance card and the payment health dimension run, so
   // every money reading on one page agrees and all but the first cost no
   // request.
-  const { data, isPending, isError, error } = useFinanceSummary(orgId);
+  const { data, isPending, isError, error } = useFinanceSummary(companyId);
   const basis = dimension ? (
     <FactList
       facts={[
@@ -1344,7 +1344,7 @@ function moneyPhrase(
 }
 
 type StripCommercial = NonNullable<
-  NonNullable<Organization360["state_strip"]>["commercial"]
+  NonNullable<Company360["state_strip"]>["commercial"]
 >;
 
 // Open pipeline, labelled as exactly what it is: the sum of open deals, never
@@ -1624,7 +1624,7 @@ const SUGGESTION_ACTION_LABELS: Record<SuggestionAction["kind"], MessageKey> = {
  * read itself. Only records this view actually carries — anything else answers
  * undefined and falls back to the kind.
  */
-export function recordNamesIn(view?: Organization360) {
+export function recordNamesIn(view?: Company360) {
   const names = new Map<string, string>();
   for (const person of view?.people?.data ?? []) {
     names.set(`person:${person.person_id}`, person.full_name);
@@ -1632,9 +1632,9 @@ export function recordNamesIn(view?: Organization360) {
   for (const deal of view?.deals?.data ?? []) {
     names.set(`deal:${deal.deal_id}`, deal.name);
   }
-  const org = view?.organization;
-  if (org) {
-    names.set(`organization:${org.id}`, org.display_name);
+  const company = view?.company;
+  if (company) {
+    names.set(`company:${company.id}`, company.display_name);
   }
   return (entityType: string, entityId: string) =>
     names.get(`${entityType}:${entityId}`);
@@ -1695,7 +1695,7 @@ function performable(
 // Exported so the brief (companytoday.tsx) reads the same truncation-honesty
 // logic rather than a second copy of it.
 export function nextCommitmentLine(
-  view: Organization360 | undefined,
+  view: Company360 | undefined,
   locale: Locale,
   t: ReturnType<typeof useT>,
 ): { headline: string; overdue: boolean } | undefined {
@@ -1730,7 +1730,7 @@ export function nextCommitmentLine(
 // reach them without a second, drifting copy. Exported so companytoday.tsx
 // composes the same rows rather than reimplementing them.
 export function useSuggestionsBody({
-  orgId,
+  companyId,
   view,
   onOpenRecord,
   onOpenEmail,
@@ -1738,8 +1738,8 @@ export function useSuggestionsBody({
   advice,
   keep,
 }: Readonly<{
-  orgId: string;
-  view?: Organization360;
+  companyId: string;
+  view?: Company360;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   // Opens a cited message in the page's email drawer. A rule that fired on an
   // unanswered mail names that mail as its grounds, and the reader's next act
@@ -1788,8 +1788,8 @@ export function useSuggestionsBody({
   const dismiss = useMutation({
     mutationFn: async (fingerprint: string) => {
       const { error } = await api.POST(
-        "/organizations/{id}/suggestions/dismiss",
-        { params: { path: { id: orgId } }, body: { fingerprint } },
+        "/companies/{id}/suggestions/dismiss",
+        { params: { path: { id: companyId } }, body: { fingerprint } },
       );
       if (error) {
         throwProblem(error);
@@ -1800,10 +1800,10 @@ export function useSuggestionsBody({
     // hide it even when the dismissal never reached the server.
     onSuccess: () =>
       Promise.all([
-        client.invalidateQueries({ queryKey: ["organization360", orgId] }),
+        client.invalidateQueries({ queryKey: ["company360", companyId] }),
         // The scan serves the merged list, so it re-reads too — else a
         // dismissed model finding would stand until the next open.
-        client.invalidateQueries({ queryKey: ["account-scan", orgId] }),
+        client.invalidateQueries({ queryKey: ["account-scan", companyId] }),
       ]),
   });
   const write = useMutation({
@@ -1819,7 +1819,7 @@ export function useSuggestionsBody({
     // fired on there being no open task, and there is one now — while the task
     // lists elsewhere gain the row this just wrote.
     onSuccess: () => {
-      client.invalidateQueries({ queryKey: ["organization360", orgId] });
+      client.invalidateQueries({ queryKey: ["company360", companyId] });
       client.invalidateQueries({ queryKey: ["activities"] });
       client.invalidateQueries({ queryKey: ["tasks"] });
     },
@@ -1967,18 +1967,18 @@ function proposesAStep(suggestion: Suggestion): boolean {
  * copy of the advice card under a heading that says otherwise.
  */
 export function ProposedNextSteps({
-  orgId,
+  companyId,
   view,
   onOpenRecord,
   onOpenEmail,
 }: Readonly<{
-  orgId: string;
-  view?: Organization360;
+  companyId: string;
+  view?: Company360;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const body = useSuggestionsBody({
-    orgId,
+    companyId,
     view,
     onOpenRecord,
     onOpenEmail,
@@ -2004,15 +2004,15 @@ export function ProposedNextSteps({
  * body via `useSuggestionsBody` alongside its own context band.
  */
 export function SuggestionsSection({
-  orgId,
+  companyId,
   view,
   onOpenRecord,
   onOpenEmail,
   onPerform,
   onOpenTasks,
 }: Readonly<{
-  orgId: string;
-  view?: Organization360;
+  companyId: string;
+  view?: Company360;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   onOpenEmail?: (activityId: string) => void;
   onPerform?: (action: SuggestionAction) => void;
@@ -2023,7 +2023,7 @@ export function SuggestionsSection({
   const t = useT();
   const { locale } = useLocale();
   const body = useSuggestionsBody({
-    orgId,
+    companyId,
     view,
     onOpenRecord,
     onOpenEmail,

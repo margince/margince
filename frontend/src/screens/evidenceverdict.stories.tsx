@@ -45,8 +45,8 @@ const EXTRACTED: ProfileField = {
   version: 3,
 };
 
-const CONFIRM = `POST /organizations/${ORG}/profile-fields/${EXTRACTED.field}/confirm`;
-const CORRECT = `PATCH /organizations/${ORG}/profile-fields/${EXTRACTED.field}`;
+const CONFIRM = `POST /companies/${ORG}/profile-fields/${EXTRACTED.field}/confirm`;
+const CORRECT = `PATCH /companies/${ORG}/profile-fields/${EXTRACTED.field}`;
 
 function verdict(routes: RouteMap = {}) {
   return () => {
@@ -54,7 +54,7 @@ function verdict(routes: RouteMap = {}) {
     return (
       <StoryProviders>
         <EvidenceVerdict
-          orgId={ORG}
+          companyId={ORG}
           claim={profileFieldClaim(ORG, EXTRACTED)}
           canEdit
         />

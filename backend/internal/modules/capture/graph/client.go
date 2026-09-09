@@ -42,7 +42,7 @@ const (
 	graphAPIBase     = "https://graph.microsoft.com/v1.0"
 
 	// defaultTenant is the multi-tenant identity endpoint: any Microsoft 365
-	// organization (and personal accounts) can consent. A single-tenant
+	// company (and personal accounts) can consent. A single-tenant
 	// deployment narrows it to its own tenant id via OAuthConfig.Tenant.
 	defaultTenant = "common"
 

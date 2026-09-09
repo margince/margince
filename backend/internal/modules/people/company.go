@@ -3,439 +3,202 @@
 
 package people
 
-// The installation's OWN company — the anchor organization (organization
-// .is_anchor, 0083). It is an organization row like any other; the mark is what
-// makes it findable, so "has this installation described itself yet?" is a
-// question the database can answer instead of a guess derived from a hostname.
-// At most one live anchor per workspace, enforced by uq_organization_anchor.
-//
-// This is the human's write. Unlike the cold-start read-back it resolves no
-// domain, creates no approval and fills no blanks on its own: a human looked
-// at every value in a form and saved it, so every field lands stamped
-// human:<user id> / source=human — which is exactly what makes a later agent
-// read-back leave it alone (applyEvidenceFields refuses to overwrite a
-// human-captured row).
-
 import (
 	"context"
-	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// The profile-field vocabulary — the contract's ColdStartField enum, spelled
-// once. A read-back fills these and the company form types them; they are the
-// same set on purpose, which is what lets a site pre-fill a form.
-const (
-	fieldOfferSummary      = "offer_summary"
-	fieldLegalName         = "legal_name"
-	fieldRegisteredAddress = "registered_address"
-	fieldRegisterVat       = "register_vat"
-	fieldLegalForm         = "legal_form"
-	fieldRegisterCourt     = "register_court"
-	fieldRegisterNumber    = "register_number"
-	fieldIndustry          = "industry"
-	fieldICP               = "icp"
-	fieldValueProposition  = "value_proposition"
-	fieldUSP               = "usp"
-	fieldCustomerPains     = "customer_pains"
-	fieldDesiredOutcomes   = "desired_outcomes"
-	fieldBuyingCenter      = "buying_center"
-	fieldBuyingIntents     = "buying_intents"
-	fieldCommonObjections  = "common_objections"
-	fieldSalesMotion       = "sales_motion"
-	fieldHistory           = "history"
-)
-
-const (
-	companySourceHuman    = "human"
-	companySourceSiteRead = "site_read"
-)
-
-const (
-	actionUpdate       = "update"
-	auditKeyFields     = "fields"
-	auditKeySource     = "source"
-	auditKeyCapturedBy = "captured_by"
-	auditKeySourceURL  = "source_url"
-	// auditKeySourceRef names WHICH source: the activity a signature came
-	// from, the page a site read quoted, the file a card arrived in.
-	auditKeySourceRef = "source_ref"
-	eventKeyDelta     = "delta"
-)
-
-// companyField is one field of the company form: its name, and — when the field
-// also lives on an organization column — which column and what this form may do
-// to a value already there. The column is the canonical value; the profile-field
-// row carries the provenance either way, exactly as the read-back writes it.
-//
-// The statement itself is orgColumnWrites', not this table's: the form and the
-// two read-back arms write the same four columns, and the only thing that
-// honestly differs between them is the authority named here.
-type companyField struct {
-	name string
-	// column is the organization column this field writes, or "" for a field
-	// the table has no column for — the profile-field row IS the record of it.
-	column    string
-	authority orgWriteAuthority
-}
-
-// companyFields is the form's vocabulary — the contract's ColdStartField enum,
-// deliberately the same set a read-back can fill. Ordered so an audit delta
-// reads the way the form does.
-var companyFields = []companyField{
-	{name: fieldDisplayName},
-	// offer_summary FILLS description (the header's one-line answer) and does
-	// not replace it. The read-back's apply REPLACES a description no person
-	// authored, and this arm deliberately does not follow it there: the form
-	// re-sends an unchanged summary on every save, so an overwrite here would
-	// clobber a newer description typed into the header's inline edit
-	// (UpdateOrganization), which stays the one editor of a standing value. The
-	// read-back has no such re-send, which is why one column takes different
-	// authority from the two paths.
-	{name: fieldOfferSummary, column: columnDescription, authority: fillUnclaimed},
-	{name: fieldLegalName, column: columnLegalName, authority: replaceStanding},
-	{name: fieldRegisteredAddress, column: columnAddress, authority: replaceStanding},
-	{name: fieldRegisterVat},
-	// The rest of the §5 DDG block. No column: the organization table carries
-	// none for a legal form, a register court or a register entry, so the
-	// profile-field row IS the record of them.
-	{name: fieldLegalForm},
-	{name: fieldRegisterCourt},
-	{name: fieldRegisterNumber},
-	{name: fieldIndustry, column: columnIndustry, authority: replaceStanding},
-	{name: fieldICP},
-	{name: fieldValueProposition},
-	{name: fieldUSP},
-	{name: fieldCustomerPains},
-	{name: fieldDesiredOutcomes},
-	{name: fieldBuyingCenter},
-	{name: fieldBuyingIntents},
-	{name: fieldCommonObjections},
-	{name: fieldSalesMotion},
-	{name: fieldHistory},
-}
-
-// CompanyProfileField is one confirmed single-value company statement with
-// its field-level provenance. Empty evidence/source URLs mean the value was
-// supplied by a human rather than read from a source document.
-type CompanyProfileField struct {
-	Field           string
-	Value           string
-	EvidenceSnippet string
-	SourceURL       string
-	// Nil when the row records no confidence, which the column allows and a
-	// non-site_read write leaves empty. Nil is not zero: a value nobody scored
-	// is not a value scored as worthless, and the list read of the same table
-	// (ListOrganizationFacts) already answers null for it.
-	Confidence *float32
-	Source     string
-	CapturedBy string
-	UpdatedAt  time.Time
-}
-
-// CompanyFact is one accepted repeatable fact about the company.
-type CompanyFact struct {
-	Category        string
-	Field           string
-	Value           string
-	ValueKey        string
-	EvidenceSnippet string
-	SourceURL       string
-	// Nil for the same reason as the profile field's above, and reachable here
-	// today: the technical-signal write records no confidence at all.
-	Confidence *float32
-	Source     string
-	CapturedBy string
-	UpdatedAt  time.Time
-	// Carried because this fact reaches the browser as the same
-	// OrganizationFact the account endpoints return, and that schema promises a
-	// version for the If-Match a correction or removal sends.
-	Version int64
-}
-
-// Company is the installation's own company as the form reads and writes it.
-// Fields carries the companyFields vocabulary; an absent key is a field
-// nobody has filled yet.
-type Company struct {
-	OrganizationID         ids.OrganizationID
-	DisplayName            string
-	OrganizationSource     string
-	OrganizationCapturedBy string
-	Website                *string
-	// The bucket path of the WIDE mark the record is wearing — one a website
-	// read resolved, or one a person uploaded (SetCompanyLogo) — and nil when
-	// it wears none. It never reaches the wire: LogoURL turns it into the
-	// endpoint that streams the bytes.
-	LogoObjectKey *string
-	// The square badge the collapsed sidebar draws, on the same terms. Only an
-	// upload ever fills it: no website read resolves a second picture.
-	LogoIconObjectKey *string
-	Fields            map[string]string
-	ProfileFields     []CompanyProfileField
-	Facts             []CompanyFact
-	MinimumComplete   bool
-	UpdatedAt         time.Time
-}
-
-// SaveCompanyInput is one submission of the company form. A nil field was not
-// sent and keeps whatever it held; a field sent empty is cleared. DisplayName
-// is required — the form cannot save a nameless company.
-type SaveCompanyInput struct {
+type CreateCompanyInput struct {
 	DisplayName string
-	Website     *string
-	Fields      map[string]*string
+	LegalName   *string
+	// Description is the one-line summary the company page shows under the
+	// title; nil leaves the column NULL, which the page renders as absent.
+	Description *string
+	Industry    *string
+	SizeBand    *string
+	OwnerID     *ids.UserID
+	ParentCompanyID *ids.CompanyID
+	Address     *crmcontracts.Address
+	Domains     []CompanyDomainInput
+	Source      string
+	// CustomFields carries the request body's extra top-level keys
+	// (additionalProperties); only active cf_* catalog columns land,
+	// drop-on-mismatch (customfields.go).
+	CustomFields map[string]any
 }
 
-// GetCompany reads the anchor organization. It returns ErrNotFound when the
-// installation has not described itself yet — that 404 IS the onboarding
-// signal, and it is deliberately indistinguishable from "no such record" to a
-// caller who may not see it.
-func (s *Store) GetCompany(ctx context.Context) (Company, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
-		return Company{}, err
+func (s *Store) CreateCompany(ctx context.Context, in CreateCompanyInput) (crmcontracts.Company, error) {
+	if err := auth.Require(ctx, "company", principal.ActionCreate); err != nil {
+		return crmcontracts.Company{}, err
 	}
-	var out Company
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		orgID, err := anchorOrganization(ctx, tx, false)
-		if err != nil {
-			return err
-		}
-		if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
-			return err
-		}
-		out, err = readCompany(ctx, tx, orgID)
-		return err
-	})
+	by, err := s.readyCompanyCreate(ctx, in)
 	if err != nil {
-		return Company{}, err
+		return crmcontracts.Company{}, err
 	}
-	return out, nil
-}
-
-// SaveCompany creates the anchor organization on first save and updates it on
-// every later one, in one transaction with its audit row and its event. The
-// transport validates the submission's shape; only names in the companyFields
-// vocabulary are ever written.
-func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, error) {
-	by, err := storekit.CapturedBy(ctx)
+	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
+	// The store-opened path reads the catalog through the unexported helper,
+	// not ActiveCompanyColumns: that one takes company:read on the
+	// caller's behalf, and a seat may hold create without it.
+	active, err := s.activeColumns(ctx, "company")
 	if err != nil {
-		return Company{}, err
+		return crmcontracts.Company{}, err
 	}
 
-	var out Company
+	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := lockCompanyState(ctx, tx); err != nil {
-			return err
-		}
-		target, err := resolveOrCreateAnchor(ctx, tx, in.DisplayName, by)
+		var err error
+		out, err = createCompanyInTx(ctx, tx, in, by, active)
 		if err != nil {
 			return err
 		}
-		orgID := target.id
+		return s.geocodeANewCompany(ctx, tx, out, in.Address)
+	})
+	return out, err
+}
 
-		fields := make(map[string]*string, len(in.Fields)+1)
-		for field, value := range in.Fields {
-			fields[field] = value
-		}
-		fields[fieldDisplayName] = &in.DisplayName
-		applied, err := writeCompanyFields(ctx, tx, orgID, by, fields)
-		if err != nil {
-			return err
-		}
-		if in.Website != nil {
-			if err := setCompanyDomain(ctx, tx, orgID, *in.Website, by); err != nil {
-				return err
-			}
-			applied["website"] = *in.Website
-		}
-		applied["display_name"] = in.DisplayName
+// CreateCompanyTx is CreateCompany for a caller that already opened a
+// transaction — one whose own write must land with this company or not at
+// all. Same gates in the same order; only the transaction is borrowed.
+//
+// Custom fields are refused rather than dropped: the catalog they are matched
+// against is read in a transaction of its own, which is exactly the second
+// connection this seam exists to avoid taking.
+func (s *Store) CreateCompanyTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput) (crmcontracts.Company, error) {
+	if err := auth.Require(ctx, "company", principal.ActionCreate); err != nil {
+		return crmcontracts.Company{}, err
+	}
+	if err := refuseCustomFields(in.CustomFields); err != nil {
+		return crmcontracts.Company{}, err
+	}
+	by, err := s.readyCompanyCreate(ctx, in)
+	if err != nil {
+		return crmcontracts.Company{}, err
+	}
+	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
+	out, err := createCompanyInTx(ctx, tx, in, by, nil)
+	if err != nil {
+		return out, err
+	}
+	return out, s.geocodeANewCompany(ctx, tx, out, in.Address)
+}
 
-		action := actionUpdate
-		if target.created {
-			action = actionCreate
-		}
-		before, after, err := anchorSaveImages(ctx, tx, target)
-		if err != nil {
-			return err
-		}
-		// before/after carry the RECORD's own column images and nothing else.
-		// The form's own bookkeeping — which source typed it, that this is the
-		// installation's own company, which fields the submission touched —
-		// rides audit_log.evidence, because anything placed in the images is
-		// projected by field history as a change to a field of that name
-		// (storekit.AuditWithEvidence).
-		auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "organization", orgID.UUID, before, after, map[string]any{
-			auditKeySource: companySourceHuman, "anchor": true, auditKeyFields: applied,
-		})
-		if err != nil {
-			return fmt.Errorf("audit company save: %w", err)
-		}
-		payload := companySaveEventPayload(target.created, applied, by)
-		if err := storekit.EmitEvent(ctx, tx, auditID, orgID.UUID, payload); err != nil {
-			return fmt.Errorf("emit %s: %w", payload.EventType(), err)
-		}
+// geocodeANewCompany queues the lookup a create earned.
+//
+// It sits on the two store entry points rather than inside
+// createCompanyInTx because that one is a free function with no store —
+// which is exactly why the enqueue was missed when the update path got it.
+// Both doors call this, so neither can create a company that never asks where
+// it is.
+//
+// A create with no usable address queues nothing: the row is simply not a
+// place yet, and the update path will queue when it becomes one.
+func (s *Store) geocodeANewCompany(ctx context.Context, tx pgx.Tx,
+	out crmcontracts.Company, address *crmcontracts.Address,
+) error {
+	if !namesAPlace(address) {
+		return nil
+	}
+	if err := s.enqueueGeocode(ctx, tx, ids.From[ids.CompanyKind](ids.UUID(out.Id))); err != nil {
+		return fmt.Errorf("locating a new company: %w", err)
+	}
+	return nil
+}
 
-		out, err = readCompany(ctx, tx, orgID)
-		return err
+// readyCompanyCreate runs what a create settles BEFORE any transaction
+// opens — the domain parse, the size-band vocabulary and the captured-by
+// resolution — and answers the attribution the write shape stamps. Both entry
+// points call it, so neither can drift from the other's validation.
+func (s *Store) readyCompanyCreate(ctx context.Context, in CreateCompanyInput) (string, error) {
+	if err := parseCompanyDomains(in.Domains); err != nil {
+		return "", err
+	}
+	// Both write paths, not just the patch: a vocabulary checked on update and
+	// not on create is a value the database refuses at birth and the transport
+	// cannot name.
+	if in.SizeBand != nil {
+		if err := checkSizeBand(*in.SizeBand); err != nil {
+			return "", err
+		}
+	}
+	return storekit.CapturedBy(ctx)
+}
+
+// createCompanyInTx is CreateCompany's transactional body, shared by
+// the store-opened and caller-opened entry points.
+func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by string,
+	active []fieldcatalog.Column,
+) (crmcontracts.Company, error) {
+	if err := ensureCompanyDomainsUnclaimed(ctx, tx, in.Domains); err != nil {
+		return crmcontracts.Company{}, err
+	}
+
+	match, err := manualDedupeCompany(ctx, tx, in)
+	if err != nil {
+		return crmcontracts.Company{}, err
+	}
+
+	// Naming a parent is a read of the parent: the child discloses the
+	// hierarchy edge, so the target must be visible under the caller's
+	// row scope, not merely same-workspace (H1 — an FK argument to a
+	// row-scoped record is a read of that record).
+	if in.ParentCompanyID != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.ParentCompanyID.UUID); err != nil {
+			return crmcontracts.Company{}, err
+		}
+	}
+
+	id, err := createCompany(ctx, tx, match, CompanySpec{
+		DisplayName:  in.DisplayName,
+		LegalName:    in.LegalName,
+		Description:  in.Description,
+		Industry:     in.Industry,
+		SizeBand:     in.SizeBand,
+		OwnerID:      in.OwnerID,
+		ParentCompanyID:  in.ParentCompanyID,
+		Address:      in.Address,
+		Domains:      in.Domains,
+		Source:       in.Source,
+		CapturedBy:   by,
+		CustomFields: in.CustomFields,
+		Active:       active,
 	})
 	if err != nil {
-		return Company{}, err
+		return crmcontracts.Company{}, err
+	}
+
+	// A description supplied at create is authored the same way an edited one
+	// is, and has to say so for the same reason: the site read asks
+	// field_provenance whose sentence it is before replacing it, and a create
+	// that stamped nothing would leave a person's own words unclaimed. `by` is
+	// the authenticated principal, so an agent's create claims nothing.
+	if in.Description != nil && *in.Description != "" {
+		if err := stampDescriptionAuthor(ctx, tx, id, by); err != nil {
+			return crmcontracts.Company{}, err
+		}
+	}
+
+	auditID, err := storekit.Audit(ctx, tx, "create", "company", id.UUID, nil, map[string]any{"display_name": in.DisplayName})
+	if err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("audit company create: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventCompanyCreated{DisplayName: &in.DisplayName}); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("emit company.created: %w", err)
+	}
+	if err := match.recordIfReview(ctx, tx, id, in.DisplayName, in.Source, by); err != nil {
+		return crmcontracts.Company{}, err
+	}
+	out, err := readCompany(ctx, tx, id, storekit.LiveOnly, active)
+	if err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("read created company: %w", err)
 	}
 	return out, nil
-}
-
-// companySaveEventPayload builds the organization-side event SaveCompany
-// emits — organization.created (the union struct) on the anchor's first
-// save, or an organization.updated changed_fields note on every later
-// one — the ONE place that maps the applied field delta onto the
-// published schema. The two shapes are different published events, not
-// variants of one, so the return type is the shared events.Payload seam.
-//
-//nolint:ireturn // dispatches to PublicEventOrganizationCreated vs Updated by the created condition; tested directly via the interface in person_organization_payload_test.go
-func companySaveEventPayload(created bool, applied map[string]any, by string) events.Payload {
-	if created {
-		source := companySourceHuman
-		anchor := true
-		return crmcontracts.PublicEventOrganizationCreated{
-			Delta:      &applied,
-			Source:     &source,
-			Anchor:     &anchor,
-			CapturedBy: &by,
-		}
-	}
-	return crmcontracts.PublicEventOrganizationUpdated{
-		ChangedFields: map[string]any{
-			eventKeyDelta: applied, auditKeySource: companySourceHuman, "anchor": true, "captured_by": by,
-		},
-	}
-}
-
-// anchorOrganization resolves the installation's own organization, or
-// ErrNotFound when it has none yet. uq_organization_anchor is a
-// `UNIQUE ((true))` singleton, so there is at most one to resolve. lock takes the row for the rest of the transaction:
-// the save path serializes concurrent edits on it, a plain read does not.
-func anchorOrganization(ctx context.Context, tx pgx.Tx, lock bool) (ids.OrganizationID, error) {
-	query := `SELECT id FROM organization
-	           WHERE is_anchor AND archived_at IS NULL`
-	if lock {
-		query += ` FOR UPDATE`
-	}
-	var orgID ids.OrganizationID
-	err := tx.QueryRow(ctx, query).Scan(&orgID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.OrganizationID{}, apperrors.ErrNotFound
-	}
-	if err != nil {
-		return ids.OrganizationID{}, fmt.Errorf("resolve anchor organization: %w", err)
-	}
-	return orgID, nil
-}
-
-// anchorTarget is the row a company save writes onto: which organization,
-// whether this save minted it, and the column images as they stood before the
-// resolve renamed it. A minted row has no before-image — nothing preceded it,
-// and a read taken after the insert would return what the insert itself wrote.
-type anchorTarget struct {
-	id      ids.OrganizationID
-	created bool
-	before  map[string]any
-}
-
-// resolveOrCreateAnchor returns the workspace's own company, minting it on the
-// first save, and reports whether it created it — which decides the audit
-// action and the event the caller emits. Creating and updating carry different
-// authority, so each arm gates on its own.
-func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by string) (anchorTarget, error) {
-	// The name lock precedes the row lock below, the one order every path
-	// holding both must use (UpdateOrganization says why).
-	if err := lockOrgNameWrites(ctx, tx); err != nil {
-		return anchorTarget{}, err
-	}
-	// The company is a single standing record, not an optimistically
-	// concurrent one: the form carries no version, so the row is LOCKED for
-	// the rest of the transaction instead. Two admins saving at once serialize
-	// — the second writes on top of the first rather than silently losing it.
-	orgID, err := anchorOrganization(ctx, tx, true)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		if err := auth.Require(ctx, "organization", principal.ActionCreate); err != nil {
-			return anchorTarget{}, err
-		}
-		orgID, err = createAnchorOrganization(ctx, tx, displayName, by)
-		return anchorTarget{id: orgID, created: true}, err
-	}
-	if err != nil {
-		return anchorTarget{}, err
-	}
-	if err := auth.Require(ctx, "organization", principal.ActionUpdate); err != nil {
-		return anchorTarget{}, err
-	}
-	if err := auth.EnsureWritable(ctx, tx, "organization", orgID.UUID); err != nil {
-		return anchorTarget{}, err
-	}
-	// Read before the rename below, because the name is one of the columns it
-	// moves: an image taken afterwards would report the new name as the old one.
-	before, err := readColdStartColumnImages(ctx, tx, orgID)
-	if err != nil {
-		return anchorTarget{}, err
-	}
-	tag, err := tx.Exec(ctx,
-		`UPDATE organization SET display_name = $2
-		 WHERE id = $1 AND display_name IS DISTINCT FROM $2`,
-		orgID, displayName)
-	if err != nil {
-		return anchorTarget{}, fmt.Errorf("update company name: %w", err)
-	}
-	// Renaming the workspace's own company can walk it onto a record captured
-	// from its own mail, which is the same duplicate every other rename path
-	// files. The IS DISTINCT FROM above means a row was touched only when the
-	// name actually moved, so that is the signal to look.
-	if tag.RowsAffected() > 0 {
-		if err := recheckOrgNameForDuplicates(ctx, tx, orgID, by); err != nil {
-			return anchorTarget{}, err
-		}
-	}
-	return anchorTarget{id: orgID, before: before}, nil
-}
-
-// createAnchorOrganization mints the company row, marked as the installation's
-// own. Nothing serializes two FIRST saves — neither has a row to lock — so the
-// uq_organization_anchor index is what decides: the loser is told the company
-// already exists rather than quietly minting a rival one.
-// It runs PO-F-2 like every other create and files what it finds. An
-// installation whose own company was already captured from mail genuinely does
-// hold that company twice, and the anchor is the row a human will work from —
-// so the pair belongs on the review queue rather than being the one create
-// allowed to mint a twin in silence.
-func createAnchorOrganization(ctx context.Context, tx pgx.Tx, displayName, by string) (ids.OrganizationID, error) {
-	match, err := DedupeOrganizationForCreate(ctx, tx, OrganizationCandidate{DisplayName: displayName})
-	if err != nil {
-		return ids.OrganizationID{}, err
-	}
-	orgID, err := createOrganization(ctx, tx, match, OrgSpec{
-		DisplayName: displayName,
-		IsAnchor:    true,
-		Source:      "manual",
-		CapturedBy:  by,
-	})
-	if constraint, dup := storekit.UniqueViolation(err); dup && constraint == "uq_organization_anchor" {
-		return ids.OrganizationID{}, fmt.Errorf("the company was created by someone else just now: %w", apperrors.ErrConflict)
-	}
-	if err != nil {
-		return ids.OrganizationID{}, err
-	}
-	if err := match.recordIfReview(ctx, tx, orgID, displayName, "manual", by); err != nil {
-		return ids.OrganizationID{}, err
-	}
-	return orgID, nil
 }

@@ -346,7 +346,7 @@ const probeInterval = 25 * time.Millisecond
 // on a lock held by pid, or once the racer finishes first — reporting WHICH, so
 // the caller decides what that means. For the refresh races below "finished
 // first" means the run proved nothing and must fail loudly; for the
-// organization-name lock it is the expected answer on the path that owes no
+// company-name lock it is the expected answer on the path that owes no
 // lock. One probe, two policies.
 //
 // Busy-read of pg_stat_activity, with the pid making it exact: that view is
@@ -499,7 +499,7 @@ func mustBlockOn(t *testing.T, probe pgx.Tx, pid int, done <-chan error) {
 func TestTheProbeSeesABackendThatDialsAfterItsFirstLook(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	holder, pid := e.holdOrgNameLock(ctx, t)
+	holder, pid := e.holdCompanyNameLock(ctx, t)
 
 	// The look that used to freeze this transaction's view of who is connected.
 	switch waiting, err := probeForWaiter(ctx, holder, pid); {
@@ -511,7 +511,7 @@ func TestTheProbeSeesABackendThatDialsAfterItsFirstLook(t *testing.T) {
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- takeOrgNameLockOnAFreshConnection(ctx) }()
+	go func() { done <- takeCompanyNameLockOnAFreshConnection(ctx) }()
 
 	// A budget of its own, and a short one. This racer dials and blocks in
 	// milliseconds, so a longer wait only delays the report — and it keeps this
@@ -525,12 +525,12 @@ func TestTheProbeSeesABackendThatDialsAfterItsFirstLook(t *testing.T) {
 	}
 }
 
-// takeOrgNameLockOnAFreshConnection contends for the workspace's
-// organization-name write identity from a backend that did not exist when this
+// takeCompanyNameLockOnAFreshConnection contends for the workspace's
+// company-name write identity from a backend that did not exist when this
 // call began, and returns once it holds it — which is only after the holder
 // lets go. Its own connection is the point: a pooled one may pre-date the
 // probe's first look, and then it proves nothing about a racer that does not.
-func takeOrgNameLockOnAFreshConnection(ctx context.Context) (err error) {
+func takeCompanyNameLockOnAFreshConnection(ctx context.Context) (err error) {
 	conn, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_APP_DSN"))
 	if err != nil {
 		return fmt.Errorf("dialling the racer's own connection: %w", err)
@@ -547,7 +547,7 @@ func takeOrgNameLockOnAFreshConnection(ctx context.Context) (err error) {
 			err = errors.Join(err, rollback)
 		}
 	}()
-	return lockOrgNameWrites(ctx, tx)
+	return lockCompanyNameWrites(ctx, tx)
 }
 
 // The trail has to name the handle a refresh actually displaced. Two messages

@@ -35,19 +35,19 @@ func newSetupService(t *testing.T) *Service {
 // A claim names what the installation is measured in. Both values are required
 // on this path — the form asks for them, so an absent one is a client that
 // stopped asking rather than an operator who declined to answer.
-func claimInput(org string) InstallationBootstrap {
+func claimInput(company string) InstallationBootstrap {
 	return InstallationBootstrap{
-		OrganizationName: org,
+		CompanyName: company,
 		BaseCurrency:     "EUR",
 		BaseLanguage:     "en",
 		Timezone:         "Europe/Berlin",
-		AdminEmail:       "admin@" + org + ".test",
+		AdminEmail:       "admin@" + company + ".test",
 		AdminName:        "Admin",
 		AdminPassword:    "a bootstrap password!",
 	}
 }
 
-func TestClaimCreatesTheOrganizationAndSpendsTheToken(t *testing.T) {
+func TestClaimCreatesTheCompanyAndSpendsTheToken(t *testing.T) {
 	svc := newSetupService(t)
 	ctx := context.Background()
 
@@ -64,7 +64,7 @@ func TestClaimCreatesTheOrganizationAndSpendsTheToken(t *testing.T) {
 		t.Fatalf("claim: %v", err)
 	}
 
-	// Spent, so the same token cannot claim twice even if the organization
+	// Spent, so the same token cannot claim twice even if the company
 	// were somehow removed.
 	outstanding, err = svc.SetupTokenOutstanding(ctx)
 	if err != nil {
@@ -266,7 +266,7 @@ func TestAConfiguredBootstrapRetiresAnOutstandingToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	if outstanding {
-		t.Error("a token minted before a configured bootstrap is still outstanding — /setup/status would advertise a provisioned installation as claimable, and the credential goes live again the moment the organization is archived")
+		t.Error("a token minted before a configured bootstrap is still outstanding — /setup/status would advertise a provisioned installation as claimable, and the credential goes live again the moment the company is archived")
 	}
 }
 

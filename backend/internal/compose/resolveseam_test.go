@@ -48,7 +48,7 @@ func TestTheSeamCarriesWhetherAKeyOrASimilarityNamedTheRecord(t *testing.T) {
 }
 
 // The mode guard is why this tool is composed here rather than registered beside
-// its ladder: the ladder reads the native person and organization tables, which
+// its ladder: the ladder reads the native person and company tables, which
 // hold none of an overlay workspace's records. `unresolved` is the answer that
 // leaves a caller free to create, so the unguarded call would turn the duplicate
 // guard into a duplicate factory.

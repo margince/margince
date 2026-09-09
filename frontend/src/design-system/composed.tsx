@@ -50,7 +50,7 @@ export type BoardDeal = BoardRecord & {
    * The company this deal is with, as a name a reader recognises. Empty for a
    * deal that names no company, which is the one reading that draws nothing.
    */
-  org: string;
+  company: string;
   /**
    * The company's own address, when the caller has one to give.
    *
@@ -60,34 +60,34 @@ export type BoardDeal = BoardRecord & {
    * Absent renders the company as prose, which is what a caller that cannot
    * link it is saying.
    */
-  orgHref?: string;
+  companyHref?: string;
   /** The company's resolved mark. Absent leaves the monogram, which is the
    *  floor rather than a fallback. */
-  orgLogoUrl?: string | null;
+  companyLogoUrl?: string | null;
   /**
    * The company is not this reader's to read: the wire sent no id and named the
    * field in `masked_fields`, so the slot carries the MASK rather than a name.
    *
-   * A flag rather than a node in `org`, for the reason `TimelineEntry.withheld`
+   * A flag rather than a node in `company`, for the reason `TimelineEntry.withheld`
    * is one: the withheld reading is this tier's to spell, and a caller handing
    * in its own words for it is how one reading ends up with two spellings. It
    * also keeps the mark honest — a monogram cut from the word for "withheld"
    * would be a mark no company has.
    */
-  orgWithheld?: boolean;
+  companyWithheld?: boolean;
   /**
    * The company's name could not be READ — the caller's lookup failed rather
-   * than answering. A distinct flag from `orgWithheld`, because the two say
+   * than answering. A distinct flag from `companyWithheld`, because the two say
    * opposite things about the reader: withheld means the answer exists and is
    * not theirs, unreadable means nobody got an answer at all.
    *
-   * It exists because the alternative is worse than either. An empty `org` is
+   * It exists because the alternative is worse than either. An empty `company` is
    * the reading for a deal that names NO company, and a failed lookup falling
    * into it tells the reader the deal is unlinked when it is linked to a
    * company they simply could not fetch. The table's own company cell has had
    * this reading all along; this is the card's half of it.
    */
-  orgUnreadable?: boolean;
+  companyUnreadable?: boolean;
   /**
    * The deal's money, as the two halves it actually has: an integer minor
    * amount and its ISO currency, either of which can be missing on a deal
@@ -215,17 +215,17 @@ function DealCardCompany({
   onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
 }>) {
   const t = useT();
-  if (deal.orgWithheld) {
+  if (deal.companyWithheld) {
     return (
-      <span className="deal-org">
+      <span className="deal-company">
         <FieldGuard mode="masked" />
       </span>
     );
   }
-  if (deal.orgUnreadable) {
+  if (deal.companyUnreadable) {
     return (
-      <span className="deal-org">
-        <span className="deal-org-name">{t("ref.nameLoadFailed")}</span>
+      <span className="deal-company">
+        <span className="deal-company-name">{t("ref.nameLoadFailed")}</span>
       </span>
     );
   }
@@ -233,12 +233,12 @@ function DealCardCompany({
     return null;
   }
   return (
-    <span className="deal-org">
-      <Avatar name={deal.org} src={deal.orgLogoUrl} shape="organization" />
+    <span className="deal-company">
+      <Avatar name={deal.org} src={deal.companyLogoUrl} shape="company" />
       {/* The name needs a box of its own to be truncated in: a bare text node
           has nothing for the ellipsis to apply to, and wraps under its own
           mark instead. */}
-      {deal.orgHref ? (
+      {deal.companyHref ? (
         // The company's own door, beside the deal's. The whole card used to be
         // one anchor to the deal, so a rep looking at a board of deals could
         // not reach the account behind any of them without opening a deal
@@ -248,8 +248,8 @@ function DealCardCompany({
         // preventDefault would be wrong: it would leave the card's own
         // navigation to fire while this link did nothing.
         <a
-          className="deal-org-name deal-org-link"
-          href={deal.orgHref}
+          className="deal-company-name deal-company-link"
+          href={deal.companyHref}
           onClick={(event) => {
             event.stopPropagation();
             onOpen?.(deal, event);
@@ -258,7 +258,7 @@ function DealCardCompany({
           {deal.org}
         </a>
       ) : (
-        <span className="deal-org-name">{deal.org}</span>
+        <span className="deal-company-name">{deal.org}</span>
       )}
     </span>
   );
@@ -942,7 +942,7 @@ function RecordHead({
   actions?: ReactNode;
   actionsAt: "none" | "inline" | "controls" | "below";
   wide: boolean;
-  markShape: "person" | "organization";
+  markShape: "person" | "company";
 }>) {
   const nameTip = useTruncationTooltip<HTMLHeadingElement>(name);
   return (
@@ -1059,8 +1059,8 @@ export function RecordView({
   controls?: ReactNode;
   // What KIND of record this is, which decides whether its mark is drawn round
   // like a face or as a rounded square like a logo. Defaults to `person`,
-  // which is what every record but an organization is.
-  markShape?: "person" | "organization";
+  // which is what every record but a company is.
+  markShape?: "person" | "company";
   // Puts `actions` on the SAME row as the identity block, right-aligned,
   // instead of the default full-width row underneath the header (or the
   // stacked column `controls` produces). An explicit opt-in: every other

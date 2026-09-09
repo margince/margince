@@ -11,7 +11,7 @@ import { useT } from "../i18n";
 import { useArchiveRecord } from "./archive";
 import { problemMessageOf, throwProblem } from "./common";
 
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 
 // "This is not a company": one press, one request, both halves.
 //
@@ -25,10 +25,10 @@ type Organization = components["schemas"]["Organization"];
 // which surfaced only the last error, told them nothing had happened. The
 // server does both in one transaction now and this asks for it once.
 export function CompanyRejectAction({
-  org,
+  company,
   disabledReasonId,
 }: Readonly<{
-  org: Organization;
+  company: Company;
   // Why this account's verbs are refused, when they are — the archived-record
   // sentence the whole menu shares. See CompanyActionBadges.
   disabledReasonId?: string;
@@ -47,11 +47,11 @@ export function CompanyRejectAction({
     crypto.randomUUID(),
   );
   // BOTH grants, because the write needs both and asks for both up front: the
-  // archive is `organization:delete` and the standing domain decision is
-  // `organization:update`. Offering this to a seat holding one of them is what
+  // archive is `company:delete` and the standing domain decision is
+  // `company:update`. Offering this to a seat holding one of them is what
   // put a suppressed domain behind a company that was still there.
-  const mayArchive = useCanWrite("organization", "delete");
-  const mayDecideDomains = useCanWrite("organization", "update");
+  const mayArchive = useCanWrite("company", "delete");
+  const mayDecideDomains = useCanWrite("company", "update");
   // The action exists only where there is a domain to refuse. A company
   // somebody typed in by hand was never derived from mail, so no refusal would
   // stop anything, and the server says so — but a control that is only ever
@@ -60,7 +60,7 @@ export function CompanyRejectAction({
   // The value shown below is what the PAGE holds; the server reads the primary
   // again inside the transaction, and the message on the way out names the one
   // it actually refused.
-  const primary = (org.domains ?? []).find((d) => d.is_primary);
+  const primary = (company.domains ?? []).find((d) => d.is_primary);
   const mutation = useArchiveRecord<
     { id: string; domain: string },
     { reason: string }
@@ -71,12 +71,12 @@ export function CompanyRejectAction({
     // the latest render sends the previous text — refusing a filled form, or
     // recording a reason the reader had already replaced.
     archive: async ({ reason: typed }) => {
-      const { data, error } = await api.POST("/organizations/{id}/reject", {
+      const { data, error } = await api.POST("/companies/{id}/reject", {
         params: {
-          path: { id: org.id },
+          path: { id: company.id },
           // Through ifMatch's own second argument: it owns the header map, and
           // a sibling `header` beside it is silently overwritten.
-          ...ifMatch(requireVersion(org.version), {
+          ...ifMatch(requireVersion(company.version), {
             "Idempotency-Key": idempotencyKey,
           }),
         },
@@ -85,12 +85,12 @@ export function CompanyRejectAction({
       if (error) {
         throwProblem(error, t);
       }
-      return { id: data.organization.id, domain: data.domain.domain };
+      return { id: data.company.id, domain: data.domain.domain };
     },
-    invalidate: "organizations",
-    recordKey: "organization",
+    invalidate: "companies",
+    recordKey: "company",
     archivedMessage: ({ domain }) =>
-      t("org.rejectDone", { name: org.display_name, domain }),
+      t("company.rejectDone", { name: company.display_name, domain }),
     onDone: () => {
       setConfirming(false);
       setReason("");
@@ -120,7 +120,7 @@ export function CompanyRejectAction({
         onClick={open}
         data-testid="reject-company"
       >
-        {t("org.reject")}
+        {t("company.reject")}
       </Button>
       <Modal
         open={confirming}
@@ -132,17 +132,17 @@ export function CompanyRejectAction({
           className="t-h2"
           style={{ marginBottom: "var(--space-3)" }}
         >
-          {t("org.reject")}
+          {t("company.reject")}
         </h2>
         <p style={{ marginBottom: "var(--space-4)" }}>
-          {t("org.rejectConfirm", {
-            name: org.display_name,
+          {t("company.rejectConfirm", {
+            name: company.display_name,
             domain: primary.domain,
           })}
         </p>
         <Field
-          label={t("org.rejectReasonLabel")}
-          hint={t("org.rejectReasonHint")}
+          label={t("company.rejectReasonLabel")}
+          hint={t("company.rejectReasonHint")}
           required
         >
           {(control) => (
@@ -185,7 +185,7 @@ export function CompanyRejectAction({
             onClick={() => mutation.mutate({ reason })}
             data-testid="reject-company-confirm"
           >
-            {t("org.reject")}
+            {t("company.reject")}
           </Button>
         </div>
       </Modal>

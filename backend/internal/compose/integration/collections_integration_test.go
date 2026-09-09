@@ -20,7 +20,7 @@ import (
 func setupCollections(t *testing.T) (*apptest.AppEnv, string) {
 	t.Helper()
 	e := apptest.SetupApp(t)
-	apptest.BootstrapWorkspaceSession(t, e, "Collections E2E", "org@fable.test", "Admin")
+	apptest.BootstrapWorkspaceSession(t, e, "Collections E2E", "company@fable.test", "Admin")
 	var person struct {
 		ID string `json:"id"`
 	}

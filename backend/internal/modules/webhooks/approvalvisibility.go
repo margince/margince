@@ -212,7 +212,7 @@ const (
 var approvalTargetRules = func() map[string]approvalTargetRule {
 	rules := map[string]approvalTargetRule{
 		"person":           targetRuleRowScoped,
-		"organization":     targetRuleRowScoped,
+		"company":     targetRuleRowScoped,
 		"deal":             targetRuleRowScoped,
 		"lead":             targetRuleRowScoped,
 		"project":          targetRuleRowScoped,

@@ -49,7 +49,7 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // read-only posture a `read_only` seat gets, not the admin the specs drive.
   voice_profile: ["create", "read", "update", "delete"],
   // The installation's own profile — name, timezone, base currency — which the
-  // organization card gates every write on. The unsaved-guard suite needs it:
+  // company card gates every write on. The unsaved-guard suite needs it:
   // that card's draft is the one that OUTLIVES its dialog, so it is the only
   // settings edit a reader can still be holding while they navigate away.
   installation_settings: ["read", "update"],
@@ -267,7 +267,7 @@ export const deals = [
     currency: "EUR",
     pipeline_id: "pl",
     stage_id: "s2",
-    organization_id: "o-brandt",
+    company_id: "o-brandt",
     project_id: null as string | null,
     status: "open",
     writable: true,
@@ -290,7 +290,7 @@ export const deals = [
     currency: "EUR",
     pipeline_id: "pl",
     stage_id: "s1",
-    organization_id: "o-brandt",
+    company_id: "o-brandt",
     project_id: null as string | null,
     status: "open",
     writable: true,
@@ -312,7 +312,7 @@ export const seededProject: MockProject = {
   workspace_id: "w",
   name: "Flottenumbau Brandt",
   key: "BRANDT-FLEET",
-  organization_id: "o-brandt",
+  company_id: "o-brandt",
   owner_id: "u1",
   // The signed-in seat owns this project, so the server sends writable: true
   // and the page draws its write controls. Left out, it would read as NOT
@@ -843,7 +843,7 @@ export const jobHealth = {
       oldest_waiting_age_seconds: 195,
     },
     {
-      kind: "enrich_organization",
+      kind: "enrich_company",
       queue: "enrich",
       fleet_wide: false,
       waiting: 0,
@@ -865,7 +865,7 @@ export const jobHealth = {
   ],
   recent_failures: [
     {
-      kind: "enrich_organization",
+      kind: "enrich_company",
       state: "discarded",
       attempt: 5,
       max_attempts: 5,
@@ -910,7 +910,7 @@ export const overlaySyncStatus = {
       backfillComplete: true,
     },
     {
-      object: "organization",
+      object: "company",
       lastSyncedAt: "2026-07-25T08:00:00Z",
       state: "fresh",
       backfillComplete: true,
@@ -1324,7 +1324,7 @@ export async function mockApi(
   }[] = [];
   const projectState = projectMock({
     seeded: seededProject,
-    organizationName: brandt.display_name,
+    companyName: brandt.display_name,
     deals: () => deals.map((deal) => ({ ...deal, ...dealPatches[deal.id] })),
     activities: () => loggedActivities,
   });
@@ -1639,7 +1639,7 @@ export async function mockApi(
     }
     if (path === "/company") {
       return json({
-        organization_id: "o-self",
+        company_id: "o-self",
         display_name: "Brandt Automotive GmbH",
         legal_name: "Brandt Automotive GmbH",
         registered_address: "Werkstraße 4, 70435 Stuttgart",
@@ -1669,7 +1669,7 @@ export async function mockApi(
     if (path === "/people/p-new") {
       return json({ ...anna, id: "p-new", full_name: "Peter Neu" });
     }
-    if (path === "/organizations" && method === "POST") {
+    if (path === "/companies" && method === "POST") {
       const body = route.request().postDataJSON();
       return json(
         {
@@ -1683,7 +1683,7 @@ export async function mockApi(
         201,
       );
     }
-    if (path === "/organizations/o-new") {
+    if (path === "/companies/o-new") {
       return json({ ...brandt, id: "o-new", display_name: "Neue Firma GmbH" });
     }
     if (path === "/leads" && method === "POST") {
@@ -1831,10 +1831,10 @@ export async function mockApi(
     if (path === "/people/p-anna/consent" && method === "GET") {
       return json({ state: [], events: [] });
     }
-    if (path === "/organizations" && method === "GET") {
+    if (path === "/companies" && method === "GET") {
       return json(page([brandt]));
     }
-    if (path === "/organizations/o-brandt") {
+    if (path === "/companies/o-brandt") {
       return json(brandt);
     }
     if (path === "/leads" && method === "GET") {
@@ -1990,7 +1990,7 @@ export async function mockApi(
       };
       const byResource: Record<string, unknown[]> = {
         person: [owner, tag],
-        organization: [
+        company: [
           owner,
           {
             name: "industry",
@@ -2067,14 +2067,14 @@ export async function mockApi(
             : [node];
       const clauses = leaves(asked.filter);
       const authored =
-        asked.resource === "organization" &&
+        asked.resource === "company" &&
         clauses.length === 1 &&
         clauses[0].field === "industry" &&
         clauses[0].op === "eq" &&
         clauses[0].value === "automotive";
       if (!authored) {
         return json({
-          resource: asked.resource ?? "organization",
+          resource: asked.resource ?? "company",
           match_count: 0,
           columns: [],
           rows: [],
@@ -2082,7 +2082,7 @@ export async function mockApi(
         });
       }
       return json({
-        resource: "organization",
+        resource: "company",
         match_count: 812,
         columns: ["id", "name", "industry"],
         // Both rows match the authored predicate. A preview returning a row the
@@ -2546,7 +2546,7 @@ export async function mockApi(
         { type: "person", id: "p-anna", title: "Anna Weber", score: 0.9 },
         ...projectHits,
         {
-          type: "organization",
+          type: "company",
           id: "o-brandt",
           title: "Brandt Automotive",
           score: 0.86,
@@ -2741,7 +2741,7 @@ export async function mockApi(
           messages_synced: 24,
           activities_created: 18,
           people_created: 3,
-          organizations_created: 1,
+          companies_created: 1,
         },
         review: {
           dedupe_open: 2,

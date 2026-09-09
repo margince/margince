@@ -78,7 +78,7 @@ const PROFILE_FIELDS: ColdField[] = FIELDS.map((field) =>
 const READ: CompanySiteRead = {
   id: READ_ID,
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: SITE_URL,
   status: "ready",
   status_code: null,

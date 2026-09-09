@@ -38,32 +38,32 @@ import (
 // about to close is complete without the technology rows, and a company that
 // publishes no recognisable marker is the ordinary case rather than a fault.
 //
-// A read that resolved no organization writes nothing: the domain-triage lane
+// A read that resolved no company writes nothing: the domain-triage lane
 // runs before an account exists, and reading a site to decide whether to CREATE
 // a company cannot enrich one.
 func (w *siteDeepReadWorker) readSiteTechnology(ctx context.Context, claim people.SiteReadClaim, crawl siteCrawl) {
-	if claim.OrganizationID == nil {
+	if claim.CompanyID == nil {
 		return
 	}
-	orgID := ids.From[ids.OrganizationKind](*claim.OrganizationID)
+	companyID := ids.From[ids.CompanyKind](*claim.CompanyID)
 	found, err := technologiesAcross(crawl.Pages)
 	if err != nil {
 		w.log.WarnContext(ctx, "site technology read failed",
-			"organization", orgID.String(), "err", err)
+			"company", companyID.String(), "err", err)
 		return
 	}
 	// The lane COMPLETED even when it found nothing: a site that declares no
 	// recognisable stack is an authoritative empty answer, and saying so is
 	// what lets a technology the company dropped leave the record.
 	apply := people.TechnicalEnrichment{
-		OrganizationID: orgID,
+		CompanyID: companyID,
 		Completed:      []people.TechnicalLane{people.LaneHomepage},
 		Observations:   found,
 		ObservedAt:     time.Now().UTC(),
 	}
 	if err := w.people.ApplyTechnicalEnrichment(ctx, apply, technicalChangeRecorder()); err != nil {
 		w.log.WarnContext(ctx, "writing what the site runs failed",
-			"organization", orgID.String(), "err", err)
+			"company", companyID.String(), "err", err)
 	}
 }
 

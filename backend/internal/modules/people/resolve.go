@@ -31,7 +31,7 @@ import (
 )
 
 // ResolveKind is the record type a candidate is asking about. Person and
-// organization are the two the ladder answers; a lead is deliberately not one
+// company are the two the ladder answers; a lead is deliberately not one
 // of them, because no lead-matching tier exists and inventing one here would be
 // a second matching implementation — the thing this file exists not to be.
 type ResolveKind string
@@ -39,23 +39,23 @@ type ResolveKind string
 // The two kinds this read answers.
 const (
 	ResolvePerson       ResolveKind = "person"
-	ResolveOrganization ResolveKind = "organization"
+	ResolveCompany ResolveKind = "company"
 )
 
 // ResolveCandidate is one thing a caller is holding and cannot name yet.
 type ResolveCandidate struct {
 	Kind ResolveKind
-	// Name is the display name — a person's full name, an organization's
+	// Name is the display name — a person's full name, a company's
 	// trading name.
 	Name string
-	// LegalName is the registered form, read only for an organization. The same
+	// LegalName is the registered form, read only for a company. The same
 	// company is routinely captured under two spellings and the pair collides
 	// only on this axis.
 	LegalName string
 	Emails    []string
 	Phones    []string
-	// Domains are claimed company domains. An organization candidate ALSO picks
-	// up the domain of each email it carries — see resolveOrganization for why
+	// Domains are claimed company domains. A company candidate ALSO picks
+	// up the domain of each email it carries — see resolveCompany for why
 	// that derivation is here rather than expected of the caller.
 	Domains []string
 }
@@ -94,7 +94,7 @@ type ResolveRef struct {
 }
 
 // The fuzzy axis names. The person ladder scores one name axis; the
-// organization ladder reports which of its two produced the winning pairing.
+// company ladder reports which of its two produced the winning pairing.
 const (
 	axisFullName = "full_name"
 	axisDomain   = "domain"
@@ -145,7 +145,7 @@ func (s *Store) Resolve(ctx context.Context, candidates []ResolveCandidate) ([]R
 // about, before any of it runs.
 //
 // Before, not per candidate: a batch that ran the person half and then refused
-// on the organization half would have told the caller which addresses exist
+// on the company half would have told the caller which addresses exist
 // before deciding they were not allowed to ask. The row scope is a separate
 // obligation and belongs to whoever serves these ids onward — see Resolve.
 func requireResolveAuthority(ctx context.Context, candidates []ResolveCandidate) error {
@@ -155,7 +155,7 @@ func requireResolveAuthority(ctx context.Context, candidates []ResolveCandidate)
 	}
 	for kind, object := range map[ResolveKind]string{
 		ResolvePerson:       entityPerson,
-		ResolveOrganization: entityOrganization,
+		ResolveCompany: entityCompany,
 	} {
 		if _, wanted := asked[kind]; !wanted {
 			continue
@@ -175,8 +175,8 @@ func resolveOne(ctx context.Context, tx pgx.Tx, c ResolveCandidate, consumerMail
 	switch c.Kind {
 	case ResolvePerson:
 		return resolvePerson(ctx, tx, c, consumerMail)
-	case ResolveOrganization:
-		return resolveOrganization(ctx, tx, c, consumerMail)
+	case ResolveCompany:
+		return resolveCompany(ctx, tx, c, consumerMail)
 	default:
 		return ResolveOutcome{}, fmt.Errorf("people: resolve: %q is not a record kind this read answers", c.Kind)
 	}
@@ -276,10 +276,10 @@ func personOutcome(match PersonResolution) ResolveOutcome {
 	}}}
 }
 
-// resolveOrganization answers which companies this payload names.
+// resolveCompany answers which companies this payload names.
 //
 // It asks the domain lane PER DOMAIN, for the reason exactPersonOwners does:
-// `exactOrgByDomain` takes the lowest id across every domain it is handed, so a
+// `exactCompanyByDomain` takes the lowest id across every domain it is handed, so a
 // card carrying two employers' addresses would resolve to one company chosen by
 // uuid order and be published as certain.
 //
@@ -291,16 +291,16 @@ func personOutcome(match PersonResolution) ResolveOutcome {
 // consumer domains is not optional: the ladder's own contract says a free-mail
 // domain must never reach it, and one that did would collide every private
 // address onto whichever company first claimed that provider.
-func resolveOrganization(ctx context.Context, tx pgx.Tx, c ResolveCandidate, consumerMail *freemail.Matcher) (ResolveOutcome, error) {
+func resolveCompany(ctx context.Context, tx pgx.Tx, c ResolveCandidate, consumerMail *freemail.Matcher) (ResolveOutcome, error) {
 	domains := companyDomains(c, consumerMail)
-	keyed, err := exactOrganizationOwners(ctx, tx, domains)
+	keyed, err := exactCompanyOwners(ctx, tx, domains)
 	if err != nil {
 		return ResolveOutcome{}, err
 	}
 	if len(keyed) > 0 {
 		return ResolveOutcome{Refs: keyed}, nil
 	}
-	match, err := DedupeOrganization(ctx, tx, OrganizationCandidate{
+	match, err := DedupeCompany(ctx, tx, CompanyCandidate{
 		DisplayName: c.Name,
 		LegalName:   c.LegalName,
 		Domains:     domains,
@@ -308,17 +308,17 @@ func resolveOrganization(ctx context.Context, tx pgx.Tx, c ResolveCandidate, con
 	if err != nil {
 		return ResolveOutcome{}, err
 	}
-	return organizationOutcome(match), nil
+	return companyOutcome(match), nil
 }
 
-// exactOrganizationOwners is every DISTINCT organization the candidate's domains
+// exactCompanyOwners is every DISTINCT company the candidate's domains
 // name. A domain belongs to one company, so each hit is exact; two domains
 // naming two companies is a contradiction the caller has to see.
-func exactOrganizationOwners(ctx context.Context, tx pgx.Tx, domains []string) ([]ResolveRef, error) {
+func exactCompanyOwners(ctx context.Context, tx pgx.Tx, domains []string) ([]ResolveRef, error) {
 	var out []ResolveRef
-	seen := map[ids.OrganizationID]bool{}
+	seen := map[ids.CompanyID]bool{}
 	for _, domain := range domains {
-		hit, found, err := exactOrgByDomain(ctx, tx, []string{domain}, nil)
+		hit, found, err := exactCompanyByDomain(ctx, tx, []string{domain}, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -327,22 +327,22 @@ func exactOrganizationOwners(ctx context.Context, tx pgx.Tx, domains []string) (
 		}
 		seen[hit] = true
 		out = append(out, ResolveRef{
-			Kind: ResolveOrganization, ID: hit.UUID, Exact: true, Confidence: 1, MatchedOn: axisDomain,
+			Kind: ResolveCompany, ID: hit.UUID, Exact: true, Confidence: 1, MatchedOn: axisDomain,
 		})
 	}
 	return out, nil
 }
 
-// organizationOutcome translates PO-F-2's FUZZY answer, split from its query for
+// companyOutcome translates PO-F-2's FUZZY answer, split from its query for
 // the same reason personOutcome is, and reached only when no domain matched.
-func organizationOutcome(match OrganizationMatch) ResolveOutcome {
+func companyOutcome(match CompanyMatch) ResolveOutcome {
 	if match.Decision != DecisionFuzzyReview {
 		return ResolveOutcome{}
 	}
 	refs := make([]ResolveRef, 0, len(match.Ranked))
 	for _, scored := range match.Ranked {
 		refs = append(refs, ResolveRef{
-			Kind: ResolveOrganization, ID: scored.OrganizationID.UUID,
+			Kind: ResolveCompany, ID: scored.CompanyID.UUID,
 			Confidence: scored.Confidence, MatchedOn: scored.MatchedField,
 		})
 	}
@@ -355,14 +355,14 @@ func companyDomains(c ResolveCandidate, consumerMail *freemail.Matcher) []string
 	seen := map[string]struct{}{}
 	out := make([]string, 0, len(c.Domains)+len(c.Emails))
 	add := func(claimed string) {
-		// companyHost, which is what the organization_domain index is KEYED on —
+		// companyHost, which is what the company_domain index is KEYED on —
 		// not a lowercase, and not freemail.Hostname either. A model handed
 		// "company domains" passes what is on the card, which is routinely
 		// `https://www.acme.example/careers`; companyHost is the same reducer the
 		// write path runs before storing a domain, so a claimed URL and a stored
 		// row meet in the middle instead of the caller's typing deciding whether
 		// this is an exact hit or a name guess.
-		// companyHost is what the organization_domain index is KEYED on, so a
+		// companyHost is what the company_domain index is KEYED on, so a
 		// claimed URL and a stored row meet in the middle rather than at whatever
 		// this caller happened to type. The whitespace comes off first because
 		// companyHost prefixes a scheme onto anything without one and cannot

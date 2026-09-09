@@ -555,7 +555,7 @@ func TestAnchorKeysSeparateTwoEntitiesSharingOneAnchor(t *testing.T) {
 	now := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
 	anchor := now.AddDate(0, 0, -40)
 	person := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
-	employer := datasource.EntityRef{Type: datasource.EntityOrganization, ID: ids.NewV7()}
+	employer := datasource.EntityRef{Type: datasource.EntityCompany, ID: ids.NewV7()}
 
 	handlers := map[string]workflow.Handler{
 		noActivityReminderName: noActivityReminder{},

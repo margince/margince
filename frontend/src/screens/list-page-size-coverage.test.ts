@@ -48,7 +48,7 @@ describe("every list fetcher asks for the page size the reader picked", () => {
     // The census IS the directory. A hand-kept list would be the thing that
     // went stale, which is the failure this test exists to prevent.
     expect(listScreens()).toContain("contacts.tsx");
-    expect(listScreens()).toContain("organizations.tsx");
+    expect(listScreens()).toContain("companies.tsx");
     expect(listScreens().length).toBeGreaterThanOrEqual(6);
   });
 

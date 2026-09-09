@@ -38,9 +38,9 @@ import {
 const LIST = "GET /capture/blocked-domains";
 const WRITE = "PUT /capture/blocked-domains";
 
-// Read is every human role's; changing an entry is organization:update.
-const OPS: GrantSpec = { organization: ["read", "update"] };
-const READER: GrantSpec = { organization: ["read"] };
+// Read is every human role's; changing an entry is company:update.
+const OPS: GrantSpec = { company: ["read", "update"] };
+const READER: GrantSpec = { company: ["read"] };
 
 const BY_HEURISTIC = {
   domain: "expensify.example",
@@ -48,7 +48,7 @@ const BY_HEURISTIC = {
   reason: "bulk sender: no reply address",
   source: "heuristic",
   decided_at: "2026-08-02T14:40:00Z",
-  organization_id: null,
+  company_id: null,
 };
 const BY_HUMAN = {
   domain: "mckinsey.example",
@@ -56,7 +56,7 @@ const BY_HUMAN = {
   reason: "they became a client in July",
   source: "human",
   decided_at: "2026-08-11T07:05:00Z",
-  organization_id: "018f3a1b-0000-7000-8000-00000000c001",
+  company_id: "018f3a1b-0000-7000-8000-00000000c001",
 };
 
 function mount(allow: GrantSpec, routes: RouteMap) {

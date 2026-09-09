@@ -118,7 +118,7 @@ var managerObjects = grid(crud, map[string]grant{
 //
 // Derived from managerObjects by copy rather than by aliasing it: the two grids
 // now differ, and one variable serving both is how a later edit to a team lead's
-// records posture would silently widen the organization-scoped seat too.
+// records posture would silently widen the company-scoped seat too.
 var managementObjects = func() map[string]grant {
 	out := maps.Clone(managerObjects)
 	for _, object := range []string{
@@ -171,7 +171,7 @@ var defaults = map[string]Document{
 		RowScope: principal.RowScopeAll,
 	},
 	// management is the sales leader's seat (ADR-0110): the manager grid over
-	// EVERY row in the organization, plus the five administration READS a sales
+	// EVERY row in the company, plus the five administration READS a sales
 	// leader answers for, and no administration write at all. Inviting users,
 	// changing roles, editing role policy, binding another user's passport and
 	// issuing password links are objUserAdmin and objRoleAdmin, which this seat
@@ -186,7 +186,7 @@ var defaults = map[string]Document{
 		// Team scope: a Team Lead manages their team, so they read and work the
 		// records of everyone sharing a live team with them without a share
 		// being arranged first. This is the manager grid above, bounded to the
-		// team rather than the organization — `management` is the same grid
+		// team rather than the company — `management` is the same grid
 		// unbounded.
 		//
 		// Membership resolves through team_membership and live teams only, so a
@@ -245,7 +245,7 @@ var defaults = map[string]Document{
 			"list":              writeNoDelete,
 			"offer":             writeNoDelete,
 			"offer_template":    writeNoDelete,
-			"organization":      writeNoDelete,
+			"company":      writeNoDelete,
 			"person":            writeNoDelete,
 			"product":           writeNoDelete,
 			"project":           writeNoDelete,

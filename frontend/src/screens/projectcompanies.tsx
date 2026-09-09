@@ -39,20 +39,20 @@ export function ProjectCompanies({
     // The key the project page actually reads under (project360.tsx), not a
     // guess: a mismatch leaves the section showing the state before the write.
     queryClient.invalidateQueries({ queryKey: ["project", projectId, "360"] });
-    queryClient.invalidateQueries({ queryKey: ["organization360"] });
+    queryClient.invalidateQueries({ queryKey: ["company360"] });
   };
 
   const attach = useMutation({
     mutationFn: async ({
-      organizationId,
+      companyId,
       role,
     }: {
-      organizationId: string;
+      companyId: string;
       role: string;
     }) => {
       const { error } = await api.PUT("/projects/{id}/companies", {
         params: { path: { id: projectId } },
-        body: { organization_id: organizationId, role },
+        body: { company_id: companyId, role },
       });
       if (error) {
         throwProblem(error);
@@ -62,11 +62,11 @@ export function ProjectCompanies({
   });
 
   const detach = useMutation({
-    mutationFn: async (organizationId: string) => {
+    mutationFn: async (companyId: string) => {
       const { error } = await api.DELETE(
-        "/projects/{id}/companies/{organization_id}",
+        "/projects/{id}/companies/{company_id}",
         {
-          params: { path: { id: projectId, organization_id: organizationId } },
+          params: { path: { id: projectId, company_id: companyId } },
         },
       );
       if (error) {
@@ -82,10 +82,10 @@ export function ProjectCompanies({
   // the other one.
   const adapter: ProjectLinksAdapter = {
     linked: (companies ?? []).map((company) => ({
-      project_id: company.organization_id,
+      project_id: company.company_id,
       name: company.display_name,
       phase: <Badge>{company.role}</Badge>,
-      href: `#/companies/${company.organization_id}`,
+      href: `#/companies/${company.company_id}`,
     })),
     readOnly,
     allowsMany: true,
@@ -94,9 +94,9 @@ export function ProjectCompanies({
     // vocabulary, so a company attached here and one attached there mean the
     // same thing.
     roles: COMPANY_ROLES.map((value) => ({ value, label: t(roleKey(value)) })),
-    attach: (organizationId, role) =>
-      attach.mutateAsync({ organizationId, role }),
-    detach: (organizationId) => detach.mutateAsync(organizationId),
+    attach: (companyId, role) =>
+      attach.mutateAsync({ companyId, role }),
+    detach: (companyId) => detach.mutateAsync(companyId),
   };
 
   return (
@@ -119,14 +119,14 @@ export function ProjectCompanies({
 async function searchCompanies(
   query: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/organizations", {
+  const { data, error } = await api.GET("/companies", {
     params: { query: { q: query, limit: 10 } },
   });
   if (error) {
     throwProblem(error);
   }
-  return (data?.data ?? []).map((org) => ({
-    id: org.id,
-    name: org.display_name,
+  return (data?.data ?? []).map((company) => ({
+    id: company.id,
+    name: company.display_name,
   }));
 }

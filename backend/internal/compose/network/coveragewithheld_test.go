@@ -34,7 +34,7 @@ func coverageReaderWithoutTheEdgeGrant() context.Context {
 			Objects: map[string]principal.ObjectGrant{
 				"deal":         {Read: true},
 				"person":       {Read: true},
-				"organization": {Read: true},
+				"company": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

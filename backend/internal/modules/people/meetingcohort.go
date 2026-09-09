@@ -49,7 +49,7 @@ const maxMeetingLinksPerActivity = 25
 // meeting whose attendee was only ever an address is offered to no arm at all.
 //
 // PERSON links only, never the company: a meeting may not link straight to an
-// organization, and the account reaches it through the attendee's employment.
+// company, and the account reaches it through the attendee's employment.
 //
 // The ATTENDEE's own merge redirect is resolved, not just the person the repair
 // was asked about. A participant row written before the merge repointed them

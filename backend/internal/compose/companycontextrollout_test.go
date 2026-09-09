@@ -67,13 +67,13 @@ func TestCompanySiteReadHandlersRefuseWhenRolloutIsOff(t *testing.T) {
 		call func(http.ResponseWriter, *http.Request)
 	}{
 		{name: "start", call: func(w http.ResponseWriter, r *http.Request) {
-			handlers.StartCompanySiteRead(w, r, crmcontracts.StartCompanySiteReadParams{})
+			handlers.StartCompanySiteRead(w, r, crmcontracts.StartAnchorCompanySiteReadParams{})
 		}},
 		{name: "get", call: func(w http.ResponseWriter, r *http.Request) {
 			handlers.GetCompanySiteRead(w, r, openapi_types.UUID{})
 		}},
 		{name: "confirm", call: func(w http.ResponseWriter, r *http.Request) {
-			handlers.ConfirmCompanySiteRead(w, r, openapi_types.UUID{}, crmcontracts.ConfirmCompanySiteReadParams{})
+			handlers.ConfirmCompanySiteRead(w, r, openapi_types.UUID{}, crmcontracts.ConfirmAnchorCompanySiteReadParams{})
 		}},
 	}
 	for _, test := range tests {

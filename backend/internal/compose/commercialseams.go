@@ -110,11 +110,11 @@ func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 func extractedCommitments(
 	ctx context.Context, pool *pgxpool.Pool, store *people.Store,
 	in agents.CommitmentQuery, limit int,
-) ([]people.OrgCommitment, bool, error) {
+) ([]people.CompanyCommitment, bool, error) {
 	if in.AssigneeID != nil || in.WithinProjectID != nil {
 		return nil, false, nil
 	}
-	var out []people.OrgCommitment
+	var out []people.CompanyCommitment
 	var more bool
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
@@ -164,7 +164,7 @@ func rankPromises(now time.Time, filed, said []agents.OpenCommitment, limit int)
 // asExtracted carries the claim rows across the seam. A rename and nothing
 // else: the store decided which rows, and the tool decides what state each is
 // in.
-func asExtracted(claims []people.OrgCommitment) []agents.OpenCommitment {
+func asExtracted(claims []people.CompanyCommitment) []agents.OpenCommitment {
 	out := make([]agents.OpenCommitment, 0, len(claims))
 	for _, claim := range claims {
 		claimID, activityID := claim.ID, claim.ActivityID
@@ -274,7 +274,7 @@ func handoffProject(p crmcontracts.Project) agents.HandoffProject {
 	out := agents.HandoffProject{
 		ProjectID:      ids.UUID(p.Id),
 		Name:           p.Name,
-		OrganizationID: (*ids.UUID)(p.OrganizationId),
+		CompanyID: (*ids.UUID)(p.CompanyId),
 		OwnerID:        (*ids.UUID)(p.OwnerId),
 	}
 	if p.Key != nil {

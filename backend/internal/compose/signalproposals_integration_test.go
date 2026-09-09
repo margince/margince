@@ -31,21 +31,21 @@ import (
 // filed under a stage.
 func seedAccountAtStage(t *testing.T, e *integration.Env, stage string) ids.UUID {
 	t.Helper()
-	org := ids.NewV7()
+	company := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO organization (id, display_name, lifecycle, source, captured_by)
-			VALUES ($1, 'ScaleCommerce', $2, 'gmail:seed', 'connector:gmail')`, org, stage)
+			INSERT INTO company (id, display_name, lifecycle, source, captured_by)
+			VALUES ($1, 'ScaleCommerce', $2, 'gmail:seed', 'connector:gmail')`, company, stage)
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
-	return org
+	return company
 }
 
 // seedOpenContractEnded plants the signal the extraction site produces when a
 // conversation says the relationship is over.
-func seedOpenContractEnded(t *testing.T, e *integration.Env, org ids.UUID) ids.UUID {
+func seedOpenContractEnded(t *testing.T, e *integration.Env, company ids.UUID) ids.UUID {
 	t.Helper()
 	signal := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -53,12 +53,12 @@ func seedOpenContractEnded(t *testing.T, e *integration.Env, org ids.UUID) ids.U
 		// of several is that they are several rows rather than one deduped one.
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO signal (id, kind, source_channel, entity_type, entity_id,
-			                    resolved_org_id, resolution_state, severity, summary, status,
+			                    resolved_company_id, resolution_state, severity, summary, status,
 			                    detected_at, source, captured_by)
-			VALUES ($1, 'contract_ended', 'derived', 'organization', $2, $2, 'resolved',
+			VALUES ($1, 'contract_ended', 'derived', 'company', $2, $2, 'resolved',
 			        'warn', 'They wrote that the contract ends on 31 July.', 'open',
 			        now(), 'signal-scan', 'agent:contract_ended')`,
-			signal, org)
+			signal, company)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -79,13 +79,13 @@ func proposePass(t *testing.T, e *integration.Env) int {
 }
 
 // stagedOffer reads the one offer standing against an account.
-func stagedOffer(t *testing.T, e *integration.Env, org ids.UUID) ids.UUID {
+func stagedOffer(t *testing.T, e *integration.Env, company ids.UUID) ids.UUID {
 	t.Helper()
 	var approvalID ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM approval WHERE kind = 'lifecycle_change' AND target_entity_id = $1`,
-			org).Scan(&approvalID)
+			company).Scan(&approvalID)
 	}); err != nil {
 		t.Fatalf("reading the staged offer: %v", err)
 	}
@@ -93,12 +93,12 @@ func stagedOffer(t *testing.T, e *integration.Env, org ids.UUID) ids.UUID {
 }
 
 // accountStage reads what the record currently says it is.
-func accountStage(t *testing.T, e *integration.Env, org ids.UUID) string {
+func accountStage(t *testing.T, e *integration.Env, company ids.UUID) string {
 	t.Helper()
 	var stage string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT lifecycle FROM organization WHERE id = $1`, org).Scan(&stage)
+			`SELECT lifecycle FROM company WHERE id = $1`, company).Scan(&stage)
 	}); err != nil {
 		t.Fatalf("reading the account's stage: %v", err)
 	}
@@ -122,24 +122,24 @@ func signalStatus(t *testing.T, e *integration.Env, signal ids.UUID) string {
 // human is asked, and their yes moves the account and settles the signal.
 func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 	e := integration.Setup(t)
-	org := seedAccountAtStage(t, e, "prospect")
-	signal := seedOpenContractEnded(t, e, org)
+	company := seedAccountAtStage(t, e, "prospect")
+	signal := seedOpenContractEnded(t, e, company)
 
 	if staged := proposePass(t, e); staged != 1 {
 		t.Fatalf("the pass staged %d offers, want the one the contradiction deserves", staged)
 	}
 	// Nothing structural before the human says yes (GATE-AI-2).
-	if stage := accountStage(t, e, org); stage != "prospect" {
+	if stage := accountStage(t, e, company); stage != "prospect" {
 		t.Fatalf("the account moved to %q before anyone decided", stage)
 	}
 
 	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
-		ids.From[ids.ApprovalKind](stagedOffer(t, e, org)), true, nil); err != nil {
+		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
 		t.Fatalf("accepting the offer: %v", err)
 	}
 
-	if stage := accountStage(t, e, org); stage != "former_customer" {
+	if stage := accountStage(t, e, company); stage != "former_customer" {
 		t.Errorf("the account reads %q after the accept, want former_customer", stage)
 	}
 	if status := signalStatus(t, e, signal); status != "acknowledged" {
@@ -154,13 +154,13 @@ func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 // memory of the refusal the same question comes back every hour.
 func TestARefusedOfferIsNotAskedAgain(t *testing.T) {
 	e := integration.Setup(t)
-	org := seedAccountAtStage(t, e, "customer")
-	signal := seedOpenContractEnded(t, e, org)
+	company := seedAccountAtStage(t, e, "customer")
+	signal := seedOpenContractEnded(t, e, company)
 
 	proposePass(t, e)
 	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
-		ids.From[ids.ApprovalKind](stagedOffer(t, e, org)), false, nil); err != nil {
+		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), false, nil); err != nil {
 		t.Fatalf("declining the offer: %v", err)
 	}
 
@@ -171,10 +171,10 @@ func TestARefusedOfferIsNotAskedAgain(t *testing.T) {
 
 	if n := e.WsCount(t, `
 		SELECT count(*) FROM approval
-		 WHERE kind = 'lifecycle_change' AND target_entity_id = $1`, org); n != 1 {
+		 WHERE kind = 'lifecycle_change' AND target_entity_id = $1`, company); n != 1 {
 		t.Errorf("%d offers after a decline, want the one that was declined", n)
 	}
-	if stage := accountStage(t, e, org); stage != "customer" {
+	if stage := accountStage(t, e, company); stage != "customer" {
 		t.Errorf("the account reads %q after a decline, want the stage the reader kept", stage)
 	}
 	// The reader said the RECORD was right, not that the mail never happened.
@@ -187,8 +187,8 @@ func TestARefusedOfferIsNotAskedAgain(t *testing.T) {
 // An hourly reconciler must not stack the same question in the inbox.
 func TestTheSameContradictionIsOfferedOnce(t *testing.T) {
 	e := integration.Setup(t)
-	org := seedAccountAtStage(t, e, "opportunity")
-	seedOpenContractEnded(t, e, org)
+	company := seedAccountAtStage(t, e, "opportunity")
+	seedOpenContractEnded(t, e, company)
 
 	if standing := proposePass(t, e); standing != 1 {
 		t.Fatalf("the first pass left %d offers standing, want 1", standing)
@@ -200,7 +200,7 @@ func TestTheSameContradictionIsOfferedOnce(t *testing.T) {
 	}
 	if n := e.WsCount(t, `
 		SELECT count(*) FROM approval
-		 WHERE kind = 'lifecycle_change' AND target_entity_id = $1`, org); n != 1 {
+		 WHERE kind = 'lifecycle_change' AND target_entity_id = $1`, company); n != 1 {
 		t.Errorf("the inbox carries %d copies of one question", n)
 	}
 }
@@ -211,15 +211,15 @@ func TestTheSameContradictionIsOfferedOnce(t *testing.T) {
 // under them, which is the one thing they need to know before deciding again.
 func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
 	e := integration.Setup(t)
-	org := seedAccountAtStage(t, e, "prospect")
-	seedOpenContractEnded(t, e, org)
+	company := seedAccountAtStage(t, e, "prospect")
+	seedOpenContractEnded(t, e, company)
 	proposePass(t, e)
-	approvalID := stagedOffer(t, e, org)
+	approvalID := stagedOffer(t, e, company)
 
 	// Someone reads the same mail and files the account as disqualified.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`UPDATE organization SET lifecycle = 'disqualified' WHERE id = $1`, org)
+			`UPDATE company SET lifecycle = 'disqualified' WHERE id = $1`, company)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -232,7 +232,7 @@ func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
 		t.Fatalf("accepting a stale offer returned %v, want a version conflict — a decider "+
 			"acting on a record that moved under them must be told, not obeyed", err)
 	}
-	if stage := accountStage(t, e, org); stage != "disqualified" {
+	if stage := accountStage(t, e, company); stage != "disqualified" {
 		t.Errorf("the account reads %q, want the stage the human set — a stale offer must "+
 			"not overwrite the edit that answered it", stage)
 	}
@@ -242,8 +242,8 @@ func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
 // so, and there is nothing to offer.
 func TestNoOfferIsMadeOnAnAccountAlreadyFiledAsOver(t *testing.T) {
 	e := integration.Setup(t)
-	org := seedAccountAtStage(t, e, "former_customer")
-	seedOpenContractEnded(t, e, org)
+	company := seedAccountAtStage(t, e, "former_customer")
+	seedOpenContractEnded(t, e, company)
 
 	if staged := proposePass(t, e); staged != 0 {
 		t.Fatalf("the pass staged %d offers on an account already filed as former_customer", staged)
@@ -259,15 +259,15 @@ func TestNoOfferIsMadeOnAnAccountAlreadyFiledAsOver(t *testing.T) {
 // nothing else will ever close them.
 func TestAcceptingSettlesEveryOpenContradictionOnTheAccount(t *testing.T) {
 	e := integration.Setup(t)
-	org := seedAccountAtStage(t, e, "customer")
-	first := seedOpenContractEnded(t, e, org)
-	second := seedOpenContractEnded(t, e, org)
-	third := seedOpenContractEnded(t, e, org)
+	company := seedAccountAtStage(t, e, "customer")
+	first := seedOpenContractEnded(t, e, company)
+	second := seedOpenContractEnded(t, e, company)
+	third := seedOpenContractEnded(t, e, company)
 
 	proposePass(t, e)
 	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
-		ids.From[ids.ApprovalKind](stagedOffer(t, e, org)), true, nil); err != nil {
+		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
 		t.Fatalf("accepting the offer: %v", err)
 	}
 
@@ -287,7 +287,7 @@ func TestAcceptingSettlesEveryOpenContradictionOnTheAccount(t *testing.T) {
 var teamScopedDecider = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"organization": {Read: true, Update: true},
+		"company": {Read: true, Update: true},
 		"signal":       {Read: true, Update: true},
 		"deal":         {Read: true},
 		"person":       {Read: true},
@@ -298,7 +298,7 @@ var teamScopedDecider = principal.Permissions{
 // Accepting settles the account's contradictions — the ones the decider could
 // have opened themselves, and no others.
 //
-// A signal is matched for settlement by resolved_org_id, while signal row
+// A signal is matched for settlement by resolved_company_id, while signal row
 // scope is inherited from its SUBJECT (auth.SignalScopeClause). Those are
 // different questions and can disagree: a signal resolved to this account
 // whose subject is a contact capture-private to another rep is on an account
@@ -307,20 +307,20 @@ var teamScopedDecider = principal.Permissions{
 // never shown it for.
 func TestAcceptingSettlesOnlyTheContradictionsTheDeciderCanSee(t *testing.T) {
 	e := integration.Setup(t)
-	org := seedAccountAtStage(t, e, "customer")
+	company := seedAccountAtStage(t, e, "customer")
 	// Accepting the offer writes the account's lifecycle, and an unowned row
 	// is writable by nobody below row_scope=all until claimed — so the
 	// team-scoped decider must own the account they are deciding on.
-	e.WsExec(t, "UPDATE organization SET owner_id = $1 WHERE id = $2", e.Rep1, org)
-	mine := seedOpenContractEnded(t, e, org)
+	e.WsExec(t, "UPDATE company SET owner_id = $1 WHERE id = $2", e.Rep1, company)
+	mine := seedOpenContractEnded(t, e, company)
 	// Same account, but its subject is a person capture-private to the OTHER
 	// team's rep — the one state that still hides an identity row from a seat.
-	theirs := seedOpenContractEndedOnPerson(t, e, org, seedCapturePrivatePersonOf(t, e, e.Rep3))
+	theirs := seedOpenContractEndedOnPerson(t, e, company, seedCapturePrivatePersonOf(t, e, e.Rep3))
 
 	proposePass(t, e)
 	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, teamScopedDecider),
-		ids.From[ids.ApprovalKind](stagedOffer(t, e, org)), true, nil); err != nil {
+		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
 		t.Fatalf("accepting the offer: %v", err)
 	}
 
@@ -349,20 +349,20 @@ func seedCapturePrivatePersonOf(t *testing.T, e *integration.Env, owner ids.UUID
 }
 
 // seedOpenContractEndedOnPerson files a contradiction that RESOLVES to the
-// account but is ABOUT a person — the shape where resolved_org_id and the
+// account but is ABOUT a person — the shape where resolved_company_id and the
 // subject scope disagree.
-func seedOpenContractEndedOnPerson(t *testing.T, e *integration.Env, org, person ids.UUID) ids.UUID {
+func seedOpenContractEndedOnPerson(t *testing.T, e *integration.Env, company, person ids.UUID) ids.UUID {
 	t.Helper()
 	signal := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO signal (id, kind, source_channel, entity_type, entity_id,
-			                    resolved_org_id, resolution_state, severity, summary, status,
+			                    resolved_company_id, resolution_state, severity, summary, status,
 			                    detected_at, source, captured_by)
 			VALUES ($1, 'contract_ended', 'derived', 'person', $2, $3, 'resolved',
 			        'warn', 'Their contact wrote that the renewal will not proceed.', 'open',
 			        now(), 'signal-scan', 'agent:contract_ended')`,
-			signal, person, org)
+			signal, person, company)
 		return err
 	}); err != nil {
 		t.Fatal(err)

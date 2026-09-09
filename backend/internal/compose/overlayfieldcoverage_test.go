@@ -38,7 +38,7 @@ const contractFile = "../../api/crm.yaml"
 // read from — expected wiring, not a waived cost.
 var contractSchemaNameFor = map[string]string{
 	"person":       "Person",
-	"organization": "Organization",
+	"company": "Company",
 }
 
 func TestArmedOverlayEntitiesDispositionEveryContractField(t *testing.T) {

@@ -16,7 +16,7 @@ package gates
 //
 // Dead code that looks load-bearing is worse than dead code that looks dead,
 // and this shape is the second kind. company.go's manual `version = version + 1`
-// read as a fourth approach to concurrent editing across the organization
+// read as a fourth approach to concurrent editing across the company
 // writers and was counted as one; coldstartprofile.go's overwrite arm carried
 // `updated_at = now()` where its fill arm did not, and the difference read as
 // deliberate. Neither was anything. The file next door already names the

@@ -52,7 +52,7 @@ func TestARefusedAuditRowNamesItsOwnTable(t *testing.T) {
 	// swallowed the error would meet a commit that cannot succeed and this test
 	// would read the rollback instead of the constraint.
 	refusal := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := storekit.AuditEvent(ctx, tx, "update", "organization", ids.NewV7(), nil)
+		_, err := storekit.AuditEvent(ctx, tx, "update", "company", ids.NewV7(), nil)
 		return err
 	})
 	if refusal == nil {

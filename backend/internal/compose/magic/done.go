@@ -66,7 +66,7 @@ type entry struct {
 // be invisible: the row looks like every other row.
 var scopedTypes = map[string]string{
 	"deal":         "deal",
-	"organization": "organization",
+	"company": "company",
 	"person":       "person",
 	"lead":         "lead",
 	"project":      "project",

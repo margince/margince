@@ -18,15 +18,15 @@ import (
 // drift apart.
 const (
 	filterKey            = "key"
-	filterOrganizationID = "organization_id"
+	filterCompanyID = "company_id"
 	filterOwnerID        = "owner_id"
 	filterPhase          = "phase"
 )
 
 var projectListFilters = storekit.FilterSet[ListProjectsInput]{
 	filterKey: storekit.FilterWord(func(in *ListProjectsInput, v *string) { in.Key = v }),
-	filterOrganizationID: storekit.FilterID(
-		func(in *ListProjectsInput, id *ids.OrganizationID) { in.OrganizationID = id }),
+	filterCompanyID: storekit.FilterID(
+		func(in *ListProjectsInput, id *ids.CompanyID) { in.CompanyID = id }),
 	filterOwnerID: storekit.FilterID(func(in *ListProjectsInput, id *ids.UserID) { in.OwnerID = id }),
 	filterPhase:   storekit.FilterWord(func(in *ListProjectsInput, v *string) { in.Phase = v }),
 }

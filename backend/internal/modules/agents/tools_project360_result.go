@@ -21,7 +21,7 @@ type Project360Result struct {
 	AsOf            time.Time               `json:"as_of"`
 	Project         Project360Project       `json:"project"`
 	SectionsOmitted []string                `json:"sections_omitted"`
-	Organization    *Project360Organization `json:"organization,omitempty"`
+	Company    *Project360Company `json:"company,omitempty"`
 	PhaseHistory    *Project360PhaseHistory `json:"phase_history,omitempty"`
 	Deals           *Project360Deals        `json:"deals,omitempty"`
 	Stakeholders    *Project360Stakeholders `json:"stakeholders,omitempty"`
@@ -45,16 +45,16 @@ type Project360Project struct {
 	Phase          string     `json:"phase"`
 	ClosedReason   string     `json:"closed_reason"`
 	Description    string     `json:"description"`
-	OrganizationID *ids.UUID  `json:"organization_id,omitempty"`
+	CompanyID *ids.UUID  `json:"company_id,omitempty"`
 	OwnerID        *ids.UUID  `json:"owner_id,omitempty"`
 	StartedAt      *time.Time `json:"started_at,omitempty"`
 	TargetEndDate  *time.Time `json:"target_end_date,omitempty"`
 	EndedAt        *time.Time `json:"ended_at,omitempty"`
 }
 
-// Project360Organization names the company the project is for.
-type Project360Organization struct {
-	OrganizationID ids.UUID `json:"organization_id"`
+// Project360Company names the company the project is for.
+type Project360Company struct {
+	CompanyID ids.UUID `json:"company_id"`
 	Name           string   `json:"name"`
 }
 
@@ -197,9 +197,9 @@ func project360Result(page crmcontracts.Project360) Project360Result {
 	for _, s := range page.SectionsOmitted {
 		out.SectionsOmitted = append(out.SectionsOmitted, string(s))
 	}
-	if page.Organization != nil {
-		out.Organization = &Project360Organization{
-			OrganizationID: ids.UUID(page.Organization.Id), Name: page.Organization.Name,
+	if page.Company != nil {
+		out.Company = &Project360Company{
+			CompanyID: ids.UUID(page.Company.Id), Name: page.Company.Name,
 		}
 	}
 	if page.PhaseHistory != nil {

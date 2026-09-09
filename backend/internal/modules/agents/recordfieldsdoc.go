@@ -174,17 +174,17 @@ func dealPipelineNote(shapes map[datasource.EntityType]reflect.Type) []string {
 
 // relationshipNote says what a relationship needs, because an edge's
 // requirements are per-KIND and invisible from a flat field list: `kind`,
-// `person_id`, `organization_id`, `deal_id` and `project_id` all read as equal
+// `person_id`, `company_id`, `deal_id` and `project_id` all read as equal
 // optional siblings, and they are not. Which pair is required is decided by the
 // kind and enforced by a database CHECK, so a caller working from names alone
 // sends a plausible pair and gets a shape refusal it could not have predicted.
 //
 // Keyed on an ENDPOINT FIELD, not on the record type, because both shape maps
 // carry relationship — the patch half serves it too. Only the create shape
-// declares `counterparty_org_id`, so that is the honest test for "can the caller
+// declares `counterparty_company_id`, so that is the honest test for "can the caller
 // name an endpoint at all", which is what the pairing rule is about.
 func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
-	if !describesField(shapes, "counterparty_org_id") {
+	if !describesField(shapes, "counterparty_company_id") {
 		// The patch half still owes the reader the pointer, because a person's
 		// employer is the field they will look for first and not find.
 		return "A person's employer is NOT a field here: employment is a relationship, created and " +
@@ -193,7 +193,7 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 	// REQUIRES, not "and rejects any other". The schema's shape CHECKs pin the
 	// pair each kind must have and forbid the endpoints that would contradict it,
 	// but they do not forbid every irrelevant one — an employment edge will accept
-	// a stray counterparty_org_id. Promising more than the constraints deliver
+	// a stray counterparty_company_id. Promising more than the constraints deliver
 	// would be a document a caller could disprove.
 	//
 	// The closing sentence deliberately does NOT say "no read tool serves an
@@ -202,10 +202,10 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 	// document a caller can disprove in one call costs more than the silence it
 	// replaced.
 	return "A person's employer is a relationship, not a field on the person: record_type=relationship " +
-		"with kind=employment, person_id and organization_id. Each kind REQUIRES its own endpoint pair, " +
-		"and a wrong pair is refused by name — employment: person + organization; deal_stakeholder: " +
+		"with kind=employment, person_id and company_id. Each kind REQUIRES its own endpoint pair, " +
+		"and a wrong pair is refused by name — employment: person + company; deal_stakeholder: " +
 		"deal + person; project_stakeholder: project + person; partner_of, referred_by and co_sell_with: " +
-		"organization + counterparty_org_id. An edge is not searchable, so keep the id a relationship " +
+		"company + counterparty_company_id. An edge is not searchable, so keep the id a relationship " +
 		"write returns."
 }
 
@@ -340,7 +340,7 @@ func transcriptNote(shapes map[datasource.EntityType]reflect.Type) []string {
 		"commitments; any other value stores the text and reads nothing."}
 }
 
-// descriptionNote says what an organization's `description` is FOR, which no
+// descriptionNote says what a company's `description` is FOR, which no
 // shape can show: it is the header's standing answer to what the company sells,
 // and the site read fills it from the company's own website.
 //
@@ -352,7 +352,7 @@ func descriptionNote(shapes map[datasource.EntityType]reflect.Type) []string {
 	if !describesField(shapes, "description") {
 		return nil
 	}
-	return []string{"An organization's `description` is the header's standing answer to what the " +
+	return []string{"A company's `description` is the header's standing answer to what the " +
 		"company SELLS, and a site read fills it from the company's own website. Omit it rather " +
 		"than summarising a meeting or a document into it; what one conversation covered belongs " +
 		"on that activity."}

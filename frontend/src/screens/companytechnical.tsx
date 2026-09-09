@@ -12,7 +12,7 @@ import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem } from "./common";
 import { derivedSource } from "./evidencesource";
 
-type OrganizationFact = components["schemas"]["OrganizationFact"];
+type CompanyFact = components["schemas"]["CompanyFact"];
 type TechnicalEnrichLane = components["schemas"]["TechnicalEnrichLane"];
 
 /**
@@ -42,7 +42,7 @@ export const TECHNICAL_FIELDS: readonly string[] = TECHNICAL_SECTIONS.flatMap(
 );
 
 /** isTechnicalFact reports whether a fact belongs to the technical profile. */
-export function isTechnicalFact(fact: OrganizationFact): boolean {
+export function isTechnicalFact(fact: CompanyFact): boolean {
   return fact.category === "signal" && TECHNICAL_FIELDS.includes(fact.field);
 }
 
@@ -58,15 +58,15 @@ export function isTechnicalFact(fact: OrganizationFact): boolean {
  * question a claim like this invites.
  */
 export function TechnicalProfileCard({
-  orgId,
-}: Readonly<{ orgId: string }>): ReactNode {
+  companyId,
+}: Readonly<{ companyId: string }>): ReactNode {
   const t = useT();
 
   const facts = useQuery({
-    queryKey: ["org-facts", orgId],
+    queryKey: ["company-facts", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/facts", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.GET("/companies/{id}/facts", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -83,11 +83,11 @@ export function TechnicalProfileCard({
   // either done or running in a worker; a card that polled would be watching
   // for an event it did not start.
   const lanes = useQuery({
-    queryKey: ["org-technical-latest", orgId],
+    queryKey: ["company-technical-latest", companyId],
     queryFn: async () => {
       const { data, error, response } = await api.GET(
-        "/organizations/{id}/technical-enrich/latest",
-        { params: { path: { id: orgId } } },
+        "/companies/{id}/technical-enrich/latest",
+        { params: { path: { id: companyId } } },
       );
       if (response.status === 404) {
         return null;
@@ -119,7 +119,7 @@ function TechnicalSections({
   facts,
   lanes,
 }: Readonly<{
-  facts: readonly OrganizationFact[];
+  facts: readonly CompanyFact[];
   lanes: readonly TechnicalEnrichLane[];
 }>): ReactNode {
   const t = useT();
@@ -163,7 +163,7 @@ function TechnicalSections({
 /** One technical value, with the public record that proved it. */
 function TechnicalRow({
   fact,
-}: Readonly<{ fact: OrganizationFact }>): ReactNode {
+}: Readonly<{ fact: CompanyFact }>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();

@@ -66,7 +66,7 @@ func TestUnmappedColumnsAreNamedRatherThanDroppedSilently(t *testing.T) {
 	}
 }
 
-// `object` takes organization, person or lead. Not deal, and not activity.
+// `object` takes company, person or lead. Not deal, and not activity.
 //
 // The refused set is what has no import WRITER: offering it would advertise a
 // door that answers an error. The accepted set has to match the REST contract's
@@ -78,7 +78,7 @@ func TestOnlyTheThreeImportableObjectsAreAccepted(t *testing.T) {
 			t.Errorf("`object` accepted %q; nothing imports it", object)
 		}
 	}
-	for _, object := range []string{importObjectLead, importObjectOrganization, importObjectPerson} {
+	for _, object := range []string{importObjectLead, importObjectCompany, importObjectPerson} {
 		if err := refuseUnimportableObject(object); err != nil {
 			t.Errorf("`object` refused %q: %v", object, err)
 		}
@@ -105,7 +105,7 @@ func TestACallersMappingOverridesTheProposalColumnByColumn(t *testing.T) {
 	out, err := previewImport{imports: recordingImports{
 		suggested: map[string]string{"Company": "legal_name", "Website": "domains"},
 	}}.Handle(context.Background(), json.RawMessage(
-		`{"object":"organization","csv":"Company,Website\nAcme,acme.test\n",`+
+		`{"object":"company","csv":"Company,Website\nAcme,acme.test\n",`+
 			`"mapping":{"Company":"display_name"}}`))
 	if err != nil {
 		t.Fatalf("previewing: %v", err)
@@ -180,14 +180,14 @@ func (r recordingImports) ProfileSource(
 // their estate without telling them what it does. They would be clicking yes
 // on a number they never saw.
 func TestTheApprovalSaysWhatTheImportWillDo(t *testing.T) {
-	got := describeImport("organization", crmcontracts.ImportRunReport{
+	got := describeImport("company", crmcontracts.ImportRunReport{
 		RowsRead: 453,
 		Disposition: crmcontracts.ImportRunDisposition{
 			Created: 412, Updated: 38, Unchanged: 3,
 		},
 		Issues: []crmcontracts.ImportRowIssue{{}, {}},
 	})
-	for _, want := range []string{"453", "412", "38", "organization", "2 row(s) could not be used"} {
+	for _, want := range []string{"453", "412", "38", "company", "2 row(s) could not be used"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("the summary %q does not carry %q", got, want)
 		}
@@ -240,7 +240,7 @@ func TestAProposalThatPlacesOnlySomeColumnsIsRefused(t *testing.T) {
 		columns:   []string{"id", "Company", "City", "Country", "Band"},
 		targets:   []string{"display_name", "address.city", "address.country", "size_band", "id"},
 	}}.Handle(context.Background(), json.RawMessage(
-		`{"object":"organization","csv":"id,Company,City,Country,Band\nx,Acme,Essen,DE,201-500\n"}`))
+		`{"object":"company","csv":"id,Company,City,Country,Band\nx,Acme,Essen,DE,201-500\n"}`))
 	if err == nil {
 		t.Fatal("a proposal that placed one column of five was accepted")
 	}
@@ -264,7 +264,7 @@ func TestAProposalThatPlacesEveryColumnIsAccepted(t *testing.T) {
 		columns:   []string{"display_name", "size_band"},
 		targets:   []string{"display_name", "size_band"},
 	}}.Handle(context.Background(), json.RawMessage(
-		`{"object":"organization","csv":"display_name,size_band\nAcme,201-500\n"}`))
+		`{"object":"company","csv":"display_name,size_band\nAcme,201-500\n"}`))
 	if err != nil {
 		t.Fatalf("a complete proposal was refused: %v", err)
 	}
@@ -277,7 +277,7 @@ func TestACallersOwnMappingIsNotSecondGuessed(t *testing.T) {
 		columns: []string{"Company", "City"},
 		targets: []string{"display_name", "address.city"},
 	}}.Handle(context.Background(), json.RawMessage(
-		`{"object":"organization","csv":"Company,City\nAcme,Essen\n","mapping":{"Company":"display_name"}}`))
+		`{"object":"company","csv":"Company,City\nAcme,Essen\n","mapping":{"Company":"display_name"}}`))
 	if err != nil {
 		t.Fatalf("a caller's own partial mapping was refused: %v", err)
 	}
@@ -298,7 +298,7 @@ func TestARefusedPreviewDoesNotLeaveItsFileBehind(t *testing.T) {
 		targets:   []string{"display_name", "id"},
 		discarded: &discarded,
 	}}.Handle(context.Background(), json.RawMessage(
-		`{"object":"organization","csv":"id,Company\nx,Acme\n"}`))
+		`{"object":"company","csv":"id,Company\nx,Acme\n"}`))
 	if err == nil {
 		t.Fatal("a partial proposal was accepted")
 	}
@@ -323,7 +323,7 @@ func TestAWideFilesRefusalStillNamesEveryColumn(t *testing.T) {
 		columns:   columns,
 		targets:   []string{"display_name", "id"},
 	}}.Handle(context.Background(), json.RawMessage(
-		`{"object":"organization","csv":"id\nx\n"}`))
+		`{"object":"company","csv":"id\nx\n"}`))
 	if err == nil {
 		t.Fatal("a proposal that placed one column of eleven was accepted")
 	}
@@ -346,7 +346,7 @@ func TestAnEmptyMappingIsTheSameQuestionAsNoMapping(t *testing.T) {
 		columns:   []string{"id", "Company"},
 		targets:   []string{"display_name", "id"},
 	}}.Handle(context.Background(), json.RawMessage(
-		`{"object":"organization","csv":"id,Company\nx,Acme\n","mapping":{}}`))
+		`{"object":"company","csv":"id,Company\nx,Acme\n","mapping":{}}`))
 	if err == nil {
 		t.Fatal("an empty mapping accepted a proposal that placed one column of two")
 	}
@@ -370,7 +370,7 @@ func TestAStagingFailureKeepsTheFileItsRunStillNeeds(t *testing.T) {
 		discarded: &discarded,
 		stageErr:  errors.New("the estate refused this mapping"),
 	}}.Handle(context.Background(), json.RawMessage(
-		`{"object":"organization","csv":"id,Company\nx,Acme\n"}`))
+		`{"object":"company","csv":"id,Company\nx,Acme\n"}`))
 	if err == nil {
 		t.Fatal("a staging failure was reported as success")
 	}
@@ -398,7 +398,7 @@ func TestACancelledPreviewStillTakesItsFile(t *testing.T) {
 	}
 	cancel()
 	if _, err := (previewImport{imports: imports}).Handle(ctx, json.RawMessage(
-		`{"object":"organization","csv":"id,Company\nx,Acme\n"}`)); err == nil {
+		`{"object":"company","csv":"id,Company\nx,Acme\n"}`)); err == nil {
 		t.Fatal("a partial proposal was accepted")
 	}
 	if len(discarded) != 1 {

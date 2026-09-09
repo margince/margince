@@ -282,7 +282,7 @@ func TestAnUnprovisionedBootStillAnnouncesTheIgnoredRoutingPath(t *testing.T) {
 	// flow has not run. Same mechanism the claim suite uses.
 	if _, err := e.Owner.Exec(context.Background(),
 		`UPDATE workspace SET archived_at = now() WHERE archived_at IS NULL`); err != nil {
-		t.Fatalf("clearing the harness organization: %v", err)
+		t.Fatalf("clearing the harness company: %v", err)
 	}
 
 	var logged strings.Builder
@@ -390,7 +390,7 @@ func TestAKeyIsSealedOnAnInstallationThatHasBoundNothing(t *testing.T) {
 //
 // `seeds.ai_routing` used to be consumed only inside the creating transaction.
 // That is every installation EXCEPT the ones that matter here: the desktop
-// bundles ship a database, so their organization was created on the build
+// bundles ship a database, so their company was created on the build
 // machine and the recipient's declaration was read by nothing. They set a
 // provider key, and their AI surfaces answered from the offline fake with the
 // one screen that looks like the fix naming the file that was already ignored.
@@ -500,7 +500,7 @@ func TestPlantingLeavesAnUnprovisionedInstallationAlone(t *testing.T) {
 	// above uses.
 	if _, err := e.Owner.Exec(ctx,
 		`UPDATE workspace SET archived_at = now() WHERE archived_at IS NULL`); err != nil {
-		t.Fatalf("clearing the harness organization: %v", err)
+		t.Fatalf("clearing the harness company: %v", err)
 	}
 
 	if err := compose.SeedRoutingIfUnset(ctx, e.Pool, routingSeedNode(t, offlineRouting), discard()); err != nil {

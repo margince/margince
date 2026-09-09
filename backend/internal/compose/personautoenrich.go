@@ -155,17 +155,17 @@ func (g *PersonAutoEnrich) enrich(ctx context.Context, personID ids.PersonID) er
 	var discoverName, discoverEmployer string
 
 	if err := database.WithWorkspaceTx(ctx, g.pool, func(tx pgx.Tx) error {
-		orgID, ok, err := g.employerOf(ctx, tx, personID)
+		companyID, ok, err := g.employerOf(ctx, tx, personID)
 		if err != nil || !ok {
 			// No employer means nothing to match against. That is the common
 			// case for a fresh contact and is not a failure.
 			return err
 		}
-		staged, err := g.stagedSitePeople(ctx, tx, orgID)
+		staged, err := g.stagedSitePeople(ctx, tx, companyID)
 		if err != nil {
 			return err
 		}
-		filled, err := g.fillFromStagedPages(ctx, tx, orgID, personID, staged)
+		filled, err := g.fillFromStagedPages(ctx, tx, companyID, personID, staged)
 		if err != nil {
 			return err
 		}
@@ -174,7 +174,7 @@ func (g *PersonAutoEnrich) enrich(ctx context.Context, personID ids.PersonID) er
 			// what they did not say, not a second opinion on what they did.
 			return nil
 		}
-		name, employer, err := g.searchTerms(ctx, tx, personID, orgID)
+		name, employer, err := g.searchTerms(ctx, tx, personID, companyID)
 		if err != nil {
 			// Not swallowed: a failed query has already aborted this
 			// transaction, so continuing past it turns a readable error into
@@ -212,11 +212,11 @@ func (g *PersonAutoEnrich) enrich(ctx context.Context, personID ids.PersonID) er
 // searchTerms reads the two facts a discovery query is anchored on: the
 // person's name and their employer's. A query without both is not run —
 // a bare name returns somebody else.
-func (g *PersonAutoEnrich) searchTerms(ctx context.Context, tx pgx.Tx, personID ids.PersonID, orgID ids.OrganizationID) (name, employer string, err error) {
+func (g *PersonAutoEnrich) searchTerms(ctx context.Context, tx pgx.Tx, personID ids.PersonID, companyID ids.CompanyID) (name, employer string, err error) {
 	err = tx.QueryRow(ctx, `
 		SELECT p.full_name, coalesce(o.display_name, '')
-		FROM person p LEFT JOIN organization o ON o.id = $2
-		WHERE p.id = $1`, personID, orgID).Scan(&name, &employer)
+		FROM person p LEFT JOIN company o ON o.id = $2
+		WHERE p.id = $1`, personID, companyID).Scan(&name, &employer)
 	return name, employer, err
 }
 
@@ -224,20 +224,20 @@ func (g *PersonAutoEnrich) searchTerms(ctx context.Context, tx pgx.Tx, personID 
 // company whose site may describe them. Filling a title from company X's site
 // onto a person the CRM records at company Y is a conflict a human should
 // see, not one a sweep settles.
-func (g *PersonAutoEnrich) employerOf(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (ids.OrganizationID, bool, error) {
-	var orgID ids.OrganizationID
+func (g *PersonAutoEnrich) employerOf(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (ids.CompanyID, bool, error) {
+	var companyID ids.CompanyID
 	err := tx.QueryRow(ctx, `
-		SELECT organization_id FROM relationship
+		SELECT company_id FROM relationship
 		WHERE person_id = $1 AND kind = 'employment' AND `+employment.CurrentPrimarySQL("")+`
-		  AND archived_at IS NULL AND organization_id IS NOT NULL
-		LIMIT 1`, personID).Scan(&orgID)
+		  AND archived_at IS NULL AND company_id IS NOT NULL
+		LIMIT 1`, personID).Scan(&companyID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return ids.OrganizationID{}, false, nil
+			return ids.CompanyID{}, false, nil
 		}
-		return ids.OrganizationID{}, false, err
+		return ids.CompanyID{}, false, err
 	}
-	return orgID, true, nil
+	return companyID, true, nil
 }
 
 // stagedSitePerson pairs a pending proposal with the payload it carries.
@@ -252,7 +252,7 @@ type stagedSitePerson struct {
 // It reads the approval rows directly because this pass runs as a system
 // principal: the module's own PendingForTarget is human-only by design, since
 // it answers "what is in YOUR inbox", and this pass has no inbox. The scan is
-// bounded so one organization's backlog cannot make a single person's event
+// bounded so one company's backlog cannot make a single person's event
 // unbounded work.
 //
 // LIVE proposals only, and the expiry predicate is load-bearing twice over.
@@ -266,7 +266,7 @@ type stagedSitePerson struct {
 // that is still on offer. A person who arrives long after their employer was
 // crawled matches nothing here, and the honest answer for them is a fresh
 // read rather than a stale proposal.
-func (g *PersonAutoEnrich) stagedSitePeople(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) ([]stagedSitePerson, error) {
+func (g *PersonAutoEnrich) stagedSitePeople(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]stagedSitePerson, error) {
 	// Oldest-first, which is the canonical approval lock order — not the
 	// newest-first this read used to take.
 	//
@@ -285,7 +285,7 @@ func (g *PersonAutoEnrich) stagedSitePeople(ctx context.Context, tx pgx.Tx, orgI
 		WHERE kind = $1 AND target_entity_type = $2 AND target_entity_id = $3
 		  AND status = 'pending' AND expires_at > now()
 		ORDER BY created_at, id
-		LIMIT 50`, siteLeadProposalKind, enrichTargetType, orgID)
+		LIMIT 50`, siteLeadProposalKind, enrichTargetType, companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -318,17 +318,17 @@ func (g *PersonAutoEnrich) stagedSitePeople(ctx context.Context, tx pgx.Tx, orgI
 func (g *PersonAutoEnrich) fillFromStagedPages(
 	ctx context.Context,
 	tx pgx.Tx,
-	orgID ids.OrganizationID,
+	companyID ids.CompanyID,
 	personID ids.PersonID,
 	staged []stagedSitePerson,
 ) (bool, error) {
 	filled := false
 	for _, sp := range staged {
 		// ApplySitePersonFields owns the match rule and keeps it narrow:
-		// an exact live email among that organization's own employees, or
+		// an exact live email among that company's own employees, or
 		// exactly ONE employee whose name matches confidently. Zero or two
 		// is not identifiable, and it declines rather than guessing.
-		matched, err := g.people.ApplySitePersonFields(ctx, orgID, people.SitePersonFields{
+		matched, err := g.people.ApplySitePersonFields(ctx, companyID, people.SitePersonFields{
 			Name:            sp.proposal.Name,
 			Role:            sp.proposal.Role,
 			PublishedEmail:  sp.proposal.PublishedEmail,
@@ -352,7 +352,7 @@ func (g *PersonAutoEnrich) fillFromStagedPages(
 		}
 		filled = true
 		g.log.InfoContext(ctx, "person auto-enriched from the employer's site",
-			string(recordTypePerson), personID.String(), "organization", orgID.String(),
+			string(recordTypePerson), personID.String(), "company", companyID.String(),
 			"source", sp.proposal.SourceURL, "proposal_withdrawn", withdrawn)
 	}
 	return filled, nil

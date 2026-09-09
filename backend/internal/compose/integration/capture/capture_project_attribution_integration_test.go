@@ -36,7 +36,7 @@ type projectSeeder struct {
 	store    *deals.Store
 	projects *projects.Store
 	ctx      context.Context
-	orgID    ids.UUID
+	companyID    ids.UUID
 	// The pipeline a seeded deal is born on. Scaffolding rather than subject:
 	// nothing in the ladder reads a stage, and a deal cannot exist without one.
 	pipelineID ids.PipelineID
@@ -71,14 +71,14 @@ func newProjectSeeder(t *testing.T, e *integration.SearchEnv) projectSeeder {
 				// to retire a project through the real store.
 				"project":      {Create: true, Read: true, Update: true, Delete: true},
 				"deal":         {Create: true, Read: true, Update: true},
-				"organization": {Read: true},
+				"company": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	var orgID, pipelineID, stageID ids.UUID
+	var companyID, pipelineID, stageID ids.UUID
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `SELECT id FROM organization WHERE is_anchor LIMIT 1`).Scan(&orgID); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT id FROM company WHERE is_anchor LIMIT 1`).Scan(&companyID); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(ctx, `
@@ -97,7 +97,7 @@ func newProjectSeeder(t *testing.T, e *integration.SearchEnv) projectSeeder {
 		store:      deals.NewStore(e.DB(), compose.DealsInstallation()),
 		projects:   integration.ProjectsStore(e.DB()),
 		ctx:        ctx,
-		orgID:      orgID,
+		companyID:      companyID,
 		pipelineID: ids.From[ids.PipelineKind](pipelineID),
 		stageID:    ids.From[ids.StageKind](stageID),
 	}
@@ -109,7 +109,7 @@ func (s projectSeeder) project(t *testing.T, name string) seededProject {
 	t.Helper()
 	created, err := s.projects.CreateProject(s.ctx, projects.CreateProjectInput{
 		Name:           name,
-		OrganizationID: ids.From[ids.OrganizationKind](s.orgID),
+		CompanyID: ids.From[ids.CompanyKind](s.companyID),
 		Source:         "manual",
 	})
 	if err != nil {
@@ -162,12 +162,12 @@ func (s projectSeeder) deal(t *testing.T, name string) ids.UUID {
 
 func (s projectSeeder) createDeal(t *testing.T, name string, projectID *ids.ProjectID) ids.UUID {
 	t.Helper()
-	orgID := ids.From[ids.OrganizationKind](s.orgID)
+	companyID := ids.From[ids.CompanyKind](s.companyID)
 	created, err := s.store.CreateDeal(s.ctx, deals.CreateDealInput{
 		Name:           name,
 		PipelineID:     s.pipelineID,
 		StageID:        s.stageID,
-		OrganizationID: &orgID,
+		CompanyID: &companyID,
 		ProjectID:      projectID,
 		Source:         "manual",
 	})

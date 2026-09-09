@@ -44,14 +44,14 @@ const ladderCounterparty = "dana@ladder.example"
 // production seeds them.
 type ladderAccount struct {
 	e          *integration.Env
-	orgID      ids.UUID
+	companyID      ids.UUID
 	sink       *capture.Sink
 	captureCtx context.Context
 }
 
 func seedLadderAccount(t *testing.T, e *integration.Env) ladderAccount {
 	t.Helper()
-	orgID := e.SeedOrg(t, "Ladder Works", nil)
+	companyID := e.SeedCompany(t, "Ladder Works", nil)
 	person, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{
 		FullName: "Dana Ladder", Source: "manual",
 		Emails: []people.PersonEmailInput{{Email: ladderCounterparty, EmailType: "work", IsPrimary: true}},
@@ -60,9 +60,9 @@ func seedLadderAccount(t *testing.T, e *integration.Env) ladderAccount {
 		t.Fatalf("seeding the contact: %v", err)
 	}
 	personID := ids.From[ids.PersonKind](ids.UUID(person.Id))
-	employer := ids.From[ids.OrganizationKind](orgID)
+	employer := ids.From[ids.CompanyKind](companyID)
 	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &employer, Source: "manual",
+		Kind: "employment", PersonID: &personID, CompanyID: &employer, Source: "manual",
 	}); err != nil {
 		t.Fatalf("seeding the employment: %v", err)
 	}
@@ -75,14 +75,14 @@ func seedLadderAccount(t *testing.T, e *integration.Env) ladderAccount {
 			Objects: map[string]principal.ObjectGrant{
 				"activity":     {Create: true, Read: true, Update: true},
 				"person":       {Create: true, Read: true},
-				"organization": {Create: true, Read: true},
+				"company": {Create: true, Read: true},
 				"project":      {Read: true},
 				"deal":         {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	return ladderAccount{e: e, orgID: orgID, sink: newCaptureSink(e.Pool, CaptureConfig{}), captureCtx: ctx}
+	return ladderAccount{e: e, companyID: companyID, sink: newCaptureSink(e.Pool, CaptureConfig{}), captureCtx: ctx}
 }
 
 // project opens one live project on the account and answers its id and key.
@@ -91,7 +91,7 @@ func seedLadderAccount(t *testing.T, e *integration.Env) ladderAccount {
 func (a ladderAccount) project(t *testing.T, name string) (ids.UUID, string) {
 	t.Helper()
 	created, err := a.e.Projects.CreateProject(a.e.Admin(), projects.CreateProjectInput{
-		Name: name, OrganizationID: ids.From[ids.OrganizationKind](a.orgID), Source: "manual",
+		Name: name, CompanyID: ids.From[ids.CompanyKind](a.companyID), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating project %q: %v", name, err)

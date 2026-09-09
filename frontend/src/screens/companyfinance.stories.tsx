@@ -19,10 +19,10 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type FinanceSummary = components["schemas"]["OrganizationFinanceSummary"];
+type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 
 const connected: FinanceSummary = {
-  organization_id: "o-1",
+  company_id: "o-1",
   state: "connected",
   provider: "offline_demo",
   last_synced_at: "2026-08-10T06:00:00Z",
@@ -60,7 +60,7 @@ const connected: FinanceSummary = {
 };
 
 const noConnection: FinanceSummary = {
-  organization_id: "o-1",
+  company_id: "o-1",
   state: "no_connection",
 };
 
@@ -69,12 +69,12 @@ function Finance({
   lifecycle,
 }: Readonly<{ summary: FinanceSummary; lifecycle?: string }>) {
   installFetchStub({
-    "GET /organizations/o-1/finance-summary": () => jsonResponse(summary),
+    "GET /companies/o-1/finance-summary": () => jsonResponse(summary),
   });
   return (
     <StoryProviders>
       <div style={{ maxWidth: 420 }}>
-        <CompanyFinanceCard orgId="o-1" lifecycle={lifecycle} />
+        <CompanyFinanceCard companyId="o-1" lifecycle={lifecycle} />
       </div>
     </StoryProviders>
   );

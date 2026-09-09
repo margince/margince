@@ -543,7 +543,7 @@ type CardState = "idle" | "connected" | "blocked" | "unavailable";
  * verified, without that unverified moment being mislabelled as blocked.
  *
  * An "unavailable" tile is not a button at all. Nothing here can be operated
- * until somebody registers the organization's app, and the one thing a reader
+ * until somebody registers the company's app, and the one thing a reader
  * can do about it is a link, which HTML does not allow inside a button.
  */
 function ConnectorCard({

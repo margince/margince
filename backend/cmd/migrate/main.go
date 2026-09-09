@@ -50,7 +50,7 @@ func main() {
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|org-exists> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>]")
+		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|company-exists> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>]")
 	}
 	direction := args[0]
 
@@ -108,12 +108,12 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		return dropDB(ctx, conn, *name, stdout)
 	case "db-exists":
 		return dbExists(ctx, conn, *name, stdout)
-	case "org-exists":
-		return orgExists(ctx, conn, stdout)
+	case "company-exists":
+		return companyExists(ctx, conn, stdout)
 	case "setup-token":
 		return rotateSetupToken(ctx, resolved, stdout)
 	default:
-		return fmt.Errorf("migrate: unknown direction %q (want up, down, reset-password, setup-token, recreate-db, drop-db, db-exists or org-exists)", direction)
+		return fmt.Errorf("migrate: unknown direction %q (want up, down, reset-password, setup-token, recreate-db, drop-db, db-exists or company-exists)", direction)
 	}
 }
 
@@ -413,7 +413,7 @@ func resetPassword(ctx context.Context, conn *pgx.Conn, email string, stdin io.R
 	return nil
 }
 
-// singletonWorkspace resolves the one active organization — the same
+// singletonWorkspace resolves the one active company — the same
 // 0/1/>1 state machine every process role applies (A107/ADR-0061).
 func singletonWorkspace(ctx context.Context, tx pgx.Tx) (ids.WorkspaceID, error) {
 	rows, err := tx.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL LIMIT 2`)
@@ -434,11 +434,11 @@ func singletonWorkspace(ctx context.Context, tx pgx.Tx) (ids.WorkspaceID, error)
 	}
 	switch len(found) {
 	case 0:
-		return ids.WorkspaceID{}, errors.New("migrate reset-password: no active organization — bootstrap the installation first")
+		return ids.WorkspaceID{}, errors.New("migrate reset-password: no active company — bootstrap the installation first")
 	case 1:
 		return found[0], nil
 	default:
-		return ids.WorkspaceID{}, errors.New("migrate reset-password: more than one active workspace — resolve the single-organization invariant first")
+		return ids.WorkspaceID{}, errors.New("migrate reset-password: more than one active workspace — resolve the single-company invariant first")
 	}
 }
 

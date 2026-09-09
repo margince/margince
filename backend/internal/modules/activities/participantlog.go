@@ -31,7 +31,7 @@ import (
 // gets written.
 const (
 	linkEntityPerson       = "person"
-	linkEntityOrganization = "organization"
+	linkEntityCompany = "company"
 	linkEntityDeal         = "deal"
 	linkEntityActivity     = "activity"
 	linkEntityProject      = "project"

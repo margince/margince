@@ -19,16 +19,16 @@ import type { CompanyTab } from "./companytab";
 // them through the page would mean the fixture had to satisfy a dozen other
 // cards to prove anything about this row.
 
-type Organization360 = components["schemas"]["Organization360"];
-type StateStripSection = components["schemas"]["Organization360StateStrip"];
-type FinanceSummary = components["schemas"]["OrganizationFinanceSummary"];
+type Company360 = components["schemas"]["Company360"];
+type StateStripSection = components["schemas"]["Company360StateStrip"];
+type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 
 const NO_CONNECTION: FinanceSummary = {
-  organization_id: "o-1",
+  company_id: "o-1",
   state: "no_connection",
 };
 
-const organization: components["schemas"]["Organization"] = {
+const company: components["schemas"]["Company"] = {
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
   source: "manual",
@@ -37,10 +37,10 @@ const organization: components["schemas"]["Organization"] = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
-function view(overrides: Partial<Organization360> = {}): Organization360 {
+function view(overrides: Partial<Company360> = {}): Company360 {
   return {
     as_of: "2026-08-18T09:00:00Z",
-    organization,
+    company,
     sections_omitted: [],
     ...overrides,
   };
@@ -74,11 +74,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// The real caller (organizations.tsx's CompanyBand) hands the strip its copy
+// The real caller (companies.tsx's CompanyBand) hands the strip its copy
 // functions, so the fixtures do too — a strip fed identity functions would draw
 // the wire enum and prove nothing about what a reader sees.
 function renderStrip(
-  three60: Organization360,
+  three60: Company360,
   onOpenTab?: (tab: CompanyTab) => void,
 ) {
   const client = new QueryClient({
@@ -87,7 +87,7 @@ function renderStrip(
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <StateStrip orgId="o-1" view={three60} onOpenTab={onOpenTab} />
+        <StateStrip companyId="o-1" view={three60} onOpenTab={onOpenTab} />
       </LocaleProvider>
     </QueryClientProvider>,
   );

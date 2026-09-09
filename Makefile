@@ -223,7 +223,7 @@ infra-down:
 ## the derived slug for a second stack inside one worktree. A bound port stops
 ## the boot loudly rather than letting you poll a server from an older branch;
 ## `make dev-sweep` is the machine-wide clear. Boots COLD: the
-## organization + admin the api bootstraps from config/margince.yaml and no
+## company + admin the api bootstraps from config/margince.yaml and no
 ## other data, so onboarding and empty states are the default view — run
 ## `make seed-dev` on top when you want the demo records. Reads an optional
 ## Anthropic BYOK key from .env.local for the live cold-start read-back. Logs +
@@ -232,7 +232,7 @@ dev:
 	@bash scripts/dev.sh up "$(DEV_SLUG)"
 
 ## dev-fresh — `make dev` onto a REBUILT database: drops it, re-migrates,
-## and boots the installation a first customer gets (organization + admin,
+## and boots the installation a first customer gets (company + admin,
 ## no records). Use it when the last session left data behind; plain
 ## `make dev` keeps whatever is there.
 ##

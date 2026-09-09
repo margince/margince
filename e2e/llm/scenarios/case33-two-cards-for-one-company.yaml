@@ -81,8 +81,8 @@ must_call:
 # record survives is therefore judged from the answer, which is also where the
 # user asked for it.
 must_call_with:
-  - merge_records.record_type=organization
-  - archive_record.record_type=organization
+  - merge_records.record_type=company
+  - archive_record.record_type=company
 
 may_call:
   - search_records

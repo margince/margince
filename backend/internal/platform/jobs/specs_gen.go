@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "879eb0b605d352cc0ae5a36e54fad4b4cb635ca7ae053e0b6efef3d626ca1eb4"
+const JobContractHash = "d524f4f122c0f3da93e39fced686cce16580984f89d3d22dc7d1386434dc15c2"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -26,7 +26,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"AccountScanBrain"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "ScanID"}, {Name: "ViewerID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}, {Name: "ScanID"}, {Name: "ViewerID"}, {Name: "Workspace"}},
 	},
 	"agent_scheduler": {
 		Kind:         "agent_scheduler",
@@ -225,15 +225,15 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
 	},
-	"check_organization_vat": {
-		Kind:         "check_organization_vat",
-		GoType:       "CheckOrganizationVatArgs",
+	"check_company_vat": {
+		Kind:         "check_company_vat",
+		GoType:       "CheckCompanyVatArgs",
 		Role:         Worker,
 		Queue:        "vat_check",
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"VatChecker"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "Requested", Scalar: true, Reason: "whether a person asked for this consultation, rather than a write having earned it. It decides whether the worker asks about a number the register has already answered, so it cannot be resolved from the organization the job names — the row says what the number is, never who wanted it re-checked. A bare true/false carrying no subject data: it names no person, and erasing the contact who pressed the button leaves nothing here to erase."}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}, {Name: "Requested", Scalar: true, Reason: "whether a person asked for this consultation, rather than a write having earned it. It decides whether the worker asks about a number the register has already answered, so it cannot be resolved from the company the job names — the row says what the number is, never who wanted it re-checked. A bare true/false carrying no subject data: it names no person, and erasing the contact who pressed the button leaves nothing here to erase."}, {Name: "Workspace"}},
 	},
 	"close_date_sweep": {
 		Kind:      "close_date_sweep",
@@ -295,6 +295,16 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"SendRegistry"}},
 		Args:         []ArgField{{Name: "DeliveryID"}, {Name: "Workspace"}},
+	},
+	"company_name_promotion": {
+		Kind:      "company_name_promotion",
+		GoType:    "CompanyNamePromotionArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 24 * time.Hour},
 	},
 	"document_extract": {
 		Kind:         "document_extract",
@@ -379,15 +389,15 @@ var specs = map[string]Spec{
 		Cadence:      Cadence{OperatorField: "Geocoding.BackfillInterval", ScheduleWhenPositive: "Geocoding.BackfillInterval"},
 		Registration: Registration{When: []string{"Geocoder"}},
 	},
-	"geocode_organization": {
-		Kind:         "geocode_organization",
-		GoType:       "GeocodeOrganizationArgs",
+	"geocode_company": {
+		Kind:         "geocode_company",
+		GoType:       "GeocodeCompanyArgs",
 		Role:         Worker,
 		Queue:        "geocode",
 		Timeout:      TimeoutPolicy{Fixed: 3 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"Geocoder"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}, {Name: "Workspace"}},
 	},
 	"gmail_sync": {
 		Kind:         "gmail_sync",
@@ -510,16 +520,6 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
 	},
-	"org_name_promotion": {
-		Kind:      "org_name_promotion",
-		GoType:    "OrgNamePromotionArgs",
-		Role:      Worker,
-		Fleet:     true,
-		Queue:     "default",
-		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
-		OptsOwner: OptsCaller,
-		Cadence:   Cadence{Fixed: 24 * time.Hour},
-	},
 	"overlay_reconcile": {
 		Kind:         "overlay_reconcile",
 		GoType:       "OverlayReconcileArgs",
@@ -623,7 +623,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{OperatorField: "DeepReadCaps"},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"DeepReadBrain"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "MaxPages", Scalar: true, Reason: "this run's page ceiling, or zero for the deployment's own. The worker clamps it against the configured cap, so it can only ever narrow what an operator set, and a crawl budget states nothing about a subject."}, {Name: "OrganizationID"}, {Name: "RequestedBy"}, {Name: "SiteReadID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}, {Name: "MaxPages", Scalar: true, Reason: "this run's page ceiling, or zero for the deployment's own. The worker clamps it against the configured cap, so it can only ever narrow what an operator set, and a crawl budget states nothing about a subject."}, {Name: "RequestedBy"}, {Name: "SiteReadID"}, {Name: "Workspace"}},
 	},
 	"stage_evidence_read": {
 		Kind:         "stage_evidence_read",
@@ -646,15 +646,15 @@ var specs = map[string]Spec{
 		Cadence:      Cadence{OperatorField: "TechnicalEnrichment.BackfillInterval", ScheduleWhenPositive: "TechnicalEnrichment.BackfillInterval"},
 		Registration: Registration{When: []string{"TechnicalEnricher"}},
 	},
-	"technical_enrich_organization": {
-		Kind:         "technical_enrich_organization",
-		GoType:       "TechnicalEnrichOrganizationArgs",
+	"technical_enrich_company": {
+		Kind:         "technical_enrich_company",
+		GoType:       "TechnicalEnrichCompanyArgs",
 		Role:         Worker,
 		Queue:        "technical_lookup",
 		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"TechnicalEnricher"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}, {Name: "Workspace"}},
 	},
 	"telegram_ingest": {
 		Kind:      "telegram_ingest",

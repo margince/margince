@@ -224,7 +224,7 @@ installation's records; point `MARGINCE_BLOBSTORE_PATH` somewhere else and a cop
 of `data/` is a database whose attachment rows name bytes it does not contain.
 `margince.yaml` and `margince.env` sit beside `data/` and
 are part of a restore too — they are not regenerated, and `margince.yaml` decides
-the organization this database belongs to.
+the company this database belongs to.
 
 What a local store does not give is what a service would: no replication, no
 versioning, no signed URLs, and no sharing between machines of its own — put the

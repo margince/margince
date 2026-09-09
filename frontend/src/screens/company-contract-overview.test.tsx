@@ -11,8 +11,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { companyBackstop, org360, stubFetch } from "./company.fixtures";
-import { CompanyScreen } from "./organizations";
+import { companyBackstop, company360, stubFetch } from "./company.fixtures";
+import { CompanyScreen } from "./companies";
 
 // What an account is under contract for belongs on the reading a rep opens
 // first, not two clicks away on the Deals tab. These cases are about the
@@ -38,7 +38,7 @@ function render(ui: ReactNode) {
 }
 
 type Contracts = NonNullable<
-  components["schemas"]["Organization360StateStrip"]["contracts"]
+  components["schemas"]["Company360StateStrip"]["contracts"]
 >;
 
 // The 360 as this account's strip carries it. `state_strip.contracts` is
@@ -46,7 +46,7 @@ type Contracts = NonNullable<
 // below, so a case that wants agreements says so explicitly.
 function viewWith(contracts?: Contracts) {
   return {
-    ...org360,
+    ...company360,
     state_strip: {
       account: { lifecycle: "customer", relationship_types: ["customer"] },
       contracts,
@@ -69,7 +69,7 @@ function contractBlock(caption: string): HTMLElement {
 describe("the overview commercial card reports the contract standing", () => {
   it("names the value and the renewal a reader would otherwise open the Deals tab for", async () => {
     stubFetch(companyBackstop, {
-      org360: viewWith({
+      company360: viewWith({
         active_count: 2,
         cancellation_pending: false,
         base_currency: "EUR",
@@ -95,7 +95,7 @@ describe("the overview commercial card reports the contract standing", () => {
 
   it("says there is no agreement rather than showing a value of nothing", async () => {
     stubFetch(companyBackstop, {
-      org360: viewWith({ active_count: 0, cancellation_pending: false }),
+      company360: viewWith({ active_count: 0, cancellation_pending: false }),
     });
 
     render(<CompanyScreen id="o-1" />);
@@ -112,7 +112,7 @@ describe("the overview commercial card reports the contract standing", () => {
       // formatMoneyOrAbsent exists because half a money pair must never
       // render as euros; here there is no pair at all, and the reading omits
       // the figure instead of inventing its units.
-      org360: viewWith({ active_count: 1, cancellation_pending: false }),
+      company360: viewWith({ active_count: 1, cancellation_pending: false }),
     });
 
     render(<CompanyScreen id="o-1" />);
@@ -125,7 +125,7 @@ describe("the overview commercial card reports the contract standing", () => {
 
   it("says nothing about renewal when no agreement names a date", async () => {
     stubFetch(companyBackstop, {
-      org360: viewWith({
+      company360: viewWith({
         active_count: 1,
         cancellation_pending: false,
         base_currency: "EUR",
@@ -148,7 +148,7 @@ describe("the overview commercial card reports the contract standing", () => {
   it("draws no contract block at all for a reader with no contract grant", async () => {
     // Absent is a fact about the READER, not about the account: this reader
     // cannot be told there are no agreements, because nobody counted.
-    stubFetch(companyBackstop, { org360: viewWith(undefined) });
+    stubFetch(companyBackstop, { company360: viewWith(undefined) });
 
     render(<CompanyScreen id="o-1" />);
 
@@ -163,7 +163,7 @@ describe("the overview commercial card reports the contract standing", () => {
     // reading of the same money and dates for the overview.
     const user = userEvent.setup();
     stubFetch(companyBackstop, {
-      org360: viewWith({
+      company360: viewWith({
         active_count: 2,
         cancellation_pending: false,
         base_currency: "EUR",

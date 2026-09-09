@@ -306,7 +306,7 @@ describe("what the drawer says about who reads a message", () => {
     // captured message's audience is derived from every importing mailbox, so
     // what this reader changes is their own contribution to the thread.
     expect(
-      screen.getByRole("button", { name: "Share with the organization" }),
+      screen.getByRole("button", { name: "Share with the company" }),
     ).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: "Change visibility" }),

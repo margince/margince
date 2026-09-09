@@ -47,14 +47,14 @@ const TechnicalRefreshAfter = 7 * 24 * time.Hour
 //
 // A company with no domain is never due: the lookup reads what the record
 // holds, and there is nothing to ask about.
-func (s *Store) ListTechnicalDue(ctx context.Context, limit int, now time.Time) ([]ids.OrganizationID, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+func (s *Store) ListTechnicalDue(ctx context.Context, limit int, now time.Time) ([]ids.CompanyID, error) {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	if limit <= 0 {
 		limit = TechnicalBackfillBatch
 	}
-	var due []ids.OrganizationID
+	var due []ids.CompanyID
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// A company is due when ANY lane is: either a lane has never run (no
 		// row for it at all) or the row it has is past its own next_attempt_at.
@@ -64,12 +64,12 @@ func (s *Store) ListTechnicalDue(ctx context.Context, limit int, now time.Time) 
 		// lanes, and every other company has fewer.
 		rows, err := tx.Query(ctx, `
 			SELECT o.id
-			  FROM organization o
+			  FROM company o
 			 WHERE o.archived_at IS NULL
 			   AND NOT o.is_anchor
-			   AND EXISTS (SELECT 1 FROM organization_domain d WHERE d.organization_id = o.id)
-			   AND (SELECT count(*) FROM organization_technical_state s
-			         WHERE s.organization_id = o.id
+			   AND EXISTS (SELECT 1 FROM company_domain d WHERE d.company_id = o.id)
+			   AND (SELECT count(*) FROM company_technical_state s
+			         WHERE s.company_id = o.id
 			           AND s.next_attempt_at IS NOT NULL
 			           AND s.next_attempt_at > $2) < $3
 			 ORDER BY o.id
@@ -80,11 +80,11 @@ func (s *Store) ListTechnicalDue(ctx context.Context, limit int, now time.Time) 
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var orgID ids.OrganizationID
-			if err := rows.Scan(&orgID); err != nil {
+			var companyID ids.CompanyID
+			if err := rows.Scan(&companyID); err != nil {
 				return fmt.Errorf("list companies due a technical lookup: %w", err)
 			}
-			due = append(due, orgID)
+			due = append(due, companyID)
 		}
 		return rows.Err()
 	})
@@ -106,13 +106,13 @@ func (s *Store) ListTechnicalDue(ctx context.Context, limit int, now time.Time) 
 //
 // Held by: TestTheTechnicalLookupTakesNoDomainFromACaller (backend/gates/technicaldomain_test.go),
 // with TestTheTechnicalLookupReadsTheDomainFromTheRecordAlone holding the read side.
-func (s *Store) TechnicalDomain(ctx context.Context, orgID ids.OrganizationID) (string, bool, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+func (s *Store) TechnicalDomain(ctx context.Context, companyID ids.CompanyID) (string, bool, error) {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return "", false, err
 	}
 	var domain string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
 		// The PRIMARY domain when the record names one, else the oldest — the
@@ -120,10 +120,10 @@ func (s *Store) TechnicalDomain(ctx context.Context, orgID ids.OrganizationID) (
 		// person looking at the page would call the company's domain.
 		return tx.QueryRow(ctx, `
 			SELECT domain
-			  FROM organization_domain
-			 WHERE organization_id = $1
+			  FROM company_domain
+			 WHERE company_id = $1
 			 ORDER BY is_primary DESC, created_at ASC
-			 LIMIT 1`, orgID).Scan(&domain)
+			 LIMIT 1`, companyID).Scan(&domain)
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -141,38 +141,38 @@ func (s *Store) TechnicalDomain(ctx context.Context, orgID ids.OrganizationID) (
 // read this morning look stale, and it must not have its own backoff reset by
 // the DNS lane succeeding.
 func (s *Store) RecordTechnicalLane(
-	ctx context.Context, orgID ids.OrganizationID, lane TechnicalLane, outcome string, now time.Time,
+	ctx context.Context, companyID ids.CompanyID, lane TechnicalLane, outcome string, now time.Time,
 ) error {
-	if err := auth.Require(ctx, "organization", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
 		return err
 	}
 	succeeded := outcome == TechnicalOutcomeApplied || outcome == TechnicalOutcomeEmpty ||
 		outcome == TechnicalOutcomeRefused
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		// Row-scoped like every other write: object RBAC says this caller may
-		// update organizations, and this says WHICH. Without it an admitted
-		// caller could write a ledger row for an organization outside its
+		// update companies, and this says WHICH. Without it an admitted
+		// caller could write a ledger row for a company outside its
 		// scope — and the ledger is what decides when that company is read.
-		if err := auth.EnsureWritableLive(ctx, tx, "organization", orgID.UUID); err != nil {
+		if err := auth.EnsureWritableLive(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO organization_technical_state
-			  (organization_id, lane, attempts, last_outcome, last_success_at, next_attempt_at, updated_at)
+			INSERT INTO company_technical_state
+			  (company_id, lane, attempts, last_outcome, last_success_at, next_attempt_at, updated_at)
 			VALUES ($1, $2, CASE WHEN $4 THEN 0 ELSE 1 END, $3,
 			        CASE WHEN $4 THEN $5::timestamptz END, $5::timestamptz + $6::interval, now())
-			ON CONFLICT (organization_id, lane)
+			ON CONFLICT (company_id, lane)
 			DO UPDATE SET
 			  -- Reset on success, climb on failure: the attempt count is what
 			  -- the backoff is computed from, so a lane that recovers must not
 			  -- keep the delay it earned while broken.
-			  attempts = CASE WHEN $4 THEN 0 ELSE organization_technical_state.attempts + 1 END,
+			  attempts = CASE WHEN $4 THEN 0 ELSE company_technical_state.attempts + 1 END,
 			  last_outcome = EXCLUDED.last_outcome,
 			  last_success_at = CASE WHEN $4 THEN EXCLUDED.last_success_at
-			                         ELSE organization_technical_state.last_success_at END,
+			                         ELSE company_technical_state.last_success_at END,
 			  next_attempt_at = EXCLUDED.next_attempt_at,
 			  updated_at = now()`,
-			orgID, string(lane), outcome, succeeded, now, technicalBackoff(outcome).String())
+			companyID, string(lane), outcome, succeeded, now, technicalBackoff(outcome).String())
 		if err != nil {
 			return fmt.Errorf("record what the %s lane did: %w", lane, err)
 		}
@@ -222,22 +222,22 @@ type TechnicalLaneState struct {
 // An empty result is "never looked up", which the caller reports as a 404 —
 // the honest difference between a company nobody has asked about and one whose
 // sources answered and had nothing.
-func (s *Store) TechnicalLaneState(ctx context.Context, orgID ids.OrganizationID) ([]TechnicalLaneState, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+func (s *Store) TechnicalLaneState(ctx context.Context, companyID ids.CompanyID) ([]TechnicalLaneState, error) {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var lanes []TechnicalLaneState
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		// Row-scoped like any other read: a leaked org id buys nothing, and the
+		// Row-scoped like any other read: a leaked company id buys nothing, and the
 		// miss is an existence-hiding 404 rather than an empty ledger.
-		if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, `
 			SELECT lane, attempts, coalesce(last_outcome, ''), last_success_at, next_attempt_at
-			  FROM organization_technical_state
-			 WHERE organization_id = $1
-			 ORDER BY lane`, orgID)
+			  FROM company_technical_state
+			 WHERE company_id = $1
+			 ORDER BY lane`, companyID)
 		if err != nil {
 			return fmt.Errorf("read what the technical lookup last did: %w", err)
 		}

@@ -46,10 +46,10 @@ func TestTheSubjectAccessPackageIsReadable(t *testing.T) {
 	// An employment, so relationships[] is populated — one of the two sections
 	// the defect was found in, and the one carrying a uuid that is not the
 	// subject's own id.
-	org := e.SeedOrg(t, "Kessler GmbH", nil)
+	company := e.SeedCompany(t, "Kessler GmbH", nil)
 	e.WsExec(t, `
-		INSERT INTO relationship (person_id, organization_id, kind, source, captured_by)
-		VALUES ($1, $2, 'employment', 'test', 'human:test')`, person, org)
+		INSERT INTO relationship (person_id, company_id, kind, source, captured_by)
+		VALUES ($1, $2, 'employment', 'test', 'human:test')`, person, company)
 
 	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.PersonKind](person))
 	if err != nil {

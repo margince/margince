@@ -56,7 +56,7 @@ func signalStore(e *SearchEnv) *signals.Store {
 // warmth would be a false one.
 func signalActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []ids.UUID) context.Context {
 	grants := map[string]principal.ObjectGrant{}
-	for _, o := range []string{"signal", "person", "organization", "deal", "lead", "relationship"} {
+	for _, o := range []string{"signal", "person", "company", "deal", "lead", "relationship"} {
 		grants[o] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 	}
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -85,25 +85,25 @@ func personCount(t *testing.T, e *SearchEnv) int {
 	return n
 }
 
-// seedOrgWithDomain plants an organization (owned by rep1) and a
+// seedCompanyWithDomain plants a company (owned by rep1) and a
 // registered domain the resolver's domain index can match.
-func (e *SearchEnv) seedOrgWithDomain(t *testing.T, name, domain string) ids.UUID {
+func (e *SearchEnv) seedCompanyWithDomain(t *testing.T, name, domain string) ids.UUID {
 	t.Helper()
-	orgID := e.SeedID(t,
-		`INSERT INTO organization (id, display_name, owner_id, source, captured_by)
+	companyID := e.SeedID(t,
+		`INSERT INTO company (id, display_name, owner_id, source, captured_by)
 		 VALUES ($1, $2, $3, 'manual', 'human:x')`, name, e.Rep1)
 	if _, err := e.Owner.Exec(context.Background(),
-		`INSERT INTO organization_domain (id, organization_id, domain, source, captured_by)
-		 VALUES ($1, $2, $3, 'manual', 'human:x')`, ids.NewV7(), orgID, domain); err != nil {
+		`INSERT INTO company_domain (id, company_id, domain, source, captured_by)
+		 VALUES ($1, $2, $3, 'manual', 'human:x')`, ids.NewV7(), companyID, domain); err != nil {
 		t.Fatal(err)
 	}
-	return orgID
+	return companyID
 }
 
 // seedEmployedContact plants a person (owned by rep1) with a work email
-// and a current employment edge at the org — the shape the prior-interaction
+// and a current employment edge at the company — the shape the prior-interaction
 // match and the warm/cold join both read.
-func (e *SearchEnv) seedEmployedContact(t *testing.T, orgID ids.UUID, name, email string) ids.UUID {
+func (e *SearchEnv) seedEmployedContact(t *testing.T, companyID ids.UUID, name, email string) ids.UUID {
 	t.Helper()
 	personID := e.SeedID(t,
 		`INSERT INTO person (id, full_name, owner_id, source, captured_by)
@@ -114,9 +114,9 @@ func (e *SearchEnv) seedEmployedContact(t *testing.T, orgID ids.UUID, name, emai
 		t.Fatal(err)
 	}
 	if _, err := e.Owner.Exec(context.Background(),
-		`INSERT INTO relationship (id, kind, person_id, organization_id, source, captured_by)
+		`INSERT INTO relationship (id, kind, person_id, company_id, source, captured_by)
 		 VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`,
-		ids.NewV7(), personID, orgID); err != nil {
+		ids.NewV7(), personID, companyID); err != nil {
 		t.Fatal(err)
 	}
 	return personID
@@ -189,22 +189,22 @@ func TestSignalRowScopeFollowsSubjectEntity(t *testing.T) {
 	}
 }
 
-// The resolver may attribute only to an organization the caller can see:
-// a rep resolving a signal whose only domain match is an org a colleague
+// The resolver may attribute only to a company the caller can see:
+// a rep resolving a signal whose only domain match is a company a colleague
 // captured privately gets an unattributable drop, not a stamped
-// resolved_org_id that would leak the private org's id/existence.
-func TestResolverDoesNotAttributeToAnInvisibleOrg(t *testing.T) {
+// resolved_company_id that would leak the private company's id/existence.
+func TestResolverDoesNotAttributeToAnInvisibleCompany(t *testing.T) {
 	e := SetupSearch(t)
 	store := signalStore(e)
 
-	// An org (with a matching domain) captured privately by rep3 — outside
+	// A company (with a matching domain) captured privately by rep3 — outside
 	// every other seat's row scope.
-	foreignOrg := e.SeedID(t,
-		`INSERT INTO organization (id, display_name, owner_id, visibility, source, captured_by)
+	foreignCompany := e.SeedID(t,
+		`INSERT INTO company (id, display_name, owner_id, visibility, source, captured_by)
 		 VALUES ($1, 'Foreign Co', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
 	if _, err := e.Owner.Exec(context.Background(),
-		`INSERT INTO organization_domain (id, organization_id, domain, source, captured_by)
-		 VALUES ($1, $2, 'foreign.example', 'manual', 'human:x')`, ids.NewV7(), ids.UUID(foreignOrg)); err != nil {
+		`INSERT INTO company_domain (id, company_id, domain, source, captured_by)
+		 VALUES ($1, $2, 'foreign.example', 'manual', 'human:x')`, ids.NewV7(), ids.UUID(foreignCompany)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -221,29 +221,29 @@ func TestResolverDoesNotAttributeToAnInvisibleOrg(t *testing.T) {
 	if string(resolved.ResolutionState) != "dropped" {
 		t.Fatalf("resolution_state = %q, want dropped (the only match is invisible)", resolved.ResolutionState)
 	}
-	if resolved.ResolvedOrgId != nil {
-		t.Fatalf("resolved_org_id = %v, want nil — an invisible org must never be stamped", resolved.ResolvedOrgId)
+	if resolved.ResolvedCompanyId != nil {
+		t.Fatalf("resolved_company_id = %v, want nil — an invisible company must never be stamped", resolved.ResolvedCompanyId)
 	}
 
-	// The captor, who CAN see the org, resolves the same class of signal to it.
+	// The captor, who CAN see the company, resolves the same class of signal to it.
 	captor := signalActor(e, e.Rep3, principal.RowScopeTeam, []ids.UUID{e.Team2})
 	captorSig := createRaw(t, store, admin, "inbound:hi@foreign.example")
 	captorResolved, err := store.Resolve(captor, captorSig)
 	if err != nil {
 		t.Fatalf("captor resolve: %v", err)
 	}
-	if captorResolved.ResolvedOrgId == nil || ids.UUID(*captorResolved.ResolvedOrgId) != ids.UUID(foreignOrg) {
-		t.Fatalf("captor resolved_org_id = %v, want %v", captorResolved.ResolvedOrgId, ids.UUID(foreignOrg))
+	if captorResolved.ResolvedCompanyId == nil || ids.UUID(*captorResolved.ResolvedCompanyId) != ids.UUID(foreignCompany) {
+		t.Fatalf("captor resolved_company_id = %v, want %v", captorResolved.ResolvedCompanyId, ids.UUID(foreignCompany))
 	}
 }
 
 // Domain match with no known contact: the signal resolves to the
-// organization and stays company-level — no person link, and no person
+// company and stays company-level — no person link, and no person
 // row is invented.
-func TestResolverAttributesToOrgWithoutCreatingAPerson(t *testing.T) {
+func TestResolverAttributesToCompanyWithoutCreatingAPerson(t *testing.T) {
 	e := SetupSearch(t)
 	store := signalStore(e)
-	orgID := e.seedOrgWithDomain(t, "Acme", "acme.example")
+	companyID := e.seedCompanyWithDomain(t, "Acme", "acme.example")
 
 	before := personCount(t, e)
 	admin := e.adminSignals()
@@ -256,8 +256,8 @@ func TestResolverAttributesToOrgWithoutCreatingAPerson(t *testing.T) {
 	if string(resolved.ResolutionState) != "resolved" {
 		t.Fatalf("resolution_state = %q, want resolved", resolved.ResolutionState)
 	}
-	if resolved.ResolvedOrgId == nil || ids.UUID(*resolved.ResolvedOrgId) != orgID {
-		t.Fatalf("resolved_org_id = %v, want %v", resolved.ResolvedOrgId, orgID)
+	if resolved.ResolvedCompanyId == nil || ids.UUID(*resolved.ResolvedCompanyId) != companyID {
+		t.Fatalf("resolved_company_id = %v, want %v", resolved.ResolvedCompanyId, companyID)
 	}
 	if resolved.ResolvedPersonId != nil {
 		t.Fatalf("resolved_person_id = %v, want nil (no consented contact)", resolved.ResolvedPersonId)
@@ -275,8 +275,8 @@ func TestResolverPersonLinkIsConsentGated(t *testing.T) {
 	admin := e.adminSignals()
 
 	// Consented contact → linked.
-	orgA := e.seedOrgWithDomain(t, "Consenting Co", "consent.example")
-	contact := e.seedEmployedContact(t, orgA, "Sam Consent", "sam@consent.example")
+	companyA := e.seedCompanyWithDomain(t, "Consenting Co", "consent.example")
+	contact := e.seedEmployedContact(t, companyA, "Sam Consent", "sam@consent.example")
 	e.grantConsent(t, contact)
 	withConsent := createRaw(t, store, admin, "inbound:sam@consent.example")
 	got, err := store.Resolve(admin, withConsent)
@@ -287,16 +287,16 @@ func TestResolverPersonLinkIsConsentGated(t *testing.T) {
 		t.Fatalf("resolved_person_id = %v, want %v (consent on record)", got.ResolvedPersonId, contact)
 	}
 
-	// Matching contact, no consent → org only.
-	orgB := e.seedOrgWithDomain(t, "Silent Co", "silent.example")
-	e.seedEmployedContact(t, orgB, "Pat Silent", "pat@silent.example")
+	// Matching contact, no consent → company only.
+	companyB := e.seedCompanyWithDomain(t, "Silent Co", "silent.example")
+	e.seedEmployedContact(t, companyB, "Pat Silent", "pat@silent.example")
 	noConsent := createRaw(t, store, admin, "inbound:pat@silent.example")
 	got, err = store.Resolve(admin, noConsent)
 	if err != nil {
 		t.Fatalf("resolve unconsented: %v", err)
 	}
-	if got.ResolvedOrgId == nil || ids.UUID(*got.ResolvedOrgId) != orgB {
-		t.Fatalf("resolved_org_id = %v, want %v", got.ResolvedOrgId, orgB)
+	if got.ResolvedCompanyId == nil || ids.UUID(*got.ResolvedCompanyId) != companyB {
+		t.Fatalf("resolved_company_id = %v, want %v", got.ResolvedCompanyId, companyB)
 	}
 	if got.ResolvedPersonId != nil {
 		t.Fatalf("resolved_person_id = %v, want nil (no consent grant)", got.ResolvedPersonId)
@@ -319,8 +319,8 @@ func TestResolverDropsTheUnattributable(t *testing.T) {
 	if string(got.ResolutionState) != "dropped" {
 		t.Fatalf("resolution_state = %q, want dropped", got.ResolutionState)
 	}
-	if got.ResolvedOrgId != nil || got.ResolvedPersonId != nil {
-		t.Fatalf("dropped signal carries org=%v person=%v, want both nil", got.ResolvedOrgId, got.ResolvedPersonId)
+	if got.ResolvedCompanyId != nil || got.ResolvedPersonId != nil {
+		t.Fatalf("dropped signal carries company=%v person=%v, want both nil", got.ResolvedCompanyId, got.ResolvedPersonId)
 	}
 	if after := personCount(t, e); after != before {
 		t.Fatalf("person count changed on a dropped signal (%d → %d)", before, after)
@@ -338,7 +338,7 @@ func TestResolverNeverAttributesToTheOwnCompany(t *testing.T) {
 	admin := e.adminSignals()
 
 	anchor := e.SeedID(t,
-		`INSERT INTO organization (id, display_name, owner_id, is_anchor, source, captured_by)
+		`INSERT INTO company (id, display_name, owner_id, is_anchor, source, captured_by)
 		 VALUES ($1, $2, $3, true, 'manual', 'human:x')`, "Our Own Company", e.Rep1)
 	colleague := e.seedEmployedContact(t, anchor, "Robin Colleague", "robin@private.invalid")
 	e.grantConsent(t, colleague)
@@ -360,8 +360,8 @@ func TestResolverNeverAttributesToTheOwnCompany(t *testing.T) {
 		if string(got.ResolutionState) != "dropped" {
 			t.Errorf("%s arm: resolution_state = %q, want dropped — the own company is not an account to hold signals about", tc.arm, got.ResolutionState)
 		}
-		if got.ResolvedOrgId != nil {
-			t.Errorf("%s arm: resolved_org_id = %v, want nil — the signal resolved to the installation's own company", tc.arm, got.ResolvedOrgId)
+		if got.ResolvedCompanyId != nil {
+			t.Errorf("%s arm: resolved_company_id = %v, want nil — the signal resolved to the installation's own company", tc.arm, got.ResolvedCompanyId)
 		}
 		if got.ResolvedPersonId != nil {
 			t.Errorf("%s arm: resolved_person_id = %v, want nil — an unattributed signal links nobody", tc.arm, got.ResolvedPersonId)
@@ -369,16 +369,16 @@ func TestResolverNeverAttributesToTheOwnCompany(t *testing.T) {
 	}
 }
 
-// The warm/cold branch classifies by our own contact graph: an org where
+// The warm/cold branch classifies by our own contact graph: a company where
 // we hold a live contact is warm (routes to the warm room) and answers
-// with the contact evidence; an org with no contact is cold.
+// with the contact evidence; a company with no contact is cold.
 func TestWarmthClassifiesByOwnContactGraph(t *testing.T) {
 	e := SetupSearch(t)
 	store := signalStore(e)
 	admin := e.adminSignals()
 
-	warmOrg := e.seedOrgWithDomain(t, "Warm Co", "warm.example")
-	contact := e.seedEmployedContact(t, warmOrg, "Wanda Warm", "wanda@warm.example")
+	warmCompany := e.seedCompanyWithDomain(t, "Warm Co", "warm.example")
+	contact := e.seedEmployedContact(t, warmCompany, "Wanda Warm", "wanda@warm.example")
 	warmSig := createRaw(t, store, admin, "warm.example")
 	if _, err := store.Resolve(admin, warmSig); err != nil {
 		t.Fatalf("resolve warm: %v", err)
@@ -394,9 +394,9 @@ func TestWarmthClassifiesByOwnContactGraph(t *testing.T) {
 		t.Fatalf("contact evidence = %v, want [%v]", warmth.ContactIds, contact)
 	}
 
-	// Seed for its side effect only: the org must exist so cold.example
-	// resolves to it, but the test asserts on the resolution, not the org.
-	e.seedOrgWithDomain(t, "Cold Co", "cold.example")
+	// Seed for its side effect only: the company must exist so cold.example
+	// resolves to it, but the test asserts on the resolution, not the company.
+	e.seedCompanyWithDomain(t, "Cold Co", "cold.example")
 	coldSig := createRaw(t, store, admin, "cold.example")
 	if _, err := store.Resolve(admin, coldSig); err != nil {
 		t.Fatalf("resolve cold: %v", err)
@@ -418,8 +418,8 @@ func TestIntroPathProposesWithoutMutating(t *testing.T) {
 	store := signalStore(e)
 	admin := e.adminSignals()
 
-	org := e.seedOrgWithDomain(t, "Intro Co", "intro.example")
-	contact := e.seedEmployedContact(t, org, "Ivy Intro", "ivy@intro.example")
+	company := e.seedCompanyWithDomain(t, "Intro Co", "intro.example")
+	contact := e.seedEmployedContact(t, company, "Ivy Intro", "ivy@intro.example")
 	sigID := createRaw(t, store, admin, "intro.example")
 	if _, err := store.Resolve(admin, sigID); err != nil {
 		t.Fatalf("resolve: %v", err)
@@ -459,7 +459,7 @@ func TestSignalMutationsWriteTheAuditOutboxPair(t *testing.T) {
 	e := SetupSearch(t)
 	store := signalStore(e)
 	admin := e.adminSignals()
-	e.seedOrgWithDomain(t, "Audit Co", "audit.example")
+	e.seedCompanyWithDomain(t, "Audit Co", "audit.example")
 
 	sigID := createRaw(t, store, admin, "audit.example")
 	assertAuditAndOutbox(t, e, sigID, "create", "signal.detected")

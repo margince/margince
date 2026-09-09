@@ -13,7 +13,7 @@ package gates
 // the only one with no gate. The other three each have theirs — tableownership
 // (writes only tables it owns), updateguard (carries a concurrency guard),
 // writeauthority + writeshape (probes write authority, audits and emits) — and
-// that single gap produced eight defects across organization, person,
+// that single gap produced eight defects across company, person,
 // person_consent, attachment, contract, commission_entry and site_read, every
 // one of them individually defensible where it sat. What they had in common was
 // not a module or a table: it was that nothing asked the question.
@@ -152,7 +152,7 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/customfields:Retire":            "the catalog field's own retirement, which moves `status` and not archived_at; lockField holds the row from before the decision read, and a repeat converges on the same status",
 	"internal/modules/identity:UpdateTeam":            "the team's archive and restore arms are this function, so both directions have to reach a row on the far side of the transition. The row is held FOR UPDATE from before the state is read",
 
-	// The organization column writers are deliberately NOT here. They used to be:
+	// The company column writers are deliberately NOT here. They used to be:
 	// three near-identical statement lists, each relying on a probe an entry
 	// point three frames up had taken. They now share one table, and every
 	// statement in it carries `archived_at IS NULL` — the same rule where it
@@ -164,7 +164,7 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// only through a caller or a helper that has already resolved the row live,
 	// and each entry names it — the scan reads one function at a time and cannot
 	// follow either edge.
-	"internal/modules/people:resolveOrCreateAnchor":        "guarded in its helper: anchorOrganization carries `WHERE is_anchor AND archived_at IS NULL FOR UPDATE`, so the row this renames was resolved live and is held for the rest of the transaction",
+	"internal/modules/people:resolveOrCreateAnchor":        "guarded in its helper: anchorCompany carries `WHERE is_anchor AND archived_at IS NULL FOR UPDATE`, so the row this renames was resolved live and is held for the rest of the transaction",
 	"internal/modules/people:recordGeocodeAfter":           "guarded by addressHashInTx, which re-reads the address `WHERE id = $1 AND archived_at IS NULL`: an archived company yields no hash, the comparison fails, and the function returns without writing. The liveness and the address-moved check are one test",
 	"internal/modules/people:touchRevertedPerson":          "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE with IncludeArchived from the top of its transaction — deliberately, because the subject of a bought-data revert may be archived — so re-taking liveness here would refuse the case the function exists for",
 	"internal/modules/activities:finalizeRelinkedActivity": "the row is already held FOR UPDATE by relinkActivityRow, its only caller, through lockActivityForWrite — two hops past what a per-function scan follows, and the same indirection updateguard ratifies for this function",
@@ -186,14 +186,14 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/activities:writeDerivedAudienceTx":        "narrowing a message to its participants, pinned on the audience the caller read under FOR UPDATE. Narrowing an archived message is not a change to what anybody may see of a live one, and refusing it would leave the derivation half-applied",
 	"internal/modules/activities:reKeyActivity":                 "restating the provider identity of a captured message so a later delivery folds into it rather than duplicating it. An absorbed echo is archived by design and is exactly the row whose identity has to be re-keyed",
 	"internal/modules/activities:StampCorrespondenceForProject": "the retention CLASSIFICATION, which decides how long a message must be kept. An archived message still has a statutory window, and the stamp only ever fills a class nobody has set",
-	"internal/modules/signals:dropUnattributable":               "the resolver recording that a market signal matched no organization. The row is one the resolution pass selected, and the write moves resolution_state alone — no content, no link",
-	"internal/modules/signals:resolveToOrg":                     "the resolver stamping the single-candidate match on a signal its own pass selected; the person link it may write is separately consent-gated and never creates a record",
-	"internal/modules/signals:flagAmbiguous":                    "the resolver flagging a signal for review when several organizations are plausible, on a row from the same pass. It links nobody and resolves nothing",
+	"internal/modules/signals:dropUnattributable":               "the resolver recording that a market signal matched no company. The row is one the resolution pass selected, and the write moves resolution_state alone — no content, no link",
+	"internal/modules/signals:resolveToCompany":                     "the resolver stamping the single-candidate match on a signal its own pass selected; the person link it may write is separately consent-gated and never creates a record",
+	"internal/modules/signals:flagAmbiguous":                    "the resolver flagging a signal for review when several companies are plausible, on a row from the same pass. It links nobody and resolves nothing",
 	"internal/modules/people:setDedupeDispositionTx":            "disposing a duplicate-candidate row, not either record it names. `disposition = 'open'` is the guard, and a candidate is closed rather than archived",
 	"internal/modules/people:reopenDedupeCandidateTx":           "the undo of the same disposition, read and written under the candidate's own lock; nothing writes dedupe_candidate.archived_at",
 	"internal/modules/people:RefreshDisplayNameTx":              "showing the name a contact's own first and last columns already carry. It refuses a name a human set, and an erasure NULLs both halves — so an erased subject fails the both-halves check before any write is attempted",
 	"internal/modules/people:completePersonName":                "filling first and last from a confident parse, and only into columns that are both still empty. The predicate is also the concurrency guard, and an erased subject has had them nulled with the row's other identity columns",
-	"internal/modules/people:absorbOrgReferences":               "the merge relinking a retired source's references onto its survivor. A merge deliberately reaches the row it is retiring — that is what a merge is — and mergePair resolved the pair under LockPair before this runs",
+	"internal/modules/people:absorbCompanyReferences":               "the merge relinking a retired source's references onto its survivor. A merge deliberately reaches the row it is retiring — that is what a merge is — and mergePair resolved the pair under LockPair before this runs",
 	"internal/modules/ai:persistBuildVersion":                   "recording the artifact a voice build produced, on the profile that build was raised for. The build row carries the profile id and the build itself is the selection; nothing in the tree writes voice_profile.archived_at",
 	"internal/modules/ai:finishBuildTx":                         "closing out a build's own status row. A build is completed or failed, never archived, and the row is the one this pass is executing",
 	"internal/modules/ai:RecordSendOutcomeTx":                   "closing a learning signal on the human's judgment of a draft, on a row lockJudgeableSignal has already held and confirmed is still `drafted`. That guard is narrower than liveness",
@@ -222,7 +222,7 @@ func retirableTables(t *testing.T) map[string]bool {
 				return err
 			}
 			current := ""
-			for _, line := range strings.Split(string(raw), "\n") {
+			for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
 				if m := createTableLine.FindStringSubmatch(line); m != nil {
 					current = m[1]
 					continue
@@ -267,7 +267,7 @@ func retirableTables(t *testing.T) map[string]bool {
 // pins the UPDATE to it with a version or an archive transition, so insisting the
 // predicate ride the write itself would ask thirteen correct functions to be
 // waived. What it still separates is the case that matters: a function that
-// guards its organization write and leaves an activity write bare names no
+// guards its company write and leaves an activity write bare names no
 // activity statement carrying the predicate, so the activity write is reported.
 func byIDWritesIn(statements []string, retirable map[string]bool) map[string]bool {
 	written := map[string]bool{}
@@ -311,11 +311,11 @@ func tablesUnderLivePredicate(statement string) []string {
 // A Go marker is NOT attributed to the table being written, which is where
 // updateguard's lock credit is stricter. It cannot be: the liveness that governs
 // a child write is frequently its ANCHOR's — a deal room's deal, a contract's
-// organization — so requiring the probe and the statement to name one table
+// company — so requiring the probe and the statement to name one table
 // would refuse the shape this rule is mostly about.
 //
 // The IN-STATEMENT half is attributed, in byIDWritesIn above, and that is the
-// half where it can be. A function that guards its organization write and
+// half where it can be. A function that guards its company write and
 // leaves its activity write bare answers for one table and not the other; the
 // two are asked separately, so the second is still reported.
 func statesLivenessInGo(fn *ast.FuncDecl) bool {

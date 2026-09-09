@@ -80,8 +80,8 @@ func assertPreparedFor(t *testing.T, assembled retrieval.Context, want datasourc
 // meetingFixture is one workspace's calendar event and everything it can name.
 type meetingFixture struct {
 	pipeline, stage        ids.UUID
-	rep1Org, rep1Deal      ids.UUID
-	rep3Org, rep3Project   ids.UUID
+	rep1Company, rep1Deal      ids.UUID
+	rep3Company, rep3Project   ids.UUID
 	organizer, otherPerson ids.UUID
 }
 
@@ -98,18 +98,18 @@ func seedMeetingFixture(t *testing.T, e *SearchEnv) meetingFixture {
 	// the per-subject visibility probe would prep against it. Every shareable
 	// record type is read by every seat (platform/auth tableclass.go), so
 	// capture privacy is what hides a record here: the other team's
-	// organization is 'owner'-visible and only Rep3 reads it. The project
+	// company is 'owner'-visible and only Rep3 reads it. The project
 	// hanging off it is visible to everyone and is the neighbourhood, not the
 	// hidden record.
-	f.rep3Org = e.SeedID(t, `INSERT INTO organization (id, owner_id, display_name, visibility, source, captured_by)
+	f.rep3Company = e.SeedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Other Team GmbH', 'owner', 'manual', 'human:x')`, e.Rep3)
-	f.rep3Project = e.SeedID(t, `INSERT INTO project (id, owner_id, name, organization_id, source, captured_by)
-		VALUES ($1, $2, 'Other Team Rollout', $3, 'manual', 'human:x')`, e.Rep3, f.rep3Org)
-	f.rep1Org = e.SeedID(t, `INSERT INTO organization (id, owner_id, display_name, source, captured_by)
+	f.rep3Project = e.SeedID(t, `INSERT INTO project (id, owner_id, name, company_id, source, captured_by)
+		VALUES ($1, $2, 'Other Team Rollout', $3, 'manual', 'human:x')`, e.Rep3, f.rep3Company)
+	f.rep1Company = e.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
 		VALUES ($1, $2, 'Turbinenbau AG', 'manual', 'human:x')`, e.Rep1)
-	f.rep1Deal = e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, organization_id, source, captured_by)
+	f.rep1Deal = e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, company_id, source, captured_by)
 		VALUES ($1, $2, 'Turbinenbau Renewal', $3, $4, $5, 'manual', 'human:x')`,
-		e.Rep1, f.pipeline, f.stage, f.rep1Org)
+		e.Rep1, f.pipeline, f.stage, f.rep1Company)
 	f.organizer = e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
 		VALUES ($1, $2, 'Annegret Weiss', 'manual', 'human:x')`, e.Rep1)
 	f.otherPerson = e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
@@ -133,10 +133,10 @@ func linkMeeting(t *testing.T, e *SearchEnv, meeting ids.UUID, entityType, colum
 // employ records the current job that reaches a company through a person. A
 // meeting cannot be filed against a company at all (a company is not somebody
 // you can meet), so this is how an account gets into a meeting's prep.
-func employAt(t *testing.T, e *SearchEnv, person, org ids.UUID) {
+func employAt(t *testing.T, e *SearchEnv, person, company ids.UUID) {
 	t.Helper()
-	e.SeedID(t, `INSERT INTO relationship (id, kind, person_id, organization_id, source, captured_by)
-		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, person, org)
+	e.SeedID(t, `INSERT INTO relationship (id, kind, person_id, company_id, source, captured_by)
+		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, person, company)
 }
 
 func addParty(t *testing.T, e *SearchEnv, meeting ids.UUID, role string, person *ids.UUID, address string) {
@@ -154,7 +154,7 @@ func TestAMeetingPrepsAgainstItsLinkedDealAndNamesTheRest(t *testing.T) {
 	linkMeeting(t, e, meeting, "deal", "deal_id", f.rep1Deal)
 	// The company is reached through the person who was in the room, which is
 	// the only way it can be: a meeting cannot be filed against a company.
-	employAt(t, e, f.organizer, f.rep1Org)
+	employAt(t, e, f.organizer, f.rep1Company)
 	addParty(t, e, meeting, "organizer", &f.organizer, "annegret@turbinenbau.example")
 	addParty(t, e, meeting, "attendee", nil, "unknown@turbinenbau.example")
 
@@ -166,7 +166,7 @@ func TestAMeetingPrepsAgainstItsLinkedDealAndNamesTheRest(t *testing.T) {
 	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityDeal, ID: f.rep1Deal})
 	also := refsIn(assembled, "also_present")
 	for _, want := range []datasource.EntityRef{
-		{Type: datasource.EntityOrganization, ID: f.rep1Org},
+		{Type: datasource.EntityCompany, ID: f.rep1Company},
 		{Type: datasource.EntityPerson, ID: f.organizer},
 	} {
 		if !containsRef(also, want) {
@@ -289,7 +289,7 @@ func TestAMeetingNeverDisclosesTheRecordBehindALinkTheCallerCannotSee(t *testing
 		linkMeeting(t, e, meeting, "deal", "deal_id", f.rep1Deal)
 		// The other team's account, in the room through the person who works
 		// there — an inferred subject is probed exactly as a linked one is.
-		employAt(t, e, f.otherPerson, f.rep3Org)
+		employAt(t, e, f.otherPerson, f.rep3Company)
 		addParty(t, e, meeting, "attendee", &f.otherPerson, "bernhard@turbinenbau.example")
 
 		assembled, err := prepFor(e.AsTeamRep(e.Rep1, e.Team1), t, e, meeting)
@@ -297,7 +297,7 @@ func TestAMeetingNeverDisclosesTheRecordBehindALinkTheCallerCannotSee(t *testing
 			t.Fatalf("preparing for the meeting: %v", err)
 		}
 		assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityDeal, ID: f.rep1Deal})
-		assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep3Org})
+		assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityCompany, ID: f.rep3Company})
 	})
 
 	// A record the caller cannot see that WOULD have been the subject (an
@@ -308,7 +308,7 @@ func TestAMeetingNeverDisclosesTheRecordBehindALinkTheCallerCannotSee(t *testing
 		e := SetupSearch(t)
 		f := seedMeetingFixture(t, e)
 		meeting := seedMeeting(t, e, "Joint review")
-		employAt(t, e, f.organizer, f.rep3Org)
+		employAt(t, e, f.organizer, f.rep3Company)
 		linkMeeting(t, e, meeting, "person", "person_id", f.organizer)
 
 		// The control: the capture's own owner preps against the account.
@@ -316,14 +316,14 @@ func TestAMeetingNeverDisclosesTheRecordBehindALinkTheCallerCannotSee(t *testing
 		if err != nil {
 			t.Fatalf("preparing for the meeting as the capture's owner: %v", err)
 		}
-		assertPreparedFor(t, theirs, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep3Org})
+		assertPreparedFor(t, theirs, datasource.EntityRef{Type: datasource.EntityCompany, ID: f.rep3Company})
 
 		assembled, err := prepFor(e.teamRepWhoReadsProjects(e.Rep1, e.Team1), t, e, meeting)
 		if err != nil {
 			t.Fatalf("preparing for the meeting: %v", err)
 		}
 		assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityPerson, ID: f.organizer})
-		assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep3Org})
+		assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityCompany, ID: f.rep3Company})
 	})
 }
 
@@ -432,7 +432,7 @@ func TestAnEventIsRefusedToACallerWithNoActivityGrant(t *testing.T) {
 	meeting := seedMeeting(t, e, "Renewal review")
 	linkMeeting(t, e, meeting, "deal", "deal_id", f.rep1Deal)
 
-	_, err := prepFor(e.readerOf(objPerson, objOrg, objDeal), t, e, meeting)
+	_, err := prepFor(e.readerOf(objPerson, objCompany, objDeal), t, e, meeting)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("preparing without an activity grant = %v, want permission denied", err)
 	}
@@ -447,18 +447,18 @@ func TestASubjectTypeTheCallerMayNotReadIsNeverNamed(t *testing.T) {
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Renewal review")
 	linkMeeting(t, e, meeting, "deal", "deal_id", f.rep1Deal)
-	employAt(t, e, f.organizer, f.rep1Org)
+	employAt(t, e, f.organizer, f.rep1Company)
 	addParty(t, e, meeting, "organizer", &f.organizer, "annegret@turbinenbau.example")
 
 	// The EDGE grant is among them because the company is reached through the
 	// attendee's employment: a prep that named it without one would be handing
 	// over a pair (this person, that company) the edge grant governs. The case
 	// below is the other end of that.
-	assembled, err := prepFor(e.readerOf(objActivity, objPerson, objOrg, objRelationship), t, e, meeting)
+	assembled, err := prepFor(e.readerOf(objActivity, objPerson, objCompany, objRelationship), t, e, meeting)
 	if err != nil {
 		t.Fatalf("preparing for the meeting: %v", err)
 	}
-	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep1Org})
+	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityCompany, ID: f.rep1Company})
 	assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityDeal, ID: f.rep1Deal})
 	assertNoTextAnywhere(t, assembled, "Turbinenbau Renewal")
 }
@@ -475,23 +475,23 @@ func TestAnEmployerIsNotNamedToACallerWithNoEdgeGrant(t *testing.T) {
 	e := SetupSearch(t)
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Renewal review")
-	employAt(t, e, f.organizer, f.rep1Org)
+	employAt(t, e, f.organizer, f.rep1Company)
 	addParty(t, e, meeting, "organizer", &f.organizer, "annegret@turbinenbau.example")
 
 	// The control: the same prep, for a caller who may read edges.
-	granted, err := prepFor(e.readerOf(objActivity, objPerson, objOrg, objRelationship), t, e, meeting)
+	granted, err := prepFor(e.readerOf(objActivity, objPerson, objCompany, objRelationship), t, e, meeting)
 	if err != nil {
 		t.Fatalf("preparing for the meeting with the edge grant: %v", err)
 	}
-	assertPreparedFor(t, granted, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep1Org})
+	assertPreparedFor(t, granted, datasource.EntityRef{Type: datasource.EntityCompany, ID: f.rep1Company})
 
-	assembled, err := prepFor(e.readerOf(objActivity, objPerson, objOrg), t, e, meeting)
+	assembled, err := prepFor(e.readerOf(objActivity, objPerson, objCompany), t, e, meeting)
 	if err != nil {
 		t.Fatalf("preparing for the meeting: %v", err)
 	}
 	// The prep still happens, around the attendee they may read.
 	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityPerson, ID: f.organizer})
-	assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep1Org})
+	assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityCompany, ID: f.rep1Company})
 }
 
 // assertAbsent holds the whole assembled picture against one ref, not just the

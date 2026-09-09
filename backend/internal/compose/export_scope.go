@@ -116,7 +116,7 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 	if !ok {
 		return "", errors.New("compose: no actor bound to export context")
 	}
-	if auth.UnboundedFor(actor, "person", "organization", "deal", "project") {
+	if auth.UnboundedFor(actor, "person", "company", "deal", "project") {
 		return "", nil
 	}
 	// Every endpoint column the table HAS, not the ones an author remembered.
@@ -131,8 +131,8 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 	for _, endpoint := range []struct{ column, table string }{
 		{"person_id", "person"},
 		{"counterparty_person_id", "person"},
-		{"organization_id", "organization"},
-		{"counterparty_org_id", "organization"},
+		{"company_id", "company"},
+		{"counterparty_company_id", "company"},
 		{"deal_id", "deal"},
 		{"project_id", "project"},
 	} {
@@ -158,7 +158,7 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 // row_scope=all (auth.ActivityContentClause). An attachment's filename and an
 // audit image's before-and-after are that message's content.
 //
-// Today no HUMAN reaches the unbounded branch: person and organization are
+// Today no HUMAN reaches the unbounded branch: person and company are
 // owner-private (auth.ownerPrivateTables), so UnboundedFor is false for every
 // seat including an admin, and an admin export has always faced the audience
 // through the bounded arms below. The branch is the system principal's, and
@@ -174,14 +174,14 @@ func polymorphicVisible(ctx context.Context, typeCol, idCol string, arg func(any
 	if err != nil {
 		return "", err
 	}
-	if auth.UnboundedFor(actor, "person", "organization", "deal", "lead") {
+	if auth.UnboundedFor(actor, "person", "company", "deal", "lead") {
 		// Every non-activity row passes; an activity row faces the audience.
 		return fmt.Sprintf("(%s <> 'activity' OR %s)", typeCol, activityArm), nil
 	}
 	var parts []string
 	for _, e := range []struct{ kind, table string }{
 		{"person", "person"},
-		{"organization", "organization"},
+		{"company", "company"},
 		{"deal", "deal"},
 		{"lead", "lead"},
 	} {
@@ -236,8 +236,8 @@ func auditExportScope(ctx context.Context, alias string, arg func(any) int) (str
 	if err != nil {
 		return "", err
 	}
-	if auth.UnboundedFor(actor, "person", "organization", "deal", "lead") {
-		// The system principal's branch, and only its: person and organization
+	if auth.UnboundedFor(actor, "person", "company", "deal", "lead") {
+		// The system principal's branch, and only its: person and company
 		// are owner-private (auth.ownerPrivateTables), so UnboundedFor is false
 		// for every human including one with row_scope=all, and an admin export
 		// takes the bounded path below.

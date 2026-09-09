@@ -180,13 +180,13 @@ func (b stored) wire(personID ids.PersonID) crmcontracts.PersonBrief {
 // nothing to check it against, which is the one thing the grounding rule exists
 // to prevent. A sentence is kept only when it cited something and every
 // citation parsed.
-func wireSentences(in []Sentence) []crmcontracts.OrganizationBriefSentence {
-	out := make([]crmcontracts.OrganizationBriefSentence, 0, len(in))
+func wireSentences(in []Sentence) []crmcontracts.CompanyBriefSentence {
+	out := make([]crmcontracts.CompanyBriefSentence, 0, len(in))
 	for _, sentence := range in {
 		if len(sentence.Evidence) == 0 {
 			continue
 		}
-		evidence := make([]crmcontracts.OrganizationBriefEvidence, 0, len(sentence.Evidence))
+		evidence := make([]crmcontracts.CompanyBriefEvidence, 0, len(sentence.Evidence))
 		malformed := false
 		for _, cited := range sentence.Evidence {
 			parsed, err := ids.Parse(cited.EntityID)
@@ -194,17 +194,17 @@ func wireSentences(in []Sentence) []crmcontracts.OrganizationBriefSentence {
 				malformed = true
 				break
 			}
-			evidence = append(evidence, crmcontracts.OrganizationBriefEvidence{
+			evidence = append(evidence, crmcontracts.CompanyBriefEvidence{
 				EntityId:   openapi_types.UUID(parsed),
-				EntityType: crmcontracts.OrganizationBriefEvidenceEntityType(cited.EntityType),
+				EntityType: crmcontracts.CompanyBriefEvidenceEntityType(cited.EntityType),
 			})
 		}
 		if malformed {
 			continue
 		}
-		wired := crmcontracts.OrganizationBriefSentence{Text: sentence.Text, Evidence: evidence}
+		wired := crmcontracts.CompanyBriefSentence{Text: sentence.Text, Evidence: evidence}
 		if sentence.Nature != "" {
-			nature := crmcontracts.OrganizationBriefSentenceNature(sentence.Nature)
+			nature := crmcontracts.CompanyBriefSentenceNature(sentence.Nature)
 			wired.Nature = &nature
 		}
 		out = append(out, wired)

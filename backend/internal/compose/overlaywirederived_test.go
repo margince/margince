@@ -26,45 +26,45 @@ import (
 // (ADR-0085), so a mirrored company owes the value a native one publishes —
 // including which row counts: the one flagged primary, wherever it sits in the
 // collection.
-func TestOverlayWireOrganizationDerivesWebsiteURLFromThePrimaryDomain(t *testing.T) {
-	rec := wireRecord(t, datasource.EntityOrganization, map[string]any{
+func TestOverlayWireCompanyDerivesWebsiteURLFromThePrimaryDomain(t *testing.T) {
+	rec := wireRecord(t, datasource.EntityCompany, map[string]any{
 		"display_name": "Acme",
-		"organization_domain": []map[string]any{
+		"company_domain": []map[string]any{
 			{"domain": "acme.de", "position": 0},
 			{"domain": "acme.io", "is_primary": true, "position": 1},
 		},
 	})
-	org, err := overlayWireOrganization(wireCtx(), rec)
+	company, err := overlayWireCompany(wireCtx(), rec)
 	if err != nil {
-		t.Fatalf("overlayWireOrganization: %v", err)
+		t.Fatalf("overlayWireCompany: %v", err)
 	}
-	if org.WebsiteUrl == nil {
+	if company.WebsiteUrl == nil {
 		t.Fatal("WebsiteUrl = nil, want the primary domain rendered as a URL")
 	}
-	if *org.WebsiteUrl != "https://acme.io" {
-		t.Errorf("WebsiteUrl = %q, want https://acme.io — the primary row, not the leading one", *org.WebsiteUrl)
+	if *company.WebsiteUrl != "https://acme.io" {
+		t.Errorf("WebsiteUrl = %q, want https://acme.io — the primary row, not the leading one", *company.WebsiteUrl)
 	}
 }
 
 // Which domain is the company's is the mapping's assertion; a reader that fell
 // back to the first row would publish a host no mapping ever nominated, and
 // the native path publishes nothing at all on those same rows.
-func TestOverlayWireOrganizationOmitsWebsiteURLWithoutAPrimaryDomain(t *testing.T) {
+func TestOverlayWireCompanyOmitsWebsiteURLWithoutAPrimaryDomain(t *testing.T) {
 	for name, fields := range map[string]map[string]any{
 		"no row claims the flag": {
 			"display_name":        "Acme",
-			"organization_domain": []map[string]any{{"domain": "acme.de", "position": 0}},
+			"company_domain": []map[string]any{{"domain": "acme.de", "position": 0}},
 		},
 		"no domain rows at all": {"display_name": "Acme"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			org, err := overlayWireOrganization(wireCtx(), wireRecord(t, datasource.EntityOrganization, fields))
+			company, err := overlayWireCompany(wireCtx(), wireRecord(t, datasource.EntityCompany, fields))
 			if err != nil {
-				t.Fatalf("overlayWireOrganization: %v", err)
+				t.Fatalf("overlayWireCompany: %v", err)
 			}
-			if org.WebsiteUrl != nil {
+			if company.WebsiteUrl != nil {
 				t.Errorf("WebsiteUrl = %q, want absent — no mirrored row claims to be primary, so there is no "+
-					"domain to render and the native path publishes none either", *org.WebsiteUrl)
+					"domain to render and the native path publishes none either", *company.WebsiteUrl)
 			}
 		})
 	}

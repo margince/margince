@@ -3,7 +3,7 @@
 
 // Package freemail answers one question: is this mail domain a consumer
 // mailbox provider rather than a company's own domain? A yes means no
-// organization may be derived from it — alice@gmail.com is a person, "Gmail" is
+// company may be derived from it — alice@gmail.com is a person, "Gmail" is
 // not her employer.
 //
 // Two modules need the same answer from opposite ends of the capture path:
@@ -49,7 +49,7 @@ func Registrable(domain string) string {
 // Mail domains arrive from a From: header, which is forgeable and which
 // net/mail parses far more loosely than DNS allows: `jane@%` parses, and `%` is
 // a legal RFC 5322 atext character. A domain that reaches SQL, a crawl seed, or
-// an organization_domain row without passing here is a string an outsider
+// a company_domain row without passing here is a string an outsider
 // chose — and one of those uses put it in a LIKE pattern, where `%` matched
 // every address in the workspace.
 //
@@ -136,7 +136,7 @@ func New(extra, never []string) *Matcher {
 }
 
 // IsConsumer reports whether mail from this domain comes from a consumer
-// mailbox provider, so no organization may be derived from it.
+// mailbox provider, so no company may be derived from it.
 //
 // The domain is matched at every level from itself down to its registrable
 // eTLD+1, so "mail.gmx.net" hits the listed "gmx.net" without the list

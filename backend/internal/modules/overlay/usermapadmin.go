@@ -215,7 +215,7 @@ func (s *MirrorStore) ListUserMap(ctx context.Context, incumbent, cursor string,
 // It resolves by id alone. A workspace predicate stood here until ADR-0091 §8
 // phase D took the tenant column off app_user; what it bought — turning an id
 // this installation does not have into no rows, and so into ErrNotFound — the
-// id itself now buys, because an installation serves one organization
+// id itself now buys, because an installation serves one company
 // (ADR-0061) and an unknown id matches nothing.
 var selectUserMapTargetSQL = `
 SELECT ` + mappableSeatSQL("u") + `

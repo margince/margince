@@ -16,7 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/compose/org360"
+	"github.com/margince/margince/backend/internal/compose/company360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -26,7 +26,7 @@ import (
 )
 
 // entityTypePerson is this baseline's record type; migration 0184 widened
-// the table's CHECK to admit it beside organization.
+// the table's CHECK to admit it beside company.
 const entityTypePerson = "person"
 
 // OverlayMode answers whether the calling workspace reads from an incumbent
@@ -151,11 +151,11 @@ func (s *Service) Acknowledge(ctx context.Context, personID ids.PersonID) (crmco
 		if err := auth.EnsureVisibleLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
-		// org360's writer, not a copy of its statement: it owns
+		// company360's writer, not a copy of its statement: it owns
 		// user_record_view (tableownership_test.go names it), and the upsert's
 		// GREATEST is the whole correctness argument. The gate ABOVE is this
 		// package's own, because that is the part that legitimately differs.
-		stored, err = org360.RecordVisit(ctx, tx, userID, entityTypePerson, personID.UUID, now)
+		stored, err = company360.RecordVisit(ctx, tx, userID, entityTypePerson, personID.UUID, now)
 		return err
 	})
 	if err != nil {

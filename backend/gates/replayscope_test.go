@@ -46,14 +46,14 @@ import (
 // reason to skip the probe.
 var rowScopedResponses = map[string]expectedTarget{
 	"Person":       {table: "person", idPath: "id"},
-	"Organization": {table: "organization", idPath: "id"},
+	"Company": {table: "company", idPath: "id"},
 	"Deal":         {table: "deal", idPath: "id"},
 	"Lead":         {table: "lead", idPath: "id"},
 	"Project":      {table: "project", idPath: "id"},
 	// A contract has no owner column; it is row-scoped through the deal it came
-	// from, falling back to its organization (ADR-0109 §8). It still hands back
+	// from, falling back to its company (ADR-0109 §8). It still hands back
 	// a record — terms, value, dates — so it is probed like any other.
-	"Contract": {object: "contract", moduleProbe: "contract", idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or organization, so the contracts store owns the probe"},
+	"Contract": {object: "contract", moduleProbe: "contract", idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or company, so the contracts store owns the probe"},
 	// A Deal Room has no owner column either: its visibility IS its deal's. It
 	// hands back a record — title, welcome text, steward, expiry — so it is
 	// probed like any other rather than waved through for lacking an owner.
@@ -68,14 +68,14 @@ var rowScopedResponses = map[string]expectedTarget{
 	// decision recorded with it. The COMPANY is the record a replay returns —
 	// its name, its fields, its archived stamp — so it is probed exactly as the
 	// wrapper shapes above are. The admission beside it has no owner column and
-	// no scope of its own: it is the same organization's, which is why one
+	// no scope of its own: it is the same company's, which is why one
 	// probe covers the body.
-	"RejectOrganizationResponse": {table: "organization", idPath: "organization.id"},
+	"RejectCompanyResponse": {table: "company", idPath: "company.id"},
 	"DemoteLeadResponse":         {table: "lead", idPath: "lead.id"},
 	// The quick-capture result wraps the person it created, alongside the
 	// employer it attached them to. The person is the record a replay hands
 	// back, so it is probed exactly as PromoteLeadResponse above is — the
-	// organization id beside it is a reference, not a second body.
+	// company id beside it is a reference, not a second body.
 	"QuickCapturePersonResult": {table: "person", idPath: "person.id"},
 	// A scheduled message is readable only by the rep who scheduled it, which
 	// the store enforces with its own scheduled_by predicate rather than an
@@ -101,10 +101,10 @@ var rowScopedResponses = map[string]expectedTarget{
 	// and still hands back whatever its parent contains.
 	"PersonConsentState": {table: "person", pathParam: "id"},
 	// The company's evidence sidecars. Neither carries an id or an owner of
-	// its own — the claim belongs to the organization named in the path and
+	// its own — the claim belongs to the company named in the path and
 	// inherits exactly its visibility, so the probe is the parent's.
-	"CompanyProfileField":  {table: "organization", pathParam: "id"},
-	"OrganizationFact":     {table: "organization", pathParam: "id"},
+	"CompanyProfileField":  {table: "company", pathParam: "id"},
+	"CompanyFact":     {table: "company", pathParam: "id"},
 	"VoiceBuild":           {table: "voice_profile", pathParam: "id"},
 	"VoiceLearningSummary": {table: "voice_profile", pathParam: "id"},
 	"VoiceProfileVersion":  {table: "voice_profile", pathParam: "id"},
@@ -226,7 +226,7 @@ func TestReplayScopeCoversEveryIdempotentOperation(t *testing.T) {
 // anyone is waived from: an entry here adds a check rather than removing one.
 var companionRecordFields = map[string]string{
 	"person_id":       "person",
-	"organization_id": "organization",
+	"company_id": "company",
 	"deal_id":         "deal",
 	"lead_id":         "lead",
 	"project_id":      "project",
@@ -236,9 +236,9 @@ var companionRecordFields = map[string]string{
 // schemas carry, beyond the record the replay is keyed on.
 //
 // ONLY FOR A BODY THAT WRAPS A RECORD, and the distinction is the whole rule.
-// `organization_id` on a Deal is the deal's own field: the live read of that
+// `company_id` on a Deal is the deal's own field: the live read of that
 // deal returns it to anyone who can see the deal, so replaying it discloses
-// nothing the product would not. `organization_id` on QuickCapturePersonResult
+// nothing the product would not. `company_id` on QuickCapturePersonResult
 // sits BESIDE the person, naming a second record the call attached them to —
 // and that one the live path never hands back with the person.
 //

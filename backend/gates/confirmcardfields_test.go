@@ -54,7 +54,7 @@ var disclosableToTheSubject = map[string]bool{
 	"phone": true,
 	// The employer, and the columns the employment read needs to find it.
 	"display_name":    true,
-	"organization_id": true,
+	"company_id": true,
 	"person_id":       true,
 	"kind":            true,
 	"ended_at":        true,

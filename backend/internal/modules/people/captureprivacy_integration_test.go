@@ -137,7 +137,7 @@ func (e *privacyEnv) as(user ids.UUID, scope principal.RowScope) context.Context
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"person":       {Create: true, Read: true, Update: true},
-				"organization": {Create: true, Read: true, Update: true},
+				"company": {Create: true, Read: true, Update: true},
 			},
 			RowScope: scope,
 		},

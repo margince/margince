@@ -32,7 +32,7 @@ function grounded(
 const baseRead = {
   id: READ_ID,
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: "https://gradion.com",
   status: "reading",
   status_code: null,

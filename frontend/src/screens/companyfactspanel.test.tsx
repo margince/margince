@@ -131,7 +131,7 @@ describe("the facts a person can state and take away", () => {
         }),
       ),
     ]);
-    mount(<CompanyFactsPanel orgId="o-1" canEdit />);
+    mount(<CompanyFactsPanel companyId="o-1" canEdit />);
 
     expect(await screen.findByText("Fleet Manager — telematics")).toBeTruthy();
     // Counted rather than sampled: an assertion on one row passes whenever the
@@ -160,7 +160,7 @@ describe("the facts a person can state and take away", () => {
         version: 7,
       }),
     ]);
-    mount(<CompanyFactsPanel orgId="o-1" canEdit />);
+    mount(<CompanyFactsPanel companyId="o-1" canEdit />);
 
     await user.click(await screen.findByRole("button", { name: /Remove ISO/ }));
     const dialog = await screen.findByRole("dialog");
@@ -187,7 +187,7 @@ describe("the facts a person can state and take away", () => {
   it("states a new fact with the category its field belongs to", async () => {
     const user = userEvent.setup();
     const calls = stub([]);
-    mount(<CompanyFactsPanel orgId="o-1" canEdit />);
+    mount(<CompanyFactsPanel companyId="o-1" canEdit />);
 
     await user.click(await screen.findByRole("button", { name: "Add fact" }));
     await user.click(screen.getByRole("combobox"));
@@ -217,7 +217,7 @@ describe("the facts a person can state and take away", () => {
         value: "1998",
       }),
     ]);
-    mount(<CompanyFactsPanel orgId="o-1" canEdit={false} reasonId="why" />);
+    mount(<CompanyFactsPanel companyId="o-1" canEdit={false} reasonId="why" />);
 
     expect(await screen.findByText("1998")).toBeTruthy();
     // No remove control at all: a viewer who may not change a set is not a

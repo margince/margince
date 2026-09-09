@@ -31,10 +31,10 @@ import (
 // as the card stated it — trimmed, unescaped, and otherwise untouched.
 type VCardEntry struct {
 	FullName string
-	// Organization is the first ORG component, which is the company. The
+	// Company is the first ORG component, which is the company. The
 	// components after it are departments ("Acme;Sales;EMEA"), and a
 	// department is not an employer.
-	Organization string
+	Company string
 	Title        string
 	Emails       []VCardChannel
 	Phones       []VCardChannel
@@ -256,7 +256,7 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 		// Split on the RAW value: unescaping first would turn an escaped
 		// semicolon inside a company's own name into a component separator,
 		// and "Acme; Holdings" would arrive as "Acme".
-		entry.Organization = strings.TrimSpace(decodeVCardValue(params, firstComponent(raw)))
+		entry.Company = strings.TrimSpace(decodeVCardValue(params, firstComponent(raw)))
 	case "TITLE":
 		entry.Title = strings.TrimSpace(value)
 	case "EMAIL":

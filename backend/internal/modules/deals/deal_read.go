@@ -47,7 +47,7 @@ func (s *Store) GetDeal(ctx context.Context, id ids.DealID, archived storekit.Ar
 // is a read: the row a PATCH echoes is the same row a GET withholds from, and
 // the reference withholding cannot ride on write authority the way a role mask
 // does — being allowed to change the DEAL says nothing about being allowed to
-// read the ORGANIZATION it names.
+// read the COMPANY it names.
 //
 // readDeal itself stays unmasked on purpose. The update path builds its
 // before-image from it, and an audit diff taken against a withheld null would
@@ -76,9 +76,9 @@ type ListDealsInput struct {
 	PipelineID     *ids.PipelineID
 	StageID        *ids.StageID
 	OwnerID        *ids.UserID
-	OrganizationID *ids.OrganizationID
+	CompanyID *ids.CompanyID
 	ProjectID      *ids.ProjectID
-	PartnerOrgID   *ids.OrganizationID
+	PartnerCompanyID   *ids.CompanyID
 	PartnerSourced *bool
 	// PartnerAttribution narrows to what the partner did — "sourced" or
 	// "influenced". Narrower than PartnerSourced, which only asks whether a
@@ -122,9 +122,9 @@ const dealNameColumn = "name"
 //
 // `name` and `status` are the two the ruling reaches today, because they are
 // columns of `deal` and the list machinery orders by a base column. `stage` and
-// the two organization columns are joined — a stage sorts by its POSITION in
+// the two company columns are joined — a stage sorts by its POSITION in
 // its pipeline rather than by its name, and a partner sorts by the
-// organization's — and storekit's ORDER BY renders one quoted identifier, so
+// company's — and storekit's ORDER BY renders one quoted identifier, so
 // those three need the sort model to take an expression before they can be
 // offered. Named here rather than left as an unexplained gap: the frontend
 // columns cite this vocabulary by name, so a reader who finds two of the four
@@ -268,9 +268,9 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		column, table string
 		id            *ids.UUID
 	}{
-		{filterOrganizationID, "organization", uuidOfFilter(in.OrganizationID)},
+		{filterCompanyID, "company", uuidOfFilter(in.CompanyID)},
 		{filterProjectID, "project", uuidOfFilter(in.ProjectID)},
-		{filterPartnerOrgID, "organization", uuidOfFilter(in.PartnerOrgID)},
+		{filterPartnerCompanyID, "company", uuidOfFilter(in.PartnerCompanyID)},
 	} {
 		if ref.id == nil {
 			continue
@@ -320,7 +320,7 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 
 // uuidOfFilter widens one optional typed filter id to the untyped UUID the
 // reference table above walks. It is deliberately the only widening here: the
-// phantom kind is what stops a project id being probed against organization.
+// phantom kind is what stops a project id being probed against company.
 func uuidOfFilter[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
 	if id == nil {
 		return nil
@@ -332,7 +332,7 @@ func uuidOfFilter[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
 // to the rows whose target the caller may read.
 //
 // Filtering by an id is asking whether it is there. A bare
-// `organization_id = $1` answers that question for an organization the caller
+// `company_id = $1` answers that question for a company the caller
 // cannot open — the same existence oracle the projection now withholds — so
 // the arm carries the target's own visibility predicate. An empty page is the
 // honest answer, and it is indistinguishable from a visible company that has
@@ -369,7 +369,7 @@ func partnerAttributionFilterClause(ctx context.Context, attribution string, arg
 		return "", err
 	}
 	clause := storekit.SQLf("partner_attribution = $%d", arg(attribution))
-	scope, err := auth.ScopeClauseFor(ctx, "organization", "pref", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "company", "pref", arg)
 	if err != nil {
 		return "", err
 	}
@@ -377,11 +377,11 @@ func partnerAttributionFilterClause(ctx context.Context, attribution string, arg
 		return clause, nil
 	}
 	return clause + storekit.SQLf(
-		" AND EXISTS (SELECT 1 FROM organization pref WHERE pref.id = partner_org_id AND %s)", scope), nil
+		" AND EXISTS (SELECT 1 FROM company pref WHERE pref.id = partner_company_id AND %s)", scope), nil
 }
 
 const dealColumns = `id, name, amount_minor, currency, pipeline_id, stage_id,
-	organization_id, project_id, owner_id, partner_org_id, partner_attribution, status, lost_reason,
+	company_id, project_id, owner_id, partner_company_id, partner_attribution, status, lost_reason,
 	won_without_contract_reason, won_without_contract_detail,
 	expected_close_date, close_date_provisional, closed_at, forecast_category, wait_until, last_activity_at,
 	source, captured_by, version, created_at, updated_at, archived_at`
@@ -407,7 +407,7 @@ func readDeal(ctx context.Context, tx pgx.Tx, id ids.DealID, archived storekit.A
 func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontracts.Deal, error) {
 	var d crmcontracts.Deal
 	var id, pipelineID, stageID ids.UUID
-	var orgID, projectID, ownerID, partnerID *ids.UUID
+	var companyID, projectID, ownerID, partnerID *ids.UUID
 	var status string
 	var forecastCat *string
 	var expectedClose, waitUntil *time.Time
@@ -417,7 +417,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var wonReason *string
 	dests := []any{
 		&id, &d.Name, &d.AmountMinor, &d.Currency, &pipelineID, &stageID,
-		&orgID, &projectID, &ownerID, &partnerID, &d.PartnerAttribution, &status, &d.LostReason,
+		&companyID, &projectID, &ownerID, &partnerID, &d.PartnerAttribution, &status, &d.LostReason,
 		&wonReason, &d.WonWithoutContractDetail,
 		&expectedClose, &closeDateProvisional, &d.ClosedAt, &forecastCat, &waitUntil, &d.LastActivityAt,
 		&d.Source, &d.CapturedBy, &version, &d.CreatedAt, &d.UpdatedAt, &d.ArchivedAt,
@@ -443,10 +443,10 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	d.PipelineId = &pid
 	sid := openapi_types.UUID(stageID)
 	d.StageId = &sid
-	d.OrganizationId = uuidPtr(orgID)
+	d.CompanyId = uuidPtr(companyID)
 	d.ProjectId = uuidPtr(projectID)
 	d.OwnerId = uuidPtr(ownerID)
-	d.PartnerOrgId = uuidPtr(partnerID)
+	d.PartnerCompanyId = uuidPtr(partnerID)
 	d.Status = crmcontracts.DealStatus(status)
 	if expectedClose != nil {
 		d.ExpectedCloseDate = &openapi_types.Date{Time: *expectedClose}

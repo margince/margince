@@ -58,7 +58,7 @@ type Page struct {
 	//
 	// The JSON-LD half is here rather than in a field of its own because it
 	// answers the same question and every reader of this one already asks it:
-	// a schema.org block naming the organization is the page's claim about
+	// a schema.org block naming the company is the page's claim about
 	// itself exactly as a meta description is, and a separate field would have
 	// to be threaded through the crawl's dedupe, its prose and its emptiness
 	// test one call site at a time.

@@ -134,7 +134,7 @@ const (
 	objAiModelRate = "ai_model_rate"
 	// Which vendor this installation's text is sent to (ai-operational-spec
 	// §1.4). Deliberately NOT folded into installation_settings: whoever may
-	// rename the organization has no business re-pointing where its people's
+	// rename the company has no business re-pointing where its people's
 	// correspondence is processed, and those become one grant the moment the
 	// two share an object.
 	//
@@ -192,7 +192,7 @@ const (
 	// is no per-rep read surface — the mode-flip and migrate-in screens are
 	// admin surfaces.
 	objImportRun = "import_run"
-	// The organization's own identity and reporting calendar (ADR-0090/A135).
+	// The company's own identity and reporting calendar (ADR-0090/A135).
 	// Read is broad — the base currency and the business timezone shape what
 	// every seat sees — and only admin/ops change it.
 	objInstallationSettings = "installation_settings"

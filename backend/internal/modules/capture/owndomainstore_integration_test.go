@@ -145,15 +145,15 @@ func TestRemovingADomainLetsItsMailBeCapturedAgain(t *testing.T) {
 func TestTheListSeparatesTheCompanysOwnClaimFromTheRegistry(t *testing.T) {
 	ctx, db := ownDomainWorkspace(t)
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
-		orgID := ids.NewV7()
+		companyID := ids.NewV7()
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO organization (id, display_name, is_anchor, source, captured_by)
-			VALUES ($1, 'Our Company', true, 'manual', 'human:test')`, orgID); err != nil {
+			INSERT INTO company (id, display_name, is_anchor, source, captured_by)
+			VALUES ($1, 'Our Company', true, 'manual', 'human:test')`, companyID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO organization_domain (organization_id, domain, is_primary, source, captured_by)
-			VALUES ($1, 'ourcompany.example', true, 'manual', 'human:test')`, orgID)
+			INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
+			VALUES ($1, 'ourcompany.example', true, 'manual', 'human:test')`, companyID)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the anchor company: %v", err)

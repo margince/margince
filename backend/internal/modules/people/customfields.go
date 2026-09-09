@@ -60,10 +60,10 @@ func (s *Store) ActivePersonColumns(ctx context.Context) (CustomColumns, error) 
 	return s.activeCustomColumns(ctx, "person", principal.ActionRead)
 }
 
-// ActiveOrganizationColumns is ActivePersonColumns for GetOrganizationTx, and
-// takes organization:read for the same reason.
-func (s *Store) ActiveOrganizationColumns(ctx context.Context) (CustomColumns, error) {
-	return s.activeCustomColumns(ctx, "organization", principal.ActionRead)
+// ActiveCompanyColumns is ActivePersonColumns for GetCompanyTx, and
+// takes company:read for the same reason.
+func (s *Store) ActiveCompanyColumns(ctx context.Context) (CustomColumns, error) {
+	return s.activeCustomColumns(ctx, "company", principal.ActionRead)
 }
 
 // ActiveLeadColumns is ActivePersonColumns for FillEmptyLeadFieldsTx. It takes

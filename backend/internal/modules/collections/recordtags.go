@@ -49,7 +49,7 @@ type RecordTags struct {
 // offers, and the refusal names the field so a caller can see why.
 var recordTagTypes = map[string]bool{
 	typePerson:       true,
-	typeOrganization: true,
+	typeCompany: true,
 	typeDeal:         true,
 }
 
@@ -57,7 +57,7 @@ var recordTagTypes = map[string]bool{
 // The tool surface advertises this rather than keeping its own copy: a schema
 // that admitted a type the store refuses would offer a call that always fails.
 func RecordTagTypesServed() []string {
-	return []string{typePerson, typeOrganization, typeDeal}
+	return []string{typePerson, typeCompany, typeDeal}
 }
 
 // RecordTagsFor reads the tags on one record.
@@ -70,7 +70,7 @@ func (s *Store) RecordTagsFor(ctx context.Context, entityType string, entityID i
 	if !recordTagTypes[entityType] {
 		return RecordTags{}, &BadInputError{
 			Field:  entityTypeField,
-			Reason: "must be person, organization or deal",
+			Reason: "must be person, company or deal",
 		}
 	}
 	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {

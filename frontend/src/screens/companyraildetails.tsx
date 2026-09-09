@@ -36,15 +36,15 @@ import {
 import { SIZE_BAND_OPTIONS } from "./companylookups";
 import { VatMark } from "./companyvatmark";
 import { derivedSource } from "./evidencesource";
-import { profileFieldsKey, useOrgProfileFields } from "./evidenceverdict";
+import { profileFieldsKey, useCompanyProfileFields } from "./evidenceverdict";
 
 // The rail's own Details grid (companyrail.tsx's DetailsGrid), split into
 // this file so the rail file stays under the 500-line ceiling: one panel
 // section (Details) and its field rows is a natural seam, not an arbitrary
 // cut.
 
-type Organization = components["schemas"]["Organization"];
-type OrganizationDomain = NonNullable<Organization["domains"]>[number];
+type Company = components["schemas"]["Company"];
+type CompanyDomain = NonNullable<Company["domains"]>[number];
 type ProfileField = components["schemas"]["CompanyProfileField"];
 // The path parameter's own closed vocabulary, taken from the generated contract
 // rather than respelled: a field name this endpoint does not accept is then a
@@ -61,8 +61,8 @@ type AddressPart =
   | "region"
   | "postal_code"
   | "country";
-type UpdateOrganizationRequest =
-  components["schemas"]["UpdateOrganizationRequest"];
+type UpdateCompanyRequest =
+  components["schemas"]["UpdateCompanyRequest"];
 
 // The column's own CHECK bound (core 0203) — stops the reader at the limit
 // rather than letting the server refuse the save. Same figure companyheader.tsx
@@ -84,7 +84,7 @@ const DESCRIPTION_MAX_LENGTH = 500;
  * overlay-mirrored account still shows every field, it simply shows them
  * without the edit affordance (InlineText/InlineChoice's own
  * `canEdit={false}` path). Derived internally from
- * `useCanWriteRecord("organization", …)` and `useCompanyReadOnlyReason` — the
+ * `useCanWriteRecord("company", …)` and `useCompanyReadOnlyReason` — the
  * grant, the seat ceiling, the record's own `writable`, and the same
  * archived/overlay reasoning the header's inline controls gate on — rather
  * than threaded down as a prop, so a caller cannot render this grid writable
@@ -118,7 +118,7 @@ const DESCRIPTION_MAX_LENGTH = 500;
  *
  * ABSENT VS WITHHELD, stated rather than built: this grid does not today
  * distinguish a field nobody has filled in from one the viewer's role cannot
- * see, because `Organization` carries no field-level grant signal to draw
+ * see, because `Company` carries no field-level grant signal to draw
  * that distinction from — only `computed_fields` does (STATE-4), and it is
  * not one of these fields. `FieldGuard` (design-system/rbac.tsx) is the
  * presentation primitive for a withheld value once one exists; its own
@@ -127,35 +127,35 @@ const DESCRIPTION_MAX_LENGTH = 500;
  * grid can currently tell.
  */
 export function DetailsGrid({
-  organization,
-}: Readonly<{ organization?: Organization }>) {
-  if (!organization) {
+  company,
+}: Readonly<{ company?: Company }>) {
+  if (!company) {
     return null;
   }
   // Split into its own component (rather than returning early above and
   // calling the hooks below unconditionally) so every hook in this file runs
   // on every render of THIS component and stays absent entirely on the
-  // no-organization one — an early return between hook calls fails the Rules
-  // of Hooks the moment `organization` flips between defined and not, which a
+  // no-company one — an early return between hook calls fails the Rules
+  // of Hooks the moment `company` flips between defined and not, which a
   // 360 read that answers slower than the shell mount does routinely.
-  return <DetailsGridBody organization={organization} />;
+  return <DetailsGridBody company={company} />;
 }
 
 // The four props every DetailsGrid row needs off the record: the value to
 // read, the verb to write it back, and the two reasons that verb might not
 // be offered. One shape rather than each row re-deriving it from
-// `organization` keeps the RBAC/read-only wiring in DetailsGridBody's single
+// `company` keeps the RBAC/read-only wiring in DetailsGridBody's single
 // pair of hook calls, not scattered across nine row components each running
 // its own.
 type DetailsRowProps = Readonly<{
-  organization: Organization;
+  company: Company;
   canEdit: boolean;
   readOnlyReason: string | undefined;
-  patch: (body: UpdateOrganizationRequest) => Promise<void>;
+  patch: (body: UpdateCompanyRequest) => Promise<void>;
 }>;
 
 function LegalNameRow({
-  organization,
+  company,
   canEdit,
   readOnlyReason,
   patch,
@@ -165,7 +165,7 @@ function LegalNameRow({
     <FieldRow label={t("create.legalName")} icon={<Landmark />}>
       <InlineText
         label={t("create.legalName")}
-        value={organization.legal_name ?? ""}
+        value={company.legal_name ?? ""}
         placeholder={t("field.addLegalName")}
         canEdit={canEdit}
         readOnlyReason={readOnlyReason}
@@ -180,23 +180,23 @@ function LegalNameRow({
 // `hideLabel` leaves the visible label to FieldGrid's own label column, the
 // same way SizeBandRow below suppresses InlineChoice's own prefix.
 function LifecycleRow({
-  organization,
-}: Readonly<{ organization: Organization }>) {
+  company,
+}: Readonly<{ company: Company }>) {
   const t = useT();
   return (
     // The badge is a box, not a line of text, so it centres against its label
     // rather than sharing the row's top edge with it.
-    <FieldRow label={t("org.lifecycle")} icon={<CircleDot />} align="middle">
-      <CompanyLifecycleControl org={organization} />
+    <FieldRow label={t("company.lifecycle")} icon={<CircleDot />} align="middle">
+      <CompanyLifecycleControl company={company} />
     </FieldRow>
   );
 }
 
-function OwnerRow({ organization }: Readonly<{ organization: Organization }>) {
+function OwnerRow({ company }: Readonly<{ company: Company }>) {
   const t = useT();
   return (
     <FieldRow label={t("co.pulse.owner")} icon={<User />}>
-      <CompanyOwnerControl org={organization} hideLabel />
+      <CompanyOwnerControl company={company} hideLabel />
     </FieldRow>
   );
 }
@@ -205,8 +205,8 @@ function OwnerRow({ organization }: Readonly<{ organization: Organization }>) {
 // paths use (flagged primary, else the first row): a record with no domain
 // flagged primary still has to name ONE entry as "the" domain this row edits.
 function primaryDomainOf(
-  domains: readonly OrganizationDomain[],
-): OrganizationDomain | undefined {
+  domains: readonly CompanyDomain[],
+): CompanyDomain | undefined {
   return domains.find((domain) => domain.is_primary) ?? domains[0];
 }
 
@@ -216,13 +216,13 @@ function primaryDomainOf(
 // treated as a delete: this row renames, it does not remove, and a removal
 // here would drop an entry with no confirmation and no way to reconsider.
 function DomainRow({
-  organization,
+  company,
   canEdit,
   readOnlyReason,
   patch,
 }: DetailsRowProps) {
   const t = useT();
-  const domains = organization.domains ?? [];
+  const domains = company.domains ?? [];
   const primary = primaryDomainOf(domains);
   return (
     <FieldRow label={t("field.domain")} icon={<Globe />}>
@@ -303,7 +303,7 @@ const ADDRESS_PARTS: ReadonlyArray<{
 // only its own part changed — see the docblock above for why a part cannot
 // PATCH alone.
 function AddressPartRow({
-  organization,
+  company,
   canEdit,
   readOnlyReason,
   patch,
@@ -322,14 +322,14 @@ function AddressPartRow({
     <FieldRow label={t(labelKey)} icon={<MapPin />}>
       <InlineText
         label={t(labelKey)}
-        value={organization.address?.[part] ?? ""}
+        value={company.address?.[part] ?? ""}
         placeholder={t(placeholderKey)}
         canEdit={canEdit}
         readOnlyReason={readOnlyReason}
         onSave={(next) =>
           patch({
             address: {
-              ...organization.address,
+              ...company.address,
               [part]: normalize(next) || null,
             },
           })
@@ -340,7 +340,7 @@ function AddressPartRow({
 }
 
 function IndustryRow({
-  organization,
+  company,
   canEdit,
   readOnlyReason,
   patch,
@@ -350,7 +350,7 @@ function IndustryRow({
     <FieldRow label={t("create.industry")} icon={<Building2 />}>
       <InlineText
         label={t("create.industry")}
-        value={organization.industry ?? ""}
+        value={company.industry ?? ""}
         placeholder={t("field.addIndustry")}
         canEdit={canEdit}
         readOnlyReason={readOnlyReason}
@@ -361,7 +361,7 @@ function IndustryRow({
 }
 
 function SizeBandRow({
-  organization,
+  company,
   canEdit,
   readOnlyReason,
   patch,
@@ -372,7 +372,7 @@ function SizeBandRow({
       <InlineChoice
         label={t("create.sizeBand")}
         hideLabel
-        value={organization.size_band ?? ""}
+        value={company.size_band ?? ""}
         options={SIZE_BAND_OPTIONS.map((band) => ({
           value: band,
           label: band,
@@ -382,7 +382,7 @@ function SizeBandRow({
         render={(value) => value || t("field.unset")}
         onSave={(next) =>
           patch({
-            size_band: (next || null) as UpdateOrganizationRequest["size_band"],
+            size_band: (next || null) as UpdateCompanyRequest["size_band"],
           })
         }
       />
@@ -395,7 +395,7 @@ function SizeBandRow({
 // link once one is set, so this row's job is writing the value, not a second
 // place to click through to it.
 function LinkedinRow({
-  organization,
+  company,
   canEdit,
   readOnlyReason,
   patch,
@@ -405,7 +405,7 @@ function LinkedinRow({
     <FieldRow label={t("create.linkedinUrl")} icon={<LinkIcon />}>
       <InlineText
         label={t("create.linkedinUrl")}
-        value={organization.linkedin_url ?? ""}
+        value={company.linkedin_url ?? ""}
         placeholder={t("field.addLinkedinUrl")}
         canEdit={canEdit}
         readOnlyReason={readOnlyReason}
@@ -416,7 +416,7 @@ function LinkedinRow({
 }
 
 function DescriptionRow({
-  organization,
+  company,
   canEdit,
   readOnlyReason,
   patch,
@@ -426,7 +426,7 @@ function DescriptionRow({
     <FieldRow label={t("co.description.label")} icon={<Text />}>
       <InlineText
         label={t("co.description.label")}
-        value={organization.description ?? ""}
+        value={company.description ?? ""}
         placeholder={t("co.description.placeholder")}
         maxLength={DESCRIPTION_MAX_LENGTH}
         canEdit={canEdit}
@@ -440,7 +440,7 @@ function DescriptionRow({
 // The two legal-identity fields that live only in the evidence sidecar: the
 // VAT/tax identifier and the address the company is REGISTERED at.
 //
-// Neither has a column on `organization`, so neither can ride the rows above:
+// Neither has a column on `company`, so neither can ride the rows above:
 // they are written through the profile-field correction path instead. That
 // difference is invisible to a reader and should stay so — a rep stating the
 // company's VAT number is doing the same thing as stating its legal name, and
@@ -471,7 +471,7 @@ const SIDECAR_FIELDS = [
 }[];
 
 // One sidecar field's row. The value comes from the profile-fields read rather
-// than from `organization`, which carries no sidecar claim.
+// than from `company`, which carries no sidecar claim.
 // Exported because the Profile tab writes the SAME sidecar fields through the
 // same PATCH — one writer for a profile-field value, mounted twice, so the rail
 // and the tab can never disagree about what they last wrote or which
@@ -479,7 +479,7 @@ const SIDECAR_FIELDS = [
 // (what they sell, who they sell to) are paragraphs, and a paragraph in a
 // single-line input is a field a reader cannot read back while typing it.
 export function SidecarFieldRow({
-  orgId,
+  companyId,
   fields,
   fieldsLoaded,
   field,
@@ -491,7 +491,7 @@ export function SidecarFieldRow({
   readOnlyReason,
   multiline,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   fields: readonly ProfileField[];
   // Whether `fields` is an ANSWER or merely the empty list a pending or failed
   // read stands in with. The two are not the same claim: an answered read
@@ -525,10 +525,10 @@ export function SidecarFieldRow({
   const current = fields.find((one) => one.field === field);
   const save = async (next: string) => {
     const { error } = await api.PATCH(
-      "/organizations/{id}/profile-fields/{field}",
+      "/companies/{id}/profile-fields/{field}",
       {
         params: {
-          path: { id: orgId, field },
+          path: { id: companyId, field },
           // A field nobody has stated yet has no row and so no version to pin:
           // the write CREATES it, and there is no earlier state to lose. Once
           // one exists the precondition is what stops two people correcting the
@@ -544,9 +544,9 @@ export function SidecarFieldRow({
     // The record read and the profile-fields read both now describe the write
     // that just landed, and the 360 summarises it.
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: profileFieldsKey(orgId) }),
-      queryClient.invalidateQueries({ queryKey: ["organization", orgId] }),
-      queryClient.invalidateQueries({ queryKey: ["organization360", orgId] }),
+      queryClient.invalidateQueries({ queryKey: profileFieldsKey(companyId) }),
+      queryClient.invalidateQueries({ queryKey: ["company", companyId] }),
+      queryClient.invalidateQueries({ queryKey: ["company360", companyId] }),
     ]);
   };
   // A value a machine read keeps its dotted underline and its receipt. The mark
@@ -587,34 +587,34 @@ export function SidecarFieldRow({
           number exists: a mark on an empty field would say the register had
           declined to recognise something nobody has stated. */}
       {field === "register_vat" && current?.value && (
-        <VatMark orgId={orgId} stated={current.value} canAsk={canEdit} />
+        <VatMark companyId={companyId} stated={current.value} canAsk={canEdit} />
       )}
     </FieldRow>
   );
 }
 
 function DetailsGridBody({
-  organization,
-}: Readonly<{ organization: Organization }>) {
+  company,
+}: Readonly<{ company: Company }>) {
   const t = useT();
   // useCanWriteRecord, not useCan: the grant alone offers a control whose save
   // the seat middleware refuses before RBAC is even consulted, and offers it on
   // a record the row scope will not let this reader write. The Profile tab
   // derives the same answer for its own rows, so the two halves of one page
   // cannot disagree about whether the reader may edit it.
-  const canUpdate = useCanWriteRecord("organization", organization);
-  const readOnlyReason = useCompanyReadOnlyReason(organization);
-  const patch = useCompanyFieldPatch(organization);
+  const canUpdate = useCanWriteRecord("company", company);
+  const readOnlyReason = useCompanyReadOnlyReason(company);
+  const patch = useCompanyFieldPatch(company);
   // The same read the Overview's own profile-field card uses, so a correction
   // made here settles that card too rather than leaving the two surfaces
   // disagreeing about what the record says.
-  const sidecarQuery = useOrgProfileFields(organization.id);
+  const sidecarQuery = useCompanyProfileFields(company.id);
   // A read that has not answered yet leaves both rows empty rather than absent:
   // the grid's rule is that every known field draws a row, and a row that
   // appears once its value arrives would make the panel jump under the reader.
   const sidecarFields = sidecarQuery.data ?? [];
   const row: DetailsRowProps = {
-    organization,
+    company,
     canEdit: canUpdate && !readOnlyReason,
     readOnlyReason,
     patch,
@@ -633,7 +633,7 @@ function DetailsGridBody({
   // one the data actually produces. Native `<details>`, so the open state is
   // the browser's and nothing here holds it.
   const anyAddressPartSet = ADDRESS_PARTS.some((field) =>
-    Boolean(organization.address?.[field.part]),
+    Boolean(company.address?.[field.part]),
   );
   return (
     <>
@@ -650,7 +650,7 @@ function DetailsGridBody({
         {SIDECAR_FIELDS.map((sidecar) => (
           <SidecarFieldRow
             key={sidecar.field}
-            orgId={organization.id}
+            companyId={company.id}
             fields={sidecarFields}
             fieldsLoaded={sidecarQuery.isSuccess}
             canEdit={row.canEdit}
@@ -658,8 +658,8 @@ function DetailsGridBody({
             {...sidecar}
           />
         ))}
-        <OwnerRow organization={organization} />
-        <LifecycleRow organization={organization} />
+        <OwnerRow company={company} />
+        <LifecycleRow company={company} />
         <DomainRow {...row} />
         <IndustryRow {...row} />
         <SizeBandRow {...row} />

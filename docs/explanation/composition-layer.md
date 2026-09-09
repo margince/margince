@@ -74,12 +74,12 @@ func New(pool, log, opts...) http.Handler {
 
 ## The installation bootstrap (one transaction, at boot)
 
-The singleton organization is **not created by a request**. `compose.EnsureInstallation`
+The singleton company is **not created by a request**. `compose.EnsureInstallation`
 (`installation.go`) runs the boot state machine from `margince.yaml` (A107/ADR-0061), seeding every
 module's per-workspace defaults — deals' default pipeline, consent's purposes and retention,
 automation's starter automations, activities' booking page — in ONE transaction, so they stand or fall
 together. identity imports none of those modules: compose owns the seed, as it owns every other
-cross-module edge. The HTTP surface only ever serves the already-bound organization.
+cross-module edge. The HTTP surface only ever serves the already-bound company.
 
 ## The cross-module edges (the map)
 

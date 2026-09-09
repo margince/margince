@@ -25,11 +25,11 @@ func TestARenewalOverHTTPCarriesTheDealTheRequestNames(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations",
-		map[string]any{"display_name": "Acme"}, nil, &org); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/companies",
+		map[string]any{"display_name": "Acme"}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("creating the counterparty → %d, want 201", status)
 	}
 
@@ -66,7 +66,7 @@ func TestARenewalOverHTTPCarriesTheDealTheRequestNames(t *testing.T) {
 	}
 	if status := e.Call(t, "POST", "/v1/deals", map[string]any{
 		"name": "Acme renewal 2027", "pipeline_id": pipelines.Data[0].ID,
-		"stage_id": openStage, "organization_id": org.ID,
+		"stage_id": openStage, "company_id": company.ID,
 	}, nil, &renewalDeal); status != http.StatusCreated {
 		t.Fatalf("creating the renewal deal → %d, want 201", status)
 	}
@@ -75,7 +75,7 @@ func TestARenewalOverHTTPCarriesTheDealTheRequestNames(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contracts", map[string]any{
-		"organization_id": org.ID, "title": "MSA 2026", "value_basis": "total",
+		"company_id": company.ID, "title": "MSA 2026", "value_basis": "total",
 	}, nil, &first); status != http.StatusCreated {
 		t.Fatalf("creating the predecessor → %d, want 201", status)
 	}

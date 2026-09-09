@@ -45,7 +45,7 @@ const (
 	objPerson   = "person"
 	objActivity = "activity"
 	objDeal     = "deal"
-	objOrg      = "organization"
+	objCompany      = "company"
 	objPipeline = "pipeline"
 	// objRelationship gates the EDGE — an employment or a stakeholder seat.
 	// Every seeded role holds read on it (identity/internal/policy.go: crud for
@@ -79,14 +79,14 @@ var (
 	// ContractRepPerms is a rep who may read agreements as well as the account
 	// and deal they hang off. Its own fixture rather than a delta on the two
 	// above, for the reason stated there: RepPerms is read by suites as a rep
-	// who canNOT see an organization, and widening it would make those pass
+	// who canNOT see a company, and widening it would make those pass
 	// while proving nothing. Row scope stays team, because the interesting
 	// contract failures are row-scope ones and an unbounded admin
 	// short-circuits every clause the inherited predicate renders.
 	ContractRepPerms = principal.Permissions{
 		RoleKeys: []string{roleRep},
 		Objects: map[string]principal.ObjectGrant{
-			objOrg:             {Read: true},
+			objCompany:             {Read: true},
 			objDeal:            {Create: true, Read: true, Update: true},
 			"contract":         {Create: true, Read: true, Update: true},
 			objPipeline:        {Read: true},
@@ -96,16 +96,16 @@ var (
 		RowScope: principal.RowScopeTeam,
 	}
 	// AccountRepPerms is the rep the account sections are read by: the
-	// organization itself, its people and deals, its activities, and the tag/list
+	// company itself, its people and deals, its activities, and the tag/list
 	// chips. It is a fixture in its own right rather than RepPerms plus a delta —
 	// RepPerms stays narrow because several suites read it as a rep who CANNOT
-	// see an organization, and widening it would make those pass while proving
+	// see a company, and widening it would make those pass while proving
 	// nothing. Row scope stays team for the same reason: the interesting failures
 	// here are row-scope ones, and an unbounded admin short-circuits every clause.
 	AccountRepPerms = principal.Permissions{
 		RoleKeys: []string{roleRep},
 		Objects: map[string]principal.ObjectGrant{
-			objOrg:             {Read: true},
+			objCompany:             {Read: true},
 			objPerson:          {Create: true, Read: true, Update: true},
 			objDeal:            {Create: true, Read: true, Update: true},
 			objActivity:        {Create: true, Read: true, Update: true},
@@ -158,7 +158,7 @@ var (
 		RoleKeys: []string{roleAdmin},
 		Objects: map[string]principal.ObjectGrant{
 			objPerson: {Create: true, Read: true, Update: true, Delete: true},
-			objOrg:    {Create: true, Read: true, Update: true, Delete: true},
+			objCompany:    {Create: true, Read: true, Update: true, Delete: true},
 			objDeal:   {Create: true, Read: true, Update: true, Delete: true},
 			// The admin role holds contracts in full (identity/internal/policy.go),
 			// mirrored here so the fixture matches production rather than a

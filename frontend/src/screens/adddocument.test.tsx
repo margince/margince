@@ -29,13 +29,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const COMPANY = { record: "organization", id: "o-1" } as const;
+const COMPANY = { record: "company", id: "o-1" } as const;
 const CONTACT = { record: "person", id: "p-1" } as const;
 
 const DEAL = {
   id: "deal-1",
   name: "Pallet Handling Programme — Graz",
-  organization_id: "o-1",
+  company_id: "o-1",
   status: "open",
 };
 
@@ -44,7 +44,7 @@ const DEAL = {
 const OLDER_DEAL = {
   id: "deal-99",
   name: "Wash cycle retrofit — Graz plant",
-  organization_id: "o-1",
+  company_id: "o-1",
   status: "open",
 };
 
@@ -55,7 +55,7 @@ const USER = { id: "u-1", email: "rep@example.com", name: "Demo Rep" };
 
 const GRANTS = {
   deal: { update: true },
-  organization: { update: true },
+  company: { update: true },
   person: { update: true },
 };
 
@@ -316,7 +316,7 @@ describe("adding a document from the account", () => {
 
     await waitFor(() => expect(uploadedForm(calls)).toBeTruthy());
     const sent = uploadedForm(calls);
-    expect(sent.get("entity_type")).toBe("organization");
+    expect(sent.get("entity_type")).toBe("company");
     expect(sent.get("entity_id")).toBe("o-1");
     expect((sent.get("file") as File).name).toBe("order_form.txt");
   });

@@ -9,7 +9,7 @@ package integration
 // wired into the segregated lead store — active cf_* columns ride create /
 // update writes and get / list / replay / disqualify reads like core fields,
 // same drop-on-mismatch and workspace-isolation posture as the
-// person/organization/deal suites. Reuses the shared people cfvFixture
+// person/company/deal suites. Reuses the shared people cfvFixture
 // (setupCFV) since leads live in the people store.
 
 import (

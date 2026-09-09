@@ -7,7 +7,7 @@ package approvals
 // is the ONE part of an approval that is prose. Everything else on the row
 // is structured and rendered by the UI; the summary is a string some stager
 // composed, and several stagers compose it partly out of record text — a
-// person's display name, an organization's name — which arrives from
+// person's display name, a company's name — which arrives from
 // inbound capture or from a create an agent itself performed.
 //
 // So it is treated as untrusted at the point it is persisted, not at each

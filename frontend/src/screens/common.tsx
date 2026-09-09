@@ -81,7 +81,7 @@ export function consumeAuthExitNotice(): "signed-out" | null {
 // The session principal (GET /v1/me): identity + effective role keys. One
 // spelling, one ["me"] cache entry — the App auth gate, the settings identity
 // card, and role-aware affordances all read the same probe. The server binds
-// the installation's singleton organization itself (A107/ADR-0061) — the
+// the installation's singleton company itself (A107/ADR-0061) — the
 // probe needs nothing but the session cookie.
 export function useMe() {
   return useQuery({
@@ -407,7 +407,7 @@ export function provenanceOf(
     };
   }
   if (source === "buyer") {
-    // The other side of a Deal Room: a person, outside the organization and in
+    // The other side of a Deal Room: a person, outside the company and in
     // no member directory, so neither the human arm (which would send a reader
     // looking them up) nor `unknown` (which says nobody recorded a source) is
     // true of them. What follows the kind is the participant uuid — opaque, and
@@ -877,13 +877,13 @@ export function namedSiteReadKind(
 // The account's finance summary. It lives here rather than beside the finance
 // card because the KPI row reads the SAME figure: one query key, so the two
 // readings on a page agree and the second costs no request.
-export function useFinanceSummary(orgId: string) {
-  return useQuery<components["schemas"]["OrganizationFinanceSummary"]>({
-    queryKey: ["finance-summary", orgId],
+export function useFinanceSummary(companyId: string) {
+  return useQuery<components["schemas"]["CompanyFinanceSummary"]>({
+    queryKey: ["finance-summary", companyId],
     queryFn: async () => {
       const { data, error } = await api.GET(
-        "/organizations/{id}/finance-summary",
-        { params: { path: { id: orgId } } },
+        "/companies/{id}/finance-summary",
+        { params: { path: { id: companyId } } },
       );
       if (error) {
         throwProblem(error);

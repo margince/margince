@@ -32,7 +32,7 @@ type BlockedDomain struct {
 	Reason         string
 	Source         string
 	DecidedAt      time.Time
-	OrganizationID *ids.OrganizationID
+	CompanyID *ids.CompanyID
 }
 
 // ToContractBlockedDomain is the wire shape of one admission decision.
@@ -48,9 +48,9 @@ func ToContractBlockedDomain(e BlockedDomain) crmcontracts.BlockedDomain {
 		Source:    crmcontracts.BlockedDomainSource(e.Source),
 		DecidedAt: e.DecidedAt,
 	}
-	if e.OrganizationID != nil {
-		id := openapi_types.UUID(e.OrganizationID.UUID)
-		out.OrganizationId = &id
+	if e.CompanyID != nil {
+		id := openapi_types.UUID(e.CompanyID.UUID)
+		out.CompanyId = &id
 	}
 	return out
 }
@@ -62,21 +62,21 @@ func ToContractBlockedDomain(e BlockedDomain) crmcontracts.BlockedDomain {
 // missing, while only admin/ops may change it. An operator who cannot find out
 // that a domain was refused has no way to know the CRM is not simply empty.
 func (s *Store) ListDomainAdmissions(ctx context.Context, limit int) ([]BlockedDomain, int, error) {
-	if err := auth.Require(ctx, entityOrganization, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
 		return nil, 0, err
 	}
 	var out []BlockedDomain
 	var total int
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
-			SELECT count(*) FROM organization_domain_disposition
+			SELECT count(*) FROM company_domain_disposition
 			 WHERE admission IS NOT NULL`).Scan(&total); err != nil {
 			return fmt.Errorf("people: counting domain admissions: %w", err)
 		}
 		rows, err := tx.Query(ctx, `
 			SELECT id, domain, admission, COALESCE(admission_reason, ''),
-			       COALESCE(admission_source, ''), admission_at, organization_id
-			  FROM organization_domain_disposition
+			       COALESCE(admission_source, ''), admission_at, company_id
+			  FROM company_domain_disposition
 			 WHERE admission IS NOT NULL
 			 ORDER BY admission_at DESC
 			 LIMIT $1`, limit)
@@ -86,39 +86,39 @@ func (s *Store) ListDomainAdmissions(ctx context.Context, limit int) ([]BlockedD
 		// Collected BEFORE any per-row visibility query: the rows cursor holds
 		// the connection, and a second query on the same transaction while it
 		// is open answers "conn busy".
-		var orgIDs []*ids.UUID
+		var companyIDs []*ids.UUID
 		for rows.Next() {
 			var d BlockedDomain
-			var orgID *ids.UUID
-			if err := rows.Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &orgID); err != nil {
+			var companyID *ids.UUID
+			if err := rows.Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &companyID); err != nil {
 				rows.Close()
 				return fmt.Errorf("people: reading a domain admission: %w", err)
 			}
 			out = append(out, d)
-			orgIDs = append(orgIDs, orgID)
+			companyIDs = append(companyIDs, companyID)
 		}
 		rows.Close()
 		if err := rows.Err(); err != nil {
 			return fmt.Errorf("people: listing domain admissions: %w", err)
 		}
-		for i, orgID := range orgIDs {
-			if orgID == nil {
+		for i, companyID := range companyIDs {
+			if companyID == nil {
 				continue
 			}
 			// The company id is withheld unless the caller could read that
-			// company. An organization captured from mail is owner-PRIVATE
+			// company. A company captured from mail is owner-PRIVATE
 			// until a human promotes it, and that privacy does not yield to
 			// row_scope=all — so returning the id here would hand every
 			// colleague a pointer to a record the record's own endpoint
 			// correctly 404s. Same rule, and same VisibleTo check, as the
-			// duplicate-domain refusal in organization_domains.go.
-			visible, verr := auth.VisibleTo(ctx, tx, entityOrganization, *orgID)
+			// duplicate-domain refusal in company_domains.go.
+			visible, verr := auth.VisibleTo(ctx, tx, entityCompany, *companyID)
 			if verr != nil {
 				return verr
 			}
 			if visible {
-				typed := ids.From[ids.OrganizationKind](*orgID)
-				out[i].OrganizationID = &typed
+				typed := ids.From[ids.CompanyKind](*companyID)
+				out[i].CompanyID = &typed
 			}
 		}
 		return nil

@@ -17,7 +17,7 @@ package compose
 // contract_ended signal. Whatever the extraction site got wrong is a card
 // somebody clears, and a card is where its influence stops.
 //
-// The precedent is org_name_promotion, not deal_follow_up: StageUnlessDeclined
+// The precedent is company_name_promotion, not deal_follow_up: StageUnlessDeclined
 // (durable rejection memory — StageOrJoinPendingInTx only dedupes against live
 // pending rows and forgets rejections) and RedeemAndApply (redemption and the
 // write in one transaction).
@@ -66,7 +66,7 @@ const (
 // sides — a reader deciding "is this right?" needs to see what the record says
 // now, not only what it would say next.
 type lifecycleProposal struct {
-	OrganizationID ids.OrganizationID `json:"organization_id"`
+	CompanyID ids.CompanyID `json:"company_id"`
 	CurrentStage   string             `json:"current_lifecycle"`
 	ProposedStage  string             `json:"proposed_lifecycle"`
 	SignalID       ids.UUID           `json:"signal_id"`
@@ -80,9 +80,9 @@ type lifecycleProposal struct {
 // summary and the record's current stage, both of which move on their own, and
 // a refusal keyed on the whole payload would be forgotten the first time
 // either did, re-offering the same move on every pass until someone accepted.
-func lifecycleIdentity(orgID ids.OrganizationID, stage string) (json.RawMessage, error) {
+func lifecycleIdentity(companyID ids.CompanyID, stage string) (json.RawMessage, error) {
 	body, err := json.Marshal(map[string]string{
-		paramOrganizationID: orgID.String(), "proposed_lifecycle": stage,
+		paramCompanyID: companyID.String(), "proposed_lifecycle": stage,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("compose: encoding the lifecycle proposal identity: %w", err)
@@ -106,7 +106,7 @@ func NewSignalProposer(pool *pgxpool.Pool, svc *approvals.Service, log *slog.Log
 
 // contradiction is one account whose stage its own mail contradicts.
 type contradiction struct {
-	OrganizationID ids.OrganizationID
+	CompanyID ids.CompanyID
 	Stage          string
 	SignalID       ids.UUID
 	Summary        string
@@ -164,7 +164,7 @@ func readContradictions(ctx context.Context, tx pgx.Tx) ([]contradiction, error)
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT ON (o.id) o.id, o.lifecycle, s.id, s.summary
 		  FROM signal s
-		  JOIN organization o ON o.id = s.resolved_org_id AND o.archived_at IS NULL
+		  JOIN company o ON o.id = s.resolved_company_id AND o.archived_at IS NULL
 		 WHERE s.kind = '`+signalKindContractEnded+`' AND s.status = 'open'
 		   AND s.archived_at IS NULL
 		   AND o.lifecycle IN ('prospect','opportunity','customer')
@@ -176,7 +176,7 @@ func readContradictions(ctx context.Context, tx pgx.Tx) ([]contradiction, error)
 	var out []contradiction
 	for rows.Next() {
 		var found contradiction
-		if err := rows.Scan(&found.OrganizationID, &found.Stage,
+		if err := rows.Scan(&found.CompanyID, &found.Stage,
 			&found.SignalID, &found.Summary); err != nil {
 			return nil, err
 		}
@@ -194,12 +194,12 @@ func readContradictions(ctx context.Context, tx pgx.Tx) ([]contradiction, error)
 // next hour — the signal that produced it stays open, so without the durable
 // memory this offer would come back every pass forever.
 func (p *SignalProposer) offerStageChange(ctx context.Context, account contradiction) (bool, error) {
-	identity, err := lifecycleIdentity(account.OrganizationID, lifecycleEnded)
+	identity, err := lifecycleIdentity(account.CompanyID, lifecycleEnded)
 	if err != nil {
 		return false, err
 	}
 	body, err := json.Marshal(lifecycleProposal{
-		OrganizationID: account.OrganizationID,
+		CompanyID: account.CompanyID,
 		CurrentStage:   account.Stage,
 		ProposedStage:  lifecycleEnded,
 		SignalID:       account.SignalID,
@@ -214,8 +214,8 @@ func (p *SignalProposer) offerStageChange(ctx context.Context, account contradic
 		ProposedChange: body,
 		DiffHash:       hex.EncodeToString(digest[:]),
 		Identity:       identity,
-		TargetType:     string(recordTypeOrganization),
-		TargetID:       account.OrganizationID.UUID,
+		TargetType:     string(recordTypeCompany),
+		TargetID:       account.CompanyID.UUID,
 		Summary: fmt.Sprintf("Their mail says the contract ended. Move this account from %s to %s?",
 			account.Stage, lifecycleEnded),
 		JoinPending: true,
@@ -259,8 +259,8 @@ func lifecycleAcceptEffect(svc *approvals.Service, store *people.Store) approval
 			// A false here is the stage having been corrected by a human while
 			// the offer waited: the approval is spent, nothing is written, and
 			// their edit stands.
-			moved, err := store.SetOrganizationLifecycleTx(execCtx, tx,
-				proposal.OrganizationID, proposal.CurrentStage, proposal.ProposedStage)
+			moved, err := store.SetCompanyLifecycleTx(execCtx, tx,
+				proposal.CompanyID, proposal.CurrentStage, proposal.ProposedStage)
 			if err != nil || !moved {
 				return err
 			}
@@ -272,8 +272,8 @@ func lifecycleAcceptEffect(svc *approvals.Service, store *people.Store) approval
 			// execCtx writes (machine provenance, beside the stage move); ctx
 			// carries the human, whose row scope bounds which of the account's
 			// signals may be settled at all.
-			_, err = signals.AcknowledgeOpenForOrgTx(execCtx, ctx, tx,
-				proposal.OrganizationID.UUID, signalKindContractEnded)
+			_, err = signals.AcknowledgeOpenForCompanyTx(execCtx, ctx, tx,
+				proposal.CompanyID.UUID, signalKindContractEnded)
 			return err
 		})
 	}

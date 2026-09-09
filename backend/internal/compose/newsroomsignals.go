@@ -75,7 +75,7 @@ type NewsroomItem struct {
 func WriteNewsroomSignals(
 	ctx context.Context,
 	tx pgx.Tx,
-	orgID ids.UUID,
+	companyID ids.UUID,
 	items []NewsroomItem,
 	now time.Time,
 ) (int, error) {
@@ -86,7 +86,7 @@ func WriteNewsroomSignals(
 		}
 		filed, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind:           item.Kind,
-			OrganizationID: orgID,
+			CompanyID: companyID,
 			Summary:        item.Headline,
 			// Never `warn` or `urgent`: a company announcing something is news
 			// about the account, not a problem with it, and the severity
@@ -98,7 +98,7 @@ func WriteNewsroomSignals(
 			// deliberately not in it: a headline the CMS rewords, or a rule
 			// that later places it differently, is the same announcement and
 			// must not arrive as a second event.
-			Fingerprint: fingerprintOf(newsroomSource, orgID.String(), item.URL),
+			Fingerprint: fingerprintOf(newsroomSource, companyID.String(), item.URL),
 			// The article is CITED, never copied: the snippet is the headline
 			// the company itself published, and the source is where to read the
 			// rest.

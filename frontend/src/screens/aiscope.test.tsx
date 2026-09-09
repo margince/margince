@@ -14,7 +14,7 @@ import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { AskSection } from "./company360";
 import { PersonMeetingBrief } from "./meetingbrief";
-import { CompanyScreen } from "./organizations";
+import { CompanyScreen } from "./companies";
 
 // Every AI surface can be told which project it is about, through the one
 // picker, and every scoped output says so in one line the server's counts
@@ -22,7 +22,7 @@ import { CompanyScreen } from "./organizations";
 // project is chosen, and the line renders from the response rather than from
 // anything the page worked out for itself.
 
-type Organization360 = components["schemas"]["Organization360"];
+type Company360 = components["schemas"]["Company360"];
 type ProjectScope = components["schemas"]["ProjectScope"];
 
 const CAPTURED = {
@@ -49,9 +49,9 @@ const migration = {
   quiet: false,
 } as const;
 
-const view: Organization360 = {
+const view: Company360 = {
   as_of: "2026-08-13T09:00:00Z",
-  organization: { id: "o-1", display_name: "Brandt", ...CAPTURED },
+  company: { id: "o-1", display_name: "Brandt", ...CAPTURED },
   sections_omitted: [],
   projects: [erp, migration],
 };
@@ -143,9 +143,9 @@ afterEach(() => {
 describe("Ask about this account, scoped to a project", () => {
   it("sends the chosen project and renders the server's scope line", async () => {
     const seen = stubFetch({
-      "POST /organizations/o-1/ask": () =>
+      "POST /companies/o-1/ask": () =>
         jsonResponse({
-          organization_id: "o-1",
+          company_id: "o-1",
           question: "whats_open",
           generated_at: "2026-08-13T09:00:00Z",
           generated_by: "deterministic",
@@ -153,7 +153,7 @@ describe("Ask about this account, scoped to a project", () => {
           sentences: [],
         }),
     });
-    render(<AskSection orgId="o-1" enabled projects={view.projects} />);
+    render(<AskSection companyId="o-1" enabled projects={view.projects} />);
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox", { name: "Project" }));
     await user.click(screen.getByRole("option", { name: /ERP-27/ }));
@@ -173,10 +173,10 @@ describe("Ask about this account, scoped to a project", () => {
 
   it("forgets the previous answer when the project changes", async () => {
     stubFetch({
-      "POST /organizations/o-1/ask": (s) => {
+      "POST /companies/o-1/ask": (s) => {
         const body = s.body as { project_id?: string };
         return jsonResponse({
-          organization_id: "o-1",
+          company_id: "o-1",
           question: "whats_open",
           generated_at: "2026-08-13T09:00:00Z",
           generated_by: "deterministic",
@@ -184,13 +184,13 @@ describe("Ask about this account, scoped to a project", () => {
           sentences: [
             {
               text: "The ERP cutover is waiting on you.",
-              evidence: [{ entity_type: "organization", entity_id: "o-1" }],
+              evidence: [{ entity_type: "company", entity_id: "o-1" }],
             },
           ],
         });
       },
     });
-    render(<AskSection orgId="o-1" enabled projects={view.projects} />);
+    render(<AskSection companyId="o-1" enabled projects={view.projects} />);
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox", { name: "Project" }));
     await user.click(screen.getByRole("option", { name: /ERP-27/ }));
@@ -207,9 +207,9 @@ describe("Ask about this account, scoped to a project", () => {
 
   it("drops a chosen project the list no longer offers, and defaults to the one left", async () => {
     const seen = stubFetch({
-      "POST /organizations/o-1/ask": () =>
+      "POST /companies/o-1/ask": () =>
         jsonResponse({
-          organization_id: "o-1",
+          company_id: "o-1",
           question: "whats_open",
           generated_at: "2026-08-13T09:00:00Z",
           generated_by: "deterministic",
@@ -217,7 +217,7 @@ describe("Ask about this account, scoped to a project", () => {
         }),
     });
     const { rerender } = render(
-      <AskSection orgId="o-1" enabled projects={view.projects} />,
+      <AskSection companyId="o-1" enabled projects={view.projects} />,
     );
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox", { name: "Project" }));
@@ -225,7 +225,7 @@ describe("Ask about this account, scoped to a project", () => {
     expect(screen.getByText("Scoped to ERP-27")).toBeTruthy();
 
     // The ERP project closes; the page's refetched list no longer carries it.
-    rerender(<AskSection orgId="o-1" enabled projects={[migration]} />);
+    rerender(<AskSection companyId="o-1" enabled projects={[migration]} />);
     await waitFor(() =>
       expect(
         screen.getByRole("combobox", { name: "Project" }).textContent,
@@ -239,7 +239,7 @@ describe("Ask about this account, scoped to a project", () => {
     });
 
     // No project left at all: the hidden id must not keep travelling.
-    rerender(<AskSection orgId="o-1" enabled projects={[]} />);
+    rerender(<AskSection companyId="o-1" enabled projects={[]} />);
     await user.click(screen.getByRole("button", { name: "What's open here?" }));
     await waitFor(() => expect(seen).toHaveLength(2));
     expect(seen[1].body).toEqual({ question: "whats_open" });
@@ -247,16 +247,16 @@ describe("Ask about this account, scoped to a project", () => {
 
   it("omits the project when none is chosen", async () => {
     const seen = stubFetch({
-      "POST /organizations/o-1/ask": () =>
+      "POST /companies/o-1/ask": () =>
         jsonResponse({
-          organization_id: "o-1",
+          company_id: "o-1",
           question: "whats_open",
           generated_at: "2026-08-13T09:00:00Z",
           generated_by: "deterministic",
           sentences: [],
         }),
     });
-    render(<AskSection orgId="o-1" enabled projects={view.projects} />);
+    render(<AskSection companyId="o-1" enabled projects={view.projects} />);
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "What's open here?" }));
@@ -340,7 +340,7 @@ describe("the meeting brief, scoped to a project", () => {
 
 describe("Prepare meeting on the company page", () => {
   it("opens the meeting brief drawer, not the composer", async () => {
-    const withMeeting: Organization360 = {
+    const withMeeting: Company360 = {
       ...view,
       next_meeting: {
         activity_id: "a-1",
@@ -351,11 +351,11 @@ describe("Prepare meeting on the company page", () => {
     };
     const seen = stubFetch({
       "GET /me": () =>
-        jsonResponse(meFixture({ allow: { organization: ["read"] } })),
-      "GET /organizations/o-1": () => jsonResponse(view.organization),
-      "GET /organizations/o-1/360": () => jsonResponse(withMeeting),
-      "GET /organizations/o-1/finance-summary": () =>
-        jsonResponse({ organization_id: "o-1", state: "no_connection" }),
+        jsonResponse(meFixture({ allow: { company: ["read"] } })),
+      "GET /companies/o-1": () => jsonResponse(view.company),
+      "GET /companies/o-1/360": () => jsonResponse(withMeeting),
+      "GET /companies/o-1/finance-summary": () =>
+        jsonResponse({ company_id: "o-1", state: "no_connection" }),
       "GET /activities/a-1/meeting-brief": () =>
         jsonResponse({
           activity_id: "a-1",

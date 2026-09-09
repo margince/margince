@@ -49,12 +49,12 @@ type geoColumns struct {
 
 // geoCapableTargets maps a record type to the columns that make it locatable.
 //
-// Only `organization` today, and that is a product fact rather than a
+// Only `company` today, and that is a product fact rather than a
 // limitation of this code: a company has an address that means a place on the
 // earth. A person's address is where somebody lives, which this product does
 // not geocode and should think hard about before it does.
 var geoCapableTargets = map[string]geoColumns{
-	"organization": {Lat: "geocode_lat", Lon: "geocode_lon", Status: "geocode_status"},
+	"company": {Lat: "geocode_lat", Lon: "geocode_lon", Status: "geocode_status"},
 }
 
 // locatableTarget reports whether this record type can be somewhere at all.

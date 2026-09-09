@@ -3,8 +3,8 @@
 
 package agents
 
-// The organization-sidecar resolvers (commandsidecar.go): the approval binds
-// to the organization, refuses the same two ways patchResolver's own target
+// The company-sidecar resolvers (commandsidecar.go): the approval binds
+// to the company, refuses the same two ways patchResolver's own target
 // does, and Subject's summary names the operand — the fact key or the
 // profile field — the door-agnostic line GovernedCall.Subject owes this
 // operation, distinct per operand even though no door renders it today.
@@ -20,12 +20,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// Each sidecar command stages against the ORGANIZATION it routes through,
+// Each sidecar command stages against the COMPANY it routes through,
 // with the operand carried into the summary — the property that keeps two
-// facts, or two profile fields, on one organization from rendering as one
+// facts, or two profile fields, on one company from rendering as one
 // indistinguishable approval.
-func TestSidecarCommandsStageTheOrganizationWithTheOperandInTheSummary(t *testing.T) {
-	orgID := ids.NewV7()
+func TestSidecarCommandsStageTheCompanyWithTheOperandInTheSummary(t *testing.T) {
+	companyID := ids.NewV7()
 	cases := []struct {
 		name        string
 		call        GovernedCall
@@ -33,22 +33,22 @@ func TestSidecarCommandsStageTheOrganizationWithTheOperandInTheSummary(t *testin
 	}{
 		{
 			"confirm_fact",
-			NewConfirmFactCall(unreadableProvider{}, ConfirmFactCommand{ID: orgID, FactKey: "named_customer:acme-inc"}),
+			NewConfirmFactCall(unreadableProvider{}, ConfirmFactCommand{ID: companyID, FactKey: "named_customer:acme-inc"}),
 			"named_customer:acme-inc",
 		},
 		{
 			"update_fact",
-			NewUpdateFactCall(unreadableProvider{}, UpdateFactCommand{ID: orgID, FactKey: "named_customer:acme-inc"}),
+			NewUpdateFactCall(unreadableProvider{}, UpdateFactCommand{ID: companyID, FactKey: "named_customer:acme-inc"}),
 			"named_customer:acme-inc",
 		},
 		{
 			"confirm_profile_field",
-			NewConfirmProfileFieldCall(unreadableProvider{}, ConfirmProfileFieldCommand{ID: orgID, Field: "icp"}),
+			NewConfirmProfileFieldCall(unreadableProvider{}, ConfirmProfileFieldCommand{ID: companyID, Field: "icp"}),
 			"icp",
 		},
 		{
 			"update_profile_field",
-			NewUpdateProfileFieldCall(unreadableProvider{}, UpdateProfileFieldCommand{ID: orgID, Field: "icp"}),
+			NewUpdateProfileFieldCall(unreadableProvider{}, UpdateProfileFieldCommand{ID: companyID, Field: "icp"}),
 			"icp",
 		},
 	}
@@ -56,15 +56,15 @@ func TestSidecarCommandsStageTheOrganizationWithTheOperandInTheSummary(t *testin
 		t.Run(c.name, func(t *testing.T) {
 			// call.Subject directly, not StageSubject: these fixtures answer every
 			// Read with not-found, so a Subject that (wrongly) tried to read the
-			// organization for a label would fail here — calling Subject alone
+			// company for a label would fail here — calling Subject alone
 			// (skipping Guards, unlike StageSubject) proves it needs no read to
 			// name the operand.
 			info, err := c.call.Subject(context.Background())
 			if err != nil {
 				t.Fatalf("naming the subject answered %v, want no error — Subject reads nothing", err)
 			}
-			if info.TargetType != "organization" || info.TargetID != orgID {
-				t.Errorf("staged target = (%s,%s), want (organization,%s)", info.TargetType, info.TargetID, orgID)
+			if info.TargetType != "company" || info.TargetID != companyID {
+				t.Errorf("staged target = (%s,%s), want (company,%s)", info.TargetType, info.TargetID, companyID)
 			}
 			if !strings.Contains(info.Summary, c.wantOperand) {
 				t.Errorf("summary %q does not name the operand %q — Subject owes a line distinct per fact or "+
@@ -74,10 +74,10 @@ func TestSidecarCommandsStageTheOrganizationWithTheOperandInTheSummary(t *testin
 	}
 }
 
-// An organization the caller cannot see is refused before anything is
+// A company the caller cannot see is refused before anything is
 // staged, for all four sidecar commands — the row-scope miss, not merely a
 // generic error.
-func TestSidecarCommandsRefuseAnUnreadableOrganization(t *testing.T) {
+func TestSidecarCommandsRefuseAnUnreadableCompany(t *testing.T) {
 	id := ids.NewV7()
 	cases := []struct {
 		name string
@@ -91,16 +91,16 @@ func TestSidecarCommandsRefuseAnUnreadableOrganization(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			if err := c.call.Guards(context.Background()); !errors.Is(err, apperrors.ErrNotFound) {
-				t.Errorf("guarding an unreadable organization answered %v, want the row-scope miss", err)
+				t.Errorf("guarding an unreadable company answered %v, want the row-scope miss", err)
 			}
 		})
 	}
 }
 
-// An organization held in another system of record is refused too — the
+// A company held in another system of record is refused too — the
 // decidability probe and the version pin both read our own tables, which
-// the organization has no row in.
-func TestSidecarCommandsRefuseAnOrganizationHeldElsewhere(t *testing.T) {
+// the company has no row in.
+func TestSidecarCommandsRefuseAnCompanyHeldElsewhere(t *testing.T) {
 	id := ids.NewV7()
 	cases := []struct {
 		name string
@@ -114,20 +114,20 @@ func TestSidecarCommandsRefuseAnOrganizationHeldElsewhere(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			if err := c.call.Guards(context.Background()); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-				t.Errorf("guarding a mirrored organization answered %v, want the unsupported-by-SoR refusal", err)
+				t.Errorf("guarding a mirrored company answered %v, want the unsupported-by-SoR refusal", err)
 			}
 		})
 	}
 }
 
-// A served, readable organization is admitted rather than refused — Guards'
+// A served, readable company is admitted rather than refused — Guards'
 // counterpart to the two refusal tests above, proving the happy path through
 // the same seam rather than only its failure modes.
-func TestSidecarCommandsAdmitAReadableOrganization(t *testing.T) {
+func TestSidecarCommandsAdmitAReadableCompany(t *testing.T) {
 	id := ids.NewV7()
-	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityOrganization, id, true)}
+	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityCompany, id, true)}
 	call := NewConfirmFactCall(provider, ConfirmFactCommand{ID: id, FactKey: "k"})
 	if err := call.Guards(context.Background()); err != nil {
-		t.Fatalf("guarding a readable, authoritative organization answered %v, want it admitted", err)
+		t.Fatalf("guarding a readable, authoritative company answered %v, want it admitted", err)
 	}
 }

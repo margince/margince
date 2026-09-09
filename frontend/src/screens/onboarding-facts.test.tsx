@@ -651,7 +651,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     // Identity carries display_name (required, empty) alongside four merely
     // empty-and-optional fields — it must read as blocking.
     const identityLink = within(nav).getByRole("button", {
-      name: /Legal organization/,
+      name: /Legal company/,
     });
     expect(identityLink.querySelector('[data-blocking="true"]')).not.toBeNull();
 
@@ -860,7 +860,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
     const identityLink = within(nav).getByRole("button", {
-      name: /Legal organization/,
+      name: /Legal company/,
     });
     // display_name is required and empty — the one field that actually
     // blocks confirm, and the only count this section's badge carries.
@@ -878,7 +878,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
     const identityLink = within(nav).getByRole("button", {
-      name: /Legal organization/,
+      name: /Legal company/,
     });
     const section = identityLink.closest("li");
     if (section === null) {
@@ -996,7 +996,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     // first section — the same honest default the live browser starts from
     // before anything has scrolled.
     expect(current).toEqual([
-      within(nav).getByRole("button", { name: /Legal organization/ }),
+      within(nav).getByRole("button", { name: /Legal company/ }),
     ]);
   });
 
@@ -1258,7 +1258,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
     const identityLink = within(nav).getByRole("button", {
-      name: /Legal organization/,
+      name: /Legal company/,
     });
     const section = identityLink.closest("li") as HTMLElement;
     const advisoryItems = () =>

@@ -53,7 +53,7 @@ func TestBootstrapSeedsFollowTheDeploymentConfiguration(t *testing.T) {
 	}
 	cfg := deployconfig.Config{
 		Version:   1,
-		Workspace: deployconfig.Workspace{Name: "Configured Org", BaseCurrency: "USD", Timezone: "Europe/Berlin"},
+		Workspace: deployconfig.Workspace{Name: "Configured Company", BaseCurrency: "USD", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: "ops@configured.test", DisplayName: "Ops", PasswordFile: pwFile,
 		},
@@ -154,13 +154,13 @@ func TestBootstrapSeedsFollowTheDeploymentConfiguration(t *testing.T) {
 		t.Fatalf("configured admin login → %d", status)
 	}
 
-	// The installation's own settings are seeded from the organization the
+	// The installation's own settings are seeded from the company the
 	// same transaction just created (ADR-0090 §8). Without this, a freshly
 	// bootstrapped installation reads its name as the registered default — an
 	// empty string — while its workspace row holds the configured one, and
 	// nothing else in the system notices the difference.
 	for _, want := range []struct{ key, value string }{
-		{"installation.name", `"Configured Org"`},
+		{"installation.name", `"Configured Company"`},
 		{"installation.base_currency", `"USD"`},
 		{"installation.timezone", `"Europe/Berlin"`},
 	} {
@@ -170,7 +170,7 @@ func TestBootstrapSeedsFollowTheDeploymentConfiguration(t *testing.T) {
 			t.Fatalf("reading the seeded %s: %v", want.key, err)
 		}
 		if got != want.value {
-			t.Errorf("%s = %s, want %s — bootstrap must seed it from the configured organization",
+			t.Errorf("%s = %s, want %s — bootstrap must seed it from the configured company",
 				want.key, got, want.value)
 		}
 	}
@@ -200,7 +200,7 @@ func TestBootstrapSeedsTheAiModelRatePriceSheet(t *testing.T) {
 
 // TestBootBindsWithoutReadingASpentBootstrapSecret is the restart an operator
 // who followed ADR-0061 §2 actually performs. The ADR permits deleting the
-// bootstrap secret once the organization exists, and the deploy entrypoint stops
+// bootstrap secret once the company exists, and the deploy entrypoint stops
 // writing it at that point — so a boot that resolved the credential eagerly
 // would fail on precisely the installations that obeyed the ADR, turning every
 // redeploy into a crash loop. The password file is removed here rather than
@@ -215,7 +215,7 @@ func TestBootBindsWithoutReadingASpentBootstrapSecret(t *testing.T) {
 	}
 	cfg := deployconfig.Config{
 		Version:   1,
-		Workspace: deployconfig.Workspace{Name: "Spent Secret Org", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
+		Workspace: deployconfig.Workspace{Name: "Spent Secret Company", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: "ops@spent.test", DisplayName: "Ops", PasswordFile: pwFile,
 		},
@@ -231,7 +231,7 @@ func TestBootBindsWithoutReadingASpentBootstrapSecret(t *testing.T) {
 	}
 	// Same configuration, same process role, second start.
 	if err := compose.EnsureInstallation(context.Background(), e.Pool, log, cfg); err != nil {
-		t.Fatalf("restart after the bootstrap secret was retired: %v — the boot path read a credential it only needs to CREATE an organization, so every redeploy of a bootstrapped installation would crash-loop", err)
+		t.Fatalf("restart after the bootstrap secret was retired: %v — the boot path read a credential it only needs to CREATE a company, so every redeploy of a bootstrapped installation would crash-loop", err)
 	}
 }
 
@@ -243,7 +243,7 @@ func TestFirstBootStillFailsLoudlyOnAnUnreadableSecret(t *testing.T) {
 	e := apptest.SetupApp(t)
 	cfg := deployconfig.Config{
 		Version:   1,
-		Workspace: deployconfig.Workspace{Name: "No Secret Org", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
+		Workspace: deployconfig.Workspace{Name: "No Secret Company", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: "ops@nosecret.test", DisplayName: "Ops",
 			PasswordFile: filepath.Join(t.TempDir(), "never-written"),
@@ -264,7 +264,7 @@ func TestSecondActiveWorkspaceTurnsTheSurfaceUnavailable(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	// A second active workspace violates the single-organization
+	// A second active workspace violates the single-company
 	// invariant. A server binding AFTER that point (fresh process, no
 	// cached singleton) must answer 503 on every request — an operator
 	// condition, never an auth failure.

@@ -188,10 +188,10 @@ func TestASearchDiscoveredFillRecordsTheEmptyFields(t *testing.T) {
 func TestASitePersonFillRecordsTheEmptyFields(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	personID, orgID := e.seedEmployedPerson(ctx, t,
+	personID, companyID := e.seedEmployedPerson(ctx, t,
 		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
 
-	matched, err := e.store.ApplySitePersonFields(ctx, orgID, SitePersonFields{
+	matched, err := e.store.ApplySitePersonFields(ctx, companyID, SitePersonFields{
 		Name: "Mira Halvorsen", Role: "Head of Platform",
 		PublishedEmail:  "mira@voltaq.test",
 		EvidenceSnippet: "Mira Halvorsen, Head of Platform",
@@ -253,7 +253,7 @@ func TestASignatureFillRecordsTheEmptyColumn(t *testing.T) {
 func TestASitePersonFillNeverRecordsAFieldAlreadyAnswered(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	personID, orgID := e.seedEmployedPerson(ctx, t,
+	personID, companyID := e.seedEmployedPerson(ctx, t,
 		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
 
 	if _, err := e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), []SignatureField{{
@@ -263,7 +263,7 @@ func TestASitePersonFillNeverRecordsAFieldAlreadyAnswered(t *testing.T) {
 		t.Fatalf("seeding the earlier answer: %v", err)
 	}
 
-	if _, err := e.store.ApplySitePersonFields(ctx, orgID, SitePersonFields{
+	if _, err := e.store.ApplySitePersonFields(ctx, companyID, SitePersonFields{
 		Name: "Mira Halvorsen", Role: "Head of Platform",
 		PublishedEmail:  "mira@voltaq.test",
 		EvidenceSnippet: "Mira Halvorsen, Head of Platform",

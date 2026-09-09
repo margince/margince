@@ -125,7 +125,7 @@ func decisionOutcomeOf(approve bool, edited json.RawMessage) decisionOutcome {
 // to defend against one.
 var AutoApplyKinds = map[string]bool{
 	"close_date_correction": true,
-	"org_name_promotion":    true,
+	"company_name_promotion":    true,
 	"lifecycle_change":      true,
 }
 

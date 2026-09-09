@@ -571,7 +571,7 @@ jobs:
       # No install step: scripts/gitleaks-pin.sh fetches the version- and
       # checksum-pinned binary itself, so this job runs the scanner an engineer
       # runs, resolved by the same code. The official gitleaks action is
-      # deliberately not used — it needs a paid licence key for organization
+      # deliberately not used — it needs a paid licence key for company
       # repositories, and this gate must stay free of one.
       - name: secret scan
         working-directory: .
@@ -889,7 +889,7 @@ jobs:
         # download, which fetches SonarSource's key from a public keyserver. On
         # run 32687876395 keyserver.ubuntu.com simply stopped answering, and the
         # step sat silent for 30 minutes until the JOB timeout killed it — a
-        # runner slot spent for nothing inside a 20-concurrent org ceiling every
+        # runner slot spent for nothing inside a 20-concurrent company ceiling every
         # pull-request lane also queues in. A rerun of the same commit finished
         # in 95 seconds. margince/margince#2543.
         #
@@ -981,7 +981,7 @@ jobs:
       - name: Boot the dev stack and migrate
         run: make db-up && make migrate
       # The deployment configuration (ADR-0061): the api bootstraps the
-      # demo organization itself at boot; the credentials match seed-dev.sh's
+      # demo company itself at boot; the credentials match seed-dev.sh's
       # demo defaults (admin@demo.test / demo-password-123 — throwaway CI-only
       # values, same posture as the compose stack's dev DSNs).
       #
@@ -1155,7 +1155,7 @@ jobs:
   # main, so that build was the de-facto gate and a break surfaced within a
   # commit of landing — a Dockerfile-only PR matching no scope was an accepted
   # trade against that net. release.yml then became dispatch-only, to stop ~400
-  # release runs a week competing for the org-wide runner ceiling. Right on its
+  # release runs a week competing for the company-wide runner ceiling. Right on its
   # own terms, and it removed the net the trade depended on: the first person to
   # notice a broken image became whoever cut the next release, with the offending
   # commit arbitrarily far back.

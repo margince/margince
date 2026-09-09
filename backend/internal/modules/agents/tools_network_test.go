@@ -148,7 +148,7 @@ func TestNoWarmRouteIsAnAnswerNotAnError(t *testing.T) {
 	tool := introPathTool{list: func(context.Context, ids.UUID) ([]IntroRoute, bool, error) {
 		return nil, false, nil
 	}}
-	out, err := tool.Handle(context.Background(), json.RawMessage(`{"organization_id":"`+ids.NewV7().String()+`"}`))
+	out, err := tool.Handle(context.Background(), json.RawMessage(`{"company_id":"`+ids.NewV7().String()+`"}`))
 	if err != nil {
 		t.Fatalf("an account with no warm route answered an error: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestAnIntroRouteNamesBothTheColleagueAndTheContact(t *testing.T) {
 			StrengthBucket: "strong", Interactions90d: 12,
 		}}, false, nil
 	}}
-	out, err := tool.Handle(context.Background(), json.RawMessage(`{"organization_id":"`+ids.NewV7().String()+`"}`))
+	out, err := tool.Handle(context.Background(), json.RawMessage(`{"company_id":"`+ids.NewV7().String()+`"}`))
 	if err != nil {
 		t.Fatalf("intro path: %v", err)
 	}

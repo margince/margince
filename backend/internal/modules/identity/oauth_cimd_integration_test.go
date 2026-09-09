@@ -58,7 +58,7 @@ func setupCIMD(t *testing.T, slug string) *cimdEnv {
 	err := database.WithInfraTx(context.Background(), pool, func(tx pgx.Tx) error {
 		var err error
 		wsID, err = createInstallation(context.Background(), tx, InstallationBootstrap{
-			OrganizationName: slug,
+			CompanyName: slug,
 			AdminEmail:       "admin@" + slug + ".test",
 			AdminName:        "Admin",
 			AdminPassword:    "correct-horse-battery-staple",

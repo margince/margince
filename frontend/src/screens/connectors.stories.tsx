@@ -42,7 +42,7 @@ const gmailConnected: CaptureConnection = {
   // extra request against a route this story never stubs.
   backfill: {
     state: "done",
-    counts: { captured: 842, people_created: 96, organizations_created: 21 },
+    counts: { captured: 842, people_created: 96, companies_created: 21 },
   },
 };
 

@@ -245,7 +245,7 @@ func countWeekMeetings(
 		        SELECT 1 FROM activity_link ml
 		          JOIN activity_link tl ON tl.entity_type = ml.entity_type
 		            AND tl.person_id IS NOT DISTINCT FROM ml.person_id
-		            AND tl.organization_id IS NOT DISTINCT FROM ml.organization_id
+		            AND tl.company_id IS NOT DISTINCT FROM ml.company_id
 		            AND tl.deal_id IS NOT DISTINCT FROM ml.deal_id
 		            AND tl.lead_id IS NOT DISTINCT FROM ml.lead_id
 		            AND tl.project_id IS NOT DISTINCT FROM ml.project_id

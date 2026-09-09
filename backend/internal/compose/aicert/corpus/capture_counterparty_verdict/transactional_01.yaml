@@ -31,7 +31,7 @@ expect:
     invoice fraud is wrong even though it hides it either way.
     "person" is the failure this scenario exists to catch and scores zero above
     the floor: it mints a contact for a robot that has said it will not read a
-    reply. "role_mailbox" and "organization_sender" are also wrong — both would
+    reply. "role_mailbox" and "company_sender" are also wrong — both would
     file this as correspondence a colleague might answer — but they withhold the
     record and so score above "person".
   bands:

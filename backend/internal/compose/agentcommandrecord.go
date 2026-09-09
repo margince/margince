@@ -5,7 +5,7 @@ package compose
 
 // The REST door's half of the two commands one tool serves through TWO
 // contract operations (margince/margince#928 task 7): merge_records is
-// mergePerson and mergeOrganization, and enrich is scrapeCompany and
+// mergePerson and mergeCompany, and enrich is scrapeCompany and
 // deepReadCompany.
 //
 // Both are where this door was previously answering the WRONG question, and in
@@ -25,7 +25,7 @@ import (
 )
 
 // mergeCommand decodes POST /v1/people/{id}/merge and
-// POST /v1/organizations/{id}/merge.
+// POST /v1/companies/{id}/merge.
 //
 // The routed {id} is the SOURCE and the body's `target_id` is the survivor:
 // crm.yaml says so ("The surviving person (B). This row (A) is archived") and
@@ -98,7 +98,7 @@ func mergeTagsCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body
 	}), nil
 }
 
-// scrapeCompanyCommand decodes POST /v1/organizations/{id}/enrich — the
+// scrapeCompanyCommand decodes POST /v1/companies/{id}/enrich — the
 // one-page read.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -106,7 +106,7 @@ func scrapeCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, 
 	return enrichCall(deps, r, body, agents.EnrichDepthPage)
 }
 
-// deepReadCompanyCommand decodes POST /v1/organizations/{id}/deep-read — the
+// deepReadCompanyCommand decodes POST /v1/companies/{id}/deep-read — the
 // whole-site crawl.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -114,7 +114,7 @@ func deepReadCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request
 	return enrichCall(deps, r, body, agents.EnrichDepthSite)
 }
 
-// technicalEnrichCompanyCommand decodes POST /v1/organizations/{id}/technical-enrich
+// technicalEnrichCompanyCommand decodes POST /v1/companies/{id}/technical-enrich
 // — the public-records lookup. Its depth is STRUCTURAL, like its two siblings:
 // the route IS the depth, where the tool door reads a word.
 //
@@ -135,7 +135,7 @@ func technicalEnrichCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.
 // merely unlikely.
 //
 // The body is optional on both routes (crm.yaml's EnrichCompanyRequest: "With
-// no body the org's own domain is read"), which commandBody answers with an
+// no body the company's own domain is read"), which commandBody answers with an
 // empty override rather than a refusal.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -151,7 +151,7 @@ func enrichCall(deps restCommandDeps, r *http.Request, body []byte, depth agents
 		return nil, err
 	}
 	return agents.NewEnrichCall(deps.records, agents.EnrichCommand{
-		OrganizationID: id,
+		CompanyID: id,
 		URL:            in.URL,
 		Depth:          depth,
 	}), nil

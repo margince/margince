@@ -33,7 +33,7 @@ type FilterSource struct {
 // so a view over them cannot be filter-exported.
 var viewResourceToEngine = map[string]string{
 	"people":        "person",
-	"organizations": "organization",
+	"companies": "company",
 	"deals":         "deal",
 	"leads":         "lead",
 	"projects":      "project",

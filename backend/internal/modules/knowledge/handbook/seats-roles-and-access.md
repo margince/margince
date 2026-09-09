@@ -11,16 +11,16 @@ A "no" from any one of them is a no.
 
 ## A word on words
 
-The product's noun for your tenant is **organization**. It is what every screen
-says: "Everyone in the organization", "Whole organization", "Organization name".
+The product's noun for your tenant is **company**. It is what every screen
+says: "Everyone in the company", "Whole company", "Company name".
 
 Two neighbouring words mean different things:
 
 - **Installation** is the deployment itself — the thing an operator runs. One
-  installation serves one organization.
+  installation serves one company.
 - **Company** is a record type. Confusingly, the underlying name for it is
-  "organization", which shows through on a few screens like search results. When
-  you see "Organizations" in a search grouping, it means companies.
+  "company", which shows through on a few screens like search results. When
+  you see "Companies" in a search grouping, it means companies.
 
 ## Seats
 
@@ -69,7 +69,7 @@ The licence is checked offline at start-up. It is never phoned home.
 |---|---|---|
 | **Admin** | every normal record, and all configuration | everything, configuration included |
 | **Ops** | every normal record, and all configuration | everything — the same grid as Admin |
-| **Management** | every record in the organization | every record; no administrative power |
+| **Management** | every record in the company | every record; no administrative power |
 | **Team Lead** | records | records they own; configuration read-only; no access to exchange rates, model prices, imports or retention |
 | **User** | records | records they own; configuration read-only; full control of their own saved views |
 | **Read-only** | every record and most configuration | nothing, except their own saved views |
@@ -88,7 +88,7 @@ Three levels: **own**, **team**, **all**.
 
 - **own** — records you own, plus records nobody owns
 - **team** — those, plus records owned by your teammates
-- **all** — everything in the organization
+- **all** — everything in the company
 
 Here is the part that differs from most CRMs, and it is deliberate:
 
@@ -96,8 +96,8 @@ Here is the part that differs from most CRMs, and it is deliberate:
 > entirely.**
 
 Every seat holding the read permission reads every contact, company, lead, deal
-and project in the organization. The app states it: "Reads every contact,
-company, lead and deal in the organization."
+and project in the company. The app states it: "Reads every contact,
+company, lead and deal in the company."
 
 Row scope governs **writes**. Not customer reads. Projects used to be the
 exception and are not any more: a consultant delivering a project they neither
@@ -114,7 +114,7 @@ Admin, because neither is a tier of row scope:
   belongs to that seat alone until a classifier judges the sender or the owner
   publishes it themselves. An admin gets a 404, which is the point: connecting
   a mailbox with a year of history must not put every correspondent, a lawyer
-  and a doctor among them, in front of the organization.
+  and a doctor among them, in front of the company.
 
 The reasoning is that a shared pipeline is the point. Two narrowings survive: a
 record created by a connector can stay private to its owner until promoted, and a

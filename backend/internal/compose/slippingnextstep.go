@@ -41,7 +41,7 @@ import (
 //     whether its owner is still here is a question about staffing, and
 //     answering it inside this predicate would make one signal quietly report
 //     two.
-//   - A task on the ORGANIZATION rather than the deal does NOT count. This tool
+//   - A task on the COMPANY rather than the deal does NOT count. This tool
 //     answers about a deal, and a step filed against the account is not a step
 //     on this opportunity — counting it would silence the signal for every deal
 //     at a company where anything at all is open.

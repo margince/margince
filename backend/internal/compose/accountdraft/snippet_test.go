@@ -99,9 +99,9 @@ func activityWith(t *testing.T, subject, body string) crmcontracts.Activity {
 	return act
 }
 
-func viewWithActivities(t *testing.T, acts ...crmcontracts.Activity) crmcontracts.Organization360 {
+func viewWithActivities(t *testing.T, acts ...crmcontracts.Activity) crmcontracts.Company360 {
 	t.Helper()
-	return crmcontracts.Organization360{
+	return crmcontracts.Company360{
 		Activities: &crmcontracts.ActivityListResponse{Data: acts},
 	}
 }

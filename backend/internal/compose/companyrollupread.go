@@ -1,0 +1,423 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+// The gated aggregate read behind GET /companies/{id}/
+// hierarchy-rollup (RD-T04): one workspace transaction walking the company
+// tree, pruning it to the caller's row scope, and computing the three
+// measures over the included nodes. Lives in compose because the read
+// spans company, deal, stage, activity, and fx_rate — exactly the
+// composition layer's charter; it durably owns none of them. The pure
+// mechanics it builds on (prune, quarter bounds, rounding) live in
+// companyrollup.go.
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+)
+
+// The rollup's scope vocabulary (crm.yaml enum): the whole readable
+// subtree, or the root's own figures alone.
+const (
+	companyRollupScopeTree = "tree"
+	companyRollupScopeSelf = "self"
+)
+
+// CompanyRollupResult is the computed hierarchy roll-up for one root
+// company: every money figure in workspace base-currency minor
+// units, plus the identity-only disclosure of pruned branches.
+type CompanyRollupResult struct {
+	RootID                 ids.UUID
+	Scope                  string
+	WeightedPipelineMinor  int64
+	ClosedWonMinor         int64
+	BaseCurrency           string
+	ActivityCount30d       int
+	AggregatedAccountCount int
+	RestrictedExcluded     []restrictedNode
+	ComputedAt             time.Time
+}
+
+// CompanyHierarchyRollup is the gated aggregate read: object-level read on
+// company, deal, AND activity, then — inside ONE workspace
+// transaction — the root's row-scope visibility, the bounded tree walk,
+// the per-node readability prune (tree scope only), and the three
+// measures over the included nodes. Out-of-scope and nonexistent roots
+// both answer ErrNotFound, indistinguishable by design.
+//
+// The rollup surfaces deal money and activity counts, so it demands the
+// same object grants the forecast and activity reports do. Aggregation
+// itself stays ORG-scoped: within a readable company, per-deal and
+// per-activity row visibility is deliberately not consulted, so account
+// totals stay whole (the contract's description states the same policy).
+//
+// now is the read's injected clock (house shape: deals.CloseDateCorrector,
+// approvals.Service, ai.meter) — the HTTP handler defaults it to time.Now
+// at server construction, and a test pins a fixed instant so a quarter or
+// 30-day window boundary can never flake between when it seeds and when
+// the read evaluates "now".
+func CompanyHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.UUID, scope string, now func() time.Time) (CompanyRollupResult, error) {
+	for _, object := range []datasource.EntityType{datasource.EntityCompany, datasource.EntityDeal, datasource.EntityActivity} {
+		if err := auth.Require(ctx, string(object), principal.ActionRead); err != nil {
+			// Permission refusal precedes input validation: a caller missing
+			// any of the three grants gets 403 even for a bogus scope value,
+			// matching arc 1a's gate order — what the caller can't do is
+			// decided before what the caller asked for is judged well-formed.
+			return CompanyRollupResult{}, err
+		}
+	}
+	if scope != companyRollupScopeTree && scope != companyRollupScopeSelf {
+		// The handler validates the enum at the edge; a value reaching
+		// this far is refused with the wire-ready 422 shape rather than
+		// silently defaulted (the contract names the vocabulary).
+		return CompanyRollupResult{}, httperr.Validation("scope", "invalid_enum",
+			fmt.Sprintf("scope must be %q or %q", companyRollupScopeTree, companyRollupScopeSelf))
+	}
+
+	asOf := now().UTC()
+	result := CompanyRollupResult{RootID: rootID, Scope: scope, RestrictedExcluded: []restrictedNode{}, ComputedAt: asOf}
+	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := auth.EnsureVisible(ctx, tx, "company", rootID); err != nil {
+			return err
+		}
+		baseCurrency, loc, fiscalStart, err := rollupInstallationMeta(ctx, tx)
+		if err != nil {
+			return err
+		}
+		nodes, err := loadCompanyTree(ctx, tx, rootID)
+		if err != nil {
+			return err
+		}
+		if len(nodes) == 0 {
+			// EnsureVisible skips the existence probe for unbounded
+			// callers, so a nonexistent (or archived) root lands here.
+			return fmt.Errorf("company %s: %w", rootID, apperrors.ErrNotFound)
+		}
+		included, restricted, err := rollupIncludedNodes(ctx, tx, rootID, scope, nodes)
+		if err != nil {
+			return err
+		}
+
+		fx := &fxConverter{tx: tx, rates: deals.NewFXRates(baseCurrency, asOf), asOf: asOf}
+		if result.WeightedPipelineMinor, err = weightedPipelineMinor(ctx, tx, included, fx); err != nil {
+			return err
+		}
+		if result.ClosedWonMinor, err = closedWonMinorThisQuarter(ctx, tx, included, asOf, loc, fiscalStart); err != nil {
+			return err
+		}
+		if result.ActivityCount30d, err = companyActivityCount30d(ctx, tx, included, asOf); err != nil {
+			return err
+		}
+		result.BaseCurrency = baseCurrency
+		result.AggregatedAccountCount = len(included)
+		result.RestrictedExcluded = restricted
+		return nil
+	})
+	if err != nil {
+		return CompanyRollupResult{}, err
+	}
+	return result, nil
+}
+
+// rollupInstallationMeta reads the installation's base currency, reporting
+// timezone and the month its business year begins — the basis every figure in
+// this rollup is expressed in. A stored zone the host cannot resolve degrades
+// the quarter window to UTC rather than failing the read — the zone was
+// validated at write time, so this only fires when the host lost its tzdata,
+// and an aggregate read is the wrong place to surface that deployment fault.
+//
+// All three read here rather than where each is used, so one rollup takes one
+// settings read per value. The fiscal month in particular is used by a leaf
+// function that runs once per read, and resolving it there would have been a
+// second answer to a question this function already asks.
+func rollupInstallationMeta(ctx context.Context, tx pgx.Tx) (string, *time.Location, int, error) {
+	baseCurrency, err := identity.BaseCurrencyOf(ctx, tx)
+	if err != nil {
+		return "", nil, 0, err
+	}
+	tzName, err := identity.TimezoneOf(ctx, tx)
+	if err != nil {
+		return "", nil, 0, err
+	}
+	loc, err := time.LoadLocation(tzName)
+	if err != nil {
+		loc = time.UTC
+	}
+	fiscalStart, err := identity.FiscalYearStartMonthOf(ctx, tx)
+	if err != nil {
+		return "", nil, 0, err
+	}
+	return baseCurrency, loc, fiscalStart, nil
+}
+
+// companyRollupMaxDepth caps the recursive tree walk. The DB trigger already
+// guarantees acyclicity, so this is a defensive belt against a
+// pathologically deep (or corrupted) hierarchy, never a correctness rule.
+const companyRollupMaxDepth = 50
+
+// loadCompanyTree walks the live company hierarchy downward from
+// rootID, root-first. RLS carries the workspace scope; an archived or
+// missing root yields an empty slice for the caller to refuse.
+//
+// The walk recurses ONE level past companyRollupMaxDepth on purpose: a row
+// at the cap depth proves the tree keeps going below what the rollup
+// would sum, and a total that silently dropped those nodes would be a
+// lie about money — the whole read fails loudly instead. (Seeding a
+// 51-deep chain to exercise this in the integration lane would be all
+// fixture and no insight; the sentinel row is plain SQL arithmetic.)
+func loadCompanyTree(ctx context.Context, tx pgx.Tx, rootID ids.UUID) ([]companyTreeNode, error) {
+	rows, err := tx.Query(ctx, `
+		WITH RECURSIVE company_tree AS (
+			SELECT o.id, o.parent_company_id, o.display_name, 0 AS depth
+			FROM company o
+			WHERE o.id = $1 AND o.archived_at IS NULL
+			UNION ALL
+			SELECT o.id, o.parent_company_id, o.display_name, t.depth + 1
+			FROM company o
+			JOIN company_tree t ON o.parent_company_id = t.id
+			WHERE o.archived_at IS NULL AND t.depth + 1 <= $2
+		)
+		SELECT id, parent_company_id, display_name, depth FROM company_tree ORDER BY depth, id`,
+		rootID, companyRollupMaxDepth)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var nodes []companyTreeNode
+	for rows.Next() {
+		var n companyTreeNode
+		var depth int
+		if err := rows.Scan(&n.id, &n.parentID, &n.displayName, &depth); err != nil {
+			return nil, err
+		}
+		if depth >= companyRollupMaxDepth {
+			return nil, fmt.Errorf(
+				"company tree under %s exceeds the supported depth of %d; roll up from a lower node or flatten the hierarchy",
+				rootID, companyRollupMaxDepth,
+			)
+		}
+		nodes = append(nodes, n)
+	}
+	return nodes, rows.Err()
+}
+
+// rollupIncludedNodes resolves which tree nodes the totals may sum.
+// scope=self is the root alone and consults no child readability at
+// all; scope=tree prunes each branch at its first unreadable node,
+// disclosing it by identity only.
+func rollupIncludedNodes(ctx context.Context, tx pgx.Tx, rootID ids.UUID, scope string,
+	nodes []companyTreeNode,
+) ([]ids.UUID, []restrictedNode, error) {
+	if scope == companyRollupScopeSelf {
+		return []ids.UUID{rootID}, []restrictedNode{}, nil
+	}
+	readable, err := companyReadablePredicate(ctx, tx, nodes)
+	if err != nil {
+		return nil, nil, err
+	}
+	included, restricted, rootReadable := pruneUnreadable(rootID, nodes, readable)
+	if !rootReadable {
+		// EnsureVisible vouched for the root in this same transaction;
+		// disagreeing here would be a scope-clause defect — refuse with
+		// the same existence-hiding answer rather than sum anything.
+		return nil, nil, fmt.Errorf("company %s: %w", rootID, apperrors.ErrNotFound)
+	}
+	return included, restricted, nil
+}
+
+// companyReadablePredicate answers which of the tree's nodes pass the
+// caller's row scope, resolved in ONE batch query over the house
+// visibility predicate. An unbounded caller reads everything, so no
+// query is spent proving it.
+func companyReadablePredicate(ctx context.Context, tx pgx.Tx, nodes []companyTreeNode) (func(ids.UUID) bool, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	clause, err := auth.ScopeClauseFor(ctx, "company", "", arg)
+	if err != nil {
+		return nil, err
+	}
+	if clause == "" {
+		return func(ids.UUID) bool { return true }, nil
+	}
+
+	nodeIDs := make([]ids.UUID, len(nodes))
+	for i, n := range nodes {
+		nodeIDs[i] = n.id
+	}
+	rows, err := tx.Query(ctx,
+		fmt.Sprintf(`SELECT id FROM company WHERE id = ANY($%d) AND %s`, arg(nodeIDs), clause),
+		args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	readable := make(map[ids.UUID]bool, len(nodes))
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		readable[id] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return func(id ids.UUID) bool { return readable[id] }, nil
+}
+
+// fxConverter is the rollup's missing-rate POLICY over the shared engine
+// (deals.FXRates): a currency with no stored rate on or before the as-of day
+// fails the whole read with the typed error, because a partial sum or a silent
+// rate of 1 would be a lie about money.
+//
+// The company page's read has the opposite policy over the same engine — it
+// prices what it can and reports how many deals reached the figure — and that
+// difference is the only thing the two surfaces are allowed to disagree about.
+// The lookup and the arithmetic are one implementation, so they cannot come
+// apart on rounding.
+type fxConverter struct {
+	tx    pgx.Tx
+	rates *deals.FXRates
+	asOf  time.Time
+}
+
+// toBase converts amountMinor from currency to the base currency.
+func (c *fxConverter) toBase(ctx context.Context, amountMinor int64, currency string) (int64, error) {
+	rate, found, err := c.rates.For(ctx, c.tx, currency)
+	if err != nil {
+		return 0, err
+	}
+	if !found {
+		return 0, &FXRateUnavailableError{Currency: currency, AsOf: c.asOf}
+	}
+	return deals.ConvertToBase(amountMinor, rate.Rate, currency, c.rates.Base())
+}
+
+// openDealRow is one open deal's contribution inputs: nullable money
+// (a deal may honestly have no amount yet) and its stage's live win
+// probability.
+type openDealRow struct {
+	amountMinor    *int64
+	currency       *string
+	winProbability int
+}
+
+// weightedPipelineMinor sums round(base(amount) × win_probability/100)
+// per open deal over the included companies (formulas §6: round per
+// deal, then sum, so the total reconciles exactly to its parts). Rows
+// are collected before converting because the FX lookup queries the
+// same transaction's connection.
+func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, fx *fxConverter) (int64, error) {
+	// The stage join deliberately carries NO archived_at filter, matching
+	// the forecast report's join: archiving a stage reshapes the pipeline
+	// vocabulary, it must never silently zero the open deals still in it.
+	rows, err := tx.Query(ctx, `
+		SELECT d.amount_minor, d.currency, s.win_probability
+		FROM deal d
+		JOIN stage s ON s.id = d.stage_id
+		WHERE d.company_id = ANY($1) AND d.status = 'open' AND d.archived_at IS NULL`,
+		included)
+	if err != nil {
+		return 0, err
+	}
+	openRows, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (openDealRow, error) {
+		var d openDealRow
+		err := row.Scan(&d.amountMinor, &d.currency, &d.winProbability)
+		return d, err
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	var total int64
+	for _, d := range openRows {
+		if d.amountMinor == nil {
+			continue // an amountless deal contributes a real 0, never an error
+		}
+		// The deal_amount_currency_pair CHECK guarantees a non-null
+		// amount carries its currency.
+		baseMinor, err := fx.toBase(ctx, *d.amountMinor, *d.currency)
+		if err != nil {
+			return 0, err
+		}
+		weighted, err := values.WeightedValue(baseMinor, d.winProbability)
+		if err != nil {
+			return 0, err
+		}
+		total += weighted
+	}
+	return total, nil
+}
+
+// closedWonMinorThisQuarter sums won deals closed in the current
+// workspace-timezone quarter [start, end). amount_minor_base carries each
+// deal's amount in the base currency at its FROZEN close-time rate, written
+// once by the freeze writer across both currencies' minor-unit scales — never
+// a live lookup, and never a product to recompute here: the scales are not on
+// the row, so multiplying the amount by the rate would be short by a factor of
+// a hundred for a zero-decimal currency.
+//
+// Held by: TestSchema_amountMinorBaseHasOneWriter
+// (backend/migrations/schema_fitness_integration_test.go) No FX failure can arise
+// here: the deal_closed_fx CHECK guarantees fx_rate_to_base for every
+// closed deal that has an amount, and an amountless won deal's NULL
+// amount_minor_base is skipped by SUM — an honest 0, not an invented rate.
+// The quarter is the installation's FISCAL one, threaded in alongside the zone
+// it is cut in. A reader who checks this figure against the win-loss report by
+// quarter is comparing two answers to one question, and they have to be cut the
+// same way or the company page and the report disagree in front of them.
+func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UUID, asOf time.Time, loc *time.Location, fiscalStart int) (int64, error) {
+	start, end := currentQuarterBounds(asOf, loc, fiscalStart)
+	var total int64
+	err := tx.QueryRow(ctx, `
+		SELECT COALESCE(SUM(d.amount_minor_base), 0)::bigint
+		FROM deal d
+		WHERE d.company_id = ANY($1) AND d.status = 'won' AND d.archived_at IS NULL
+		  AND d.closed_at >= $2 AND d.closed_at < $3`,
+		included, start, end).Scan(&total)
+	return total, err
+}
+
+// companyActivityCount30d counts live activities that reach any included
+// company in the half-open window [asOf−30d, asOf). The upper bound
+// keeps a future-dated activity (a scheduled call, a clock-skewed import)
+// out of a count that claims to describe the PAST 30 days.
+//
+// "Reaches" is activities.CompanyLinkedActivityExistsAny — the same three-arm
+// walk (own link, its deal's company, the contact's employer) the timeline
+// list and the company view's sections use. A count that answered a
+// narrower question than the timeline it is displayed above was a number
+// the reader could disprove by scrolling.
+//
+// EXISTS rather than a join, so an activity reachable through several
+// links of the same tree is one row and COUNT(*) needs no DISTINCT.
+func companyActivityCount30d(ctx context.Context, tx pgx.Tx, included []ids.UUID, asOf time.Time) (int, error) {
+	var count int
+	err := tx.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM activity a
+		WHERE `+activities.CompanyLinkedActivityExistsAny(1)+`
+		  AND a.archived_at IS NULL
+		  AND a.occurred_at >= $2 AND a.occurred_at < $3`,
+		included, asOf.AddDate(0, 0, -30), asOf).Scan(&count)
+	return count, err
+}

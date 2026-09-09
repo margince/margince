@@ -47,16 +47,16 @@ func TestAPatchedEdgeRecordsTheRoleAndDatesItReplaced(t *testing.T) {
 	personID, _ := e.seedEmployedPerson(ctx, t,
 		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
 
-	former, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	former, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Kessler Werke", Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seed the earlier employer: %v", err)
 	}
-	formerID := ids.From[ids.OrganizationKind](ids.UUID(former.Id))
+	formerID := ids.From[ids.CompanyKind](ids.UUID(former.Id))
 	analyst := "Analyst"
 	edge, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &formerID,
+		Kind: "employment", PersonID: &personID, CompanyID: &formerID,
 		Role: &analyst, Source: "manual",
 	})
 	if err != nil {
@@ -89,13 +89,13 @@ func TestAPatchedEdgeRecordsTheRoleAndDatesItReplaced(t *testing.T) {
 func TestAPatchedEdgeRecordsTheCurrentEmployerFlagItCleared(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.asEdgeEditor(t)
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Terralogic", Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seed the employer: %v", err)
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 	person, err := e.store.CreatePerson(ctx, CreatePersonInput{
 		FullName: "Jonas Brede", Source: "manual",
 		Emails: []PersonEmailInput{{Email: "jonas@terralogic.test", EmailType: "work", IsPrimary: true}},
@@ -107,7 +107,7 @@ func TestAPatchedEdgeRecordsTheCurrentEmployerFlagItCleared(t *testing.T) {
 
 	primary := true
 	edge, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &orgID,
+		Kind: "employment", PersonID: &personID, CompanyID: &companyID,
 		IsCurrentPrimary: &primary, Source: "manual",
 	})
 	if err != nil {

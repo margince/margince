@@ -110,13 +110,13 @@ type counterpartyCreation struct {
 
 // counterpartyCreated reports what a `real` answer produced that its caller has
 // to act on AFTER the transaction commits. Today that is one thing: the domain
-// whose organization question is still open, which somebody has to queue a
+// whose company question is still open, which somebody has to queue a
 // triage read for.
 type counterpartyCreated struct {
 	// Suppressed marks an address erased between capture and the answer. Nothing
 	// was created: erasure outranks a verdict.
 	Suppressed bool
-	// TriageDomain names the domain still owed an organization verdict, empty
+	// TriageDomain names the domain still owed a company verdict, empty
 	// when there is none.
 	TriageDomain string
 }

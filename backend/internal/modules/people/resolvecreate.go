@@ -4,7 +4,7 @@
 package people
 
 // The identity chokepoint: the ONE place a person row and the ONE place an
-// organization row is minted. Four person paths and four organization paths
+// company row is minted. Four person paths and four company paths
 // used to each own their own INSERT, and they drifted — capture asked PO-F-2
 // about a domain and never about a name, cold start never asked at all, lead
 // promotion probed one column by hand. Two companies in a real workspace ended
@@ -194,18 +194,18 @@ func refusedPersonCreate(ctx context.Context, tx pgx.Tx, match PersonResolution,
 		match.MatchedLane, apperrors.ErrConflict)
 }
 
-// OrgSpec is every column an organization create writes, across all four
+// CompanySpec is every column a company create writes, across all four
 // paths.
-type OrgSpec struct {
+type CompanySpec struct {
 	DisplayName string
 	LegalName   *string
 	Description *string
 	Industry    *string
 	SizeBand    *string
 	OwnerID     *ids.UserID
-	ParentOrgID *ids.OrganizationID
+	ParentCompanyID *ids.CompanyID
 	Address     *crmcontracts.Address
-	Domains     []OrgDomainInput
+	Domains     []CompanyDomainInput
 
 	// NameSource is the ADR-0072/A118 authority ladder entry for the name
 	// being written ("" writes the column default, 'human'). A row named from
@@ -215,7 +215,7 @@ type OrgSpec struct {
 	// Visibility is "" for the column default; capture mints 'owner' rows.
 	Visibility string
 	// IsAnchor marks the workspace's own company; there is exactly one, and
-	// uq_organization_anchor is what decides a race between two first saves.
+	// uq_company_anchor is what decides a race between two first saves.
 	IsAnchor bool
 
 	Source       string
@@ -224,60 +224,60 @@ type OrgSpec struct {
 	Active       []fieldcatalog.Column
 }
 
-// refusedOrgCreate is refusedPersonCreate's twin, with the same disclosure
+// refusedCompanyCreate is refusedPersonCreate's twin, with the same disclosure
 // rule: the manual path refuses a claimed domain before the ladder, so
 // arriving here is a race that still owes the caller the domain 409 — but the
 // incumbent's id only when they could have read that record.
-func refusedOrgCreate(ctx context.Context, tx pgx.Tx, match OrganizationMatch, spec OrgSpec) error {
+func refusedCompanyCreate(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec CompanySpec) error {
 	if len(spec.Domains) == 0 {
 		return fmt.Errorf(
 			"people: an exact domain collision already claims this identity: %w",
 			apperrors.ErrConflict)
 	}
 	dup := &DuplicateDomainError{Domain: spec.Domains[0].Domain}
-	visible, err := auth.VisibleTo(ctx, tx, entityOrganization, match.OrganizationID.UUID)
+	visible, err := auth.VisibleTo(ctx, tx, entityCompany, match.CompanyID.UUID)
 	if err != nil {
 		return err
 	}
 	if visible {
-		dup.ExistingID = match.OrganizationID
+		dup.ExistingID = match.CompanyID
 	}
 	return dup
 }
 
-// createOrganization is the one INSERT INTO organization.
+// createCompany is the one INSERT INTO company.
 //
 // It refuses an exact collision outright: PO-F-2's exact tier is the domain,
-// and a domain already mapped to a live organization names that same company
+// and a domain already mapped to a live company names that same company
 // (this is the capture employer-inference path — a hit lands the person on the
 // existing company rather than minting a rival).
-func createOrganization(ctx context.Context, tx pgx.Tx, match OrganizationMatch, spec OrgSpec) (ids.OrganizationID, error) {
+func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec CompanySpec) (ids.CompanyID, error) {
 	if match.Decision == DecisionExactCollision {
-		return ids.OrganizationID{}, refusedOrgCreate(ctx, tx, match, spec)
+		return ids.CompanyID{}, refusedCompanyCreate(ctx, tx, match, spec)
 	}
-	id := ids.New[ids.OrganizationKind]()
+	id := ids.New[ids.CompanyKind]()
 	addr := addressColumns(spec.Address)
 	cfCols, cfHolders, args := storekit.InsertFragments(spec.Active, spec.CustomFields, []any{
-		id, spec.DisplayName, spec.LegalName, spec.Description, spec.Industry, spec.SizeBand, spec.OwnerID, spec.ParentOrgID,
+		id, spec.DisplayName, spec.LegalName, spec.Description, spec.Industry, spec.SizeBand, spec.OwnerID, spec.ParentCompanyID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.NameSource, spec.Visibility, spec.IsAnchor,
 	})
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO organization (id, display_name, legal_name, description, industry, size_band, owner_id, parent_org_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, name_source, visibility, is_anchor`+cfCols+`)
+		`INSERT INTO company (id, display_name, legal_name, description, industry, size_band, owner_id, parent_company_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, name_source, visibility, is_anchor`+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
 		         coalesce(NULLIF($17, ''), 'human'),
 		         coalesce(NULLIF($18, ''), 'workspace'), $19`+cfHolders+`)`,
 		args...); err != nil {
-		return ids.OrganizationID{}, fmt.Errorf("insert organization: %w", err)
+		return ids.CompanyID{}, fmt.Errorf("insert company: %w", err)
 	}
-	// A new organization has no primary yet, so the election has nothing to
+	// A new company has no primary yet, so the election has nothing to
 	// preserve and fills the caller's silence. Here rather than in the HTTP
 	// mapping because every producer of a company converges on this call — the
 	// API, the tool surface, CSV import, cold start, domain triage and the
 	// overlay flip — and a rule spelled at one of those doors binds only that
 	// door.
-	if err := insertOrgDomains(ctx, tx, id, spec.Source, spec.CapturedBy, electPrimary(spec.Domains, "")); err != nil {
-		return ids.OrganizationID{}, err
+	if err := insertCompanyDomains(ctx, tx, id, spec.Source, spec.CapturedBy, electPrimary(spec.Domains, "")); err != nil {
+		return ids.CompanyID{}, err
 	}
 	return id, nil
 }

@@ -201,8 +201,8 @@ func wireReasons(reasons []Reason) []crmcontracts.AccountDraftReason {
 				out = append(out, wired)
 				continue
 			}
-			wired.EvidenceRef = &crmcontracts.OrganizationBriefEvidence{
-				EntityType: crmcontracts.OrganizationBriefEvidenceEntityType(reason.EntityType),
+			wired.EvidenceRef = &crmcontracts.CompanyBriefEvidence{
+				EntityType: crmcontracts.CompanyBriefEvidenceEntityType(reason.EntityType),
 				EntityId:   openapi_types.UUID(id),
 			}
 		}

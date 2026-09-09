@@ -30,7 +30,7 @@ import (
 // singlePurposeTools are the fourteen verbs whose every contract operation
 // this task put on the seam. Named as VERBS rather than as operationIds
 // because the mapping is the point: two of them serve two operations each
-// (merge_records is the person and organization halves, enrich is the two
+// (merge_records is the person and company halves, enrich is the two
 // depths), so a walk keyed on tool names finds sixteen routes and would find a
 // seventeenth the contract grew for any of them.
 var singlePurposeTools = []string{
@@ -64,7 +64,7 @@ var singlePurposeTools = []string{
 var contractBodies = map[string]string{
 	"sendEmail":        `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales"}`,
 	"sendMessage":      `{"body":"hi","consent_purpose":"support"}`,
-	"sendAccountEmail": `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales","links":[{"entity_type":"organization","entity_id":"019ff000-0000-7000-8000-000000000001"}]}`,
+	"sendAccountEmail": `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales","links":[{"entity_type":"company","entity_id":"019ff000-0000-7000-8000-000000000001"}]}`,
 	"bookMeeting":      `{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z","links":[{"entity_type":"deal","entity_id":"019ff000-0000-7000-8000-000000000002"}]}`,
 	"promoteLead":      `{"trigger":"inbound_reply"}`,
 	// Optional on the wire so a governed agent disqualify works bare; the
@@ -73,7 +73,7 @@ var contractBodies = map[string]string{
 	"advanceProjectPhase": `{"to_phase":"pursuing"}`,
 	"advanceDeal":         `{"to_stage_id":"019ff000-0000-7000-8000-000000000003"}`,
 	"mergePerson":         `{"target_id":"019ff000-0000-7000-8000-000000000004"}`,
-	"mergeOrganization":   `{"target_id":"019ff000-0000-7000-8000-000000000005"}`,
+	"mergeCompany":   `{"target_id":"019ff000-0000-7000-8000-000000000005"}`,
 	"scrapeCompany":       `{"url":"https://acme.test/about"}`,
 	"deepReadCompany":     `{"url":"https://acme.test"}`,
 	"logActivity":         `{"kind":"note","body":"hi"}`,
@@ -97,7 +97,7 @@ var contractBodies = map[string]string{
 	// The operand family's own bodies, on the same rule: every required member
 	// crm.yaml declares, and nothing else.
 	"setProjectStakeholder":          `{"person_id":"019ff000-0000-7000-8000-000000000031","role":"champion"}`,
-	"setProjectCompany":              `{"organization_id":"019ff000-0000-7000-8000-000000000032","role":"partner"}`,
+	"setProjectCompany":              `{"company_id":"019ff000-0000-7000-8000-000000000032","role":"partner"}`,
 	"applyTag":                       `{"entity_type":"person","entity_id":"019ff000-0000-7000-8000-000000000033"}`,
 	"removeTag":                      `{"entity_type":"person","entity_id":"019ff000-0000-7000-8000-000000000034"}`,
 	"mergeTags":                      `{"into_tag_id":"019ff000-0000-7000-8000-000000000035"}`,
@@ -107,9 +107,9 @@ var contractBodies = map[string]string{
 	"updateOfferLineItem":            `{"quantity":3}`,
 	"openDealRoomThread":             `{"body":"can we revisit the delivery date?"}`,
 	"replyDealRoomThread":            `{"body":"yes — moving it a week."}`,
-	"createOrganizationFact":         `{"category":"company","field":"headcount","value":"240"}`,
-	"updateOrganizationFact":         `{"value":"260"}`,
-	"updateOrganizationProfileField": `{"value":"Acme GmbH"}`,
+	"createCompanyFact":         `{"category":"company","field":"headcount","value":"240"}`,
+	"updateCompanyFact":         `{"value":"260"}`,
+	"updateCompanyProfileField": `{"value":"Acme GmbH"}`,
 	"updateCustomFieldOptions":       `{"options":["bronze","silver","gold"]}`,
 }
 
@@ -222,7 +222,7 @@ func TestAMergeStagesTheSurvivorTheBodyNamesRatherThanTheRoutedRecord(t *testing
 		recordType     agentRecordType
 	}{
 		{"mergePerson", "/v1/people", recordTypePerson},
-		{"mergeOrganization", "/v1/organizations", recordTypeOrganization},
+		{"mergeCompany", "/v1/companies", recordTypeCompany},
 	} {
 		t.Run(c.op, func(t *testing.T) {
 			source, survivor := ids.NewV7(), ids.NewV7()
@@ -260,14 +260,14 @@ func TestAMergeStagesTheSurvivorTheBodyNamesRatherThanTheRoutedRecord(t *testing
 func TestTheTwoEnrichRoutesStageTheDepthTheirOwnRouteMeans(t *testing.T) {
 	staged := map[string]string{}
 	for _, c := range []struct{ op, path string }{
-		{"scrapeCompany", "/v1/organizations/%s/enrich"},
-		{"deepReadCompany", "/v1/organizations/%s/deep-read"},
+		{"scrapeCompany", "/v1/companies/%s/enrich"},
+		{"deepReadCompany", "/v1/companies/%s/deep-read"},
 	} {
-		org := ids.NewV7()
-		pol := agentPolicy{Op: c.op, Access: accessTool, Tool: "enrich", RecordType: recordTypeOrganization}
-		req := httptest.NewRequest(http.MethodPost, strings.Replace(c.path, "%s", org.String(), 1), nil)
+		company := ids.NewV7()
+		pol := agentPolicy{Op: c.op, Access: accessTool, Tool: "enrich", RecordType: recordTypeCompany}
+		req := httptest.NewRequest(http.MethodPost, strings.Replace(c.path, "%s", company.String(), 1), nil)
 		rctx := chi.NewRouteContext()
-		rctx.URLParams.Add("id", org.String())
+		rctx.URLParams.Add("id", company.String())
 		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 		decode := restCommands[c.op]

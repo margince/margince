@@ -108,7 +108,7 @@ func flipService(db *database.DB) *Service {
 		switch canonical {
 		case "person":
 			return []string{IncumbentClassContacts}, true
-		case "organization":
+		case "company":
 			return []string{IncumbentClassCompanies}, true
 		default:
 			return nil, false
@@ -288,9 +288,9 @@ func TestFlipChecksSpareAClassNoCurrentDeclarationJudges(t *testing.T) {
 
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
 	ingestMirrorRow(ctx, t, ms, "person", "p-current", currentContactsDeclaration, baseline)
-	// organization resolves to companies, which the injected map does not
+	// company resolves to companies, which the injected map does not
 	// name — and the row carries a fingerprint that matches nothing.
-	ingestMirrorRow(ctx, t, ms, "organization", "org-retired", "companies-declaration-retired", baseline)
+	ingestMirrorRow(ctx, t, ms, "company", "company-retired", "companies-declaration-retired", baseline)
 
 	checks, err := svc.FlipChecks(ctx)
 	if err != nil {

@@ -232,22 +232,22 @@ func TestBackfillCountsOnlyTheCounterpartiesItsOwnPagesCreated(t *testing.T) {
 	// companies it created — capture creates none. The three recipients share
 	// one domain, and a domain is asked about once; gmail.com asks nothing,
 	// which is what makes this a count of QUESTIONS rather than of senders.
-	if status.Organizations != 1 {
-		t.Fatalf("company questions = %d, want 1 — one corporate domain asks, gmail.com does not", status.Organizations)
+	if status.Companies != 1 {
+		t.Fatalf("company questions = %d, want 1 — one corporate domain asks, gmail.com does not", status.Companies)
 	}
 
 	// The persisted columns are the proof the run counted at page-commit time
 	// rather than the read inferring it: BackfillYields and the cost estimator
 	// read these, and a live query could never serve them.
-	people, orgs := readBackfillYieldColumns(t, e, run.ID)
-	if people != 3 || orgs != 1 {
-		t.Fatalf("stored people_created=%d company questions=%d, want 3/1", people, orgs)
+	people, companies := readBackfillYieldColumns(t, e, run.ID)
+	if people != 3 || companies != 1 {
+		t.Fatalf("stored people_created=%d company questions=%d, want 3/1", people, companies)
 	}
 }
 
 func TestBackfillYieldsAreVisibleWhileThePageRuns(t *testing.T) {
 	// The counterparty half of the live tally. The Sink counts a person or an
-	// organization as it creates one, so the two numbers beside "emails
+	// company as it creates one, so the two numbers beside "emails
 	// captured" have to move during the page as well — a screen where only the
 	// mail count advances tells the user the import found nobody.
 	e := integration.SetupSearch(t)
@@ -280,13 +280,13 @@ func TestBackfillYieldsAreVisibleWhileThePageRuns(t *testing.T) {
 		t.Fatalf("StartBackfill: %v", err)
 	}
 
-	var midPagePeople, midPageOrganizations int
+	var midPagePeople, midPageCompanies int
 	prov.afterMessage = func() {
 		status, err := registry.BackfillStatus(grantCtx, "gmail", rep)
 		if err != nil || status == nil {
 			t.Fatalf("mid-page status read: %v (run=%v)", err, status)
 		}
-		midPagePeople, midPageOrganizations = status.People, status.Organizations
+		midPagePeople, midPageCompanies = status.People, status.Companies
 	}
 
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -299,16 +299,16 @@ func TestBackfillYieldsAreVisibleWhileThePageRuns(t *testing.T) {
 	if midPagePeople != 2 {
 		t.Fatalf("mid-page people = %d, want 2 — both attested recipients, before the page committed", midPagePeople)
 	}
-	if midPageOrganizations != 1 {
-		t.Fatalf("mid-page company questions = %d, want 1 — the corporate domain, before the page committed", midPageOrganizations)
+	if midPageCompanies != 1 {
+		t.Fatalf("mid-page company questions = %d, want 1 — the corporate domain, before the page committed", midPageCompanies)
 	}
 
 	status, err := registry.BackfillStatus(grantCtx, "gmail", rep)
 	if err != nil || status == nil {
 		t.Fatalf("BackfillStatus: %v (run=%v)", err, status)
 	}
-	if status.People != 2 || status.Organizations != 1 {
-		t.Fatalf("after the commit = %d people / %d organizations, want exactly the page's 2/1", status.People, status.Organizations)
+	if status.People != 2 || status.Companies != 1 {
+		t.Fatalf("after the commit = %d people / %d companies, want exactly the page's 2/1", status.People, status.Companies)
 	}
 }
 
@@ -326,7 +326,7 @@ func seedForeignCounterparties(t *testing.T, e *integration.SearchEnv) {
 			          ('Other Connection Three', 'capture', 'connector:gmail')`,
 			`INSERT INTO person (full_name, source, captured_by)
 			   VALUES ('Manually Typed', 'manual', 'human:someone')`,
-			`INSERT INTO organization (display_name, source, captured_by)
+			`INSERT INTO company (display_name, source, captured_by)
 			   VALUES ('Other Connection Co', 'capture', 'connector:gmail')`,
 		} {
 			if _, execErr := tx.Exec(e.Admin(), q); execErr != nil {
@@ -340,17 +340,17 @@ func seedForeignCounterparties(t *testing.T, e *integration.SearchEnv) {
 	}
 }
 
-func readBackfillYieldColumns(t *testing.T, e *integration.SearchEnv, id ids.UUID) (people, organizations int) {
+func readBackfillYieldColumns(t *testing.T, e *integration.SearchEnv, id ids.UUID) (people, companies int) {
 	t.Helper()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
-			SELECT people_created, organizations_created FROM capture_backfill WHERE id = $1`, id).
-			Scan(&people, &organizations)
+			SELECT people_created, companies_created FROM capture_backfill WHERE id = $1`, id).
+			Scan(&people, &companies)
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return people, organizations
+	return people, companies
 }
 
 func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
@@ -400,9 +400,9 @@ func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
 
 	// Promoted into the committed columns by the fault, not discarded with the
 	// message tally.
-	people, orgs := readBackfillYieldColumns(t, e, run.ID)
-	if people != 2 || orgs != 1 {
-		t.Fatalf("after the transient fault people_created=%d company questions=%d, want 2/1 — the work happened and no retry will count it again", people, orgs)
+	people, companies := readBackfillYieldColumns(t, e, run.ID)
+	if people != 2 || companies != 1 {
+		t.Fatalf("after the transient fault people_created=%d company questions=%d, want 2/1 — the work happened and no retry will count it again", people, companies)
 	}
 
 	// The retry replays both messages, mints nothing, and must not inflate the
@@ -415,8 +415,8 @@ func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
 	if err != nil || status == nil {
 		t.Fatalf("BackfillStatus: %v (run=%v)", err, status)
 	}
-	if status.People != 2 || status.Organizations != 1 {
-		t.Fatalf("after the retry = %d people / %d organizations, want 2/1 — counted once, by the attempt that minted them", status.People, status.Organizations)
+	if status.People != 2 || status.Companies != 1 {
+		t.Fatalf("after the retry = %d people / %d companies, want 2/1 — counted once, by the attempt that minted them", status.People, status.Companies)
 	}
 }
 
@@ -470,12 +470,12 @@ func TestBackfillYieldsSurviveACancelUnderTheRunningPage(t *testing.T) {
 		t.Fatalf("the cancelled page's step: %v", err)
 	}
 
-	status, people, orgs := readRunAndYields(t, e, run.ID)
+	status, people, companies := readRunAndYields(t, e, run.ID)
 	if status != "cancelled" {
 		t.Fatalf("status = %s, want cancelled", status)
 	}
-	if people != 2 || orgs != 1 {
-		t.Fatalf("after a mid-page cancel people_created=%d organizations_created=%d, want 2/1 — the rows exist and no retry will offer them again", people, orgs)
+	if people != 2 || companies != 1 {
+		t.Fatalf("after a mid-page cancel people_created=%d companies_created=%d, want 2/1 — the rows exist and no retry will offer them again", people, companies)
 	}
 }
 
@@ -515,27 +515,27 @@ func TestBackfillYieldsAreCreditedOnceAtTheRetryCeiling(t *testing.T) {
 	if !done || retryAfter != 0 {
 		t.Fatalf("at the ceiling the run ends rather than retrying (done=%v retryAfter=%v)", done, retryAfter)
 	}
-	status, people, orgs := readRunAndYields(t, e, run.ID)
+	status, people, companies := readRunAndYields(t, e, run.ID)
 	if status != "error" {
 		t.Fatalf("status = %s, want error — the ceiling ends the run", status)
 	}
-	if people != 2 || orgs != 1 {
-		t.Fatalf("at the ceiling people_created=%d organizations_created=%d, want 2/1 counted ONCE", people, orgs)
+	if people != 2 || companies != 1 {
+		t.Fatalf("at the ceiling people_created=%d companies_created=%d, want 2/1 counted ONCE", people, companies)
 	}
 }
 
 // readRunAndYields reads the run's state and its committed yield columns.
-func readRunAndYields(t *testing.T, e *integration.SearchEnv, id ids.UUID) (status string, people, organizations int) {
+func readRunAndYields(t *testing.T, e *integration.SearchEnv, id ids.UUID) (status string, people, companies int) {
 	t.Helper()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
-			SELECT status, people_created, organizations_created FROM capture_backfill WHERE id = $1`, id).
-			Scan(&status, &people, &organizations)
+			SELECT status, people_created, companies_created FROM capture_backfill WHERE id = $1`, id).
+			Scan(&status, &people, &companies)
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return status, people, organizations
+	return status, people, companies
 }
 
 // seedBackfillFailuresAtCeiling puts the run one fault below
@@ -591,15 +591,15 @@ func TestTheReachIsACountRatherThanAnAccumulation(t *testing.T) {
 		t.Fatalf("the page must finish the run: done=%v err=%v", done, stepErr)
 	}
 
-	people, organizations := readBackfillYieldColumns(t, e, run.ID)
-	ledgeredPeople, ledgeredOrgs := readCreationLedger(t, e, run.ID)
+	people, companies := readBackfillYieldColumns(t, e, run.ID)
+	ledgeredPeople, ledgeredCompanies := readCreationLedger(t, e, run.ID)
 	if ledgeredPeople == 0 {
 		t.Fatal("the run ledgered no creation at all, so this test is measuring an import that made nothing")
 	}
-	if people != ledgeredPeople || organizations != ledgeredOrgs {
+	if people != ledgeredPeople || companies != ledgeredCompanies {
 		t.Errorf("the run reports %d people and %d company questions; the ledger holds %d and %d — the "+
 			"reported numbers are a projection of the ledger, so the two cannot disagree",
-			people, organizations, ledgeredPeople, ledgeredOrgs)
+			people, companies, ledgeredPeople, ledgeredCompanies)
 	}
 
 	// The write is idempotent, which is what lets it be retried. Replaying the
@@ -607,12 +607,12 @@ func TestTheReachIsACountRatherThanAnAccumulation(t *testing.T) {
 	// are: a retry that double-counted would be the old accumulation with more
 	// steps.
 	replayCreationLedger(t, e, run.ID)
-	afterPeople, afterOrgs := readBackfillYieldColumns(t, e, run.ID)
-	nowPeople, nowOrgs := readCreationLedger(t, e, run.ID)
-	if afterPeople != people || afterOrgs != organizations || nowPeople != ledgeredPeople || nowOrgs != ledgeredOrgs {
+	afterPeople, afterCompanies := readBackfillYieldColumns(t, e, run.ID)
+	nowPeople, nowCompanies := readCreationLedger(t, e, run.ID)
+	if afterPeople != people || afterCompanies != companies || nowPeople != ledgeredPeople || nowCompanies != ledgeredCompanies {
 		t.Errorf("replaying the ledger moved the reach from %d/%d to %d/%d — writing the same creation "+
 			"twice must write it once, or the retry is not safe to take",
-			people, organizations, afterPeople, afterOrgs)
+			people, companies, afterPeople, afterCompanies)
 	}
 }
 
@@ -691,21 +691,21 @@ func loseTheCount(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
 	}
 }
 
-// readCreationLedger returns how many people and how many queued organizations
+// readCreationLedger returns how many people and how many queued companies
 // the run's ledger holds — the rows the reported reach is a projection of.
 func readCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) (int, int) {
 	t.Helper()
-	var people, organizations int
+	var people, companies int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
 			SELECT count(*) FILTER (WHERE kind = 'person'),
-			       count(*) FILTER (WHERE kind = 'organization_queued')
+			       count(*) FILTER (WHERE kind = 'company_queued')
 			  FROM capture_backfill_creation
-			 WHERE backfill_id = $1`, id).Scan(&people, &organizations)
+			 WHERE backfill_id = $1`, id).Scan(&people, &companies)
 	}); err != nil {
 		t.Fatalf("reading the creation ledger: %v", err)
 	}
-	return people, organizations
+	return people, companies
 }
 
 // replayCreationLedger writes every creation the ledger already holds a second
@@ -725,10 +725,10 @@ func replayCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
 		_, err := tx.Exec(e.Admin(), `
 			UPDATE capture_backfill b
 			SET people_created = greatest(counted.people, b.people_created),
-			    organizations_created = greatest(counted.organizations, b.organizations_created)
+			    companies_created = greatest(counted.companies, b.companies_created)
 			FROM (
 				SELECT count(*) FILTER (WHERE kind = 'person') AS people,
-				       count(*) FILTER (WHERE kind = 'organization_queued') AS organizations
+				       count(*) FILTER (WHERE kind = 'company_queued') AS companies
 				  FROM capture_backfill_creation
 				 WHERE backfill_id = $1
 			) counted

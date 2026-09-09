@@ -52,7 +52,7 @@ import (
 // meetingFixture is the account a briefing is asked about: a deal, the people
 // on it, and the exchange history that decides who counts as engaged.
 type meetingFixture struct {
-	org  ids.UUID
+	company  ids.UUID
 	deal ids.UUID
 	// engaged has traffic both ways inside the window; quiet has none. The
 	// pair is the fixture's whole point — "everyone is engaged" and "nobody is"
@@ -91,10 +91,10 @@ func (s *scenario) seedMeetingAccount(t *testing.T) meetingFixture {
 	// state the product cannot reach.
 	pipeline, stage := s.defaultOpenStage(t)
 
-	f.org = s.seedID(t, `INSERT INTO organization (id, owner_id, display_name, source, captured_by)
+	f.org = s.seedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
 		VALUES ($1, $2, 'Vietnam Partner JSC', 'manual', 'human:x')`, s.Colleague)
 	f.deal = s.seedID(t, `INSERT INTO deal
-		(id, owner_id, organization_id, pipeline_id, stage_id, name, status, source, captured_by)
+		(id, owner_id, company_id, pipeline_id, stage_id, name, status, source, captured_by)
 		VALUES ($1, $2, $3, $4, $5, 'Distribution agreement', 'open', 'manual', 'human:x')`,
 		s.Colleague, f.org, pipeline, stage)
 
@@ -133,10 +133,10 @@ func (s *scenario) seedColdAccount(t *testing.T) meetingFixture {
 	var f meetingFixture
 	pipeline, stage := s.defaultOpenStage(t)
 
-	f.org = s.seedID(t, `INSERT INTO organization (id, owner_id, display_name, source, captured_by)
+	f.org = s.seedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
 		VALUES ($1, $2, 'Quiet Partner GmbH', 'manual', 'human:x')`, s.Colleague)
 	f.deal = s.seedID(t, `INSERT INTO deal
-		(id, owner_id, organization_id, pipeline_id, stage_id, name, status, source, captured_by)
+		(id, owner_id, company_id, pipeline_id, stage_id, name, status, source, captured_by)
 		VALUES ($1, $2, $3, $4, $5, 'Renewal', 'open', 'manual', 'human:x')`,
 		s.Colleague, f.org, pipeline, stage)
 
@@ -153,13 +153,13 @@ func (s *scenario) seedColdAccount(t *testing.T) meetingFixture {
 	return f
 }
 
-// seedPerson adds a contact employed at the organization.
-func (s *scenario) seedPerson(t *testing.T, name string, org ids.UUID) ids.UUID {
+// seedPerson adds a contact employed at the company.
+func (s *scenario) seedPerson(t *testing.T, name string, company ids.UUID) ids.UUID {
 	t.Helper()
 	id := s.seedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
 		VALUES ($1, $2, $3, 'manual', 'human:x')`, s.Colleague, name)
-	s.seed(t, `INSERT INTO relationship (id, kind, person_id, organization_id, source, captured_by)
-		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, ids.NewV7(), id, org)
+	s.seed(t, `INSERT INTO relationship (id, kind, person_id, company_id, source, captured_by)
+		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, ids.NewV7(), id, company)
 	return id
 }
 
@@ -169,7 +169,7 @@ func (s *scenario) seedPerson(t *testing.T, name string, org ids.UUID) ids.UUID 
 // event carries the date it happened, and a briefing that quotes a date from
 // somebody's prose instead of the record is the defect #2059 was merged for.
 func (s *scenario) seedDatedActivity(
-	t *testing.T, kind, direction string, person, org, deal ids.UUID, occurredAt time.Time, body string,
+	t *testing.T, kind, direction string, person, company, deal ids.UUID, occurredAt time.Time, body string,
 ) ids.UUID {
 	t.Helper()
 	id := s.seedID(t, `INSERT INTO activity
@@ -177,7 +177,7 @@ func (s *scenario) seedDatedActivity(
 		VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`, kind, direction, occurredAt, body)
 
 	// One link row per target, because activity_link_shape allows exactly one
-	// id per row: a row naming both a person and an organization is refused.
+	// id per row: a row naming both a person and a company is refused.
 	//
 	// THE DEAL LINK IS LOAD-BEARING. deal.last_activity_at is maintained by a
 	// trigger on activity_link, and the coverage rules read that column to
@@ -187,8 +187,8 @@ func (s *scenario) seedDatedActivity(
 	// fixture did before Codex pointed at it.
 	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
 		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), id, person)
-	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, organization_id)
-		VALUES ($1, $2, 'organization', $3)`, ids.NewV7(), id, org)
+	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, company_id)
+		VALUES ($1, $2, 'company', $3)`, ids.NewV7(), id, company)
 	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
 		VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), id, deal)
 

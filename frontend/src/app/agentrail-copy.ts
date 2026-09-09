@@ -143,7 +143,7 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
  * The line under the orb names one thing at a time (`agentrail-ticker.ts`), and
  * this is the vocabulary it names them in: the words a salesperson uses about
  * their own day, not the words the cache uses about itself. "Reading this
- * company" is a sentence; "fetching organization360" is a key.
+ * company" is a sentence; "fetching company360" is a key.
  *
  * A key with no entry here produces NO LINE. That is the point of a table rather
  * than a fallback that opens up the key: half of what a session fetches is
@@ -239,8 +239,8 @@ export const WROTE: Readonly<Record<string, [named: string, plain: string]>> = {
 export const NAMED: Readonly<Record<string, string>> = {
   deal: "Reading the %s deal",
   lead: "Reading %s",
-  organization: "Reading %s",
-  organization360: "Reading everything about %s",
+  company: "Reading %s",
+  company360: "Reading everything about %s",
   person: "Reading %s",
   person360: "Reading everything about %s",
   personBrief: "Summarising %s",
@@ -259,9 +259,9 @@ export const SAID: Readonly<Record<string, string>> = {
   dsrs: "Checking privacy requests",
   lead: "Reading a lead",
   leads: "Reading leads",
-  organization: "Reading a company",
-  organization360: "Reading everything about this company",
-  organizations: "Reading companies",
+  company: "Reading a company",
+  company360: "Reading everything about this company",
+  companies: "Reading companies",
   overlay: "Reading what it wrote here",
   people: "Reading contacts",
   person: "Reading a contact",

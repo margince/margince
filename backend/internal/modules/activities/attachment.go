@@ -36,7 +36,7 @@ var ErrBlobstoreUnconfigured = errors.New("activities: no object store configure
 
 const attachmentColumns = `at.id, at.entity_type, at.entity_id, at.filename,
 	at.content_type, at.byte_size, at.checksum, at.source, at.captured_by, at.created_at,
-	at.category, at.title, at.doc_state, at.pinned, at.supersedes_id, at.organization_id,
+	at.category, at.title, at.doc_state, at.pinned, at.supersedes_id, at.company_id,
 	at.contract_id`
 
 // attachmentSource marks how the row was captured; a direct upload is "upload".
@@ -65,7 +65,7 @@ func ensureAttachmentParentVisible(ctx context.Context, tx pgx.Tx, entityType st
 // Out of scope still reads as ErrNotFound; a readable parent the caller may not
 // change answers ErrPermissionDenied.
 //
-// It does not require a deal, person or organization parent to be LIVE, and
+// It does not require a deal, person or company parent to be LIVE, and
 // that is the point of it being separate from the upload's gate below.
 // Archiving a record must not strand the files on it: removing a misfiled
 // document, relabelling one, and finishing a reading already in flight all run
@@ -93,7 +93,7 @@ func ensureAttachmentParentWritable(ctx context.Context, tx pgx.Tx, entityType s
 //
 // The activity arm needs no separate spelling — EnsureActivityWritable already
 // reaches EnsureActivityContentVisibleLive, so that arm has always been live and
-// the two gates differ only for a deal, person or organization parent.
+// the two gates differ only for a deal, person or company parent.
 func ensureAttachmentParentWritableLive(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
 	if entityType == "activity" {
 		return auth.EnsureActivityWritable(ctx, tx, id)
@@ -367,7 +367,7 @@ type attachmentScan struct {
 	category    string
 	docState    string
 	supersedes  *ids.UUID
-	orgID       *ids.UUID
+	companyID       *ids.UUID
 	contractID  *ids.UUID
 }
 
@@ -376,7 +376,7 @@ func (c *attachmentScan) targets() []any {
 	return []any{
 		&c.aid, &c.entityType, &c.entityID, &c.att.Filename,
 		&c.contentType, &c.byteSize, &c.checksum, &c.att.Source, &c.capturedBy, &c.att.CreatedAt,
-		&c.category, &c.att.Title, &c.docState, &c.att.Pinned, &c.supersedes, &c.orgID, &c.contractID,
+		&c.category, &c.att.Title, &c.docState, &c.att.Pinned, &c.supersedes, &c.companyID, &c.contractID,
 	}
 }
 
@@ -396,7 +396,7 @@ func (c *attachmentScan) attachment() crmcontracts.Attachment {
 	state := crmcontracts.AttachmentDocState(c.docState)
 	att.DocState = &state
 	att.SupersedesId = uuidOrNil(c.supersedes)
-	att.OrganizationId = uuidOrNil(c.orgID)
+	att.CompanyId = uuidOrNil(c.companyID)
 	att.ContractId = uuidOrNil(c.contractID)
 	return att
 }
@@ -426,7 +426,7 @@ func nullIfEmpty(s string) *string {
 // agreement cannot file paper against it — otherwise the upload is an existence
 // oracle, and the document lands under an agreement its owner never chose. A
 // contract has no owner column, so its visibility is inherited from the deal it
-// came from or its organization; the contracts module owns that rule and this
+// came from or its company; the contracts module owns that rule and this
 // asks the same question by joining through it.
 //
 // Nil is the ordinary case: most client paper is about no particular agreement.
@@ -438,10 +438,10 @@ func ensureContractFileable(ctx context.Context, tx pgx.Tx, contractID *ids.UUID
 		return err
 	}
 	var dealID *ids.UUID
-	var orgID ids.UUID
+	var companyID ids.UUID
 	err := tx.QueryRow(ctx,
-		`SELECT deal_id, organization_id FROM contract WHERE id = $1 AND archived_at IS NULL`,
-		*contractID).Scan(&dealID, &orgID)
+		`SELECT deal_id, company_id FROM contract WHERE id = $1 AND archived_at IS NULL`,
+		*contractID).Scan(&dealID, &companyID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Absent, archived, or invisible all answer the same way: a contract
 		// the caller cannot reach does not exist as far as they are concerned.
@@ -453,7 +453,7 @@ func ensureContractFileable(ctx context.Context, tx pgx.Tx, contractID *ids.UUID
 	if dealID != nil {
 		return auth.EnsureLinkTarget(ctx, tx, "deal", *dealID)
 	}
-	return auth.EnsureLinkTarget(ctx, tx, "organization", orgID)
+	return auth.EnsureLinkTarget(ctx, tx, "company", companyID)
 }
 
 // accountRollUp resolves the account a newly filed attachment belongs to, which
@@ -464,25 +464,25 @@ func ensureContractFileable(ctx context.Context, tx pgx.Tx, contractID *ids.UUID
 // depends on — a file uploaded without it is invisible to the account view
 // forever, and nothing about the upload looks wrong when that happens.
 //
-// A PERSON rolls up to nothing on purpose. person→organization runs through
+// A PERSON rolls up to nothing on purpose. person→company runs through
 // `relationship` with kind 'employment', which is many-valued: a contact who
 // works at two companies has no single account, and picking one would file the
 // document under a company the uploader never named. A null here means the file
 // is reachable from the person, not that it was lost.
 func accountRollUp(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (ids.UUID, bool, error) {
 	switch entityType {
-	case linkEntityOrganization:
+	case linkEntityCompany:
 		return entityID, true, nil
 	case linkEntityDeal:
-		var org *ids.UUID
+		var company *ids.UUID
 		if err := tx.QueryRow(ctx,
-			`SELECT organization_id FROM deal WHERE id = $1`, entityID).Scan(&org); err != nil {
+			`SELECT company_id FROM deal WHERE id = $1`, entityID).Scan(&company); err != nil {
 			return ids.UUID{}, false, fmt.Errorf("resolving the deal's account for a filed document: %w", err)
 		}
-		if org == nil {
+		if company == nil {
 			return ids.UUID{}, false, nil
 		}
-		return *org, true, nil
+		return *company, true, nil
 	}
 	return ids.UUID{}, false, nil
 }

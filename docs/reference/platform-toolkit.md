@@ -96,7 +96,7 @@ Hand-rolled runner for the ownership namespaces (core, custom, packs), each with
 - **Reach for it when:** applying/rolling back migrations in tooling (usually you just run `cmd/migrate`).
 
 ### `platform/deployconfig` — the installation config (`margince.yaml`)
-Loads the operator's deployment file: the singleton organization, the bootstrap admin,
+Loads the operator's deployment file: the singleton company, the bootstrap admin,
 auth/email/AI/capture posture, and the ordered `company_context.rollout` capability
 (`off < read < tasks < onboarding`; empty resolves to `onboarding`).
 - `Load(path)`, the typed `Config` tree, `EffectiveRollout()`.

@@ -1,0 +1,380 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package company360
+
+// What the connections card is NOT allowed to show. The graph's shape is
+// pinned in company360_graph_integration_test.go; this file is only about the
+// gates:
+//
+//   - a group the caller's grants refuse is absent and NAMED, never drawn as a
+//     company with no contacts;
+//   - every node carries its own object's read gate (capture privacy on
+//     people and accounts), so the card cannot out-see the endpoint that owns
+//     the record;
+//   - an edge needs BOTH its ends visible — a stakeholder seat is withheld
+//     when either the deal or the person is;
+//   - the intro path names the contact the warm room names, and stays quiet
+//     rather than naming a different one.
+
+import (
+	"errors"
+	"slices"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// TestRouteInEdgesRefusesWithoutThePersonGrant pins the gate at the ENTRY
+// POINT rather than at the callers.
+//
+// Every row RouteInEdges returns names a person, and its row-scope clause
+// narrows WHICH people a caller sees, never whether they may see people at
+// all — so the object grant has to be asked here, or each new caller has to
+// remember to ask it and one eventually will not. The warm/cold join and the
+// connections card are both callers today; when this read was gated only by
+// its callers, reordering the graph's group list turned it into an ungated one.
+func TestRouteInEdgesRefusesWithoutThePersonGrant(t *testing.T) {
+	e := integration.Setup(t)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
+	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	employ(t, e, contact, company.UUID, "cto")
+
+	noPeople := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"company":          {Read: true},
+			"signal":                {Read: true},
+			"installation_settings": {Read: true},
+		},
+		RowScope: principal.RowScopeTeam,
+	})
+	err := database.WithWorkspaceTx(noPeople, e.Pool, func(tx pgx.Tx) error {
+		_, err := signals.RouteInEdges(noPeople, tx, company)
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("RouteInEdges without the person grant → %v, want ErrPermissionDenied", err)
+	}
+
+	// The positive control: the same call WITH the grant returns the contact, so
+	// the gate refuses a missing grant rather than breaking the read.
+	granted := e.As(e.Rep1, []ids.UUID{e.Team1}, graphRepPerms)
+	var edges []signals.RouteInEdge
+	if err := database.WithWorkspaceTx(granted, e.Pool, func(tx pgx.Tx) error {
+		var err error
+		edges, err = signals.RouteInEdges(granted, tx, company)
+		return err
+	}); err != nil {
+		t.Fatalf("RouteInEdges with the person grant: %v", err)
+	}
+	if len(edges) != 1 || edges[0].PersonID.UUID != contact {
+		t.Errorf("route-in edges = %+v, want the account's one contact %v", edges, contact)
+	}
+}
+
+// TestCompanyGraphOmitsAGroupTheCallerMayNotRead is the honesty rule the
+// whole card rests on: a company with contacts the caller cannot read must not
+// look like a company with no contacts.
+func TestCompanyGraphOmitsAGroupTheCallerMayNotRead(t *testing.T) {
+	e := integration.Setup(t)
+	svc := company360Service(e)
+	pipeline, stage, _ := integration.DealFixture(t, e)
+
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	employee := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	employ(t, e, employee, company, "cto")
+	deal := e.SeedDeal(t, "Renewal", pipeline, stage, &e.Rep1)
+	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company)
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:x')`, employee, deal)
+
+	full, err := svc.Graph(e.As(e.Rep1, []ids.UUID{e.Team1}, graphRepPerms), ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("graph as a fully-granted rep: %v", err)
+	}
+	if kinds := graphNodeKinds(full); kinds[crmcontracts.CompanyGraphNodeKindPerson] != 1 {
+		t.Errorf("person nodes = %d for a granted rep, want 1", kinds[crmcontracts.CompanyGraphNodeKindPerson])
+	}
+
+	// Without the person grant: no contacts, no stakeholder edges, and both
+	// contacts and the intro path named as withheld.
+	noPeople := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"company":          {Read: true},
+			"deal":                  {Read: true},
+			"signal":                {Read: true},
+			"installation_settings": {Read: true},
+		},
+		RowScope: principal.RowScopeTeam,
+	})
+	graph, err := svc.Graph(noPeople, ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("graph without the person grant: %v", err)
+	}
+	if kinds := graphNodeKinds(graph); kinds[crmcontracts.CompanyGraphNodeKindPerson] != 0 {
+		t.Errorf("person nodes = %d without the person grant, want 0", kinds[crmcontracts.CompanyGraphNodeKindPerson])
+	}
+	if edges := graphEdgeKinds(graph); edges[crmcontracts.CompanyGraphEdgeKindDealStakeholder] != 0 {
+		t.Error("a stakeholder edge was drawn without the person grant — an edge names two records")
+	}
+	for _, want := range []crmcontracts.CompanyGraphGroupsOmitted{"contacts", "intro_path"} {
+		if !slices.Contains(graph.GroupsOmitted, want) {
+			t.Errorf("groups_omitted = %v, want it to name %q", graph.GroupsOmitted, want)
+		}
+	}
+	// The deal is still drawn: losing one grant narrows the card, it does not
+	// blank it.
+	if !graphHasNode(graph, deal) {
+		t.Error("the open deal is missing for a caller who holds the deal grant")
+	}
+
+	// Without the deal grant: no deals, no stakeholder edges, contacts intact.
+	noDeals := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
+	graph, err = svc.Graph(noDeals, ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("graph without the deal grant: %v", err)
+	}
+	if graphHasNode(graph, deal) {
+		t.Error("a deal was drawn for a caller who cannot read deals")
+	}
+	if !slices.Contains(graph.GroupsOmitted, "deals") {
+		t.Errorf("groups_omitted = %v, want it to name deals", graph.GroupsOmitted)
+	}
+	if !graphHasNode(graph, employee) {
+		t.Error("the contact is missing for a caller who holds the person grant")
+	}
+}
+
+// TestCompanyGraphPrunesNodesToTheCallersReadScope: the grant says which
+// KINDS a caller may see, the per-row read gate says which ROWS. People and
+// accounts can be capture-private to another user; deals are readable by every
+// seat. Every node kind is checked, because one unscoped arm is a side channel
+// for the whole class.
+func TestCompanyGraphPrunesNodesToTheCallersReadScope(t *testing.T) {
+	e := integration.Setup(t)
+	svc := company360Service(e)
+	pipeline, stage, _ := integration.DealFixture(t, e)
+
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	mine := e.SeedPerson(t, "My Contact", &e.Rep1)
+	theirs := e.SeedPerson(t, "Their Private Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "person", theirs, e.Rep3)
+	employ(t, e, mine, company, "cto")
+	employ(t, e, theirs, company, "cfo")
+
+	myDeal := e.SeedDeal(t, "My Renewal", pipeline, stage, &e.Rep1)
+	theirDeal := e.SeedDeal(t, "Their Renewal", pipeline, stage, &e.Rep3)
+	for _, deal := range []ids.UUID{myDeal, theirDeal} {
+		e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company)
+	}
+
+	myPartner := e.SeedCompany(t, "My Partner", &e.Rep1)
+	theirPartner := e.SeedCompany(t, "Their Private Partner", &e.Rep3)
+	e.MakeCapturePrivate(t, "company", theirPartner, e.Rep3)
+	for _, partner := range []ids.UUID{myPartner, theirPartner} {
+		e.WsExec(t, `INSERT INTO relationship (kind, company_id, counterparty_company_id, source, captured_by)
+			VALUES ('referred_by', $1, $2, 'manual', 'human:x')`, partner, company)
+	}
+
+	// A seat on the caller's own deal held by a person they cannot read: the
+	// deal is visible, the person is not, so the edge must not appear.
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'blocker', 'manual', 'human:x')`, theirs, myDeal)
+
+	graph, err := svc.Graph(e.As(e.Rep1, []ids.UUID{e.Team1}, graphRepPerms), ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("graph: %v", err)
+	}
+	// The other team's deal is drawn too: deals carry no capture privacy and
+	// are readable across teams.
+	for _, want := range []ids.UUID{mine, myDeal, theirDeal, myPartner} {
+		if !graphHasNode(graph, want) {
+			t.Errorf("node %v is missing — the caller may read it", want)
+		}
+	}
+	for _, forbidden := range []ids.UUID{theirs, theirPartner} {
+		if graphHasNode(graph, forbidden) {
+			t.Errorf("node %v was drawn — it is capture-private to another user", forbidden)
+		}
+	}
+	if edges := graphEdgeKinds(graph); edges[crmcontracts.CompanyGraphEdgeKindDealStakeholder] != 0 {
+		t.Error("a stakeholder edge was drawn for a capture-private person the caller cannot read")
+	}
+	// referred_by is recorded on the PARTNER's row, so the edge starts there.
+	// Counted as well as checked: a loop that only judges the edges it finds
+	// passes just as happily when the edge went missing altogether.
+	referrals := 0
+	for _, edge := range graph.Edges {
+		if edge.Kind != crmcontracts.CompanyGraphEdgeKindReferredBy {
+			continue
+		}
+		referrals++
+		if ids.UUID(edge.From) != myPartner || ids.UUID(edge.To) != company {
+			t.Errorf("referred_by edge runs %v -> %v, want %v -> %v", edge.From, edge.To, myPartner, company)
+		}
+	}
+	if referrals != 1 {
+		t.Errorf("referred_by edges = %d, want exactly 1 — the readable partner and only it", referrals)
+	}
+}
+
+// TestCompanyGraphHidesACapturePrivateAccount: the root read is the whole
+// graph's gate, and a capture-private account must be indistinguishable from a
+// nonexistent one.
+func TestCompanyGraphHidesACapturePrivateAccount(t *testing.T) {
+	e := integration.Setup(t)
+	svc := company360Service(e)
+	theirsRaw := e.SeedCompany(t, "Other Rep's Private Account", &e.Rep3)
+	e.MakeCapturePrivate(t, "company", theirsRaw, e.Rep3)
+	theirs := ids.From[ids.CompanyKind](theirsRaw)
+
+	_, err := svc.Graph(e.As(e.Rep1, []ids.UUID{e.Team1}, graphRepPerms), theirs)
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("graph on a capture-private account → %v, want ErrNotFound (existence-hiding)", err)
+	}
+	mine := ids.From[ids.CompanyKind](e.SeedCompany(t, "My Account", &e.Rep1))
+	if _, err := svc.Graph(e.As(e.Rep1, []ids.UUID{e.Team1}, graphRepPerms), mine); err != nil {
+		t.Errorf("graph on the caller's own account: %v", err)
+	}
+}
+
+// TestCompanyGraphIntroPathNamesTheWarmRoomsContact is the no-drift
+// claim, taken against real rows: the card marks the same contact
+// GET /signals/{id}/intro-path would route through, and cites the signal.
+func TestCompanyGraphIntroPathNamesTheWarmRoomsContact(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	svc := company360Service(e)
+
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	cold := e.SeedPerson(t, "Cold Contact", &e.Rep1)
+	warm := e.SeedPerson(t, "Warm Contact", &e.Rep1)
+	employ(t, e, cold, company, "cfo")
+	employ(t, e, warm, company, "cto")
+	// Only the warm contact has qualifying interactions inside the §4 window,
+	// so the ranking has one honest answer rather than a tie.
+	for _, direction := range []string{"inbound", "outbound"} {
+		activity := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
+			VALUES ($1, 'email', 'terms', '2026-05-30T09:00:00Z', '`+direction+`', 'manual', 'human:x')`)
+		integration.LinkActivity(t, owner, activity, "person", warm)
+	}
+	signal := seedOpenSignal(t, owner, company)
+
+	graph, err := svc.Graph(e.As(e.Rep1, []ids.UUID{e.Team1}, graphRepPerms), ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("graph: %v", err)
+	}
+	if graph.IntroPath == nil {
+		t.Fatal("no intro path for an open resolved signal with a measured contact")
+	}
+	if ids.UUID(graph.IntroPath.ContactId) != warm {
+		t.Errorf("intro path routes through %v, want the strongest contact %v", graph.IntroPath.ContactId, warm)
+	}
+	if ids.UUID(graph.IntroPath.SignalId) != signal {
+		t.Errorf("intro path cites signal %v, want %v", graph.IntroPath.SignalId, signal)
+	}
+	marked := 0
+	for _, node := range graph.Nodes {
+		if node.IntroPath != nil && *node.IntroPath {
+			marked++
+			if ids.UUID(node.Id) != warm {
+				t.Errorf("marked node %v as the route in, want %v", node.Id, warm)
+			}
+		}
+	}
+	if marked != 1 {
+		t.Errorf("%d nodes carry intro_path, want exactly 1", marked)
+	}
+
+	// A caller without the signal grant gets the same contacts and no path,
+	// named as withheld — advice absent is not advice that does not exist.
+	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	graph, err = svc.Graph(blind, ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("graph without the signal grant: %v", err)
+	}
+	if graph.IntroPath != nil {
+		t.Errorf("intro path %+v served without the signal grant", *graph.IntroPath)
+	}
+	if !slices.Contains(graph.GroupsOmitted, "intro_path") {
+		t.Errorf("groups_omitted = %v, want it to name intro_path", graph.GroupsOmitted)
+	}
+	if !graphHasNode(graph, warm) {
+		t.Error("the contact is missing for a caller who holds the person grant")
+	}
+}
+
+// TestCompanyGraphCitesAnCompanySubjectSignal: a signal created
+// directly ABOUT the account carries the subject pair and no resolved_company_id at
+// all, so a card that only looked at resolved_company_id would never cite one. The
+// predicate comes from the signals module (signals.OfCompanyWhere), which
+// is what keeps this card and GET /signals agreeing about what belongs to an
+// account.
+func TestCompanyGraphCitesAnCompanySubjectSignal(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	svc := company360Service(e)
+
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	contact := e.SeedPerson(t, "Warm Contact", &e.Rep1)
+	employ(t, e, contact, company, "cto")
+	activity := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
+		VALUES ($1, 'email', 'terms', '2026-05-30T09:00:00Z', 'inbound', 'manual', 'human:x')`)
+	integration.LinkActivity(t, owner, activity, "person", contact)
+	signal := seedCompanySubjectSignal(t, owner, company)
+
+	graph, err := svc.Graph(e.As(e.Rep1, []ids.UUID{e.Team1}, graphRepPerms),
+		ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("graph: %v", err)
+	}
+	if graph.IntroPath == nil {
+		t.Fatal("no intro path for a signal created about the account itself")
+	}
+	if ids.UUID(graph.IntroPath.SignalId) != signal {
+		t.Errorf("intro path cites signal %v, want the company-subject signal %v",
+			graph.IntroPath.SignalId, signal)
+	}
+}
+
+// TestCompanyGraphReportsNoIntroPathWithoutAnOpenSignal: the ranking is
+// available whenever the account has contacts, so the absence has to come from
+// the signal, not from the contacts.
+func TestCompanyGraphReportsNoIntroPathWithoutAnOpenSignal(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	svc := company360Service(e)
+
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	contact := e.SeedPerson(t, "Warm Contact", &e.Rep1)
+	employ(t, e, contact, company, "cto")
+	activity := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
+		VALUES ($1, 'email', 'terms', '2026-05-30T09:00:00Z', 'inbound', 'manual', 'human:x')`)
+	integration.LinkActivity(t, owner, activity, "person", contact)
+
+	graph, err := svc.Graph(e.As(e.Rep1, []ids.UUID{e.Team1}, graphRepPerms), ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("graph: %v", err)
+	}
+	if graph.IntroPath != nil {
+		t.Errorf("intro path %+v reported for an account with no open signal", *graph.IntroPath)
+	}
+	if slices.Contains(graph.GroupsOmitted, "intro_path") {
+		t.Error("groups_omitted names intro_path for a caller who HAS the signal grant — nothing was withheld")
+	}
+	if !graphHasNode(graph, contact) {
+		t.Error("the contact is missing")
+	}
+}

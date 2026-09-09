@@ -75,7 +75,7 @@ func TestWinLossVocabularyMatchesItsPinnedShape(t *testing.T) {
 	// stronger claim than the grain needs and the wrong one to hold: it forbids
 	// a to-one lookup, which cannot multiply anything, while saying nothing
 	// about the to-many join that would. What matters is that each join matches
-	// at most one row per deal — `org.id` is a primary key — and that it is
+	// at most one row per deal — `company.id` is a primary key — and that it is
 	// LEFT, so a deal with no company stays in the totals instead of vanishing
 	// from them.
 	if got := spec.fromClause(); got != "deal t" {

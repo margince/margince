@@ -38,7 +38,7 @@ import (
 // sitePage is what a team page published about one person, in the shape the
 // staged proposal carries it.
 type sitePage struct {
-	OrganizationID  ids.UUID `json:"organization_id"`
+	CompanyID  ids.UUID `json:"company_id"`
 	SiteReadID      ids.UUID `json:"site_read_id"`
 	NaturalKey      string   `json:"natural_key"`
 	Name            string   `json:"name"`
@@ -51,13 +51,13 @@ type sitePage struct {
 
 // seedEmployedPerson creates a contact and the current-primary employment that
 // makes their employer's site the only one allowed to describe them.
-func seedEmployedPerson(t *testing.T, e *Env, name string) (ids.PersonID, ids.OrganizationID) {
+func seedEmployedPerson(t *testing.T, e *Env, name string) (ids.PersonID, ids.CompanyID) {
 	t.Helper()
-	personID, orgID := ids.NewV7(), ids.NewV7()
+	personID, companyID := ids.NewV7(), ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO organization (id, owner_id, display_name, source, captured_by)
-			VALUES ($1, $2, 'Gitex', 'manual', 'user:seed')`, orgID, e.Rep1); err != nil {
+			INSERT INTO company (id, owner_id, display_name, source, captured_by)
+			VALUES ($1, $2, 'Gitex', 'manual', 'user:seed')`, companyID, e.Rep1); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(context.Background(), `
@@ -67,21 +67,21 @@ func seedEmployedPerson(t *testing.T, e *Env, name string) (ids.PersonID, ids.Or
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO relationship (id, person_id, organization_id, kind,
+			INSERT INTO relationship (id, person_id, company_id, kind,
 			                          is_current_primary, source, captured_by)
 			VALUES ($1, $2, $3, 'employment', true, 'manual', 'user:seed')`,
-			ids.NewV7(), personID, orgID)
+			ids.NewV7(), personID, companyID)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the employed contact: %v", err)
 	}
-	return ids.From[ids.PersonKind](personID), ids.From[ids.OrganizationKind](orgID)
+	return ids.From[ids.PersonKind](personID), ids.From[ids.CompanyKind](companyID)
 }
 
 // stageSiteLead stages one published person exactly as the site-read lane does.
-func stageSiteLead(t *testing.T, e *Env, orgID ids.OrganizationID, page sitePage) ids.ApprovalID {
+func stageSiteLead(t *testing.T, e *Env, companyID ids.CompanyID, page sitePage) ids.ApprovalID {
 	t.Helper()
-	page.OrganizationID = orgID.UUID
+	page.CompanyID = companyID.UUID
 	page.SiteReadID = ids.NewV7()
 	page.NaturalKey = page.Name
 	proposed, err := json.Marshal(page)
@@ -97,8 +97,8 @@ func stageSiteLead(t *testing.T, e *Env, orgID ids.OrganizationID, page sitePage
 		Kind:           "site_lead",
 		ProposedChange: proposed,
 		DiffHash:       hex.EncodeToString(digest[:]),
-		TargetType:     "organization",
-		TargetID:       orgID.UUID,
+		TargetType:     "company",
+		TargetID:       companyID.UUID,
 		Identity:       identity,
 		JoinPending:    true,
 		Summary:        "Lead from the team page: " + page.Name,
@@ -162,8 +162,8 @@ func profileFields(t *testing.T, e *Env, personID ids.PersonID) map[string]strin
 // again.
 func TestPersonAutoEnrichFillsAContactFromTheirEmployersStagedPage(t *testing.T) {
 	e := Setup(t)
-	personID, orgID := seedEmployedPerson(t, e, "Anna Muster")
-	approvalID := stageSiteLead(t, e, orgID, sitePage{
+	personID, companyID := seedEmployedPerson(t, e, "Anna Muster")
+	approvalID := stageSiteLead(t, e, companyID, sitePage{
 		Name:            "Anna Muster",
 		Role:            "Head of Delivery",
 		LinkedinURL:     "https://www.linkedin.com/in/annamuster",
@@ -208,8 +208,8 @@ func TestPersonAutoEnrichFillsAContactFromTheirEmployersStagedPage(t *testing.T)
 // contact must leave the record alone rather than be settled by a sweep.
 func TestPersonAutoEnrichLeavesAContactAloneWhenThePageNamesSomebodyElse(t *testing.T) {
 	e := Setup(t)
-	personID, orgID := seedEmployedPerson(t, e, "Anna Muster")
-	stageSiteLead(t, e, orgID, sitePage{
+	personID, companyID := seedEmployedPerson(t, e, "Anna Muster")
+	stageSiteLead(t, e, companyID, sitePage{
 		Name:            "Bernd Schulz",
 		Role:            "Head of Procurement",
 		EvidenceSnippet: "Bernd Schulz — Head of Procurement",
@@ -234,8 +234,8 @@ func TestPersonAutoEnrichLeavesAContactAloneWhenThePageNamesSomebodyElse(t *test
 // database and prove nothing.
 func TestPersonAutoEnrichStopsAtAContactWithNoEmployer(t *testing.T) {
 	e := Setup(t)
-	_, foreignOrg := seedEmployedPerson(t, e, "Somebody Else")
-	stageSiteLead(t, e, foreignOrg, sitePage{
+	_, foreignCompany := seedEmployedPerson(t, e, "Somebody Else")
+	stageSiteLead(t, e, foreignCompany, sitePage{
 		Name:            "Anna Muster",
 		Role:            "Head of Delivery",
 		EvidenceSnippet: "Anna Muster — Head of Delivery",
@@ -267,7 +267,7 @@ func TestPersonAutoEnrichStopsAtAContactWithNoEmployer(t *testing.T) {
 // missed entirely.
 func TestPersonAutoEnrichFollowsAMergeToTheSurvivor(t *testing.T) {
 	e := Setup(t)
-	survivor, orgID := seedEmployedPerson(t, e, "Anna Muster")
+	survivor, companyID := seedEmployedPerson(t, e, "Anna Muster")
 	mergedAway := ids.From[ids.PersonKind](ids.NewV7())
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
@@ -277,7 +277,7 @@ func TestPersonAutoEnrichFollowsAMergeToTheSurvivor(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("seeding the merged-away contact: %v", err)
 	}
-	stageSiteLead(t, e, orgID, sitePage{
+	stageSiteLead(t, e, companyID, sitePage{
 		Name:            "Anna Muster",
 		Role:            "Head of Delivery",
 		EvidenceSnippet: "Anna Muster — Head of Delivery",

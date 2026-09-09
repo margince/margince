@@ -183,7 +183,7 @@ func (h Handlers) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request, par
 	accounts := make([]crmcontracts.LinkedInReachAccount, 0, len(reach.Accounts))
 	for _, a := range reach.Accounts {
 		accounts = append(accounts, crmcontracts.LinkedInReachAccount{
-			OrganizationId: openapi_types.UUID(a.OrganizationID),
+			CompanyId: openapi_types.UUID(a.CompanyID),
 			DisplayName:    a.DisplayName,
 			Connections:    a.Connections,
 			ContactsOnFile: a.ContactsOnFile,

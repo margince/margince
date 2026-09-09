@@ -24,7 +24,7 @@ import (
 type ListInput struct {
 	Cursor       *string
 	Limit        *int
-	PartnerOrgID *ids.OrganizationID
+	PartnerCompanyID *ids.CompanyID
 	DealID       *ids.DealID
 	Status       *string
 }
@@ -100,8 +100,8 @@ func listPredicates(ctx context.Context, in ListInput, arg func(any) int) ([]str
 	if scope != "" {
 		where = append(where, scope)
 	}
-	if in.PartnerOrgID != nil {
-		where = append(where, storekit.SQLf("partner_org_id = $%d", arg(*in.PartnerOrgID)))
+	if in.PartnerCompanyID != nil {
+		where = append(where, storekit.SQLf("partner_company_id = $%d", arg(*in.PartnerCompanyID)))
 	}
 	if in.DealID != nil {
 		where = append(where, storekit.SQLf("deal_id = $%d", arg(*in.DealID)))
@@ -153,10 +153,10 @@ func summaryTx(ctx context.Context, tx pgx.Tx) (crmcontracts.CommissionSummaryRe
 	}
 
 	rows, err := tx.Query(ctx, storekit.SQLf(
-		`SELECT partner_org_id, status, currency, count(*), coalesce(sum(amount_minor), 0)
+		`SELECT partner_company_id, status, currency, count(*), coalesce(sum(amount_minor), 0)
 		   FROM commission_entry WHERE %s
-		  GROUP BY partner_org_id, status, currency
-		  ORDER BY partner_org_id, status, currency`, where), args...)
+		  GROUP BY partner_company_id, status, currency
+		  ORDER BY partner_company_id, status, currency`, where), args...)
 	if err != nil {
 		return crmcontracts.CommissionSummaryResponse{}, fmt.Errorf("summarize commissions: %w", err)
 	}
@@ -169,7 +169,7 @@ func summaryTx(ctx context.Context, tx pgx.Tx) (crmcontracts.CommissionSummaryRe
 		if err := rows.Scan(&partner, &row.Status, &row.Currency, &row.EntryCount, &row.AmountMinor); err != nil {
 			return crmcontracts.CommissionSummaryResponse{}, fmt.Errorf("scan commission summary: %w", err)
 		}
-		row.PartnerOrgId = openapi_types.UUID(partner)
+		row.PartnerCompanyId = openapi_types.UUID(partner)
 		out.Data = append(out.Data, row)
 	}
 	if err := rows.Err(); err != nil {

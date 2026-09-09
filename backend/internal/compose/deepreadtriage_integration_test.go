@@ -95,12 +95,12 @@ func openTriageQuestion(t *testing.T, e *integration.Env, domain, email, display
 }
 
 // triageState reads back what the run decided.
-func triageState(t *testing.T, e *integration.Env, domain string) (status, readStatus string, orgs int) {
+func triageState(t *testing.T, e *integration.Env, domain string) (status, readStatus string, companies int) {
 	t.Helper()
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx,
-			`SELECT status FROM organization_domain_disposition WHERE domain = $1`, domain).Scan(&status); err != nil {
+			`SELECT status FROM company_domain_disposition WHERE domain = $1`, domain).Scan(&status); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(ctx,
@@ -109,11 +109,11 @@ func triageState(t *testing.T, e *integration.Env, domain string) (status, readS
 			return err
 		}
 		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM organization_domain WHERE domain = $1`, domain).Scan(&orgs)
+			`SELECT count(*) FROM company_domain WHERE domain = $1`, domain).Scan(&companies)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	return status, readStatus, orgs
+	return status, readStatus, companies
 }
 
 func TestTriageStopsAtTheLandingPageForAPersonalDomain(t *testing.T) {
@@ -133,12 +133,12 @@ func TestTriageStopsAtTheLandingPageForAPersonalDomain(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	status, readStatus, orgs := triageState(t, e, triageTestDomain)
+	status, readStatus, companies := triageState(t, e, triageTestDomain)
 	if status != people.DomainPersonal {
 		t.Errorf("disposition = %q, want %q", status, people.DomainPersonal)
 	}
-	if orgs != 0 {
-		t.Errorf("%d organizations on a personal domain, want 0", orgs)
+	if companies != 0 {
+		t.Errorf("%d companies on a personal domain, want 0", companies)
 	}
 	// The saving the classifier exists to buy: one page, no crawl, no
 	// extraction. If this ever reads 'done' the early exit is gone.
@@ -163,12 +163,12 @@ func TestTriageReadsOnAndCreatesTheCompanyTheSiteNames(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	status, readStatus, orgs := triageState(t, e, triageTestDomain)
+	status, readStatus, companies := triageState(t, e, triageTestDomain)
 	if status != people.DomainCompany {
 		t.Fatalf("disposition = %q, want %q", status, people.DomainCompany)
 	}
-	if orgs != 1 {
-		t.Fatalf("%d organizations for a company domain, want 1", orgs)
+	if companies != 1 {
+		t.Fatalf("%d companies for a company domain, want 1", companies)
 	}
 	if readStatus != "done" && readStatus != "partial" {
 		t.Errorf("read status = %q, want a completed read", readStatus)
@@ -177,37 +177,37 @@ func TestTriageReadsOnAndCreatesTheCompanyTheSiteNames(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	var name, nameSource string
 	var employments int
-	var boundToOrg bool
+	var boundToCompany bool
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
-			SELECT o.display_name, o.name_source FROM organization o
-			JOIN organization_domain d ON d.organization_id = o.id
+			SELECT o.display_name, o.name_source FROM company o
+			JOIN company_domain d ON d.company_id = o.id
 			WHERE d.domain = $1`, triageTestDomain).Scan(&name, &nameSource); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(ctx, `
 			SELECT count(*) FROM relationship r
-			JOIN organization_domain d ON d.organization_id = r.organization_id
+			JOIN company_domain d ON d.company_id = r.company_id
 			WHERE d.domain = $1 AND r.kind = 'employment' AND r.is_current_primary`, triageTestDomain).Scan(&employments); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx, `
-			SELECT organization_id IS NOT NULL AND confirmed_at IS NOT NULL FROM site_read
+			SELECT company_id IS NOT NULL AND confirmed_at IS NOT NULL FROM site_read
 			WHERE target_kind = 'domain_triage' AND seed_url = $1`,
-			people.TriageSeedURL(triageTestDomain)).Scan(&boundToOrg)
+			people.TriageSeedURL(triageTestDomain)).Scan(&boundToCompany)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	// The site's legal notice named the entity, so the organization is born
+	// The site's legal notice named the entity, so the company is born
 	// with that name rather than a title-cased domain label.
 	if name != "Acme Robotics GmbH" || nameSource != "dossier" {
-		t.Errorf("organization = %q/%s, want the site-stated name", name, nameSource)
+		t.Errorf("company = %q/%s, want the site-stated name", name, nameSource)
 	}
 	if employments != 1 {
 		t.Errorf("%d employment edges, want the waiting sender wired to their company", employments)
 	}
-	if !boundToOrg {
-		t.Error("the triage dossier was never bound to the organization it produced")
+	if !boundToCompany {
+		t.Error("the triage dossier was never bound to the company it produced")
 	}
 }
 
@@ -223,15 +223,15 @@ func TestTriageWithNoModelPathStillClosesTheQuestion(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	status, _, orgs := triageState(t, e, triageTestDomain)
+	status, _, companies := triageState(t, e, triageTestDomain)
 	// Nobody's name explains "acme-triage" and no site was read, so nothing has
 	// EARNED a company. The question stays open and marked, where it used to
-	// mint an organization named after the domain label.
+	// mint a company named after the domain label.
 	if status != people.DomainPending {
 		t.Errorf("disposition = %q, want it left open", status)
 	}
-	if orgs != 0 {
-		t.Errorf("%d organizations from a domain nothing evidenced, want 0", orgs)
+	if companies != 0 {
+		t.Errorf("%d companies from a domain nothing evidenced, want 0", companies)
 	}
 }
 
@@ -248,12 +248,12 @@ func TestTriageWithoutAModelRefusesADomainThatIsTheSendersName(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	status, _, orgs := triageState(t, e, domain)
+	status, _, companies := triageState(t, e, domain)
 	if status != people.DomainPersonal {
 		t.Errorf("disposition = %q, want %q", status, people.DomainPersonal)
 	}
-	if orgs != 0 {
-		t.Errorf("%d organizations named after a person, want 0", orgs)
+	if companies != 0 {
+		t.Errorf("%d companies named after a person, want 0", companies)
 	}
 }
 

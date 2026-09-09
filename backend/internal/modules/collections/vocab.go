@@ -18,7 +18,7 @@ import (
 
 // Column references shared across the per-entity segment engines below —
 // one spelling each so the archived filter and owner scope stay identical
-// across person/organization/deal/lead.
+// across person/company/deal/lead.
 const (
 	whereArchivedNull = "t.archived_at IS NULL"
 	colOwnerID        = "t.owner_id"
@@ -29,7 +29,7 @@ const (
 // filter names fields from the closed per-resource vocabulary
 // (data-model §13.5) — the columnar subset, since a predicate leaf maps
 // one field to one indexed column on the base table (the join-backed and
-// full-text list params — organization_id-via-employment, q,
+// full-text list params — company_id-via-employment, q,
 // entity_type+entity_id — are list-query surface, not predicate leaves,
 // and are deliberately out of the segment vocabulary). Every list entity
 // type carries a segment engine; list.entity_type constrains membership to
@@ -67,7 +67,7 @@ const ownerIDField = "owner_id"
 func TaggableEntityTypes() []string {
 	return []string{
 		string(crmcontracts.TaggableEntityTypePerson),
-		string(crmcontracts.TaggableEntityTypeOrganization),
+		string(crmcontracts.TaggableEntityTypeCompany),
 		string(crmcontracts.TaggableEntityTypeDeal),
 		string(crmcontracts.TaggableEntityTypeLead),
 		string(crmcontracts.TaggableEntityTypeProject),
@@ -117,7 +117,7 @@ const domainFilterField = "domain"
 // predicate, so it can only ever narrow what that predicate already admits.
 //
 // What that means for another team's rows depends on the table, and the loose
-// reading is wrong. On the identity engines — person, organization, lead, deal —
+// reading is wrong. On the identity engines — person, company, lead, deal —
 // customer identity is workspace-readable and auth renders the own/team arm as
 // TRUE (platform/auth: identityTables), so naming a team the caller is not in is
 // an honest selection of that team's records, which is the product's intent
@@ -135,10 +135,10 @@ var ownerTeamField = storekit.Field{
 }
 
 // customerLink is the EXISTS template a deal's filter reaches its customer
-// through: one correlated subquery per leaf, on the organization the deal
+// through: one correlated subquery per leaf, on the company the deal
 // already points at.
 //
-// It does NOT re-apply the organization engine's own base clause (archived and
+// It does NOT re-apply the company engine's own base clause (archived and
 // is_anchor), and that is the substantive choice here. Those two exclusions
 // answer "which of our accounts are segment MEMBERS"; this leaf answers a fact
 // about the company a deal belongs to, which archiving does not change. Carrying
@@ -149,9 +149,9 @@ var ownerTeamField = storekit.Field{
 // The subquery names no tenant column, and neither does any sibling here: core
 // 0217 (ADR-0091 phase A) retired every row-level-security policy, so the
 // workspace GUC binds nothing on its own and an installation serves ONE
-// organization (ADR-0061). That is what makes the read tenant-safe — not a
+// company (ADR-0061). That is what makes the read tenant-safe — not a
 // policy, which is why this says so rather than claiming one.
-const customerLink = "EXISTS (SELECT 1 FROM organization o WHERE o.id = t.organization_id AND %s)"
+const customerLink = "EXISTS (SELECT 1 FROM company o WHERE o.id = t.company_id AND %s)"
 
 // projectCompanyField matches a project against ANY of the live companies
 // working it. A Link rather than a scalar expression precisely because a
@@ -159,15 +159,15 @@ const customerLink = "EXISTS (SELECT 1 FROM organization o WHERE o.id = t.organi
 // naming the partner on a project the partner is genuinely on.
 func projectCompanyField() storekit.Field {
 	return storekit.Field{
-		Expr:       "c.organization_id",
+		Expr:       "c.company_id",
 		Type:       storekit.FieldID,
-		References: storekit.RefOrganization,
+		References: storekit.RefCompany,
 		Link: "EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'" +
 			" AND c.project_id = t.id AND c.archived_at IS NULL AND %s)",
 	}
 }
 
-// customerField types one organization column as a deal-side filter leaf. The
+// customerField types one company column as a deal-side filter leaf. The
 // operators it advertises narrow themselves — OperatorsFor reads Link — so an
 // industry reached this way offers everything text does except `contains`.
 func customerField(
@@ -189,7 +189,7 @@ func customerField(
 //
 // Written out here rather than assembled from the generated constants because of
 // how the generator spells a NULLABLE enum: it emits a `<nil>` member, so a set
-// built from OrganizationSizeBand's or DealForecastCategory's constants would
+// built from CompanySizeBand's or DealForecastCategory's constants would
 // offer "<nil>" as something a human could pick. Only those two are nullable
 // today, and one is enough — a set is either derived or it is not.
 //
@@ -240,8 +240,8 @@ var segmentEngines = map[string]storekit.Query{
 			tagFilterField:   tagLinkFor("person"),
 		},
 	},
-	"organization": {
-		Table: "organization",
+	"company": {
+		Table: "company",
 		// The installation's own company is never a segment member: a segment
 		// answers "which of our accounts match this", and the company running
 		// the CRM is not one of them (ADR-0082/A127). In the base clause rather
@@ -263,7 +263,7 @@ var segmentEngines = map[string]storekit.Query{
 			"classification":    {Expr: "t.classification", Type: storekit.FieldPicklist},
 			"relationship_type": relationshipTypeField,
 			domainFilterField:   domainField,
-			tagFilterField:      tagLinkFor("organization"),
+			tagFilterField:      tagLinkFor("company"),
 			// What the account demonstrably RUNS, read from public records
 			// rather than from anything they told us (vocabaccountleaves.go).
 			// This is what makes "every account with a webshop" and "every
@@ -282,24 +282,24 @@ var segmentEngines = map[string]storekit.Query{
 			"stage_id":          {Expr: "t.stage_id", Type: storekit.FieldID, References: storekit.RefStage},
 			ownerIDField:        {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField:    ownerTeamField,
-			"organization_id":   {Expr: "t.organization_id", Type: storekit.FieldID, References: storekit.RefOrganization},
-			"partner_org_id":    {Expr: "t.partner_org_id", Type: storekit.FieldID, References: storekit.RefOrganization},
+			"company_id":   {Expr: "t.company_id", Type: storekit.FieldID, References: storekit.RefCompany},
+			"partner_company_id":    {Expr: "t.partner_company_id", Type: storekit.FieldID, References: storekit.RefCompany},
 			"project_id":        {Expr: "t.project_id", Type: storekit.FieldID, References: storekit.RefProject},
 			"status":            {Expr: "t.status", Type: storekit.FieldPicklist, Options: dealStatusValues},
 			"forecast_category": {Expr: "t.forecast_category", Type: storekit.FieldPicklist, Options: forecastValues},
 			tagFilterField:      tagLinkFor("deal"),
 			// The customer's own attributes, so "the pipeline for manufacturing"
 			// is a filter rather than a spreadsheet. Same columns and same types
-			// as the organization engine offers directly, reached through the
-			// deal's organization_id.
+			// as the company engine offers directly, reached through the
+			// deal's company_id.
 			//
 			// classification is deliberately absent. It is retired (ADR-0079/A124)
-			// and survives on the organization engine only so segments already
+			// and survives on the company engine only so segments already
 			// written against it keep evaluating — a NEW way to name it would be
 			// a fresh dependency on a column that is going away.
-			"organization_industry":  customerField("industry", storekit.FieldText),
-			"organization_size_band": customerField("size_band", storekit.FieldPicklist, sizeBandValues...),
-			"organization_lifecycle": customerField("lifecycle", storekit.FieldPicklist, lifecycleValues...),
+			"company_industry":  customerField("industry", storekit.FieldText),
+			"company_size_band": customerField("size_band", storekit.FieldPicklist, sizeBandValues...),
+			"company_lifecycle": customerField("lifecycle", storekit.FieldPicklist, lifecycleValues...),
 		},
 	},
 	"lead": {
@@ -309,7 +309,7 @@ var segmentEngines = map[string]storekit.Query{
 			"status":            {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
 			ownerIDField:        {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField:    ownerTeamField,
-			"candidate_org_key": {Expr: "t.candidate_org_key", Type: storekit.FieldText},
+			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldText},
 			tagFilterField:      tagLinkFor("lead"),
 		},
 	},
@@ -324,7 +324,7 @@ var segmentEngines = map[string]storekit.Query{
 			// saved view that filtered on the column would answer for whichever
 			// one happened to be written there — including a company that was
 			// taken off the project.
-			"organization_id": projectCompanyField(),
+			"company_id": projectCompanyField(),
 			"phase":           {Expr: "t.phase", Type: storekit.FieldPicklist, Options: projectPhaseValues},
 			tagFilterField:    tagLinkFor(projectEntity),
 		},
@@ -339,14 +339,14 @@ var segmentEngines = map[string]storekit.Query{
 // status is per-workspace admin state, read from the catalogue; a core field's is
 // a decision in this file, taken by an ADR, identical in every installation. A
 // map keyed by a name the catalogue has never heard of is the only place the
-// second can live — organization.classification has no `custom_field` row, so no
+// second can live — company.classification has no `custom_field` row, so no
 // catalogue read and no client-side join can ever discover that it is retired.
 //
 // Keyed by resource rather than by bare name: two resources may legitimately
 // carry a field of the same name where only one of them has retired it.
 var retiredCoreFields = map[string]map[string]bool{
 	// ADR-0079/A124 replaced it with lifecycle.
-	"organization": {"classification": true},
+	"company": {"classification": true},
 }
 
 // SegmentEngine returns the ONE predicate engine for a filterable resource: the
@@ -377,7 +377,7 @@ func (s *Store) SegmentEngine(ctx context.Context, resource string) (storekit.Qu
 	}
 	// Every resource that reaches this point owns a segment engine, and
 	// customfields.FieldObjects admits exactly that same set — person,
-	// organization, deal, lead, project — so resource IS the catalog's
+	// company, deal, lead, project — so resource IS the catalog's
 	// object key; no separate mapping to maintain or drift out of sync.
 	columns, err := s.catalog.FilterableColumns(ctx, resource)
 	if err != nil {

@@ -67,16 +67,16 @@ func grantsAtTeamScope(objects ...string) principal.Permissions {
 func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("deal", "organization", "contract"))
-	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("deal", "organization", "contract"))
+	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("deal", "company", "contract"))
+	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("deal", "company", "contract"))
 
-	org := ids.NewV7()
-	e.WsExec(t, `INSERT INTO organization (id, owner_id, display_name, source, captured_by)
-		VALUES ($1, $2, 'Anchor GmbH', 'manual', 'human:x')`, org, e.Rep3)
+	company := ids.NewV7()
+	e.WsExec(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
+		VALUES ($1, $2, 'Anchor GmbH', 'manual', 'human:x')`, company, e.Rep3)
 	deal := ids.NewV7()
-	e.WsExec(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, organization_id, source, captured_by)
+	e.WsExec(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, company_id, source, captured_by)
 		VALUES ($1, $2, 'Anchored Deal', $3, $4, $5, 'manual', 'human:x')`,
-		deal, e.Rep3, pipeline, open, org)
+		deal, e.Rep3, pipeline, open, company)
 
 	store := ContractsStore(e.DB(), e.Deals)
 	// Fixed, because nothing here is about WHEN: the term's dates never reach an
@@ -84,7 +84,7 @@ func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
 	// reason its own name does not mention.
 	starts := time.Date(2026, time.January, 5, 0, 0, 0, 0, time.UTC)
 	contract, err := store.CreateContract(owner, contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
+		CompanyID: ids.From[ids.CompanyKind](company),
 		DealID:         idPtr(ids.From[ids.DealKind](deal)),
 		Title:          "Framework agreement",
 		StartsOn:       &starts,
@@ -231,25 +231,25 @@ func TestAReadOnlySeatCanStillDeclineItsOwnShare(t *testing.T) {
 }
 
 // The partner row's own comment already stated this invariant — "promotion
-// flips organization.classification — that is an org mutation, so the org's own
+// flips company.classification — that is a company mutation, so the company's own
 // write grant is required too" — and only the OBJECT half of it was enforced.
 // The row half probed for sight, so a `read` share of a company let its holder
 // reclassify it as a partner.
 func TestAReadShareOfACompanyCannotMakeItAPartner(t *testing.T) {
 	e := Setup(t)
-	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("organization", "partner"))
-	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("organization", "partner"))
+	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("company", "partner"))
+	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("company", "partner"))
 
-	// Captured privately by Rep3: an organization that is merely owned is
+	// Captured privately by Rep3: a company that is merely owned is
 	// readable by every seat with the grant, and capture privacy is what
 	// makes the share the holder's only path to it.
-	org := ids.NewV7()
-	e.WsExec(t, `INSERT INTO organization (id, owner_id, display_name, visibility, source, captured_by)
-		VALUES ($1, $2, 'Reseller GmbH', 'owner', 'manual', 'human:x')`, org, e.Rep3)
+	company := ids.NewV7()
+	e.WsExec(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
+		VALUES ($1, $2, 'Reseller GmbH', 'owner', 'manual', 'human:x')`, company, e.Rep3)
 
 	promote := func(as context.Context) error {
 		_, err := people.NewStore(e.DB()).UpsertPartner(as, people.UpsertPartnerInput{
-			OrganizationID: ids.From[ids.OrganizationKind](org), PartnerRole: "hosting",
+			CompanyID: ids.From[ids.CompanyKind](company), PartnerRole: "hosting",
 		})
 		return err
 	}
@@ -257,11 +257,11 @@ func TestAReadShareOfACompanyCannotMakeItAPartner(t *testing.T) {
 	if err := promote(holder); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("promoting an unshared company → %v, want not-found", err)
 	}
-	shareRecord(owner, t, e, "organization", org, e.Rep1, "read")
+	shareRecord(owner, t, e, "company", company, e.Rep1, "read")
 	if err := promote(holder); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("promoting under a read share → %v, want permission-denied", err)
 	}
-	shareRecord(owner, t, e, "organization", org, e.Rep1, "write")
+	shareRecord(owner, t, e, "company", company, e.Rep1, "write")
 	if err := promote(holder); err != nil {
 		t.Fatalf("promoting under a write share → %v, want allowed", err)
 	}

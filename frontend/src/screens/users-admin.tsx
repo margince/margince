@@ -31,7 +31,7 @@ import {
 import { PasswordLinkModal, usePasswordLink } from "./users-password-link";
 
 type User = components["schemas"]["User"];
-// The member roster (org settings). Every user-management WRITE is admin-only
+// The member roster (company settings). Every user-management WRITE is admin-only
 // server-side, but the read is not: `GET /users` answers 200 to any authenticated
 // principal, so the list is fetched for everyone and only the controls that
 // change a member are withheld. The read opts into inactive members

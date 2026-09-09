@@ -26,7 +26,7 @@ import { SentenceList, WrittenBy } from "./record360";
 type Person360 = components["schemas"]["Person360"];
 type PersonBrief = components["schemas"]["PersonBrief"];
 type Activity = components["schemas"]["Activity"];
-type BriefEvidence = components["schemas"]["OrganizationBriefEvidence"];
+type BriefEvidence = components["schemas"]["CompanyBriefEvidence"];
 
 // --- Relationship brief (§5.6) ---------------------------------------------
 

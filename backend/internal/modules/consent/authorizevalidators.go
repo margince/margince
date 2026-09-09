@@ -51,7 +51,7 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 		// than querying a person-keyed table.
 		//
 		// Every other arm reads a record a lead cannot hold — an invoice or
-		// contract hangs off an organization reached through employment, and a
+		// contract hangs off a company reached through employment, and a
 		// confirmation link is minted against a person. Those stay unsupported
 		// and fall through to the lead's own grant.
 		return unsupported, nil
@@ -130,18 +130,18 @@ func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject
 
 // validateInvoice answers a message about a named financial event.
 //
-// An invoice belongs to an ORGANIZATION, so reaching a person means going
+// An invoice belongs to an COMPANY, so reaching a person means going
 // through employment. That is a real gap in ordinary CRM data — a finance
 // contact who was never linked to the customer record — and it is a data gap
 // rather than a legal one. So a missing link is unsupported with a reason a
 // human can act on, never a refusal: the legacy path still answers, and the
 // operator is told what to link.
 func validateInvoice(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
-	return validateOrgDocument(ctx, tx, subject, commsauthz.CategoryInvoiceOrPayment,
+	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryInvoiceOrPayment,
 		commsauthz.BasisContract, `
 		SELECT EXISTS (
 			SELECT 1 FROM finance_invoice i
-			  JOIN relationship r ON r.organization_id = i.organization_id
+			  JOIN relationship r ON r.company_id = i.company_id
 			 WHERE i.id = $1::uuid
 			   -- A deleted or voided invoice is not a financial event anybody
 			   -- is owed a message about. The contract validator beside this
@@ -157,14 +157,14 @@ func validateInvoice(ctx context.Context, tx pgx.Tx, req commsauthz.Request, sub
 }
 
 // validateContract answers a notice a live contract requires. Same shape and
-// same reasoning as the invoice: the document names an organization, and the
+// same reasoning as the invoice: the document names a company, and the
 // person is reached through employment.
 func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
-	return validateOrgDocument(ctx, tx, subject, commsauthz.CategoryContractNotice,
+	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryContractNotice,
 		commsauthz.BasisContract, `
 		SELECT EXISTS (
 			SELECT 1 FROM contract c
-			  JOIN relationship r ON r.organization_id = c.organization_id
+			  JOIN relationship r ON r.company_id = c.company_id
 			 WHERE c.id = $1::uuid
 			   AND c.archived_at IS NULL
 			   AND r.kind = 'employment'
@@ -179,7 +179,7 @@ func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, su
 // follow-up arm reads, because being on the opportunity is what makes somebody
 // the person a quote goes to.
 func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
-	return validateOrgDocument(ctx, tx, subject, commsauthz.CategoryPrecontractQuote,
+	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryPrecontractQuote,
 		commsauthz.BasisPrecontractRequest, `
 		SELECT EXISTS (
 			SELECT 1 FROM offer o
@@ -205,19 +205,19 @@ func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subje
 }
 
 // wrapEvidenceRead names the read that failed without naming the record, the
-// recipient or the organization it was about. A decision's errors reach an
+// recipient or the company it was about. A decision's errors reach an
 // operator's lane.
 func wrapEvidenceRead(what string, err error) error {
 	return fmt.Errorf("consent: read %s: %w", what, err)
 }
 
-// validateOrgDocument runs the shared shape of the three document validators:
+// validateCompanyDocument runs the shared shape of the three document validators:
 // the caller named a record, and the recipient is reachable from it.
 //
 // One function because the three differ only in their query and their basis. A
 // second copy of "named nothing, so unsupported" is a second place for the
 // no-evidence answer to drift.
-func validateOrgDocument(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category, basis commsauthz.Basis, query string, named ids.UUID) (resolution, error) {
+func validateCompanyDocument(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category, basis commsauthz.Basis, query string, named ids.UUID) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
 	if named == (ids.UUID{}) {
 		// The caller claimed the category and named no record. Nothing to look

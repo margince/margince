@@ -5,7 +5,7 @@
 
 package integration
 
-// partner_org_id and partner_attribution are one fact in two columns, and the
+// partner_company_id and partner_attribution are one fact in two columns, and the
 // deal_partner_attribution_pairing CHECK is what makes that true of the stored
 // row rather than only of the code that writes it. These tests go through the
 // real writer against a real database, because the store's refusals and the
@@ -36,19 +36,19 @@ func execDirect(t *testing.T, e *Env, sql string, args ...any) error {
 	})
 }
 
-// seedDealWithPartner links a live deal to a partner organization through the
+// seedDealWithPartner links a live deal to a partner company through the
 // real writer and hands back both ids.
-func seedDealWithPartner(t *testing.T, e *Env) (ids.DealID, ids.OrganizationID) {
+func seedDealWithPartner(t *testing.T, e *Env) (ids.DealID, ids.CompanyID) {
 	t.Helper()
 	pipeline, open, _ := DealFixture(t, e)
-	partnerOrg := orgIDOf(e.SeedPartnerOrg(t, "Northgate Partners", nil, nil))
+	partnerCompany := companyIDOf(e.SeedPartnerCompany(t, "Northgate Partners", nil, nil))
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Northgate rollout", pipeline, open, &e.Rep1))
 	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
-		PartnerOrganizationID: &partnerOrg,
+		PartnerCompanyID: &partnerCompany,
 	}); err != nil {
 		t.Fatalf("linking the deal to its partner: %v", err)
 	}
-	return deal, partnerOrg
+	return deal, partnerCompany
 }
 
 func TestNamingAPartnerStoresTheSourcedClaimWithIt(t *testing.T) {
@@ -59,8 +59,8 @@ func TestNamingAPartnerStoresTheSourcedClaimWithIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the deal back: %v", err)
 	}
-	if got.PartnerOrgId == nil || ids.UUID(*got.PartnerOrgId) != partner.UUID {
-		t.Fatalf("partner_org_id = %v, want the partner just linked", got.PartnerOrgId)
+	if got.PartnerCompanyId == nil || ids.UUID(*got.PartnerCompanyId) != partner.UUID {
+		t.Fatalf("partner_company_id = %v, want the partner just linked", got.PartnerCompanyId)
 	}
 	if got.PartnerAttribution == nil || *got.PartnerAttribution != "sourced" {
 		t.Errorf("partner_attribution = %v, want \"sourced\" — a bare partner link is the sourced motion", got.PartnerAttribution)
@@ -86,8 +86,8 @@ func TestADealCanBeReAttributedToInfluencedWithoutMovingThePartner(t *testing.T)
 	if got.PartnerAttribution == nil || *got.PartnerAttribution != influenced {
 		t.Errorf("partner_attribution = %v, want %q", got.PartnerAttribution, influenced)
 	}
-	if got.PartnerOrgId == nil || ids.UUID(*got.PartnerOrgId) != partner.UUID {
-		t.Errorf("partner_org_id = %v, want the partner to have stayed put", got.PartnerOrgId)
+	if got.PartnerCompanyId == nil || ids.UUID(*got.PartnerCompanyId) != partner.UUID {
+		t.Errorf("partner_company_id = %v, want the partner to have stayed put", got.PartnerCompanyId)
 	}
 }
 
@@ -125,28 +125,28 @@ func TestTheDatabaseItselfRefusesAHalfSetPartnerPair(t *testing.T) {
 	}
 }
 
-// Deleting a partner organization must detach its deals rather than fail: the
-// FK clears partner_org_id, and without the trigger that clears the attribution
+// Deleting a partner company must detach its deals rather than fail: the
+// FK clears partner_company_id, and without the trigger that clears the attribution
 // with it the delete would breach the pairing CHECK instead of succeeding.
-func TestDeletingAPartnerOrganizationDetachesItsDealsIntact(t *testing.T) {
+func TestDeletingAPartnerCompanyDetachesItsDealsIntact(t *testing.T) {
 	e := Setup(t)
 	deal, partner := seedDealWithPartner(t, e)
 
-	if err := execDirect(t, e, `DELETE FROM organization WHERE id = $1`, partner); err != nil {
-		t.Fatalf("deleting the partner organization: %v", err)
+	if err := execDirect(t, e, `DELETE FROM company WHERE id = $1`, partner); err != nil {
+		t.Fatalf("deleting the partner company: %v", err)
 	}
 
 	got, err := e.Deals.GetDeal(e.Admin(), deal, 0)
 	if err != nil {
 		t.Fatalf("reading the orphaned deal back: %v", err)
 	}
-	if got.PartnerOrgId != nil || got.PartnerAttribution != nil {
+	if got.PartnerCompanyId != nil || got.PartnerAttribution != nil {
 		t.Errorf("deal kept partner %v / attribution %v after its partner was deleted; both halves leave together",
-			got.PartnerOrgId, got.PartnerAttribution)
+			got.PartnerCompanyId, got.PartnerAttribution)
 	}
 }
 
-// The clear surface names the pair ONCE, as `partner_org_id`, and forgetting the
+// The clear surface names the pair ONCE, as `partner_company_id`, and forgetting the
 // partner forgets what they did. Routed through the single-column clear path
 // instead, this write would set one half and earn the constraint violation the
 // test above proves is really there.
@@ -155,7 +155,7 @@ func TestForgettingADealsPartnerForgetsItsClaimToo(t *testing.T) {
 	deal, _ := seedDealWithPartner(t, e)
 
 	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
-		Clear: []string{"partner_org_id"},
+		Clear: []string{"partner_company_id"},
 	}); err != nil {
 		t.Fatalf("clearing the deal's partner: %v", err)
 	}
@@ -164,9 +164,9 @@ func TestForgettingADealsPartnerForgetsItsClaimToo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the deal back: %v", err)
 	}
-	if got.PartnerOrgId != nil || got.PartnerAttribution != nil {
+	if got.PartnerCompanyId != nil || got.PartnerAttribution != nil {
 		t.Errorf("deal kept partner %v / attribution %v; both halves leave together",
-			got.PartnerOrgId, got.PartnerAttribution)
+			got.PartnerCompanyId, got.PartnerAttribution)
 	}
 }
 
@@ -176,7 +176,7 @@ func TestForgettingThePartnerWhileClaimingSomethingOfThemIsRefused(t *testing.T)
 	influenced := "influenced"
 
 	_, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
-		Clear:              []string{"partner_org_id"},
+		Clear:              []string{"partner_company_id"},
 		PartnerAttribution: &influenced,
 	})
 
@@ -204,9 +204,9 @@ func TestNamingTheClaimForgetsTheWholePair(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the deal back: %v", err)
 	}
-	if got.PartnerOrgId != nil || got.PartnerAttribution != nil {
+	if got.PartnerCompanyId != nil || got.PartnerAttribution != nil {
 		t.Errorf("deal kept partner %v / attribution %v; both halves leave together",
-			got.PartnerOrgId, got.PartnerAttribution)
+			got.PartnerCompanyId, got.PartnerAttribution)
 	}
 }
 
@@ -217,23 +217,23 @@ func TestNamingTheClaimForgetsTheWholePair(t *testing.T) {
 func TestForgettingAPartnerTheReaderCannotSeeIsRefused(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	partnerOrg := e.SeedPartnerOrg(t, "Northgate Partners", nil, &e.Rep3)
+	partnerCompany := e.SeedPartnerCompany(t, "Northgate Partners", nil, &e.Rep3)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Northgate rollout", pipeline, open, &e.Rep1))
-	partnerID := orgIDOf(partnerOrg)
+	partnerID := companyIDOf(partnerCompany)
 	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
-		PartnerOrganizationID: &partnerID,
+		PartnerCompanyID: &partnerID,
 	}); err != nil {
 		t.Fatalf("linking the deal to its partner: %v", err)
 	}
-	e.MakeCapturePrivate(t, "organization", partnerOrg, e.Rep3)
+	e.MakeCapturePrivate(t, "company", partnerCompany, e.Rep3)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
 	_, err := e.Deals.UpdateDeal(rep, deal, deals.UpdateDealInput{
-		Clear: []string{"partner_org_id"},
+		Clear: []string{"partner_company_id"},
 	})
 
 	if err == nil {
-		t.Fatal("a reader who cannot open the partner cleared it; that is a write about an organization they may not name")
+		t.Fatal("a reader who cannot open the partner cleared it; that is a write about a company they may not name")
 	}
 	// Not-found rather than forbidden: existence stays hidden, which is what
 	// EnsureLinkTarget answers on the set path too.
@@ -242,7 +242,7 @@ func TestForgettingAPartnerTheReaderCannotSeeIsRefused(t *testing.T) {
 	}
 	// Read off the ROW, not through the store: the same masking that withholds
 	// this partner from the rep withholds it from any reader whose scope cannot
-	// reach the capture-private organization, so a store read here cannot tell a
+	// reach the capture-private company, so a store read here cannot tell a
 	// surviving link from a cleared one.
 	partner, claim := partnerPairOnTheRow(t, e, deal)
 	if partner == nil || claim == nil {
@@ -255,7 +255,7 @@ func partnerPairOnTheRow(t *testing.T, e *Env, deal ids.DealID) (partner, claim 
 	t.Helper()
 	if err := e.DB().Tx(context.Background(), func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT partner_org_id::text, partner_attribution FROM deal WHERE id = $1`,
+			`SELECT partner_company_id::text, partner_attribution FROM deal WHERE id = $1`,
 			deal).Scan(&partner, &claim)
 	}); err != nil {
 		t.Fatalf("reading the deal's partner pair off the row: %v", err)
@@ -267,19 +267,19 @@ func partnerPairOnTheRow(t *testing.T, e *Env, deal ids.DealID) (partner, claim 
 func TestForgettingACompanyTheReaderCannotSeeIsRefused(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	org := e.SeedOrg(t, "Meridian Labs", &e.Rep3)
+	company := e.SeedCompany(t, "Meridian Labs", &e.Rep3)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Meridian renewal", pipeline, open, &e.Rep1))
-	orgID := orgIDOf(org)
+	companyID := companyIDOf(company)
 	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
-		OrganizationID: &orgID,
+		CompanyID: &companyID,
 	}); err != nil {
 		t.Fatalf("linking the deal to its company: %v", err)
 	}
-	e.MakeCapturePrivate(t, "organization", org, e.Rep3)
+	e.MakeCapturePrivate(t, "company", company, e.Rep3)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
 	_, err := e.Deals.UpdateDeal(rep, deal, deals.UpdateDealInput{
-		Clear: []string{"organization_id"},
+		Clear: []string{"company_id"},
 	})
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
@@ -295,15 +295,15 @@ func TestADealCanBeUnlinkedFromItsCompany(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Kestrel renewal", pipeline, open, &e.Rep1))
-	org := orgIDOf(e.SeedOrg(t, "Kestrel Foods", nil))
+	company := companyIDOf(e.SeedCompany(t, "Kestrel Foods", nil))
 	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
-		OrganizationID: &org,
+		CompanyID: &company,
 	}); err != nil {
 		t.Fatalf("linking the deal to its company: %v", err)
 	}
 
 	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
-		Clear: []string{"organization_id"},
+		Clear: []string{"company_id"},
 	}); err != nil {
 		t.Fatalf("unlinking the deal from its company: %v", err)
 	}
@@ -312,7 +312,7 @@ func TestADealCanBeUnlinkedFromItsCompany(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the deal back: %v", err)
 	}
-	if got.OrganizationId != nil {
-		t.Errorf("organization_id = %v, want nil", got.OrganizationId)
+	if got.CompanyId != nil {
+		t.Errorf("company_id = %v, want nil", got.CompanyId)
 	}
 }

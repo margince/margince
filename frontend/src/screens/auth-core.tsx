@@ -158,7 +158,7 @@ function LegalFooter() {
       <p>{t("auth.legalProtected")}</p>
       {/* The bottom row is the surface's chrome row, and the theme control is
           chrome: it changes how this page looks and claims nothing about the
-          organization. It sits after the two links, behind a separator, so the
+          company. It sits after the two links, behind a separator, so the
           legal sentence above still reads as a statement and not as a control.
           The row already wraps, so the extra item cannot widen the surface. */}
       <span className="auth-legal-links">

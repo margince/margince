@@ -195,7 +195,7 @@ func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T)
 	if err := json.Unmarshal(confirmedRec.Body.Bytes(), &confirmed); err != nil {
 		t.Fatal(err)
 	}
-	if confirmed.Status != crmcontracts.CompanySiteReadStatusConfirmed || confirmed.OrganizationId == nil {
+	if confirmed.Status != crmcontracts.CompanySiteReadStatusConfirmed || confirmed.CompanyId == nil {
 		t.Fatalf("confirmed dossier = %+v, want confirmed and bound", confirmed)
 	}
 }
@@ -303,9 +303,9 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsPeopleSeparate(t *testing.T) {
 	e := integration.Setup(t)
 	ready := onboardingDraft(t, e)
-	if e.WsCount(t, `SELECT count(*) FROM organization WHERE is_anchor`) != 0 ||
-		e.WsCount(t, `SELECT count(*) FROM organization_profile_field`) != 0 ||
-		e.WsCount(t, `SELECT count(*) FROM organization_fact`) != 0 {
+	if e.WsCount(t, `SELECT count(*) FROM company WHERE is_anchor`) != 0 ||
+		e.WsCount(t, `SELECT count(*) FROM company_profile_field`) != 0 ||
+		e.WsCount(t, `SELECT count(*) FROM company_fact`) != 0 {
 		t.Fatal("the operational onboarding draft wrote company domain truth before confirmation")
 	}
 
@@ -325,15 +325,15 @@ func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsPeopleSeparate(t *testing
 	}
 
 	var siteRows, humanRows, leads, leadProposals int
-	var confirmedOrg ids.UUID
+	var confirmedCompany ids.UUID
 	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM organization_profile_field
-			WHERE organization_id = $1 AND source = 'site_read' AND captured_by = 'agent:site-read'`, company.OrganizationID).Scan(&siteRows); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM company_profile_field
+			WHERE company_id = $1 AND source = 'site_read' AND captured_by = 'agent:site-read'`, company.CompanyID).Scan(&siteRows); err != nil {
 			return err
 		}
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM organization_profile_field
-			WHERE organization_id = $1 AND field = 'icp' AND source = 'human'`, company.OrganizationID).Scan(&humanRows); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM company_profile_field
+			WHERE company_id = $1 AND field = 'icp' AND source = 'human'`, company.CompanyID).Scan(&humanRows); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(ctx, `SELECT count(*) FROM lead`).Scan(&leads); err != nil {
@@ -342,7 +342,7 @@ func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsPeopleSeparate(t *testing
 		if err := tx.QueryRow(ctx, `SELECT count(*) FROM approval WHERE kind = 'site_lead'`).Scan(&leadProposals); err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, `SELECT organization_id FROM site_read WHERE id = $1 AND confirmed_at IS NOT NULL`, ready.ID).Scan(&confirmedOrg)
+		return tx.QueryRow(ctx, `SELECT company_id FROM site_read WHERE id = $1 AND confirmed_at IS NOT NULL`, ready.ID).Scan(&confirmedCompany)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -353,8 +353,8 @@ func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsPeopleSeparate(t *testing
 	if leads != 0 || leadProposals != 1 {
 		t.Fatalf("people lane created %d leads and %d proposals, want 0 leads and 1 separate proposal", leads, leadProposals)
 	}
-	if confirmedOrg != company.OrganizationID.UUID {
-		t.Fatalf("dossier bound to %s, want anchor %s", confirmedOrg, company.OrganizationID)
+	if confirmedCompany != company.CompanyID.UUID {
+		t.Fatalf("dossier bound to %s, want anchor %s", confirmedCompany, company.CompanyID)
 	}
 
 	_, _, err = e.People.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), people.ConfirmCompanySiteReadInput{
@@ -419,9 +419,9 @@ func TestCorrectingAFactAtColdStartStoresItAsTheHumansOwnAssertion(t *testing.T)
 
 	var dossierLinks int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT count(*) FROM organization_fact
-			WHERE organization_id = $1 AND source = 'human' AND site_read_id IS NOT NULL`,
-			company.OrganizationID).Scan(&dossierLinks)
+		return tx.QueryRow(context.Background(), `SELECT count(*) FROM company_fact
+			WHERE company_id = $1 AND source = 'human' AND site_read_id IS NOT NULL`,
+			company.CompanyID).Scan(&dossierLinks)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -516,8 +516,8 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 	}
 	var storedAddress string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT address_line1 FROM organization WHERE id = $1`,
-			confirmed.OrganizationID).Scan(&storedAddress)
+		return tx.QueryRow(context.Background(), `SELECT address_line1 FROM company WHERE id = $1`,
+			confirmed.CompanyID).Scan(&storedAddress)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -530,7 +530,7 @@ func TestOnboardingConfirmationRollsBackWhenSeparatePeopleCannotStage(t *testing
 	e := integration.Setup(t)
 	ready := onboardingDraft(t, e)
 	offer, icp := "Employee onboarding software", "Growing RevOps teams"
-	stageFailure := func(context.Context, pgx.Tx, ids.OrganizationID, people.SiteRead, []people.SiteReadPerson) ([]ids.UUID, error) {
+	stageFailure := func(context.Context, pgx.Tx, ids.CompanyID, people.SiteRead, []people.SiteReadPerson) ([]ids.UUID, error) {
 		return nil, errors.New("approval store unavailable")
 	}
 	_, _, err := e.People.ConfirmCompanySiteRead(e.As(e.Rep1, nil, integration.AdminPerms), people.ConfirmCompanySiteReadInput{
@@ -540,9 +540,9 @@ func TestOnboardingConfirmationRollsBackWhenSeparatePeopleCannotStage(t *testing
 	if err == nil {
 		t.Fatal("confirmation succeeded while its separate people staging failed")
 	}
-	if e.WsCount(t, `SELECT count(*) FROM organization WHERE is_anchor`) != 0 ||
-		e.WsCount(t, `SELECT count(*) FROM organization_profile_field`) != 0 ||
-		e.WsCount(t, `SELECT count(*) FROM organization_fact`) != 0 {
+	if e.WsCount(t, `SELECT count(*) FROM company WHERE is_anchor`) != 0 ||
+		e.WsCount(t, `SELECT count(*) FROM company_profile_field`) != 0 ||
+		e.WsCount(t, `SELECT count(*) FROM company_fact`) != 0 {
 		t.Fatal("a failed confirmation left partially committed company truth")
 	}
 	var confirmed int
@@ -629,8 +629,8 @@ func TestConfirmingAReadThatNamedNobodySucceeds(t *testing.T) {
 		t.Fatalf("confirming a read that named nobody: %v\n"+
 			"this is the ordinary company website, and onboarding cannot finish without it", err)
 	}
-	if company.OrganizationID.UUID == ids.Nil {
-		t.Fatal("the confirmation returned no organization")
+	if company.CompanyID.UUID == ids.Nil {
+		t.Fatal("the confirmation returned no company")
 	}
 
 	// The row records an empty list, not a null one.

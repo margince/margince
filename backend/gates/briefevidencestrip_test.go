@@ -37,7 +37,7 @@ import (
 // would admit one silently.
 var cachingWriters = []string{
 	"internal/compose/dealstatus",
-	"internal/compose/orgscan",
+	"internal/compose/companyscan",
 }
 
 // Every caching writer reaches the shared strip.

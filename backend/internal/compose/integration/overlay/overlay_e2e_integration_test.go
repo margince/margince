@@ -354,10 +354,10 @@ func assertHumanRestSurfaceServesTheMirror(t *testing.T, e *apptest.AppEnv) {
 	// hand back an unfiltered list as the AI-review list.
 	for _, path := range []string{
 		"/v1/people?captured_by_kind=agent",
-		"/v1/organizations?captured_by_kind=agent",
+		"/v1/companies?captured_by_kind=agent",
 		"/v1/leads?captured_by_kind=agent",
 		"/v1/people?ai_written=true",
-		"/v1/organizations?ai_written=true",
+		"/v1/companies?ai_written=true",
 		"/v1/leads?ai_written=true",
 	} {
 		if code := e.Call(t, "GET", path, nil, nil, nil); code != http.StatusUnprocessableEntity {
@@ -368,14 +368,14 @@ func assertHumanRestSurfaceServesTheMirror(t *testing.T, e *apptest.AppEnv) {
 	// same rule again: all three are OUR columns, so answering them from the
 	// mirror would return the unfiltered list looking like a filtered one.
 	for _, path := range []string{
-		"/v1/organizations?lifecycle=customer",
-		"/v1/organizations?relationship_type=partner",
+		"/v1/companies?lifecycle=customer",
+		"/v1/companies?relationship_type=partner",
 		"/v1/activities?thread_key=t-1",
 		// include_anchor is the same rule from the other side: the
 		// installation's own company is a native row the mirror never holds,
 		// so a page that could not contain it either way must not come back
 		// looking like the opt-in was honoured (ADR-0082/A127).
-		"/v1/organizations?include_anchor=true",
+		"/v1/companies?include_anchor=true",
 		// Delivery work is ours as well, and this dial was neither forwarded
 		// nor refused until the declared-parameter gate found it: a caller
 		// asking for one project's deals was handed the whole mirror.

@@ -398,11 +398,11 @@ func assertListFiltering(t *testing.T, e *apptest.AppEnv) {
 	// (`activity`, `relationship`) answers 422 and would prove nothing about
 	// filtering.
 	var otherObject customFieldListWire
-	if s := e.Call(t, "GET", "/v1/custom-fields?object=organization", nil, nil, &otherObject); s != http.StatusOK {
+	if s := e.Call(t, "GET", "/v1/custom-fields?object=company", nil, nil, &otherObject); s != http.StatusOK {
 		t.Fatalf("list other-object status = %d, want 200: %+v", s, otherObject)
 	}
 	if containsID(otherObject.Data, active.ID) || containsID(otherObject.Data, retiring.ID) {
-		t.Fatalf("object filter leaked a lead field into the organization list: %+v", otherObject.Data)
+		t.Fatalf("object filter leaked a lead field into the company list: %+v", otherObject.Data)
 	}
 }
 

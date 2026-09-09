@@ -19,7 +19,7 @@ describe("contractBody", () => {
     // "Not recorded" and "recorded as nothing" are different facts about an
     // agreement, and an empty string would be the second wearing the first's
     // clothes.
-    const body = contractBody("org-1", DRAFT);
+    const body = contractBody("company-1", DRAFT);
 
     expect(body).not.toHaveProperty("starts_on");
     expect(body).not.toHaveProperty("signed_on");
@@ -30,11 +30,11 @@ describe("contractBody", () => {
   it("sends value and currency together when it holds both", () => {
     // Half a money pair cannot be converted, and the record's own CHECK refuses
     // one, so an agreement with no amount states neither half.
-    const unpriced = contractBody("org-1", DRAFT);
+    const unpriced = contractBody("company-1", DRAFT);
     expect(unpriced).not.toHaveProperty("value_minor");
     expect(unpriced).not.toHaveProperty("currency");
 
-    const priced = contractBody("org-1", { ...DRAFT, valueMinor: 12_000_000 });
+    const priced = contractBody("company-1", { ...DRAFT, valueMinor: 12_000_000 });
     expect(priced.value_minor).toBe(12_000_000);
     expect(priced.currency).toBe("EUR");
   });
@@ -45,7 +45,7 @@ describe("contractBody", () => {
     // server's refusal: an invented unit would be believed forever, while
     // dropping the amount would report a saved agreement whose value quietly
     // went nowhere.
-    const body = contractBody("org-1", {
+    const body = contractBody("company-1", {
       ...DRAFT,
       valueMinor: 12_000_000,
       currency: "",
@@ -58,11 +58,11 @@ describe("contractBody", () => {
   it("never invents a signed date", () => {
     // The whole point of the field: a date the form supplied would be
     // indistinguishable from one a human asserted, the moment it was saved.
-    expect(contractBody("org-1", DRAFT)).not.toHaveProperty("signed_on");
+    expect(contractBody("company-1", DRAFT)).not.toHaveProperty("signed_on");
   });
 
   it("carries the value basis, because it changes what the amount means", () => {
-    const annual = contractBody("org-1", {
+    const annual = contractBody("company-1", {
       ...DRAFT,
       valueMinor: 12_000_000,
       valueBasis: "annualized_12m",

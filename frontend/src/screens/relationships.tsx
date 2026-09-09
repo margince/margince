@@ -51,7 +51,7 @@ type RelationshipKind = Relationship["kind"];
 // all. `GET /relationships` filters on deal_id for exactly this reading.
 export type RelationshipScope =
   | { person_id: string }
-  | { organization_id: string }
+  | { company_id: string }
   | { deal_id: string };
 
 const KIND_LABELS: Record<RelationshipKind, MessageKey> = {
@@ -78,7 +78,7 @@ const SEARCH_DEBOUNCE_MS = 250;
 
 function scopeQuery(scope: RelationshipScope): {
   person_id?: string;
-  organization_id?: string;
+  company_id?: string;
   deal_id?: string;
 } {
   if ("person_id" in scope) {
@@ -87,7 +87,7 @@ function scopeQuery(scope: RelationshipScope): {
   if ("deal_id" in scope) {
     return { deal_id: scope.deal_id };
   }
-  return { organization_id: scope.organization_id };
+  return { company_id: scope.company_id };
 }
 
 function scopeQueryKey(scope: RelationshipScope): [string, string, string] {
@@ -97,7 +97,7 @@ function scopeQueryKey(scope: RelationshipScope): [string, string, string] {
   if ("deal_id" in scope) {
     return ["relationships", "deal", scope.deal_id];
   }
-  return ["relationships", "organization", scope.organization_id];
+  return ["relationships", "company", scope.company_id];
 }
 
 // The words this panel uses on the record it is rendered from, and whether that
@@ -145,10 +145,10 @@ async function fetchRelationships(
 // The other side of an edge from this scope's point of view, as a typed
 // record reference EntityRef can hydrate into a name + backlink. The far end
 // follows the edge shape (migration 0007 rel_*_shape) AND the scope: a
-// person's 360 sees its employment (→org) and deal_stakeholder (→deal) edges;
-// an org's 360 sees employment (→person) and the org↔org edges. Critically,
-// the org list filter matches an org↔org edge on EITHER end
-// (organization_id OR counterparty_org_id), so the far org is whichever id is
+// person's 360 sees its employment (→company) and deal_stakeholder (→deal) edges;
+// a company's 360 sees employment (→person) and the company↔company edges. Critically,
+// the company list filter matches a company↔company edge on EITHER end
+// (company_id OR counterparty_company_id), so the far company is whichever id is
 // not this scope's own — never the record itself.
 export function counterpartyRef(
   rel: Relationship,
@@ -162,7 +162,7 @@ export function counterpartyRef(
   if ("person_id" in scope) {
     // works_with names a person on either column, and the person filter now
     // matches either end — the far person is whichever id is not this
-    // scope's own, the same rule the org↔org branch below keeps.
+    // scope's own, the same rule the company↔company branch below keeps.
     if (rel.kind === "works_with") {
       const farPerson = [rel.person_id, rel.counterparty_person_id].find(
         (personId) => personId != null && personId !== scope.person_id,
@@ -172,17 +172,17 @@ export function counterpartyRef(
     if (rel.deal_id) {
       return { kind: "deal", id: rel.deal_id };
     }
-    return rel.organization_id
-      ? { kind: "organization", id: rel.organization_id }
+    return rel.company_id
+      ? { kind: "company", id: rel.company_id }
       : null;
   }
   if (rel.person_id) {
     return { kind: "person", id: rel.person_id };
   }
-  const far = [rel.counterparty_org_id, rel.organization_id].find(
-    (orgId) => orgId != null && orgId !== scope.organization_id,
+  const far = [rel.counterparty_company_id, rel.company_id].find(
+    (companyId) => companyId != null && companyId !== scope.company_id,
   );
-  return far ? { kind: "organization", id: far } : null;
+  return far ? { kind: "company", id: far } : null;
 }
 
 function dateRange(rel: Relationship, t: (key: MessageKey) => string): string {
@@ -196,14 +196,14 @@ type Candidate = { id: string; name: string };
 // is an ordinary, frequent fact. The list hides the own company by default
 // because it answers "which companies are we selling to"; this question is a
 // different one, so it opts back in (ADR-0082/A127).
-async function searchOrganizationCandidates(q: string): Promise<Candidate[]> {
-  const { data, error } = await api.GET("/organizations", {
+async function searchCompanyCandidates(q: string): Promise<Candidate[]> {
+  const { data, error } = await api.GET("/companies", {
     params: { query: { q, limit: 10, include_anchor: true } },
   });
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((org) => ({ id: org.id, name: org.display_name }));
+  return data.data.map((company) => ({ id: company.id, name: company.display_name }));
 }
 
 async function searchPersonCandidates(q: string): Promise<Candidate[]> {
@@ -237,7 +237,7 @@ async function searchDealCandidates(q: string): Promise<Candidate[]> {
 }
 
 // The entity kinds this tab can ever pick as a relationship's other side —
-// organization/person/deal, per the rel_*_shape CHECKs (migration 0007). A
+// company/person/deal, per the rel_*_shape CHECKs (migration 0007). A
 // lead has no relationship edges (it is promoted into a person first) and a
 // project seats its stakeholders through its own endpoint, so
 // this narrows EntityKind rather than switching on a kind the module can
@@ -249,14 +249,14 @@ function searchByEntity(
   query: string,
 ): Promise<Candidate[]> {
   switch (entity) {
-    case "organization":
-      return searchOrganizationCandidates(query);
+    case "company":
+      return searchCompanyCandidates(query);
     case "person":
       return searchPersonCandidates(query);
     case "deal":
       return searchDealCandidates(query);
     default:
-      // Relationship edges only ever anchor person/organization/deal (see
+      // Relationship edges only ever anchor person/company/deal (see
       // edgeOptions below) — `lead`/`user`/`team` are EntityRefKind additions
       // for record refs elsewhere (EntityRef), not creatable relationship
       // endpoints, so this branch is unreachable for any real EdgeOption but
@@ -272,22 +272,22 @@ function searchByEntity(
 export type EdgeOption = {
   kind: CreatableRelationshipKind;
   entity: RelationshipEntity;
-  field: "organization_id" | "person_id" | "counterparty_org_id" | "deal_id";
+  field: "company_id" | "person_id" | "counterparty_company_id" | "deal_id";
 };
 
 // Only the kinds a scope can actually anchor are offered — a person anchors
-// employment (→org) and deal_stakeholder (→deal); an org anchors employment
-// (→person) and the three org↔org kinds (→counterparty org). Offering the
+// employment (→company) and deal_stakeholder (→deal); a company anchors employment
+// (→person) and the three company↔company kinds (→counterparty company). Offering the
 // rest would only earn an endpoint-shape 422.
 export function edgeOptions(scope: RelationshipScope): EdgeOption[] {
   // A deal anchors its stakeholders and nothing else — employment is a fact
-  // about a person and a company, and the org↔org kinds name no deal.
+  // about a person and a company, and the company↔company kinds name no deal.
   if ("deal_id" in scope) {
     return [{ kind: "deal_stakeholder", entity: "person", field: "person_id" }];
   }
   if ("person_id" in scope) {
     return [
-      { kind: "employment", entity: "organization", field: "organization_id" },
+      { kind: "employment", entity: "company", field: "company_id" },
       { kind: "deal_stakeholder", entity: "deal", field: "deal_id" },
     ];
   }
@@ -295,18 +295,18 @@ export function edgeOptions(scope: RelationshipScope): EdgeOption[] {
     { kind: "employment", entity: "person", field: "person_id" },
     {
       kind: "partner_of",
-      entity: "organization",
-      field: "counterparty_org_id",
+      entity: "company",
+      field: "counterparty_company_id",
     },
     {
       kind: "referred_by",
-      entity: "organization",
-      field: "counterparty_org_id",
+      entity: "company",
+      field: "counterparty_company_id",
     },
     {
       kind: "co_sell_with",
-      entity: "organization",
-      field: "counterparty_org_id",
+      entity: "company",
+      field: "counterparty_company_id",
     },
   ];
 }
@@ -318,12 +318,12 @@ export function endpointBody(
   id: string,
 ): Partial<CreateRelationshipRequest> {
   switch (field) {
-    case "organization_id":
-      return { organization_id: id };
+    case "company_id":
+      return { company_id: id };
     case "person_id":
       return { person_id: id };
-    case "counterparty_org_id":
-      return { counterparty_org_id: id };
+    case "counterparty_company_id":
+      return { counterparty_company_id: id };
     case "deal_id":
       return { deal_id: id };
   }
@@ -457,7 +457,7 @@ function AddRelationshipAction({
     },
   });
 
-  // Switching kind can switch the target entity (org→deal→person), so any
+  // Switching kind can switch the target entity (company→deal→person), so any
   // pending pick and search results from the old entity must clear.
   function selectKind(next: CreatableRelationshipKind) {
     setKind(next);

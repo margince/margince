@@ -39,7 +39,7 @@ func coverageReaderPerms(withEdge bool) principal.Permissions {
 	objects := map[string]principal.ObjectGrant{
 		"deal":         {Read: true},
 		"person":       {Read: true},
-		"organization": {Read: true},
+		"company": {Read: true},
 		"activity":     {Read: true},
 	}
 	if withEdge {
@@ -54,8 +54,8 @@ func coverageReaderPerms(withEdge bool) principal.Permissions {
 
 func TestCoverageIsWithheldRatherThanReportedCleanWithoutTheEdgeGrant(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Kessler Systems", nil)
-	orgID := ids.From[ids.OrganizationKind](org)
+	company := e.SeedCompany(t, "Kessler Systems", nil)
+	companyID := ids.From[ids.CompanyKind](company)
 
 	// A champion whose employment has ENDED: a real finding on a real seat, so
 	// the withheld read is compared against something rather than against
@@ -65,7 +65,7 @@ func TestCoverageIsWithheldRatherThanReportedCleanWithoutTheEdgeGrant(t *testing
 	started := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 	ended := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
 	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &orgID,
+		Kind: "employment", PersonID: &personID, CompanyID: &companyID,
 		StartedAt: &started, EndedAt: &ended, Source: "manual",
 	}); err != nil {
 		t.Fatalf("recording the ended employment: %v", err)
@@ -74,7 +74,7 @@ func TestCoverageIsWithheldRatherThanReportedCleanWithoutTheEdgeGrant(t *testing
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Renewal", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, Source: "manual",
+		CompanyID: &companyID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)

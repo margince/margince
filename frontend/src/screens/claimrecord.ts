@@ -4,7 +4,7 @@ import { ifMatch, requireVersion } from "../api/version";
 import { throwProblem } from "./common";
 
 /** The record kinds the claim endpoint accepts. */
-export type ClaimableRecordType = "organization" | "person" | "lead" | "deal";
+export type ClaimableRecordType = "company" | "person" | "lead" | "deal";
 
 // The list each kind is filed under. Spelled out rather than derived, because
 // one of the four is not the type with an "s" on the end: contacts are filed
@@ -15,7 +15,7 @@ export type ClaimableRecordType = "organization" | "person" | "lead" | "deal";
 // settled, and the list the reader was looking at went on showing the record
 // as unowned until something else happened to refetch it.
 const LIST_KEY: Record<ClaimableRecordType, string> = {
-  organization: "organizations",
+  company: "companies",
   person: "people",
   lead: "leads",
   deal: "deals",

@@ -10,8 +10,8 @@ import { ProblemError } from "./common";
 
 const FILE = new File(["signed"], "agreement.pdf", { type: "application/pdf" });
 const ORG: AttachmentParent = {
-  entityType: "organization",
-  entityId: "org-1",
+  entityType: "company",
+  entityId: "company-1",
 };
 
 /** The one request the wrapper made, recorded as it was sent. */
@@ -52,8 +52,8 @@ describe("uploadAttachment", () => {
     // The session cookie is what authorizes the upload; a request that omitted
     // it would be refused as anonymous.
     expect(sent[0].credentials).toBe("include");
-    expect(sent[0].parts.get("entity_type")).toBe("organization");
-    expect(sent[0].parts.get("entity_id")).toBe("org-1");
+    expect(sent[0].parts.get("entity_type")).toBe("company");
+    expect(sent[0].parts.get("entity_id")).toBe("company-1");
     expect(sent[0].parts.get("file")).toBe(FILE);
   });
 

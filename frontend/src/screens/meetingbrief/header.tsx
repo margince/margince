@@ -27,7 +27,7 @@ export type MeetingFacts = Readonly<{
 export type PreparedFor = Readonly<{
   name: string;
   identity: string;
-  organizationName?: string;
+  companyName?: string;
 }>;
 
 export function BriefHeader({
@@ -50,10 +50,10 @@ export function BriefHeader({
     <>
       {preparedFor && (
         <p className="mb-prepared-for t-sub">
-          {preparedFor.organizationName
+          {preparedFor.companyName
             ? t("person.meeting.preparedForAt", {
                 name: preparedFor.name,
-                org: preparedFor.organizationName,
+                company: preparedFor.companyName,
               })
             : t("person.meeting.preparedFor", { name: preparedFor.name })}
         </p>

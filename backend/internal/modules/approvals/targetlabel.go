@@ -46,7 +46,7 @@ const columnName = "name"
 
 var targetLabelColumns = map[string]string{
 	tablePerson:       "full_name",
-	tableOrganization: "display_name",
+	tableCompany: "display_name",
 	tableDeal:         columnName,
 	tableLead:         "full_name",
 	tableProject:      columnName,

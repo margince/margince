@@ -259,9 +259,9 @@ func TestCompanyContextRendererAdmitsOnlyWholeItemsWithinBudget(t *testing.T) {
 // squeeze that drops facts, and it must be absent rather than rendered as a
 // zero uuid when there is no anchor to name (ADR-0082/A127).
 func TestTheOwnCompanyIDSurvivesTruncationAndIsAbsentWhenUnset(t *testing.T) {
-	orgID := ids.From[ids.OrganizationKind](ids.NewV7())
+	companyID := ids.From[ids.CompanyKind](ids.NewV7())
 	oversized := people.CompanyContext{
-		OrganizationID: orgID,
+		CompanyID: companyID,
 		Scopes: []people.CompanyContextSection{{
 			Scope: people.CompanyContextIdentity,
 			Items: []people.CompanyContextItem{{Key: "history", Value: strings.Repeat("x", 2000), Source: "site_read"}},
@@ -271,7 +271,7 @@ func TestTheOwnCompanyIDSurvivesTruncationAndIsAbsentWhenUnset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(block, `"organization_id":"`+orgID.String()+`"`) {
+	if !strings.Contains(block, `"company_id":"`+companyID.String()+`"`) {
 		t.Fatalf("the own company's id was truncated away with the facts: %s", block)
 	}
 	if !strings.Contains(block, `"truncated":true`) {
@@ -282,7 +282,7 @@ func TestTheOwnCompanyIDSurvivesTruncationAndIsAbsentWhenUnset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(block, "organization_id") {
+	if strings.Contains(block, "company_id") {
 		t.Fatalf("an unset anchor still rendered an id field: %s", block)
 	}
 }

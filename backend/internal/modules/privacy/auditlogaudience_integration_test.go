@@ -257,7 +257,7 @@ func TestAnUploadedFileOnAnOpenThreadKeepsItsName(t *testing.T) {
 
 // TestADocumentOnAPersonKeepsItsName holds the other six parent types.
 //
-// An attachment hangs off person, organization, deal, lead, activity, project or
+// An attachment hangs off person, company, deal, lead, activity, project or
 // relationship. Only the activity parent has an audience, so treating every
 // attachment row as governed would withhold the filename of a contract filed on
 // a deal from the compliance log — audit data destroyed to protect an audience

@@ -195,7 +195,7 @@ describe("what each page lets a reader change", () => {
       "all(full-seat, any(any(voice_profile:update, voice_profile:create)))",
 
     company:
-      "all(full-seat, any(any(installation_settings:update), all(any(organization:update, organization:create), available:company_context), any(fx_rate:update, fx_rate:create)))",
+      "all(full-seat, any(any(installation_settings:update), all(any(company:update, company:create), available:company_context), any(fx_rate:update, fx_rate:create)))",
     // The OAuth cards save through `capture_settings`, a different grant from
     // the sign-in card's.
     authentication:
@@ -221,7 +221,7 @@ describe("what each page lets a reader change", () => {
       "all(full-seat, any(any(product:update, product:create), product:delete, any(offer_template:update, offer_template:create), offer_template:delete))",
 
     capture:
-      "all(full-seat, any(any(capture_settings:update), any(organization:update)))",
+      "all(full-seat, any(any(capture_settings:update), any(company:update)))",
     // Delete included on both, and the composed-unit arm outside the ceiling:
     // ExtensionUnitsCard's Open link asks for no grant at all.
     integrations:
@@ -513,11 +513,11 @@ describe("who may open what", () => {
 
 describe("requirements that are not permissions", () => {
   it("withholds the company page when the installation lacks the surface", () => {
-    // organization.update alone. The company profile ANDs its grant with a
+    // company.update alone. The company profile ANDs its grant with a
     // deployment flag, so a reader holding only that grant sees nothing when
     // the flag is off — the surface may genuinely not exist here.
     const holder = meFixture({
-      allow: { organization: ["read", "update"] },
+      allow: { company: ["read", "update"] },
       settingsAvailability: { company_context: false },
     });
     expect(visibleSettingsPages(holder).map((p) => p.id)).not.toContain(
@@ -527,7 +527,7 @@ describe("requirements that are not permissions", () => {
 
   it("shows it once the installation has it", () => {
     const holder = meFixture({
-      allow: { organization: ["read", "update"] },
+      allow: { company: ["read", "update"] },
       settingsAvailability: { company_context: true },
     });
     expect(visibleSettingsPages(holder).map((p) => p.id)).toContain("company");
@@ -537,7 +537,7 @@ describe("requirements that are not permissions", () => {
     // A server older than the field, or a snapshot cached before it shipped.
     // Absent is not permission: it has to read as "no such surface here".
     const holder = meFixture({
-      allow: { organization: ["read", "update"] },
+      allow: { company: ["read", "update"] },
       settingsAvailability: null,
     });
     expect(visibleSettingsPages(holder).map((p) => p.id)).not.toContain(
@@ -877,7 +877,7 @@ describe("what the rail carries and what it leaves behind", () => {
       list: ["create", "read", "update"],
       offer: ["create", "read", "update"],
       offer_template: ["create", "read", "update"],
-      organization: ["create", "read", "update"],
+      company: ["create", "read", "update"],
       overlay_connection: ["read"],
       partner: ["read"],
       person: ["create", "read", "update"],
@@ -905,13 +905,13 @@ describe("what the rail carries and what it leaves behind", () => {
       "agents",
       "connections",
       "capture-activity",
-      // The company profile the AI reads: a rep holds `organization` create and
+      // The company profile the AI reads: a rep holds `company` create and
       // update, which is what CompanyContextCard asks. Existing behaviour that
       // the rail is only now reporting — the card was always editable by them.
       "company",
       // Products and offer templates: a rep authors both.
       "products",
-      // Capture rules, because a rep holds `organization:update` and
+      // Capture rules, because a rep holds `company:update` and
       // BlockedDomainsCard writes it. If a rep editing the company's blocked
       // domains is not wanted, that CARD's grant is the thing to change — the
       // rail is only reporting what the card already allows.

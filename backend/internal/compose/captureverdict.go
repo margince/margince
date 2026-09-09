@@ -374,7 +374,7 @@ func (e *CounterpartyVerdictEngine) apply(
 			// with a thousand held messages would hold it open for all of them.
 			// The reconciling pass finishes what this leaves.
 			return e.widenClearedSender(ctx, tx, row.Email)
-		case capture.KindRoleMailbox, capture.KindOrganizationSender:
+		case capture.KindRoleMailbox, capture.KindCompanySender:
 			// Real correspondence with no human to name. The message stays
 			// visible; no contact is invented for a mailbox nobody owns.
 			return nil

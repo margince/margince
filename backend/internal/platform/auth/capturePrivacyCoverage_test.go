@@ -15,7 +15,7 @@ import (
 // visibilityCheck matches a CHECK that constrains a `visibility` column,
 // capturing the vocabulary it admits. Both DDL shapes the migrations use are
 // covered: the inline column inside a CREATE TABLE (project, 0131) and the
-// later ALTER TABLE (person and organization, 0095; signal, 0208; the
+// later ALTER TABLE (person and company, 0095; signal, 0208; the
 // narrowing in 1787320003).
 var visibilityCheck = regexp.MustCompile(`(?is)CHECK\s*\(\s*visibility\s*(=|IN)\s*([^)]*)\)`)
 

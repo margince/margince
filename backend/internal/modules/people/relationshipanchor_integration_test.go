@@ -10,7 +10,7 @@ package people
 //
 // An edge annotates its anchor, so writing one writes that record. The surface
 // asked the anchor's OBJECT grant and whether the endpoints were VISIBLE, and on
-// an anchor object visibility decides nothing: person, organization, deal and
+// an anchor object visibility decides nothing: person, company, deal and
 // project are identity tables, so their owner arm renders TRUE for every seat.
 // An ordinary rep could therefore demote another team's real primary employer,
 // forge a partner edge on their company, or staff their project — through
@@ -49,13 +49,13 @@ type edgeAnchorEnv struct {
 
 	// Mine — owned by the acting rep.
 	myPerson ids.PersonID
-	myOrg    ids.OrganizationID
+	myCompany    ids.CompanyID
 
 	// Theirs, and readable: promoted records the other rep owns. These are the
 	// subjects the old gate could not refuse.
 	theirPerson  ids.PersonID
-	theirOrg     ids.OrganizationID
-	theirPartner ids.OrganizationID
+	theirCompany     ids.CompanyID
+	theirPartner ids.CompanyID
 	theirProject ids.ProjectID
 
 	// Theirs and UNreadable: a capture-private contact. It is here to prove the
@@ -94,9 +94,9 @@ func setupEdgeAnchor(t *testing.T) *edgeAnchorEnv {
 
 	e := &edgeAnchorEnv{
 		owner: conn, ws: ids.NewV7(), me: ids.NewV7(), them: ids.NewV7(),
-		myPerson: ids.New[ids.PersonKind](), myOrg: ids.New[ids.OrganizationKind](),
-		theirPerson: ids.New[ids.PersonKind](), theirOrg: ids.New[ids.OrganizationKind](),
-		theirPartner: ids.New[ids.OrganizationKind](), theirProject: ids.New[ids.ProjectKind](),
+		myPerson: ids.New[ids.PersonKind](), myCompany: ids.New[ids.CompanyKind](),
+		theirPerson: ids.New[ids.PersonKind](), theirCompany: ids.New[ids.CompanyKind](),
+		theirPartner: ids.New[ids.CompanyKind](), theirProject: ids.New[ids.ProjectKind](),
 		theirHiddenPerson: ids.New[ids.PersonKind](),
 	}
 	if _, err := conn.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
@@ -131,25 +131,25 @@ func setupEdgeAnchor(t *testing.T) *edgeAnchorEnv {
 		}
 	}
 	for _, o := range []struct {
-		id    ids.OrganizationID
+		id    ids.CompanyID
 		owner ids.UUID
 		name  string
 	}{
-		{e.myOrg, e.me, "My Company"},
-		{e.theirOrg, e.them, "Their Company"},
+		{e.myCompany, e.me, "My Company"},
+		{e.theirCompany, e.them, "Their Company"},
 		{e.theirPartner, e.them, "Their Partner"},
 	} {
 		if _, err := conn.Exec(ctx, `
-			INSERT INTO organization (id, owner_id, display_name, source, captured_by)
+			INSERT INTO company (id, owner_id, display_name, source, captured_by)
 			VALUES ($1, $2, $3, 'manual', 'human:seed')`,
 			o.id, o.owner, o.name); err != nil {
 			t.Fatal(err)
 		}
 	}
 	if _, err := conn.Exec(ctx, `
-		INSERT INTO project (id, owner_id, organization_id, name, source, captured_by)
+		INSERT INTO project (id, owner_id, company_id, name, source, captured_by)
 		VALUES ($1, $2, $3, 'Their Delivery', 'manual', 'human:seed')`,
-		e.theirProject, e.them, e.theirOrg); err != nil {
+		e.theirProject, e.them, e.theirCompany); err != nil {
 		t.Fatal(err)
 	}
 
@@ -176,7 +176,7 @@ func (e *edgeAnchorEnv) as(user ids.UUID) context.Context {
 			Objects: map[string]principal.ObjectGrant{
 				"relationship": {Create: true, Read: true, Update: true, Delete: true},
 				"person":       {Create: true, Read: true, Update: true},
-				"organization": {Create: true, Read: true, Update: true},
+				"company": {Create: true, Read: true, Update: true},
 				"project":      {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeOwn,
@@ -223,15 +223,15 @@ func TestCreatingAnEdgeTakesTheAnchorsRowAuthority(t *testing.T) {
 		in     CreateRelationshipInput
 	}{
 		{"person", CreateRelationshipInput{
-			Kind: employmentKind, PersonID: &e.theirPerson, OrganizationID: &e.myOrg,
+			Kind: employmentKind, PersonID: &e.theirPerson, CompanyID: &e.myCompany,
 			IsCurrentPrimary: pointerTo(true), Source: "manual",
 		}},
 		{"project", CreateRelationshipInput{
 			Kind: ProjectStakeholderKind, ProjectID: &e.theirProject, PersonID: &e.myPerson,
 			Role: pointerTo("sponsor"), Source: "manual",
 		}},
-		{"organization", CreateRelationshipInput{
-			Kind: "partner_of", OrganizationID: &e.theirOrg, CounterpartyOrgID: &e.theirPartner,
+		{"company", CreateRelationshipInput{
+			Kind: "partner_of", CompanyID: &e.theirCompany, CounterpartyCompanyID: &e.theirPartner,
 			Source: "manual",
 		}},
 	} {
@@ -255,7 +255,7 @@ func TestCreatingAnEdgeTakesTheAnchorsRowAuthority(t *testing.T) {
 	// on an anchor this rep owns. The gate narrowed the scope; it did not close
 	// the surface.
 	if _, err := e.store.CreateRelationship(me, CreateRelationshipInput{
-		Kind: employmentKind, PersonID: &e.myPerson, OrganizationID: &e.theirOrg,
+		Kind: employmentKind, PersonID: &e.myPerson, CompanyID: &e.theirCompany,
 		IsCurrentPrimary: pointerTo(true), Source: "manual",
 	}); err != nil {
 		t.Fatalf("an edge on the caller's OWN person was refused: %v", err)
@@ -269,7 +269,7 @@ func TestPatchingAndArchivingAnEdgeTakeTheAnchorsRowAuthority(t *testing.T) {
 	e := setupEdgeAnchor(t)
 	me := e.as(e.me)
 	edge := e.seedEdge(t, CreateRelationshipInput{
-		Kind: employmentKind, PersonID: &e.theirPerson, OrganizationID: &e.theirOrg,
+		Kind: employmentKind, PersonID: &e.theirPerson, CompanyID: &e.theirCompany,
 		IsCurrentPrimary: pointerTo(true), Source: "manual",
 	})
 
@@ -309,7 +309,7 @@ func TestPatchingAndArchivingAnEdgeTakeTheAnchorsRowAuthority(t *testing.T) {
 func (e *edgeAnchorEnv) seedEdgeAsMe(me context.Context, t *testing.T) relationshipRow {
 	t.Helper()
 	row, err := e.store.CreateRelationship(me, CreateRelationshipInput{
-		Kind: employmentKind, PersonID: &e.myPerson, OrganizationID: &e.myOrg,
+		Kind: employmentKind, PersonID: &e.myPerson, CompanyID: &e.myCompany,
 		IsCurrentPrimary: pointerTo(true), Source: "manual",
 	})
 	if err != nil {
@@ -325,7 +325,7 @@ func TestAnAnchorTheCallerCannotSeeStillAnswersNotFound(t *testing.T) {
 	e := setupEdgeAnchor(t)
 
 	_, err := e.store.CreateRelationship(e.as(e.me), CreateRelationshipInput{
-		Kind: employmentKind, PersonID: &e.theirHiddenPerson, OrganizationID: &e.myOrg,
+		Kind: employmentKind, PersonID: &e.theirHiddenPerson, CompanyID: &e.myCompany,
 		Source: "manual",
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {

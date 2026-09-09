@@ -23,7 +23,7 @@ type ColdField = components["schemas"]["ColdStartField"];
 const READ_ID = "018f3a1b-0000-7000-8000-0000000000c3";
 
 const savedProfile = {
-  organization_id: "018f3a1b-0000-7000-8000-0000000000a1",
+  company_id: "018f3a1b-0000-7000-8000-0000000000a1",
   display_name: "Gradion",
   website: "gradion.com",
   legal_name: "Gradion GmbH",
@@ -52,7 +52,7 @@ function grounded(
 const readingRead = {
   id: READ_ID,
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: "https://gradion.com",
   status: "reading",
   status_code: null,

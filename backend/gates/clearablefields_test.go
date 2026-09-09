@@ -39,7 +39,7 @@ import (
 // gatekit:fixture the record type each module's clearable-column map serves
 var clearableMapsByRecordType = map[string]string{
 	"clearablePersonColumns":       "person",
-	"clearableOrganizationColumns": "organization",
+	"clearableCompanyColumns": "company",
 	"clearableLeadColumns":         "lead",
 	"clearableDealColumns":         "deal",
 	// A clear that writes TWO columns cannot travel in the single-column map,

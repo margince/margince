@@ -32,7 +32,7 @@ func NewEmbedGen(store *Store, embedder Embedder) *EmbedGen {
 // key off the same identifiers rather than each repeating the literal.
 const (
 	entityPerson       = "person"
-	entityOrganization = "organization"
+	entityCompany = "company"
 	entityDeal         = "deal"
 	entityLead         = "lead"
 	entityActivity     = "activity"
@@ -55,7 +55,7 @@ const (
 // hit means agreement about one text, not two.
 var embedText = map[string]string{
 	entityPerson:       `SELECT full_name FROM person WHERE id = $1 AND archived_at IS NULL`,
-	entityOrganization: `SELECT concat_ws(' ', display_name, legal_name, industry) FROM organization WHERE id = $1 AND archived_at IS NULL`,
+	entityCompany: `SELECT concat_ws(' ', display_name, legal_name, industry) FROM company WHERE id = $1 AND archived_at IS NULL`,
 	entityDeal:         `SELECT name FROM deal WHERE id = $1 AND archived_at IS NULL`,
 	entityLead:         `SELECT concat_ws(' ', full_name, company_name, title) FROM lead WHERE id = $1 AND archived_at IS NULL`,
 	// The audience clause is the vector lane's half of capture privacy. An

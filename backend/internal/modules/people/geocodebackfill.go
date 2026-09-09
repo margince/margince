@@ -60,19 +60,19 @@ const GeocodeBackfillBatch = 50
 // Re-nominating a stale row costs nothing when a job IS already coming: the
 // insert deduplicates by args across every active state, so the sweep's
 // nomination collapses into the one the write queued.
-func (s *Store) ListGeocodeOrphans(ctx context.Context, limit int) ([]ids.OrganizationID, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+func (s *Store) ListGeocodeOrphans(ctx context.Context, limit int) ([]ids.CompanyID, error) {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	if limit <= 0 {
 		limit = GeocodeBackfillBatch
 	}
-	var out []ids.OrganizationID
+	var out []ids.CompanyID
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT o.id
-			  FROM organization o
-			  LEFT JOIN organization_geocode_state g ON g.organization_id = o.id
+			  FROM company o
+			  LEFT JOIN company_geocode_state g ON g.company_id = o.id
 			 WHERE o.archived_at IS NULL
 			   -- NULL: never asked. 'stale': the trigger cleared the point and
 			   -- some writers cannot queue (see above). 'failed': the lookup did
@@ -105,7 +105,7 @@ func (s *Store) ListGeocodeOrphans(ctx context.Context, limit int) ([]ids.Organi
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var id ids.OrganizationID
+			var id ids.CompanyID
 			if err := rows.Scan(&id); err != nil {
 				return err
 			}

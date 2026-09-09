@@ -62,8 +62,8 @@ func refusedBy(t *testing.T, err error, want Reason) {
 func TestReversingALinkBehindAnEndsErasureBoundaryRefusesByName(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Selma Subject", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	edge := seedEmploymentEdge(t, e, person, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
 	e.SeedScrubTombstone(t, "person", person, time.Now().Add(time.Hour).UTC())
@@ -87,17 +87,17 @@ func TestReversingALinkBehindAnEndsErasureBoundaryRefusesByName(t *testing.T) {
 func TestReversingALinkBehindTheOtherEndsErasureBoundaryRefusesByName(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Ada Employed", nil)
-	org := e.SeedOrg(t, "Erased Holdings GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org)
+	company := e.SeedCompany(t, "Erased Holdings GmbH", nil)
+	edge := seedEmploymentEdge(t, e, person, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
-	// On the ORGANIZATION, read from the ORGANIZATION: the anchor's own boundary,
+	// On the COMPANY, read from the COMPANY: the anchor's own boundary,
 	// which the admission leaves to the evaluator, on the end whose column is not
 	// the first in the slice.
-	e.SeedScrubTombstone(t, "organization", org, time.Now().Add(time.Hour).UTC())
+	e.SeedScrubTombstone(t, "company", company, time.Now().Add(time.Hour).UTC())
 
-	_, err := restoreSeamFor(e).Restore(e.Admin(), "organization", org, auditID,
-		currentVersion(t, e, "organization", org))
+	_, err := restoreSeamFor(e).Restore(e.Admin(), "company", company, auditID,
+		currentVersion(t, e, "company", company))
 	refusedBy(t, err, ReasonBehindErasureBoundary)
 	if !edgeIsLive(t, e, edge) {
 		t.Error("the refused reverse removed the link anyway")
@@ -110,10 +110,10 @@ func TestReversingALinkBehindTheOtherEndsErasureBoundaryRefusesByName(t *testing
 func TestALinkWrittenAfterAnEndsErasureIsStillReversible(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Ada Employed", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
 	e.SeedScrubTombstone(t, "person", person, time.Now().Add(-time.Hour).UTC())
 
-	edge := seedEmploymentEdge(t, e, person, org)
+	edge := seedEmploymentEdge(t, e, person, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 	if _, err := restoreSeamFor(e).Restore(e.Admin(), "person", person, auditID,
 		currentVersion(t, e, "person", person)); err != nil {
@@ -143,8 +143,8 @@ func TestALinkWrittenAfterAnEndsErasureIsStillReversible(t *testing.T) {
 func TestALinkInAnOverlayGovernedWorkspaceIsStillReversible(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Ada Employed", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	edge := seedEmploymentEdge(t, e, person, company)
 	title := "COO"
 	if _, err := e.People.UpdatePerson(e.Admin(), ids.From[ids.PersonKind](person),
 		people.UpdatePersonInput{Title: &title, Source: "manual"}); err != nil {
@@ -178,8 +178,8 @@ func TestALinkInAnOverlayGovernedWorkspaceIsStillReversible(t *testing.T) {
 func TestReplayingALinksPreErasureImageIsRefusedByName(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Selma Subject", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	edge := seedEmploymentEdge(t, e, person, company)
 	changed := "coo"
 	if _, err := e.People.UpdateRelationship(e.Admin(), edge,
 		people.UpdateRelationshipInput{Role: &changed}); err != nil {

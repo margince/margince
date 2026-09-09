@@ -3,9 +3,9 @@
 
 package compose
 
-// How an organization row becomes the store's inputs, and back again.
+// How a company row becomes the store's inputs, and back again.
 //
-// Split from csvfields.go for the reason csvpersonfields.go is: an organization's
+// Split from csvfields.go for the reason csvpersonfields.go is: a company's
 // identity lives in a CHILD COLLECTION. Its domains are rows with their own
 // primary flag and their own estate-wide uniqueness, so the create path, the
 // patch path and the diff each need a shape the flat helpers next door do not
@@ -21,7 +21,7 @@ import (
 
 // storedPrimaryDomain reads the `domain` target's current value.
 //
-// An organization holds its domains as a child collection, so `current["domain"]`
+// A company holds its domains as a child collection, so `current["domain"]`
 // is always absent — the same shape a person's emails have, and the same defect
 // if left alone. The primary is the one a spreadsheet's single column names, so
 // it is the one to compare against; a company's other domains are not
@@ -57,8 +57,8 @@ func storedPrimaryDomain(current map[string]json.RawMessage) json.RawMessage {
 // comparison that can be made without inventing a type the file never declared.
 // An absent field renders empty, which no non-empty import value equals.
 
-func organizationCreateFrom(fields map[string]string, source string) people.CreateOrganizationInput {
-	in := people.CreateOrganizationInput{
+func companyCreateFrom(fields map[string]string, source string) people.CreateCompanyInput {
+	in := people.CreateCompanyInput{
 		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
 		Source:      source,
 	}
@@ -66,7 +66,7 @@ func organizationCreateFrom(fields map[string]string, source string) people.Crea
 	in.Description = importString(fields, "description")
 	in.Industry = importString(fields, fieldIndustry)
 	in.SizeBand = importString(fields, "size_band")
-	in.Domains = orgDomainsFrom(fields)
+	in.Domains = companyDomainsFrom(fields)
 	in.Address = addressFrom(fields)
 	return in
 }
@@ -75,7 +75,7 @@ func organizationCreateFrom(fields map[string]string, source string) people.Crea
 // record already holds, so an import that carries a City does not blank the
 // street beside it.
 //
-// The store's address patch is all-or-nothing by design — buildOrganizationPatch
+// The store's address patch is all-or-nothing by design — buildCompanyPatch
 // assigns all six columns whenever an Address is present — which is right for a
 // form that always submits the whole address, and wrong for a spreadsheet whose
 // columns are whatever the customer happened to export. Merging here rather
@@ -86,8 +86,8 @@ func organizationCreateFrom(fields map[string]string, source string) people.Crea
 // gets false must leave the record's address alone rather than send nil, which
 // the patch builder cannot distinguish from "no address given".
 
-func organizationUpdateFrom(changed map[string]string) people.UpdateOrganizationInput {
-	in := people.UpdateOrganizationInput{
+func companyUpdateFrom(changed map[string]string) people.UpdateCompanyInput {
+	in := people.UpdateCompanyInput{
 		DisplayName: importString(changed, fieldDisplayName),
 		LegalName:   importString(changed, "legal_name"),
 		Description: importString(changed, "description"),
@@ -104,7 +104,7 @@ func organizationUpdateFrom(changed map[string]string) people.UpdateOrganization
 	// caller has the stored record to merge against — but the target has to
 	// reach this input for the round-trip rule to hold, and a domain that never
 	// arrives here would be accepted, reported as written, and dropped.
-	if domains := orgDomainsFrom(changed); domains != nil {
+	if domains := companyDomainsFrom(changed); domains != nil {
 		in.Domains = &domains
 	}
 	return in
@@ -125,7 +125,7 @@ func organizationUpdateFrom(changed map[string]string) people.UpdateOrganization
 // The bool reports whether the file carried a domain at all. False means leave
 // the company's domains alone rather than send an empty set, which the store
 // reads as "archive them all".
-func domainsMergedOnto(current []byte, mapped []people.OrgDomainInput) ([]people.OrgDomainInput, bool, error) {
+func domainsMergedOnto(current []byte, mapped []people.CompanyDomainInput) ([]people.CompanyDomainInput, bool, error) {
 	if len(mapped) == 0 {
 		return nil, false, nil
 	}
@@ -138,18 +138,18 @@ func domainsMergedOnto(current []byte, mapped []people.OrgDomainInput) ([]people
 		return nil, false, fmt.Errorf("import: reading the stored domains: %w", err)
 	}
 	incoming := strings.ToLower(strings.TrimSpace(mapped[0].Domain))
-	merged := append([]people.OrgDomainInput(nil), mapped...)
+	merged := append([]people.CompanyDomainInput(nil), mapped...)
 	merged[0].IsPrimary = true
 	for _, held := range record.Domains {
 		if strings.EqualFold(strings.TrimSpace(held.Domain), incoming) {
 			continue
 		}
-		merged = append(merged, people.OrgDomainInput{Domain: held.Domain, IsPrimary: false})
+		merged = append(merged, people.CompanyDomainInput{Domain: held.Domain, IsPrimary: false})
 	}
 	return merged, true, nil
 }
 
-// orgDomainsFrom reads the single domain column a spreadsheet carries into the
+// companyDomainsFrom reads the single domain column a spreadsheet carries into the
 // set shape the store takes.
 //
 // A file has one Website or Domain column, so the value it names is the
@@ -157,12 +157,12 @@ func domainsMergedOnto(current []byte, mapped []people.OrgDomainInput) ([]people
 // what keeps "the file said nothing" distinct from "the file says none" —
 // the store reads an empty set as an instruction to archive every domain the
 // company holds.
-func orgDomainsFrom(fields map[string]string) []people.OrgDomainInput {
+func companyDomainsFrom(fields map[string]string) []people.CompanyDomainInput {
 	domain := strings.TrimSpace(fields[fieldDomain])
 	if domain == "" {
 		return nil
 	}
-	return []people.OrgDomainInput{{Domain: domain, IsPrimary: true}}
+	return []people.CompanyDomainInput{{Domain: domain, IsPrimary: true}}
 }
 
 // importString reads one mapped field as a pointer, absent when the file did

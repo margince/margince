@@ -46,7 +46,7 @@ var dateColumnLine = regexp.MustCompile(`^public\.([a-z_]+)\.([a-z_0-9]+) date(?
 // Asserted rather than derived, and the test below holds it against the source
 // so a seventh record type cannot quietly escape this gate.
 var tablesUndoReads = []string{
-	"person", "organization", "deal", "lead", "project", "activity", "relationship",
+	"person", "company", "deal", "lead", "project", "activity", "relationship",
 }
 
 // dateColumnFloor is what the schema holds today. Under-recognition is the one

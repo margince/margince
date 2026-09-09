@@ -9,13 +9,13 @@ package gates
 // one.
 //
 // The obligation used to be table-agnostic: a function that projected an
-// `organization_id` satisfied it by reaching a probe over `deal`. That is not a
-// weaker check, it is a different one — #1876's read named an organization and
+// `company_id` satisfied it by reaching a probe over `deal`. That is not a
+// weaker check, it is a different one — #1876's read named a company and
 // scoped a deal, and a gate counting probes rather than matching them would
 // have gone green over it and then certified it.
 //
 // And the columns it looked for were named after their table. An FK named for
-// its ROLE — `partner_org_id` was one of the three references #1876 fixed —
+// its ROLE — `partner_company_id` was one of the three references #1876 fixed —
 // escaped entirely: the extractor read the column's own words as a table name,
 // found no such table, and dropped the site with no census entry and no waiver.
 
@@ -77,7 +77,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 
 	// The edge conjunction bounds the relationship by its ENDPOINTS: each
 	// endpoint column is tested with VisiblePredicate over its own table, so a
-	// person or organization id projected from an edge that passed it is
+	// person or company id projected from an edge that passed it is
 	// bounded as surely as one from a direct scope clause. Reading it as
 	// "relationship only" would report those projections unscoped and send the
 	// next author to add a second clause over a column the conjunction covers.
@@ -122,8 +122,8 @@ func TestEveryRowScopeSpellingSaysWhichTableItBounds(t *testing.T) {
 //
 // DERIVED FROM THE SCHEMA's own FOREIGN KEY declarations rather than from the
 // column's spelling, which is what makes a role-named FK visible: the catalog
-// says `partner_org_id` references `organization`, where the name says
-// `partner_org` and no such table exists.
+// says `partner_company_id` references `company`, where the name says
+// `partner_company` and no such table exists.
 func referenceColumns(t *testing.T, tables map[string]bool) map[string]string {
 	t.Helper()
 	catalog, err := os.ReadFile(filepath.Join(repoRoot, headCatalogPath))

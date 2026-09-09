@@ -27,7 +27,7 @@ import {
 // shipped, answered by the same writer as the account and lead paths.
 //
 // The composer never called it. "Write email" on a contact fell through to the
-// organization guard, and the rep was told "the model is not configured" — a
+// company guard, and the rep was told "the model is not configured" — a
 // claim about the deployment, made by a browser that had sent no request, on a
 // stack whose model was answering transcript readings on the same screen. So
 // these assert the ENDPOINT and not merely the words: a test reading the
@@ -146,7 +146,7 @@ describe("drafting to a person", () => {
     expect(
       sent.some((call) => call.key === "POST /people/c-1/draft-email"),
     ).toBe(true);
-    expect(sent.some((call) => call.key.includes("/organizations/"))).toBe(
+    expect(sent.some((call) => call.key.includes("/companies/"))).toBe(
       false,
     );
   });

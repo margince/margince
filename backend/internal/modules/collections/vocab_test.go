@@ -148,7 +148,7 @@ func TestTheTeamLeafJoinsMembershipOnTheOwnerColumn(t *testing.T) {
 // Gated rather than explained, because a comment claiming it cannot notice the
 // day someone adds validation to one leaf and leaves the rest.
 func TestAPicklistLeafComparesAnUnrecognisedValueRatherThanRefusingIt(t *testing.T) {
-	engine, ok, err := (&Store{}).SegmentEngine(context.Background(), "organization")
+	engine, ok, err := (&Store{}).SegmentEngine(context.Background(), "company")
 	if err != nil || !ok {
 		t.Fatalf("segmentEngine: ok=%v err=%v", ok, err)
 	}
@@ -288,14 +288,14 @@ func TestEveryIDFieldDeclaresWhatItReferences(t *testing.T) {
 // An account's relationship to us is multi-valued, and a withdrawn one is a fact
 // it no longer carries.
 func TestTheRelationshipLeafExcludesWithdrawnRows(t *testing.T) {
-	field, ok := segmentEngines["organization"].Fields["relationship_type"]
+	field, ok := segmentEngines["company"].Fields["relationship_type"]
 	if !ok {
-		t.Fatal("organizations cannot be filtered by relationship type")
+		t.Fatal("companies cannot be filtered by relationship type")
 	}
 	if !strings.Contains(field.Link, "rt.archived_at IS NULL") {
 		t.Errorf("the relationship leaf keeps selecting on withdrawn rows: %q", field.Link)
 	}
-	if !strings.Contains(field.Link, "rt.organization_id = t.id") {
+	if !strings.Contains(field.Link, "rt.company_id = t.id") {
 		t.Errorf("the relationship leaf does not correlate to the account: %q", field.Link)
 	}
 }
@@ -304,14 +304,14 @@ func TestTheRelationshipLeafExcludesWithdrawnRows(t *testing.T) {
 // carries — the relationship leaf's rule, owed by every leaf that reaches a
 // child table.
 func TestTheDomainLeafExcludesRemovedRows(t *testing.T) {
-	field, ok := segmentEngines["organization"].Fields[domainFilterField]
+	field, ok := segmentEngines["company"].Fields[domainFilterField]
 	if !ok {
-		t.Fatal("organizations cannot be filtered by domain")
+		t.Fatal("companies cannot be filtered by domain")
 	}
 	if !strings.Contains(field.Link, "od.archived_at IS NULL") {
 		t.Errorf("the domain leaf keeps selecting on removed domains: %q", field.Link)
 	}
-	if !strings.Contains(field.Link, "od.organization_id = t.id") {
+	if !strings.Contains(field.Link, "od.company_id = t.id") {
 		t.Errorf("the domain leaf does not correlate to the account: %q", field.Link)
 	}
 	// Domain, not text: the column stores a host, and the type is what folds a
@@ -590,7 +590,7 @@ func TestStoringASegmentRefusesAPicklistValueTheFieldDoesNotHave(t *testing.T) {
 		return map[string]any{"field": "relationship_type", "op": "eq", "value": value}
 	}
 
-	err := store.validateSegmentDefinition(context.Background(), "organization", definition("custmer"))
+	err := store.validateSegmentDefinition(context.Background(), "company", definition("custmer"))
 	var refusal *storekit.PredicateError
 	if !errors.As(err, &refusal) || refusal.Code != "filter_value_invalid" {
 		t.Fatalf("storing a mistyped picklist value = %v, want a filter_value_invalid refusal — the "+
@@ -602,7 +602,7 @@ func TestStoringASegmentRefusesAPicklistValueTheFieldDoesNotHave(t *testing.T) {
 
 	// A real value still stores, so the refusal is about the VALUE rather than
 	// about picklists having become unfilterable.
-	engine, _, err := store.SegmentEngine(context.Background(), "organization")
+	engine, _, err := store.SegmentEngine(context.Background(), "company")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -611,7 +611,7 @@ func TestStoringASegmentRefusesAPicklistValueTheFieldDoesNotHave(t *testing.T) {
 		t.Fatal("relationship_type offers no values, so this test cannot tell a refusal from a typo")
 	}
 	if err := store.validateSegmentDefinition(
-		context.Background(), "organization", definition(known[0])); err != nil {
+		context.Background(), "company", definition(known[0])); err != nil {
 		t.Errorf("storing %q, one of the field's own values, was refused: %v", known[0], err)
 	}
 }

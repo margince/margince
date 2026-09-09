@@ -28,13 +28,13 @@ func TestQuickCaptureWritesThePersonAndTheirEmployer(t *testing.T) {
 	ctx := e.as()
 
 	title := "VP Finance"
-	orgName := "Acme Quick GmbH"
+	companyName := "Acme Quick GmbH"
 	profile := "https://linkedin.com/in/dana-quick"
 	email := "dana@acme-quick.test"
 	out, err := e.store.QuickCapture(ctx, QuickCaptureInput{
 		FullName:         "Dana Quick",
 		Title:            &title,
-		OrganizationName: &orgName,
+		CompanyName: &companyName,
 		ProfileURL:       &profile,
 		Email:            &email,
 	})
@@ -45,18 +45,18 @@ func TestQuickCaptureWritesThePersonAndTheirEmployer(t *testing.T) {
 	if out.Person.FullName != "Dana Quick" {
 		t.Errorf("full name = %q, want %q", out.Person.FullName, "Dana Quick")
 	}
-	if out.OrganizationID == nil {
+	if out.CompanyID == nil {
 		t.Fatal("no employer attached, but a company name was given")
 	}
-	if !out.OrganizationCreated {
-		t.Error("organization_created is false for a company this call created")
+	if !out.CompanyCreated {
+		t.Error("company_created is false for a company this call created")
 	}
 
 	// The employment edge is the part two separate calls would lose.
 	assertEmployedAt(
 		ctx, t, e,
 		ids.From[ids.PersonKind](ids.UUID(out.Person.Id)),
-		*out.OrganizationID,
+		*out.CompanyID,
 	)
 
 	// The profile address is stored as stated, under the key every reader of a
@@ -103,13 +103,13 @@ func TestQuickCaptureAttachesAnExistingEmployer(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
-	incumbent, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	incumbent, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Existing Employer AG", Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("seed org: %v", err)
+		t.Fatalf("seed company: %v", err)
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(incumbent.Id))
+	companyID := ids.From[ids.CompanyKind](ids.UUID(incumbent.Id))
 
 	// The name is deliberately WRONG and present: an id the caller picked from
 	// the list answers the question the name was only guessing at, so a typo
@@ -117,20 +117,20 @@ func TestQuickCaptureAttachesAnExistingEmployer(t *testing.T) {
 	wrongName := "Existng Employer"
 	out, err := e.store.QuickCapture(ctx, QuickCaptureInput{
 		FullName:         "Sam Second",
-		OrganizationID:   &orgID,
-		OrganizationName: &wrongName,
+		CompanyID:   &companyID,
+		CompanyName: &wrongName,
 	})
 	if err != nil {
 		t.Fatalf("quick capture: %v", err)
 	}
-	if out.OrganizationID == nil || out.OrganizationID.UUID != ids.UUID(incumbent.Id) {
-		t.Fatalf("attached org = %v, want the incumbent %v", out.OrganizationID, incumbent.Id)
+	if out.CompanyID == nil || out.CompanyID.UUID != ids.UUID(incumbent.Id) {
+		t.Fatalf("attached company = %v, want the incumbent %v", out.CompanyID, incumbent.Id)
 	}
-	if out.OrganizationCreated {
-		t.Error("organization_created is true for a company that already existed")
+	if out.CompanyCreated {
+		t.Error("company_created is true for a company that already existed")
 	}
-	if got := countOrganizationsNamed(ctx, t, e, wrongName); got != 0 {
-		t.Errorf("the misspelled name created %d organization(s), want 0", got)
+	if got := countCompaniesNamed(ctx, t, e, wrongName); got != 0 {
+		t.Errorf("the misspelled name created %d company(s), want 0", got)
 	}
 }
 
@@ -142,20 +142,20 @@ func TestQuickCaptureWithoutAnEmployerIsStillAPerson(t *testing.T) {
 	out, err := e.store.QuickCapture(ctx, QuickCaptureInput{
 		FullName: "Lone Contact",
 		// Whitespace is a box the reader left alone, not a company called "".
-		OrganizationName: &blank,
+		CompanyName: &blank,
 	})
 	if err != nil {
 		t.Fatalf("quick capture: %v", err)
 	}
-	if out.OrganizationID != nil {
-		t.Errorf("attached an employer %v for a blank company name", out.OrganizationID)
+	if out.CompanyID != nil {
+		t.Errorf("attached an employer %v for a blank company name", out.CompanyID)
 	}
 	if out.Person.FullName != "Lone Contact" {
 		t.Errorf("full name = %q, want %q", out.Person.FullName, "Lone Contact")
 	}
 }
 
-// A seat that may create a person but not an organization gets NEITHER. The
+// A seat that may create a person but not a company gets NEITHER. The
 // refusal has to roll the person back, or the list keeps a contact the reader
 // was told did not save.
 func TestQuickCaptureLeavesNoPersonWhenTheEmployerIsRefused(t *testing.T) {
@@ -169,18 +169,18 @@ func TestQuickCaptureLeavesNoPersonWhenTheEmployerIsRefused(t *testing.T) {
 			Objects: map[string]principal.ObjectGrant{
 				"person":       {Create: true, Read: true, Update: true},
 				"relationship": {Create: true, Read: true},
-				// organization: absent. Creating the employer is refused.
+				// company: absent. Creating the employer is refused.
 			},
 			RowScope: principal.RowScopeAll,
 		},
 	})
 
-	orgName := "Refused Employer GmbH"
+	companyName := "Refused Employer GmbH"
 	if _, err := e.store.QuickCapture(ctx, QuickCaptureInput{
 		FullName:         "Rolled Back",
-		OrganizationName: &orgName,
+		CompanyName: &companyName,
 	}); err == nil {
-		t.Fatal("quick capture succeeded without the organization grant")
+		t.Fatal("quick capture succeeded without the company grant")
 	}
 
 	if got := countPeopleNamed(ctx, t, e, "Rolled Back"); got != 0 {
@@ -193,15 +193,15 @@ func assertEmployedAt(
 	t *testing.T,
 	e *dedupeEnv,
 	personID ids.PersonID,
-	orgID ids.OrganizationID,
+	companyID ids.CompanyID,
 ) {
 	t.Helper()
 	var found int
 	err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM relationship
-			 WHERE kind = 'employment' AND person_id = $1 AND organization_id = $2
-			   AND archived_at IS NULL`, personID, orgID).Scan(&found)
+			 WHERE kind = 'employment' AND person_id = $1 AND company_id = $2
+			   AND archived_at IS NULL`, personID, companyID).Scan(&found)
 	})
 	if err != nil {
 		t.Fatalf("reading the employment edge: %v", err)
@@ -211,15 +211,15 @@ func assertEmployedAt(
 	}
 }
 
-func countOrganizationsNamed(ctx context.Context, t *testing.T, e *dedupeEnv, name string) int {
+func countCompaniesNamed(ctx context.Context, t *testing.T, e *dedupeEnv, name string) int {
 	t.Helper()
 	var found int
 	err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM organization WHERE display_name = $1`, name).Scan(&found)
+			`SELECT count(*) FROM company WHERE display_name = $1`, name).Scan(&found)
 	})
 	if err != nil {
-		t.Fatalf("counting organizations: %v", err)
+		t.Fatalf("counting companies: %v", err)
 	}
 	return found
 }

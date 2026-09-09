@@ -241,7 +241,7 @@ export function mapPersonUpdate(
 // Built inside ContactsScreen (not module-level) because the email/phone
 // "Type" options are display text, not raw values — fieldControl (create.tsx)
 // renders option.label verbatim, so the human-readable string has to be
-// resolved via useT() before it reaches CreateField, unlike organizations.tsx's
+// resolved via useT() before it reaches CreateField, unlike companies.tsx's
 // size_band options, which are already display-ready raw labels ("1-10").
 function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
   return [
@@ -346,7 +346,7 @@ function quickCaptureFields(): CreateField[] {
   return [
     { key: "full_name", label: "create.fullName", required: true },
     { key: "title", label: "create.personTitle" },
-    { key: "organization_name", label: "create.companyName" },
+    { key: "company_name", label: "create.companyName" },
     { key: "profile_url", label: "create.linkedin" },
     { key: "email", label: "create.email", type: "email" },
     { key: "phone", label: "create.phone" },
@@ -369,7 +369,7 @@ async function quickCapturePerson(
     body: {
       full_name: values.full_name?.trim() ?? "",
       title: statedValue(values, "title"),
-      organization_name: statedValue(values, "organization_name"),
+      company_name: statedValue(values, "company_name"),
       // Normalized here rather than server-side for the same reason the person
       // rail normalizes on save: a bare `linkedin.com/in/jdoe` is an address
       // somebody typed, and storing it unusable makes the row permanently
@@ -540,7 +540,7 @@ export function ContactsScreen() {
             // no employer key, and a header that looked sortable and refused
             // would be worse than one that never offered.
             key: "company",
-            header: t("create.organization"),
+            header: t("create.company"),
             cell: (person: Person) =>
               person.employer ? (
                 // A real link to the COMPANY, in a cell that is not the row's
@@ -552,9 +552,9 @@ export function ContactsScreen() {
                 // person first. The name comes with the row, so this resolves
                 // nothing.
                 <EntityRef
-                  kind="organization"
-                  id={person.employer.organization_id}
-                  name={person.employer.organization_name}
+                  kind="company"
+                  id={person.employer.company_id}
+                  name={person.employer.company_name}
                 />
               ) : null,
           },

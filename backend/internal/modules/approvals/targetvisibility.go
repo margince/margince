@@ -86,7 +86,7 @@ const (
 var targetProbes = func() map[string]targetProbe {
 	probes := map[string]targetProbe{
 		tablePerson:        probeOwnScope,
-		tableOrganization:  probeOwnScope,
+		tableCompany:  probeOwnScope,
 		tableDeal:          probeOwnScope,
 		tableLead:          probeOwnScope,
 		tableProject:       probeOwnScope,

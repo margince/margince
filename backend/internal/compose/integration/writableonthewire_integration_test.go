@@ -115,14 +115,14 @@ func TestARecordSaysWhetherItIsThisCallersToChange(t *testing.T) {
 // the owner in the moment right after they saved.
 func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
 	e := Setup(t)
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, orgWriterPermsFor(t))
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, companyWriterPermsFor(t))
 	name := "Echo Test GmbH"
 
-	created, err := e.People.CreateOrganization(rep, people.CreateOrganizationInput{
+	created, err := e.People.CreateCompany(rep, people.CreateCompanyInput{
 		DisplayName: name, Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("creating the organization: %v", err)
+		t.Fatalf("creating the company: %v", err)
 	}
 	if created.Writable == nil || !*created.Writable {
 		t.Errorf("the CREATE echo reports writable=%v for the row its own caller just made and owns",
@@ -130,10 +130,10 @@ func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
 	}
 
 	changed := "Echo Test GmbH II"
-	updated, err := e.People.UpdateOrganization(rep, ids.From[ids.OrganizationKind](ids.UUID(created.Id)),
-		people.UpdateOrganizationInput{DisplayName: &changed})
+	updated, err := e.People.UpdateCompany(rep, ids.From[ids.CompanyKind](ids.UUID(created.Id)),
+		people.UpdateCompanyInput{DisplayName: &changed})
 	if err != nil {
-		t.Fatalf("updating the organization: %v", err)
+		t.Fatalf("updating the company: %v", err)
 	}
 	if updated.Writable == nil || !*updated.Writable {
 		t.Errorf("the UPDATE echo reports writable=%v for a row the same caller just wrote",
@@ -147,23 +147,23 @@ func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
 // the server declines.
 func TestAnArchivedRecordIsNotWritableOnTheWire(t *testing.T) {
 	e := Setup(t)
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, orgWriterPermsFor(t))
-	created, err := e.People.CreateOrganization(rep, people.CreateOrganizationInput{
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, companyWriterPermsFor(t))
+	created, err := e.People.CreateCompany(rep, people.CreateCompanyInput{
 		DisplayName: "Archived Co", Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("creating the organization: %v", err)
+		t.Fatalf("creating the company: %v", err)
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(created.Id))
-	if _, err := e.People.ArchiveOrganization(rep, orgID, nil); err != nil {
+	companyID := ids.From[ids.CompanyKind](ids.UUID(created.Id))
+	if _, err := e.People.ArchiveCompany(rep, companyID, nil); err != nil {
 		t.Fatalf("archiving: %v", err)
 	}
-	got, err := e.People.GetOrganization(rep, orgID, storekit.IncludeArchived)
+	got, err := e.People.GetCompany(rep, companyID, storekit.IncludeArchived)
 	if err != nil {
-		t.Fatalf("reading the archived organization: %v", err)
+		t.Fatalf("reading the archived company: %v", err)
 	}
 	if got.Writable != nil && *got.Writable {
-		t.Error("an archived organization reports writable=true, but every mutation takes the LIVE " +
+		t.Error("an archived company reports writable=true, but every mutation takes the LIVE " +
 			"probe and refuses it — the flag is promising an edit the server declines")
 	}
 }
@@ -203,17 +203,17 @@ func TestAListPageCarriesWritabilityOnEveryRow(t *testing.T) {
 	}
 }
 
-// orgWriterPermsFor is AccountRepPerms plus organization.update. No shipped rep
+// companyWriterPermsFor is AccountRepPerms plus company.update. No shipped rep
 // fixture grants it, and several suites read those fixtures as a rep who cannot
 // write a company, so widening one there would make them pass while proving
 // nothing.
-func orgWriterPermsFor(t *testing.T) principal.Permissions {
+func companyWriterPermsFor(t *testing.T) principal.Permissions {
 	t.Helper()
 	perms := AccountRepPerms
 	perms.Objects = map[string]principal.ObjectGrant{}
 	for object, grant := range AccountRepPerms.Objects {
 		perms.Objects[object] = grant
 	}
-	perms.Objects["organization"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
+	perms.Objects["company"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	return perms
 }

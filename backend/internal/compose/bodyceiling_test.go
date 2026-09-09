@@ -66,7 +66,7 @@ func TestALyingContentTypeBuysNothing(t *testing.T) {
 		"/oauth/register",
 		"/v1/auth/login",
 		"/v1/deals",
-		"/v1/organizations",
+		"/v1/companies",
 		"/mcp",
 	} {
 		got := ceilingFor(t, http.MethodPost, path,

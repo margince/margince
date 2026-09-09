@@ -19,8 +19,8 @@ import { beginModelCall, endModelCall } from "./model-inflight";
 // It is a TYPE-ONLY import, so nothing changes at runtime and no bundler alias
 // is needed: `verbatimModuleSyntax` erases the line entirely.
 //
-// One installation serves one organization (A107/ADR-0061): the server
-// resolves its singleton organization itself — the client sends no tenant
+// One installation serves one company (A107/ADR-0061): the server
+// resolves its singleton company itself — the client sends no tenant
 // selector, only the session cookie.
 
 // The reader's language, read from where the shell stores it. Sent on every
@@ -164,9 +164,9 @@ type ModelWait = "always" | "on-miss";
 const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "GET /activities/{id}/meeting-brief": "always",
   "GET /deals/{id}/status": "on-miss",
-  "GET /organizations/{id}/brief": "on-miss",
-  "GET /organizations/{id}/dossier": "on-miss",
-  "GET /organizations/{id}/growth-fit": "on-miss",
+  "GET /companies/{id}/brief": "on-miss",
+  "GET /companies/{id}/dossier": "on-miss",
+  "GET /companies/{id}/growth-fit": "on-miss",
   "GET /people/{id}/brief": "on-miss",
   "POST /activities/{id}/draft-email": "always",
   "POST /brief": "on-miss",
@@ -178,13 +178,13 @@ const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "POST /leads/{id}/draft-email": "always",
   "POST /offers/{id}/regenerate": "always",
   "POST /onboarding/company/messages": "always",
-  "POST /organizations/{id}/ask": "always",
-  "POST /organizations/{id}/brief": "always",
-  "POST /organizations/{id}/dossier": "always",
-  "POST /organizations/{id}/draft-email": "always",
-  "POST /organizations/{id}/enrich": "always",
-  "POST /organizations/{id}/growth-fit": "always",
-  "POST /organizations/{id}/intro-request-draft": "always",
+  "POST /companies/{id}/ask": "always",
+  "POST /companies/{id}/brief": "always",
+  "POST /companies/{id}/dossier": "always",
+  "POST /companies/{id}/draft-email": "always",
+  "POST /companies/{id}/enrich": "always",
+  "POST /companies/{id}/growth-fit": "always",
+  "POST /companies/{id}/intro-request-draft": "always",
   "POST /people/{id}/brief": "always",
   "POST /people/{id}/draft-email": "always",
   "POST /people/{id}/intro-note-draft": "always",

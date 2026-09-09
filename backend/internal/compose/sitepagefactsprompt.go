@@ -83,7 +83,7 @@ func menuGuidance(fields []string) string {
 	// the company's own name, a revenue figure. The categories are listed in
 	// the order the guidance reads best, not the order the map iterates.
 	for _, category := range []string{companyWord, "offering", "market", "signal"} {
-		for _, f := range people.OrganizationFactFields[category] {
+		for _, f := range people.CompanyFactFields[category] {
 			if present[f] {
 				parts = append(parts, categoryGuidance[category])
 				break

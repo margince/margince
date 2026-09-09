@@ -90,7 +90,7 @@ Which model to run each site on, and what that choice rests on.
 
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
-| [`account_scan/org_scan`](#account_scanorg_scan) | - | - | - | `stale` | 2 | 2 |
+| [`account_scan/company_scan`](#account_scanorg_scan) | - | - | - | `stale` | 2 | 2 |
 | [`agent_loop/loop`](#agent_looploop) | - | - | - | `stale` | 24 | 3 |
 | [`brief_ranking/rank`](#brief_rankingrank) | - | - | - | `stale` | 1 | 4 |
 | [`capture_classify/classify`](#capture_classifyclassify) | - | - | - | `stale` | 5 | 3 |
@@ -123,9 +123,9 @@ Which model to run each site on, and what that choice rests on.
 | [`site_triage/triage`](#site_triagetriage) | - | - | - | `stale` | 5 | 2 |
 | [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | - | - | - | `absent` | 9 | 0 |
 | [`summarize/meeting_plan`](#summarizemeeting_plan) | - | - | - | `stale` | 1 | 2 |
-| [`summarize/org_ask`](#summarizeorg_ask) | - | - | - | `stale` | 2 | 2 |
-| [`summarize/org_brief`](#summarizeorg_brief) | - | - | - | `stale` | 2 | 2 |
-| [`summarize/org_dossier`](#summarizeorg_dossier) | - | - | - | `stale` | 1 | 2 |
+| [`summarize/company_ask`](#summarizeorg_ask) | - | - | - | `stale` | 2 | 2 |
+| [`summarize/company_brief`](#summarizeorg_brief) | - | - | - | `stale` | 2 | 2 |
+| [`summarize/company_dossier`](#summarizeorg_dossier) | - | - | - | `stale` | 1 | 2 |
 | [`summarize/person_brief`](#summarizeperson_brief) | - | - | - | `stale` | 2 | 2 |
 | [`transcript_propose/next_steps`](#transcript_proposenext_steps) | - | - | - | `stale` | 3 | 2 |
 | [`voice_build/derive`](#voice_buildderive) | - | - | - | `stale` | 1 | 3 |
@@ -182,8 +182,8 @@ model, real network).
 
 | Site | Binding | Why it is stale |
 |---|---|---|
-| `account_scan/org_scan` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
-| `account_scan/org_scan` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
+| `account_scan/company_scan` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
+| `account_scan/company_scan` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `agent_loop/loop` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 24 scenarios it scored have changed since (the case and the prompt this build sends): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more |
 | `agent_loop/loop` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `agent_loop/loop` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 24 scenarios it scored have changed since (the case and the prompt this build sends): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more |
@@ -278,12 +278,12 @@ model, real network).
 | `site_triage/triage` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 5 scenarios it scored have changed since (the case): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_person_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
 | `summarize/meeting_plan` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
 | `summarize/meeting_plan` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
-| `summarize/org_ask` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
-| `summarize/org_ask` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
-| `summarize/org_brief` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
-| `summarize/org_brief` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
-| `summarize/org_dossier` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
-| `summarize/org_dossier` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
+| `summarize/company_ask` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
+| `summarize/company_ask` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
+| `summarize/company_brief` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
+| `summarize/company_brief` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
+| `summarize/company_dossier` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
+| `summarize/company_dossier` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
 | `summarize/person_brief` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): person_brief_reads_what_was_said, person_brief_stays_silent_about_what_the_reader_may_not_see |
 | `summarize/person_brief` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): person_brief_reads_what_was_said, person_brief_stays_silent_about_what_the_reader_may_not_see |
 | `transcript_propose/next_steps` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
@@ -312,7 +312,7 @@ did. What the columns mean is in [How to read this page](#how-to-read-this-page)
 
 Certified without the company context production prepends (`identity`): this lane runs with no database to assemble it from.
 
-#### `account_scan/org_scan`
+#### `account_scan/company_scan`
 
 Scope a run of it can claim: `full_invocation`.
 
@@ -463,12 +463,12 @@ Scenarios (16):
 | Scenario | Expects | Case |
 |---|---|---|
 | `a_chased_cold_pitch_is_still_spam` | `accepted` | [spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_02.yaml) |
-| `a_company_writing_as_itself_does_not_become_a_contact_named_after_it` | `accepted` | [organization_sender_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/organization_sender_01.yaml) |
+| `a_company_writing_as_itself_does_not_become_a_contact_named_after_it` | `accepted` | [company_sender_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_sender_01.yaml) |
 | `a_department_display_name_is_not_somebodys_name` | `accepted` | [role_display_name_billing_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_display_name_billing_01.yaml) |
 | `a_fluent_machine_written_pitch_is_still_spam` | `accepted` | [spam_bot_written_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml) |
 | `a_private_correspondent_is_not_a_business_contact` | `accepted` | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_01.yaml) |
 | `a_shared_mailbox_is_real_correspondence_with_nobody_to_name` | `accepted` | [role_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_01.yaml) |
-| `a_trade_offices_city_mailbox_names_a_place_not_a_person` | `accepted` | [organization_city_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/organization_city_mailbox_01.yaml) |
+| `a_trade_offices_city_mailbox_names_a_place_not_a_person` | `accepted` | [company_city_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_city_mailbox_01.yaml) |
 | `a_two_sided_thread_is_a_conversation` | `accepted` | [false_spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_02.yaml) |
 | `an_automated_invoice_notice_is_not_a_contact` | `accepted` | [transactional_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/transactional_01.yaml) |
 | `bulk_marketing_is_noise` | `accepted` | [noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/noise_01.yaml) |
@@ -1063,7 +1063,7 @@ Records (2):
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1889ms | 3181ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1318ms | 2158ms | 3 | 0 | 0 | 0 |
 
-#### `summarize/org_ask`
+#### `summarize/company_ask`
 
 Scope a run of it can claim: `full_invocation`.
 
@@ -1081,7 +1081,7 @@ Records (2):
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 6 | 5 | 0.83 | 1889ms | 3181ms | 5 | 0 | 0 | 1 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/2 | `certified` | 6 | 6 | 1.00 | 1318ms | 2158ms | 6 | 0 | 0 | 0 |
 
-#### `summarize/org_brief`
+#### `summarize/company_brief`
 
 Scope a run of it can claim: `full_invocation`.
 
@@ -1099,7 +1099,7 @@ Records (2):
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/2 | `not_supported` | 6 | 0 | 0.00 | 1889ms | 3181ms | 0 | 0 | 0 | 6 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/2 | `not_supported` | 6 | 0 | 0.00 | 1318ms | 2158ms | 0 | 0 | 0 | 6 |
 
-#### `summarize/org_dossier`
+#### `summarize/company_dossier`
 
 Scope a run of it can claim: `full_invocation`.
 

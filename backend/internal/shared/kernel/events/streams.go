@@ -20,7 +20,7 @@ const StreamPrefix = "gw:events:crm:"
 
 const (
 	personStreamEntity       = "person"
-	organizationStreamEntity = "organization"
+	companyStreamEntity = "company"
 	dealStreamEntity         = "deal"
 	leadStreamEntity         = "lead"
 	activityStreamEntity     = "activity"
@@ -113,7 +113,7 @@ func IsExtensionType(eventType string) bool {
 // Workspace is a field inside the envelope, never a stream —
 // per-tenant streams would explode key count at multi-tenant scale.
 var streamEntities = []string{
-	personStreamEntity, organizationStreamEntity, dealStreamEntity, leadStreamEntity, activityStreamEntity,
+	personStreamEntity, companyStreamEntity, dealStreamEntity, leadStreamEntity, activityStreamEntity,
 	approvalStreamEntity, captureStreamEntity, coldstartStreamEntity, auditStreamEntity, identityStreamEntity, voiceStreamEntity,
 	streamOverlay,
 }

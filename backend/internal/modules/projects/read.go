@@ -51,7 +51,7 @@ func (s *Store) GetProject(ctx context.Context, id ids.ProjectID, archived store
 // opens the transaction itself reads the catalog BEFORE opening it, then
 // threads the answer in — the same order every store-opened entry point keeps,
 // because the catalog read takes a connection of its own. It takes
-// project:read, as people's ActiveOrganizationColumns takes organization:read:
+// project:read, as people's ActiveCompanyColumns takes company:read:
 // which columns a record type carries is a fact about that record type.
 func (s *Store) ActiveProjectColumns(ctx context.Context) (CustomColumns, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
@@ -86,7 +86,7 @@ type ListProjectsInput struct {
 	Cursor          *string
 	Limit           *int
 	Query           *string
-	OrganizationID  *ids.OrganizationID
+	CompanyID  *ids.CompanyID
 	OwnerID         *ids.UserID
 	Phase           *string
 	Key             *string
@@ -173,14 +173,14 @@ func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) in
 	if in.Query != nil && *in.Query != "" {
 		where = append(where, storekit.QuickFindClause(arg(*in.Query), projectQuickFindExpr))
 	}
-	if in.OrganizationID != nil {
+	if in.CompanyID != nil {
 		// ANY of the project's live companies, not the legacy anchor column: a
 		// project is work several companies do together, so narrowing the list
 		// to a partner must show the deliveries that partner is on.
 		where = append(where, storekit.SQLf(
 			`EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'`+
-				` AND c.project_id = project.id AND c.organization_id = $%d AND c.archived_at IS NULL)`,
-			arg(*in.OrganizationID)))
+				` AND c.project_id = project.id AND c.company_id = $%d AND c.archived_at IS NULL)`,
+			arg(*in.CompanyID)))
 	}
 	if in.OwnerID != nil {
 		where = append(where, storekit.SQLf("owner_id = $%d", arg(*in.OwnerID)))
@@ -197,7 +197,7 @@ func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) in
 	return where
 }
 
-const projectColumns = `id, name, key, organization_id, owner_id, phase, closed_reason,
+const projectColumns = `id, name, key, company_id, owner_id, phase, closed_reason,
 	description, started_at, target_end_date, ended_at, last_activity_at,
 	source, captured_by, version, created_at, updated_at, archived_at`
 
@@ -220,14 +220,14 @@ func readProject(ctx context.Context, tx pgx.Tx, id ids.ProjectID, archived stor
 // trailing expressions the caller's SELECT appended.
 func scanProject(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontracts.Project, error) {
 	var p crmcontracts.Project
-	var id, orgID ids.UUID
+	var id, companyID ids.UUID
 	var ownerID *ids.UUID
 	var phase string
 	var startedAt, targetEnd, endedAt *time.Time
 	var version int64
 
 	dests := []any{
-		&id, &p.Name, &p.Key, &orgID, &ownerID, &phase, &p.ClosedReason,
+		&id, &p.Name, &p.Key, &companyID, &ownerID, &phase, &p.ClosedReason,
 		&p.Description, &startedAt, &targetEnd, &endedAt, &p.LastActivityAt,
 		&p.Source, &p.CapturedBy, &version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
 	}
@@ -240,8 +240,8 @@ func scanProject(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	}
 
 	p.Id = openapi_types.UUID(id)
-	anchor := openapi_types.UUID(orgID)
-	p.OrganizationId = &anchor
+	anchor := openapi_types.UUID(companyID)
+	p.CompanyId = &anchor
 	p.OwnerId = uuidPtr(ownerID)
 	projectPhase := crmcontracts.ProjectPhase(phase)
 	p.Phase = &projectPhase

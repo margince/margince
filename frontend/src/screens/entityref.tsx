@@ -12,7 +12,7 @@ import { throwProblem } from "./common";
 
 // A cross-record reference rendered as the target's display name plus a
 // backlink to its 360, resolved by id. Records point at each other by id
-// across the contract (owner, counterparty, partner org, deal); showing the
+// across the contract (owner, counterparty, partner company, deal); showing the
 // raw UUID is honest but unreadable, so this hydrates the name off the record
 // read and links through. A reference that cannot be named renders the id
 // (mono, no link) rather than blank or a dead link — on an audit row or a
@@ -69,8 +69,8 @@ const NAME_READERS: Record<EntityKind, (id: string) => Promise<string | null>> =
       if (error) return unnamedOrThrow(error, response);
       return data.full_name ?? null;
     },
-    organization: async (id) => {
-      const { data, error, response } = await api.GET("/organizations/{id}", {
+    company: async (id) => {
+      const { data, error, response } = await api.GET("/companies/{id}", {
         params: { path: { id } },
       });
       if (error) return unnamedOrThrow(error, response);

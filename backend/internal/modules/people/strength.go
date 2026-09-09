@@ -131,7 +131,7 @@ func (s *Store) PersonStrengthTx(
 
 // StrengthToWire renders a §4 result onto the contract's shared
 // RelationshipStrength. It lives with the computation, not beside one of
-// its transports: the per-person route, the per-organization route and the
+// its transports: the per-person route, the per-company route and the
 // company view all answer this shape, and a bucket rename made in only one
 // of three places is the drift this prevents.
 //
@@ -183,29 +183,29 @@ func StrengthBucketToWire(bucket string) crmcontracts.RelationshipStrengthBucket
 	}
 }
 
-// ContactStrength pairs one of an organization's current contacts with
+// ContactStrength pairs one of a company's current contacts with
 // that contact's §4 score.
 type ContactStrength struct {
 	PersonID ids.PersonID
 	Strength RelationshipStrength
 }
 
-// StrengthForOrgContacts computes §4 for every current employee of one
-// organization that the caller can read, inside the caller's OWN
+// StrengthForCompanyContacts computes §4 for every current employee of one
+// company that the caller can read, inside the caller's OWN
 // transaction and in a fixed number of queries — two, regardless of how
 // many contacts the account has.
 //
 // It exists because the per-person path opens a transaction each: the
 // company view needs a score beside every contact, and doing that through
 // PersonStrength would open one transaction per row and read a different
-// instant for each of them. The caller has already gated the organization;
+// instant for each of them. The caller has already gated the company;
 // what this adds is the person row scope, applied here as a predicate so a
 // contact the caller may not read contributes nothing and is not named.
 //
 // The results come back in the order the contacts sort by id, so a page
 // built from them is deterministic.
-func StrengthForOrgContacts(
-	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
+func StrengthForCompanyContacts(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	now time.Time, within *ids.ProjectID,
 ) ([]ContactStrength, error) {
 	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
@@ -213,9 +213,9 @@ func StrengthForOrgContacts(
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos := arg(orgID)
+	companyPos := arg(companyID)
 	// The roster is drawn from employment EDGES: "who works at this account" is
-	// the fact relationship.read governs, and this read is the one org360's
+	// the fact relationship.read governs, and this read is the one company360's
 	// contacts section is built from. A refusal reaches the assembler, which
 	// names `people` in sections_omitted — so the page says "you may not see
 	// this" rather than showing an account with nobody at it.
@@ -233,10 +233,10 @@ func StrengthForOrgContacts(
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT p.id FROM person p
 		JOIN relationship r ON r.person_id = p.id
-		WHERE r.kind = 'employment' AND r.organization_id = $%d
+		WHERE r.kind = 'employment' AND r.company_id = $%d
 		  AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 		  AND p.archived_at IS NULL AND (%s) AND (%s)
-		ORDER BY p.id`, orgPos, edgeBound, scope), args...)
+		ORDER BY p.id`, companyPos, edgeBound, scope), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +266,7 @@ func personScopePredicate(ctx context.Context, arg func(any) int) (string, error
 // absent from the result rather than carried with a zero — the caller
 // learns nothing about a record they cannot open.
 //
-// StrengthForOrgContacts answers "everyone employed here"; this answers
+// StrengthForCompanyContacts answers "everyone employed here"; this answers
 // "these people", which is what a reader that assembled its own contact
 // set needs — the company view's connection graph scores employees and
 // deal stakeholders together, and asking per person would open one

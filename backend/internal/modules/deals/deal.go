@@ -91,8 +91,8 @@ func moved[T comparable](current, supplied *T) bool {
 }
 
 // dealUpdatePatch folds the caller's sparse update onto the current row
-// as a field patch. Re-pointing the deal at an organization (or partner
-// organization) is a read of that record, so each link target must be
+// as a field patch. Re-pointing the deal at a company (or partner
+// company) is a read of that record, so each link target must be
 // visible under the caller's row scope before it lands in the patch.
 func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Deal, in UpdateDealInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
@@ -177,7 +177,7 @@ func applyPartnerAttributionPatch(ctx context.Context, tx pgx.Tx,
 		if in.PartnerAttribution != nil {
 			return &PartnerAttributionUnpairedError{}
 		}
-		p.Set("partner_org_id", current.PartnerOrgId, nil)
+		p.Set("partner_company_id", current.PartnerCompanyId, nil)
 		p.Set("partner_attribution", current.PartnerAttribution, nil)
 		return nil
 	}
@@ -186,34 +186,34 @@ func applyPartnerAttributionPatch(ctx context.Context, tx pgx.Tx,
 			return err
 		}
 	}
-	if in.PartnerOrganizationID == nil {
+	if in.PartnerCompanyID == nil {
 		if in.PartnerAttribution == nil {
 			return nil
 		}
 		// An attribution alone is only meaningful when the deal already
 		// names the partner it describes.
-		if current.PartnerOrgId == nil {
+		if current.PartnerCompanyId == nil {
 			return &PartnerAttributionUnpairedError{}
 		}
 		// Re-attributing is a write ABOUT that partner, so it needs the same
 		// permission naming them would: a caller who can no longer open the
-		// organization — it became capture-private after the link was made —
+		// company — it became capture-private after the link was made —
 		// may not change what the deal claims they did.
-		if err := auth.EnsureLinkTarget(ctx, tx, "organization", ids.UUID(*current.PartnerOrgId)); err != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, "company", ids.UUID(*current.PartnerCompanyId)); err != nil {
 			return err
 		}
 		p.Set("partner_attribution", current.PartnerAttribution, *in.PartnerAttribution)
 		return nil
 	}
-	if err := auth.EnsureLinkTarget(ctx, tx, "organization", in.PartnerOrganizationID.UUID); err != nil {
+	if err := auth.EnsureLinkTarget(ctx, tx, "company", in.PartnerCompanyID.UUID); err != nil {
 		return err
 	}
 	// Visible is not enough: it must actually BE a partner, or the deal reads
 	// as credited to somebody the accrual can never price.
-	if err := ensurePartner(ctx, tx, *in.PartnerOrganizationID); err != nil {
+	if err := ensurePartner(ctx, tx, *in.PartnerCompanyID); err != nil {
 		return err
 	}
-	p.Set("partner_org_id", current.PartnerOrgId, *in.PartnerOrganizationID)
+	p.Set("partner_company_id", current.PartnerCompanyId, *in.PartnerCompanyID)
 	p.Set("partner_attribution", current.PartnerAttribution, resolvedAttribution(current, in))
 	return nil
 }
@@ -242,8 +242,8 @@ func resolvedAttribution(current crmcontracts.Deal, in UpdateDealInput) string {
 // samePartner reports whether the update names the partner the deal already
 // carries, rather than pointing it at a different one.
 func samePartner(current crmcontracts.Deal, in UpdateDealInput) bool {
-	return current.PartnerOrgId != nil && in.PartnerOrganizationID != nil &&
-		ids.UUID(*current.PartnerOrgId) == in.PartnerOrganizationID.UUID
+	return current.PartnerCompanyId != nil && in.PartnerCompanyID != nil &&
+		ids.UUID(*current.PartnerCompanyId) == in.PartnerCompanyID.UUID
 }
 
 // validPartnerAttribution keeps the vocabulary refusal in the store, where it
@@ -428,7 +428,7 @@ const partnerAttributionField = "partner_attribution"
 type PartnerAttributionUnpairedError struct{}
 
 func (e *PartnerAttributionUnpairedError) Error() string {
-	return "partner_attribution needs a partner_org_id — set the partner in the same request, or clear the attribution"
+	return "partner_attribution needs a partner_company_id — set the partner in the same request, or clear the attribution"
 }
 
 // FieldFault refuses an attribution on a deal that names no partner.

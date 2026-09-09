@@ -137,21 +137,21 @@ const quietDeal: Deal = {
   id: "d-9",
   name: "Ostwind refit",
   amount_minor: 1_200_000,
-  organization_id: "org-9",
+  company_id: "company-9",
   stalled: true,
 };
 
 // ── The context rail ──
 
 describe("BriefScreen — the context rail", () => {
-  // Brief used to pass `org: ""` for every card here, so every quiet deal on
+  // Brief used to pass `company: ""` for every card here, so every quiet deal on
   // this page claimed to belong to no company at all. The panel resolves the
   // company through the same naming the pipeline board uses.
   it("names the company on a quiet deal", async () => {
     stubApi({
       "GET /deals": () => jsonResponse({ data: [fleetDeal, quietDeal] }),
-      "GET /organizations/org-9": () =>
-        jsonResponse({ id: "org-9", display_name: "Nordwind Logistik" }),
+      "GET /companies/company-9": () =>
+        jsonResponse({ id: "company-9", display_name: "Nordwind Logistik" }),
     });
     render(<BriefScreen />);
 
@@ -188,7 +188,7 @@ describe("BriefScreen — the context rail", () => {
       messages_synced: 42,
       activities_created: 42,
       people_created: 5,
-      organizations_created: 2,
+      companies_created: 2,
     },
     review: {
       dedupe_open: 3,

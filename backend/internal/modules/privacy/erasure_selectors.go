@@ -35,12 +35,12 @@ func notTransitivelyHeld(activityID string) string {
 	return `
 	  AND NOT EXISTS (
 	    SELECT 1 FROM activity_link h
-	    LEFT JOIN organization org ON org.id = h.organization_id
+	    LEFT JOIN company company ON company.id = h.company_id
 	    LEFT JOIN deal dl ON dl.id = h.deal_id
 	    LEFT JOIN lead ld ON ld.id = h.lead_id
 	    LEFT JOIN project pj ON pj.id = h.project_id
 	    WHERE h.activity_id = ` + activityID + `
-	      AND (coalesce(org.legal_hold, false) OR coalesce(dl.legal_hold, false)
+	      AND (coalesce(company.legal_hold, false) OR coalesce(dl.legal_hold, false)
 	           OR coalesce(ld.legal_hold, false) OR coalesce(pj.legal_hold, false)))`
 }
 
@@ -85,7 +85,7 @@ var subjectOnlyDestroyable = `
 // It reaches mail in BOTH directions, and the symmetry is the point. Outbound
 // mail this installation SENT reaches the subject the same way: the send path
 // gives its activity only the links the anchor already had, so a reply anchored
-// on an organization- or deal-linked thread — or on one with no person link at
+// on a company- or deal-linked thread — or on one with no person link at
 // all — records the recipient's address and the whole message body while being
 // linked to nobody. A direction test would have left exactly the mail we wrote
 // to the subject behind, along with the delivery row behind it.
@@ -122,7 +122,7 @@ var subjectOnlyDestroyable = `
 // exactly as it is on the link-walk arm.
 //
 // The legal-hold exclusion matters MORE on this arm than on the link-walk one:
-// a send inherits its anchor's organization and deal links, so mail on a held
+// a send inherits its anchor's company and deal links, so mail on a held
 // deal's thread is the ordinary shape of an activity with no person link at
 // all — precisely the position a litigation hold protects.
 // unlinkedSubjectChannel is the channel twin of unlinkedSubjectMail, and it

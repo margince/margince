@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import type { components } from "../../api/schema";
 import { introTargetFor, type MapCopy, mapModelFromCoverage } from "./mapmodel";
 
-type Coverage = components["schemas"]["OrganizationCoverage"];
+type Coverage = components["schemas"]["CompanyCoverage"];
 
 const COPY: MapCopy = {
   routesWithheld: "Hidden from you",
@@ -371,7 +371,7 @@ test("names the colleague to ask and the contact to be met, in that order", () =
 // only because of where it happens to be called is one the next caller breaks.
 test("refuses a node that is not a person", () => {
   const model = mapModelFromCoverage(coverage(), "Brandt GmbH", COPY);
-  for (const id of ["u:u-1", "org", "d:d-1", "gap:champion", "p:missing"]) {
+  for (const id of ["u:u-1", "company", "d:d-1", "gap:champion", "p:missing"]) {
     expect(introTargetFor(model, id)).toBeNull();
   }
 });

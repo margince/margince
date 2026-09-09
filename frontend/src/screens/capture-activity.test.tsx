@@ -681,7 +681,7 @@ describe("capture activity", () => {
       ).toBeInTheDocument();
     }
     // The block list is on this page at all — it used to live two tabs away
-    // under Organization, behind a door most seats cannot open.
+    // under Company, behind a door most seats cannot open.
     expect(await screen.findByText("Keep out of capture")).toBeInTheDocument();
     // And the log is closed, so nothing about one message is on screen until
     // somebody asks for it.

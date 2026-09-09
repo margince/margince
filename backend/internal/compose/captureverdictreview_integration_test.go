@@ -68,7 +68,7 @@ func TestCounterpartyAcceptCreatesTheRecordsAndClosesTheDisposition(t *testing.T
 
 // The proposal is FILED under the message that carried the unrecognized sender,
 // because that message is the evidence a human judges it on — but the effect
-// creates a person and an organization and closes the disposition, and never
+// creates a person and a company and closes the disposition, and never
 // writes the activity. So the ordinary inbox work done to the message while the
 // question waits (a relink, a participant correction, a subject fix) must not be
 // able to cancel the answer.

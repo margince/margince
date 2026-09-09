@@ -10,7 +10,7 @@ package integration
 // agentcommandtarget_integration_test.go proves it for archive: the staged
 // approval ROW.
 //
-// TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing below
+// TestAConfirmFirstFactCallAgainstAnUnseeableCompanyStagesNothing below
 // is the proof that matters: their restCommands entries make Guards run before
 // anything stages. TestTwoStagedCallsDifferingOnlyInArgumentsAreDistinguishable
 // does NOT prove that — diff_hash and summary are both derived from the
@@ -29,17 +29,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing is
+// TestAConfirmFirstFactCallAgainstAnUnseeableCompanyStagesNothing is
 // this task's actual behavioral proof: an agent acting for a human who cannot
-// read an organization (it is capture-private to the admin who captured it,
+// read a company (it is capture-private to the admin who captured it,
 // and the rep holds no record grant) gets the existence-hiding 404
-// GetOrganization itself would give, and stages NO approval. A target answered from the route alone
+// GetCompany itself would give, and stages NO approval. A target answered from the route alone
 // asks for no read and so makes no such refusal — it stages one regardless;
 // that is the delta this test exercises through the REAL row-scope predicate
 // (internal/platform/auth),
 // which TestAnOperandCommandOfAnUnseeableRecordStagesNothing (agentcommandoperand_test.go)
 // can only fake.
-func TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing(t *testing.T) {
+func TestAConfirmFirstFactCallAgainstAnUnseeableCompanyStagesNothing(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -51,14 +51,14 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing(t *tes
 	// An account is readable by every seat unless its capture is private:
 	// visibility='owner' narrows it to owner_id, which is the admin and not
 	// the rep below, so the miss is genuine rather than incidental.
-	orgID := createdID(t, e, "/v1/organizations", AnyMap{
+	companyID := createdID(t, e, "/v1/companies", AnyMap{
 		"display_name": "Capture-Private Inc", "owner_id": adminID,
 	})
 
 	wsA := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner)
 	rep := ids.NewV7()
 	seedInWorkspace(t, e, wsA,
-		stmt(`UPDATE organization SET visibility = 'owner' WHERE id = $1`, orgID),
+		stmt(`UPDATE company SET visibility = 'owner' WHERE id = $1`, companyID),
 		stmt(`INSERT INTO app_user (id, email, display_name) VALUES ($1, 'rep@example.com', 'Rep One')`, rep),
 		// Borrow the bootstrap admin's hash so the rep can actually sign in —
 		// the same reason TestRosterWithholdsRoleKeysFromANonAdmin does.
@@ -77,18 +77,18 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing(t *tes
 	var problem struct {
 		Code string `json:"code"`
 	}
-	status := e.Call(t, "POST", "/v1/organizations/"+orgID+"/facts/named_customer:acme-inc/confirm", nil, bearer, &problem)
+	status := e.Call(t, "POST", "/v1/companies/"+companyID+"/facts/named_customer:acme-inc/confirm", nil, bearer, &problem)
 	if status != http.StatusNotFound {
-		t.Fatalf("confirming a fact on an organization the acting human cannot see answered %d %q, want 404 — "+
+		t.Fatalf("confirming a fact on a company the acting human cannot see answered %d %q, want 404 — "+
 			"the refusal must not tell a caller that a row they may not see exists", status, problem.Code)
 	}
 
 	var n int
-	if err := e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM approval WHERE target_entity_id = $1`, orgID).Scan(&n); err != nil {
+	if err := e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM approval WHERE target_entity_id = $1`, companyID).Scan(&n); err != nil {
 		t.Fatalf("counting approvals: %v", err)
 	}
 	if n != 0 {
-		t.Errorf("staged %d approvals against an organization nobody could ever decide about, want 0", n)
+		t.Errorf("staged %d approvals against a company nobody could ever decide about, want 0", n)
 	}
 }
 
@@ -99,7 +99,7 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing(t *tes
 // Driven through createWebhookSubscription, which the contract still floors:
 // two subscriptions naming different URLs are the same verb on the same
 // (absent) target, which is exactly the shape this needs. It used to use two
-// fact keys on one organization, until confirming a fact stopped asking a
+// fact keys on one company, until confirming a fact stopped asking a
 // second time — a passport does what its holder could do unaided.
 func TestTwoStagedCallsDifferingOnlyInArgumentsAreDistinguishable(t *testing.T) {
 	e := apptest.SetupApp(t)
@@ -143,7 +143,7 @@ func stageWebhookCreate(t *testing.T, e *apptest.AppEnv, bearer map[string]strin
 		Detail string `json:"detail"`
 	}
 	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
-		"target_url": url, "event_types": []string{"organization.created"},
+		"target_url": url, "event_types": []string{"company.created"},
 	}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
 		t.Fatalf("agent subscription create %q → %d %q, want 403 approval_required", url, status, problem.Code)
 	}

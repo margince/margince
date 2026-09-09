@@ -25,8 +25,8 @@ import (
 // TestTheAdHocVocabularyScopesEveryReferenceTheCatalogDoes holds the two
 // together, so a reference the catalog learns about cannot stay unknown here.
 var adHocReferenceTables = map[string]string{
-	fieldOrganizationID: tableOrganization,
-	fieldPartnerOrgID:   tableOrganization,
+	fieldCompanyID: tableCompany,
+	fieldPartnerCompanyID:   tableCompany,
 	fieldProjectID:      tableProject,
 }
 

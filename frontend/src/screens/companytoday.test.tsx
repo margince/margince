@@ -13,14 +13,14 @@ import { TodayOnThisAccount } from "./companytoday";
 
 afterEach(cleanup);
 
-type Organization360 = components["schemas"]["Organization360"];
+type Company360 = components["schemas"]["Company360"];
 
-// A COMPLETE Organization360, not a cast one. A fixture asserted into the
+// A COMPLETE Company360, not a cast one. A fixture asserted into the
 // contract type can drop a required field or carry an invalid value and still
 // compile, so the test would go on passing after the wire shape moved under it.
-const BASE: Organization360 = {
+const BASE: Company360 = {
   as_of: "2026-08-07T09:00:00Z",
-  organization: {
+  company: {
     id: "o-1",
     display_name: "Acme",
     source: "manual",
@@ -32,7 +32,7 @@ const BASE: Organization360 = {
 };
 
 function show(
-  view?: Organization360,
+  view?: Company360,
   opts: {
     loading?: boolean;
     failed?: boolean;
@@ -48,7 +48,7 @@ function show(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <TodayOnThisAccount
-          orgId="o-1"
+          companyId="o-1"
           view={view}
           loading={opts.loading ?? false}
           failed={opts.failed ?? false}
@@ -226,7 +226,7 @@ describe("the day's call, and which record it is read from", () => {
   // The route rule: strongest CONTACT, then that contact's strongest ROUTE.
 
   // The largest-open-deal reading moved to the Commercial panel
-  // (organizations.tsx) alongside the full open-deals list, so this file no
+  // (companies.tsx) alongside the full open-deals list, so this file no
   // longer picks or ranks a deal of its own.
 
   // Whose move it is used to be the strip's own tile ("Whose move"); it moved
@@ -424,7 +424,7 @@ describe("the day's call, and which record it is read from", () => {
 });
 
 // The card the server sends for an account owing nothing.
-const QUIET_MOMENT: NonNullable<Organization360["moment"]> = {
+const QUIET_MOMENT: NonNullable<Company360["moment"]> = {
   claim_key: "moment:nothing_needed",
   evidence_fingerprint: "quiet",
   rule: "nothing_needed",
@@ -496,7 +496,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "running",
           findings: [ruleRow],
           findings_dropped: 0,
@@ -516,7 +516,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "done",
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "model",
@@ -544,7 +544,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "queued",
           resumes_at: "2026-08-07T09:30:00Z",
           findings: [ruleRow],
@@ -562,7 +562,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "done",
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "model",
@@ -580,7 +580,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "degraded",
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "deterministic",
@@ -620,7 +620,7 @@ describe("the generic draft row", () => {
       data: [RECIPIENT],
       page: { has_more: false, next_cursor: null },
     },
-  } satisfies Organization360;
+  } satisfies Company360;
 
   it("stands on its own when no advice names a message to answer", () => {
     show(withRecipient, { onDraftTo: vi.fn() });

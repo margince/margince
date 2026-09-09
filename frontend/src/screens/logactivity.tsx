@@ -132,11 +132,11 @@ const KINDS_WITH_A_PERSON = new Set(["meeting", "call"]);
 // the question is who from THIS account was in the room, and an unscoped search
 // would offer contacts of other companies as equally likely answers to it.
 async function searchCompanyContacts(
-  organizationID: string,
+  companyID: string,
   q: string,
 ): Promise<RecordPickerCandidate[]> {
   const { data, error } = await api.GET("/people", {
-    params: { query: { organization_id: organizationID, q, limit: 20 } },
+    params: { query: { company_id: companyID, q, limit: 20 } },
   });
   if (error) {
     throwProblem(error);
@@ -193,7 +193,7 @@ function activityRequestBody(
     ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
     ...(isTranscript ? { source_system: "transcript" } : {}),
     // The attendee REPLACES the company link rather than joining it. The
-    // server refuses an organization link on a meeting or a call whichever
+    // server refuses a company link on a meeting or a call whichever
     // else are present, and the company still reaches the activity: the
     // employer walk carries it there through the person who was named.
     //
@@ -254,7 +254,7 @@ export function LogActivityForm({
   // that are with a person — see KINDS_WITH_A_PERSON.
   const [attendee, setAttendee] = useState<RecordPickerCandidate | null>(null);
   const needsAttendee =
-    entityType === "organization" && KINDS_WITH_A_PERSON.has(draft.kind);
+    entityType === "company" && KINDS_WITH_A_PERSON.has(draft.kind);
 
   const log = useMutation({
     // Keyed on entityId, the record this form is open on, not the created

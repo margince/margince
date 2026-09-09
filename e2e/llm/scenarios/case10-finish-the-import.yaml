@@ -62,7 +62,7 @@ may_call:
   - read_record
   - query_workspace
 
-# THE OBJECT IS THE PLAN. preview_import takes organization, person or lead, and
+# THE OBJECT IS THE PLAN. preview_import takes company, person or lead, and
 # the three are not interchangeable: a lead lands unworked and waits for a human
 # to promote it, which is the right answer for a machine-scraped list and the
 # wrong one for a file two people have already been through line by line. The
@@ -72,7 +72,7 @@ may_call:
 # run_id is not pinned: it is minted by the preview inside the run itself, so
 # there is nothing a scenario file could compare it to.
 must_call_with:
-  - preview_import.object=organization
+  - preview_import.object=company
 
 must_mention:
   # Criterion 1: the number that landed, which is the file's four rows. All four
@@ -82,7 +82,7 @@ must_mention:
   # ANCHORED TO WHAT IT COUNTS, because a bare "4|four|vier" is satisfied by a
   # date, an id or a row number and would tick this criterion for an answer that
   # never gave the figure. Both orders, since a report writes either "4
-  # organizations" or "Companies created: 4".
+  # companies" or "Companies created: 4".
   - "\b(?:4|four|vier)\s+(?:organi[sz]ations?|companies|company|records?|rows?|accounts?|Firmen|Unternehmen)|(?:organi[sz]ations?|companies|records?|rows?|accounts?)[^\n]{0,15}[:=]?\s*\b(?:4|four|vier)\b"
   # Criterion 2: it answers the second question too. "Nothing was skipped" is
   # the honest report of this file, and the answer that never says it has left
@@ -101,14 +101,14 @@ must_mention:
   # CRITERION 1, WHICH NOTHING ABOVE COULD FAIL. The two counts are the same
   # before the commit and after it — that is exactly why read_import_report is
   # the tool for both — so a run that stopped at the dry run and reported "4
-  # organizations, 0 skipped" satisfied every assertion this case had while
+  # companies, 0 skipped" satisfied every assertion this case had while
   # doing the one thing it exists to catch. The forbidden half below only sees
   # an answer that ASKS; an answer that simply stops asks nothing.
   #
   # So the commit has to be reported as DONE. The run to the verb refuses to
   # cross the words that make it a forecast or an offer, and stops at a table
-  # cell, so "Would create 4 organizations" and "ready to commit once you
-  # confirm" reach nothing while "4 organizations created", "the partner list is
+  # cell, so "Would create 4 companies" and "ready to commit once you
+  # confirm" reach nothing while "4 companies created", "the partner list is
   # committed" and "vier Organisationen angelegt" all land.
   - "(?:^|[.;:!?\n|])(?:(?!\b(?:would|will|going to|about to|once|after|if|before|not|nothing|no|never|shall|should|ready|awaiting|waiting|pending|to)\b)[^.;:!?\n|])*?(?:(?:I |we |)(?:have |'ve |has |had |)(?:committed|imported|created|added|landed)\b|(?:is|are) (?:now )?(?:committed|imported|in the (?:CRM|workspace|system))|\bdrin\b|angelegt|eingelesen)"
 

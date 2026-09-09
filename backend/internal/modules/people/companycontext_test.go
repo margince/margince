@@ -17,10 +17,10 @@ func scored(value float32) *float32 { return &value }
 func TestAssembleCompanyContextIsCanonicalAndScoped(t *testing.T) {
 	generatedAt := time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)
 	company := Company{
-		OrganizationID:         ids.From[ids.OrganizationKind](ids.MustParse("018f3a1b-0000-7000-8000-0000000000a1")),
+		CompanyID:         ids.From[ids.CompanyKind](ids.MustParse("018f3a1b-0000-7000-8000-0000000000a1")),
 		DisplayName:            "Gradion",
-		OrganizationSource:     "manual",
-		OrganizationCapturedBy: "human:owner",
+		CompanySource:     "manual",
+		CompanyCapturedBy: "human:owner",
 		ProfileFields: []CompanyProfileField{
 			{Field: fieldICP, Value: "Mid-market manufacturers", Source: companySourceHuman, CapturedBy: "human:owner", Confidence: scored(1)},
 			{Field: fieldOfferSummary, Value: "Revenue software", Source: companySourceSiteRead, CapturedBy: "agent:site-read", SourceURL: "https://gradion.com", Confidence: scored(0.9)},
@@ -76,11 +76,11 @@ func TestAssembleCompanyContextIsCanonicalAndScoped(t *testing.T) {
 func TestAssembleCompanyContextFallsBackToAnchorIdentity(t *testing.T) {
 	website := "gradion.com"
 	company := Company{
-		OrganizationID:         ids.From[ids.OrganizationKind](ids.MustParse("018f3a1b-0000-7000-8000-0000000000a1")),
+		CompanyID:         ids.From[ids.CompanyKind](ids.MustParse("018f3a1b-0000-7000-8000-0000000000a1")),
 		DisplayName:            "Gradion",
 		Website:                &website,
-		OrganizationSource:     "manual",
-		OrganizationCapturedBy: "human:owner",
+		CompanySource:     "manual",
+		CompanyCapturedBy: "human:owner",
 	}
 
 	context := assembleCompanyContext(company, []CompanyContextScope{CompanyContextIdentity}, time.Time{})

@@ -335,13 +335,13 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 // NOT EXISTS(… = …), where EXISTS(… <> …) would answer "carries some other tag"
 // — a different question, and true for almost every record. The same reading
 // governs a column reached through a join: `neq` answers "has no linked row
-// matching this", which for a deal with no organization at all is true.
+// matching this", which for a deal with no company at all is true.
 //
 // `exists` binds nothing and asks about the COLUMN, not the row:
 // EXISTS(… AND <expr> IS NOT NULL). The distinction only shows up once a link
 // carries a nullable column. For a tag it makes no difference — taggable.tag_id
 // is NOT NULL, so the added test cannot change which rows the wrapper finds —
-// but for organization.industry the two readings differ, and the row reading is
+// but for company.industry the two readings differ, and the row reading is
 // the wrong one: "which deals is the customer's industry unknown for" would
 // answer "the ones with no customer", silently excluding every deal whose
 // company simply has no industry recorded. Asking about the column gives one

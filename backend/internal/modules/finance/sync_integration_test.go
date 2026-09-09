@@ -31,12 +31,12 @@ import (
 )
 
 // financeEnv is one workspace with a connected offline source and one linked
-// organization — the smallest install the sync has anything to do on.
+// company — the smallest install the sync has anything to do on.
 type financeEnv struct {
 	store    *Store
 	ctx      context.Context
 	ws       ids.UUID
-	org      ids.OrganizationID
+	company      ids.CompanyID
 	external string
 }
 
@@ -67,7 +67,7 @@ func setupFinance(t *testing.T) *financeEnv {
 
 	e := &financeEnv{
 		ws:       ids.NewV7(),
-		org:      ids.New[ids.OrganizationKind](),
+		company:      ids.New[ids.CompanyKind](),
 		external: "ACME-01",
 	}
 	connID := ids.NewV7()
@@ -76,7 +76,7 @@ func setupFinance(t *testing.T) *financeEnv {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO organization (id, display_name, lifecycle, source, captured_by)
+		`INSERT INTO company (id, display_name, lifecycle, source, captured_by)
 		 VALUES ($1, 'Ledger GmbH', 'customer', 'manual', 'human:test')`,
 		e.org); err != nil {
 		t.Fatal(err)
@@ -90,7 +90,7 @@ func setupFinance(t *testing.T) *financeEnv {
 	}
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO finance_customer_link
-		       (connection_id, organization_id, external_customer_id,
+		       (connection_id, company_id, external_customer_id,
 		        sync_hash, source, captured_by)
 		VALUES ($1, $2, $3, 'seed', 'system', 'system:test')`,
 		connID, e.org, e.external); err != nil {
@@ -125,7 +125,7 @@ func setupFinance(t *testing.T) *financeEnv {
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
 				"finance":      {Read: true},
-				"organization": {Read: true},
+				"company": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -165,12 +165,12 @@ func (e *financeEnv) provider() Provider {
 // database's clock — and now; pinning one side of it would make the assertion
 // pass for the wrong reason.
 func (e *financeEnv) summaryAtEpoch(
-	t *testing.T, orgID ids.OrganizationID,
-) crmcontracts.OrganizationFinanceSummary {
+	t *testing.T, companyID ids.CompanyID,
+) crmcontracts.CompanyFinanceSummary {
 	t.Helper()
 	at := NewStore(e.store.db, e.store.baseCurrency).
 		WithClock(func() time.Time { return offlineEpoch })
-	out, err := at.SummaryFor(e.ctx, orgID)
+	out, err := at.SummaryFor(e.ctx, companyID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,17 +214,17 @@ func TestASecondSyncOverAnUnchangedSourceWritesNothing(t *testing.T) {
 // make every invoice look edited.
 func TestAnUnchangedInvoiceKeepsItsVersion(t *testing.T) {
 	e := setupFinance(t)
-	ctx, orgID, provider := e.ctx, e.org, e.provider()
+	ctx, companyID, provider := e.ctx, e.org, e.provider()
 	store := e.store
 
 	if _, err := store.SyncConnection(ctx, provider); err != nil {
 		t.Fatal(err)
 	}
-	before := invoiceVersions(ctx, t, e, orgID)
+	before := invoiceVersions(ctx, t, e, companyID)
 	if _, err := store.SyncConnection(ctx, provider); err != nil {
 		t.Fatal(err)
 	}
-	after := invoiceVersions(ctx, t, e, orgID)
+	after := invoiceVersions(ctx, t, e, companyID)
 	for id, version := range before {
 		if after[id] != version {
 			t.Fatalf("invoice %s went from version %d to %d without the source changing",
@@ -234,13 +234,13 @@ func TestAnUnchangedInvoiceKeepsItsVersion(t *testing.T) {
 }
 
 func invoiceVersions(
-	ctx context.Context, t *testing.T, e *financeEnv, orgID ids.OrganizationID,
+	ctx context.Context, t *testing.T, e *financeEnv, companyID ids.CompanyID,
 ) map[string]int64 {
 	t.Helper()
 	out := map[string]int64{}
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT external_id, version FROM finance_invoice WHERE organization_id = $1`, orgID)
+			`SELECT external_id, version FROM finance_invoice WHERE company_id = $1`, companyID)
 		if err != nil {
 			return err
 		}
@@ -266,12 +266,12 @@ func invoiceVersions(
 // rather than with a state that says it cannot.
 func TestAfterASyncTheCardHasFiguresToShow(t *testing.T) {
 	e := setupFinance(t)
-	ctx, orgID, provider := e.ctx, e.org, e.provider()
+	ctx, companyID, provider := e.ctx, e.org, e.provider()
 	store := e.store
 
 	// Before the pass: connected and mapped, but nothing synced. The card says
 	// so rather than showing zeroes.
-	before, err := store.SummaryFor(ctx, orgID)
+	before, err := store.SummaryFor(ctx, companyID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,7 +285,7 @@ func TestAfterASyncTheCardHasFiguresToShow(t *testing.T) {
 	if _, err := store.SyncConnection(ctx, provider); err != nil {
 		t.Fatal(err)
 	}
-	after, err := store.SummaryFor(ctx, orgID)
+	after, err := store.SummaryFor(ctx, companyID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -295,7 +295,7 @@ func TestAfterASyncTheCardHasFiguresToShow(t *testing.T) {
 
 	// The figures, as of the ledger's epoch — see summaryAtEpoch for why they
 	// are not read off the summary above.
-	figures := e.summaryAtEpoch(t, orgID)
+	figures := e.summaryAtEpoch(t, companyID)
 	if figures.NetInvoiced == nil || figures.NetInvoiced.AmountMinor == nil {
 		t.Fatal("no net invoiced after a sync that mirrored a ledger")
 	}
@@ -328,12 +328,12 @@ func TestAfterASyncTheCardHasFiguresToShow(t *testing.T) {
 // was suppressed for want of a name for a number it had already computed.
 func TestAnAccountBilledInTwoCurrenciesStillReportsATotal(t *testing.T) {
 	e := setupFinance(t)
-	ctx, orgID, provider := e.ctx, e.org, e.provider()
+	ctx, companyID, provider := e.ctx, e.org, e.provider()
 
 	if _, err := e.store.SyncConnection(ctx, provider); err != nil {
 		t.Fatal(err)
 	}
-	single := e.summaryAtEpoch(t, orgID)
+	single := e.summaryAtEpoch(t, companyID)
 	if single.NetInvoiced == nil || single.NetInvoiced.AmountMinor == nil {
 		t.Fatal("no total on a single-currency ledger; the rest of this test proves nothing")
 	}
@@ -348,15 +348,15 @@ func TestAnAccountBilledInTwoCurrenciesStillReportsATotal(t *testing.T) {
 			UPDATE finance_invoice
 			   SET currency = 'CHF'
 			 WHERE id = (SELECT id FROM finance_invoice
-			              WHERE organization_id = $1
+			              WHERE company_id = $1
 			              ORDER BY issued_at ASC, id ASC
-			              LIMIT 1)`, orgID)
+			              LIMIT 1)`, companyID)
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	mixed := e.summaryAtEpoch(t, orgID)
+	mixed := e.summaryAtEpoch(t, companyID)
 	if mixed.NetInvoiced == nil || mixed.NetInvoiced.AmountMinor == nil {
 		t.Fatal("a mixed-currency account reported no total; the figure is suppressed for want of a label")
 	}
@@ -378,7 +378,7 @@ func TestAnAccountBilledInTwoCurrenciesStillReportsATotal(t *testing.T) {
 // proves the amount landed on the right row.
 func TestTheCreditNoteReducesItsTargetInTheMirror(t *testing.T) {
 	e := setupFinance(t)
-	ctx, orgID, provider := e.ctx, e.org, e.provider()
+	ctx, companyID, provider := e.ctx, e.org, e.provider()
 	if _, err := e.store.SyncConnection(ctx, provider); err != nil {
 		t.Fatal(err)
 	}
@@ -390,13 +390,13 @@ func TestTheCreditNoteReducesItsTargetInTheMirror(t *testing.T) {
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
 			SELECT count(*) FROM finance_invoice
-			 WHERE organization_id = $1 AND credited_minor > 0`, orgID).Scan(&creditedRows); err != nil {
+			 WHERE company_id = $1 AND credited_minor > 0`, companyID).Scan(&creditedRows); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx, `
 			SELECT coalesce(sum(open_minor), 0) FROM finance_invoice
-			 WHERE organization_id = $1 AND credits_invoice_id IS NOT NULL`,
-			orgID).Scan(&noteOwes)
+			 WHERE company_id = $1 AND credits_invoice_id IS NOT NULL`,
+			companyID).Scan(&noteOwes)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -440,7 +440,7 @@ func TestCrossingADueDateDoesNotRewriteTheLedger(t *testing.T) {
 // source has no reason to change again, so nothing would ever fix it.
 func TestASyncRepairsAnInvoiceThatIsMissingItsRate(t *testing.T) {
 	e := setupFinance(t)
-	ctx, orgID, provider := e.ctx, e.org, e.provider()
+	ctx, companyID, provider := e.ctx, e.org, e.provider()
 
 	if _, err := e.store.SyncConnection(ctx, provider); err != nil {
 		t.Fatal(err)
@@ -452,12 +452,12 @@ func TestASyncRepairsAnInvoiceThatIsMissingItsRate(t *testing.T) {
 		_, err := tx.Exec(ctx, `
 			UPDATE finance_invoice
 			   SET fx_rate_to_base = NULL, fx_rate_date = NULL
-			 WHERE organization_id = $1`, orgID)
+			 WHERE company_id = $1`, companyID)
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
-	before := e.summaryAtEpoch(t, orgID)
+	before := e.summaryAtEpoch(t, companyID)
 	if before.NetInvoiced != nil {
 		t.Fatal("a ledger with no rates reported a total; the rest of this test proves nothing")
 	}
@@ -469,7 +469,7 @@ func TestASyncRepairsAnInvoiceThatIsMissingItsRate(t *testing.T) {
 	if repair.InvoicesUpdate == 0 {
 		t.Fatal("the pass skipped every invoice, so the rates were never repaired")
 	}
-	if after := e.summaryAtEpoch(t, orgID); after.NetInvoiced == nil ||
+	if after := e.summaryAtEpoch(t, companyID); after.NetInvoiced == nil ||
 		after.NetInvoiced.AmountMinor == nil {
 		t.Fatal("still no total after a repair pass")
 	}

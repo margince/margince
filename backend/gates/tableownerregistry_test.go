@@ -50,9 +50,9 @@ var tableOwners = map[string]string{
 	// (ADR-0097 D1). It lives with people because a claim is an attribute of
 	// the PERSON it is about, written through the same store that owns them.
 	"conversation_claim":             "internal/modules/people",
-	"organization":                   "internal/modules/people",
-	"organization_domain":            "internal/modules/people",
-	"organization_relationship_type": "internal/modules/people",
+	"company":                   "internal/modules/people",
+	"company_domain":            "internal/modules/people",
+	"company_relationship_type": "internal/modules/people",
 	"signal_thread_scan":             "internal/compose",
 	// One reader's frozen walk through their worklist. Owned by the compose
 	// package that writes it, the way compose/weekly owns team_weekly_review.
@@ -72,27 +72,27 @@ var tableOwners = map[string]string{
 	"sdr_handoff":                "internal/modules/people",
 	"sdr_handoff_event":          "internal/modules/people",
 	"sdr_handoff_reason":         "internal/modules/people",
-	"organization_profile_field": "internal/modules/people",
-	"organization_vat_check":     "internal/modules/people",
+	"company_profile_field": "internal/modules/people",
+	"company_vat_check":     "internal/modules/people",
 	"person_profile_field":       "internal/modules/people",
 	// The signature pass's per-person read cursor (PO-F-2a): which mail was
 	// already shown to the model, so the same empty signature is not re-read
 	// every night.
 	"person_signature_enrich_state": "internal/modules/people",
-	"organization_fact":             "internal/modules/people",
-	"organization_geocode_state":    "internal/modules/people",
+	"company_fact":             "internal/modules/people",
+	"company_geocode_state":    "internal/modules/people",
 	"geocode_cache":                 "internal/modules/people",
 	// What a technical lookup last read for one company, per public source,
 	// and what those sources answered. The cache is installation-global for
 	// the same reason geocode_cache is — a domain's DNS records are the same
 	// for every tenant — and people owns both because it owns the company
 	// record they describe.
-	"organization_technical_state": "internal/modules/people",
+	"company_technical_state": "internal/modules/people",
 	"technical_lookup_cache":       "internal/modules/people",
-	// What a mail domain is allowed to create. It governs ORGANIZATION
+	// What a mail domain is allowed to create. It governs COMPANY
 	// creation, which people owns, so the verdict lives with the records it
 	// authorizes rather than with the capture path that asks the question.
-	"organization_domain_disposition": "internal/modules/people",
+	"company_domain_disposition": "internal/modules/people",
 	"site_read":                       "internal/modules/people",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
 	"dedupe_candidate": "internal/modules/people",
@@ -420,7 +420,7 @@ var tableOwners = map[string]string{
 	// fact, so it is written without an audit row — the saved-view ruling.
 	// The person view acknowledges visits into the SAME table (one baseline
 	// per user per record, whatever kind of record it is), ratified below.
-	"user_record_view": "internal/compose/org360",
+	"user_record_view": "internal/compose/company360",
 	// Which activities have had their stored originals re-read for further
 	// participants. Job bookkeeping about a background pass rather than a
 	// fact about a customer, and the pass is composed here because it spans
@@ -440,17 +440,17 @@ var tableOwners = map[string]string{
 	"activity_meeting_rsvp_backfill": "internal/compose",
 	// The rep's own "not this, not now" on a suggestion: per user, keyed on
 	// the evidence it fired on. Same ruling — view state, no audit row.
-	"suggestion_dismissal": "internal/compose/org360",
+	"suggestion_dismissal": "internal/compose/company360",
 	// The account brief's per-user cache: derived content, regenerable at
 	// any time, readable by nobody but its own user. Same ruling.
-	"org_brief":      "internal/compose/orgbrief",
-	"org_dossier":    "internal/compose/orgdossier",
-	"org_growth_fit": "internal/compose/orgdossier",
+	"company_brief":      "internal/compose/companybrief",
+	"company_dossier":    "internal/compose/companydossier",
+	"company_growth_fit": "internal/compose/companydossier",
 	// The account scan's per-user row: the last findings the model read for
 	// this reader, and the job carrier of the read in flight. Same ruling.
-	"org_scan": "internal/compose/orgscan",
+	"company_scan": "internal/compose/companyscan",
 	// The relationship brief's per-user cache — the person-side sibling of
-	// org_brief, and the same ruling for the same reasons.
+	// company_brief, and the same ruling for the same reasons.
 	"person_brief": "internal/compose/personbrief",
 	// The deal status card's per-user cache — the deal-side sibling of the
 	// two above, and the same ruling: derived content, regenerable from the

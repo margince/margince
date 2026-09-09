@@ -41,7 +41,7 @@ func ActivityAvailableClause(alias string) string {
 // that an activity EXISTS — its occurred_at, direction, kind, who owns it —
 // without its content. Activities have no owner, but their free-text
 // inherits the sensitivity of the records they attach to. An activity is
-// discoverable when ANY linked person/organization/deal/lead/project is
+// discoverable when ANY linked person/company/deal/lead/project is
 // visible under the caller's row scope, or when it has no links at all (a
 // workspace-shared note). It lives here, not in a module: it is the one
 // scope rule that spans the record tables and activity_link rows, and scope
@@ -336,7 +336,7 @@ func probeExistsLive(ctx context.Context, tx pgx.Tx, from, alias string, idPos i
 //
 // Every non-null endpoint must be visible under the caller's row scope, on read
 // exactly as on write. Only a caller unbounded over EVERY endpoint table carries
-// no clause; person and organization hold capture privacy, so that is the system
+// no clause; person and company hold capture privacy, so that is the system
 // principal alone.
 //
 // It lives here rather than in people for the reason the two rules above do:
@@ -368,13 +368,13 @@ func RelationshipEndpointScope(ctx context.Context, alias string, arg func(any) 
 }
 
 // relationshipEndpointColumns is every endpoint an edge can carry, paired with
-// the table it points at. Two columns point at `organization`, which is why this
+// the table it points at. Two columns point at `company`, which is why this
 // is a slice and not a map.
 var relationshipEndpointColumns = []struct{ column, table string }{
 	{"person_id", tablePerson},
 	{"counterparty_person_id", tablePerson},
-	{"organization_id", tableOrganization},
-	{"counterparty_org_id", tableOrganization},
+	{"company_id", tableCompany},
+	{"counterparty_company_id", tableCompany},
 	{"deal_id", tableDeal},
 	{"project_id", tableProject},
 }

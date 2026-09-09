@@ -88,7 +88,7 @@ func readingsOf(
 			//
 			// KNOWN NARROWING, and it is the safe direction rather than an
 			// oversight. A duplicate pair the reader may write but nobody may
-			// MERGE — two organizations each carrying live projects — can still
+			// MERGE — two companies each carrying live projects — can still
 			// be dismissed as not-a-duplicate, and reaches here with no verb
 			// because the surface offers no dismiss control for this source
 			// yet (issue 5066). Such a pair is missing from this count until it
