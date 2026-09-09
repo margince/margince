@@ -25,7 +25,6 @@ import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
 import { useCanWriteRecord, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
-import { liveRecordRead } from "../app/queryclient";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, routeHash } from "../app/router";
 import { useInstallationSettings } from "../app/uploadlimit";
@@ -3976,20 +3975,14 @@ function dealBand({
 /**
  * useDeal is the deal page's read of the deal record itself.
  *
- * Live while the reader is on the page (FE-PARAM-5, app/queryclient.ts): a
- * stage somebody else advanced, or an amount they corrected, reaches the page
- * the reader is looking at rather than waiting for a reload. The deal RECORD
- * only — the briefing beside it is model-written and rewritten server-side
- * whenever the deal has moved, so putting the cadence on that would spend the
- * workspace's AI budget on an open tab.
- *
- * A hook rather than a query inline in the screen, so the record kinds that
- * read live all read the same way and a suite can mount this one the way it
- * mounts the other three.
+ * A hook rather than a query inline in the screen, so the four record reads
+ * are mounted the same way — which is what lets one suite prove the live
+ * cadence over all of them (FE-PARAM-5, app/queryclient.ts). The cadence
+ * itself is the client's, keyed on the read: nothing is spread in here to
+ * forget.
  */
 export function useDeal(id: string) {
   return useQuery({
-    ...liveRecordRead,
     queryKey: ["deal", id],
     queryFn: async () => {
       const { data, error } = await api.GET("/deals/{id}", {

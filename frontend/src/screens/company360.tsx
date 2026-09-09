@@ -3,7 +3,6 @@ import { Sparkles } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { liveRecordRead } from "../app/queryclient";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, Skeleton, StatCard } from "../design-system/atoms";
@@ -81,11 +80,6 @@ export type Org360Result =
  */
 export function useOrganization360(id: string, enabled = true) {
   return useQuery<Org360Result>({
-    // Live while the reader is on the page (FE-PARAM-5, app/queryclient.ts).
-    // Everything the day's work ranks — the moment, the suggestions, the open
-    // tasks — rides this one read, so the whole panel moves together or not at
-    // all.
-    ...liveRecordRead,
     queryKey: ["organization360", id],
     enabled: enabled && id !== "",
     queryFn: async () => {

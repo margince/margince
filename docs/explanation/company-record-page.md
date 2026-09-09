@@ -265,58 +265,27 @@ dismissed advice come back.
 
 ## What needs you, and the one answer it gives
 
-The needs list is the panel under the call: the account's **moment** leads it,
-the **suggestions** follow, and the manual moves — prepare the booked meeting,
-write to the best route in — come last. Three producers, one list, and the
-reader takes what is at the top of it as the verdict on the account.
+The needs list has three producers — the moment leads it, the suggestions
+follow, the manual moves come last — and the reader takes the top of it as the
+verdict. The moment fires on **owed promises only**; everything else arrives
+through the suggestions or the scan's findings. Two rules stop the list
+disagreeing with itself, each held where it sees what the other cannot:
 
-The moment fires on **owed promises only** (`compose/org360/moment.go`): the
-promise that slipped most recently, else the one coming due soonest, from both
-places a promise gets written down. Everything else that could need a person —
-an unanswered message, a stalled deal, an account with nothing scheduled —
-reaches the same list through the suggestions above, and a model's findings
-reach it through the account scan.
+- **The quiet card claims only the promises it read** — *"Nothing is owed to
+  this account"*, never "nothing needs you today", a claim about work it did
+  not look at, in the payload carrying the rows contradicting it. Every client
+  reads it, the tool surface included, so the bound is the server's.
+- **A quiet card is not a row when the list has other rows** (`momentIsARow`) —
+  only the client can apply this, because the scan's findings arrive on their
+  own read. The row goes only where the list holds something, and what it holds
+  *is* the answer.
 
-Two rules keep the list from disagreeing with itself, and each is held where it
-can see what the other cannot:
-
-- **The quiet card claims only the promises it read.** With nothing owed the
-  moment is a `nothing_needed` card headed *"Nothing is owed to this account"*
-  — not "nothing needs you today", which is a claim about work this card never
-  looked at, made in the payload that carries the rows contradicting it. Every
-  client reads that headline, the tool surface included, so the bound belongs
-  on the server.
-- **A quiet card is not a row when the list has other rows** (`momentIsARow`,
-  `screens/persontoday.tsx`, used by the contact page and the account brief).
-  The client is the only place that can apply this: the scan's findings arrive
-  on their own read, so the server building the 360 cannot see the whole list.
-  Nothing is lost by dropping it: the row goes only where the list has
-  something in it, and what is in the list *is* the answer — the card was not
-  carrying one there, it was carrying a wrong one. Where the list is empty the
-  card stands, reason and verb included.
-
-The contact page's ladder is the exception that proves the bound: its rung 10
-does say *"Nothing needs you today"*, having walked eight rungs — a meeting
-within 72 hours, a re-engagement, both promise rungs, a role change, a missing
-next step, a thin relationship — before it gets there.
-
-## The record re-reads itself while it is open
-
-`GET /organizations/{id}/360` is a **live read** (FE-PARAM-5,
-`frontend/src/app/queryclient.ts`): it repeats every 20 seconds while the tab
-has focus, and refetches when the reader comes back to it. Work arrives on an
-account from places the tab cannot see — an agent files a task, a colleague
-answers a mail, a promise falls due — and a page read once on arrival keeps
-answering from that instant. The failure is silent: a stale "what needs you"
-looks exactly like a current one.
-
-It is a cadence and not a stream. The contract serves no push, so a reader sees
-new work within one cadence rather than the moment it lands. The interval
-belongs to the mounted query and stops with it, and it runs only while the
-window has focus, so a tab forgotten on a second monitor re-reads nothing. The
-contact, project and deal record reads carry the same options; the deal's
-*briefing* deliberately does not, because a model writes it and the server
-rewrites it whenever the deal has moved.
+The 360 is also a **live read** (FE-PARAM-5): every 20 seconds while the tab
+has focus, because a page read once on arrival goes stale silently — a stale
+"what needs you" looks like a current one. A cadence, not a stream; the
+contract serves no push. A read is live for the key it reads under
+(`isRecordRead`), not because its screen opted in, so the contact, project and
+deal records are live too — the deal's model-written *briefing* is not.
 
 ## The account scan
 
@@ -619,9 +588,8 @@ list, approval, signal) and durably own no business entity. See
 | The account scan: row, rail carrier, ensure rule, merge | `backend/internal/compose/orgscan/{store,service}.go` |
 | The account scan's job, and its wiring into both roles | `backend/internal/compose/jobs_accountscan.go` |
 | The visit baseline (`user_record_view`) | `backend/internal/compose/org360/viewbaseline.go` |
-| The account card: the promise it fires on, and the bound on its quiet state | `backend/internal/compose/org360/moment.go` |
-| The needs list's one answer (`momentIsARow`) | `frontend/src/screens/persontoday.tsx`, composed in `companytoday.tsx` |
-| The live record cadence (FE-PARAM-5) | `frontend/src/app/queryclient.ts`, proved in `frontend/src/screens/liverecord.test.tsx` |
+| The account card, and the moment vocabulary every record page reads it with | `backend/internal/compose/org360/moment.go`, `frontend/src/screens/record360/moment.tsx` |
+| The live record cadence (FE-PARAM-5), and which reads it recognises | `frontend/src/app/queryclient.ts`, `frontend/src/screens/activitykeys.ts` |
 | The connections graph | `backend/internal/compose/org360/{graph,graphreads,graphplace,graphourside}.go` |
 | HTTP transport + the overlay refusal | `backend/internal/compose/org360/handlers.go` |
 | The brief: cache, input, fingerprint | `backend/internal/compose/orgbrief/{service,input}.go` |

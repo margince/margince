@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { AiPending } from "../design-system/aipending";
-import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
+import { Badge, EmptyState, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { PanelBody, PanelRow } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
@@ -30,15 +30,10 @@ import {
 } from "./companylookups";
 import { EntityRef } from "./entityref";
 import {
-  MOMENT_RULE_LABEL,
-  momentGrounding,
-  momentIsARow,
-  standingTone,
-} from "./persontoday";
-import {
   CallCard,
   type Grounding,
-  Proof,
+  MomentRow,
+  momentIsARow,
   type StandingTone,
   TodayPanel,
   TodoRow,
@@ -49,7 +44,6 @@ import "./company360.css";
 
 type Organization360 = components["schemas"]["Organization360"];
 type HealthRating = components["schemas"]["HealthDimension"]["rating"];
-type PersonMoment = components["schemas"]["PersonMoment"];
 
 // The lead reading: whose move it is, under the call and in its own weight. It
 // is the one thing a reader must know before the moves under it mean anything.
@@ -678,68 +672,3 @@ function byStrengthThenId(
 type Organization360Contact = NonNullable<
   Organization360["people"]
 >["data"][number];
-
-/**
- * The moment as the lead row of the needs list: the rule it fired on as the
- * eyebrow, the headline in the display face, why now, the evidence one
- * disclosure away, and the one filled verb on the page.
- *
- * The button appears only where the server said the action can be taken AND
- * named somewhere to go. A card whose verb lands nowhere is worse than a card
- * with no verb: the reader clicks, nothing happens, and they stop trusting
- * the ones that work.
- */
-function MomentRow({
-  moment,
-  onOpenRecord,
-}: Readonly<{
-  moment: PersonMoment;
-  onOpenRecord?: (entityType: string, entityId: string) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const destination = moment.recommended_action.destination;
-  const target =
-    moment.recommended_action.state === "available" &&
-    destination?.entity_type != null &&
-    destination.entity_id != null
-      ? { type: destination.entity_type, id: destination.entity_id }
-      : undefined;
-  const tone = standingTone(moment.rule);
-  return (
-    <PanelRow className="co-move co-move-lead">
-      <span className="co-move-body">
-        <span className="co-move-by">
-          <span className={`co-dim co-dim-${tone} t-sub`}>
-            {t(MOMENT_RULE_LABEL[moment.rule])}
-          </span>
-        </span>
-        <span className="co-move-ask co-move-headline">{moment.headline}</span>
-        <span className="co-move-reason t-sub">{moment.why_now}</span>
-        <Proof
-          label={t("record.restsOn")}
-          items={momentGrounding(moment.evidence, t, locale, recordZone)}
-          count
-        />
-        {target && onOpenRecord && (
-          <span className="co-move-do">
-            <span className="co-move-actions">
-              {/* Indigo, because pressing it hands the work to Margince: the
-                  hue is the product's one claim about who is acting, and a
-                  verb the agent performs drawn in the accent would read as
-                  the reader's own move. */}
-              <Button
-                small
-                variant="ai"
-                onClick={() => onOpenRecord(target.type, target.id)}
-              >
-                {moment.recommended_action.label}
-              </Button>
-            </span>
-          </span>
-        )}
-      </span>
-    </PanelRow>
-  );
-}

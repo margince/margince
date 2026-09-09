@@ -876,33 +876,6 @@ describe("logging an activity", () => {
     expect(within(move).queryByText("Ready")).toBeNull();
   });
 
-  // The ladder reaches rung 10 with work still on the page whenever the reader
-  // has dismissed the card that spoke for it. The dismissal silences a card,
-  // not the record — so the task stays listed, and the panel must not answer
-  // "nothing needs you today" over the top of it.
-  it("drops the quiet card when an open task is still listed", async () => {
-    mount("overview", {
-      ...view,
-      moment: quietDayMoment,
-      next_steps: {
-        data: [
-          {
-            id: "a-9",
-            kind: "task",
-            subject: "Send the renewal quote",
-            occurred_at: "2026-08-10T09:00:00Z",
-            is_done: false,
-            ...CAPTURED,
-          },
-        ],
-        page: { has_more: false },
-      },
-    });
-
-    expect(await screen.findByText("Send the renewal quote")).toBeTruthy();
-    expect(screen.queryByText("Nothing needs you today")).toBeNull();
-  });
-
   // The contrast that makes the rule above a rule rather than a blanket
   // deletion: a rung that really is an ask still says whose ask it is.
   it("keeps the byline on a rung that does ask for something", async () => {

@@ -1,8 +1,9 @@
 /** @vitest-environment jsdom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createQueryClient } from "../app/queryclient";
 import { useOrganization360 } from "./company360";
 import { useDeal } from "./deals";
 import { useDealStatusCard } from "./dealstatus";
@@ -18,10 +19,10 @@ import { useProject360 } from "./project360";
 // cadence, and only a stopped clock proves the tab nobody is looking at is
 // not polling all night.
 //
-// Held per record read rather than once over the shared options, because what
-// could actually go wrong is a page forgetting to ask for them: the constant
-// staying correct while a screen quietly drops the spread is the regression,
-// and a test of the constant alone would pass through it.
+// Driven through each record page's OWN read against the app's own client,
+// rather than asserting the policy's predicate: what could actually go wrong
+// is a page reading under a key the policy does not recognise, and a test of
+// the predicate alone would agree with itself and pass straight through that.
 
 // FE-PARAM-5's cadence, mirrored here so a case can advance past exactly one
 // of them rather than a bare number that could mean anything.
@@ -34,7 +35,9 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
-let client: QueryClient;
+// THE APP'S OWN CLIENT. The cadence is a default of that client keyed on the
+// read, so a bare QueryClient built here would prove a policy nothing ships.
+let client: ReturnType<typeof createQueryClient>;
 
 function wrapper({ children }: Readonly<{ children: ReactNode }>) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
@@ -62,7 +65,7 @@ async function advance(ms: number): Promise<void> {
 }
 
 beforeEach(() => {
-  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client = createQueryClient();
   vi.useFakeTimers();
 });
 

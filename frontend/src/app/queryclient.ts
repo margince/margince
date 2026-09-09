@@ -1,4 +1,10 @@
-import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  type QueryKey,
+} from "@tanstack/react-query";
+import { isRecordRead } from "../screens/activitykeys";
 import { logUnexpectedError, ProblemError } from "../screens/common";
 import { ENTITY_NAME_KEY } from "../screens/entityref";
 
@@ -24,44 +30,33 @@ const STALE_TIME_MS = 30_000;
 //
 // Twenty seconds is the cadence, not a stream: the contract serves no push, so
 // this is the honest approximation — new work reaches the reader within one
-// cadence rather than the moment it lands. It is short enough that a rep who
-// files a task from their phone sees it on the open page before they have
-// finished reading the paragraph, and long enough that an idle tab is one
-// composite read every twenty seconds and nothing else.
+// cadence rather than the moment it lands. It is short enough that a task
+// filed elsewhere reaches the open page while the reader is still on it, and
+// long enough that an idle tab costs one composite read every twenty seconds
+// and nothing else.
 const LIVE_RECORD_MS = 20_000;
 
-/**
- * The options that make a read LIVE: it repeats while somebody is looking at
- * it, and catches up the instant they come back to the tab.
- *
- * Spelled ONCE, because the cadence is a property of the product rather than
- * of one screen. Four record pages read live, and four copies of the number
- * would be four cadences the first time anybody tuned one.
- *
- * Both flags beside the interval are load-bearing.
- * `refetchIntervalInBackground` is the library's default restated, because it
- * is the half that keeps a tab forgotten on a second monitor from re-reading
- * all night — the interval runs only while the window has focus. The focus
- * refetch is the deliberate exception to FE-PARAM-3: returning to a record
- * after an hour away is exactly the moment the cached answer is wrong, and it
- * is the moment the reader is most likely to act on it.
- *
- * It belongs on a record's COMPOSITE read — the one that carries its open
- * work — and not on a read whose answer a model writes: the deal briefing is
- * rewritten server-side whenever the deal has moved, so putting this on it
- * would spend the workspace's AI budget on an idle tab.
- *
- * It sits on the READ and not on the record screen, so every surface showing
- * that record is current: the composer anchored on a contact and the
- * worklist's record pane are looking at the same thing the page is. They also
- * share one interval — a cache key has one query however many surfaces mount
- * it — and it stops when the last of them unmounts.
- */
-export const liveRecordRead = {
-  refetchInterval: LIVE_RECORD_MS,
-  refetchIntervalInBackground: false,
-  refetchOnWindowFocus: true,
-} as const;
+// FE-PARAM-5, applied: a read is live because of WHAT IT IS, not because the
+// screen that mounts it remembered to ask.
+//
+// The alternative was per-hook options, and it fails the way lists fail: the
+// fifth record page is written without them, nothing says so, and the page
+// serves a stale answer that looks exactly like a fresh one. Keyed on the read
+// instead, `isRecordRead` derives its corpus from the table that already knows
+// which key carries a record — so a record kind joins by existing rather than
+// by being remembered here.
+//
+// It reaches every surface showing that record and not only its page: the
+// composer anchored on a contact and the worklist's record pane read under the
+// same key, so they see what the page sees, share its one interval, and stop
+// it when the last of them unmounts. What it deliberately does NOT reach is a
+// read whose answer a model writes — the deal briefing is rewritten
+// server-side whenever the deal has moved, and a cadence on that would spend
+// the workspace's AI budget on an open tab. Its key is the status card's, not
+// the deal record's, which is what keeps it out.
+function liveInterval(query: { queryKey: QueryKey }): number | false {
+  return isRecordRead(query.queryKey) && LIVE_RECORD_MS;
+}
 
 // FE-PARAM-2. Two retries, and only for a failure the server reported as its
 // own fault.
@@ -188,9 +183,18 @@ export function createQueryClient(): QueryClient {
       queries: {
         staleTime: STALE_TIME_MS,
         retry: retryQuery,
+        // FE-PARAM-5. A record on screen re-reads itself; everything else is
+        // answered from cache exactly as before.
+        refetchInterval: liveInterval,
+        // The library's default, restated because it is the half that keeps a
+        // tab forgotten on a second monitor from re-reading all night: the
+        // interval runs only while the window has focus.
+        refetchIntervalInBackground: false,
         // FE-PARAM-3. Returning to the tab refetches nothing by default; a
-        // query whose freshness matters opts in for itself.
-        refetchOnWindowFocus: false,
+        // query whose freshness matters opts in for itself. A record does:
+        // coming back to one after an hour away is exactly when the cached
+        // answer is wrong, and exactly when the reader acts on it.
+        refetchOnWindowFocus: (query) => isRecordRead(query.queryKey),
       },
     },
     queryCache: new QueryCache({ onError: reportQueryError }),
