@@ -18473,12 +18473,17 @@ export interface components {
         };
         /**
          * @description Where this reader's scan of the account stands. `never` — this reader has not asked
-         *     for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
-         *     model read the account and its findings are stored. `degraded` — the read finished
-         *     on the deterministic floor (no model lane, the AI budget deferred past the job's
-         *     patience, or a reply the grounding filter refused whole); the rules' own advice is
-         *     what stands. `failed` — the read could not run at all; the rules' advice still
-         *     answers, and `degrade_reason` says what stopped it.
+         *     for one. `queued` / `running` — a read is in flight, on the rail. `done` — the read
+         *     covered everything this reader may read and its findings are stored; that is the
+         *     model's reading of the account's exchanges, or — on an account with no exchange
+         *     this reader may read, which is every account before its first — the rules' own
+         *     advice over nothing, with `read` saying nought exchanges and `generated_by` saying
+         *     which wrote it. An empty account is not a shortfall and never degrades: `degraded`
+         *     is the DEPLOYMENT falling short of the read it was asked for, so the answer
+         *     finished on the deterministic floor (no model lane, the AI budget deferred past the
+         *     job's patience, or a reply the grounding filter refused whole) and the rules' own
+         *     advice is what stands. `failed` — the read could not run at all; the rules' advice
+         *     still answers, and `degrade_reason` says what stopped it.
          * @enum {string}
          */
         OrganizationScanState: "never" | "queued" | "running" | "done" | "degraded" | "failed";

@@ -348,9 +348,15 @@ name on it — a system principal reads every audience away) with the row id
 as the correlation id, reads, and settles. Every transition announces itself
 on the rail with the account's name as the subject, so the reader who opened
 three accounts and moved on finds out which is ready. A budget deferral
-parks the row and snoozes the job; no lane, no exchanges the reader may read,
-or a reply the grounding refused whole settles `degraded` with a reason the
-reader can read, and the rules' rows stand alone.
+parks the row and snoozes the job; no lane, or a reply the grounding refused
+whole, settles `degraded` with a reason the reader can read, and the rules'
+rows stand alone. An account with no exchange the reader may read settles
+`done` and not `degraded`: the read covered everything it was ever going to,
+and `read` saying nought exchanges beside `generated_by` saying the rules
+wrote the advice is the whole of what happened. `degraded` reaches the rail's
+faults arm, which holds the orb amber until somebody acknowledges it, so
+degrading an empty account would raise a warning on every account nobody has
+written to yet — which every account is, on the day it is added.
 
 **The page.** While the read runs, the needs list keeps the rules' rows and
 draws the `AiPending` row above them — the indigo tile breathing, the answer's
