@@ -112,10 +112,14 @@ trap cleanup EXIT
 
 # --- the stack ---------------------------------------------------------------
 #
-# One fresh boot here, and a fresh DATABASE before every run that follows a run
-# — the WORLD_DIRTY loop below, whose own comment says why the cheaper rules
-# that preceded it were wrong. What this section buys is the boot: the stack
-# comes up once and only its database is rebuilt.
+# One boot here, one seed, one passport — and then a restored DATABASE before
+# every run that follows a run, the WORLD_DIRTY loop below, whose own comment
+# says why the cheaper rules that preceded it were wrong.
+#
+# The stack comes up ONCE and stays up. This section used to promise that and
+# not keep it: the loop called `dev-fresh`, which rebuilds the composition,
+# relinks the api binary and boots three processes — none of which can have
+# changed while a sweep is running. Only the database ever needed to go back.
 #
 # So every scenario is measured against the same world: the one this seeding
 # produces and nothing a previous run added to it. That is what makes a case
@@ -170,13 +174,17 @@ MCP_SERVER=margince_e2e_llm
 
 # mint_passport signs in and writes the MCP config.
 #
-# It is a FUNCTION and not a one-time step because dev-fresh drops and
-# recreates the database, which destroys the passport row with everything
-# else. Minting once at startup left every run after the first re-seed
-# presenting a token that no longer existed: the CLI reported
-# {"name":"margince","status":"failed"}, the assistant saw no tools at all,
-# and the checker read that as "the answer was not drawn from Margince" —
-# six scenarios failing for one expired credential.
+# It runs ONCE, and what makes that safe is that the snapshot below is taken
+# after it: the passport row is inside the template, so every restore hands the
+# assistant back the same working credential.
+#
+# It could not be once while the reset was a `dev-fresh`, and the failure was
+# expensive to read. That rebuild dropped the database and the passport row with
+# it, so a token minted only at startup was gone by the second run: the CLI
+# reported {"name":"margince","status":"failed"}, the assistant was offered no
+# tools at all, and the checker scored that as "the answer was not drawn from
+# Margince" — six scenarios blamed on the product for one dead credential. The
+# guard in run_once now catches that shape whatever causes it.
 #
 # It also runs AFTER seeding, because the seed lifts the admin's first-login
 # hold, and a passport cannot be minted by an account that is still held.
@@ -212,6 +220,28 @@ open(sys.argv[3], "w").write(json.dumps(cfg))' \
   }
 }
 mint_passport
+
+# --- the snapshot every later run is restored from --------------------------
+#
+# THE EXPENSIVE PART OF ISOLATION WAS NEVER THE ISOLATION. Every run needs the
+# world the seed built and nothing a previous run wrote, and this lane used to
+# buy that with a full `dev-fresh` plus a reseed plus a re-mint before each one:
+# measured at 33s + 10s on a warm machine, 62 times over a full sweep, to
+# produce a world identical to the one it had just thrown away.
+#
+# A snapshot makes the same guarantee a file copy. `dev-snapshot` copies this
+# stack's database to a template and `dev-restore` clones it back — about a
+# second — which is the shape the integration lanes have used all along
+# (scripts/lib-testdb.sh). What is different here is that the snapshot is taken
+# AFTER the seed and after the passport is minted, so a restore returns the
+# records and the credential together and neither has to be rebuilt.
+#
+# The stack comes down for the copy and straight back up, because Postgres will
+# not copy a database a session is connected to. That is the one time it stops.
+echo "==> snapshotting the seeded world"
+(cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
+(cd "$ROOT" && make dev-snapshot DEV_SLUG="$SLUG" >/dev/null)
+(cd "$ROOT" && make dev DEV_SLUG="$SLUG" >/dev/null)
 
 # --- run one scenario once ---------------------------------------------------
 #
@@ -367,15 +397,15 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     # So: a run dirties the world, and the next run starts from a fresh one.
     # More boots, and the number they buy is one a reader can trust.
     if [[ "$WORLD_DIRTY" = "1" ]]; then
-      # dev-stop FIRST. dev-fresh refuses to boot over a port its own stack is
-      # already holding — "port :18081 already in use" — so calling it on the
-      # running stack killed the lane after case 1 run 1 on the first real
-      # outing of this script.
-      (cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
-      (cd "$ROOT" && make dev-fresh DEV_SLUG="$SLUG" >/dev/null)
-      seed_everything
-      # The rebuild took the passport row with the old database.
-      mint_passport
+      # The stack STAYS UP. A restore closes the api's connections and clones
+      # the snapshot back underneath it, and the pool redials on its next query
+      # — so there is no boot, no migrate, no reseed and no re-mint here.
+      #
+      # It is also safer for the api's own memory than the reseed it replaces,
+      # which is the opposite of what one expects: a fresh seed mints new uuids
+      # for every record, so anything the process had cached by id went stale,
+      # while a clone is byte-identical to the world it was already looking at.
+      (cd "$ROOT" && make dev-restore DEV_SLUG="$SLUG" >/dev/null)
       WORLD_DIRTY=0
     fi
 
