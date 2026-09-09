@@ -55,7 +55,7 @@ function withProviders(node: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  render(
+  return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{node}</LocaleProvider>
     </QueryClientProvider>,
@@ -130,6 +130,39 @@ describe("the timeline tab", () => {
       screen.getByRole("button", { name }).getAttribute("aria-pressed");
     expect(pressed("All")).toBe("true");
     expect(pressed("Activities")).toBe("false");
+  });
+
+  // The cuts stand in the panel's body, over the row that narrows whichever
+  // cut is open. A pill row wraps to as many rows as the column needs, and the
+  // head is one fixed band — so in the head it was the one card on the page
+  // whose title sat at a different height from every other.
+  it("keeps the cuts under the head, above the narrowing row", () => {
+    const { container } = withProviders(
+      <PersonTimelineTab personId="p-1" view={view} />,
+    );
+    const cuts = screen.getByRole("button", { name: "All" });
+    expect(cuts.closest(".panel-head")).toBeNull();
+    const dials = container.querySelector(".panel-body .timeline-header");
+    expect(dials).not.toBeNull();
+    expect(dials?.contains(cuts)).toBe(true);
+    // The narrowing row follows the cuts inside the same block, so the two
+    // read as one set of dials rather than as a control that wrapped.
+    expect(dials?.querySelector(".timeline-filters")).not.toBeNull();
+  });
+
+  // Changes is the one cut with no exchanges to narrow, so the filter row
+  // stands down — and the cuts themselves must not go with it, or a reader who
+  // picked Changes has no way back to the rest of the chronology.
+  it("keeps the cuts when the narrowing row stands down", async () => {
+    const user = userEvent.setup();
+    withProviders(<PersonTimelineTab personId="p-1" view={view} />);
+
+    await user.click(screen.getByRole("button", { name: "Changes" }));
+
+    expect(
+      screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(screen.queryByLabelText("Activity kind")).toBeNull();
   });
 
   it("says the section is withheld rather than drawing it empty", () => {
