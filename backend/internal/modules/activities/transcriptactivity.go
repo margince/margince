@@ -102,7 +102,7 @@ func emitTranscriptActivity(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, r
 // is the condition on riding the bus without an entity ref at all.
 func logTranscriptActivity(ctx context.Context, tx pgx.Tx, read TranscriptRead) error {
 	ledgerID, err := storekit.LogSystem(ctx, tx, "ai_task.state_changed", map[string]any{
-		"source": TranscriptActivitySource, "occurrence_key": read.ID.String(),
+		ledgerSourceKey: TranscriptActivitySource, "occurrence_key": read.ID.String(),
 		"state": read.Status, "attempt": read.Attempt,
 	})
 	if err != nil {
