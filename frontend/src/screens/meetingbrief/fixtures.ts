@@ -259,3 +259,18 @@ export const briefManager: MeetingBrief = {
     },
   },
 };
+
+// The same preparation plan with a model lane behind it.
+//
+// Built by REPLACING one field on the rep's plan, never by writing a second
+// one: what changes between a composed plan and a model's is the writer, and a
+// fixture assembled the other way would let the tint tests pass over facts
+// production never sends together.
+export const briefModelPlan: MeetingBrief = {
+  ...briefWithPlan,
+  generated_by: "model",
+  plan: {
+    ...(briefWithPlan.plan as NonNullable<MeetingBrief["plan"]>),
+    generated_by: "model",
+  },
+};

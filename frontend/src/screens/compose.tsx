@@ -25,6 +25,7 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Eyebrow } from "../design-system/eyebrow";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { Panel, PanelBody } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
 import {
   liveProjects,
@@ -1599,47 +1600,56 @@ function DraftBand({
     return null;
   }
   return (
-    <section className="compose-band" data-testid="ai-disclosure-banner">
-      <Eyebrow>{t("compose.aiDisclosureTitle")}</Eyebrow>
-      <p className="t-body">
-        {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
-      </p>
-      <DraftReasons
-        reasons={reasons}
-        onOpenRecord={openCited}
-        onOpenEmail={setOpenEmail}
-      />
-      <OpenEmailDrawer
-        activityId={openEmail}
-        zone={zone}
-        onClose={() => setOpenEmail(null)}
-      />
-      {provenance.voice_degraded && (
-        // The one loss a sender cannot see in the text: their own voice is
-        // the register nobody proofreads for.
-        <Callout tone="warn" live="status">
-          {t("compose.voiceDegraded")}
-        </Callout>
-      )}
-      {provenance.voice_profile_version != null && (
-        <>
-          <p className="t-caption">
-            {/* A profile VERSION, never grouped: version 1234 is one
-                identifier, and "1.234" reads as a different one. */}
-            {t("compose.voiceVersion", {
-              n: identifierNumber(provenance.voice_profile_version),
-            })}
-          </p>
-          {maturity === "provisional" && (
+    // The house card in its machine-authored tone, not a hand-drawn indigo
+    // box: the disclosure's own title heads it, at h3 because the drawer's
+    // heading is already the h2 these sit under.
+    <Panel
+      tone="ai"
+      title={t("compose.aiDisclosureTitle")}
+      titleLevel={3}
+      className="compose-band"
+    >
+      <PanelBody className="compose-band-body">
+        <p className="t-body">
+          {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
+        </p>
+        <DraftReasons
+          reasons={reasons}
+          onOpenRecord={openCited}
+          onOpenEmail={setOpenEmail}
+        />
+        <OpenEmailDrawer
+          activityId={openEmail}
+          zone={zone}
+          onClose={() => setOpenEmail(null)}
+        />
+        {provenance.voice_degraded && (
+          // The one loss a sender cannot see in the text: their own voice is
+          // the register nobody proofreads for.
+          <Callout tone="warn" live="status">
+            {t("compose.voiceDegraded")}
+          </Callout>
+        )}
+        {provenance.voice_profile_version != null && (
+          <>
             <p className="t-caption">
-              <Badge>{t("compose.provisional")}</Badge>{" "}
-              {t("compose.provisionalHint")}
+              {/* A profile VERSION, never grouped: version 1234 is one
+                  identifier, and "1.234" reads as a different one. */}
+              {t("compose.voiceVersion", {
+                n: identifierNumber(provenance.voice_profile_version),
+              })}
             </p>
-          )}
-        </>
-      )}
-      {children}
-    </section>
+            {maturity === "provisional" && (
+              <p className="t-caption">
+                <Badge>{t("compose.provisional")}</Badge>{" "}
+                {t("compose.provisionalHint")}
+              </p>
+            )}
+          </>
+        )}
+        {children}
+      </PanelBody>
+    </Panel>
   );
 }
 

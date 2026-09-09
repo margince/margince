@@ -538,7 +538,9 @@ describe("ComposeModal", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    expect(await screen.findByTestId("ai-disclosure-banner")).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "AI-assisted draft" }),
+    ).toBeTruthy();
     expect(
       screen.getByText("AI-assisted draft (Art. 50): reviewed by a human."),
     ).toBeTruthy();
@@ -573,7 +575,9 @@ describe("ComposeModal", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    expect(await screen.findByTestId("ai-disclosure-banner")).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "AI-assisted draft" }),
+    ).toBeTruthy();
     expect(screen.getByText(/This draft was produced by AI/i)).toBeTruthy();
   });
 
@@ -605,7 +609,9 @@ describe("ComposeModal", () => {
     // The fill proves the draft landed, so the missing banner is the
     // disclosure being conditional rather than the response never arriving.
     expect(await screen.findByDisplayValue("Re: Q3 numbers")).toBeTruthy();
-    expect(screen.queryByTestId("ai-disclosure-banner")).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "AI-assisted draft" }),
+    ).toBeNull();
   });
 
   it("names the voice version that styled the draft and flags a provisional profile", async () => {
@@ -1407,7 +1413,9 @@ describe("ComposeModal draft provenance", () => {
     // disclosure following the body rather than the response never arriving.
     expect(await screen.findByDisplayValue("Re: Q3")).toBeTruthy();
     expect(messageText("Body")).toBe("My own words.");
-    expect(screen.queryByTestId("ai-disclosure-banner")).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "AI-assisted draft" }),
+    ).toBeNull();
   });
 
   it("keeps the applied draft's voice version when a re-draft is discarded", async () => {
@@ -1454,12 +1462,16 @@ describe("ComposeModal draft provenance", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    expect(screen.getByTestId("ai-disclosure-banner")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "AI-assisted draft" }),
+    ).toBeTruthy();
 
     writeMessage("Body", "");
 
     await waitFor(() =>
-      expect(screen.queryByTestId("ai-disclosure-banner")).toBeNull(),
+      expect(
+        screen.queryByRole("heading", { name: "AI-assisted draft" }),
+      ).toBeNull(),
     );
   });
 
@@ -1483,7 +1495,9 @@ describe("ComposeModal draft provenance", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    expect(await screen.findByTestId("ai-disclosure-banner")).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "AI-assisted draft" }),
+    ).toBeTruthy();
     expect(screen.queryByText("Provisional voice")).toBeNull();
   });
 });

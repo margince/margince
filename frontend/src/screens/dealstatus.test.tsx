@@ -40,6 +40,7 @@ function serve({
   standing = "blocked",
   risks = [] as Risk[],
   sectionsOmitted = [] as string[],
+  writer = "model" as "model" | "deterministic",
 }) {
   vi.stubGlobal(
     "fetch",
@@ -62,7 +63,7 @@ function serve({
               },
             },
             generated_at: "2026-08-24T00:00:00Z",
-            generated_by: "model",
+            generated_by: writer,
           }),
           { status: 200, headers: { "content-type": "application/json" } },
         );
@@ -288,5 +289,42 @@ describe("Deal360's signal chips state their trigger", () => {
       expect(document.querySelector(".r360-signals")).toBeNull();
     });
     expect(screen.queryByText("Going cold")).toBeNull();
+  });
+});
+
+describe("Deal360's brief says who wrote it", () => {
+  // The panel the fold lives in, which is the brief. Named this way rather than
+  // by "the first .panel-ai on the page": the day's work above it is the
+  // agent's own reading and wears the indigo band unconditionally, so a
+  // page-wide query would answer about that panel in both directions.
+  function briefPanel(container: HTMLElement): HTMLElement {
+    const fold = container.querySelector("details.deal360-fold");
+    const panel = fold?.closest(".panel");
+    expect(panel).not.toBeNull();
+    return panel as HTMLElement;
+  }
+
+  // Both directions, because a lookup that returned "ai" for everything and
+  // one that returned nothing for everything each satisfy half of this.
+  it("tints the brief indigo when a model wrote it", async () => {
+    serve({ writer: "model" });
+    const { container } = renderCard();
+    await screen.findByText("They asked for slots.");
+    expect(briefPanel(container).classList).toContain("panel-ai");
+    // The verb that asks for another reading is the machine's own, drawn quiet
+    // because it sits inside the panel the machine already wrote.
+    expect(
+      screen.getByRole("button", { name: "Write it again" }).className,
+    ).toContain("btn-aiQuiet");
+  });
+
+  it("leaves a deterministic composition untinted", async () => {
+    // The same read degrades to a composition over the same records when no
+    // model lane answers. Indigo means "Margince wrote this", so a band that
+    // tinted this too would tell a reader a model weighed the deal.
+    serve({ writer: "deterministic" });
+    const { container } = renderCard();
+    await screen.findByText("They asked for slots.");
+    expect(briefPanel(container).classList).not.toContain("panel-ai");
   });
 });

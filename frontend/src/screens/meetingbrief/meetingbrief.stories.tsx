@@ -5,6 +5,7 @@ import {
   briefEmpty,
   briefManager,
   briefModel,
+  briefModelPlan,
   briefOmitted,
   briefReady,
   briefScoped,
@@ -61,10 +62,23 @@ export const Ready: Story = {
   render: () => drawer(() => jsonResponse(briefReady)),
 };
 
-// The same facts with a model lane behind them. The band turns indigo and the
-// badge names the writer; nothing else moves.
+// The same facts with a model lane behind them. Every panel turns indigo and
+// the lead's head carries the disclosure badge; nothing else moves.
 export const ModelWritten: Story = {
   render: () => drawer(() => jsonResponse(briefModel)),
+};
+
+// The whole PLAN written by a model: the objective, the arc, the close, the
+// unknowns and the ranked asks all indigo, with the badge on the objective
+// alone. Read beside `WithPlan` — the same panels and the same facts, composed
+// rather than written — this is the only place the claim can be checked.
+export const ModelWrittenPlan: Story = {
+  render: () => drawer(() => jsonResponse(briefModelPlan)),
+};
+
+export const ModelWrittenPlanDark: Story = {
+  render: () => drawer(() => jsonResponse(briefModelPlan)),
+  globals: { theme: "dark" },
 };
 
 // What a reader sees in the seconds before the brief arrives.

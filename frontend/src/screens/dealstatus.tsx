@@ -264,11 +264,18 @@ function Briefing({
           between a scanning reader and the call. */}
       <Panel
         title={t("deal360.brief")}
+        // Indigo follows the WRITER: the same read degrades to a deterministic
+        // composition when no model lane answers, and a band that tinted both
+        // would tell a reader a model weighed a deal nothing weighed.
+        tone={card.generated_by === "model" ? "ai" : undefined}
         titleAction={<WrittenBy by={card.generated_by} />}
         footer={
           <div className="deal360-foot">
+            {/* Asking for the brief again is the machine's own verb, and it is
+                quiet rather than filled because it sits inside the panel the
+                machine already wrote. */}
             <Button
-              variant="ghost"
+              variant="aiQuiet"
               small
               pending={rewriting}
               onClick={onRewrite}

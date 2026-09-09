@@ -61,6 +61,12 @@ export function PersonBriefCard({
   return (
     <Panel
       title={t("person.brief.title")}
+      // Indigo follows the WRITER, not the card: the deterministic fallback
+      // composes over the same records and would be dressed as a model's
+      // reading by a tint it did not earn. `WrittenBy` already carries the
+      // indigo badge for a model, so the band takes the tone and nothing
+      // else is added beside it.
+      tone={written && brief.generated_by === "model" ? "ai" : undefined}
       // Who wrote it, on the band that claims it. A reader weighing a sentence
       // needs to know whether a model or the deterministic fallback wrote it,
       // and the two are not interchangeable.
