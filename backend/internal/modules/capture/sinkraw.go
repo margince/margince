@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"unicode/utf8"
 
@@ -121,3 +122,46 @@ func jsonEscapesNUL(raw []byte) bool {
 		at = found + len("u0000")
 	}
 }
+
+// DecodeStoredOriginal unwraps what storeRawCapture put in raw_capture.payload,
+// and is the exact inverse of rawCapturePayload above.
+//
+// It lives here rather than at each reader because the three spellings are this
+// file's own invention: a JSON payload (a calendar event resource) stored as
+// itself, text (an RFC822 message) as a JSON *string*, and bytes jsonb cannot
+// hold as text in a base64 envelope naming its own encoding. A reader keeping
+// its own copy of that list is a second answer to what the column means, and
+// the copy is what falls behind when a fourth spelling arrives.
+//
+// The envelope is checked before the string case because it IS a JSON object,
+// and it is checked by its DECLARED encoding rather than by shape, so a
+// provider payload that happens to carry those two keys cannot be mistaken for
+// one.
+func DecodeStoredOriginal(payload []byte) ([]byte, error) {
+	if len(payload) == 0 {
+		return nil, errors.New("capture: the stored original is empty")
+	}
+	var envelope rawCaptureEnvelope
+	if err := json.Unmarshal(payload, &envelope); err == nil &&
+		envelope.Encoding == RawCaptureBase64Encoding {
+		raw, err := base64.StdEncoding.DecodeString(envelope.Data)
+		if err != nil {
+			return nil, fmt.Errorf("capture: decoding the stored original: %w", err)
+		}
+		return raw, nil
+	}
+	if !bytes.HasPrefix(bytes.TrimSpace(payload), []byte(`"`)) {
+		return payload, nil
+	}
+	var text string
+	if err := json.Unmarshal(payload, &text); err != nil {
+		return nil, fmt.Errorf("capture: unwrapping the stored original: %w", err)
+	}
+	return []byte(text), nil
+}
+
+// EncodeStoredOriginal is rawCapturePayload under a name another package can
+// reach. The part sweep needs it: what it writes back has to be spelled the way
+// the sink would have spelled it, or the next reader decodes something the
+// column does not hold.
+func EncodeStoredOriginal(raw []byte) ([]byte, error) { return rawCapturePayload(raw) }

@@ -187,7 +187,16 @@ func (s *PartSlimStore) slimRow(ctx context.Context, row candidateRow, out *Part
 	if len(proved) == 0 {
 		return s.stamp(ctx, row.id)
 	}
-	stripped, count, err := partslim.StripStoredParts(row.payload, proved)
+	// The column is jsonb, so what came out of it is the SPELLING of the
+	// original rather than the original: an RFC822 message arrives as a JSON
+	// string, with its CRLFs escaped. Stripping that would look for a base64
+	// run wrapped in real newlines inside text that has none, find nothing, and
+	// report a clean no-op forever.
+	original, err := DecodeStoredOriginal(row.payload)
+	if err != nil {
+		return s.stamp(ctx, row.id)
+	}
+	stripped, count, err := partslim.StripStoredParts(original, proved)
 	if err != nil {
 		// An original this cannot rewrite is stamped rather than retried: the
 		// fault is in the message or the rows describing it, and neither
@@ -195,14 +204,23 @@ func (s *PartSlimStore) slimRow(ctx context.Context, row candidateRow, out *Part
 		// and re-refused every cadence for as long as the row exists.
 		return s.stamp(ctx, row.id)
 	}
-	if count == 0 || len(stripped) >= len(row.payload) {
+	if count == 0 || len(stripped) >= len(original) {
 		// Nothing came out, or the stanza cost more than the octets it replaced
 		// — which happens on a part small enough, and is why this is measured
 		// rather than assumed.
 		return s.stamp(ctx, row.id)
 	}
-	saved := int64(len(row.payload) - len(stripped))
-	err = s.write(ctx, row, stripped)
+	// Written back in the same spelling the sink would have used, so the next
+	// reader decodes what the column actually holds.
+	payload, err := EncodeStoredOriginal(stripped)
+	if err != nil {
+		return s.stamp(ctx, row.id)
+	}
+	saved := int64(len(row.payload) - len(payload))
+	if saved <= 0 {
+		return s.stamp(ctx, row.id)
+	}
+	err = s.write(ctx, row, payload)
 	if errors.Is(err, errPartSlimRaced) {
 		return nil
 	}

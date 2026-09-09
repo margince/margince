@@ -26,12 +26,8 @@ package compose
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -331,37 +327,11 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 
 // decodeStoredOriginal unwraps what the sink put in raw_capture.payload.
 //
-// The column is jsonb and a provider's original need not be JSON, so three
-// spellings arrive here: a JSON payload (a calendar event resource) as itself,
-// text (an RFC822 message) as a JSON *string*, and bytes jsonb cannot hold as
-// text — invalid UTF-8, or a NUL — in a base64 envelope that names its own
-// encoding. The envelope is checked before the string case because it IS a
-// JSON object, and it is checked by its declared encoding rather than by shape
-// so a provider payload that happens to carry those two keys cannot be
-// mistaken for one.
+// Delegated rather than spelled here: the three spellings a payload can carry
+// are capture/sinkraw.go's own invention, and a reader holding its own copy of
+// that list is the copy that falls behind when a fourth arrives.
 func decodeStoredOriginal(payload []byte) ([]byte, error) {
-	if len(payload) == 0 {
-		return nil, errors.New("compose: the stored original is empty")
-	}
-	var envelope struct {
-		Encoding string `json:"encoding"`
-		Data     string `json:"data"`
-	}
-	if err := json.Unmarshal(payload, &envelope); err == nil && envelope.Encoding == capture.RawCaptureBase64Encoding {
-		raw, err := base64.StdEncoding.DecodeString(envelope.Data)
-		if err != nil {
-			return nil, fmt.Errorf("compose: decoding the stored original: %w", err)
-		}
-		return raw, nil
-	}
-	if !strings.HasPrefix(strings.TrimSpace(string(payload)), `"`) {
-		return payload, nil
-	}
-	var text string
-	if err := json.Unmarshal(payload, &text); err != nil {
-		return nil, fmt.Errorf("compose: unwrapping the stored original: %w", err)
-	}
-	return []byte(text), nil
+	return capture.DecodeStoredOriginal(payload)
 }
 
 // markReplayed records that this activity has been re-read, so no later pass
