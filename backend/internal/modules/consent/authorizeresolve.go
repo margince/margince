@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -350,24 +351,13 @@ func deliveryLinks(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) ([]ids.U
 	rows, err := tx.Query(ctx, `
 		SELECT l.deal_id
 		  FROM comms_outbound o
+		  JOIN activity a ON a.id = o.activity_id
 		  JOIN activity_link l ON l.activity_id = o.activity_id AND l.deal_id IS NOT NULL
-		 WHERE o.id = $1`, deliveryID)
+		 WHERE o.id = $1 AND `+auth.ActivityAvailableClause("a"), deliveryID)
 	if err != nil {
 		return nil, fmt.Errorf("consent: read the delivery's linked records: %w", err)
 	}
-	defer rows.Close()
-	var out []ids.UUID
-	for rows.Next() {
-		var id ids.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("consent: read the delivery's linked records: %w", err)
-		}
-		out = append(out, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("consent: read the delivery's linked records: %w", err)
-	}
-	return out, nil
+	return storekit.ScanUUIDColumn(rows, "consent: read the delivery's linked records")
 }
 
 // stagedClaim is what one recipient's staging decision said.
