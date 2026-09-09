@@ -118,7 +118,8 @@ func TestUnderContractTakesTheEarlierOfTermEndAndCancellation(t *testing.T) {
 // to the fixture's status vocabulary or its create shape would otherwise have to
 // be made in three places, and the one that was missed would keep passing until
 // it did not.
-func anActiveContract(t *testing.T, e *Env, company ids.UUID, title string) ids.ContractID {
+func anActiveContract(t *testing.T, e *Env, company ids.UUID) ids.ContractID {
+	const title = "MSA 2026"
 	t.Helper()
 	first, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
 		CompanyID: ids.From[ids.CompanyKind](company),
@@ -142,7 +143,7 @@ func TestRenewalChainsRatherThanOverwrites(t *testing.T) {
 	company := e.SeedCompany(t, "Acme", nil)
 	admin := e.Admin()
 
-	predecessorID := anActiveContract(t, e, company, "MSA 2026")
+	predecessorID := anActiveContract(t, e, company)
 
 	successor, err := e.Contracts.Renew(admin, predecessorID, contracts.CreateContractInput{
 		Title: "MSA 2027", ValueBasis: contracts.BasisAnnualized, Source: "renewal",
@@ -302,7 +303,7 @@ func TestARenewalSuccessorKeepsTheDealItNames(t *testing.T) {
 	}
 	dealID := ids.From[ids.DealKind](ids.UUID(renewal.Id))
 
-	predecessorID := anActiveContract(t, e, company, "MSA 2026")
+	predecessorID := anActiveContract(t, e, company)
 
 	successor, err := e.Contracts.Renew(admin, predecessorID, contracts.CreateContractInput{
 		Title: "MSA 2027", ValueBasis: contracts.BasisAnnualized, Source: "renewal", DealID: &dealID,
@@ -340,7 +341,7 @@ func TestARenewalCannotNameAnotherCompanysDeal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	predecessorID := anActiveContract(t, e, ours, "MSA 2026")
+	predecessorID := anActiveContract(t, e, ours)
 
 	elsewhereID := ids.From[ids.DealKind](ids.UUID(elsewhere.Id))
 	if _, err := e.Contracts.Renew(admin, predecessorID, contracts.CreateContractInput{
@@ -376,7 +377,7 @@ func TestARenewalCannotNameAnotherCompanysDeal(t *testing.T) {
 func TestTwoConcurrentRenewalsLeaveOneSuccessor(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
-	predecessorID := anActiveContract(t, e, company, "MSA 2026")
+	predecessorID := anActiveContract(t, e, company)
 
 	const racers = 2
 	results := make([]crmcontracts.Contract, racers)

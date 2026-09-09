@@ -256,7 +256,7 @@ func applySelectedSiteReadFacts(
 				fact.Category, fact.Field, err)
 		}
 	}
-	return upsertCompanyFacts(ctx, tx, workspaceID(ctx), DeepReadProposal{
+	return upsertCompanyFacts(ctx, tx, DeepReadProposal{
 		CompanyID:  companyID,
 		SourceURL:  read.SeedURL,
 		SiteReadID: read.ID,

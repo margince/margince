@@ -434,7 +434,7 @@ func createAnchorCompany(ctx context.Context, tx pgx.Tx, displayName, by string)
 	if err != nil {
 		return ids.CompanyID{}, err
 	}
-	if err := match.recordIfReview(ctx, tx, companyID, displayName, activitySourceManual, by); err != nil {
+	if err := match.recordIfReview(ctx, tx, companyID, activitySourceManual, by); err != nil {
 		return ids.CompanyID{}, err
 	}
 	return companyID, nil

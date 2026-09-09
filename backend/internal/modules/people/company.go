@@ -199,7 +199,7 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventCompanyCreated{DisplayName: &in.DisplayName}); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("emit company.created: %w", err)
 	}
-	if err := match.recordIfReview(ctx, tx, id, in.DisplayName, in.Source, by); err != nil {
+	if err := match.recordIfReview(ctx, tx, id, in.Source, by); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	out, err := readCompany(ctx, tx, id, storekit.LiveOnly, active)

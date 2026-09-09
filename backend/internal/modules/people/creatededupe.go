@@ -287,7 +287,7 @@ func (m PersonResolution) recordSharedPhone(ctx context.Context, tx pgx.Tx, crea
 // collide on their registered names while their display names differ, and
 // rendering that as a display-name collision would show a reviewer a
 // comparison nobody made.
-func (m CompanyMatch) recordIfReview(ctx context.Context, tx pgx.Tx, createdID ids.CompanyID, createdName, source, by string) error {
+func (m CompanyMatch) recordIfReview(ctx context.Context, tx pgx.Tx, createdID ids.CompanyID, source, by string) error {
 	if m.Decision != DecisionFuzzyReview {
 		return nil
 	}

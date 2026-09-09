@@ -64,7 +64,7 @@ type RoutingConfig struct {
 // supports. The mirror is TestRoutableLeadFieldVocabularyIsSingleSourced,
 // in compose — the only place both modules are visible.
 // Held by: TestEveryRoutableLeadFieldResolvesToItsOwnFact (backend/internal/modules/people/leadroutingvocab_test.go)
-var RoutableLeadFields = []string{"source", "company_name", candidateCompanyKey}
+var RoutableLeadFields = []string{leadSourceColumn, leadCompanyColumn, candidateCompanyKey}
 
 // ParseRoutingConfig decodes automation params into a RoutingConfig.
 // Params were validated against the catalog schema at write time; this
@@ -104,7 +104,7 @@ func (f leadRoutingFacts) field(name string) string {
 	switch name {
 	case "source":
 		return f.Source
-	case "company_name":
+	case leadCompanyColumn:
 		return f.CompanyName
 	case candidateCompanyKey:
 		return f.CandidateCompanyKey

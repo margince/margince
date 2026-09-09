@@ -294,7 +294,7 @@ func singleDesiredPrimary(desired []CompanyDomainInput) (string, error) {
 // one is set so the transient state never trips uq_company_domain_primary, and
 // adds reuse insertCompanyDomains so the uniqueness→409 mapping stays one
 // spelling. Callers validate the domains (parse + unclaimed) first.
-func reconcileCompanyDomains(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, companyID ids.CompanyID, by string, desired []CompanyDomainInput) ([]map[string]any, error) {
+func reconcileCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, by string, desired []CompanyDomainInput) ([]map[string]any, error) {
 	live, before, currentPrimary, err := readLiveDomains(ctx, tx, companyID)
 	if err != nil {
 		return nil, err

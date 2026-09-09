@@ -338,11 +338,11 @@ func (s *Store) ApplyDeepReadTx(ctx context.Context, tx pgx.Tx, in DeepReadPropo
 	if err != nil {
 		return err
 	}
-	appliedFields, err := applyEvidenceFields(ctx, tx, wsID, in.CompanyID, companySourceSiteRead, by, fields)
+	appliedFields, err := applyEvidenceFields(ctx, tx, wsID, in.CompanyID, by, fields)
 	if err != nil {
 		return err
 	}
-	appliedFacts, err := upsertCompanyFacts(ctx, tx, wsID, in, by)
+	appliedFacts, err := upsertCompanyFacts(ctx, tx, in, by)
 	if err != nil {
 		return err
 	}
@@ -384,7 +384,7 @@ func (s *Store) ApplyDeepReadTx(ctx context.Context, tx pgx.Tx, in DeepReadPropo
 // the same precedence rule company_profile_field applies. It returns
 // the facts actually written (a human-held row upserts zero rows and is
 // honestly absent from the delta).
-func upsertCompanyFacts(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, in DeepReadProposal, by string) ([]map[string]any, error) {
+func upsertCompanyFacts(ctx context.Context, tx pgx.Tx, in DeepReadProposal, by string) ([]map[string]any, error) {
 	// The dossier link is provenance, not a requirement: a proposal staged
 	// without one (or whose dossier was since erased) still lands its facts.
 	var siteReadID *ids.UUID

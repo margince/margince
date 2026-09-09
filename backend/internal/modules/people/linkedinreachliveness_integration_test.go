@@ -30,7 +30,7 @@ import (
 func TestReachCountsOnlyColleaguesWhoStillWorkHere(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	company := e.seedCompanyNamed(t, "Acme GmbH")
+	company := e.seedAcmeCompany(t)
 
 	// One connection each, so a count that loses a seat is unambiguous: the
 	// map either names them or it does not.

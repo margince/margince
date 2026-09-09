@@ -101,7 +101,7 @@ func (s *Store) ApplyEnrichment(ctx context.Context, companyID ids.CompanyID, in
 		if err != nil {
 			return err
 		}
-		applied, err := applyEvidenceFields(ctx, tx, wsID, companyID, companySourceSiteRead, by, in.Fields)
+		applied, err := applyEvidenceFields(ctx, tx, wsID, companyID, by, in.Fields)
 		if err != nil {
 			return err
 		}

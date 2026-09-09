@@ -310,7 +310,7 @@ func TestColdStartAcceptWritesProfileOntoCompany(t *testing.T) {
 	// The company already exists with a HUMAN-set industry: acceptance may
 	// fill what is empty, never overwrite a human's value.
 	admin := e.Admin()
-	companyID := seedAcmeCompanyWithHumanIndustry(t, e, admin)
+	companyID := seedAcmeCompanyWithHumanIndustry(admin, t, e)
 
 	svc := approvals.NewService(e.DB())
 	svc.WithEffect("coldstart", coldstartAcceptEffect(svc, people.NewStore(e.DB())))
@@ -328,7 +328,7 @@ func TestColdStartAcceptWritesProfileOntoCompany(t *testing.T) {
 		t.Fatalf("accept: %v", err)
 	}
 
-	assertAcceptFilledOnlyEmptyColumns(t, e, admin, companyID)
+	assertAcceptFilledOnlyEmptyColumns(admin, t, e, companyID)
 
 	// The approval is consumed; deciding again is refused and applies
 	// nothing twice.
@@ -365,7 +365,7 @@ func TestColdStartAcceptWritesProfileOntoCompany(t *testing.T) {
 // seedAcmeCompanyWithHumanIndustry plants the pre-existing acme.example
 // company with a HUMAN-set industry, so acceptance can prove it
 // fills only empty columns.
-func seedAcmeCompanyWithHumanIndustry(t *testing.T, e *integration.Env, admin context.Context) ids.UUID {
+func seedAcmeCompanyWithHumanIndustry(admin context.Context, t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	companyID := ids.NewV7()
 	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
@@ -389,7 +389,7 @@ func seedAcmeCompanyWithHumanIndustry(t *testing.T, e *integration.Env, admin co
 // discipline: company resolved (not duplicated), empty legal_name filled,
 // the human-set industry untouched, and the evidence rows landed as the
 // coldstart agent.
-func assertAcceptFilledOnlyEmptyColumns(t *testing.T, e *integration.Env, admin context.Context, companyID ids.UUID) {
+func assertAcceptFilledOnlyEmptyColumns(admin context.Context, t *testing.T, e *integration.Env, companyID ids.UUID) {
 	t.Helper()
 	var legalName, industry, capturedBy string
 	var profileRows, companies int

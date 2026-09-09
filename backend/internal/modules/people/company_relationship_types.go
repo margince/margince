@@ -163,7 +163,7 @@ func hasPartnerRow(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (boo
 // and silently keeping the row would make the request a lie in the other
 // direction.
 func reconcileCompanyRelationshipTypes(
-	ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, companyID ids.CompanyID, source, by string, desired []string,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, source, by string, desired []string,
 ) ([]string, error) {
 	live, err := readLiveRelationshipTypes(ctx, tx, companyID)
 	if err != nil {
