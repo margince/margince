@@ -230,3 +230,47 @@ func stringValue(t *testing.T, constants map[string]string, e ast.Expr) string {
 		return ""
 	}
 }
+
+// The literal-scanning census cannot see these reads at all. Every OTHER
+// compose reader of a row-scoped reference names its column in a SQL string,
+// which is how TestEveryComposeReadOfARecordReferenceAppliesItsRowScope finds
+// its sites; the export builds its select list from the live catalog, so
+// export.go, filteredexport.go and filterpreview.go contain no such literal and
+// were never subjects of it. Not waived there — invisible to it, which is the
+// failure mode that reports PASS.
+//
+// So the class gets its own census, keyed on the mechanism that creates the
+// blind spot rather than on the three functions that have it today: a read
+// whose columns come from the catalog serves whatever the catalog holds,
+// including a column added next year by a migration nobody read.
+func TestEveryCatalogColumnedReadWithholdsWhatItCannotShow(t *testing.T) {
+	t.Parallel()
+
+	const (
+		catalogSource = "exportableColumns"
+		withholding   = "withholdUnreadableReferences"
+	)
+	graph := packageCallGraph(t, "internal/compose")
+	if _, declared := graph[withholding]; !declared {
+		t.Fatalf("compose declares no %s — this gate's obligation does not exist, so every subject would pass it", withholding)
+	}
+
+	var roots []string
+	for fn, entry := range graph {
+		if fn != catalogSource && entry.calls[catalogSource] {
+			roots = append(roots, fn)
+		}
+	}
+	if len(roots) == 0 {
+		t.Fatalf("no compose function calls %s — the call graph read nothing, and an empty census passes against anything", catalogSource)
+	}
+	sort.Strings(roots)
+
+	for _, root := range roots {
+		if reaches(graph, root, withholding) {
+			continue
+		}
+		t.Errorf("compose's %s takes its columns from the catalog but never reaches %s — it serves whatever the catalog holds, so a reference column added by a later migration leaves without anyone deciding it should",
+			root, withholding)
+	}
+}
