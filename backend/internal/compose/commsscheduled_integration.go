@@ -38,12 +38,15 @@ import (
 //
 // A snooze is not an error: a message whose moment has moved reports one, and
 // the lane reads the ROW to see what happened rather than the return.
-func DriveScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspace, id ids.UUID) error {
+func DriveScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspace, id ids.UUID, origin SendOrigin) error {
 	inserter, err := jobs.NewInserter(pool, slog.New(slog.DiscardHandler))
 	if err != nil {
 		return err
 	}
-	worker := newScheduledSendWorker(pool, NewDeliveryStager(pool, inserter), nil, SendPacing{})
+	// The origin the worker role composes. Without it this harness assembles a
+	// worker production does not have, and a message carrying an unsubscribe
+	// link refuses here for a reason no deployment would hit.
+	worker := newScheduledSendWorker(pool, NewDeliveryStager(pool, inserter), nil, SendPacing{}, origin)
 	err = worker.Work(ctx, &river.Job[ScheduledSendArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: scheduledSendMaxAttempts},
 		Args:   ScheduledSendArgs{Workspace: workspace, ScheduledSendID: id.String()},

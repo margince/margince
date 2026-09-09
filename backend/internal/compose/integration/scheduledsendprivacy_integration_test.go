@@ -152,7 +152,7 @@ func TestABlindCopiedSubjectSeesTheirOwnMailAndNobodyElsesAddress(t *testing.T) 
 		"subject": "Quiet copy", "body": "You were blind-copied on this.",
 		"to":              []string{"visible@preflight.test"},
 		"bcc":             []string{"buyer@preflight.test", otherBlind},
-		"consent_purpose": "transactional",
+		"consent_purpose": sendPurpose,
 		"links": []AnyMap{
 			{"entity_type": "person", "entity_id": p.personID},
 		},

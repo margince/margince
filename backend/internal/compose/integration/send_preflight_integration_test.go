@@ -134,7 +134,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	}
 	var transactional string
 	for _, p := range purposes.Data {
-		if p.Key == "transactional" {
+		if p.Key == sendPurpose {
 			transactional = p.ID
 		}
 	}
@@ -181,7 +181,7 @@ func (p *preflightEnv) send(t *testing.T) (status int, code, message string) {
 	}
 	status = p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
 		"subject": "Re: Inbound question", "body": "answer",
-		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": sendPurpose,
 	}, nil, &problem)
 	if errs := problem.Details.Errors; len(errs) > 0 {
 		return status, errs[0].Code, errs[0].Message

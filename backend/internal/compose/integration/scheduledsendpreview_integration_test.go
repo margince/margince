@@ -53,7 +53,7 @@ func TestAScheduledAccountSendReadsBackWhatItWillAskTheEngine(t *testing.T) {
 	status := p.Call(t, "POST", "/v1/emails", AnyMap{
 		"subject": "Your quote", "body": "As discussed.",
 		"to":              []string{"buyer@preflight.test"},
-		"consent_purpose": "transactional",
+		"consent_purpose": sendPurpose,
 		"links": []AnyMap{
 			{"entity_type": "person", "entity_id": p.personID},
 		},
@@ -75,7 +75,7 @@ func TestAScheduledAccountSendReadsBackWhatItWillAskTheEngine(t *testing.T) {
 			"the account-send preview refuses a message naming no records, so a row without them "+
 			"cannot be asked about", got.Links)
 	}
-	if got.ConsentPurpose != "transactional" {
+	if got.ConsentPurpose != sendPurpose {
 		t.Errorf("consent purpose came back %q, want transactional: the fire consults it where the record "+
 			"supports no category, so a preview without it asks a different question", got.ConsentPurpose)
 	}
@@ -104,7 +104,10 @@ func TestAScheduledReplyNamesItsAnchorAndNoRecords(t *testing.T) {
 	if len(got.Links) != 0 {
 		t.Errorf("a reply came back naming records of its own: %+v", got.Links)
 	}
-	if got.ConsentPurpose != "transactional" {
-		t.Errorf("consent purpose came back %q, want transactional", got.ConsentPurpose)
+	// The purpose the scheduler was GIVEN, read back unchanged. It is
+	// sendPurpose rather than a literal so the preview and the send it previews
+	// cannot claim different things.
+	if got.ConsentPurpose != sendPurpose {
+		t.Errorf("consent purpose came back %q, want %q", got.ConsentPurpose, sendPurpose)
 	}
 }

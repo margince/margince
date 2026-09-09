@@ -55,7 +55,7 @@ import (
 func accountSendBody(org, subject string) AnyMap {
 	return AnyMap{
 		"subject": subject, "body": "Good morning — introducing ourselves.",
-		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": sendPurpose,
 		"links": []AnyMap{{"entity_type": "organization", "entity_id": org}},
 	}
 }
@@ -158,7 +158,7 @@ func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
 
 	args, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello over MCP",
-		"body": "Good morning.", "consent_purpose": "transactional",
+		"body": "Good morning.", "consent_purpose": sendPurpose,
 		"links": []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
 	})
 	if err != nil {
@@ -214,7 +214,7 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 	token := a.mintAccountSendPassport(t)
 	args, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
-		"body": "Good morning.", "consent_purpose": "transactional",
+		"body": "Good morning.", "consent_purpose": sendPurpose,
 		"links": []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
 	})
 	if err != nil {
@@ -263,7 +263,7 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 	// exact message.
 	retry, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
-		"body": "Good morning.", "consent_purpose": "transactional",
+		"body": "Good morning.", "consent_purpose": sendPurpose,
 		"links":       []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
 		"approval_id": approvalID,
 	})

@@ -49,7 +49,7 @@ func (p *preflightEnv) scheduleAsAgent(t *testing.T, actor principal.Principal, 
 			Recipients:     []string{"buyer@preflight.test"},
 			Subject:        "Monday morning",
 			Body:           "Written the night before, by a tool.",
-			ConsentPurpose: "transactional",
+			ConsentPurpose: sendPurpose,
 		}, at)
 	if err != nil {
 		t.Fatalf("scheduling as an agent: %v", err)

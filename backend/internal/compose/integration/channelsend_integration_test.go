@@ -89,7 +89,7 @@ func setupChannelSend(t *testing.T) *channelSendEnv {
 	}
 	c.bindIdentity(t)
 	c.seedInboundMessage(t)
-	c.grantConsent(t, "transactional")
+	c.grantConsent(t, sendPurpose)
 	c.connectBot(t)
 	return c
 }
@@ -284,7 +284,7 @@ func (c *channelSendEnv) assertNoOutboundEffect(t *testing.T, refusal string) {
 func TestSendMessageRefusesAWriteOnlyPassport(t *testing.T) {
 	c := setupChannelSend(t)
 
-	status, code, _ := c.sendReplyAs(t, []string{"read", "write"}, "transactional")
+	status, code, _ := c.sendReplyAs(t, []string{"read", "write"}, sendPurpose)
 
 	if status != http.StatusForbidden || code != "scope_exceeds_grantor" {
 		t.Fatalf("write-only passport reply → %d %q, want 403 scope_exceeds_grantor", status, code)
@@ -307,7 +307,7 @@ func TestSendMessageRefusesAWriteOnlyPassport(t *testing.T) {
 func TestSendMessageAcceptsASendScopedPassportWithoutAToken(t *testing.T) {
 	c := setupChannelSend(t)
 
-	status, code, detail := c.sendReplyAs(t, []string{"read", "send"}, "transactional")
+	status, code, detail := c.sendReplyAs(t, []string{"read", "send"}, sendPurpose)
 
 	if status != http.StatusAccepted {
 		t.Fatalf("agent reply on a send-scoped passport → %d %q (%s), want 202", status, code, detail)
@@ -323,7 +323,7 @@ func TestSendMessageAcceptsASendScopedPassportWithoutAToken(t *testing.T) {
 func TestSendMessageRefusesAPassportWithoutTheSendCap(t *testing.T) {
 	c := setupChannelSend(t)
 
-	status, code, _ := c.sendReplyAs(t, []string{"read"}, "transactional")
+	status, code, _ := c.sendReplyAs(t, []string{"read"}, sendPurpose)
 
 	if status == http.StatusAccepted {
 		t.Fatalf("a read-only passport sent a channel reply → %d %q", status, code)
@@ -338,7 +338,7 @@ func TestSendMessageRefusesAPassportWithoutTheSendCap(t *testing.T) {
 func TestSendMessageAcceptsAHumanCallerWithoutAToken(t *testing.T) {
 	c := setupChannelSend(t)
 
-	status, code, detail := c.sendReply(t, "transactional", "Yes — shipping Monday.", nil)
+	status, code, detail := c.sendReply(t, sendPurpose, "Yes — shipping Monday.", nil)
 
 	if status != http.StatusAccepted {
 		t.Fatalf("human reply → %d %q (%s), want 202", status, code, detail)
@@ -383,7 +383,7 @@ func TestSendMessageRefusesWhenNoBotIsBoundForTheChannel(t *testing.T) {
 		t.Fatalf("disconnecting the bot: %v", err)
 	}
 
-	status, code, detail := c.sendReply(t, "transactional", "Yes — shipping Monday.", nil)
+	status, code, detail := c.sendReply(t, sendPurpose, "Yes — shipping Monday.", nil)
 
 	if status != http.StatusUnprocessableEntity || code != "channel_not_send_capable" {
 		t.Fatalf("reply with no bot bound → %d %q, want 422 channel_not_send_capable", status, code)
@@ -406,7 +406,7 @@ func TestSendMessageRefusesAnEmptyBody(t *testing.T) {
 	c := setupChannelSend(t)
 
 	for _, body := range []string{"", "   \n\t "} {
-		status, code, message := c.sendReply(t, "transactional", body, nil)
+		status, code, message := c.sendReply(t, sendPurpose, body, nil)
 
 		if status != http.StatusUnprocessableEntity {
 			t.Fatalf("reply with body %q → %d, want 422", body, status)
@@ -449,7 +449,7 @@ func TestSendMessageRefusesAnUnreachablePerson(t *testing.T) {
 		t.Fatalf("blocking the identity: %v", err)
 	}
 
-	status, code, detail := c.sendReply(t, "transactional", "Yes — shipping Monday.", nil)
+	status, code, detail := c.sendReply(t, sendPurpose, "Yes — shipping Monday.", nil)
 
 	if status != http.StatusUnprocessableEntity || code != "person_unreachable" {
 		t.Fatalf("reply to a blocked person → %d %q, want 422 person_unreachable", status, code)
@@ -473,7 +473,7 @@ func TestSentMessageLandsAsAnOutboundActivity(t *testing.T) {
 		Body      string `json:"body"`
 	}
 	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-message", AnyMap{
-		"body": "On its way.", "consent_purpose": "transactional",
+		"body": "On its way.", "consent_purpose": sendPurpose,
 	}, nil, &sent); status != http.StatusAccepted {
 		t.Fatalf("human reply → %d", status)
 	}

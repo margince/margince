@@ -235,7 +235,7 @@ func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
 
-	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
+	sentActivity := p.sendExpectingAcceptance(t, sendPurpose, "Re: Inbound question", "As discussed.")
 	deliveryID, messageID := p.deliveryFor(t, sentActivity)
 	rfc822, capturingConnector := p.transmit(t, deliveryID, "")
 
@@ -379,7 +379,7 @@ func TestDeactivatingTheSenderParksAStagedDelivery(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
 
-	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
+	sentActivity := p.sendExpectingAcceptance(t, sendPurpose, "Re: Inbound question", "As discussed.")
 	deliveryID, _ := p.deliveryFor(t, sentActivity)
 	p.deactivateSender(t)
 
@@ -407,7 +407,7 @@ func TestASenderDowngradedToAReadSeatParksAStagedDelivery(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
 
-	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
+	sentActivity := p.sendExpectingAcceptance(t, sendPurpose, "Re: Inbound question", "As discussed.")
 	deliveryID, _ := p.deliveryFor(t, sentActivity)
 	p.downgradeSenderToReadSeat(t)
 

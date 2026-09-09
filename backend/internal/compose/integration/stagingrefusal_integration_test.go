@@ -105,10 +105,10 @@ func TestAMailSendToASuppressedRecipientStagesNothing(t *testing.T) {
 // asserted separately.
 func TestAChannelSendToASuppressedRecipientStagesNothing(t *testing.T) {
 	c := setupChannelSend(t)
-	c.grantConsent(t, "transactional")
+	c.grantConsent(t, sendPurpose)
 	suppressPerson(t, c.AppEnv, c.personID)
 
-	status, code, _ := c.sendReply(t, "transactional", "Yes — shipping Monday.", nil)
+	status, code, _ := c.sendReply(t, sendPurpose, "Yes — shipping Monday.", nil)
 
 	if status != http.StatusConflict || code != "consent_not_granted" {
 		t.Fatalf("channel reply to a recipient who asked us to stop → %d %q, want 409 consent_not_granted", status, code)
@@ -160,7 +160,7 @@ func TestAnAllowedSendRecordsItsStagingDecision(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
 
-	sent := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
+	sent := p.sendExpectingAcceptance(t, sendPurpose, "Re: Inbound question", "As discussed.")
 	deliveryID, _ := p.deliveryFor(t, sent)
 
 	rows := p.stagingDecisions(t, deliveryID)
@@ -196,7 +196,7 @@ func (p *preflightEnv) sendExpectingAcceptanceClaiming(t *testing.T, context str
 	}
 	status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
 		"subject": "Re: Inbound question", "body": "As discussed.",
-		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": sendPurpose,
 		"communication_context": context,
 	}, nil, &sent)
 	if status != http.StatusAccepted {
@@ -224,7 +224,7 @@ func (p *preflightEnv) sendClaiming(t *testing.T, context string) (status int, c
 	}
 	status = p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
 		"subject": "Re: Inbound question", "body": "answer",
-		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": sendPurpose,
 		"communication_context": context,
 	}, nil, &problem)
 	if errs := problem.Details.Errors; len(errs) > 0 {
@@ -286,9 +286,9 @@ func TestASendCannotClaimAControllerCategory(t *testing.T) {
 // no test anywhere posted a communication_context to this route.
 func TestAChannelSendCannotClaimAControllerCategory(t *testing.T) {
 	c := setupChannelSend(t)
-	c.grantConsent(t, "transactional")
+	c.grantConsent(t, sendPurpose)
 
-	status, code, _ := c.sendReplyClaiming(t, "transactional", "Yes — shipping Monday.", "security_notice", nil)
+	status, code, _ := c.sendReplyClaiming(t, sendPurpose, "Yes — shipping Monday.", "security_notice", nil)
 
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("a channel reply claiming security_notice → %d, want 422", status)
@@ -303,9 +303,9 @@ func TestAChannelSendCannotClaimAControllerCategory(t *testing.T) {
 // is a category check rather than the channel door rejecting the field itself.
 func TestAChannelSendMayClaimAnOrdinaryCategory(t *testing.T) {
 	c := setupChannelSend(t)
-	c.grantConsent(t, "transactional")
+	c.grantConsent(t, sendPurpose)
 
-	status, _, detail := c.sendReplyClaiming(t, "transactional", "Yes — shipping Monday.", "reply_to_inbound", nil)
+	status, _, detail := c.sendReplyClaiming(t, sendPurpose, "Yes — shipping Monday.", "reply_to_inbound", nil)
 
 	if status != http.StatusAccepted {
 		t.Fatalf("a channel reply claiming reply_to_inbound → %d (%s), want 202", status, detail)

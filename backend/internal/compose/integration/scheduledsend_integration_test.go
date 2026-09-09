@@ -50,9 +50,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seedConsentedRecipient creates a person with one address and a granted
-// transactional purpose — the minimum a send's consent gate demands of an
-// addressee, spelled once because a multi-recipient fixture needs it per head.
+// sendPurpose is what every scheduled send in this file claims. Named once so
+// the grant the fixture writes and the purpose the send names cannot drift into
+// disagreeing — a send whose purpose has no grant is held, and the failure
+// reads as the scheduler's rather than the fixture's.
+const sendPurpose = "business_correspondence"
+
+// seedConsentedRecipient creates a person a send may lawfully reach: one
+// address, an inbound message from them, and a granted correspondence purpose.
+// Spelled once because a multi-recipient fixture needs it per head.
+//
+// The INBOUND is the load-bearing half. A purpose key is a claim, not evidence
+// for one — the send path asks what supports THIS message, and a person who
+// wrote to us is the qualifying event correspondence derives its basis from.
+// Without it the grant alone buys nothing and every send here is held.
 func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) {
 	t.Helper()
 	var person struct {
@@ -64,6 +75,12 @@ func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) 
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create %s → %d", email, status)
 	}
+	if status := p.Call(t, "POST", "/v1/activities", AnyMap{
+		"kind": "email", "subject": "Inbound question", "direction": "inbound",
+		"links": []AnyMap{{"entity_type": "person", "entity_id": person.ID}},
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("log the inbound %s replies to → %d", email, status)
+	}
 	var purposes struct {
 		Data []struct {
 			ID  string `json:"id"`
@@ -73,17 +90,8 @@ func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) 
 	if status := p.Call(t, "GET", "/v1/consent-purposes", nil, nil, &purposes); status != http.StatusOK {
 		t.Fatalf("list purposes → %d", status)
 	}
-	var transactional string
-	for _, purpose := range purposes.Data {
-		if purpose.Key == "transactional" {
-			transactional = purpose.ID
-		}
-	}
-	if transactional == "" {
-		t.Fatalf("bootstrap seeded no transactional purpose: %+v", purposes.Data)
-	}
 	if status := p.Call(t, "POST", "/v1/people/"+person.ID+"/consent", AnyMap{
-		"purpose_id": transactional, "new_state": "granted", "lawful_basis": "contract",
+		"purpose_id": purposeID(t, purposes.Data), "new_state": "granted", "lawful_basis": "consent",
 		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("grant consent for %s → %d", email, status)
@@ -136,7 +144,7 @@ func (p *preflightEnv) scheduleFor(t *testing.T, at time.Time) ids.UUID {
 	}
 	status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
 		"subject": "Monday morning", "body": "Written the night before.",
-		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": sendPurpose,
 		"scheduled_at": at.UTC().Format(time.RFC3339),
 		"scheduled_tz": "Europe/Berlin",
 	}, nil, &scheduled)
@@ -194,7 +202,8 @@ func (p *preflightEnv) countDeliveries(t *testing.T) int {
 func (p *preflightEnv) fire(t *testing.T, id ids.UUID) {
 	t.Helper()
 	ws := p.workspaceID(t)
-	if err := compose.DriveScheduledSendForTest(context.Background(), p.Pool, ws, id); err != nil {
+	if err := compose.DriveScheduledSendForTest(context.Background(), p.Pool, ws, id,
+		compose.SendOrigin{PublicBaseURL: preflightBaseURL}); err != nil {
 		t.Fatalf("driving the scheduled-send timer: %v", err)
 	}
 }
@@ -229,12 +238,15 @@ func (p *preflightEnv) setDueAt(t *testing.T, id ids.UUID, at time.Time) {
 // message was written under, through the real consent surface.
 func (p *preflightEnv) withdrawConsent(t *testing.T) {
 	t.Helper()
-	p.setTransactionalConsent(t, "withdrawn")
+	p.setSendConsent(t, "withdrawn")
 }
 
-// setTransactionalConsent moves the recipient's transactional grant either way,
-// through the real consent surface.
-func (p *preflightEnv) setTransactionalConsent(t *testing.T, state string) {
+// setSendConsent moves the recipient's grant for the purpose these sends claim,
+// either way, through the real consent surface. It follows sendPurpose rather
+// than naming a purpose of its own: a withdrawal aimed at a purpose the send
+// does not claim withdraws nothing, and the send goes out while the case reads
+// as proving it was stopped.
+func (p *preflightEnv) setSendConsent(t *testing.T, state string) {
 	t.Helper()
 	var purposes struct {
 		Data []struct {
@@ -245,16 +257,7 @@ func (p *preflightEnv) setTransactionalConsent(t *testing.T, state string) {
 	if status := p.Call(t, "GET", "/v1/consent-purposes", nil, nil, &purposes); status != http.StatusOK {
 		t.Fatalf("list purposes → %d", status)
 	}
-	var transactional string
-	for _, purpose := range purposes.Data {
-		if purpose.Key == "transactional" {
-			transactional = purpose.ID
-		}
-	}
-	if transactional == "" {
-		t.Fatalf("bootstrap seeded no transactional purpose: %+v", purposes.Data)
-	}
-	body := AnyMap{"purpose_id": transactional, "new_state": state, "lawful_basis": "consent"}
+	body := AnyMap{"purpose_id": purposeID(t, purposes.Data), "new_state": state, "lawful_basis": "consent"}
 	// Only a grant carries it: a grant that cannot say what the subject agreed
 	// to is refused, and a withdrawal demonstrates nothing, so sending it for
 	// one would describe a request this helper never makes.
@@ -409,7 +412,7 @@ func (p *preflightEnv) forceStatus(t *testing.T, id ids.UUID, status string) {
 // accepting a held card has actually fixed what stopped it.
 func (p *preflightEnv) grantTransactionalConsent(t *testing.T) {
 	t.Helper()
-	p.setTransactionalConsent(t, "granted")
+	p.setSendConsent(t, "granted")
 }
 
 // rescheduleTo moves a message through the endpoint a rep uses, version header
@@ -847,7 +850,7 @@ func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
 	}
 	status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
 		"subject": "Monday morning", "body": "Written the night before.",
-		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": sendPurpose,
 		"scheduled_at": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339),
 		"scheduled_tz": "Europe/Berlin",
 		"also_links":   []AnyMap{{"entity_type": "organization", "entity_id": org.String()}},
@@ -907,4 +910,23 @@ func (p *preflightEnv) countLinks(t *testing.T, scheduledID ids.UUID, entityType
 		t.Fatalf("counting the fired reply's links: %v", err)
 	}
 	return count
+}
+
+// purposeID resolves sendPurpose in the bootstrap catalog, failing loudly when
+// it is absent: a send naming a purpose the installation does not have is
+// refused for that reason, and the case would read as proving something about
+// consent.
+func purposeID(t *testing.T, catalog []struct {
+	ID  string `json:"id"`
+	Key string `json:"key"`
+},
+) string {
+	t.Helper()
+	for _, purpose := range catalog {
+		if purpose.Key == sendPurpose {
+			return purpose.ID
+		}
+	}
+	t.Fatalf("bootstrap seeded no %s purpose: %+v", sendPurpose, catalog)
+	return ""
 }

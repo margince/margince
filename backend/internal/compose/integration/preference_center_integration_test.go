@@ -193,7 +193,7 @@ func sendAndAssertUnsubscribeLink(t *testing.T, c *consentEnv) string {
 
 	// A transactional (locked) send has nothing to unsubscribe from, so
 	// nothing is appended to what the sender wrote.
-	if _, tbody := sendMarketing(t, c.AppEnv, c.activityID, "transactional", "", ""); strings.Contains(tbody, "/unsubscribe") {
+	if _, tbody := sendMarketing(t, c.AppEnv, c.activityID, sendPurpose, "", ""); strings.Contains(tbody, "/unsubscribe") {
 		t.Fatalf("transactional send carried an unsubscribe link:\n%s", tbody)
 	}
 	return token
@@ -284,7 +284,7 @@ func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
 	c := setupConsent(t)
 
 	// A live deal's transactional lane stays open throughout.
-	grantPurpose(t, c, c.purposes["transactional"])
+	grantPurpose(t, c, c.purposes[sendPurpose])
 
 	newsletterID := createNewsletterPurpose(t, c)
 	grantPurpose(t, c, newsletterID)
@@ -296,7 +296,7 @@ func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
 	if s, _ := purposeStateOf(t, view, "newsletter"); s != "granted" {
 		t.Fatalf("newsletter shows %q before opt-out, want granted", s)
 	}
-	if s, locked := purposeStateOf(t, view, "transactional"); s != "granted" || !locked {
+	if s, locked := purposeStateOf(t, view, sendPurpose); s != "granted" || !locked {
 		t.Fatalf("transactional shows state=%q locked=%v, want granted+locked", s, locked)
 	}
 
@@ -329,7 +329,7 @@ func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
 	if s, code := c.send(t, "newsletter"); s != http.StatusConflict || code != "consent_not_granted" {
 		t.Fatalf("marketing send after opt-out → %d %q, want 409 consent_not_granted", s, code)
 	}
-	if s, code := c.send(t, "transactional"); s != http.StatusAccepted {
+	if s, code := c.send(t, sendPurpose); s != http.StatusAccepted {
 		t.Fatalf("transactional send after marketing opt-out → %d %q, want 202", s, code)
 	}
 

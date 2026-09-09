@@ -139,7 +139,7 @@ func TestAnEchoCapturedBeforeTransmitIsAbsorbedByTheReceiptItself(t *testing.T) 
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
 
 	const subject = "Re: Inbound question"
-	sentActivity := p.sendExpectingAcceptance(t, "transactional", subject, "As discussed.")
+	sentActivity := p.sendExpectingAcceptance(t, sendPurpose, subject, "As discussed.")
 	deliveryID, mintedIdentity := p.deliveryFor(t, sentActivity)
 	// Captured BEFORE the transmission is recorded, which is the whole race:
 	// the row the re-key is about to claim the identity of already exists.
@@ -197,7 +197,7 @@ func TestAGmailRewrittenIdentityStillYieldsOneActivityAndOneReplyTarget(t *testi
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
 
-	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
+	sentActivity := p.sendExpectingAcceptance(t, sendPurpose, "Re: Inbound question", "As discussed.")
 	deliveryID, mintedIdentity := p.deliveryFor(t, sentActivity)
 	if mintedIdentity == gmailStamped {
 		t.Fatalf("the send staged under %q, which is the identity the provider is meant to REPLACE — this case would prove nothing", mintedIdentity)

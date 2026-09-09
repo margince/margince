@@ -102,7 +102,7 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 	}
 	var transactional string
 	for _, p := range purposes.Data {
-		if p.Key == "transactional" {
+		if p.Key == sendPurpose {
 			transactional = p.ID
 		}
 	}
@@ -226,7 +226,7 @@ func TestTestMailboxFullLoop(t *testing.T) {
 		t.Fatal("connect returned no connection id")
 	}
 
-	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
+	sentActivity := p.sendExpectingAcceptance(t, sendPurpose, "Re: Inbound question", "As discussed.")
 	deliveryID, messageID := p.deliveryFor(t, sentActivity)
 
 	outcome := p.dispatchTestMailboxOnce(t, deliveryID)
