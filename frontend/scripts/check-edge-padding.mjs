@@ -280,6 +280,12 @@ async function readStory(page, port, storyId, viewportTag) {
   }
 }
 
+// Every story at one viewport, in WORKERS lanes. A lane keeps ONE page for its
+// whole share rather than a context per story: a context costs more to raise
+// than most stories cost to read, and the probe is re-injected on every
+// navigation anyway. What a crowded lane costs a story is paid back by the
+// quiet re-read below, so this stays a throughput decision and not a correctness
+// one.
 async function sweepViewport(browser, port, stories, viewport) {
   const findings = [];
   const unread = [];
@@ -325,6 +331,12 @@ async function reReadAlone(browser, port, misses) {
   return { findings, unread };
 }
 
+// Build the catalog, sweep it, and report by BOX rather than by story: one CSS
+// rule shows up in every story that renders the component, so a reader wants
+// the thing to go and fix, not the fifty places it was seen. The build is
+// forced rather than reused — a stale storybook-static would answer for a tree
+// that has since changed, which is the same silent-PASS this gate exists to
+// prevent.
 async function main() {
   buildStaticStorybook(repoRoot, staticDir, { force: true });
   const all = readStoryIndex(staticDir).filter((s) => s.type !== "docs");
