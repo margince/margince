@@ -161,6 +161,13 @@ Eight workflows sit beside the gate, deliberately outside it:
   Findings become **issues** (`scripts/scheduled-report.sh`), one open issue per
   check keyed on an exact title, because a red scheduled run notifies nobody and
   these checks exist precisely for the case where nothing prompts a human to look.
+  Each finding carries the axes the rulebook requires — exactly one `priority:`
+  and exactly one `area:`, per arm, on top of its provenance label — because this
+  is the one filer in the tree that files with no human present, and
+  `docs/reference/issue-labels.md` protects the invariant that an unlabelled
+  issue is one nobody has looked at yet. The `area:` is a filing guess and is
+  meant to be: what is knowable when the alarm goes off is that CI observed it,
+  not where the fix will live.
   A check that comes back **green closes its own issue** — so the report job runs
   whatever the lanes said, rather than only when one failed. Without that half a
   finding outlives its fix until somebody closes it by hand, and the tracker

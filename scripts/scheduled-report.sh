@@ -43,9 +43,23 @@ lookup() {
     "$open_issues"
 }
 
-# report <title> <label> <body>
+# report <title> <labels> <body>
+#
+# `labels` is a comma-separated list and carries the three axes the rulebook
+# requires, not a provenance word alone: exactly one `priority:`, exactly one
+# `area:`, and whatever provenance applies. Every issue this reporter filed used
+# to carry `bug` and nothing else, which made each one claim something false
+# about itself — docs/reference/issue-labels.md protects one invariant, that
+# UNLABELLED MEANS NOBODY HAS LOOKED AT IT YET, and this is the one filer in the
+# tree that files with no human present, so it is the one most likely to be read
+# by somebody who was not there when it was written.
+#
+# `area:` is a FILING guess and is meant to be. A red frontend lane may need its
+# fix in `frontend/`, but nothing here knows that; what is knowable is that CI is
+# what observed it. A human retriaging may move it, and moving a wrong label is a
+# different act from adding a missing one.
 report() {
-  local title="$1" label="$2" body="$3" existing
+  local title="$1" labels="$2" body="$3" existing
   existing="$(lookup "$title")"
   if [[ -n "$existing" ]]; then
     echo "already open as #$existing — commenting"
@@ -54,7 +68,15 @@ report() {
     return
   fi
   echo "filing: $title"
-  gh issue create --repo "$REPO" --title "$title" --label "$label" --body "$body"
+  # One --label per name rather than one comma-joined value. Every label here
+  # carries a space, and leaving `gh` to split the list is a guess about a flag
+  # whose parsing is not ours.
+  local -a label_args=()
+  local one
+  while IFS= read -r one; do
+    [[ -n "$one" ]] && label_args+=(--label "$one")
+  done <<<"${labels//,/$'\n'}"
+  gh issue create --repo "$REPO" --title "$title" "${label_args[@]}" --body "$body"
 }
 
 # resolve <title> — the other half of report, for a check that came back GREEN.
@@ -98,7 +120,7 @@ is green, not that every question on the thread was answered."
 unreported=0
 
 if [[ "${VULN_RESULT:-}" = "failure" ]]; then
-  report "govulncheck reports a vulnerability reachable from main" security \
+  report "govulncheck reports a vulnerability reachable from main" "priority: critical,area: platform,security" \
 "\`make vuln\` failed on the scheduled run of \`main\`: $RUN_URL
 
 This is the finding a pull-request scan cannot produce. govulncheck answers
@@ -117,7 +139,7 @@ elif [[ "${VULN_RESULT:-}" = "success" ]]; then
 fi
 
 if [[ "${GATE_RESULT:-}" = "failure" ]]; then
-  report "SonarCloud quality gate is not green on main" bug \
+  report "SonarCloud quality gate is not green on main" "priority: high,area: ci-tests,bug" \
 "The quality gate on \`main\` read \`${GATE_STATUS:-unknown}\` on the scheduled
 run: $RUN_URL
 
@@ -137,7 +159,7 @@ elif [[ "${GATE_RESULT:-}" = "success" ]]; then
 fi
 
 if [[ "${LANE_RESULT:-}" = "failure" ]]; then
-  report "the backend merge gate is red on main" bug \
+  report "the backend merge gate is red on main" "priority: high,area: ci-tests,bug" \
 "\`make check-backend\` failed on the scheduled run of \`main\`: $RUN_URL
 
 Worth reading before assuming the last green run means anything. \`main\`'s
@@ -161,7 +183,7 @@ fi
 # learning about. PERF_OUTCOME is set by the step from the harness's own breach
 # message, so only a MEASURED breach is reported as one.
 if [[ "${PERF_RESULT:-}" = "failure" ]] && [[ "${PERF_OUTCOME:-}" != "breach" ]]; then
-  report "the weekly PERF-3/PERF-7 run could not complete" bug \
+  report "the weekly PERF-3/PERF-7 run could not complete" "priority: normal,area: ci-tests,bug" \
 "\`make bench-perf-check\` failed on the weekly run of \`main\` WITHOUT reaching a
 budget verdict: $RUN_URL
 
@@ -186,7 +208,7 @@ elif [[ "${PERF_RESULT:-}" = "success" ]] || [[ "${PERF_OUTCOME:-}" = "breach" ]
 fi
 
 if [[ "${PERF_OUTCOME:-}" = "breach" ]]; then
-  report "a PERF-3/PERF-7 budget is breaching on main" bug \
+  report "a PERF-3/PERF-7 budget is breaching on main" "priority: normal,area: ci-tests,bug" \
 "\`make bench-perf-check\` failed on the weekly run of \`main\`: $RUN_URL
 
 This alarm runs the SMB tier only, and that shapes what the finding means: SMB
@@ -214,7 +236,7 @@ fi
 # spec prints `perfbench [fast-3g/390px]: … p95=…` and THEN asserts, so the line
 # is present exactly when a number was measured.
 if [[ "${MOBILE_RESULT:-}" = "failure" ]] && [[ "${MOBILE_OUTCOME:-}" != "breach" ]]; then
-  report "the weekly MOBILE-AC-2 run could not complete" bug \
+  report "the weekly MOBILE-AC-2 run could not complete" "priority: normal,area: ci-tests,bug" \
 "\`make bench-mobile-check\` failed on the weekly run of \`main\` WITHOUT reaching a
 budget verdict: $RUN_URL
 
@@ -236,7 +258,7 @@ elif [[ "${MOBILE_RESULT:-}" = "success" ]] || [[ "${MOBILE_OUTCOME:-}" = "breac
 fi
 
 if [[ "${MOBILE_OUTCOME:-}" = "breach" ]]; then
-  report "PERF-1's perceived budget is breaching on main" bug \
+  report "PERF-1's perceived budget is breaching on main" "priority: normal,area: ci-tests,bug" \
 "\`make bench-mobile-check\` measured a p95 over the 300 ms perceived budget on
 the weekly run of \`main\`: $RUN_URL
 
@@ -262,7 +284,7 @@ elif [[ "${MOBILE_RESULT:-}" = "success" ]]; then
 fi
 
 if [[ "${CLOCK_RESULT:-}" = "failure" ]]; then
-  report "the frontend suite's verdict depends on the calendar" bug \
+  report "the frontend suite's verdict depends on the calendar" "priority: normal,area: ci-tests,bug" \
 "\`make fe-clock-drift\` failed on the scheduled run of \`main\`: $RUN_URL
 
 The suite passes today and fails 200 days from now, which means at least one test
@@ -286,7 +308,7 @@ elif [[ "${CLOCK_RESULT:-}" = "success" ]]; then
 fi
 
 if [[ "${CACHE_RESULT:-}" = "failure" ]]; then
-  report "the Actions build-cache reaper is failing" bug \
+  report "the Actions build-cache reaper is failing" "priority: normal,area: ci-tests,bug" \
 "\`scripts/reap-build-caches.sh\` failed on the scheduled run: $RUN_URL
 
 This one degrades quietly, which is why it is filed rather than left as a red
@@ -323,7 +345,7 @@ fi
 # person looking, which is worse than a dozen candidates and a failing test name.
 
 if [[ "${MAIN_GATES_RESULT:-}" = "failure" ]]; then
-  report "main is red: the backend gate fails on the tip" bug \
+  report "main is red: the backend gate fails on the tip" "priority: high,area: ci-tests,bug" \
 "\`make check-backend\` failed against \`main\` on the two-hourly health check:
 $RUN_URL
 
@@ -341,7 +363,7 @@ elif [[ "${MAIN_GATES_RESULT:-}" = "success" ]]; then
 fi
 
 if [[ "${MAIN_INTEGRATION_RESULT:-}" = "failure" ]]; then
-  report "main is red: the integration lane fails on the tip" bug \
+  report "main is red: the integration lane fails on the tip" "priority: high,area: ci-tests,bug" \
 "The real-Postgres lane failed against \`main\` on the two-hourly health check:
 $RUN_URL
 
@@ -361,7 +383,7 @@ elif [[ "${MAIN_INTEGRATION_RESULT:-}" = "success" ]]; then
 fi
 
 if [[ "${MAIN_FRONTEND_RESULT:-}" = "failure" ]]; then
-  report "main is red: the frontend lane fails on the tip" bug \
+  report "main is red: the frontend lane fails on the tip" "priority: high,area: ci-tests,bug" \
 "The SPA lane (biome + vitest + tsc + build) failed against \`main\` on the
 two-hourly health check: $RUN_URL
 
@@ -390,7 +412,7 @@ elif [[ "${MAIN_FRONTEND_RESULT:-}" = "success" ]]; then
 fi
 
 if [[ "${MAIN_UAT_RESULT:-}" = "failure" ]]; then
-  report "main is red: the screen-acceptance UAT fails on the tip" bug \
+  report "main is red: the screen-acceptance UAT fails on the tip" "priority: high,area: ci-tests,bug" \
 "The UAT lane (AC screens + axe WCAG 2.2 AA + the 390px sweep, against the built
 app over the seed mock) failed against \`main\` on the two-hourly health check:
 $RUN_URL
@@ -417,7 +439,7 @@ elif [[ "${MAIN_UAT_RESULT:-}" = "success" ]]; then
 fi
 
 if [[ "${MAIN_SONAR_RESULT:-}" = "failure" ]]; then
-  report "main's SonarCloud analysis was not published" bug \
+  report "main's SonarCloud analysis was not published" "priority: high,area: ci-tests,bug" \
 "The \`sonarcloud (main)\` job failed on the two-hourly health check, with every
 lane it depends on green: $RUN_URL
 
@@ -461,7 +483,7 @@ fi
 # step from the runner's own "scenarios: N passed" line, which it prints only
 # once every scenario has actually been driven.
 if [[ "${LLM_RESULT:-}" = "failure" ]] && [[ "${LLM_OUTCOME:-}" != "scenario-failed" ]]; then
-  report "the weekly model-driven use cases could not run" bug \
+  report "the weekly model-driven use cases could not run" "priority: normal,area: ci-tests,bug" \
 "\`make e2e-llm\` failed on the weekly run of \`main\` WITHOUT driving the
 scenarios: $RUN_URL
 
@@ -489,7 +511,7 @@ elif [[ "${LLM_RESULT:-}" = "success" ]] || [[ "${LLM_OUTCOME:-}" = "scenario-fa
 fi
 
 if [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then
-  report "a use case is failing when driven by a real model" bug \
+  report "a use case is failing when driven by a real model" "priority: normal,area: ci-tests,bug" \
 "\`make e2e-llm\` drove all six use cases on \`main\` and at least one did not
 reach its pass rate: $RUN_URL
 
@@ -540,7 +562,7 @@ if [[ "${MERGE_VERDICT_RESULT:-}" = "failure" ]]; then
   else
     merge_title="A merge landed on main with no pull request behind it"
   fi
-  report "$merge_title" bug \
+  report "$merge_title" "priority: high,area: ci-tests,bug" \
 "${MERGE_VERDICT_WHY:-a merge landed on \`main\` whose required check reported an adverse verdict; the run below says which}
 
 Found by the push-time check on \`main\`: $RUN_URL
