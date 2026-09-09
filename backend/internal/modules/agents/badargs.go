@@ -96,6 +96,33 @@ func decodeArgs[T any](in json.RawMessage, into *T) error {
 // that the field cannot carry prose.
 const maxBadArgsDetail = 200
 
+// MaxFaultDetail bounds a CLASSIFIED refusal's detail, which is a different
+// obligation from maxBadArgsDetail above and used to borrow its number.
+//
+// The two differ in who wrote the text. A bad-args detail quotes the caller's
+// own argument names and is mostly their words, so 200 is generous. A
+// classified fault's detail is OURS: it names what was refused and then, for
+// every closed vocabulary on this surface, lists the whole set that would have
+// worked. Sharing one figure meant the set was measured against a budget sized
+// for something else, and it lost — a report's fourteen block kinds never
+// reached a caller at all, and the twelve analytics populations arrived cut
+// mid-name, which is worse than absent because a truncated list reads as a
+// complete one.
+//
+// The caller's share of one of these is bounded at its SOURCE
+// (httperr.QuoteCaller), so this figure is spent on our own text rather than on
+// whatever a caller sent. That is what makes it safe to be the larger number:
+// the refusal's length is a property of the vocabulary it names.
+//
+// NOT derived, and it cannot be from here — the vocabularies live in compose,
+// downstream of this package, so naming them would invert the dependency.
+//
+// Exported as a shared FIGURE for that reason, the way httperr.MaxFaultText is:
+// the gate that CAN see those vocabularies reads this number and fails when one
+// of them no longer fits, rather than keeping a second copy of it that would
+// agree only until somebody edited one.
+const MaxFaultDetail = 512
+
 // BadArgsError maps to a tool-call validation failure.
 //
 // The two members have opposite provenance, and that is the whole reason they

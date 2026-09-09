@@ -62,11 +62,18 @@ export function ObjectivePanel({
   if (!plan.objective) {
     return null;
   }
+  const byModel = plan.generated_by === "model";
   return (
     <Panel
       title={t("person.meeting.objective")}
       titleLevel={3}
-      tone={plan.generated_by === "model" ? "ai" : "accent"}
+      tone={byModel ? "ai" : "accent"}
+      // The disclosure rides the plan's LEAD and nowhere else: the panels under
+      // it are the same writer's work and take the same tint, but a badge on
+      // each of them would be the same sentence said six times.
+      titleAction={
+        byModel ? <Badge tone="ai">{t("co.assistant.aiTag")}</Badge> : undefined
+      }
     >
       <PanelBody>
         <div className="mb-objective">
@@ -116,6 +123,7 @@ export function AccountArc({
       title={t("person.meeting.arc")}
       titleLevel={3}
       sub={t("person.meeting.arcSub")}
+      tone={plan.generated_by === "model" ? "ai" : undefined}
     >
       {plan.account_arc.map((moment) => (
         <PanelRow key={`${moment.from}-${moment.title}`}>
@@ -156,7 +164,11 @@ export function AdvancePanel({
     { key: "fallback", sentence: plan.advance.fallback },
   ] as const;
   return (
-    <Panel title={t("person.meeting.close")} titleLevel={3} tone="accent">
+    <Panel
+      title={t("person.meeting.close")}
+      titleLevel={3}
+      tone={plan.generated_by === "model" ? "ai" : "accent"}
+    >
       <PanelBody>
         <div className="mb-advance">
           {legs.map((leg) => (
@@ -188,7 +200,11 @@ export function Unknowns({ plan }: Readonly<{ plan: MeetingPlan }>) {
     return null;
   }
   return (
-    <Panel title={t("person.meeting.unknowns")} titleLevel={3}>
+    <Panel
+      title={t("person.meeting.unknowns")}
+      titleLevel={3}
+      tone={plan.generated_by === "model" ? "ai" : undefined}
+    >
       {plan.unknowns.map((unknown) => (
         <PanelRow key={unknown.kind}>
           <span className="mb-unknown">{unknown.question}</span>
@@ -217,7 +233,11 @@ export function LikelyAsks({
     return null;
   }
   return (
-    <Panel title={t("person.meeting.likelyAsks")} titleLevel={3}>
+    <Panel
+      title={t("person.meeting.likelyAsks")}
+      titleLevel={3}
+      tone={plan.generated_by === "model" ? "ai" : undefined}
+    >
       {plan.likely_asks.map((ask) => (
         <PanelRow key={ask.question}>
           <div className="mb-ask">
@@ -291,7 +311,11 @@ export function Scenarios({ plan }: Readonly<{ plan: MeetingPlan }>) {
     return null;
   }
   return (
-    <Panel title={t("person.meeting.scenarios")} titleLevel={3}>
+    <Panel
+      title={t("person.meeting.scenarios")}
+      titleLevel={3}
+      tone={plan.generated_by === "model" ? "ai" : undefined}
+    >
       {plan.scenarios.map((scenario) => (
         <PanelRow key={scenario.label}>
           <div className="mb-path-row">

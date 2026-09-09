@@ -59,13 +59,23 @@ export function CoachPanel({
 
 // The branches a lead rehearses against. The same ones the rep's own plan
 // carries, so the two are preparing for one meeting.
-export function MeetingPaths({ coaching }: Readonly<{ coaching: Coaching }>) {
+export function MeetingPaths({
+  coaching,
+  writtenByModel,
+}: Readonly<{ coaching: Coaching; writtenByModel: boolean }>) {
   const t = useT();
   if (coaching.paths.length === 0) {
     return null;
   }
   return (
-    <Panel title={t("person.meeting.coach.paths")} titleLevel={3}>
+    <Panel
+      title={t("person.meeting.coach.paths")}
+      titleLevel={3}
+      // The same layer the panel above draws, so the same writer wrote it. A
+      // lead reading one tinted card beside an untinted one would take the two
+      // for two different readings.
+      tone={writtenByModel ? "ai" : undefined}
+    >
       {coaching.paths.map((path) => (
         <PanelRow key={path.label}>
           <div className="mb-path-row">

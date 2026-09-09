@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -380,4 +381,55 @@ func evidenceByRow(answer agents.QueryWorkspaceResult) map[ids.UUID][]agents.Que
 		out[row.Record.ID] = row.Evidence
 	}
 	return out
+}
+
+// The DIRECT form of the same question. A hop is scoped; a predicate naming
+// the reference column is the same read with the join written out, and it
+// carries the same answer.
+//
+// Filtering by an id is asking whether it is there. The rep sends a company id
+// they cannot open, and the deals that come back would say it is on the books
+// and which deals are its — masking the id on the way out makes that answer
+// quieter, not different, because the ROW is the disclosure and the rep chose
+// the predicate that selected it.
+func TestAPredicateNamingARecordTheCallerCannotSeeAdmitsNothing(t *testing.T) {
+	q := setupQuery(t)
+	f := q.seedFixture(t)
+	registry := compose.NewRegistry(q.Pool, compose.SendPath{})
+	plan := fmt.Sprintf(`{"plan":{
+		"version": "v1", "target": "deal",
+		"where": [{"field": "organization_id", "op": "eq", "value": %q}]}}`, f.rep3Org)
+
+	admin := queryPayload(t, invokeQuery(q.admin(), t, registry, plan).Data)
+	if _, err := q.Owner.Exec(context.Background(),
+		`UPDATE organization SET visibility = 'owner' WHERE id = $1`, f.rep3Org); err != nil {
+		t.Fatalf("capturing the organization privately: %v", err)
+	}
+	rep := queryPayload(t, invokeQuery(q.teamRep(q.Rep1, q.Team1), t, registry, plan).Data)
+
+	// The unbounded reader is what proves the plan asks a real question: an
+	// empty answer for the rep means nothing if it is empty for everybody.
+	if len(admin.Rows) == 0 {
+		t.Fatalf("the unbounded reader sees no deal at the seeded company, so this plan asks nothing")
+	}
+	if len(rep.Rows) != 0 {
+		t.Errorf("the rep selected %d deals by a company they cannot open — the rows answer that it exists", len(rep.Rows))
+	}
+}
+
+// The same predicate over a company the rep CAN open still answers. A guard
+// that refused both would pass the case above perfectly while making the field
+// useless, which is the availability regression a security fix smuggles in.
+func TestAPredicateNamingARecordTheCallerCanSeeStillAnswers(t *testing.T) {
+	q := setupQuery(t)
+	f := q.seedFixture(t)
+	registry := compose.NewRegistry(q.Pool, compose.SendPath{})
+	plan := fmt.Sprintf(`{"plan":{
+		"version": "v1", "target": "deal",
+		"where": [{"field": "organization_id", "op": "eq", "value": %q}]}}`, f.rep1Org)
+
+	rep := queryPayload(t, invokeQuery(q.teamRep(q.Rep1, q.Team1), t, registry, plan).Data)
+	if len(rep.Rows) == 0 {
+		t.Error("the rep cannot filter by their own company, so the guard withholds a reference they are entitled to")
+	}
 }

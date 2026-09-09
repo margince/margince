@@ -22,7 +22,7 @@
 
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
-import { Badge } from "../../design-system/atoms";
+import { Badge, Button } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -155,8 +155,13 @@ export function Proof({
   }
   return (
     <>
-      <button
-        type="button"
+      {/* The working behind a machine's claim, so the trigger wears the
+          machine's own quiet variant — tinted and outlined, which is what the
+          head's hand-rolled chip was drawing for itself. The class is all
+          that is left of it: where the control sits in the head's grid. */}
+      <Button
+        small
+        variant="aiQuiet"
         className="r360-rests-toggle"
         onClick={() => setOpen((shown) => !shown)}
         aria-expanded={open}
@@ -173,7 +178,7 @@ export function Proof({
             {plural("record.restsOn.source", items.length)}
           </span>
         ) : null}
-      </button>
+      </Button>
       {open ? (
         <div className="r360-rests" id={panelId}>
           {items.map((item) => (

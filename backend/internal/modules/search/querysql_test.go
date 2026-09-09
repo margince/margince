@@ -19,7 +19,7 @@ import (
 // enough of each record type to ask a real question, and deliberately missing
 // the derived members (`stalled`) no table holds.
 var planTables = map[string][]StoredColumn{
-	"deal": columnsOf("id:uuid", "name", "status", "amount_minor:bigint",
+	"deal": columnsOf("id:uuid", "name", "status", "amount_minor:bigint", "partner_org_id:uuid",
 		"expected_close_date:date", "closed_at:timestamp with time zone",
 		"owner_id:uuid", "organization_id:uuid", "project_id:uuid"),
 	"organization": columnsOf("id:uuid", "display_name", "owner_id:uuid",
@@ -373,7 +373,7 @@ func TestTheRankedLaneNarrowsTheStatementToItsCandidates(t *testing.T) {
 func TestAFieldWithNoStoragePathRefusesRatherThanCompiling(t *testing.T) {
 	compiler := &planCompiler{}
 	vocab := TargetVocabulary{Target: entityDeal, Fields: []Field{newField("stalled", KindBoolean)}}
-	_, refusal := compiler.clause("t", newStorage(planTables["deal"]), vocab, "where[0]",
+	_, _, refusal := compiler.resolve("t", newStorage(planTables["deal"]), vocab, "where[0]",
 		Predicate{Field: "stalled", Op: OpEq, Value: []byte("true")})
 	if refusal == nil || refusal.Code != CodeUnknownField {
 		t.Fatalf("refusal is %v", refusal)
@@ -384,7 +384,7 @@ func TestAFieldWithNoStoragePathRefusesRatherThanCompiling(t *testing.T) {
 // naming a field the vocabulary does not carry.
 func TestAFieldOutsideTheVocabularyRefusesAtCompileTime(t *testing.T) {
 	compiler := &planCompiler{}
-	_, refusal := compiler.clause("t", newStorage(planTables["deal"]),
+	_, _, refusal := compiler.resolve("t", newStorage(planTables["deal"]),
 		TargetVocabulary{Target: entityDeal}, "where[0]",
 		Predicate{Field: "invented", Op: OpEq, Value: []byte(`"x"`)})
 	if refusal == nil || refusal.Code != CodeUnknownField {
@@ -397,8 +397,12 @@ func TestAFieldOutsideTheVocabularyRefusesAtCompileTime(t *testing.T) {
 func TestAnOperatorWithNoSQLSpellingIsRefused(t *testing.T) {
 	compiler := &planCompiler{}
 	vocab := TargetVocabulary{Target: entityDeal, Fields: []Field{newField("status", KindText)}}
-	_, refusal := compiler.clause("t", newStorage(planTables["deal"]), vocab, "where[0]",
-		Predicate{Field: "status", Op: "matches", Value: []byte(`"open"`)})
+	predicate := Predicate{Field: "status", Op: "matches", Value: []byte(`"open"`)}
+	field, expr, refusal := compiler.resolve("t", newStorage(planTables["deal"]), vocab, "where[0]", predicate)
+	if refusal != nil {
+		t.Fatalf("the field itself was refused: %v", refusal)
+	}
+	_, refusal = compiler.clause(expr, "where[0]", field, predicate)
 	if refusal == nil || refusal.Code != CodeUnknownOperator {
 		t.Fatalf("refusal is %v", refusal)
 	}

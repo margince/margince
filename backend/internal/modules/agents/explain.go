@@ -225,7 +225,7 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 // occupants.
 func faultExplanation(fault httperr.Fault) string {
 	if len(fault.Fields) == 0 {
-		return echoSafe(fault.Code, maxBadArgsDetail) + ": " + echoSafe(fault.Detail, maxBadArgsDetail)
+		return echoSafe(fault.Code, maxBadArgsDetail) + ": " + echoSafe(fault.Detail, MaxFaultDetail)
 	}
 
 	parts := make([]string, 0, len(fault.Fields))
@@ -268,7 +268,7 @@ func faultExplanation(fault httperr.Fault) string {
 	if remedied {
 		return named
 	}
-	return named + ": " + echoSafe(fault.Detail, maxBadArgsDetail)
+	return named + ": " + echoSafe(fault.Detail, MaxFaultDetail)
 }
 
 // maxRemedyBudget bounds the TOTAL guidance one refusal contributes, across

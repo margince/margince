@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
@@ -96,12 +96,16 @@ function preferredSet(sets: readonly Corpus[]): string {
 
 export function CorpusAskCard({
   carriedQuestion,
-}: Readonly<{ carriedQuestion?: string | null }>) {
+  onCarriedAsked,
+}: Readonly<{
+  carriedQuestion?: string;
+  onCarriedAsked?: () => void;
+}>) {
   const t = useT();
   const canAsk = useCan("knowledge_corpus", "read");
   const sets = useAskableSets(canAsk);
   const [corpusId, setCorpusId] = useState("");
-  const [question, setQuestion] = useState(carriedQuestion ?? "");
+  const [question, setQuestion] = useState("");
   const ask = useAsk();
 
   // The set is chosen once the list arrives, and only while nothing is chosen:
@@ -114,6 +118,42 @@ export function CorpusAskCard({
     }
   }, [items, corpusId]);
 
+  // A question carried in has already been ASKED, so arriving with one fills
+  // the box AND submits it. It arrives as a change of ADDRESS and not as a
+  // mount — the reader is as often as not already standing on this screen — so
+  // it is an effect: a `useState` initialiser runs once per mount and would
+  // miss every arrival that is not one.
+  //
+  // `asked` is what keeps one arrival to one ask. The effect is replayed for
+  // the set list landing, for the grant landing, for a caller's callback
+  // changing identity, and twice over on a development mount, and a model call
+  // is not a thing to make twice. It clears when the address does, which is
+  // what makes the same question carried again a second ask rather than a row
+  // that does nothing.
+  const carried = carriedQuestion?.trim() ?? "";
+  const asked = useRef("");
+  const submit = ask.mutate;
+  useEffect(() => {
+    if (carried === "") {
+      asked.current = "";
+      return;
+    }
+    // Two things have to be known first, and neither is on the first render.
+    // A set, because an ask with none to search is one the mutation refuses.
+    // And the GRANT: the set is chosen from whatever the corpora cache holds,
+    // and a warm cache outlives the grant that filled it, so without this the
+    // card would ask on behalf of a reader it is not even drawn for and spend
+    // the question doing it. Held rather than dropped either way, so a grant
+    // that lands a moment later still asks it.
+    if (!canAsk || corpusId === "" || asked.current === carried) {
+      return;
+    }
+    asked.current = carried;
+    setQuestion(carried);
+    submit({ corpusId, question: carried });
+    onCarriedAsked?.();
+  }, [canAsk, carried, corpusId, submit, onCarriedAsked]);
+
   // Nothing is offered until we KNOW there is something to ask. The three
   // cases collapse to one answer — no grant, no sets, or not yet told — and
   // that is deliberate: rendering the box while the list is still in flight
@@ -125,7 +165,13 @@ export function CorpusAskCard({
   }
 
   return (
-    <Panel title={t("corpusAsk.title")}>
+    <Panel
+      title={t("corpusAsk.title")}
+      // Indigo, and the badge with it: the answer under this head is a model's
+      // reading of the set, and the verb the head offers is the model's too.
+      tone="ai"
+      titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
+    >
       <PanelBody className="form-stack">
         <p className="t-caption">{t("corpusAsk.sub")}</p>
         {items && items.length > 1 ? (
@@ -154,6 +200,9 @@ export function CorpusAskCard({
         </Field>
         <div className="form-actions">
           <Button
+            // The one AI call to action on this surface: the model does the
+            // reading and writes the sentence.
+            variant="ai"
             disabled={question.trim() === "" || corpusId === ""}
             pending={ask.isPending}
             onClick={() => ask.mutate({ corpusId, question: question.trim() })}
