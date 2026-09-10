@@ -1295,6 +1295,22 @@ func (stubs) SaveMyLocale(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyLocale")
 }
 
+func (stubs) DisableMyMfa(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DisableMyMfa")
+}
+
+func (stubs) GetMyMfa(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetMyMfa")
+}
+
+func (stubs) StartMyTotpEnrolment(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "StartMyTotpEnrolment")
+}
+
+func (stubs) ConfirmMyTotp(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ConfirmMyTotp")
+}
+
 func (stubs) ListMySessions(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListMySessions")
 }

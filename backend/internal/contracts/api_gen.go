@@ -26680,6 +26680,18 @@ type MergeTagsResult struct {
 	Moved int `json:"moved"`
 }
 
+// MfaStatus The caller's own multi-factor state.
+type MfaStatus struct {
+	// Confirmed Whether the factor is active — a pending enrolment is not yet a factor.
+	Confirmed bool `json:"confirmed"`
+
+	// Enrolled Whether an enrolment exists (pending or confirmed).
+	Enrolled bool `json:"enrolled"`
+
+	// RecoveryCodesLeft How many one-time recovery codes remain unused.
+	RecoveryCodesLeft int `json:"recovery_codes_left"`
+}
+
 // Money Money as integer minor-units + ISO-4217 currency. Never a float.
 type Money struct {
 	// AmountMinor Smallest currency unit (e.g. cents). 100000 EUR-cents = €1,000.00.
@@ -31894,6 +31906,12 @@ type RecordViewAck struct {
 // RecordViewAckEntityType defines model for RecordViewAck.EntityType.
 type RecordViewAckEntityType string
 
+// RecoveryCodes One-time recovery codes, shown exactly once at confirmation.
+type RecoveryCodes struct {
+	// RecoveryCodes Each code works once, for signing in when the authenticator is unavailable.
+	RecoveryCodes []string `json:"recovery_codes"`
+}
+
 // RefreshAccepted An async refresh was enqueued; proposals will appear in the approvals inbox.
 type RefreshAccepted struct {
 	Status RefreshAcceptedStatus `json:"status"`
@@ -34541,6 +34559,21 @@ type ThreadAudienceOutcome struct {
 	// Shared Whether the messages are now readable by the workspace. False after a share means
 	// somebody else still holds them.
 	Shared bool `json:"shared"`
+}
+
+// TotpConfirmRequest defines model for TotpConfirmRequest.
+type TotpConfirmRequest struct {
+	// Code The current code from the authenticator being enrolled.
+	Code string `json:"code"`
+}
+
+// TotpEnrolment A pending TOTP enrolment, returned once. Never retrievable again.
+type TotpEnrolment struct {
+	// OtpauthUri The otpauth:// URI the same app scans as a QR code.
+	OtpauthUri string `json:"otpauth_uri"`
+
+	// Secret The base32 shared secret, for manual entry into an authenticator app.
+	Secret string `json:"secret"`
 }
 
 // TranscriptReadReport What one reading of one transcript did. The three outcomes are kept apart on purpose: still reading, read it and it stated nothing, and could not read it are different answers, and collapsing the last two makes a correct empty result look like a broken feature.
@@ -42988,6 +43021,9 @@ type ImportLinkedInConnectionsMultipartRequestBody ImportLinkedInConnectionsMult
 
 // SaveMyLocaleJSONRequestBody defines body for SaveMyLocale for application/json ContentType.
 type SaveMyLocaleJSONRequestBody = SaveMyLocaleRequest
+
+// ConfirmMyTotpJSONRequestBody defines body for ConfirmMyTotp for application/json ContentType.
+type ConfirmMyTotpJSONRequestBody = TotpConfirmRequest
 
 // SaveMyWorkingHoursJSONRequestBody defines body for SaveMyWorkingHours for application/json ContentType.
 type SaveMyWorkingHoursJSONRequestBody = WorkingHours
@@ -52215,6 +52251,18 @@ type ServerInterface interface {
 	// Choose the language your own interface is in.
 	// (PUT /me/locale)
 	SaveMyLocale(w http.ResponseWriter, r *http.Request)
+	// Turn your own multi-factor authentication off.
+	// (DELETE /me/mfa)
+	DisableMyMfa(w http.ResponseWriter, r *http.Request)
+	// Your own multi-factor state.
+	// (GET /me/mfa)
+	GetMyMfa(w http.ResponseWriter, r *http.Request)
+	// Begin enrolling an authenticator app.
+	// (POST /me/mfa/totp)
+	StartMyTotpEnrolment(w http.ResponseWriter, r *http.Request)
+	// Confirm an authenticator and receive recovery codes.
+	// (POST /me/mfa/totp/confirm)
+	ConfirmMyTotp(w http.ResponseWriter, r *http.Request)
 	// The sessions open under your account.
 	// (GET /me/sessions)
 	ListMySessions(w http.ResponseWriter, r *http.Request)
@@ -55044,6 +55092,30 @@ func (_ Unimplemented) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request
 // Choose the language your own interface is in.
 // (PUT /me/locale)
 func (_ Unimplemented) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Turn your own multi-factor authentication off.
+// (DELETE /me/mfa)
+func (_ Unimplemented) DisableMyMfa(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Your own multi-factor state.
+// (GET /me/mfa)
+func (_ Unimplemented) GetMyMfa(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Begin enrolling an authenticator app.
+// (POST /me/mfa/totp)
+func (_ Unimplemented) StartMyTotpEnrolment(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm an authenticator and receive recovery codes.
+// (POST /me/mfa/totp/confirm)
+func (_ Unimplemented) ConfirmMyTotp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -69306,6 +69378,86 @@ func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveMyLocale(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisableMyMfa operation middleware
+func (siw *ServerInterfaceWrapper) DisableMyMfa(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisableMyMfa(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMyMfa operation middleware
+func (siw *ServerInterfaceWrapper) GetMyMfa(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMyMfa(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartMyTotpEnrolment operation middleware
+func (siw *ServerInterfaceWrapper) StartMyTotpEnrolment(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartMyTotpEnrolment(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmMyTotp operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmMyTotp(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmMyTotp(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -84434,6 +84586,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/locale", wrapper.SaveMyLocale)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/mfa", wrapper.DisableMyMfa)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/mfa", wrapper.GetMyMfa)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/mfa/totp", wrapper.StartMyTotpEnrolment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/mfa/totp/confirm", wrapper.ConfirmMyTotp)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/sessions", wrapper.ListMySessions)

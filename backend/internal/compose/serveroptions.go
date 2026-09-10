@@ -209,6 +209,10 @@ func WithBlobstore(store blobstore.Store) Option {
 func WithKeyvault(vault keyvault.Vault) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.vault = vault
+		// The MFA endpoints seal each member's TOTP secret here; without a vault
+		// they serve enrolment as unavailable rather than storing a seed in the
+		// clear. Mutates the one identity service the auth handlers already hold.
+		s.authHandlers = s.authHandlers.WithVault(vault)
 		// Backfilled for the same reason the object store is: WithDataReset may
 		// have already run, and a reset that cannot reach the vault leaves the
 		// sealed credentials of the installation it just wiped resident.
@@ -296,7 +300,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// The channel connect path needs the same custodian: it seals the bot
 		// token and destroys it on disconnect. A role that composed no channel
 		// transport is left that way (channelconnect.go).
-		s.channelHandlers = s.WithVault(vault)
+		s.channelHandlers = s.channelHandlers.WithVault(vault)
 		// The pre-flight reads whichever registry the lines above just
 		// ensured exists — the SAME one, never a second construction — so a
 		// mailbox or bot connected through it is a mailbox or bot the check

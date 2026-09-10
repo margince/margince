@@ -19693,6 +19693,91 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /me/mfa:
+    get:
+      tags: [Identity]
+      operationId: getMyMfa
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Your own multi-factor state.
+      description: |
+        Always the CALLER's own: whether a second factor is enrolled, whether it is
+        confirmed (a pending enrolment is not yet a factor), and how many one-time recovery
+        codes remain.
+      responses:
+        '200':
+          description: The caller's MFA state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MfaStatus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Identity]
+      operationId: disableMyMfa
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Turn your own multi-factor authentication off.
+      description: |
+        Removes the caller's own second factor: the enrolment, its recovery codes, and the
+        sealed secret. Idempotent — disabling when nothing is enrolled is a no-op.
+      responses:
+        '204': { description: 'MFA is off, or was already.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/mfa/totp:
+    post:
+      tags: [Identity]
+      operationId: startMyTotpEnrolment
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Begin enrolling an authenticator app.
+      description: |
+        Mints a fresh TOTP secret for the caller and returns it once, with the `otpauth://`
+        URI an authenticator app scans. The enrolment is PENDING until confirmed with a code;
+        it is not yet a factor a login will challenge for. A caller who already holds a
+        CONFIRMED factor must disable it first (409) rather than silently swap it. The secret
+        is shown exactly once and never retrievable again — `Cache-Control: no-store`.
+      responses:
+        '200':
+          description: The pending enrolment's secret and provisioning URI. Returned once.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TotpEnrolment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: 'Refused with `code: mfa_already_enrolled` — disable the current factor before enrolling a new one.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /me/mfa/totp/confirm:
+    post:
+      tags: [Identity]
+      operationId: confirmMyTotp
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Confirm an authenticator and receive recovery codes.
+      description: |
+        Verifies a code against the pending secret and, on success, activates the factor and
+        returns a fresh set of one-time recovery codes — shown exactly once, never retrievable
+        again (`Cache-Control: no-store`). A wrong code leaves the enrolment pending (401).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TotpConfirmRequest' }
+      responses:
+        '200':
+          description: The factor is active; the one-time recovery codes, shown once.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecoveryCodes' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: 'Refused with `code: mfa_already_enrolled` — the factor is already confirmed.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /me/working-hours:
     get:
       tags: [Identity]
@@ -22797,6 +22882,51 @@ components:
         sessions:
           type: array
           items: { $ref: '#/components/schemas/MySession' }
+    MfaStatus:
+      type: object
+      additionalProperties: false
+      required: [enrolled, confirmed, recovery_codes_left]
+      description: The caller's own multi-factor state.
+      properties:
+        enrolled:
+          type: boolean
+          description: Whether an enrolment exists (pending or confirmed).
+        confirmed:
+          type: boolean
+          description: Whether the factor is active — a pending enrolment is not yet a factor.
+        recovery_codes_left:
+          type: integer
+          description: How many one-time recovery codes remain unused.
+    TotpEnrolment:
+      type: object
+      additionalProperties: false
+      required: [secret, otpauth_uri]
+      description: A pending TOTP enrolment, returned once. Never retrievable again.
+      properties:
+        secret:
+          type: string
+          description: The base32 shared secret, for manual entry into an authenticator app.
+        otpauth_uri:
+          type: string
+          description: The otpauth:// URI the same app scans as a QR code.
+    TotpConfirmRequest:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: The current code from the authenticator being enrolled.
+    RecoveryCodes:
+      type: object
+      additionalProperties: false
+      required: [recovery_codes]
+      description: One-time recovery codes, shown exactly once at confirmation.
+      properties:
+        recovery_codes:
+          type: array
+          items: { type: string }
+          description: Each code works once, for signing in when the authenticator is unavailable.
     UserSession:
       type: object
       additionalProperties: false

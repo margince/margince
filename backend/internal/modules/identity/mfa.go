@@ -51,6 +51,14 @@ func (s *Service) WithVault(v keyvault.Vault) *Service {
 	return s
 }
 
+// WithVault wires the seal into the handlers' service, so the composition root
+// can turn MFA on where a vault exists. A deployment with no vault serves the
+// enrolment routes as unavailable rather than storing a secret in the clear.
+func (h Handlers) WithVault(v keyvault.Vault) Handlers {
+	h.svc.WithVault(v)
+	return h
+}
+
 // StartTOTPEnrolment mints a fresh secret for the caller, seals it, and records a
 // PENDING enrolment. Returns the raw secret once, for the authenticator app; it
 // is never shown again. A caller who is already CONFIRMED must disable first —

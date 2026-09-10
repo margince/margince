@@ -13615,6 +13615,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your own multi-factor state.
+         * @description Always the CALLER's own: whether a second factor is enrolled, whether it is
+         *     confirmed (a pending enrolment is not yet a factor), and how many one-time recovery
+         *     codes remain.
+         */
+        get: operations["getMyMfa"];
+        put?: never;
+        post?: never;
+        /**
+         * Turn your own multi-factor authentication off.
+         * @description Removes the caller's own second factor: the enrolment, its recovery codes, and the
+         *     sealed secret. Idempotent — disabling when nothing is enrolled is a no-op.
+         */
+        delete: operations["disableMyMfa"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/mfa/totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Begin enrolling an authenticator app.
+         * @description Mints a fresh TOTP secret for the caller and returns it once, with the `otpauth://`
+         *     URI an authenticator app scans. The enrolment is PENDING until confirmed with a code;
+         *     it is not yet a factor a login will challenge for. A caller who already holds a
+         *     CONFIRMED factor must disable it first (409) rather than silently swap it. The secret
+         *     is shown exactly once and never retrievable again — `Cache-Control: no-store`.
+         */
+        post: operations["startMyTotpEnrolment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/mfa/totp/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm an authenticator and receive recovery codes.
+         * @description Verifies a code against the pending secret and, on success, activates the factor and
+         *     returns a fresh set of one-time recovery codes — shown exactly once, never retrievable
+         *     again (`Cache-Control: no-store`). A wrong code leaves the enrolment pending (401).
+         */
+        post: operations["confirmMyTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/working-hours": {
         parameters: {
             query?: never;
@@ -15568,6 +15641,31 @@ export interface components {
         /** @description The caller's live sessions, newest activity first. */
         MySessionList: {
             sessions: components["schemas"]["MySession"][];
+        };
+        /** @description The caller's own multi-factor state. */
+        MfaStatus: {
+            /** @description Whether an enrolment exists (pending or confirmed). */
+            enrolled: boolean;
+            /** @description Whether the factor is active — a pending enrolment is not yet a factor. */
+            confirmed: boolean;
+            /** @description How many one-time recovery codes remain unused. */
+            recovery_codes_left: number;
+        };
+        /** @description A pending TOTP enrolment, returned once. Never retrievable again. */
+        TotpEnrolment: {
+            /** @description The base32 shared secret, for manual entry into an authenticator app. */
+            secret: string;
+            /** @description The otpauth:// URI the same app scans as a QR code. */
+            otpauth_uri: string;
+        };
+        TotpConfirmRequest: {
+            /** @description The current code from the authenticator being enrolled. */
+            code: string;
+        };
+        /** @description One-time recovery codes, shown exactly once at confirmation. */
+        RecoveryCodes: {
+            /** @description Each code works once, for signing in when the authenticator is unavailable. */
+            recovery_codes: string[];
         };
         /** @description One session open under a member's account as an admin sees it: the same view its owner gets from MySession, minus `current` — the admin's own request is never one of the target's sessions. No IP, the same coarser view the owner has. */
         UserSession: {
@@ -54560,6 +54658,111 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getMyMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's MFA state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    disableMyMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description MFA is off, or was already. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    startMyTotpEnrolment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pending enrolment's secret and provisioning URI. Returned once. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TotpEnrolment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused with `code: mfa_already_enrolled` — disable the current factor before enrolling a new one. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    confirmMyTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description The factor is active; the one-time recovery codes, shown once. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodes"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused with `code: mfa_already_enrolled` — the factor is already confirmed. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
     getMyWorkingHours: {
