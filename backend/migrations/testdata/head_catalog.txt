@@ -1402,6 +1402,7 @@ public.capture_pending_counterparty.resolved_by_owner boolean NOT NULL gen=- def
 public.capture_pending_counterparty.served_model text gen=- def=-
 public.capture_pending_counterparty.status text NOT NULL gen=- def='pending'::text
 public.capture_pending_counterparty.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_pending_counterparty.withheld_from_workspace boolean NOT NULL gen=- def=false
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)
 public.capture_sender_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_sender_override.address text NOT NULL gen=- def=-
