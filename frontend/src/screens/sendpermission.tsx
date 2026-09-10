@@ -43,7 +43,11 @@ type Recipient = components["schemas"]["SendAuthorizationPreviewRecipient"];
  * render — and so a second surface adopting this component cannot reach a
  * fourth answer by branching on the preview itself.
  */
-export type SendPermissionState = "allowed" | "unproven" | "refused";
+export type SendPermissionState =
+  | "allowed"
+  | "unproven"
+  | "refused"
+  | "checking";
 
 /**
  * The recipient whose answer decides the message, and the state it puts the
@@ -55,10 +59,23 @@ export type SendPermissionState = "allowed" | "unproven" | "refused";
  * and helped once. An absolute refusal outranks an unproven one because it is
  * the one the rep cannot act on.
  */
-export function decidingRecipient(preview: Preview | undefined): {
+export function decidingRecipient(
+  preview: Preview | undefined,
+  asking = false,
+): {
   state: SendPermissionState;
   recipient?: Recipient;
 } {
+  // AN ANSWER THAT HAS NOT ARRIVED IS NOT AN ANSWER. An absent preview used to
+  // read as "allowed", so three situations reached one state: nobody asked, the
+  // asking is in flight, and the answer came back clean. Only the last is
+  // permission, and a rep who pressed Send in the second met the refusal at the
+  // button — the failure this whole surface exists to end.
+  //
+  // An UNASKED question stays quiet rather than warning. A surface with no
+  // recipient yet has nothing to ask about, and a warning there would tell a
+  // rep something is wrong with a message they have not written.
+  if (asking) return { state: "checking" };
   if (!preview) return { state: "allowed" };
 
   let overrulable: Recipient | undefined;
@@ -94,9 +111,17 @@ export function decidingRecipient(preview: Preview | undefined): {
 export function SendPermission({
   preview,
   unanswered = false,
+  asking = false,
   onOverride,
 }: Readonly<{
   preview: Preview | undefined;
+  /**
+   * The question is in flight. Drawn rather than left silent, because silence
+   * here is what a permitted send looks like: the composer said nothing while
+   * it waited and nothing when it was told yes, so a rep read the first as the
+   * second.
+   */
+  asking?: boolean;
   /**
    * The question did not arrive: the preview failed rather than answered. Said
    * out loud, because a surface that fell silent here would look exactly like
@@ -112,12 +137,20 @@ export function SendPermission({
   onOverride?: () => void;
 }>) {
   const t = useT();
-  const { state, recipient } = decidingRecipient(preview);
+  const { state, recipient } = decidingRecipient(preview, asking);
 
   if (unanswered) {
     return (
       <p className="t-caption" role="status">
         {t("sendPermission.unanswered")}
+      </p>
+    );
+  }
+
+  if (state === "checking") {
+    return (
+      <p className="t-caption" role="status">
+        {t("sendPermission.checking")}
       </p>
     );
   }

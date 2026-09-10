@@ -420,6 +420,7 @@ export function ApprovalRow({
           {!decided && staged !== undefined && (
             <SendPermission
               preview={permission.preview}
+              asking={permission.asking}
               unanswered={permission.unanswered}
             />
           )}

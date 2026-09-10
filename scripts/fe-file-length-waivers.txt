@@ -58,7 +58,7 @@
 737 frontend/src/screens/companytoday.tsx
 533 frontend/src/screens/companywork.tsx
 3331 frontend/src/screens/compose.test.tsx
-3014 frontend/src/screens/compose.tsx
+2941 frontend/src/screens/compose.tsx
 547 frontend/src/screens/connected-agents.tsx
 1278 frontend/src/screens/connectors.tsx
 1428 frontend/src/screens/contacts.test.tsx
