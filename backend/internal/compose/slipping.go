@@ -135,7 +135,7 @@ func quietDealScan(
 		for _, d := range out {
 			ids = append(ids, d.DealID)
 		}
-		stepless, err := dealsWithNoOpenNextStep(ctx, pool, ids)
+		stepless, err := dealsWithNoOpenNextStep(ctx, pool, ids, now)
 		if err != nil {
 			return nil, false, err
 		}

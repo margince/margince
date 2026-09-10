@@ -158,6 +158,30 @@ func (e *reconcileEnv) seedInteraction(t *testing.T, dealID ids.UUID, kind, subj
 	return id
 }
 
+// seedMeeting plants a meeting at an offset from now, so a test can say
+// "tomorrow" or "an hour ago" directly. A NEGATIVE hours value is the future.
+//
+// status is written as given, and "" writes NULL — which is what a captured
+// calendar entry nobody has marked actually carries, and the case a NOT IN
+// predicate silently drops.
+func (e *reconcileEnv) seedMeeting(
+	t *testing.T, dealID ids.UUID, subject string, occurredHoursAgo, durationSeconds int, status string,
+) {
+	t.Helper()
+	id := ids.NewV7()
+	var meetingStatus *string
+	if status != "" {
+		meetingStatus = &status
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO activity (id, kind, subject, occurred_at, duration_seconds, meeting_status, source, captured_by)
+		 VALUES ($1, 'meeting', $2, now() - make_interval(hours => $3), $4, $5, 'manual', 'human:x')`,
+		id, subject, occurredHoursAgo, durationSeconds, meetingStatus); err != nil {
+		t.Fatalf("seed meeting: %v", err)
+	}
+	e.linkActivity(t, id, dealID)
+}
+
 // seedTask plants a task on the deal — the "next step already planned"
 // side that suppresses the proposal when it is still open.
 func (e *reconcileEnv) seedTask(t *testing.T, dealID ids.UUID, done bool) ids.UUID {
@@ -303,6 +327,180 @@ func TestFollowUpReconcileSuppressesWhenNoDiscrepancy(t *testing.T) {
 	}
 	if got := e.pendingFollowUps(t, noteOnly); got != 0 {
 		t.Errorf("deal with no recent interaction staged %d proposals, want 0", got)
+	}
+}
+
+// A meeting the rep has BOOKED is not a touch that already happened, and the
+// sweep used to read it as one: the evidence window had only a lower bound, so
+// tomorrow's meeting satisfied "landed in the window" and — being the newest
+// row — outranked the real interaction the follow-up should have named. The rep
+// was told a meeting "left no next step planned" the day before it happened.
+// The deal carries a real past call AND tomorrow's meeting, which is the shape
+// that reproduced it: an open task is deliberately absent, so the only thing
+// standing between this deal and a proposal is the meeting. Seeding the future
+// meeting ALONE would prove nothing — it falls outside the lookback's lower
+// bound too, so the sweep would stay silent even with the bug present.
+func TestAMeetingBookedForTomorrowIsNotEvidenceOfAMissedNextStep(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Meeting booked ahead", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "call", "Discovery call", 3)
+	e.seedMeeting(t, deal, "Architecture review", -24, 3600, "")
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 0 {
+		t.Errorf("a meeting booked for tomorrow staged %d proposals, want 0 — "+
+			"it has not happened, so it is neither a touch to reconcile nor a "+
+			"conversation that ended without a next step", got)
+	}
+
+	// What the proposal WOULD have said, had one been staged: the summary names
+	// the evidence, and the bug's signature was a future date in that sentence.
+	// Asserting on the count alone would not catch a sweep that stopped naming
+	// the meeting but still staged on it.
+	if t.Failed() {
+		_, proposal := e.followUpApproval(t, deal)
+		t.Logf("staged proposal named evidence of kind %q at %s",
+			proposal.EvidenceKind, proposal.EvidenceOccurredAt)
+	}
+}
+
+// The other half of the same fact: a meeting on the calendar IS the next step.
+// A past call with nothing queued would normally earn a proposal; a booked
+// meeting answers it, because the rep already has the thing the proposal would
+// ask them to arrange.
+func TestABookedMeetingCountsAsThePlannedNextStep(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Call then a booked meeting", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "call", "Discovery call", 3)
+	e.seedMeeting(t, deal, "Follow-up session", -48, 1800, "booked")
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 0 {
+		t.Errorf("a deal with a meeting on the calendar staged %d proposals, want 0", got)
+	}
+
+	// The guard on this test's own premise: the same call WITHOUT the booked
+	// meeting must still earn a proposal. Without this, the assertion above
+	// would pass just as well if the sweep had stopped working entirely.
+	bare := e.SeedDeal(t, "Call and nothing else", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, bare, "call", "Discovery call", 3)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, bare); got != 1 {
+		t.Errorf("a call with no next step staged %d proposals, want 1 — if this is "+
+			"0 the sweep is silent for some other reason and the case above proves "+
+			"nothing", got)
+	}
+}
+
+// A meeting that will never happen is not a next step. Cancelled and no-show
+// both mean the calendar is empty again, so the deal is back to owing one.
+func TestACancelledFutureMeetingIsNotANextStep(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Meeting called off", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "call", "Discovery call", 3)
+	e.seedMeeting(t, deal, "Session nobody will attend", -24, 3600, "canceled")
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 1 {
+		t.Errorf("a cancelled meeting suppressed the proposal (%d staged, want 1) — "+
+			"a meeting that will never happen leaves the deal owing a next step", got)
+		return
+	}
+
+	// And the proposal must name the CALL, not the cancelled meeting in the
+	// future. This is the assertion that isolates the evidence window: a
+	// cancelled meeting is not a next step, so nothing else stops the sweep
+	// reaching for it as the newest row — only the upper time bound does.
+	_, proposal := e.followUpApproval(t, deal)
+	if proposal.EvidenceKind != "call" {
+		t.Errorf("the proposal named a %q from %s as its evidence, want the call — "+
+			"a meeting that has not happened cannot be the interaction that left "+
+			"no next step", proposal.EvidenceKind, proposal.EvidenceOccurredAt)
+	}
+	if proposal.EvidenceOccurredAt.After(time.Now()) {
+		t.Errorf("the proposal's evidence is dated %s, which is in the future",
+			proposal.EvidenceOccurredAt)
+	}
+}
+
+// A meeting still in progress is not yet evidence either: it started, but "over"
+// means ended, so the conversation cannot have left anything behind yet.
+func TestAMeetingStillRunningIsNotYetEvidence(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Meeting under way", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "call", "Earlier call", 3)
+	// Started an hour ago and scheduled for two hours, so it is neither over
+	// nor still in the future. A running meeting has to count as the PLANNED
+	// next step for this to hold: otherwise the earlier call is evidence, the
+	// meeting is not yet a plan, and the sweep tells a rep they have no next
+	// step while they are sitting in one.
+	e.seedMeeting(t, deal, "Long workshop", 1, 2*3600, "")
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 0 {
+		t.Errorf("a meeting still running staged %d proposals, want 0 — a rep in "+
+			"the meeting is not a rep who forgot to plan one", got)
+	}
+}
+
+// A future row already marked `held` is not a plan. Everywhere else in the tree
+// that status means the meeting happened, so a deal whose only forward-dated
+// meeting carries it still owes a next step.
+func TestAFutureMeetingAlreadyMarkedHeldIsNotAPlan(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Settled ahead of time", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "call", "Discovery call", 3)
+	e.seedMeeting(t, deal, "Already recorded as done", -24, 3600, "held")
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 1 {
+		t.Errorf("a future meeting marked held suppressed the proposal (%d staged, "+
+			"want 1) — `held` says the meeting happened, so it is not a plan", got)
+	}
+}
+
+// The slipping lane reads the SAME "has a next step" question through
+// dealsWithNoOpenNextStep, and it is a different reader with its own statement.
+// Both were task-only before, so a fix to one alone would have left the two
+// disagreeing: the at-risk lane reporting "no next step" about a deal the
+// overnight sweep had just called planned.
+func TestTheSlippingLaneReadsABookedMeetingAsANextStep(t *testing.T) {
+	e := setupReconcile(t)
+	booked := e.SeedDeal(t, "Has a meeting booked", e.pipeline, e.open, &e.Rep1)
+	e.seedMeeting(t, booked, "Next Thursday", -72, 3600, "booked")
+
+	bare := e.SeedDeal(t, "Has nothing planned", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, bare, "call", "Discovery call", 3)
+
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithActor(ctx,
+		principal.Principal{Type: principal.PrincipalSystem, ID: "agent:overnight"})
+	stepless, err := dealsWithNoOpenNextStep(
+		ctx, e.Pool, []ids.UUID{booked, bare}, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stepless[booked] {
+		t.Errorf("the lane reports no next step for a deal with a meeting on the " +
+			"calendar; the overnight sweep reads the same deal as planned")
+	}
+	// The premise guard: the reader must still find the deal that genuinely has
+	// nothing, or the assertion above passes for a reader that answers "planned"
+	// to everything.
+	if !stepless[bare] {
+		t.Errorf("the lane found a next step on a deal that has only a past call")
 	}
 }
 
