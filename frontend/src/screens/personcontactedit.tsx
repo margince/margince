@@ -217,14 +217,23 @@ export function EditContactMethodsModal({
     personRef.current = person;
   }, [person]);
 
+  // The person snapshot the OPEN-TIME staging was seeded from, pinned for the
+  // life of this open. A background person360 refetch can update the `person`
+  // prop (and its version) while the modal sits open; saving the staged edits
+  // against that newer version would pass If-Match and silently overwrite
+  // whatever the concurrent change did. Pinning to the open-time version
+  // means a real conflict 409s instead.
+  const editPersonRef = useRef(person);
+
   // Re-stages every row the moment the modal OPENS, and only then: the modal
   // stays mounted between opens rather than remounting, so a plain effect on
   // `person` would re-seed on every background person360 refetch too — wiping
   // out whatever the reader was mid-way through typing.
   useEffect(() => {
     if (open) {
-      setEmails(seedEmails(personRef.current));
-      setPhones(seedPhones(personRef.current));
+      editPersonRef.current = personRef.current;
+      setEmails(seedEmails(editPersonRef.current));
+      setPhones(seedPhones(editPersonRef.current));
     }
   }, [open]);
 
@@ -236,7 +245,7 @@ export function EditContactMethodsModal({
   function handleSave() {
     save.mutate(
       {
-        person,
+        person: editPersonRef.current,
         emails: toEmailInputs(emails),
         phones: toPhoneInputs(phones),
       },
@@ -263,9 +272,20 @@ export function EditContactMethodsModal({
               typeValue={row.email_type}
               onTypeChange={(value) => {
                 if (isEmailType(value)) {
-                  setEmails((rows) =>
-                    replaceRow(rows, row.key, { email_type: value }),
-                  );
+                  setEmails((rows) => {
+                    const retyped = replaceRow(rows, row.key, {
+                      email_type: value,
+                    });
+                    // A primary row that switches type carries `is_primary`
+                    // with it. If its NEW type already has a primary, the
+                    // staged list would then hold two — a state the server's
+                    // uq_person_email_primary constraint rejects with a 409,
+                    // so the picker re-settles who is primary within the new
+                    // type immediately rather than surfacing that at Save.
+                    return row.is_primary
+                      ? selectPrimary(retyped, row.key, (r) => r.email_type)
+                      : retyped;
+                  });
                 }
               }}
               valueLabel={t("person.rail.contactValueEmail")}
@@ -312,9 +332,16 @@ export function EditContactMethodsModal({
               typeValue={row.phone_type}
               onTypeChange={(value) => {
                 if (isPhoneType(value)) {
-                  setPhones((rows) =>
-                    replaceRow(rows, row.key, { phone_type: value }),
-                  );
+                  setPhones((rows) => {
+                    const retyped = replaceRow(rows, row.key, {
+                      phone_type: value,
+                    });
+                    // Same reconciliation as the email row above, mirrored
+                    // for uq_person_phone_primary.
+                    return row.is_primary
+                      ? selectPrimary(retyped, row.key, (r) => r.phone_type)
+                      : retyped;
+                  });
                 }
               }}
               valueLabel={t("person.rail.contactValuePhone")}

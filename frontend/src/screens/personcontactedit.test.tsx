@@ -22,7 +22,14 @@ function json(body: unknown): Response {
 // Every PATCH this modal sends, in order, so a test can assert what was SENT
 // rather than what the component happened to render afterwards — the same
 // discipline personrail.test.tsx holds for the employment modal's requests.
-const sent: Array<{ method: string; path: string; body: unknown }> = [];
+// `ifMatch` rides along the same way automations.test.tsx captures it: the
+// version-pinning tests need to see the precondition header, not just the body.
+const sent: Array<{
+  method: string;
+  path: string;
+  body: unknown;
+  ifMatch: string | null;
+}> = [];
 
 function mountFetchRecorder() {
   sent.length = 0;
@@ -43,7 +50,8 @@ function mountFetchRecorder() {
           ? await request.clone().text()
           : String(init?.body ?? "");
         const body: unknown = raw === "" ? {} : JSON.parse(raw);
-        sent.push({ method, path: url.pathname, body });
+        const ifMatch = request?.headers.get("If-Match") ?? null;
+        sent.push({ method, path: url.pathname, body, ifMatch });
         return json(body);
       }
       return json({ data: [], page: { has_more: false, next_cursor: null } });
@@ -64,7 +72,7 @@ function renderModal({
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <EditContactMethodsModal
@@ -75,6 +83,7 @@ function renderModal({
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return { ...view, client };
 }
 
 // Narrowed, not asserted: the recorded body came off the wire as `unknown`,
@@ -98,6 +107,7 @@ async function findPatch(): Promise<{
   method: string;
   path: string;
   body: unknown;
+  ifMatch: string | null;
 }> {
   await waitFor(() => {
     if (!sent.some((request) => request.method === "PATCH")) {
@@ -319,5 +329,142 @@ describe("editing a person's contact methods", () => {
     expect(first.position).toBe(0);
     expect(second.email).toBe("a@acme.com");
     expect(second.position).toBe(1);
+  });
+
+  it("reconciles the primary email when the primary row's type changes to match another primary", async () => {
+    const user = userEvent.setup();
+    mountFetchRecorder();
+    const dana = person({
+      emails: [
+        {
+          id: "e-1",
+          email: "a@acme.com",
+          email_type: "work",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "human:u-1",
+        },
+        {
+          id: "e-2",
+          email: "b@acme.com",
+          email_type: "personal",
+          is_primary: true,
+          position: 1,
+          source: "manual",
+          captured_by: "human:u-1",
+        },
+      ],
+      phones: [],
+    });
+    renderModal({ open: true, person: dana });
+
+    // Both rows arrived primary within their OWN type (work, personal) — a
+    // state the seed data can hold but the UI itself cannot produce. Switch
+    // b@acme.com's type to "work", the type a@acme.com already occupies.
+    const typeSelects = screen.getAllByRole("combobox", { name: "Type" });
+    await user.click(typeSelects[1]);
+    await user.click(screen.getByRole("option", { name: "Work" }));
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    const patch = await findPatch();
+    const body = asRecord(patch.body, "the contact-methods patch");
+    const emails = asArray(body.emails, "the patched emails");
+    const workEmails = emails
+      .map((row) => asRecord(row, "an email row"))
+      .filter((row) => row.email_type === "work");
+    expect(workEmails).toHaveLength(2);
+    const primaryWorkEmails = workEmails.filter((row) => row.is_primary);
+    // b@acme.com is the row whose type changed and which carried is_primary
+    // into the new type, so it stays primary and a@acme.com is demoted.
+    expect(primaryWorkEmails).toHaveLength(1);
+    expect(primaryWorkEmails[0]?.email).toBe("b@acme.com");
+  });
+
+  it("reconciles the primary phone when the primary row's type changes to match another primary", async () => {
+    const user = userEvent.setup();
+    mountFetchRecorder();
+    const dana = person({
+      emails: [],
+      phones: [
+        {
+          id: "ph-1",
+          phone: "+49301111",
+          phone_type: "work",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "human:u-1",
+        },
+        {
+          id: "ph-2",
+          phone: "+49302222",
+          phone_type: "mobile",
+          is_primary: true,
+          position: 1,
+          source: "manual",
+          captured_by: "human:u-1",
+        },
+      ],
+    });
+    renderModal({ open: true, person: dana });
+
+    const typeSelects = screen.getAllByRole("combobox", { name: "Type" });
+    await user.click(typeSelects[1]);
+    await user.click(screen.getByRole("option", { name: "Work" }));
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    const patch = await findPatch();
+    const body = asRecord(patch.body, "the contact-methods patch");
+    const phones = asArray(body.phones, "the patched phones");
+    const workPhones = phones
+      .map((row) => asRecord(row, "a phone row"))
+      .filter((row) => row.phone_type === "work");
+    expect(workPhones).toHaveLength(2);
+    const primaryWorkPhones = workPhones.filter((row) => row.is_primary);
+    expect(primaryWorkPhones).toHaveLength(1);
+    expect(primaryWorkPhones[0]?.phone).toBe("+49302222");
+  });
+
+  it("pins the save to the version open when the modal opened, not a later refetch", async () => {
+    const user = userEvent.setup();
+    mountFetchRecorder();
+    const dana = person({
+      version: 4,
+      emails: [
+        {
+          id: "e-1",
+          email: "old@acme.com",
+          email_type: "work",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "human:u-1",
+        },
+      ],
+      phones: [],
+    });
+    const { rerender, client } = renderModal({ open: true, person: dana });
+
+    // A background person360 refetch bumps the `person` prop's version while
+    // the modal stays open (no close/reopen) — the staged edits were made
+    // against version 4 and the save must still pin to that, not the newer
+    // version that arrived underneath the open modal.
+    rerender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <EditContactMethodsModal
+            open={true}
+            onClose={() => {}}
+            person={{ ...dana, version: 5 }}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    const patch = await findPatch();
+    expect(patch.ifMatch).toBe("4");
   });
 });

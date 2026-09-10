@@ -8287,7 +8287,7 @@ export const de = {
   "person.rail.contactMoveDown": "Nach unten verschieben",
   "person.contactType.work": "Geschäftlich",
   "person.contactType.personal": "Privat",
-  "person.contactType.home": "Zuhause",
+  "person.contactType.home": "Privat",
   "person.contactType.mobile": "Mobil",
   "person.contactType.other": "Sonstige",
   "person.drawer.close": "Schließen",
