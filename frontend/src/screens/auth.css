@@ -385,7 +385,7 @@
 .auth-error .ae-t {
   font-size: var(--fs-sm);
   font-weight: 600;
-  color: var(--danger);
+  color: var(--dangerText);
 }
 .auth-error .ae-m {
   margin-top: var(--space-1);

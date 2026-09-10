@@ -443,7 +443,7 @@
 .mw-aistat-r dd small {
   display: block;
   margin-top: 2px;
-  color: var(--warn);
+  color: var(--warnText);
   font-family: var(--f-body);
   font-size: var(--fs-meta);
 }

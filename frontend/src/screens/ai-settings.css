@@ -26,7 +26,7 @@
  * the tree spells a warning in. It shares a line with the last-call note, so it
  * carries the colour rather than the whole detail block. */
 .ai-settings-missing {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* One lane, as a line: the lane's name, the vendor, the model it binds, what is

@@ -577,7 +577,7 @@ function SiteReadPanel({
   }
   if (reportQuery.isError) {
     return (
-      <p className="t-caption" style={{ color: "var(--danger)" }}>
+      <p className="t-caption" style={{ color: "var(--dangerText)" }}>
         {problemMessageOf(reportQuery.error, t)}
       </p>
     );
@@ -735,7 +735,7 @@ function DeepReadPanel({ orgId }: Readonly<{ orgId: string }>) {
             says nothing is written until a person accepts it. */}
         <p className="t-sub">{t("deepread.sub")}</p>
         {start.isError && (
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
+          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(start.error, t)}
           </p>
         )}

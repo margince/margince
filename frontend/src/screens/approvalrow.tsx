@@ -96,7 +96,7 @@ export function useDecisionSink(): {
         alignItems: "center",
       }}
     >
-      <p className="t-caption" style={{ color: "var(--danger)", flex: 1 }}>
+      <p className="t-caption" style={{ color: "var(--dangerText)", flex: 1 }}>
         {t("decision.alreadyDecided")}
       </p>
       <Button small onClick={() => setAlreadyDecided(false)}>

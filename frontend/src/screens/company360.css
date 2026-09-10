@@ -719,7 +719,7 @@
 }
 .co-part-error {
   margin-top: var(--space-2);
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The receipt behind one cited value. Read as a short record, not as prose:
@@ -1742,10 +1742,10 @@
   white-space: nowrap;
 }
 .co-todo-due-warn {
-  color: var(--warn);
+  color: var(--warnText);
 }
 .co-todo-due-danger {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The row's verb keeps its own width. The row is a flex line, and a flex line

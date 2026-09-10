@@ -1013,7 +1013,7 @@
 }
 .mw-send-error,
 .mw-error-detail {
-  color: var(--danger);
+  color: var(--dangerText);
   font-size: var(--fs-meta);
 }
 .mw-citations {

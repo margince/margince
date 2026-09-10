@@ -13,32 +13,24 @@ type StripVars = CSSProperties & Record<`--${string}`, string | number>;
 // StatStrip is the record page's readings row: ONE comparison of equal slots,
 // each a reading pane, with air between them and no plate around them. The
 // row is read across as a single comparison, which is what the equal slots
-// and the one type scale hold; the panes are what keeps every reading on the
-// same translucent ground as every other zone of the page.
+// hold; the panes are what keeps every reading on the same translucent ground
+// as every other zone of the page.
 //
 // It takes StatCards as children and owns only the row: the slot count, the
-// gaps between slots, the fold when the row stops being legible, and the one
-// type scale every slot in the row shares. A slot that sized itself to its own
-// content would stop the row reading as one comparison — some slots carry a
-// figure and some carry a sentence.
+// gaps between slots, and the fold when the row stops being legible. A slot
+// that sized itself to its own content would stop the row reading as one
+// comparison — some slots carry a figure and some carry a sentence. How a
+// reading DRAWS is the tile's own (atoms.css): one type scale for every stat
+// card in the product, so a reading is the same reading whichever row shape
+// holds it.
 export function StatStrip({
   children,
   className,
   testId,
   label,
   floor,
-  hero,
 }: Readonly<{
   children: ReactNode;
-  /**
-   * The row at the size of a page it OPENS. On a record a reading is one of
-   * five beside the work and takes the strip's one shared size; on the Brief
-   * the five are the page's first answer, under a greeting set at display
-   * size, and a strip sized for a record column read as a footnote there.
-   * The figure takes the display rung and the tile grows to hold it; label
-   * and basis keep their type.
-   */
-  hero?: boolean;
   // How the strip SITS in the layout around it — it lands on the strip's
   // outer box, which is the element the parent lays out. Not for restyling
   // the row of slots itself: the row's grid, gaps and fold are this
@@ -76,7 +68,7 @@ export function StatStrip({
   };
   const row = (
     <section
-      className={hero ? "stat-strip stat-strip-hero" : "stat-strip"}
+      className="stat-strip"
       style={vars}
       aria-label={label}
       data-testid={testId}

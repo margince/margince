@@ -245,7 +245,7 @@ export function DraftOffer({
         <p
           className="t-caption"
           role="alert"
-          style={{ color: "var(--danger)" }}
+          style={{ color: "var(--dangerText)" }}
         >
           {draft.error}
         </p>

@@ -112,7 +112,7 @@ describe("ConfirmModal", () => {
     );
     const message = screen.getByText("archive failed");
     expect(message.className).toContain("t-caption");
-    expect(message.getAttribute("style")).toContain("var(--danger)");
+    expect(message.getAttribute("style")).toContain("var(--dangerText)");
   });
 
   it("renders no error paragraph when error is null", () => {

@@ -351,7 +351,7 @@
    only ever beside it. */
 .deal-card .deal-age {
   font-size: var(--fs-sm);
-  color: var(--warn);
+  color: var(--warnText);
   font-variant-numeric: tabular-nums;
 }
 .deal-card .deal-org {
@@ -397,7 +397,7 @@
    one already behind us. The tone marks the figure and leaves the card alone,
    which is the deal strip's rule for the same fact. */
 .deal-card .deal-closes-warn {
-  color: var(--warn);
+  color: var(--warnText);
 }
 .deal-card .deal-name {
   font-size: var(--fs-sm);

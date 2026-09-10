@@ -15,6 +15,6 @@
  * — the words are — but a failure that reads at the same weight as the success
  * beside it is one a reader scans past. */
 .rates-error {
-  color: var(--danger);
+  color: var(--dangerText);
   font-size: var(--fs-sm);
 }

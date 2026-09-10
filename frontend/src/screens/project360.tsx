@@ -32,6 +32,7 @@ import { ProjectCompanies } from "./projectcompanies";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
 import {
+  PROJECT_ACTIVITY_ANCHOR,
   PROJECT_COMMITMENTS_ANCHOR,
   PROJECT_DEALS_ANCHOR,
   RollupsStrip,
@@ -207,6 +208,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         ) : undefined
       }
       {...chronology}
+      timelineAnchorId={PROJECT_ACTIVITY_ANCHOR}
     >
       {/* The record's work column, at the record's own step. The phase and the
           readings open it: they describe the whole project but are read as

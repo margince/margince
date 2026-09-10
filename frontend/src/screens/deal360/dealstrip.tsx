@@ -19,6 +19,7 @@
 
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
+import { reveal } from "../../app/reveal";
 import { StatCard } from "../../design-system/atoms";
 import { FactList } from "../../design-system/factlist";
 import { ReadingsGrid } from "../../design-system/readingsgrid";
@@ -28,12 +29,20 @@ import {
   formatDayMonth,
   formatMoneyOrAbsent,
   formatNumber,
+  MONEY_ABSENT,
   relativeDays,
 } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { dealRoleLabel } from "../record360";
 import { SeatPerson } from "./seatperson";
+
+// Where the money reading's door leads. The deal's overview draws the offers
+// card under these readings — the same tab, one screen down — so the door is a
+// scroll to it rather than a route. Named here and given to the element by
+// `deals.tsx`, which owns the layout, so the two cannot drift apart into an id
+// nothing carries.
+export const DEAL_OFFERS_ANCHOR = "deal-offers";
 
 type Deal = components["schemas"]["Deal"];
 type Offer = components["schemas"]["Offer"];
@@ -146,13 +155,22 @@ function MoneyStat({
         }))}
       />
     ) : undefined;
+  const amount = formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale);
   return (
     <StatCard
       label={t("deal.strip.money")}
-      value={formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale)}
+      // A deal nobody has priced says so. `formatMoneyOrAbsent` owns whether
+      // the pair can be said as money and its sentinel is that answer; the word
+      // is the slot's, because "not priced yet" is work somebody can do and a
+      // dash is a reading that failed to load.
+      value={amount === MONEY_ABSENT ? t("deal.strip.money.unpriced") : amount}
       detail={detail}
-      numeric
       basis={basis}
+      // The paper the amount was written on. Drawn on the unpriced arm too:
+      // this is the same card either way, and a deal nobody has priced is
+      // exactly the one whose reader wants the offers card, where the price
+      // gets written.
+      onOpen={reveal(DEAL_OFFERS_ANCHOR)}
     />
   );
 }
@@ -269,7 +287,6 @@ function PeopleStat({
       })}
       detail={detail}
       tone={engaged <= 1 || !champion ? "warn" : undefined}
-      numeric
       // Counted segments, because a committee is a thing a reader counts.
       meter={{ filled: engaged, total: seats.length }}
       basis={
@@ -313,8 +330,6 @@ function MomentumStat({
       value={relativeDays(deal.last_activity_at, t, locale)}
       detail={parts.join(" · ")}
       tone={deal.stalled ? "danger" : undefined}
-      dot={deal.stalled}
-      openLabel={t("deal.strip.openHistory")}
       onOpen={onOpen}
       basis={
         deal.last_activity_at ? (

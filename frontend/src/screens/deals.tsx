@@ -104,7 +104,7 @@ import {
 import { DealCommitteeMap } from "./deal360/dealcommittee";
 import { DealPulse } from "./deal360/dealpulse";
 import { DealSeats } from "./deal360/dealseats";
-import { DealStrip } from "./deal360/dealstrip";
+import { DEAL_OFFERS_ANCHOR, DealStrip } from "./deal360/dealstrip";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import { useDealRecipientAddress } from "./deal360/usedealrecipient";
 import { DealBulkBar } from "./dealbulk";
@@ -2716,7 +2716,7 @@ export function DealsScreen({
       {advance.isError && (
         <p
           className="t-caption"
-          style={{ color: "var(--danger)", marginTop: "var(--space-2)" }}
+          style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
         >
           {problemMessageOf(advance.error, t)}
         </p>
@@ -3159,7 +3159,7 @@ function ReopenAction({
           ))}
         </div>
         {reopen.isError && (
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
+          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(reopen.error, t)}
           </p>
         )}
@@ -3907,14 +3907,18 @@ function DealOverviewPane({
         />
         <DealApprovals approvals={dealApprovals} decide={onDecide} />
         <RecordReadingPair>
-          <OffersPanel
-            offers={offers}
-            creating={creatingOffer}
-            locale={locale}
-            dealCurrency={deal.currency ?? null}
-            refusedReasonId={refusedReasonId}
-            onCreate={onCreateOffer}
-          />
+          {/* The money reading's door scrolls here; the id is the strip's own
+              constant, so a rename cannot leave the door pointing at nothing. */}
+          <div id={DEAL_OFFERS_ANCHOR}>
+            <OffersPanel
+              offers={offers}
+              creating={creatingOffer}
+              locale={locale}
+              dealCurrency={deal.currency ?? null}
+              refusedReasonId={refusedReasonId}
+              onCreate={onCreateOffer}
+            />
+          </div>
           <DealCommitteeMap
             coverage={coverage.coverage}
             withheld={coverage.withheld}
@@ -4336,7 +4340,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 <p
                   className="t-caption"
                   style={{
-                    color: "var(--danger)",
+                    color: "var(--dangerText)",
                     marginTop: "var(--space-2)",
                   }}
                 >

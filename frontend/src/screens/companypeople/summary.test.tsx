@@ -196,7 +196,8 @@ test("each door narrows the list to what it describes", async () => {
   );
 
   const untried = await screen.findByRole("button", {
-    name: "Show who is untried",
+    name: "Open",
+    description: "Coverage",
   });
   untried.click();
   expect(narrowed).toContain("untried");
@@ -238,10 +239,12 @@ test("does not claim a complete committee when seats are hidden", async () => {
   expect(screen.queryByText("Champion and economic buyer named")).toBeNull();
 });
 
-// The door's label has to name what pressing it does. A way in who has not
-// answered clears the filter, so promising "who answered" would be a label for
-// a different press.
-test("labels the way-in door by what it actually does", async () => {
+// Every door on the plate says the same word, so the press is the only thing
+// that can tell them apart in behaviour. A way in who has not answered belongs
+// to no conversational state: its press clears the filter rather than promising
+// a list of people who answered, which would narrow to somebody else entirely.
+test("a way-in nobody has answered narrows to nothing in particular", async () => {
+  const narrowed: (string | null)[] = [];
   stub({
     best_way_in: {
       person_id: "p-1",
@@ -250,15 +253,20 @@ test("labels the way-in door by what it actually does", async () => {
     },
   });
   render(
-    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    <CoverageBand
+      orgId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={(s) => narrowed.push(s)}
+    />,
   );
 
-  expect(
-    await screen.findByRole("button", { name: "Show everyone" }),
-  ).not.toBeNull();
-  expect(
-    screen.queryByRole("button", { name: "Show who answered" }),
-  ).toBeNull();
+  (
+    await screen.findByRole("button", {
+      name: "Open",
+      description: "Best way in",
+    })
+  ).click();
+  expect(narrowed).toEqual([null]);
 });
 
 // A seat carrying a role this board has no column for is still a person the

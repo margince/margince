@@ -43,7 +43,6 @@ export function LeadReadings({ lead }: Readonly<{ lead: Lead }>) {
       <StatCard
         label={t("lead.status")}
         value={statusReading(lead, t)}
-        openLabel={t("lead.readings.openStatus")}
         onOpen={() =>
           navigate({ screen: "leads" }, new Map([["status", lead.status]]))
         }
@@ -122,7 +121,6 @@ function ScoreCard({
     <StatCard
       label={t("lead.score")}
       value={formatNumber(lead.score, locale)}
-      numeric
       detail={
         lead.score_override_reason
           ? t("lead.overriddenBadge")
@@ -192,7 +190,6 @@ function FirstResponseCard({
         at: formatDateTime(clock.deadline, locale, zone),
       })}
       tone={breached ? "danger" : atRisk ? "warn" : undefined}
-      dot={breached || atRisk}
     />
   );
 }

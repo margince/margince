@@ -355,7 +355,7 @@ function PartnerForm({
         )}
       </Field>
       {mutation.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(mutation.error, t)}
         </p>
       )}

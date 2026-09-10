@@ -360,7 +360,7 @@
   border-bottom: 1px solid var(--warnBorder);
 }
 .panel-warn > .panel-head .panel-title {
-  color: var(--warn);
+  color: var(--warnText);
 }
 .panel-warn > .panel-foot {
   border-top-color: var(--warnBorder);

@@ -68,15 +68,15 @@
 /* Ink per state. The GLYPH already differs — this is the second signal, not the
  * only one, so a reader who takes in no colour has already been told. */
 .commstatus-ready {
-  color: var(--success);
+  color: var(--successText);
 }
 
 .commstatus-attention {
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 .commstatus-restricted {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* checking, context_only and external stay --textMeta: none of them is news. */

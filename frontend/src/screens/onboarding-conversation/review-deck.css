@@ -111,7 +111,7 @@
 }
 .rdeck-tag[data-required="true"] {
   background: var(--dangerBg);
-  color: var(--danger);
+  color: var(--dangerText);
 }
 .rdeck-question {
   color: var(--textPrimary);

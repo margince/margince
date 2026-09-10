@@ -378,7 +378,7 @@ export function LeadBoard({
   return (
     <>
       {move.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(move.error, t)}
         </p>
       )}
@@ -390,12 +390,12 @@ export function LeadBoard({
           both read as fact — "nobody was ever disqualified" is a very
           different statement from "we could not ask". */}
       {counts.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
           {t("lead.boardCountsUnavailable")}
         </p>
       )}
       {terminalRows.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
           {t("lead.boardTerminalRowsUnavailable")}
         </p>
       )}

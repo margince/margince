@@ -72,7 +72,7 @@
 }
 
 .confirm-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The receipt block on the done state: the references a subject quotes when

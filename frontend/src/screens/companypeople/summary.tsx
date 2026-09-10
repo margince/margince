@@ -150,7 +150,6 @@ export function CoverageBand({
           detail={t("co.people.band.untried", {
             count: formatNumber(coverage.summary.untried, locale),
           })}
-          openLabel={t("co.people.band.showUntried")}
           onOpen={() => onNarrow("untried")}
         />
       </StatStrip>
@@ -207,13 +206,6 @@ function WayIn({
           {t(stateLabel)}
         </span>
       }
-      openLabel={t(
-        door === "waiting"
-          ? "co.people.band.showWaiting"
-          : door === "answered"
-            ? "co.people.band.showAnswered"
-            : "co.people.band.showAll",
-      )}
       onOpen={() => onNarrow(door)}
     />
   );

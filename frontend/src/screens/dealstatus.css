@@ -1,7 +1,7 @@
 /* Deal360 — the deal page's written briefing. Tokens only. */
 
 .deal360-warn {
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 .deal360-move-reason {

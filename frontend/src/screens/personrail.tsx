@@ -1016,7 +1016,7 @@ function AddEmploymentModal({
         <p
           className="t-caption"
           role="alert"
-          style={{ color: "var(--danger)" }}
+          style={{ color: "var(--dangerText)" }}
         >
           {problemMessageOf(create.error, t)}
         </p>

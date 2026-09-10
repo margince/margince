@@ -268,12 +268,12 @@
 
 .pe-loop-due {
   font-size: var(--fs-sm);
-  color: var(--warn);
+  color: var(--warnText);
   white-space: nowrap;
 }
 
 .pe-loop-overdue {
-  color: var(--danger);
+  color: var(--dangerText);
   font-weight: 600;
 }
 
@@ -449,12 +449,12 @@
 }
 
 .pe-rail-value-good {
-  color: var(--success);
+  color: var(--successText);
   font-weight: 600;
 }
 
 .pe-rail-value-warn {
-  color: var(--warn);
+  color: var(--warnText);
   font-weight: 600;
 }
 
@@ -635,11 +635,11 @@
   gap: var(--space-2);
   margin-top: var(--space-3);
   font-size: var(--fs-sm);
-  color: var(--success);
+  color: var(--successText);
 }
 
 .pe-consent-line-blocked {
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 /* The way out of a refused send. It sits under the verdict rather than beside
@@ -678,7 +678,7 @@
 .pe-send-error {
   margin: var(--space-2) 0 0;
   font-size: var(--fs-sm);
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* "Why this draft": the reasoning is a SIBLING of the body, never part of it.
@@ -711,7 +711,7 @@
   gap: var(--space-2);
   font-size: var(--fs-meta);
   line-height: 1.4;
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 .pe-drawer-actions {
