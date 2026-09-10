@@ -1107,7 +1107,7 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       {errorMessage && (
         <p
           className="t-caption"
-          style={{ color: "var(--dangerText)", marginTop: 4 }}
+          style={{ color: "var(--dangerText)", marginTop: "var(--space-1)" }}
         >
           {errorMessage}
         </p>
@@ -1300,7 +1300,7 @@ function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
       {errorMessage && (
         <p
           className="t-caption"
-          style={{ color: "var(--dangerText)", marginTop: 8 }}
+          style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
         >
           {errorMessage}
         </p>

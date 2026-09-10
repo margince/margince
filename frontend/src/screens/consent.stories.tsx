@@ -68,12 +68,16 @@ const CONSENT = {
   ],
 };
 
+// The write gate reads `writable` off the record itself, so a story that wants
+// the Grant/Withdraw/ConfirmDetails verbs must hand the section a writable person.
+const WRITABLE_PERSON = { writable: true };
+
 function section(routes: RouteMap) {
   return () => {
     installFetchStub(routes);
     return (
       <StoryProviders>
-        <ConsentSection personId="person-1" />
+        <ConsentSection personId="person-1" person={WRITABLE_PERSON} />
       </StoryProviders>
     );
   };
