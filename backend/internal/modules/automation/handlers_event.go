@@ -17,7 +17,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -153,11 +155,29 @@ func (routeLeadCreateTask) Spec() workflow.Spec {
 	}
 }
 
-// Match fires unconditionally: unlike stage_change_create_task (which
-// narrows to open moves), every new lead needs its first follow-up —
-// there is no "wrong direction" a lead.created could have arrived from.
-func (routeLeadCreateTask) Match(_ context.Context, _ workflow.Event) (bool, error) {
-	return true, nil
+// Match declines a lead nobody asked us for.
+//
+// Every lead that came from a person — a form, a reply, a referral, a hand
+// typed row — needs its first follow-up, and unlike stage_change_create_task
+// there is no "wrong direction" one could have arrived from. What does not need
+// one is a name the product READ off a public web page: nobody wrote in and
+// nothing is owed, so minting a task says a rep owes a stranger an answer.
+//
+// An absent or unreadable payload fires, matching the sibling above: every real
+// lead.created carries one, and the direct-create path deliberately sets no
+// source system at all.
+func (routeLeadCreateTask) Match(_ context.Context, ev workflow.Event) (bool, error) {
+	if len(ev.Payload) == 0 {
+		return true, nil
+	}
+	var payload crmcontracts.PublicEventLeadCreated
+	if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+		return false, err
+	}
+	if payload.SourceSystem == nil {
+		return true, nil
+	}
+	return !leadsource.IsPassiveDiscovery(*payload.SourceSystem), nil
 }
 
 // Plan mints the follow-up ASSIGNED to whoever answers for the lead.

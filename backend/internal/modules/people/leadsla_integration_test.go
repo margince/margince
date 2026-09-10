@@ -207,6 +207,59 @@ func TestLeadQuickFindIncludesExactEmailAndLinkedIn(t *testing.T) {
 	}
 }
 
+// Taking on a lead nobody owned starts its response clock.
+//
+// The clock reads COALESCE(routed_at, created_at), so without the stamp a lead
+// that sat unowned for a week is a week overdue the instant somebody picks it
+// up — they inherit a breach earned while the row was nobody's. That is the
+// state a website read leaves behind, which is why it matters now.
+func TestTakingOnAnUnownedLeadStartsItsResponseClock(t *testing.T) {
+	e := setupPromoteConsent(t)
+	id := ids.NewV7()
+	weekAgo := time.Now().UTC().Add(-7 * 24 * time.Hour)
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO lead (id, full_name, email, status, source, captured_by, owner_id, created_at)
+		 VALUES ($1, 'Found On A Website', 'found@example.test', 'new', 'siteread', 'agent:siteread', NULL, $2)`,
+		id, weekAgo); err != nil {
+		t.Fatal(err)
+	}
+	leadID := ids.From[ids.LeadKind](id)
+
+	owner := ids.From[ids.UserKind](e.user)
+	after, err := e.store.UpdateLead(e.ctx, leadID, UpdateLeadInput{OwnerID: &owner})
+	if err != nil {
+		t.Fatalf("assigning the lead: %v", err)
+	}
+	if after.RoutedAt == nil {
+		t.Fatal("assigning an unowned lead left routed_at unset, so its deadline is " +
+			"still measured from a creation date nobody was answerable for")
+	}
+	if after.RoutedAt.Before(weekAgo.Add(time.Hour)) {
+		t.Errorf("routed_at = %s, want roughly now — the clock starts when somebody "+
+			"takes the lead on, not when the crawler found it", *after.RoutedAt)
+	}
+
+	// A reassignment between people keeps the ORIGINAL clock: the customer has
+	// been waiting since we took the lead on, and passing it along is not an
+	// answer.
+	first := *after.RoutedAt
+	colleague := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'A Colleague')`,
+		colleague, "colleague-"+colleague.String()+"@example.test"); err != nil {
+		t.Fatal(err)
+	}
+	second := ids.From[ids.UserKind](colleague)
+	again, err := e.store.UpdateLead(e.ctx, leadID, UpdateLeadInput{OwnerID: &second})
+	if err != nil {
+		t.Fatalf("reassigning the lead: %v", err)
+	}
+	if again.RoutedAt == nil || !again.RoutedAt.Equal(first) {
+		t.Errorf("a reassignment moved routed_at to %v, want it held at %s",
+			again.RoutedAt, first)
+	}
+}
+
 // A human moving the lead off `new` is a first response; the stamp is set
 // once and a later status change does not move it. Disqualifying an
 // unanswered lead is an explicit disposition and stamps it too.

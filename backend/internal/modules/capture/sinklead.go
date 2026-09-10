@@ -111,6 +111,13 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 	// ownerless lead is nobody's to change, and the connector's own replay is
 	// a write — a lead it could not write back to would be one it created and
 	// then could never resume.
+	//
+	// A source that declines ownership is saying it has no replay to protect
+	// and no assignment to make; LeadFields.Unowned carries the reason.
+	owner := storekit.OwnerOrActor(ctx, nil)
+	if fields.Unowned {
+		owner = nil
+	}
 	err := tx.QueryRow(ctx, `
 		INSERT INTO lead (full_name, email, company_name, title, source_system, source_id, source, captured_by, owner_id)
 		VALUES (NULLIF($1, ''), NULLIF(lower($2), ''), NULLIF($3, ''), NULLIF($4, ''), $5, $6, $7, $8, $9)
@@ -119,7 +126,7 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 		RETURNING id`,
 		fields.FullName, fields.Email, fields.CompanyName, fields.Title,
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), rec.CapturedBy,
-		storekit.OwnerOrActor(ctx, nil)).Scan(&id)
+		owner).Scan(&id)
 	if err == nil {
 		var stamps []storekit.FieldStamp
 		for _, f := range []struct{ field, value string }{

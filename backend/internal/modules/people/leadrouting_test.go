@@ -9,10 +9,12 @@ package people
 // integration suite; here the decision table itself is the spec.
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 func routingPool(n int) ([]ids.UserID, map[ids.UserID]bool) {
@@ -115,6 +117,59 @@ func TestChooseOwnerIgnoresInactiveOwners(t *testing.T) {
 	chosen, _, ok := chooseOwner(cfg, leadRoutingFacts{}, map[ids.UserID]int{}, active)
 	if !ok || chosen != owners[1] {
 		t.Fatalf("inactive pool[0] must be skipped; got pool[%d] ok=%v", indexOf(owners, chosen), ok)
+	}
+}
+
+// Owner assignment declines a lead nobody asked us for, for the same reason the
+// follow-up task does — and it matters more here, because assigning is not only
+// a label: it stamps routed_at, which starts the first-response clock and lands
+// the lead in that rep's "owes a reply" lane.
+//
+// Every case runs against a CONFIGURED instance. An unconfigured one declines
+// everything, so a test without owners would pass no matter what the source
+// rule did.
+func TestLeadRoutingDeclinesAPassivelyDiscoveredLead(t *testing.T) {
+	owner := ids.New[ids.UserKind]()
+	params, err := json.Marshal(map[string]any{
+		"owners":        []string{owner.String()},
+		"cap_per_owner": 3,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, cfgErr := ParseRoutingConfig(params)
+	if cfgErr != nil || !cfg.Configured() {
+		t.Fatalf("the fixture must be configured or every case passes vacuously (err=%v)", cfgErr)
+	}
+
+	cases := []struct {
+		name    string
+		payload json.RawMessage
+		want    bool
+	}{
+		{"no payload", nil, true},
+		{"no source system", json.RawMessage(`{}`), true},
+		{"a direct create", json.RawMessage(`{"source_system":"manual"}`), true},
+		{"a website read", json.RawMessage(`{"source_system":"siteread"}`), false},
+		{"a crawl", json.RawMessage(`{"source_system":"crawl"}`), false},
+	}
+	for _, tc := range cases {
+		matched, err := leadRouting{}.Match(context.Background(),
+			workflow.Event{Params: params, Payload: tc.payload})
+		if err != nil {
+			t.Fatalf("%s: Match err = %v, want nil", tc.name, err)
+		}
+		if matched != tc.want {
+			t.Errorf("%s: Match = %v, want %v", tc.name, matched, tc.want)
+		}
+	}
+
+	// The premise guard: an unconfigured instance still declines everything, so
+	// the cases above are about the SOURCE rule and not about configuration.
+	matched, err := leadRouting{}.Match(context.Background(),
+		workflow.Event{Payload: json.RawMessage(`{"source_system":"manual"}`)})
+	if err != nil || matched {
+		t.Errorf("an unconfigured instance matched (err=%v, matched=%v)", err, matched)
 	}
 }
 
