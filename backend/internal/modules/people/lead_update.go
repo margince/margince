@@ -391,6 +391,11 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		// condition: no owner yet, and no clock yet.
 		if current.RoutedAt == nil && current.OwnerId == nil {
 			p.Set("routed_at", nil, leadSLAClock().UTC())
+			// And the breach stamp goes with it, for the reason
+			// startLeadResponseClockTx clears it on the claim path: a row that
+			// breached while it was nobody's is already escalated, and leaving
+			// the stamp would keep this owner's lead out of the scan for good.
+			p.Set("sla_breached_at", nil, nil)
 		}
 	}
 	return p, resumeRecompute, nil

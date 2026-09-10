@@ -76,7 +76,11 @@ func startLeadResponseClockTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error
 		return err
 	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE lead SET routed_at = $2
+		// The breach stamp goes with the clock. A lead that breached while it
+		// was nobody's has been escalated to the intake seat already; starting
+		// this owner's clock without clearing it would leave a row that can
+		// never breach again, because the scan skips anything already stamped.
+		`UPDATE lead SET routed_at = $2, sla_breached_at = NULL
 		  WHERE id = $1 AND routed_at IS NULL AND archived_at IS NULL`,
 		id, leadSLAClock().UTC()); err != nil {
 		return fmt.Errorf("people: starting the lead response clock: %w", err)
