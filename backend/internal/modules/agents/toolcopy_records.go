@@ -139,7 +139,9 @@ var archiveRecordCopy = toolCopy{
 	Instead: "Use merge_records when a duplicate's history should end up on the record that " +
 		"survives, and disqualify_lead when a lead is going nowhere — a lead's own transition " +
 		"records the reason where archiving would not.",
-	Retain: "A person approves this call before it runs; do not report the record as archived " +
+	Retain: "By default the record is archived when this call answers; where an installation " +
+		"has raised this verb to confirm first, the answer is a staged approval and you must not " +
+		"report the record as archived " +
 		"until the retry that carries their approval has answered.",
 }
 
@@ -152,7 +154,7 @@ var mergeRecordsCopy = toolCopy{
 	Instead: "Use archive_record when the extra record has nothing worth keeping, rather than " +
 		"merging to make it disappear.",
 	Retain: "target_id is the record that survives and source_id the one merged away — read both " +
-		"records before choosing, because a person approves the call as you described it.",
+		"records before choosing: the fold cannot be called back, and by default nothing holds it.",
 }
 
 var advanceDealCopy = toolCopy{
@@ -201,8 +203,10 @@ var promoteLeadCopy = toolCopy{
 		"promotion, and there is no trigger for it.",
 	Instead: "Use qualify_lead when the lead is merely incomplete rather than ready, and " +
 		"disqualify_lead when the engagement says the opposite.",
-	Retain: "A person approves this call before it runs; the promoted person's id comes back only " +
-		"from the retry that carries their approval.",
+	Retain: "By default the lead is promoted when this call answers and the promoted person's " +
+		"id comes back with it. Where an installation has raised this verb to confirm first, the " +
+		"answer is a staged approval instead and the id arrives only from the retry that " +
+		"carries it.",
 }
 
 var disqualifyLeadCopy = toolCopy{
@@ -211,7 +215,8 @@ var disqualifyLeadCopy = toolCopy{
 		"a deletion and not an archive.",
 	Instead: "Use promote_lead when engagement says the opposite, and qualify_lead when the lead " +
 		"is only missing information.",
-	Retain: "A person approves this call before it runs; do not report the lead as disqualified " +
+	Retain: "By default the lead is disqualified when this call answers; where an installation " +
+		"has raised this verb to confirm first, do not report the lead as disqualified " +
 		"until the retry carrying their approval has answered.",
 }
 
@@ -236,8 +241,10 @@ var advanceProjectPhaseCopy = toolCopy{
 		"the phase history either way.",
 	Instead: "Use advance_deal for a deal's pipeline stages; a project's phases are a different " +
 		"vocabulary on a different record.",
-	Retain: "Send if_version with the version you read; a person approves the move before it " +
-		"runs.",
+	Retain: "Send if_version with the version you read. By default the phase moves when this " +
+		"call answers. Where an installation has raised this verb to confirm first, the answer " +
+		"is a staged approval and the phase has NOT moved — keep its id and do not report the " +
+		"project as advanced until the retry that carries the approval has answered.",
 }
 
 var listPipelinesCopy = toolCopy{

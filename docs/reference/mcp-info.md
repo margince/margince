@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 75 |
 | Resources | 12 |
-| Tool catalog | 210.5 KB |
+| Tool catalog | 214.4 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 55029 |
+| Approx. wire tokens | 56021 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 98.4 KB | 46% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 51.8 KB | 24% | Yes, every step |
-| Input schemas | 44.5 KB | 21% | Yes, every step |
+| Output schemas | 98.7 KB | 46% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 55.4 KB | 25% | Yes, every step |
+| Input schemas | 44.5 KB | 20% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
-| **Description + input schema** | **96.3 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **99.8 KB** | **46%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -66,21 +66,21 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 |---|---|:-:|---|---:|
 | [`account_coverage`](#account_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`advance_deal`](#advance_deal) | Advance a deal to a stage |  |  | 3.1 KB |
-| [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.2 KB |
+| [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.5 KB |
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 2.9 KB |
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
-| [`archive_record`](#archive_record) | Archive a record |  |  | 2.2 KB |
+| [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
-| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.7 KB |
+| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.8 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 2.8 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.2 KB |
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
-| [`commit_import`](#commit_import) | Commit an import |  |  | 1.7 KB |
-| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.6 KB |
+| [`commit_import`](#commit_import) | Commit an import |  |  | 1.8 KB |
+| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.8 KB |
 | [`create_record`](#create_record) | Create a record |  |  | 3.5 KB |
 | [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
-| [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 1.7 KB |
+| [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 2.0 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
 | [`demote_lead`](#demote_lead) | Reverse a lead promotion |  |  | 2.4 KB |
@@ -88,20 +88,20 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
 | [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
 | [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.4 KB |
-| [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 1.9 KB |
+| [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 2.0 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
-| [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.6 KB |
-| [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.4 KB |
-| [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.0 KB |
-| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 3.2 KB |
+| [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.7 KB |
+| [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.7 KB |
+| [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.4 KB |
+| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 3.8 KB |
 | [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 2.9 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
-| [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 1.9 KB |
-| [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.1 KB |
+| [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.4 KB |
+| [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.3 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 3.3 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
@@ -112,7 +112,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 4.2 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.4 KB |
-| [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.4 KB |
+| [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.6 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.0 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes |  | 2.4 KB |
@@ -128,12 +128,12 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.6 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.2 KB |
-| [`run_report`](#run_report) | Run a report | yes |  | 5.0 KB |
+| [`run_report`](#run_report) | Run a report | yes |  | 5.2 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
-| [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 4.2 KB |
-| [`send_email`](#send_email) | Send an email |  |  | 3.9 KB |
-| [`send_message`](#send_message) | Reply on a channel conversation |  |  | 3.3 KB |
+| [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 4.3 KB |
+| [`send_email`](#send_email) | Send an email |  |  | 4.0 KB |
+| [`send_message`](#send_message) | Reply on a channel conversation |  |  | 3.4 KB |
 | [`update_record`](#update_record) | Update a record |  |  | 3.8 KB |
 | [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.0 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [`ui://margince/pipeline-review.html`](#pipeline_review_view) | 2.3 KB |
@@ -783,7 +783,7 @@ Move a deal to a different stage of its pipeline. The stage is named by id from 
 
 **Move a project to a phase**
 
-Move a project to another phase — initiative, pursuing, delivering, closed. The four names are fixed but the order is not enforced: a project may go back a phase, and a closed one may be reopened. Closing requires a reason, which is recorded on the phase history either way. Use advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a different record. Send if_version with the version you read; a person approves the move before it runs. (Governance: runs immediately; requires passport scope "write".)
+Move a project to another phase — initiative, pursuing, delivering, closed. The four names are fixed but the order is not enforced: a project may go back a phase, and a closed one may be reopened. Closing requires a reason, which is recorded on the phase history either way. Use advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a different record. Send if_version with the version you read. By default the phase moves when this call answers. Where an installation has raised this verb to confirm first, the answer is a staged approval and the phase has NOT moved — keep its id and do not report the project as advanced until the retry that carries the approval has answered. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -1261,7 +1261,7 @@ Tag a person, company, deal, lead or project by tag_id, or by tag_name, which mu
 
 **Archive a record**
 
-Retire a record that should no longer be worked — a duplicate, a dead account, a project that ended. Archiving hides the record from day-to-day work; it does not delete it and does not move anything attached to it, so an archived duplicate still holds the activities and deals that were logged against it. Use merge_records when a duplicate's history should end up on the record that survives, and disqualify_lead when a lead is going nowhere — a lead's own transition records the reason where archiving would not. A person approves this call before it runs; do not report the record as archived until the retry that carries their approval has answered. (Governance: runs immediately; requires passport scope "write".)
+Retire a record that should no longer be worked — a duplicate, a dead account, a project that ended. Archiving hides the record from day-to-day work; it does not delete it and does not move anything attached to it, so an archived duplicate still holds the activities and deals that were logged against it. Use merge_records when a duplicate's history should end up on the record that survives, and disqualify_lead when a lead is going nowhere — a lead's own transition records the reason where archiving would not. By default the record is archived when this call answers; where an installation has raised this verb to confirm first, the answer is a staged approval and you must not report the record as archived until the retry that carries their approval has answered. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -1615,7 +1615,7 @@ Answer "where are our relationships thin?": across the caller's OPEN deals, the 
 
 **Book a meeting**
 
-Hold a slot in the host's calendar and record the meeting against the records it is about. Needs at least one link saying what it is about. The slot is taken and the meeting is a real commitment, so a person approves it first. No attendee list: who is invited is the calendar connection's business. Check the slot is free first — this tool does not. Use check_availability to find the time, and log_activity to record a meeting that already happened. Keep the staged approval id and re-send the identical start, end and links: the approval is bound to the meeting as it was described. (Governance: runs immediately; requires passport scope "send".)
+Hold a slot in the host's calendar and record the meeting against the records it is about. Needs at least one link saying what it is about. The slot is taken and the meeting is a real commitment, and by default it is taken when this call answers — where an installation has raised this verb to confirm first, the answer is a staged approval instead. No attendee list: who is invited is the calendar connection's business. Check the slot is free first — this tool does not. Use check_availability to find the time, and log_activity to record a meeting that already happened. Keep the staged approval id and re-send the identical start, end and links: the approval is bound to the meeting as it was described. (Governance: runs immediately; requires passport scope "send".)
 
 <details><summary>Input schema</summary>
 
@@ -2301,7 +2301,7 @@ Renders its result in [`ui://margince/geo-probe.html`](#geo_probe_view), visible
 
 **Commit an import**
 
-Write a checked import into the workspace, once a person approves. Only from awaiting_approval. Undoing one needs the web app. read_import_report first; nobody should approve what they have not read. (Governance: runs immediately; requires passport scope "write".)
+Write a checked import into the workspace. The dry run is the check; by default this commits when it answers. Only from awaiting_approval. Undoing one needs the web app. read_import_report first; nobody should approve what they have not read. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -2450,7 +2450,7 @@ Write a checked import into the workspace, once a person approves. Only from awa
 
 **Compose an analytics report**
 
-Render a report whose every figure comes from a saved analytics run. The document carries the STRUCTURE and the WORDS; each number names a run id and a cell inside it, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Save a run first — run an analytics query with save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
+WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary for a meeting — whose every number comes from a saved analytics run instead of being typed. Not for answering with a figure: a number in the reply is run_analytics_query's or run_report's. The document carries the STRUCTURE and the WORDS; each figure names a run id and a cell inside it, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Save a run first — run an analytics query with save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -3161,7 +3161,7 @@ Put a to-do on someone's list: what is owed, by whom, on which records. Creates 
 
 **How current the sources are**
 
-Which connectors the nightly check could read, and how far back each reaches. Needs the data_coverage grant, which operators hold and sellers do not — a refusal here is a seat boundary, not a missing run. Only a `checked` source carries a date. On any other state nothing was read, and a quiet week is indistinguishable from a broken connector until somebody looks. (Governance: runs immediately; requires passport scope "read".)
+Answer how much of what is going on this workspace can actually SEE — which connectors the nightly check could read, and how far back each reaches. Needs the data_coverage grant, which operators hold and sellers do not — a refusal here is a seat boundary, not a missing run. Only a `checked` source carries a date; on any other state nothing was read, and a quiet week is indistinguishable from a broken connector until somebody looks. forecast_input_checks and list_input_checks answer what the check FOUND, and both are silent on whether it could look — a clean set of findings over sources nobody opened reads as good news and is not. Ask this one when the question is whether to trust the other two. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -4346,7 +4346,7 @@ Answer what a run_report plan may SAY: for each prebuilt report, the names its g
 
 **Disqualify a lead**
 
-Close out a lead that is not going anywhere, so it stops appearing as live work. It is the lead's own terminal state and keeps the record and its history; it is not a deletion and not an archive. Use promote_lead when engagement says the opposite, and qualify_lead when the lead is only missing information. A person approves this call before it runs; do not report the lead as disqualified until the retry carrying their approval has answered. (Governance: runs immediately; requires passport scope "write".)
+Close out a lead that is not going anywhere, so it stops appearing as live work. It is the lead's own terminal state and keeps the record and its history; it is not a deletion and not an archive. Use promote_lead when engagement says the opposite, and qualify_lead when the lead is only missing information. By default the lead is disqualified when this call answers; where an installation has raised this verb to confirm first, do not report the lead as disqualified until the retry carrying their approval has answered. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -4850,7 +4850,7 @@ Draft a follow-up for each deal in a segment at once — today only the slipping
 
 **Enrich an organization from its website**
 
-Learn about an organization by reading its public website, and propose what was found for a person to accept onto the record. It reaches OUTSIDE the workspace, so a person approves the call before it runs, and what it returns is a proposal — nothing lands on the record until someone accepts it. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the organization_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a person approves every call before it runs; requires passport scope "enrich".)
+Learn about an organization by reading its public website, and propose what was found for a person to accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing lands on the record until someone accepts it, which is the review that guards this, not an approval on the call. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the organization_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a person approves every call before it runs; requires passport scope "enrich".)
 
 <details><summary>Input schema</summary>
 
@@ -4992,7 +4992,7 @@ Learn about an organization by reading its public website, and propose what was 
 
 **What the forecast's inputs were checked against**
 
-What last night's input check found, and how much of the pipeline it reached. A forecast is only as good as its inputs, and the failures are mundane: a close date that went by, an amount that disagrees with the offer that was sent, a deal nobody has heard from in ninety days. Read `readiness` before quoting any forecast figure. `checks_incomplete` is NOT a worse `needs_review` — one says the pipeline has problems, the other says we could not look, and reporting the first when the second is true tells somebody their pipeline is sound when nobody read the mailbox. `sources` says why: each carries the state the run reached, and only a `checked` source has a date. An absent or unread source means the run could not confirm anything from it, which is different from finding nothing there. `eligible_deals` is how much there was to check — compared against an earlier run it shows a pass that covered less of the pipeline. (Governance: runs immediately; requires passport scope "read".)
+Answer whether the forecast's inputs are sound enough to quote — a verdict, and how much of the pipeline last night's check reached. A forecast is only as good as its inputs, and the failures are mundane: a close date that went by, an amount that disagrees with the offer that was sent, a deal nobody has heard from in ninety days. `checks_incomplete` is NOT a worse `needs_review` — one says the pipeline has problems, the other says we could not look, and reporting the first when the second is true tells somebody their pipeline is sound when nobody read the mailbox. This is the VERDICT. list_input_checks is the findings themselves, one row per problem, when the question is what to go and fix. data_coverage is the third question and the one this cannot answer: whether the CONNECTORS were readable at all, which is what makes a clean verdict trustworthy rather than merely clean. Read `readiness` before quoting any forecast figure. `sources` says why: each carries the state the run reached, and only a `checked` source has a date — an absent or unread source means the run could not confirm anything from it, which is different from finding nothing there. `eligible_deals` is how much there was to check. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -5148,7 +5148,7 @@ What last night's input check found, and how much of the pipeline it reached. A 
 
 **What moved the forecast**
 
-The difference between two forecast snapshots, classified into named causes. Opening plus every bucket equals closing, exactly — so the buckets are a complete account of the change and not a selection from it. A deal appears in exactly ONE bucket: one that both slipped and was repriced has moved for one reason as far as a reader is concerned, which is that it left. Two buckets are about the machinery rather than the business, and quoting them as sales movement is the mistake this classification exists to prevent. `definition` means the two snapshots were computed under different rules, and then the WHOLE difference is in that bucket. `model` means a probability the product re-scored. `reopened_or_archived` carries a deal that left the population entirely — archived, or no longer visible to this caller — with its whole prior contribution, so no money disappears without a row that says where it went. (Governance: runs immediately; requires passport scope "read".)
+Explain why a forecast changed between two points, as named causes that account for the whole difference. Opening plus every bucket equals closing, exactly, so the buckets are a complete account of the change and not a selection from it. A deal appears in exactly ONE bucket: one that both slipped and was repriced has moved for one reason as far as a reader is concerned, which is that it left. Two buckets are about the machinery rather than the business, and quoting them as sales movement is the mistake this classification exists to prevent: `definition` means the two snapshots were computed under different rules, and then the WHOLE difference is in that bucket; `model` means a probability the product re-scored. IT NEEDS TWO SNAPSHOT IDS, and nothing on this surface hands one out — no tool lists snapshots and no resource publishes them, so a caller that has not been given ids from elsewhere cannot call this. Reading forecast_readings twice and subtracting is NOT the same answer and must not be reported as one: the difference between two reads is a number with no account of where it went. `reopened_or_archived` carries a deal that left the population entirely — archived, or no longer visible to this caller — with its whole prior contribution, so no money disappears without a row that says where it went. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -5355,7 +5355,7 @@ The difference between two forecast snapshots, classified into named causes. Ope
 
 **Read the forecast**
 
-What a period is expected to close, in four readings. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover, and it is absent only when they cover every eligible deal — so quoting a total without it reports a partial pipeline as a complete one. `eligible_count`, `priced_count` and `fx_missing_count` are the counts it is written from. Quote `as_of`, `timezone` and `base_currency` with the number: a total placed in the reader's own zone is a different total. (Governance: runs immediately; requires passport scope "read".)
+Answer what a period is expected to close — `won`, `evidence`, `best_case` and `open`, plus `weighted` — under the installation's own fiscal calendar and base currency. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover and is absent only when they cover every eligible deal, so quoting a total without it reports a partial pipeline as a complete one. run_report's forecast report and a hand-summed query_workspace also produce a number, and NEITHER is the forecast: only this applies the fiscal calendar, the base currency conversion and the weighting. These figures also cannot be cited in a composed document — for a board-pack section or anything a reader keeps, run_analytics_query with save and compose_analytics_report from the run id. Ask forecast_input_checks whether the inputs behind these numbers were read. Quote `as_of`, `timezone` and `base_currency` with the number — a total placed in the reader's own zone is a different total — and `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is written from. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -6411,7 +6411,7 @@ Find out which messaging transports exist in THIS installation, and what each is
 
 **List colleagues**
 
-List the people who work HERE — colleagues holding a seat, not the contacts stored as person records. Reads only, and lists seats that can actually receive work — archived, suspended and locked-out ones are absent. `truncated` means there are more. search_records/person finds a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an is_agent seat. (Governance: runs immediately; requires passport scope "read".)
+List the people who work HERE — colleagues holding a seat, not the contacts stored as person records. Reads only, and lists seats that can actually receive work — archived, suspended and locked-out ones are absent. `truncated` means there are more. A `q` matching nobody answers with `all_colleagues` and a warning; that list is ABSENT if it could not be read and partial if `all_colleagues_truncated`, so read the warning before concluding a person has no seat. search_records/person finds a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an is_agent seat. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -6437,6 +6437,40 @@ List the people who work HERE — colleagues holding a seat, not the contacts st
   "properties": {
     "data": {
       "properties": {
+        "all_colleagues": {
+          "items": {
+            "properties": {
+              "display_name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "is_agent": {
+                "type": "boolean"
+              },
+              "seat_type": {
+                "type": "string"
+              },
+              "user_id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "display_name",
+              "email",
+              "is_agent",
+              "seat_type",
+              "user_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "all_colleagues_truncated": {
+          "type": "boolean"
+        },
         "colleagues": {
           "items": {
             "properties": {
@@ -6563,7 +6597,7 @@ List the people who work HERE — colleagues holding a seat, not the contacts st
 
 **What the forecast's inputs still need**
 
-The open findings from the nightly input check, most material first. Read them before quoting a forecast figure: a close date that went by, or an amount that disagrees with the offer that was sent, makes a total wrong without making the arithmetic wrong. Scoped to what this caller can open, with no count of what was withheld — a count of what somebody may not read is itself a statement about how much there is. `affected_minor` absent means the money at stake cannot be said, not that nothing is at stake. (Governance: runs immediately; requires passport scope "read".)
+List the open input problems behind the forecast, most material first, so they can be fixed. A close date that went by, or an amount that disagrees with the offer that was sent, makes a total wrong without making the arithmetic wrong. Scoped to what this caller can open, with no count of what was withheld — a count of what somebody may not read is itself a statement about how much there is. forecast_input_checks answers the VERDICT — whether the numbers are quotable at all — which is the question before this one and the cheaper call. data_coverage answers whether the sources were readable, which an empty list here cannot distinguish from a clean pipeline. `affected_minor` absent means the money at stake cannot be said, not that nothing is at stake. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -7435,7 +7469,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
 
 **Merge two records**
 
-Collapse two records for the same real person or company into one, moving the source's activities, deals and links onto the record that survives. People merge with people and organizations with organizations; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing, because a person approves the call as you described it. (Governance: runs immediately; requires passport scope "write".)
+Collapse two records for the same real person or company into one, moving the source's activities, deals and links onto the record that survives. People merge with people and organizations with organizations; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing: the fold cannot be called back, and by default nothing holds it. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -9298,7 +9332,7 @@ Move a deal to a new stage and leave a note on its timeline saying why, in one c
 
 **Promote a lead to a person**
 
-Turn a lead who has genuinely engaged into a person record, carrying their history across. It requires a trigger naming the engagement that justifies it — a reply, a booked or held meeting, or a human's decision. Cold outreach that nobody answered is not a promotion, and there is no trigger for it. Use qualify_lead when the lead is merely incomplete rather than ready, and disqualify_lead when the engagement says the opposite. A person approves this call before it runs; the promoted person's id comes back only from the retry that carries their approval. (Governance: runs immediately; requires passport scope "write".)
+Turn a lead who has genuinely engaged into a person record, carrying their history across. It requires a trigger naming the engagement that justifies it — a reply, a booked or held meeting, or a human's decision. Cold outreach that nobody answered is not a promotion, and there is no trigger for it. Use qualify_lead when the lead is merely incomplete rather than ready, and disqualify_lead when the engagement says the opposite. By default the lead is promoted when this call answers and the promoted person's id comes back with it. Where an installation has raised this verb to confirm first, the answer is a staged approval instead and the id arrives only from the retry that carries it. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -10331,7 +10365,7 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
 
 **Read an import report**
 
-What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
+What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what a person weighs before committing. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -12851,7 +12885,7 @@ Compute a grouped aggregate — counts, sums, averages, medians — over a gover
 
 **Run a report**
 
-Answer a question about totals, counts or breakdowns — pipeline by stage, deals won by owner, activity volume over time — by running one of this workspace's prebuilt reports. Only the named reports exist, each with its own filter, grouping and measure names; anything else is refused. It aggregates: how many and how much, never which record. Use search_records or whats_slipping_this_week when the answer wanted is the records themselves rather than a number over them. Call a report with no plan first to see its default answer, then narrow with the names its catalog entry lists. (Governance: runs immediately; requires passport scope "read".)
+Answer a question about totals, counts or breakdowns — pipeline by stage, deals won by owner, activity volume over time — by running one of this workspace's prebuilt reports. Only the named reports exist, each with its own filter, grouping and measure names; anything else is refused. It aggregates: how many and how much, never which record. Use search_records or whats_slipping_this_week when the answer wanted is the records themselves rather than a number over them. Reach for run_analytics_query only when NO prebuilt report answers the question: a report already carries the filter and the grouping, so it is one call where a query is a vocabulary lookup and a query. Call a report with no plan first to see its default answer, then narrow with the names its catalog entry lists. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -13465,7 +13499,7 @@ Find people, organizations, deals, leads and projects when you know roughly what
 
 **Start an email conversation from a record**
 
-Put a mail on the wire to a real recipient, from this workspace, starting a new conversation rather than answering one, and file it on the records it is about. Sends EXACTLY the subject and body given; composes nothing. Needs at least one link naming the records it belongs to. Every recipient must have granted the named consent purpose, and a person approves the send first — a sent mail cannot be recalled. Use send_email to answer a conversation already recorded here; this starts a separate thread beside it. Keep the staged approval id and re-send the identical text and links: the approval is bound to that exact message. The activity_id that comes back is the new conversation. (Governance: runs immediately; requires passport scope "send".)
+Put a mail on the wire to a real recipient, from this workspace, starting a new conversation rather than answering one, and file it on the records it is about. Sends EXACTLY the subject and body given; composes nothing. Needs at least one link naming the records it belongs to. Every recipient must have granted the named consent purpose. A sent mail cannot be recalled, and by default nothing holds it: where an installation has raised this verb to confirm first, the answer is a staged approval instead of a send. Use send_email to answer a conversation already recorded here; this starts a separate thread beside it. Keep the staged approval id and re-send the identical text and links: the approval is bound to that exact message. The activity_id that comes back is the new conversation. (Governance: runs immediately; requires passport scope "send".)
 
 <details><summary>Input schema</summary>
 
@@ -13717,7 +13751,7 @@ Put a mail on the wire to a real recipient, from this workspace, starting a new 
 
 **Send an email**
 
-Put a mail on the wire to a real recipient, from this workspace, and record it on the thread it belongs to. It sends EXACTLY the subject and body it is given and composes nothing, so it is not the tool to reach for when the message does not exist yet. Every recipient must have granted the consent purpose the call names, and a person approves the send before it leaves — a message leaving the workspace cannot be recalled. Use draft_email first to produce the message and let it be read, and send_message when the conversation is on a chat channel rather than mail. Send the same activity_id, subject and body the draft produced, and keep the staged approval id: the approval is bound to that exact message, so changed text needs a new approval. (Governance: runs immediately; requires passport scope "send".)
+Put a mail on the wire to a real recipient, from this workspace, and record it on the thread it belongs to. It sends EXACTLY the subject and body it is given and composes nothing, so it is not the tool to reach for when the message does not exist yet. Every recipient must have granted the consent purpose the call names. A message leaving the workspace cannot be recalled, and by default nothing holds it: where an installation has raised this verb to confirm first, the answer is a staged approval instead of a send. Use draft_email first to produce the message and let it be read, and send_message when the conversation is on a chat channel rather than mail. Send the same activity_id, subject and body the draft produced, and keep the staged approval id: the approval is bound to that exact message, so changed text needs a new approval. (Governance: runs immediately; requires passport scope "send".)
 
 <details><summary>Input schema</summary>
 
@@ -13943,7 +13977,7 @@ Put a mail on the wire to a real recipient, from this workspace, and record it o
 
 **Reply on a channel conversation**
 
-Reply on a captured chat conversation — the channels this workspace has connected — on the thread it was captured from. It replies to an existing conversation named by activity_id; it cannot start one, and it cannot choose a channel. The recipient must have granted the consent purpose the call names, and a person approves it before it leaves. Use send_email when the thread is a mail thread, and log_activity when the point is to record that something was said rather than to say it. Keep the activity_id of the conversation and the staged approval id; the approval binds the exact text, so changed text needs a new approval. (Governance: runs immediately; requires passport scope "send".)
+Reply on a captured chat conversation — the channels this workspace has connected — on the thread it was captured from. It replies to an existing conversation named by activity_id; it cannot start one, and it cannot choose a channel. The recipient must have granted the consent purpose the call names. By default the message leaves when this call answers; where an installation has raised this verb to confirm first, the answer is a staged approval instead. Use send_email when the thread is a mail thread, and log_activity when the point is to record that something was said rather than to say it. Keep the activity_id of the conversation and the staged approval id; the approval binds the exact text, so changed text needs a new approval. (Governance: runs immediately; requires passport scope "send".)
 
 <details><summary>Input schema</summary>
 

@@ -40,7 +40,13 @@ may_call:
 # say so sends a rep into a colleague's account.
 must_mention:
   - "Sofia Meier|Lena Fischer|Phạm Hương Giang"
-  - "owner|owned by|belongs to|check with|speak to|message"
+  # CRITERION 6 is the ADVICE, not the fact. Naming the owner satisfied the old
+  # alternation, so "all three are owned by Sofia Meier" — knowing the owner and
+  # saying nothing about what to do — scored the criterion that exists to stop a
+  # rep walking into a colleague's account. "message" made it looser still: "I
+  # will draft a message" matched. Anchored to telling the reader to go via the
+  # owner first.
+  - "(?:check|speak|talk|clear it|confirm|coordinate|touch base|abstimmen|Bescheid)[^.]{0,60}(?:with|to|mit)?[^.]{0,20}(?:owner|Sofia|Lena|Ph\u1ea1m|colleague|whoever owns|rep who owns)|(?:owner|Sofia Meier|Lena Fischer|Ph\u1ea1m H\u01b0\u01a1ng Giang)[^.]{0,60}(?:before you|first|should know|would want|ask them|let them know|not your|not yours|not you\b|nicht dein)"
 
 # Run 1 of the real scenario failed exactly here: correct companies, and it
 # never said whose they were, because the row carried a bare uuid.
