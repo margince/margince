@@ -116,7 +116,9 @@ var ratifiedDestinations = map[string]string{
 	"resolveWithdrawalTokenTx":          "is the same resolve inside a caller's transaction",
 	"legacyPreferenceTokenAsWithdrawal": "looks up an OLD preference token and returns a withdrawal ref, never the token",
 	"HasPrefix":                         "reads the credential's family prefix and returns a bool; a prefix test discloses nothing the link's own shape does not",
-	"oneClickSubject":                   "resolves the press to the person it acts for, trying both credential families, and returns that person and the withdrawal scope — never the token",
+	"stopForCredential":                 "resolves the token and records the stop it presses, returning nothing about the token itself",
+
+	"oneClickSubject": "resolves the press to the person it acts for, trying both credential families, and returns that person and the withdrawal scope — never the token",
 }
 
 // launderers are the two functions whose OWN BODY this gate does not inspect,

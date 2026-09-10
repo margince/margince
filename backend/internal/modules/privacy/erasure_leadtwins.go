@@ -71,6 +71,10 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, personID ids.PersonID, e
 		), leadsuppressions AS (
 		  DELETE FROM communication_suppression
 		  WHERE lead_id IN (SELECT id FROM wiped)
+		), leadcredentials AS (
+		  DELETE FROM withdrawal_credential
+		  WHERE lead_id IN (SELECT id FROM wiped)
+		     OR lower(address) = ANY($2)
 		), leaddecisions AS (
 		  UPDATE communication_decision
 		     SET recipient_address = 'erased+' || id || '@example.invalid',

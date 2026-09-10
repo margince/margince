@@ -13,12 +13,12 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -48,12 +48,18 @@ func (h Handlers) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, to
 		httperr.Write(w, r, err)
 		return
 	}
-	subject, scoped, err := h.oneClickSubject(r.Context(), token, params)
+	subject, scoped, viaCredential, err := h.oneClickSubject(r.Context(), token, params)
+	if errors.Is(err, errNoConsentSubject) {
+		// A lead or a bare address: no per-purpose state exists to withdraw,
+		// so the press records a stop instead. See StopForCredentialTx.
+		h.stopForCredential(w, r, token)
+		return
+	}
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	withdrawn, err := h.unsubscribe(r.Context(), subject, scoped)
+	withdrawn, err := h.unsubscribe(r.Context(), subject, scoped, viaCredential)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -61,7 +67,31 @@ func (h Handlers) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, to
 	if withdrawn == nil {
 		withdrawn = []string{}
 	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{"unsubscribed": withdrawn})
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{"unsubscribed": answeredKeys(withdrawn, viaCredential)})
+}
+
+// answeredKeys decides how much of the outcome the press is told back.
+//
+// A PREFERENCE TOKEN gets the real list, which it has always had: it is the
+// credential the preference centre runs on, its holder can read the whole
+// consent state on the next GET anyway, and the unsubscribe screen uses the
+// empty list to say "already off" rather than "stopped".
+//
+// A WITHDRAWAL CREDENTIAL gets nothing back but the count's shape. It is a
+// long-lived bearer token that may deliberately NOT read a consent state, and
+// the difference between a populated list and an empty one is that state: it
+// says whether the recipient had already unsubscribed, and an all-marketing
+// press would otherwise enumerate the purpose keys the workspace runs. Anyone
+// holding a link found in a forwarded mail could ask.
+//
+// The recipient loses nothing. Their press did what it said; whether it moved
+// anything is our bookkeeping, and the page they land on tells them they are
+// unsubscribed either way.
+func answeredKeys(withdrawn []string, viaCredential bool) []string {
+	if viaCredential {
+		return []string{}
+	}
+	return withdrawn
 }
 
 // unsubscribe stops what this press asked to stop.
@@ -75,10 +105,24 @@ func (h Handlers) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, to
 // window would survive the press that reported success.
 func (h Handlers) unsubscribe(
 	ctx context.Context, personID ids.PersonID, params crmcontracts.OneClickUnsubscribeParams,
+	viaCredential bool,
 ) ([]string, error) {
 	if params.Purpose != nil && strings.TrimSpace(*params.Purpose) != "" {
 		named := strings.ToLower(strings.TrimSpace(*params.Purpose))
 		return h.store.PublicWithdrawAll(ctx, personID, []string{named})
+	}
+	if viaCredential {
+		// A withdrawal credential's all_marketing scope stops the MARKETING
+		// classes and nothing else. The legacy sweep below stops everything
+		// except the locked transactional purpose, so a press there also ends
+		// business correspondence — a person who unsubscribed from a
+		// newsletter stops receiving replies to their own enquiries.
+		//
+		// That is older than this credential and narrowing it changes what
+		// links already sitting in mailboxes do, so it belongs to the slice
+		// that owns the canonical purpose vocabulary. A NEW credential is not
+		// owed the old breadth, and its scope says marketing.
+		return h.store.WithdrawMarketingForCredential(ctx, personID)
 	}
 	return h.store.PublicWithdrawEverything(ctx, personID)
 }
@@ -98,27 +142,29 @@ func (h Handlers) unsubscribe(
 // beyond the authority the recipient was handed.
 func (h Handlers) oneClickSubject(
 	ctx context.Context, token string, params crmcontracts.OneClickUnsubscribeParams,
-) (ids.PersonID, crmcontracts.OneClickUnsubscribeParams, error) {
+) (ids.PersonID, crmcontracts.OneClickUnsubscribeParams, bool, error) {
 	if ref, err := h.store.ResolvePreferenceToken(ctx, token); err == nil {
-		return ref.PersonID, params, nil
+		return ref.PersonID, params, false, nil
 	}
 	ref, err := h.store.ResolveWithdrawalToken(ctx, token)
 	if err != nil {
-		return ids.PersonID{}, params, err
+		return ids.PersonID{}, params, false, err
 	}
 	if ref.PersonID.IsZero() {
 		// A lead-only or address-only credential. Withdrawing a per-purpose
-		// consent state needs a person to hold it, and there is none; the stop
-		// such a link records belongs to A3's address-scoped path.
-		return ids.PersonID{}, params, apperrors.ErrNotFound
+		// consent state needs a person to hold it, and there is none — so the
+		// caller records a stop rather than refusing. Answering 404 here, as
+		// this did first, handed a lead a link that resolved and then said no,
+		// which defeats the mint that issued it.
+		return ids.PersonID{}, params, true, errNoConsentSubject
 	}
 	if ref.Scope == WithdrawalScopeNamedPurpose {
 		named, err := h.store.purposeKeyByID(ctx, ref.PurposeID)
 		if err != nil {
-			return ids.PersonID{}, params, err
+			return ids.PersonID{}, params, true, err
 		}
 		if params.Purpose != nil && !strings.EqualFold(strings.TrimSpace(*params.Purpose), named) {
-			return ids.PersonID{}, params, &ValidationError{
+			return ids.PersonID{}, params, true, &ValidationError{
 				Field: fieldKeyPurpose,
 				Reason: "this unsubscribe link stops one named subscription, and the request names " +
 					"a different one",
@@ -126,7 +172,31 @@ func (h Handlers) oneClickSubject(
 		}
 		params.Purpose = &named
 	}
-	return ref.PersonID, params, nil
+	return ref.PersonID, params, true, nil
+}
+
+// errNoConsentSubject says the credential names nobody who can hold a
+// per-purpose consent state. It is a routing answer inside this package, never
+// a status: the press succeeds, by a different write.
+var errNoConsentSubject = errors.New("consent: this link names no person")
+
+// stopForCredential records the press for a subject with no consent state.
+//
+// It answers the SAME body a person's press answers, with an empty list: the
+// mailbox provider posting this cannot tell the two subjects apart and must
+// not learn which it got. An empty list already means "nothing moved" on the
+// person path, which is exactly true here too.
+func (h Handlers) stopForCredential(w http.ResponseWriter, r *http.Request, token string) {
+	ref, err := h.store.ResolveWithdrawalToken(r.Context(), token)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	if err := h.store.StopForCredential(r.Context(), ref); err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{"unsubscribed": []string{}})
 }
 
 // maxPreferenceChoices bounds a single granular save. The consent purpose

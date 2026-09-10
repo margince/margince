@@ -260,8 +260,14 @@ func ensurePreferenceTokenTx(
 	// stopped honouring must stop existing rather than linger as a row that
 	// only looks live. This rotation is the production writer revoked_at was
 	// declared for in 0048 and never had.
+	//
+	// NAMING THE REASON is not bookkeeping: the withdrawal adapter honours a
+	// legacy link revoked by THIS writer and refuses one revoked by an
+	// erasure, a compromise or a merge, so a revocation that states nothing is
+	// a revocation it cannot classify. The column's CHECK requires the pair,
+	// which is what makes the adapter's allowlist safe to rely on.
 	if _, err := tx.Exec(ctx, `
-		UPDATE preference_token SET revoked_at = now()
+		UPDATE preference_token SET revoked_at = now(), revoked_reason = 'rotated'
 		 WHERE person_id = $1 AND person_email_id = $2 AND revoked_at IS NULL`,
 		personID, emailID); err != nil {
 		return "", err
