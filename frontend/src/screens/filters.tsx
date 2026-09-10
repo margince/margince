@@ -26,7 +26,7 @@ import {
   useFilterVocabulary,
   type VocabularyField,
 } from "./filterdata";
-import { ExportFilterMenu } from "./filterexport";
+import { canExportFilter, ExportFilterMenu } from "./filterexport";
 import { FilterResults } from "./filterresults";
 import "./filters.css";
 import {
@@ -143,7 +143,18 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
         // takes the FILTER vocabulary's word for the object rather than the
         // view rail's, because `/exports` enumerates `person`, the same as the
         // preview it has to agree with.
-        actions={<ExportFilterMenu resource={resource} tree={tree} />}
+        //
+        // The slot is filled only when the menu will draw something. Panel
+        // draws its actions band for any element it is handed, and a React
+        // element that renders `null` is still an element — so an unfinished
+        // filter, which has nothing to export, left an empty band ruled under
+        // the builder. `canExportFilter` is the menu's own condition, asked
+        // here rather than restated.
+        actions={
+          canExportFilter(tree) ? (
+            <ExportFilterMenu resource={resource} tree={tree} />
+          ) : undefined
+        }
       >
         {/* A toolbar row under the head, not inside it: the band is one line
             that never wraps, and this cluster — a count, a badge and two view

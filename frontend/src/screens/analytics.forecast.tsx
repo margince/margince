@@ -2,7 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, SegmentedControl, StatCard } from "../design-system/atoms";
+import {
+  Button,
+  SegmentedControl,
+  StatCard,
+  TextInput,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { EvidenceReceipt } from "../design-system/evidencereceipt";
 import { MoneyInput } from "../design-system/moneyinput";
@@ -301,7 +306,7 @@ function ForecastCallEditor({
         </label>
         <label className="field">
           <span>{t("forecast.supportingNote")}</span>
-          <input
+          <TextInput
             type="text"
             value={note}
             onChange={(event) => setNote(event.target.value)}
