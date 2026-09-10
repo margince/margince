@@ -67,6 +67,12 @@
         "read": true,
         "update": true
       },
+      "communication_exception": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -413,6 +419,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "communication_exception": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
       },
       "computed_field": {
         "create": false,
@@ -761,6 +773,12 @@
         "read": true,
         "update": true
       },
+      "communication_exception": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -1107,6 +1125,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "communication_exception": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
       },
       "computed_field": {
         "create": false,
@@ -1455,6 +1479,12 @@
         "read": true,
         "update": false
       },
+      "communication_exception": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -1800,6 +1830,12 @@
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "communication_exception": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "computed_field": {
