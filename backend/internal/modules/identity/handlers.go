@@ -138,7 +138,13 @@ type Handlers struct {
 	// the flow redirects through — never derived from the request Host.
 	oidcProviders map[string]OIDCProviderSource
 	stateSigner   OIDCStateSigner
-	oidcRoutes    OIDCRoutes
+	// mfaSigner signs the short-lived 202 challenge a password login hands back
+	// when a member owes a second factor, and verifies it at /auth/mfa. Nil when
+	// unwired — a login that would challenge instead fails closed rather than
+	// mint an unsigned token, and MFA cannot be confirmed without the vault the
+	// same composition step wires.
+	mfaSigner  MFAChallengeSigner
+	oidcRoutes OIDCRoutes
 	// oidcPerIP throttles the two unauthenticated OIDC edges — an exchange
 	// failure on /callback still drives one outbound token-exchange POST
 	// carrying the shared Gmail-capture client credentials, so an uncapped
@@ -311,6 +317,14 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 				Status: http.StatusForbidden, Code: "sso_required",
 				Detail: "this installation requires single sign-on; use your corporate account",
 			})
+			return
+		}
+		if errors.Is(err, errMFARequired) {
+			// Password verified; the member owes a second factor. Hand back a
+			// signed, short-lived challenge and no session — the flow resumes at
+			// /auth/mfa. A 202, not a 200, so a client that predates MFA never
+			// reads this as signed-in.
+			h.writeMFAChallenge(w, r, id.UserID)
 			return
 		}
 		httperr.Write(w, r, err)

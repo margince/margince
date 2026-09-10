@@ -22,10 +22,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-func mfaStatus(t *testing.T, h Handlers, ctx context.Context) crmcontracts.MfaStatus {
+func mfaStatus(t *testing.T, h Handlers, e *revocationEnv) crmcontracts.MfaStatus {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	h.GetMyMfa(rec, httptest.NewRequest(http.MethodGet, "/v1/me/mfa", nil).WithContext(ctx))
+	h.GetMyMfa(rec, httptest.NewRequest(http.MethodGet, "/v1/me/mfa", nil).WithContext(e.asMember()))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET /me/mfa = %d, want 200", rec.Code)
 	}
@@ -42,7 +42,7 @@ func TestMFAEndpointsEnrolConfirmAndDisable(t *testing.T) {
 	h := NewHandlers(e.svc)
 	ctx := e.asMember()
 
-	if s := mfaStatus(t, h, ctx); s.Enrolled || s.Confirmed {
+	if s := mfaStatus(t, h, e); s.Enrolled || s.Confirmed {
 		t.Fatalf("a fresh member reads as enrolled: %+v", s)
 	}
 
@@ -69,8 +69,8 @@ func TestMFAEndpointsEnrolConfirmAndDisable(t *testing.T) {
 		t.Fatal(err)
 	}
 	confirmRec := httptest.NewRecorder()
-	h.ConfirmMyTotp(confirmRec, jsonRequest(t, http.MethodPost, "/v1/me/mfa/totp/confirm",
-		crmcontracts.TotpConfirmRequest{Code: code}, ctx))
+	h.ConfirmMyTotp(confirmRec, jsonRequest(ctx, t, http.MethodPost, "/v1/me/mfa/totp/confirm",
+		crmcontracts.TotpConfirmRequest{Code: code}))
 	if confirmRec.Code != http.StatusOK {
 		t.Fatalf("confirm = %d, want 200 (body %s)", confirmRec.Code, confirmRec.Body.String())
 	}
@@ -82,7 +82,7 @@ func TestMFAEndpointsEnrolConfirmAndDisable(t *testing.T) {
 		t.Fatalf("got %d recovery codes, want %d", len(codes.RecoveryCodes), recoveryCodeCount)
 	}
 
-	if s := mfaStatus(t, h, ctx); !s.Confirmed || s.RecoveryCodesLeft != recoveryCodeCount {
+	if s := mfaStatus(t, h, e); !s.Confirmed || s.RecoveryCodesLeft != recoveryCodeCount {
 		t.Fatalf("state after confirm = %+v", s)
 	}
 
@@ -92,13 +92,13 @@ func TestMFAEndpointsEnrolConfirmAndDisable(t *testing.T) {
 	if delRec.Code != http.StatusNoContent {
 		t.Fatalf("disable = %d, want 204", delRec.Code)
 	}
-	if mfaStatus(t, h, ctx).Enrolled {
+	if mfaStatus(t, h, e).Enrolled {
 		t.Error("MFA still reads as enrolled after disable over HTTP")
 	}
 }
 
 // jsonRequest builds a POST carrying the marshalled body on the given context.
-func jsonRequest(t *testing.T, method, path string, payload crmcontracts.TotpConfirmRequest, ctx context.Context) *http.Request {
+func jsonRequest(ctx context.Context, t *testing.T, method, path string, payload crmcontracts.TotpConfirmRequest) *http.Request {
 	t.Helper()
 	body, err := json.Marshal(payload)
 	if err != nil {

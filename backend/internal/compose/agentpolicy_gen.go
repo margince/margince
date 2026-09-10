@@ -427,6 +427,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/auth/forgot-password":                                      {Op: "requestPasswordReset", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/auth/login":                                                {Op: "login", Access: "auth-bootstrap", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/auth/logout":                                               {Op: "logout", Access: "auth-bootstrap", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/auth/mfa":                                                  {Op: "completeMfaChallenge", Access: "auth-bootstrap", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/auth/reset-password":                                       {Op: "resetPassword", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/automations":                                               {Op: "createAutomation", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/automations/runs/{id}/retry":                               {Op: "retryAutomationRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

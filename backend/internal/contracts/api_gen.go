@@ -26680,6 +26680,21 @@ type MergeTagsResult struct {
 	Moved int `json:"moved"`
 }
 
+// MfaChallenge Handed back by a 202 login when a second factor is required. The token is opaque, short-lived, and stands in for "this member passed the password step"; present it to POST /auth/mfa with a code.
+type MfaChallenge struct {
+	// MfaChallenge The opaque challenge to return with the authenticator code.
+	MfaChallenge string `json:"mfa_challenge"`
+}
+
+// MfaLoginRequest defines model for MfaLoginRequest.
+type MfaLoginRequest struct {
+	// Code A current authenticator code, or an unused recovery code.
+	Code string `json:"code"`
+
+	// MfaChallenge The challenge from the 202 login response.
+	MfaChallenge string `json:"mfa_challenge"`
+}
+
 // MfaStatus The caller's own multi-factor state.
 type MfaStatus struct {
 	// Confirmed Whether the factor is active — a pending enrolment is not yet a factor.
@@ -42722,6 +42737,9 @@ type RequestPasswordResetJSONRequestBody RequestPasswordResetJSONBody
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
+// CompleteMfaChallengeJSONRequestBody defines body for CompleteMfaChallenge for application/json ContentType.
+type CompleteMfaChallengeJSONRequestBody = MfaLoginRequest
+
 // ResetPasswordJSONRequestBody defines body for ResetPassword for application/json ContentType.
 type ResetPasswordJSONRequestBody ResetPasswordJSONBody
 
@@ -51516,6 +51534,9 @@ type ServerInterface interface {
 	// End the current session and clear the cookie.
 	// (POST /auth/logout)
 	Logout(w http.ResponseWriter, r *http.Request)
+	// Complete a second-factor challenge and open a session.
+	// (POST /auth/mfa)
+	CompleteMfaChallenge(w http.ResponseWriter, r *http.Request)
 	// Complete federated sign-in; sets the session cookie on success.
 	// (GET /auth/oidc/{provider}/callback)
 	OidcSignInCallback(w http.ResponseWriter, r *http.Request, provider OidcSignInCallbackParamsProvider, params OidcSignInCallbackParams)
@@ -53622,6 +53643,12 @@ func (_ Unimplemented) Login(w http.ResponseWriter, r *http.Request) {
 // End the current session and clear the cookie.
 // (POST /auth/logout)
 func (_ Unimplemented) Logout(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Complete a second-factor challenge and open a session.
+// (POST /auth/mfa)
+func (_ Unimplemented) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59885,6 +59912,20 @@ func (siw *ServerInterfaceWrapper) Logout(w http.ResponseWriter, r *http.Request
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Logout(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompleteMfaChallenge operation middleware
+func (siw *ServerInterfaceWrapper) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteMfaChallenge(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -83851,6 +83892,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/logout", wrapper.Logout)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/mfa", wrapper.CompleteMfaChallenge)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/auth/oidc/{provider}/callback", wrapper.OidcSignInCallback)

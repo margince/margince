@@ -45,8 +45,15 @@ func totpCodeAt(secret string, t time.Time, digits int) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("identity: totp secret is not base32: %w", err)
 	}
+	// The counter is the 30-second step index. Unix seconds before the epoch are
+	// not a real authenticator moment; clamping the guard makes the conversion to
+	// the unsigned counter provably safe rather than merely true in practice.
+	unix := t.Unix()
+	if unix < 0 {
+		unix = 0
+	}
 	var msg [8]byte
-	binary.BigEndian.PutUint64(msg[:], uint64(t.Unix())/uint64(totpStep.Seconds()))
+	binary.BigEndian.PutUint64(msg[:], uint64(unix)/uint64(totpStep.Seconds()))
 	mac := hmac.New(sha1.New, key)
 	mac.Write(msg[:])
 	sum := mac.Sum(nil)

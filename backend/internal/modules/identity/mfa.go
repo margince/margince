@@ -51,10 +51,12 @@ func (s *Service) WithVault(v keyvault.Vault) *Service {
 	return s
 }
 
-// WithVault wires the seal into the handlers' service, so the composition root
-// can turn MFA on where a vault exists. A deployment with no vault serves the
-// enrolment routes as unavailable rather than storing a secret in the clear.
-func (h Handlers) WithVault(v keyvault.Vault) Handlers {
+// WithMFAVault wires the seal into the handlers' service, so the composition
+// root can turn MFA on where a vault exists. A deployment with no vault serves
+// the enrolment routes as unavailable rather than storing a secret in the clear.
+// Named distinctly from the capture handlers' own WithVault, so neither shadows
+// the other on the embedding server.
+func (h Handlers) WithMFAVault(v keyvault.Vault) Handlers {
 	h.svc.WithVault(v)
 	return h
 }

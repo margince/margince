@@ -95,7 +95,7 @@ func TestTOTPEnrolmentConfirmVerifyAndRecovery(t *testing.T) {
 	if e.verifyMemberMFA(t, recovery[0]) {
 		t.Error("a recovery code verified a second time; it must be single-use")
 	}
-	if left := statusOf(t, e, ctx).RecoveryCodesLeft; left != recoveryCodeCount-1 {
+	if left := statusOf(t, e).RecoveryCodesLeft; left != recoveryCodeCount-1 {
 		t.Errorf("recovery codes left = %d, want %d after spending one", left, recoveryCodeCount-1)
 	}
 }
@@ -123,7 +123,7 @@ func TestMFACannotBeReEnrolledWhileConfirmed(t *testing.T) {
 	if err := e.svc.DisableMFA(ctx); err != nil {
 		t.Fatalf("disable: %v", err)
 	}
-	if statusOf(t, e, ctx).Enrolled {
+	if statusOf(t, e).Enrolled {
 		t.Error("MFA still reads as enrolled after disable")
 	}
 	// After disabling, enrolment can start again.
@@ -144,14 +144,14 @@ func TestConfirmTOTPRefusesAWrongCode(t *testing.T) {
 		t.Fatal("a wrong confirmation code was accepted")
 	}
 	// The enrolment stays pending, not confirmed.
-	if statusOf(t, e, ctx).Confirmed {
+	if statusOf(t, e).Confirmed {
 		t.Error("a wrong code still confirmed the enrolment")
 	}
 }
 
-func statusOf(t *testing.T, e *revocationEnv, ctx context.Context) MFAStatus {
+func statusOf(t *testing.T, e *revocationEnv) MFAStatus {
 	t.Helper()
-	status, err := e.svc.MFAEnrolment(ctx)
+	status, err := e.svc.MFAEnrolment(e.asMember())
 	if err != nil {
 		t.Fatalf("MFAEnrolment: %v", err)
 	}

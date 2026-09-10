@@ -98,6 +98,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete a second-factor challenge and open a session.
+         * @description Second half of an MFA sign-in. Present the `mfa_challenge` from a `202` login together
+         *     with a current authenticator code — or an unused recovery code — and, on success, a
+         *     session is minted and the `crm_session` cookie set, exactly as `POST /auth/login` does
+         *     for a member with no second factor. A wrong code, or an expired or tampered challenge,
+         *     is a neutral 401. The challenge is short-lived; a stale one is refused.
+         */
+        post: operations["completeMfaChallenge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/oidc/{provider}/start": {
         parameters: {
             query?: never;
@@ -15641,6 +15665,17 @@ export interface components {
         /** @description The caller's live sessions, newest activity first. */
         MySessionList: {
             sessions: components["schemas"]["MySession"][];
+        };
+        /** @description Handed back by a 202 login when a second factor is required. The token is opaque, short-lived, and stands in for "this member passed the password step"; present it to POST /auth/mfa with a code. */
+        MfaChallenge: {
+            /** @description The opaque challenge to return with the authenticator code. */
+            mfa_challenge: string;
+        };
+        MfaLoginRequest: {
+            /** @description The challenge from the 202 login response. */
+            mfa_challenge: string;
+            /** @description A current authenticator code, or an unused recovery code. */
+            code: string;
         };
         /** @description The caller's own multi-factor state. */
         MfaStatus: {
@@ -34405,6 +34440,15 @@ export interface operations {
                     "application/json": components["schemas"]["MeResponse"];
                 };
             };
+            /** @description The password was correct but a second factor is required: no session is set yet. The body carries a short-lived `mfa_challenge` to present, with the authenticator code, to `POST /auth/mfa`. A distinct status rather than a variant 200 body, so a client that has not learned MFA still treats only 200 as signed-in. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaChallenge"];
+                };
+            };
             /** @description Invalid credentials. */
             401: {
                 headers: {
@@ -34421,6 +34465,42 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    completeMfaChallenge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Authenticated; session cookie set. */
+            200: {
+                headers: {
+                    /** @description crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/ */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            /** @description The code, or the challenge, is not valid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
             422: components["responses"]["ValidationError"];

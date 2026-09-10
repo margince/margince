@@ -276,6 +276,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeResponse' }
+        '202':
+          description: >-
+            The password was correct but a second factor is required: no session is set yet.
+            The body carries a short-lived `mfa_challenge` to present, with the authenticator
+            code, to `POST /auth/mfa`. A distinct status rather than a variant 200 body, so a
+            client that has not learned MFA still treats only 200 as signed-in.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MfaChallenge' }
         '401':
           description: Invalid credentials.
           content:
@@ -289,6 +298,41 @@ paths:
             error. Admins are exempt (break-glass), so they never see this.
           content:
             application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/mfa:
+    post:
+      tags: [Identity]
+      operationId: completeMfaChallenge
+      security: []   # pre-auth: the signed challenge from /auth/login is the credential
+      x-agent-access: auth-bootstrap
+      summary: Complete a second-factor challenge and open a session.
+      description: |
+        Second half of an MFA sign-in. Present the `mfa_challenge` from a `202` login together
+        with a current authenticator code — or an unused recovery code — and, on success, a
+        session is minted and the `crm_session` cookie set, exactly as `POST /auth/login` does
+        for a member with no second factor. A wrong code, or an expired or tampered challenge,
+        is a neutral 401. The challenge is short-lived; a stale one is refused.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MfaLoginRequest' }
+      responses:
+        '200':
+          description: Authenticated; session cookie set.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: 'crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeResponse' }
+        '401':
+          description: The code, or the challenge, is not valid.
+          content:
+            application/json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -22882,6 +22926,29 @@ components:
         sessions:
           type: array
           items: { $ref: '#/components/schemas/MySession' }
+    MfaChallenge:
+      type: object
+      additionalProperties: false
+      required: [mfa_challenge]
+      description: >-
+        Handed back by a 202 login when a second factor is required. The token is opaque,
+        short-lived, and stands in for "this member passed the password step"; present it to
+        POST /auth/mfa with a code.
+      properties:
+        mfa_challenge:
+          type: string
+          description: The opaque challenge to return with the authenticator code.
+    MfaLoginRequest:
+      type: object
+      additionalProperties: false
+      required: [mfa_challenge, code]
+      properties:
+        mfa_challenge:
+          type: string
+          description: The challenge from the 202 login response.
+        code:
+          type: string
+          description: A current authenticator code, or an unused recovery code.
     MfaStatus:
       type: object
       additionalProperties: false

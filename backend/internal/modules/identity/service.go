@@ -294,6 +294,17 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 		if sso && !id.hasRole(roleAdmin) {
 			return errSSORequired
 		}
+		// A member with an active second factor gets no session from the password
+		// alone: the flow stops here and resumes at /auth/mfa. Checked after the
+		// SSO gate so an admin break-glass password login is still challenged for
+		// its factor if they hold one.
+		mfaConfirmed, err := hasConfirmedMFA(ctx, tx, account.UserID)
+		if err != nil {
+			return err
+		}
+		if mfaConfirmed {
+			return errMFARequired
+		}
 		if err := insertSession(ctx, tx, account.UserID, tokenHash); err != nil {
 			return err
 		}
@@ -329,6 +340,12 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 			return Identity{}, "", auditErr
 		}
 		return Identity{}, "", err
+	}
+	if errors.Is(err, errMFARequired) {
+		// Password verified; a second factor is owed. The id carries the user the
+		// challenge must bind to — populated before the gate rolled the tx back —
+		// but no session token: that waits for /auth/mfa.
+		return id, "", errMFARequired
 	}
 	if err != nil {
 		return Identity{}, "", err
