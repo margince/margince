@@ -116,7 +116,11 @@ type PrivateThreadContact struct {
 // one of them protects the record:
 //
 //   - JUDGED, and not personal-held — cleared, shared, or held for a business
-//     reason like legal or personnel. Evidence. The contact stays.
+//     reason like legal or personnel. Evidence. The contact stays. A row the
+//     OWNER held carries no kind at all, and NULL is not `personal`: they held
+//     a conversation without saying it was their private life, which is a
+//     business hold like any other. `IS NOT DISTINCT FROM` is what makes that
+//     read true rather than NULL.
 //   - OPEN TO THE WORKSPACE already, whatever the ledger says. A cleared
 //     sender's mail is born workspace-visible and opens no question at all, so
 //     requiring a verdict row would retract exactly the contacts the workspace
@@ -168,7 +172,8 @@ func ContactsOrphanedByPrivacyTx(
 		            AND other.archived_at IS NULL
 		            AND other.restricted_at IS NULL
 		            AND ((tv.id IS NOT NULL
-		                  AND NOT (tv.kind = $3 AND tv.status IN ($4, $5)))
+		                  AND NOT (tv.kind IS NOT DISTINCT FROM $3
+		                           AND tv.status IN ($4, $5)))
 		                 OR other.audience = $6))`,
 		threadKey, user, ThreadKindPersonal, VerdictHeld, VerdictHeldByOwner, audienceWorkspace)
 	if err != nil {

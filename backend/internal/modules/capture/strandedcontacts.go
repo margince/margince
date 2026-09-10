@@ -245,7 +245,12 @@ func noiseJudgedStandsSQL(emailExpr, ownerExpr string) string {
 	                   WHERE q.email = ` + emailExpr + `
 	                     AND q.status = 'noise'
 	                     AND q.kind IN ('newsletter', 'transactional', 'spam', 'personal')
-	                     AND (NOT q.resolved_by_owner OR q.owner_id = ` + ownerExpr + `))
+	                     AND (NOT q.resolved_by_owner OR q.owner_id = ` + ownerExpr + `)
+	                     -- A personal answer is about ONE seat's own life, so it
+	                     -- reaches only that seat's record. Every other kind is
+	                     -- about the address and reaches them all: a newsletter
+	                     -- is a newsletter in every mailbox it lands in.
+	                     AND (q.kind <> 'personal' OR q.owner_id = ` + ownerExpr + `))
 	          AND NOT EXISTS (SELECT 1 FROM capture_pending_counterparty q2
 	                           WHERE q2.email = ` + emailExpr + `
 	                             AND q2.status IN ('pending', 'unsure', 'real')))
@@ -255,8 +260,10 @@ func noiseJudgedStandsSQL(emailExpr, ownerExpr string) string {
 	                       AND o.user_id = ` + ownerExpr + `))`
 }
 
-// noiseJudgedKindSQL is the kind the standing answer carries, `personal`
-// outranking a sibling row so the strictest reading wins: an address settled
+// noiseJudgedKindSQL is the kind the standing answer carries, seen from ONE
+// seat: a `personal` row counts only for the seat whose life it is about, on
+// the same bound the predicate above draws and for the same reason. `personal`
+// outranks a sibling row so the strictest reading wins: an address settled
 // personal by one message and transactional by another is somebody's private
 // correspondent either way, and the correspondence bound must not be applied to
 // it. Empty when nothing but an owner's keep_out disowns the address.
@@ -270,6 +277,7 @@ func noiseJudgedKindSQL(emailExpr, ownerExpr string) string {
 	                   WHERE q.email = ` + emailExpr + `
 	                     AND q.status = 'noise'
 	                     AND (NOT q.resolved_by_owner OR q.owner_id = ` + ownerExpr + `)
+	                     AND (q.kind <> 'personal' OR q.owner_id = ` + ownerExpr + `)
 	                   ORDER BY (q.kind = 'personal') DESC, q.resolved_at DESC NULLS LAST
 	                   LIMIT 1), '')`
 }

@@ -186,8 +186,11 @@ func adoptableMessagesTx(
 //   - A thread this seat has already settled: inherit that answer. The message
 //     is part of a conversation the classifier read, and re-asking would spend
 //     a model call to reach the answer already on the ledger.
-//   - Classified, nothing settled: `pending`, and open the question. That is
-//     what a message captured under this posture would have got.
+//   - Classified, nothing settled, and the message HAS a thread: `pending`, and
+//     open the question. That is what a message captured under this posture
+//     would have got. A message with no thread key gets no status: EnsureTx has
+//     no conversation to open a question about, and a pending row nothing can
+//     resolve holds the mail forever.
 //   - Anything else (shared, held): write no status and let the posture speak.
 //     A held mailbox holds it, a shared one opens it, and neither needs a
 //     verdict to say so.
@@ -198,10 +201,19 @@ func adoptOneMessageTx(
 	if err != nil {
 		return err
 	}
+	// `pending` is written ONLY where a question is actually opened, and the
+	// two are decided together on purpose. A pending status renders as HELD, so
+	// a row carrying one that no question will resolve is mail held forever
+	// with nothing scheduled to free it — the defect adoption exists to end.
+	// The thread-key check is DEFENCE rather than a live case: mailmap falls
+	// back to a message's own Message-ID, so mail arriving through a connector
+	// always carries one. It is here because EnsureTx no-ops silently on an
+	// empty key — a future transport that produces one would strand every
+	// message it adopted, with no failing assertion anywhere to say so.
 	status := inherited
-	openQuestion := false
-	if status == "" && posture == PostureClassified {
-		status, openQuestion = VerdictPending, true
+	openQuestion := status == "" && posture == PostureClassified && msg.threadKey != ""
+	if openQuestion {
+		status = VerdictPending
 	}
 	if err := recordImportTx(ctx, tx, msg.id, seat, birthDecision{
 		posture:       posture,

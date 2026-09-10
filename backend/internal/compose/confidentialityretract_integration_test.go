@@ -230,6 +230,82 @@ func seedCapturedContact(t *testing.T, e *integration.Env, email string) ids.Per
 	return id
 }
 
+// A thread the OWNER held carries no kind at all, and that is a business hold:
+// they held a conversation without saying it was their private life.
+//
+// The trap is SQL, not judgement. `NOT (kind = 'personal' AND ...)` is NULL for
+// a NULL kind, so the whole clause drops the row and the owner's held business
+// thread stopped protecting its contact — a regression against the rule the
+// previous spelling got right by accident.
+func TestAPersonalVerdictKeepsAContactWhoseOtherThreadTheOwnerHeldThemselves(t *testing.T) {
+	e := integration.Setup(t)
+	const held = "berater@kanzlei.test"
+	privateActivity := seedHeldThreadMail(t, e, "thread-private-d", held, "Privat")
+	threadID := seedThreadQuestion(t, e, "thread-private-d", privateActivity)
+	seedHeldThreadMail(t, e, "thread-owner-held", held, "Mandat")
+	seedOwnerHeldThread(t, e, "thread-owner-held")
+	personID := seedCapturedContact(t, e, held)
+
+	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
+
+	if personIsArchived(t, e, personID) {
+		t.Fatal("a contact was retracted although the owner had held another of their threads " +
+			"themselves — an owner hold carries no kind, and NULL is not `personal`")
+	}
+}
+
+// A contact a human APPROVED is theirs, even though the record that approval
+// creates is written by a machine.
+//
+// The approval executor runs under a system principal and records the deciding
+// human only in `on_behalf_of` (compose/captureverdictaccept.go), so a guard
+// reading actor_type alone sees a machine's own record and archives a contact
+// somebody was asked about and said yes to.
+func TestAPersonalVerdictKeepsAContactAHumanApproved(t *testing.T) {
+	e := integration.Setup(t)
+	const approved = "kontakt@partner.test"
+	activityID := seedHeldThreadMail(t, e, "thread-approved", approved, "Privat")
+	threadID := seedThreadQuestion(t, e, "thread-approved", activityID)
+	personID := seedMachinePromotedContact(t, e, approved)
+	seedApprovedOnBehalfOf(t, e, personID)
+
+	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
+
+	if personIsArchived(t, e, personID) {
+		t.Fatal("a contact a human was asked about and approved was retracted — the approval " +
+			"executor writes as the system and records the person only in on_behalf_of")
+	}
+}
+
+// seedOwnerHeldThread records the ledger row DecideAsOwner writes: a status and
+// no kind, because the owner said "keep this private" and not why.
+func seedOwnerHeldThread(t *testing.T, e *integration.Env, threadKey string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_thread_verdict (thread_key, user_id, status, disposition_reason, resolved_at)
+			VALUES ($1, $2, 'held_by_owner', 'owner_decision', now())`, threadKey, e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the owner's own hold: %v", err)
+	}
+}
+
+// seedApprovedOnBehalfOf lands the audit row an accepted counterparty proposal
+// leaves: system actor, the deciding human in on_behalf_of.
+func seedApprovedOnBehalfOf(t *testing.T, e *integration.Env, id ids.PersonID) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, on_behalf_of)
+			VALUES ('system', 'agent:capture_counterparty', 'create', 'person', $1, $2)`,
+			id.UUID, e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the approval: %v", err)
+	}
+}
+
 // seedOpenThreadMail lands a message already open to the whole workspace: the
 // shape a cleared sender's mail is born with, which carries no verdict row and
 // no held audience.

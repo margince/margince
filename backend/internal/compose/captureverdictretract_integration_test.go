@@ -182,6 +182,14 @@ func TestTheReconcileSweepRetractsContactsANoiseVerdictAlreadyCovered(t *testing
 	promoted := seedMachineMadeContact(t, e, "labor.befunde@gesund.example", e.Rep1)
 	seedSettledNoiseRow(t, e, "labor.befunde@gesund.example", capture.KindPersonal)
 
+	// A COLLEAGUE's personal answer about their own mailbox. It says nothing
+	// about this seat's contact, and the sweep must not act on it — the
+	// immediate verdict arm binds `personal` to the deciding seat and the sweep
+	// has to carry the same bound or it becomes the way around it.
+	colleaguesLife := seedCaptureOnlyContact(t, e, "nachbarin@privat.example", e.Rep1)
+	seedSettledRowFor(t, e, "nachbarin@privat.example", capture.PendingStatusNoise,
+		capture.KindPersonal, e.Rep2)
+
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, people.NewStore(InstallationDB(e.Pool)))
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
@@ -209,6 +217,28 @@ func TestTheReconcileSweepRetractsContactsANoiseVerdictAlreadyCovered(t *testing
 	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NOT NULL`, promoted); n != 1 {
 		t.Fatal("the sweep could not see a contact the sender classifier had made and published — " +
 			"its selector only ever looked at owner-scoped connector records")
+	}
+	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NULL`, colleaguesLife); n != 1 {
+		t.Fatal("one seat's personal verdict retracted ANOTHER seat's contact through the sweep — " +
+			"whose private life a conversation belongs to is answered per mailbox")
+	}
+}
+
+// seedSettledRowFor is seedSettledRow with the owner named, for the cases where
+// whose answer it is decides what may be done with it.
+func seedSettledRowFor(t *testing.T, e *integration.Env, email, status, kind string, owner ids.UUID) {
+	t.Helper()
+	activityID := seedCapturedMail(t, e, email, "already judged")
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_pending_counterparty
+			  (email, domain, activity_id, owner_id, status, kind, resolved_at)
+			VALUES ($1, split_part($1, '@', 2), $2, $3, $4, $5, now())`,
+			email, activityID, owner, status, kind)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("seeding the settled row: %v", err)
 	}
 }
 
