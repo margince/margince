@@ -40,6 +40,12 @@ jobs:
     name: The tag is a version, on main, with a verdict
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 10
+    permissions:
+      contents: read
+      # merge-attest's verdict on the tagged commit. The Checks API needs its
+      # own scope, and naming any scope sets the rest to none, so contents
+      # has to be spelled out alongside it.
+      checks: read
     outputs:
       version: ${{ steps.v.outputs.version }}
       prerelease: ${{ steps.v.outputs.prerelease }}
