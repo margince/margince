@@ -237,20 +237,29 @@ function UnsubscribeBody({
             {t("prefs.unsub.seeAll")}
           </a>
         </div>
-        {unsubscribe.error ? (
-          <Callout
-            tone={
-              unsubscribe.error instanceof RateLimitedError ? "warn" : "danger"
-            }
-            kind="outcome"
-            title={t("prefs.unsub.failedTitle")}
-          >
-            {explainPublicError(unsubscribe.error, t)}
-          </Callout>
-        ) : null}
+        <PressError error={unsubscribe.error} />
       </Card>
       <p className="unsub-privacy">{t("prefs.unsub.privacy")}</p>
     </PublicPage>
+  );
+}
+
+// PressError is the refusal both bodies show, so a copy of it cannot lose the
+// title the other one carries — which is exactly what happened when the
+// read-less page was written by copying the original's callout.
+function PressError({ error }: Readonly<{ error: unknown }>) {
+  const t = useT();
+  if (!error) {
+    return null;
+  }
+  return (
+    <Callout
+      tone={error instanceof RateLimitedError ? "warn" : "danger"}
+      kind="outcome"
+      title={t("prefs.unsub.failedTitle")}
+    >
+      {explainPublicError(error, t)}
+    </Callout>
   );
 }
 
@@ -334,15 +343,7 @@ function WithdrawOnlyBody({
             {t("prefs.unsub.confirm")}
           </Button>
         </div>
-        {unsubscribe.error ? (
-          <Callout
-            tone={
-              unsubscribe.error instanceof RateLimitedError ? "warn" : "danger"
-            }
-          >
-            {explainPublicError(unsubscribe.error, t)}
-          </Callout>
-        ) : null}
+        <PressError error={unsubscribe.error} />
       </Card>
       <p className="unsub-privacy">{t("prefs.unsub.privacy")}</p>
     </PublicPage>
