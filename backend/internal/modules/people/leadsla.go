@@ -82,6 +82,13 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 // and §18.1 is explicit that an auto-touch does not satisfy first response — so
 // the rung a lead sits on says nothing about whether somebody replied to it.
 //
+// Not a statement about OWNERSHIP either. An unowned lead is the funnel's normal
+// arrival state (CreateLead assigns nobody unless a human names an owner), so a
+// queue admitting only owned rows would drop the whole unassigned backlog the
+// Unassigned dial exists to show. Only the BREACH SCAN narrows that way, and it
+// does so in its own statement: escalating a row nobody has taken on stamps
+// sla_breached_at and suppresses the real escalation once somebody does.
+//
 // Held by: TestTheOwesAReplyPredicateHasOneSpelling (leadowespelling_test.go)
 const leadOwesAReplySQL = "archived_at IS NULL AND first_response_at IS NULL"
 
@@ -158,6 +165,11 @@ func (s *Store) ScanLeadSLA(ctx context.Context, now time.Time) ([]SLABreach, er
 			       COALESCE(NULLIF(btrim(full_name), ''), email::text, '')
 			FROM lead
 			WHERE `+leadOwesAReplySQL+` AND sla_breached_at IS NULL
+			  -- Only a lead somebody is answerable for. An unowned row's
+			  -- deadline is measured from created_at against nobody, and
+			  -- escalating it stamps sla_breached_at — which then suppresses
+			  -- the real escalation once a human takes the lead on.
+			  AND owner_id IS NOT NULL
 			  AND COALESCE(routed_at, created_at) + $1 * interval '1 minute' < $2
 			ORDER BY created_at
 			FOR UPDATE SKIP LOCKED`,

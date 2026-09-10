@@ -96,12 +96,15 @@ func connectorFamily(source string) (string, bool) {
 	return "", false
 }
 
-// defaultSourceIntents is the seeded weighting — the same six keys the
-// migration inserts — kept here so the unit scorer has a fixture and so the
-// parity test can prove the seed and the code agree.
+// defaultSourceIntents is the seeded weighting — the same keys the migrations
+// insert — kept here so the unit scorer has a fixture and so the parity test
+// can prove the seed and the code agree.
 var defaultSourceIntents = SourceIntents{
 	"manual": SourceIntentNeutral, "inbound": SourceIntentHigh, "webform": SourceIntentHigh,
 	"referral": SourceIntentHigh, "import": SourceIntentLow, "crawl": SourceIntentLow,
+	// A name published on a company's own website, read by the deep-read pass.
+	// Low for crawl's reason: nobody asked us for anything.
+	"siteread": SourceIntentLow,
 }
 
 // loadSourceIntents reads the installation's weighting inside the caller's
