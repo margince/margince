@@ -26,7 +26,6 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { ContactLink } from "../design-system/contactlink";
 import { EmailReference } from "../design-system/emailreference";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineText } from "../design-system/inlinechoice";
@@ -60,7 +59,7 @@ import { CounterpartyHoldRow } from "./counterparty-hold";
 import { stillHeld, today } from "./employmentcurrency";
 import { interactionIcon } from "./interactionchrome";
 import { PersonAccess } from "./personaccess";
-import { EditContactMethodsModal } from "./personcontactedit";
+import { ContactMethodsEdit, EmailRow, PhoneRow } from "./personcontactdetails";
 import { daysSinceInbound, isQuiet } from "./personquiet";
 import { consentWord } from "./personreadings";
 import { personTabRoute } from "./persontab";
@@ -445,73 +444,15 @@ function CityRow({ person, canEdit, readOnlyReason, patch }: DetailsRowProps) {
   );
 }
 
-// Email and phone read as what a reader DOES with them — an address is written
-// to, a number is dialled — while editing lives behind the "Edit contact
-// methods" modal, because the wire replaces the whole list at once
-// (UpdatePersonRequest.emails/.phones) rather than one value in place.
-function EmailRow({ person }: Readonly<{ person: Person }>) {
-  const t = useT();
-  const primary =
-    person.emails?.find((row) => row.is_primary) ?? person.emails?.[0];
-  const email = primary?.email;
-  return (
-    <FieldRow label={t("person.rail.email")} icon={<Mail />}>
-      {email ? (
-        <ContactLink
-          kind="email"
-          value={email}
-          record={{ entityType: "person", entityId: person.id }}
-          readOnly={Boolean(person.archived_at)}
-          className="pe-meta-link"
-        />
-      ) : (
-        <span className="pe-rail-value-muted">{t("field.unset")}</span>
-      )}
-    </FieldRow>
-  );
-}
-
-function PhoneRow({
-  person,
-  canEdit,
-  onEdit,
-}: Readonly<{
-  person: Person;
-  canEdit: boolean;
-  onEdit: () => void;
-}>) {
-  const t = useT();
-  const primary =
-    person.phones?.find((row) => row.is_primary) ?? person.phones?.[0];
-  const phone = primary?.phone;
-  return (
-    <FieldRow label={t("person.rail.phone")} icon={<Phone />}>
-      {/* The value itself, then the verb that reaches the modal — the same
-          pairing LinkedinRow draws above, and the same class: a value
-          somebody can correct beside the affordance that opens the editor,
-          wrapping as a pair rather than pushing the button onto its own
-          line. */}
-      <span className="pe-linkedin">
-        {phone ? (
-          <ContactLink kind="phone" value={phone} className="pe-meta-link" />
-        ) : (
-          <span className="pe-rail-value-muted">{t("field.unset")}</span>
-        )}
-        {canEdit ? (
-          <Button variant="link" small onClick={onEdit}>
-            {t("person.rail.editContactMethods")}
-          </Button>
-        ) : null}
-      </span>
-    </FieldRow>
-  );
-}
-
 // The rail's own Details grid — the record's own fields, at a glance above
 // the six relationship sections below it. Writability gates the VERBS only:
 // an archived or overlay-mirrored contact still shows every field, it simply
 // loses the edit affordance (InlineText's own `canEdit={false}` path), the
 // same rule companyraildetails.tsx's DetailsGrid keeps for the account.
+//
+// EmailRow, PhoneRow and ContactMethodsEdit live in personcontactdetails.tsx
+// (co-located, not shared elsewhere) purely to keep this file's own length in
+// bounds — they are this panel's rows as much as NameRow or TitleRow below.
 function DetailsGrid({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
   const person = view.person;
@@ -522,7 +463,6 @@ function DetailsGrid({ view }: Readonly<{ view: Person360 }>) {
   const readOnlyReason = usePersonReadOnlyReason(person);
   const patch = usePersonFieldPatch(person);
   const canEdit = canUpdate && !readOnlyReason;
-  const [editingContact, setEditingContact] = useState(false);
   const row: DetailsRowProps = {
     person,
     canEdit,
@@ -530,26 +470,20 @@ function DetailsGrid({ view }: Readonly<{ view: Person360 }>) {
     patch,
   };
   return (
-    <Panel title={t("person.rail.detailsTitle")}>
+    <Panel
+      title={t("person.rail.detailsTitle")}
+      titleAction={<ContactMethodsEdit person={person} canEdit={canEdit} />}
+    >
       <PanelBody>
         <FieldGrid icons>
           <NameRow {...row} />
           <TitleRow {...row} />
           <EmailRow person={person} />
-          <PhoneRow
-            person={person}
-            canEdit={canEdit}
-            onEdit={() => setEditingContact(true)}
-          />
+          <PhoneRow person={person} />
           <LinkedinRow {...row} />
           <CityRow {...row} />
         </FieldGrid>
       </PanelBody>
-      <EditContactMethodsModal
-        open={editingContact}
-        onClose={() => setEditingContact(false)}
-        person={person}
-      />
     </Panel>
   );
 }
