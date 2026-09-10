@@ -76,10 +76,29 @@ func requireExpectedAddress(expected, deliveredTo string) error {
 	if expected == "" || strings.EqualFold(strings.TrimSpace(expected), strings.TrimSpace(deliveredTo)) {
 		return nil
 	}
-	return &ValidationError{
-		Field:  personIDKey,
-		Reason: "this address is on file for a contact whose confirmations go elsewhere, so the link would reach a different mailbox than the one that asked",
-	}
+	return &MisdirectedLinkError{}
+}
+
+// MisdirectedLinkError refuses a mint whose link would reach a mailbox other
+// than the one that asked.
+//
+// A DISTINCT TYPE, because a booking form has to tell this refusal apart from
+// the others this mint makes. The rest — no live address on the record, a
+// purpose archived under a live form — say this installation cannot put the
+// question, and a booking must survive them: the tick was optional and the
+// meeting was not. This one says the question would go to the WRONG PERSON,
+// which is not a question worth asking at any price.
+type MisdirectedLinkError struct{}
+
+func (e *MisdirectedLinkError) Error() string {
+	return "this address is on file for a contact whose confirmations go elsewhere, " +
+		"so the link would reach a different mailbox than the one that asked"
+}
+
+// FieldFault carries the refusal to every surface, the field naming the person
+// because that is the record whose addresses disagree.
+func (e *MisdirectedLinkError) FieldFault() (field, code, message string) {
+	return personIDKey, "confirmations_go_elsewhere", e.Error()
 }
 
 // refuseWithdrawnPurposeTx refuses to ask again about a purpose the subject has
@@ -118,8 +137,24 @@ func refuseWithdrawnPurposeTx(ctx context.Context, tx pgx.Tx, personID ids.Perso
 	if ConsentState(state) != StateWithdrawn {
 		return nil
 	}
-	return &ValidationError{
-		Field:  purposeIDField,
-		Reason: "this contact has withdrawn this purpose, so we do not ask them about it again",
-	}
+	return &ReSolicitationError{}
+}
+
+// ReSolicitationError refuses asking again about a purpose the subject has
+// already taken back.
+//
+// A distinct type for MisdirectedLinkError's reason, and the stronger case of
+// the two: a withdrawal is the subject's own instruction, and a booking form
+// that swallowed this refusal would mail the newsletter question to somebody
+// who explicitly said stop — the exact act the withdrawal forbids.
+type ReSolicitationError struct{}
+
+func (e *ReSolicitationError) Error() string {
+	return "this contact has withdrawn this purpose, so we do not ask them about it again"
+}
+
+// FieldFault carries the refusal to every surface, the field naming the purpose
+// because that is what the caller would change.
+func (e *ReSolicitationError) FieldFault() (field, code, message string) {
+	return purposeIDField, "purpose_withdrawn", e.Error()
 }

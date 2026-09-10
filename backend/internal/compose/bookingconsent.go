@@ -110,7 +110,7 @@ func admitBookingMarketingPurpose(purposes []consent.Purpose, purposeID ids.UUID
 	return httperr.Validation("consent.marketing.purpose_id", "invalid", "not a tracked consent purpose")
 }
 
-func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, personID ids.UUID, c activities.BookingConsent) error {
+func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, personID ids.UUID, c activities.BookingConsent) (activities.MarketingOutcome, error) {
 	source := "public_booking"
 	_, err := a.store.Record(ctx, consent.RecordInput{
 		PersonID:      ids.From[ids.PersonKind](personID),
@@ -128,12 +128,13 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, person
 	// bad DOI token reads as the 422 it is, not a 500.
 	var invalid *consent.ValidationError
 	if errors.As(err, &invalid) {
-		return httperr.Validation(invalid.Field, "invalid", invalid.Reason)
+		return activities.MarketingNotRequested, httperr.Validation(invalid.Field, "invalid", invalid.Reason)
 	}
 	if err != nil {
-		return err
+		return activities.MarketingNotRequested, err
 	}
-	return a.askMarketing(ctx, personID, c.Marketing)
+	outcome, err := a.askMarketing(ctx, personID, c.Marketing)
+	return outcome, err
 }
 
 // askMarketing mails the confirmation link an affirmative tick earns, and it
@@ -161,15 +162,41 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, person
 // installation that has not wired that text has a consent problem whether or
 // not this code reads it. Carrying both through to the grant needs columns on
 // confirm_token, which is its own change.
-func (a bookingConsentAdapter) askMarketing(ctx context.Context, personID ids.UUID, m *activities.BookingMarketing) error {
+func (a bookingConsentAdapter) askMarketing(ctx context.Context, personID ids.UUID,
+	m *activities.BookingMarketing,
+) (activities.MarketingOutcome, error) {
 	if m == nil {
-		return nil
+		return activities.MarketingNotRequested, nil
 	}
 	_, err := a.store.IssueConsentLink(ctx,
 		ids.From[ids.PersonKind](personID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom)
-	var invalid *consent.ValidationError
-	if errors.As(err, &invalid) {
-		return httperr.Validation(invalid.Field, "invalid", invalid.Reason)
+	if err == nil {
+		return activities.MarketingPendingConfirmation, nil
 	}
-	return err
+	// TWO KINDS OF REFUSAL, and only one of them may cost the meeting.
+	//
+	// A refusal about THIS INSTALLATION'S ability to ask — no live address on
+	// the record, a purpose archived since the form was published, a mail lane
+	// that would not take the message — is reported and not raised. The tick
+	// was optional and the meeting was not: the subject can be asked again from
+	// the preference centre or the next mail, and the slot they booked cannot
+	// be handed back. Before this, every one of those took the booking with it.
+	//
+	// A refusal about WHERE THE QUESTION WOULD GO is fatal, and stays fatal.
+	// A misdirected link mails a stranger's mailbox about a request made from
+	// an address they do not hold; a re-solicitation mails somebody who
+	// explicitly withdrew. Neither is a question worth asking at any price, and
+	// swallowing either would turn a booking form into the way around a
+	// withdrawal.
+	// Returned as themselves rather than translated: both implement
+	// apperrors.FieldFault, which httperr renders as the 422 naming the field —
+	// and which the MCP surface reads too, where a translation done here would
+	// not reach.
+	if misdirected := new(consent.MisdirectedLinkError); errors.As(err, &misdirected) {
+		return activities.MarketingNotRequested, misdirected
+	}
+	if resolicit := new(consent.ReSolicitationError); errors.As(err, &resolicit) {
+		return activities.MarketingNotRequested, resolicit
+	}
+	return activities.MarketingNotAsked, nil
 }

@@ -6790,15 +6790,32 @@ paths:
                 consent: { $ref: '#/components/schemas/CaptureConsent' }
       responses:
         '201':
-          description: Booked; a minimal confirmation (no CRM record data disclosed).
+          description: |
+            Booked; a minimal confirmation (no CRM record data disclosed). `marketing` reports what
+            became of the newsletter tick, separately from the booking itself: a question this
+            installation could not put — no live mailbox on the record, a purpose archived since the
+            form was published, a mail lane that refused it — leaves the meeting standing and says
+            `not_asked`, so a booker who ticked the box is not left waiting for a mail that is not
+            coming.
           content:
             application/json:
               schema:
                 type: object
-                required: [start, end]
+                required: [start, end, booking, marketing]
                 properties:
                   start: { type: string, format: date-time }
                   end:   { type: string, format: date-time }
+                  booking:
+                    type: string
+                    enum: [confirmed]
+                    description: 'The slot is held. A booking that did not commit answers 409 or 422 instead.'
+                  marketing:
+                    type: string
+                    enum: [not_requested, pending_confirmation, not_asked]
+                    description: |
+                      `not_requested` — the form carried no tick. `pending_confirmation` — the question
+                      was mailed and the grant waits on the subject answering it. `not_asked` — the
+                      question could not be put; the booking stands and no subscription mail follows.
         '409': { description: 'Slot no longer available (`code: slot_taken`).', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
         '422': { $ref: '#/components/responses/ValidationError' }
 
