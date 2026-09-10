@@ -15046,6 +15046,57 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /users/{id}/sessions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: listUserSessions
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: The sessions open under a member's account. Admin-only, human-only.
+      description: |
+        For a `user_admin` holder: the live sessions open under another member's account,
+        each naming the device it was opened from. The self-service `GET /me/sessions` is the
+        owner's own view; this is the administrative one, so it carries the grant rather than
+        being self-scoped. No `current` marker — the admin's own request is never one of the
+        target's sessions. No IP, the same coarser view the owner gets. A delegated admin may
+        not view a full admin's sessions (403), and an unknown member is 404.
+      responses:
+        '200':
+          description: The member's live sessions, newest activity first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserSessionList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /users/{id}/sessions/{sessionId}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: sessionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      tags: [Identity]
+      operationId: revokeUserSession
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: End one of a member's sessions. Admin-only, human-only.
+      description: |
+        For a `user_admin` holder: ends one session open under another member's account — the
+        administrative counterpart to a person signing their own device out. A session id the
+        member does not hold is answered 404, never 403, so an admin cannot probe ids by whose
+        revoke lands; a delegated admin may not end a full admin's session (403); an unknown
+        member is 404. Ending an already-ended session is a no-op. The action is audited naming
+        both the acting admin and the member.
+      responses:
+        '204': { description: 'The session is revoked, or was already.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /users/{id}/password-link:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -22729,6 +22780,40 @@ components:
         sessions:
           type: array
           items: { $ref: '#/components/schemas/MySession' }
+    UserSession:
+      type: object
+      additionalProperties: false
+      required: [id, signed_in_at, last_active_at]
+      description: >-
+        One session open under a member's account as an admin sees it: the same view its owner
+        gets from MySession, minus `current` — the admin's own request is never one of the
+        target's sessions. No IP, the same coarser view the owner has.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The session's handle, for revoking it.
+        user_agent:
+          type: string
+          nullable: true
+          description: The User-Agent the session was opened from, or null when the client sent none.
+        signed_in_at:
+          type: string
+          format: date-time
+          description: When the session was opened.
+        last_active_at:
+          type: string
+          format: date-time
+          description: When a request was last admitted on it.
+    UserSessionList:
+      type: object
+      additionalProperties: false
+      required: [sessions]
+      description: A member's live sessions, newest activity first.
+      properties:
+        sessions:
+          type: array
+          items: { $ref: '#/components/schemas/UserSession' }
     AuthenticationPolicy:
       type: object
       description: |

@@ -2299,6 +2299,14 @@ func (stubs) ChangeUserRole(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "ChangeUserRole")
 }
 
+func (stubs) ListUserSessions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListUserSessions")
+}
+
+func (stubs) RevokeUserSession(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, sessionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RevokeUserSession")
+}
+
 func (stubs) ListSavedViews(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSavedViewsParams) {
 	httperr.NotImplemented(w, r, "ListSavedViews")
 }

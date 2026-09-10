@@ -10340,6 +10340,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/{id}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The sessions open under a member's account. Admin-only, human-only.
+         * @description For a `user_admin` holder: the live sessions open under another member's account,
+         *     each naming the device it was opened from. The self-service `GET /me/sessions` is the
+         *     owner's own view; this is the administrative one, so it carries the grant rather than
+         *     being self-scoped. No `current` marker — the admin's own request is never one of the
+         *     target's sessions. No IP, the same coarser view the owner gets. A delegated admin may
+         *     not view a full admin's sessions (403), and an unknown member is 404.
+         */
+        get: operations["listUserSessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * End one of a member's sessions. Admin-only, human-only.
+         * @description For a `user_admin` holder: ends one session open under another member's account — the
+         *     administrative counterpart to a person signing their own device out. A session id the
+         *     member does not hold is answered 404, never 403, so an admin cannot probe ids by whose
+         *     revoke lands; a delegated admin may not end a full admin's session (403); an unknown
+         *     member is 404. Ending an already-ended session is a no-op. The action is audited naming
+         *     both the acting admin and the member.
+         */
+        delete: operations["revokeUserSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}/password-link": {
         parameters: {
             query?: never;
@@ -15503,6 +15560,30 @@ export interface components {
         /** @description The caller's live sessions, newest activity first. */
         MySessionList: {
             sessions: components["schemas"]["MySession"][];
+        };
+        /** @description One session open under a member's account as an admin sees it: the same view its owner gets from MySession, minus `current` — the admin's own request is never one of the target's sessions. No IP, the same coarser view the owner has. */
+        UserSession: {
+            /**
+             * Format: uuid
+             * @description The session's handle, for revoking it.
+             */
+            id: string;
+            /** @description The User-Agent the session was opened from, or null when the client sent none. */
+            user_agent?: string | null;
+            /**
+             * Format: date-time
+             * @description When the session was opened.
+             */
+            signed_in_at: string;
+            /**
+             * Format: date-time
+             * @description When a request was last admitted on it.
+             */
+            last_active_at: string;
+        };
+        /** @description A member's live sessions, newest activity first. */
+        UserSessionList: {
+            sessions: components["schemas"]["UserSession"][];
         };
         /**
          * @description Which sign-in methods this installation offers, apart from the rest of its settings.
@@ -49493,6 +49574,57 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listUserSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The member's live sessions, newest activity first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSessionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    revokeUserSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The session is revoked, or was already. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     issueUserPasswordLink: {

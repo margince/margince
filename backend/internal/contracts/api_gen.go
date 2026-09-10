@@ -35427,6 +35427,26 @@ type UserListResponse struct {
 	Page PageInfo `json:"page"`
 }
 
+// UserSession One session open under a member's account as an admin sees it: the same view its owner gets from MySession, minus `current` — the admin's own request is never one of the target's sessions. No IP, the same coarser view the owner has.
+type UserSession struct {
+	// Id The session's handle, for revoking it.
+	Id openapi_types.UUID `json:"id"`
+
+	// LastActiveAt When a request was last admitted on it.
+	LastActiveAt time.Time `json:"last_active_at"`
+
+	// SignedInAt When the session was opened.
+	SignedInAt time.Time `json:"signed_in_at"`
+
+	// UserAgent The User-Agent the session was opened from, or null when the client sent none.
+	UserAgent *string `json:"user_agent,omitempty"`
+}
+
+// UserSessionList A member's live sessions, newest activity first.
+type UserSessionList struct {
+	Sessions []UserSession `json:"sessions"`
+}
+
 // VCardImportReport One entry per card in the file, in the order the file listed them.
 type VCardImportReport struct {
 	Results []VCardImportResult `json:"results"`
@@ -52934,6 +52954,12 @@ type ServerInterface interface {
 	// Set a member's system role. Admin-only, human-only.
 	// (PATCH /users/{id}/role)
 	ChangeUserRole(w http.ResponseWriter, r *http.Request, id Id)
+	// The sessions open under a member's account. Admin-only, human-only.
+	// (GET /users/{id}/sessions)
+	ListUserSessions(w http.ResponseWriter, r *http.Request, id Id)
+	// End one of a member's sessions. Admin-only, human-only.
+	// (DELETE /users/{id}/sessions/{sessionId})
+	RevokeUserSession(w http.ResponseWriter, r *http.Request, id Id, sessionId openapi_types.UUID)
 	// List the caller's saved views (per-user; optionally scoped to one resource).
 	// (GET /views)
 	ListSavedViews(w http.ResponseWriter, r *http.Request, params ListSavedViewsParams)
@@ -56510,6 +56536,18 @@ func (_ Unimplemented) ReactivateUser(w http.ResponseWriter, r *http.Request, id
 // Set a member's system role. Admin-only, human-only.
 // (PATCH /users/{id}/role)
 func (_ Unimplemented) ChangeUserRole(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The sessions open under a member's account. Admin-only, human-only.
+// (GET /users/{id}/sessions)
+func (_ Unimplemented) ListUserSessions(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// End one of a member's sessions. Admin-only, human-only.
+// (DELETE /users/{id}/sessions/{sessionId})
+func (_ Unimplemented) RevokeUserSession(w http.ResponseWriter, r *http.Request, id Id, sessionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -80946,6 +80984,79 @@ func (siw *ServerInterfaceWrapper) ChangeUserRole(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListUserSessions operation middleware
+func (siw *ServerInterfaceWrapper) ListUserSessions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUserSessions(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeUserSession operation middleware
+func (siw *ServerInterfaceWrapper) RevokeUserSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "sessionId" -------------
+	var sessionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "sessionId", chi.URLParam(r, "sessionId"), &sessionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sessionId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeUserSession(w, r, id, sessionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListSavedViews operation middleware
 func (siw *ServerInterfaceWrapper) ListSavedViews(w http.ResponseWriter, r *http.Request) {
 
@@ -85062,6 +85173,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/users/{id}/role", wrapper.ChangeUserRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{id}/sessions", wrapper.ListUserSessions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/users/{id}/sessions/{sessionId}", wrapper.RevokeUserSession)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/views", wrapper.ListSavedViews)
