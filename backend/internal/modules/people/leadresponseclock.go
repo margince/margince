@@ -15,10 +15,14 @@ package people
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -45,6 +49,37 @@ func stampHumanFirstResponse(ctx context.Context, p *storekit.Patch, current crm
 // leadStatusSetByColumn records who placed the lead on its current step.
 const leadStatusSetByColumn = "status_set_by"
 
-// stampStatusSetBy records that a status written through this path was a
-// hand's doing — a human, or an agent acting for one — as opposed to the
-// system's own climb from captured activity (advanceLeadStatusTx).
+// startLeadResponseClockTx stamps routed_at on a lead that has just gained its
+// first owner, unless something already started the clock.
+//
+// Two paths reach it — the update path's owner assignment and the claim
+// button's — because the SLA reads COALESCE(routed_at, created_at) and a lead
+// picked up long after it was captured would otherwise be measured from a date
+// nobody was answerable for.
+//
+// Both guards live in the WHERE clause, which is what makes this safe to call
+// from either path without a lock of its own: `routed_at IS NULL` means a
+// concurrent claim and assignment cannot both stamp, and the loser writes
+// nothing rather than moving a clock that had already started. `archived_at IS
+// NULL` refuses a retired lead, whose deadline is nobody's business.
+//
+// The caller has already taken the row's write authority: the claim path
+// through auth.EnsureClaimable inside storekit.ClaimOwnership, the update path
+// through ensureLeadUpdateAuthority. This adds no probe of its own because it
+// is the same transaction and the same row.
+func startLeadResponseClockTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	// The row is locked before it is read or written, so a concurrent claim and
+	// assignment serialise here rather than racing on the WHERE clause. LiveOnly
+	// refuses a retired lead outright, which is also the liveness answer this
+	// write owes.
+	if _, err := storekit.LockRow(ctx, tx, "lead", id, storekit.LiveOnly); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE lead SET routed_at = $2
+		  WHERE id = $1 AND routed_at IS NULL AND archived_at IS NULL`,
+		id, leadSLAClock().UTC()); err != nil {
+		return fmt.Errorf("people: starting the lead response clock: %w", err)
+	}
+	return nil
+}

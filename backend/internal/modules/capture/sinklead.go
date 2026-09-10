@@ -162,7 +162,19 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 	// only a `read` share of are equally not the connector's to fold onto, and
 	// the difference between 404 and 403 is a distinction for a caller, which a
 	// sweep does not have.
-	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
+	// A source that declined ownership gets a READ probe instead of a write one.
+	//
+	// EnsureWritable refuses an unowned row on purpose — it is nobody's to
+	// change until somebody claims it — so asking it here would fail every
+	// replay of exactly the rows this source creates. There is nothing to
+	// resume in any case: the row already carries what the natural key says,
+	// and this path folds no new field onto it. What still has to hold is that
+	// the caller may SEE the lead, which is what the replay hands back.
+	probe := auth.EnsureWritable
+	if fields.Unowned {
+		probe = auth.EnsureVisibleLive
+	}
+	if err := probe(ctx, tx, "lead", id.UUID); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 			return ids.LeadID{}, false, skipInvisibleIncumbent(rec, "lead")
 		}

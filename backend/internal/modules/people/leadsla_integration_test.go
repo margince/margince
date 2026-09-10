@@ -260,6 +260,86 @@ func TestTakingOnAnUnownedLeadStartsItsResponseClock(t *testing.T) {
 	}
 }
 
+// The "Take ownership" button starts the clock too.
+//
+// It is a different writer from an owner assignment — ClaimRecord updates
+// owner_id alone — and stamping only the update path left the button, which is
+// how a rep actually picks a lead up, handing them a deadline measured from the
+// day a crawler found the name.
+func TestClaimingAnUnownedLeadStartsItsResponseClock(t *testing.T) {
+	e := setupPromoteConsent(t)
+	id := ids.NewV7()
+	weekAgo := time.Now().UTC().Add(-7 * 24 * time.Hour)
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO lead (id, full_name, email, status, source, captured_by, owner_id, created_at)
+		 VALUES ($1, 'Found On A Website', 'claimed@example.test', 'new', 'siteread', 'agent:siteread', NULL, $2)`,
+		id, weekAgo); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.ClaimRecord(e.ctx, "lead", id, nil); err != nil {
+		t.Fatalf("claiming the lead: %v", err)
+	}
+
+	var routedAt *time.Time
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT routed_at FROM lead WHERE id = $1`, id).Scan(&routedAt); err != nil {
+		t.Fatal(err)
+	}
+	if routedAt == nil {
+		t.Fatal("claiming an unowned lead left routed_at unset, so its deadline is " +
+			"still measured from the day the crawler found the name")
+	}
+	if routedAt.Before(weekAgo.Add(time.Hour)) {
+		t.Errorf("routed_at = %s, want roughly now", *routedAt)
+	}
+}
+
+// A lead nobody has taken on owes no reply, so the breach scan must leave it
+// alone.
+//
+// Escalating one wrote sla_breached_at and minted a task for an intake owner
+// while the row still belonged to nobody — and the stamp then suppressed the
+// real escalation once somebody finally picked it up. Suppressing the
+// lead.created automations does not reach this path: it runs on a timer, not on
+// the event.
+func TestAnUnownedLeadIsNotEscalatedForBreachingAClockNobodyStarted(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	id := ids.NewV7()
+	longAgo := time.Now().UTC().Add(-30 * 24 * time.Hour)
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO lead (id, full_name, email, status, source, captured_by, owner_id, created_at)
+		 VALUES ($1, 'Found On A Website', 'unowned@example.test', 'new', 'siteread', 'agent:siteread', NULL, $2)`,
+		id, longAgo); err != nil {
+		t.Fatal(err)
+	}
+	// The premise guard: an OWNED lead of the same age must still breach, or
+	// this test passes against an SLA that escalates nothing at all.
+	owned := e.seedLeadCreatedAt(t, "owned@example.test", longAgo)
+
+	breached, err := e.store.ScanLeadSLA(e.ctx, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("scanning: %v", err)
+	}
+	var sawUnowned, sawOwned bool
+	for _, b := range breached {
+		if b.LeadID.UUID == id {
+			sawUnowned = true
+		}
+		if b.LeadID == owned {
+			sawOwned = true
+		}
+	}
+	if sawUnowned {
+		t.Error("a lead nobody owns was escalated for a deadline nobody was " +
+			"answerable for")
+	}
+	if !sawOwned {
+		t.Error("no owned lead breached either, so this proves nothing about the " +
+			"ownership arm")
+	}
+}
+
 // A human moving the lead off `new` is a first response; the stamp is set
 // once and a later status change does not move it. Disqualifying an
 // unanswered lead is an explicit disposition and stamps it too.

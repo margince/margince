@@ -383,6 +383,12 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		// Only on the first owner. A reassignment between people keeps the
 		// original clock: the customer has been waiting since we took the lead
 		// on, and passing it along is not an answer.
+		//
+		// Through the patch rather than startLeadResponseClockTx, which the
+		// claim path uses: this write is already inside a patch that carries
+		// the audit image, and a second statement beside it would put the stamp
+		// outside the record of the change that caused it. The two agree on the
+		// condition: no owner yet, and no clock yet.
 		if current.RoutedAt == nil && current.OwnerId == nil {
 			p.Set("routed_at", nil, leadSLAClock().UTC())
 		}
