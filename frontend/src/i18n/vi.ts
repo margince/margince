@@ -8024,8 +8024,6 @@ export const vi = {
   "person.action.messageOn": "Nhắn qua {transport}",
   "person.action.noTransport":
     "Không có địa chỉ và không có cuộc trò chuyện nào để trả lời.",
-  "person.action.consentRefused":
-    "Hiện chưa có mục đích nào cho phép viết cho họ.",
   "person.action.call": "Gọi",
   "person.action.meetings": "Xem lịch hẹn",
   "person.action.addTask": "Thêm việc",

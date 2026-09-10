@@ -385,25 +385,32 @@ describe("the header's writing verb", () => {
     expect(lead.getAttribute("aria-describedby")).toBeTruthy();
   });
 
-  it("refuses under the consent verdict on its own reason", async () => {
+  // WRITING IS ALWAYS AVAILABLE. A contact who stopped the newsletter can still
+  // be sent their invoice, and which purpose applies is a question about the
+  // MESSAGE — which this page does not have. Disabling the verb answered it
+  // anyway, and answered it wrong: a rep with a lawful service message to send
+  // was told the product would not let them write at all, with no way to see
+  // that only marketing was refused.
+  it("opens the composer even where no purpose currently permits writing", async () => {
     mount("overview", view, [mailBlocked]);
 
-    expect(await screen.findByText(CONSENT_REFUSED)).toBeTruthy();
     const lead = await leadVerb("Email");
-    expect(lead.disabled).toBe(true);
-    // The verb still names the transport it would have opened: what changed is
-    // whether it may be pressed, not what pressing it would do.
+    await waitFor(() => {
+      expect(lead.disabled).toBe(false);
+    });
+    expect(screen.queryByText(CONSENT_REFUSED)).toBeNull();
+    // The verb still names the transport it opens.
     expect(lead.querySelector(".lucide-mail")).toBeTruthy();
   });
 
-  it("keeps the two refusals apart when both apply", async () => {
-    // A rep told the wrong one goes looking in the wrong record. Reachability
-    // is the sentence to show, because it is the half that no consent decision
-    // can lift.
+  it("still refuses when there is nowhere to write to", async () => {
+    // Reachability is the half no consent decision can lift: with no transport
+    // the composer has nothing to send on, whatever the verdict says.
     mount("overview", unreachable, [mailBlocked]);
 
     expect(await screen.findByText(NO_TRANSPORT)).toBeTruthy();
-    expect(screen.queryByText(CONSENT_REFUSED)).toBeNull();
+    const lead = await leadVerb("Write");
+    expect(lead.disabled).toBe(true);
   });
 });
 

@@ -42,20 +42,13 @@ type Person360 = components["schemas"]["Person360"];
 // without a reason until the verdict is in, because claiming a refusal the
 // server has not made is worse than a control that is briefly quiet.
 function writeRefusal(
-  state: Readonly<{
-    transports: readonly Transport[];
-    consentAllows: boolean;
-    consentKnown: boolean;
-  }>,
+  state: Readonly<{ transports: readonly Transport[] }>,
   t: ReturnType<typeof useT>,
 ): string | undefined {
   if (state.transports.length === 0) {
     return t("person.action.noTransport");
   }
-  if (state.consentAllows || !state.consentKnown) {
-    return undefined;
-  }
-  return t("person.action.consentRefused");
+  return undefined;
 }
 
 // The header's verbs, in the order every record page carries them: writing
@@ -63,8 +56,6 @@ function writeRefusal(
 // worth doing is the one the call names, and that one carries the colour.
 export function PersonActions({
   view,
-  consentAllows,
-  consentKnown,
   personId,
   overlay,
   onWrite,
@@ -74,8 +65,6 @@ export function PersonActions({
   refusedReasonId,
 }: Readonly<{
   view: Person360;
-  consentAllows: boolean;
-  consentKnown: boolean;
   personId: string;
   // LogActivityAction itself renders nothing in overlay — a mirrored
   // workspace has no activity write of its own, the same fact
@@ -115,7 +104,7 @@ export function PersonActions({
   const transports = useTransports(view);
   const write = primaryTransportAction(transports, t);
   const WriteIcon = write.icon;
-  const refusal = writeRefusal({ transports, consentAllows, consentKnown }, t);
+  const refusal = writeRefusal({ transports }, t);
   return (
     <>
       {/* The shared Email verb, wearing the transport it will open when there
@@ -124,7 +113,6 @@ export function PersonActions({
       <EmailVerb
         label={write.label}
         icon={<WriteIcon size={15} aria-hidden="true" />}
-        disabled={!consentKnown}
         reason={refusal}
         onClick={onWrite}
       />
