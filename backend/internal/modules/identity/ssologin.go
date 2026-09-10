@@ -363,7 +363,7 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		return
 	}
 
-	token, err := h.svc.LoginViaFederatedIdentity(ctx, provider, sub, email)
+	token, err := h.svc.LoginViaFederatedIdentity(withUserAgent(ctx, r.UserAgent()), provider, sub, email)
 	if err != nil {
 		fail(ctx, "resolve/link account", err)
 		return

@@ -26965,6 +26965,29 @@ type MyAgentGrants struct {
 	Data []MyAgentGrant `json:"data"`
 }
 
+// MySession One session open under the caller's account, as its owner sees it. The opaque token never appears; `id` is the session's own handle, which `DELETE /me/sessions/{sessionId}` takes. No IP address — the device is the coarser view this list deliberately offers in its place.
+type MySession struct {
+	// Current Whether this is the session making the request.
+	Current bool `json:"current"`
+
+	// Id The session's handle, for revoking it.
+	Id openapi_types.UUID `json:"id"`
+
+	// LastActiveAt When a request was last admitted on it.
+	LastActiveAt time.Time `json:"last_active_at"`
+
+	// SignedInAt When the session was opened.
+	SignedInAt time.Time `json:"signed_in_at"`
+
+	// UserAgent The User-Agent the session was opened from, verbatim, or null when the client sent none. Shown as given; the client formats it.
+	UserAgent *string `json:"user_agent,omitempty"`
+}
+
+// MySessionList The caller's live sessions, newest activity first.
+type MySessionList struct {
+	Sessions []MySession `json:"sessions"`
+}
+
 // MyWorkingHoursResponse The caller's own working hours, and whether they are theirs or the fallback.
 type MyWorkingHoursResponse struct {
 	// Chosen False when nobody has chosen: the hours above are then the fallback —
@@ -52158,6 +52181,12 @@ type ServerInterface interface {
 	// Choose the language your own interface is in.
 	// (PUT /me/locale)
 	SaveMyLocale(w http.ResponseWriter, r *http.Request)
+	// The sessions open under your account.
+	// (GET /me/sessions)
+	ListMySessions(w http.ResponseWriter, r *http.Request)
+	// End one of your sessions.
+	// (DELETE /me/sessions/{sessionId})
+	RevokeMySession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID)
 	// When you are bookable.
 	// (GET /me/working-hours)
 	GetMyWorkingHours(w http.ResponseWriter, r *http.Request)
@@ -54975,6 +55004,18 @@ func (_ Unimplemented) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request
 // Choose the language your own interface is in.
 // (PUT /me/locale)
 func (_ Unimplemented) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The sessions open under your account.
+// (GET /me/sessions)
+func (_ Unimplemented) ListMySessions(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// End one of your sessions.
+// (DELETE /me/sessions/{sessionId})
+func (_ Unimplemented) RevokeMySession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -69213,6 +69254,58 @@ func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveMyLocale(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMySessions operation middleware
+func (siw *ServerInterfaceWrapper) ListMySessions(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMySessions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeMySession operation middleware
+func (siw *ServerInterfaceWrapper) RevokeMySession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "sessionId" -------------
+	var sessionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "sessionId", chi.URLParam(r, "sessionId"), &sessionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sessionId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeMySession(w, r, sessionId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -84216,6 +84309,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/locale", wrapper.SaveMyLocale)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/sessions", wrapper.ListMySessions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/sessions/{sessionId}", wrapper.RevokeMySession)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/working-hours", wrapper.GetMyWorkingHours)

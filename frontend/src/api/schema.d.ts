@@ -13505,6 +13505,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The sessions open under your account.
+         * @description Always the CALLER's own. Each entry names the device the session was
+         *     opened from and when, and marks the one making this request, so a person
+         *     can recognise a session they do not know and end it. The opaque token is
+         *     never returned — a session is named here by its own id, which is the
+         *     handle `DELETE` takes. The address a session was opened from is
+         *     deliberately withheld: the device is enough to recognise it by, and the
+         *     IP is a sharper disclosure than the list needs.
+         */
+        get: operations["listMySessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * End one of your sessions.
+         * @description Ends the caller's own session named by its id — including the session
+         *     making the request, which is how a person signs THIS device out by
+         *     choosing it from the list. A session id that is not the caller's is
+         *     answered 404, never 403: whose revoke succeeds must not disclose whether
+         *     a session exists. Ending an already-ended session is a no-op, not an
+         *     error.
+         */
+        delete: operations["revokeMySession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/working-hours": {
         parameters: {
             query?: never;
@@ -15424,6 +15477,32 @@ export interface components {
             source: "stored" | "environment" | "none";
             /** @description Every callback URL that must be registered as a redirect URI on the vendor's OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause. */
             redirect_uris: components["schemas"]["ConnectorAppRedirectUri"][];
+        };
+        /** @description One session open under the caller's account, as its owner sees it. The opaque token never appears; `id` is the session's own handle, which `DELETE /me/sessions/{sessionId}` takes. No IP address — the device is the coarser view this list deliberately offers in its place. */
+        MySession: {
+            /**
+             * Format: uuid
+             * @description The session's handle, for revoking it.
+             */
+            id: string;
+            /** @description The User-Agent the session was opened from, verbatim, or null when the client sent none. Shown as given; the client formats it. */
+            user_agent?: string | null;
+            /**
+             * Format: date-time
+             * @description When the session was opened.
+             */
+            signed_in_at: string;
+            /**
+             * Format: date-time
+             * @description When a request was last admitted on it.
+             */
+            last_active_at: string;
+            /** @description Whether this is the session making the request. */
+            current: boolean;
+        };
+        /** @description The caller's live sessions, newest activity first. */
+        MySessionList: {
+            sessions: components["schemas"]["MySession"][];
         };
         /**
          * @description Which sign-in methods this installation offers, apart from the rest of its settings.
@@ -54281,6 +54360,49 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listMySessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's live sessions, newest activity first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MySessionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    revokeMySession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The session is revoked, or was already. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
     getMyWorkingHours: {
