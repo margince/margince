@@ -715,3 +715,49 @@ func TestAnIntakeSeatMustBeAbleToReadTheLeadsItAnswersFor(t *testing.T) {
 		t.Errorf("the refused nomination was stored anyway")
 	}
 }
+
+// Taking on a lead that already breached clears the stamp with the clock.
+//
+// The two have to move together. COALESCE(routed_at, created_at) restarts the
+// deadline when somebody picks the lead up, and sla_breached_at keeps a row out
+// of the scan for good — so a stamp left behind by the ownerless escalation
+// would mean the new owner could never breach, on a clock that had just been
+// restarted for them. That is the suppression the breach scan used to avoid by
+// refusing to escalate unowned rows at all, which cost the intake seat its
+// escalation.
+func TestTakingOnABreachedLeadClearsTheStampWithTheClock(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	e.nameIntakeSeat(t, e.user)
+	now := time.Now().UTC()
+
+	// An inbound nobody picked up, past its target: the ownerless case that
+	// escalates to the intake seat.
+	lead := e.seedOwnerlessLeadCreatedAt(t, "waiting@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
+	if _, err := e.store.ScanLeadSLA(e.ctx, now); err != nil {
+		t.Fatalf("first scan: %v", err)
+	}
+	if target := e.breachTargetOf(t, lead); target == nil || *target != e.user.String() {
+		t.Fatalf("escalation target = %v, want the intake seat %s — the rest of this case rests on it having breached", target, e.user)
+	}
+
+	owner := ids.From[ids.UserKind](e.user)
+	if _, err := e.store.UpdateLead(e.ctx, lead, UpdateLeadInput{OwnerID: &owner}); err != nil {
+		t.Fatalf("taking the lead on: %v", err)
+	}
+
+	var breachedAt *time.Time
+	var routedAt *time.Time
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT sla_breached_at, routed_at FROM lead WHERE id = $1`, lead.UUID).
+		Scan(&breachedAt, &routedAt); err != nil {
+		t.Fatal(err)
+	}
+	if routedAt == nil {
+		t.Fatal("taking the lead on started no clock, so this case cannot say anything about the stamp beside it")
+	}
+	if breachedAt != nil {
+		t.Errorf("the breach stamp survived the take-on (%v) — the new owner's clock restarted and the scan will skip this row for good, so they can never breach on it",
+			breachedAt)
+	}
+}
