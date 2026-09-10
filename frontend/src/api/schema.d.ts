@@ -29264,6 +29264,18 @@ export interface components {
             state: "needs_context" | "needs_repair" | "resolved" | "superseded" | "cancelled";
             /** @enum {string} */
             kind: "single";
+            /**
+             * Format: uuid
+             * @description The held message this review can resume. A refused send freezes the message into a held
+             *     `scheduled_send` — subject, body, recipients, attachments and the claimed purpose — so
+             *     resolving the review fires what the rep wrote rather than something retyped from memory.
+             *     The signature and the unsubscribe footer are re-derived when it fires, as they are for any
+             *     scheduled send, so a resumed message is not byte-identical to the one that was refused.
+             *     Null for a review whose message could not be held: a channel reply, which the held row's
+             *     shape cannot carry; a recipient the installation has since been asked to forget; or a hold
+             *     that failed while the refusal still had to be answered.
+             */
+            delivery_intent_id?: string | null;
             /** @description The strongest reason across the recipients, so a queue can order without opening the snapshot. */
             reason_code: string;
             /** @description What was refused, per recipient. Empty once an erasure has cleared the subject from it. */

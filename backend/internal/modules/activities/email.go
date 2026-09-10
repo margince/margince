@@ -136,39 +136,52 @@ type DeliveryStager interface {
 //
 // A stager that does not implement it is a composition that keeps no record,
 // which is what every fixture is and what the product was before this existed.
+//
+// intentID names the held scheduled_send carrying the refused message, so the
+// review binds to something a human can resume. A zero id means the message was
+// not held — the caller could not freeze it, or the transport has nothing to
+// freeze — and the review is recorded without one, which is what every review
+// looked like before holdforreview.go existed.
 type RefusalRecorder interface {
-	RecordPendingReview(ctx context.Context, err error) error
+	RecordPendingReview(ctx context.Context, err error, intentID ids.UUID) error
 }
 
 // recordRefusal gives a stager that keeps records the chance to keep this one,
 // once the transaction is done with. It answers the error either way, so a
 // composition with no recorder refuses exactly as it did before.
-func recordRefusal(ctx context.Context, stager DeliveryStager, err error) error {
+func recordRefusal(ctx context.Context, stager DeliveryStager, err error, intentID ids.UUID) error {
 	recorder, ok := stager.(RefusalRecorder)
 	if !ok {
 		return err
 	}
-	return recordRefusalOn(ctx, recorder, err)
+	return recordRefusalOn(ctx, recorder, err, intentID)
 }
 
 // recordChannelRefusal is the same offer to the channel stager, which is a
 // different interface carrying the same optional seam.
+//
+// It never holds an intent. scheduled_send freezes a MAIL message — its payload
+// is addressed, subjected and attached like one, and the fire path rebuilds a
+// mail send from it. A channel reply frozen into that shape would be a message
+// no fire could send, so a refused channel reply keeps the review it always had
+// and gains nothing to resume. Giving channels their own resumable intent is a
+// slice of its own.
 func recordChannelRefusal(ctx context.Context, stager ChannelDeliveryStager, err error) error {
 	recorder, ok := stager.(RefusalRecorder)
 	if !ok {
 		return err
 	}
-	return recordRefusalOn(ctx, recorder, err)
+	return recordRefusalOn(ctx, recorder, err, ids.UUID{})
 }
 
 // recordRefusalOn is the shared body both transports call once they hold a
 // recorder. A refusal recorded on mail and one recorded on a channel answer
 // the same rule because they run the same code.
-func recordRefusalOn(ctx context.Context, recorder RefusalRecorder, err error) error {
+func recordRefusalOn(ctx context.Context, recorder RefusalRecorder, err error, intentID ids.UUID) error {
 	if err == nil {
 		return nil
 	}
-	return recorder.RecordPendingReview(ctx, err)
+	return recorder.RecordPendingReview(ctx, err, intentID)
 }
 
 // DeliveryRequest is one message handed to the delivery machinery. Message
