@@ -121,7 +121,11 @@ function ConnectionNotice({
         <p>{t("overlay.notConfigured")}</p>
       </EmptyState>
     ) : (
-      <Callout tone="danger" live="alert">
+      <Callout
+        kind="outcome"
+        tone="danger"
+        title={t("overlay.loadFailedTitle")}
+      >
         {problemMessageOf(query.error, t, t("overlay.loadFailed"))}
       </Callout>
     );

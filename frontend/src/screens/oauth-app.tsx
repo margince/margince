@@ -265,7 +265,13 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
           {(status) => (
             <>
               {failure && (
-                <Callout tone="danger">{problemMessageOf(failure, t)}</Callout>
+                <Callout
+                  kind="outcome"
+                  tone="danger"
+                  title={t("oauthApp.writeFailed")}
+                >
+                  {problemMessageOf(failure, t)}
+                </Callout>
               )}
               {/* Three states, because there are three answers. `configured`
                   alone could not tell "nothing anywhere" from "the deployment

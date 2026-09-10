@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { Info, TriangleAlert } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
@@ -251,26 +250,28 @@ export function LicenseReading({
             one that was never configured is a standing condition. */}
         {entitlement.state === "rejected" && (
           <Callout
+            kind="standing"
             tone="warn"
-            icon={TriangleAlert}
             title={t("license.refused.title")}
           >
             {t("license.refused.body")}
           </Callout>
         )}
         {entitlement.state === "absent" && (
-          <Callout tone="info" icon={Info} title={t("license.absent.title")}>
+          <Callout kind="standing" title={t("license.absent.title")}>
             {t("license.absent.body")}
           </Callout>
         )}
         {entitlement.over_limit && (
-          // `alert` interrupts, which is right here and nowhere else on this
-          // screen: the installation is past what it is entitled to, and that is a
-          // thing the admin has to act on rather than notice eventually.
+          // `live` overrides what `standing` derives, which is silence: the
+          // breach is true as the page renders and still has to interrupt,
+          // here and nowhere else on this screen — the installation is past
+          // what it is entitled to, and that is a thing the admin has to act on
+          // rather than notice eventually.
           <Callout
+            kind="standing"
             tone="danger"
             live="alert"
-            icon={TriangleAlert}
             title={t("license.over.title")}
           >
             {/* Gated on the server's verdict ALONE. `over_limit` is false

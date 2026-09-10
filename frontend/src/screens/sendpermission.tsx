@@ -126,36 +126,44 @@ export function SendPermission({
 
   if (state === "refused") {
     return (
-      <Callout tone="danger" icon={ShieldAlert} live="status">
-        <p>{t("sendPermission.refused")}</p>
-        <p className="t-caption">{t(reasonKey(recipient))}</p>
+      // `status` rather than the silence a standing notice derives: the answer
+      // arrives as the rep picks a recipient, so one who does not hear it meets
+      // the refusal at the Send button instead.
+      <Callout
+        tone="danger"
+        kind="standing"
+        live="status"
+        icon={ShieldAlert}
+        title={t("sendPermission.refused")}
+      >
+        {t(reasonKey(recipient))}
       </Callout>
     );
   }
 
   return (
+    // `status` for the same reason the refusal above keeps it.
     <Callout
       tone="warn"
-      icon={ShieldQuestion}
+      kind="standing"
       live="status"
+      icon={ShieldQuestion}
+      title={t("sendPermission.unproven")}
       actions={
         onOverride ? (
           <Button onClick={onOverride}>{t("sendPermission.sayWhy")}</Button>
         ) : undefined
       }
     >
-      <p>{t("sendPermission.unproven")}</p>
       {/* The hint says what the rep can DO, so it changes with what is on
           offer: with the control, how to answer; without it, what happens if
           the message goes as it stands. Telling a reader to "say so" beside no
           control would be the dead button in prose. */}
-      <p className="t-caption">
-        {t(
-          onOverride
-            ? "sendPermission.unprovenHint"
-            : "sendPermission.unprovenRefuses",
-        )}
-      </p>
+      {t(
+        onOverride
+          ? "sendPermission.unprovenHint"
+          : "sendPermission.unprovenRefuses",
+      )}
     </Callout>
   );
 }

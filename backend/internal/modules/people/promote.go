@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -140,6 +141,15 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 		}
 		if err := carryLeadConsent(ctx, tx, id, personID, by); err != nil {
 			return fmt.Errorf("carry lead consent: %w", err)
+		}
+		// And the lead's STOPS, which live in consent's table rather than ours
+		// — see stopcarry.go. A lead who asked us to stop and was then promoted
+		// would otherwise arrive as a person carrying no stop at all, which is
+		// the same silent resumption the person merge produced.
+		if err := s.carryStopsTx(ctx, tx,
+			commsauthz.LeadStopSubject(id),
+			commsauthz.PersonStopSubject(personID)); err != nil {
+			return fmt.Errorf("carry the lead's stops: %w", err)
 		}
 		carried, err := carryLeadActivities(ctx, tx, id, personID)
 		if err != nil {
@@ -408,6 +418,15 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 // converted_from_lead_id that lies when the field was already set, and never
 // omitting a title it just filled. A no-op merge returns a nil map.
 func (s *Store) mergeLeadIntoPerson(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, personID ids.PersonID) (map[string]any, error) {
+	// BEFORE the person row lock. Recording a stop takes consent's lock on the
+	// person and then reads the person row; taking the row first here and
+	// consent's lock later (in carryStopsTx, once the promotion knows this is
+	// the surviving person) inverts the order and deadlocks. See
+	// StopCarrier.LockStopsTx.
+	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier,
+		commsauthz.PersonStopSubject(personID)); err != nil {
+		return nil, err
+	}
 	lock, err := storekit.LockRow(ctx, tx, "person", personID.UUID, storekit.LiveOnly)
 	if err != nil {
 		return nil, fmt.Errorf("lock merge-target person: %w", err)

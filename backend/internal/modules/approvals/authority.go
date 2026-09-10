@@ -17,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -63,6 +62,17 @@ const kindLinkedInMatch = "linkedin_match"
 // the release files the message under — and a typo across them would leave the
 // kind half-governed with nothing saying so.
 const kindHeldDraft = "held_draft"
+
+// kindDealFollowUp is the nightly reconciliation's "this conversation left no
+// next step" card, and kindTranscriptProposal the next step a transcript
+// recorded somebody committing to. Named rather than spelled: this module makes
+// three separate statements about each — the grants deciding it needs, that the
+// rep it was staged for decides it alone, and what filing it means — and a typo
+// across them would leave the kind half-governed with nothing saying so.
+const (
+	kindDealFollowUp       = "deal_follow_up"
+	kindTranscriptProposal = "transcript_proposal"
+)
 
 // KindScheduledSendHeld is the card a stopped scheduled message raises for the
 // rep who scheduled it (ADR-0104 §5). Exported because compose stages it and
@@ -248,14 +258,14 @@ var decisionGrants = map[string][]grantRequirement{
 	// the drafted task activity; the target deal's visibility gates who
 	// may see and decide it (targetVisible), the create grant gates the
 	// write the confirm performs.
-	"deal_follow_up": {{objectActivity, principal.ActionCreate}},
+	kindDealFollowUp: {{objectActivity, principal.ActionCreate}},
 	// Confirming a next step read out of a meeting transcript (S-E04.3)
 	// creates the task activity it proposed. The transcript activity it is
 	// filed against gates who may see and decide it (targetVisible); the
 	// create grant gates the write the confirm performs. Read is not enough:
 	// somebody who may read the transcript but not add to the timeline could
 	// otherwise release a task they could not have logged themselves.
-	"transcript_proposal": {{objectActivity, principal.ActionCreate}},
+	kindTranscriptProposal: {{objectActivity, principal.ActionCreate}},
 	// A proposed stage move is decided by whoever may MOVE the deal. Approving
 	// it performs the advance, so read is not enough: somebody who can see a
 	// deal but not steer it must not be able to release a move they could not
@@ -320,52 +330,6 @@ var targetResolvedGrants = map[string]principal.Action{
 	"create_record":  principal.ActionCreate,
 }
 
-// selfOnlyKinds are the staging kinds whose proposal is nobody's business but
-// the member it was staged for.
-//
-// The inbox is a SHARED surface by design — a manager triages what a rep
-// staged — and for almost every kind that is the point. It is wrong for one:
-// a LinkedIn match names a third party out of one member's imported address
-// book, people who never agreed to be in this CRM at all. The endpoints this
-// kind replaced were owner-only and said so; routing the same question through
-// a shared inbox would have handed every admin a readable copy of a
-// colleague's contact list, which is a bigger disclosure than the feature it
-// enables.
-//
-// So a self-only kind adds one predicate to the two below: the deciding human
-// must BE the member it was staged for. It is the inbox's mirror of the
-// webhooks module's selfOnlyEvents, which keeps the same three LinkedIn facts
-// off the workspace fan-out for the same reason.
-//
-// A step-up is the other: "may this agent keep reading" is a question about ONE
-// connection, and the only person who can answer it is the human whose authority
-// that connection borrows.
-// A held scheduled send is the third: the message is one rep's, the decision is
-// whether to retry it or abandon it, and nobody else has standing to answer.
-var selfOnlyKinds = map[string]bool{
-	kindLinkedInMatch:     true,
-	KindVolumeRelease:     true,
-	KindScheduledSendHeld: true,
-	// A vCard review is one member's own uploaded address book, exactly the
-	// LinkedIn-match shape: the staged card names a third party who never
-	// agreed to be in this CRM, and a shared inbox would hand every
-	// person:create holder a readable copy of a colleague's contacts.
-	"vcard_create": true,
-	// A held draft is the fourth, and it is about WHOSE MAILBOX the message
-	// leaves from rather than who may read it. Releasing one sends it, and the
-	// send stamps its identity from the approving human: comms.stagingUser
-	// takes the sending credential from the authenticated principal, and the
-	// display name and signature come from that same actor. So a colleague who
-	// approved a rep's draft did not authorise the rep's message — they sent
-	// their own, into a customer thread they were never part of, signed by
-	// themselves.
-	//
-	// The narrowing puts the decision back with the person the message would go
-	// out as. It is also what kindHeldDraft's own doc has always claimed ("held
-	// for the rep it was written for") and what nothing enforced.
-	kindHeldDraft: true,
-}
-
 // decidable is the ONE visibility-and-authority predicate for the inbox
 // and the decision: true when p holds every grant approving a would
 // require AND could read the staged target itself — the object-read grant
@@ -374,8 +338,9 @@ var selfOnlyKinds = map[string]bool{
 // gate can never drift apart — you see exactly what you could act on, and
 // what you cannot see you cannot decide (in either direction). Two shapes
 // narrow that to ONE seat, the member the row was staged for: a self-only
-// kind, and a staged create against a table whose rows belong to one human
-// each. An unknown kind (no mapping) or unknown target type is not
+// kind, a staged create against a table whose rows belong to one human
+// each, and a kind that is one rep's own morning work
+// (decidedByTheSeatStagedFor). An unknown kind (no mapping) or unknown target type is not
 // decidable: fail-closed.
 func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bool, error) {
 	if requireDecisionGrants(p, a) != nil {
@@ -385,29 +350,6 @@ func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bo
 		return false, nil
 	}
 	return targetDecidable(ctx, tx, a.TargetType, a.TargetID)
-}
-
-// withheldFromOtherSeats is the self-only narrowing of decidable, spelled once
-// because three reads apply it: the inbox scan through decidable, and the two
-// target-filtered reads (inbox.listForTarget, Service.PendingForTarget) which
-// settle target visibility for the record instead of per row and so cannot call
-// decidable itself. It reports the rows this caller must NOT see — true when the
-// staging is bound to one seat and p is not it.
-//
-// Two routes to the same predicate: a kind whose subject is one member's own
-// business, and a staged create against a table whose rows belong to one human
-// each — where no row exists yet for an ownership probe to ask. Fail-closed on a
-// missing stager: a proposal nobody is recorded for is one nobody may read, not
-// one everybody may.
-//
-// Held by: TestEveryApprovalsGrantFilterAlsoAppliesTheSelfOnlyNarrowing
-// (backend/gates/approvalselfonlyreaders_test.go) — it fails when a reader
-// filters rows with requireDecisionGrants and does not also call this.
-func withheldFromOtherSeats(p principal.Principal, a row) bool {
-	if !selfOnlyKinds[a.Kind] && !stagedForStagerOnly(a.TargetType, a.TargetID != nil) {
-		return false
-	}
-	return a.OnBehalfOf == nil || p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID
 }
 
 func requireDecisionGrants(p principal.Principal, a row) error {

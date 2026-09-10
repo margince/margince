@@ -139,7 +139,7 @@ test("AC-meeting-brief-1: a rep opens the brief and meets the ask before the det
   // The ask, then the watch-out, then everything else. A reader who stops
   // after the first screen has still met the two that change what they say.
   const goal = await boxOf(page, ".panel-accent");
-  const risk = await boxOf(page, ".callout-warn");
+  const risk = await boxOf(page, ".panel-warn");
   expect(goal.y).toBeLessThan(risk.y);
   await expect(
     page.getByRole("heading", { name: copy("person.meeting.goal") }),
@@ -231,7 +231,7 @@ test.describe("with a preparation plan", () => {
     expect(objective.y).toBeLessThan(close.y);
     // An outline plan ADDS to the brief. The watch-out a reader already had
     // must still be on the page, not buried behind it.
-    await expect(page.locator(".callout-warn")).toBeVisible();
+    await expect(page.locator(".panel-warn")).toBeVisible();
   });
 
   test("AC-meeting-brief-13: the three ways to close sit side by side", async ({

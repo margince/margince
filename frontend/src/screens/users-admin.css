@@ -21,18 +21,20 @@
   min-width: 0;
 }
 
-/* A refused write on a member's row, under that row and inside its cell — so
-   the hairline the list draws still separates one member from the next, and the
-   notice is not squeezed into the right column beside the control that caused
-   it. The row above brings its own bottom padding, so this pays for the
-   interval below itself and nothing else does. */
+/* The BOX a refused write sits in on a member's row, under that row and inside
+   its cell — so the hairline the list draws still separates one member from the
+   next, and the notice is not squeezed into the right column beside the control
+   that caused it. The interval is the box's, never the notice's: a callout owns
+   no layout, and the row above brings its own bottom padding, so this pays for
+   the interval below itself and nothing else does. */
 .users-member-error {
   margin-bottom: var(--space-3);
 }
 
-/* The refusal a write comes back with inside the set-password dialog. It sits
-   in a wrapping flex line (`.users-link-row`), so the notice takes the whole
-   next line rather than being squeezed between the controls it is about. */
+/* The BOX a refusal sits in inside the set-password dialog. It sits in a
+   wrapping flex line (`.users-link-row`), so it takes the whole next line
+   rather than being squeezed between the controls it is about — and the line
+   is the box's business, because the notice inside it owns no layout. */
 .users-formerror {
   flex-basis: 100%;
 }

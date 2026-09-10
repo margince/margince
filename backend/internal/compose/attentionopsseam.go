@@ -100,6 +100,7 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 			Kind:         concern.Kind,
 			Provider:     concern.Provider,
 			AccountLabel: concern.AccountLabel,
+			FailingSince: concern.FailingSince,
 		})
 	}
 	return out, nil

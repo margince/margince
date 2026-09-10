@@ -3,16 +3,18 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useQuery } from "@tanstack/react-query";
-import { QueryGate } from "./common";
+import { Button } from "../design-system/atoms";
+import { QueryGate, WriteRefused } from "./common";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// QueryGate is the shared loading/error/empty/loaded ladder every screen's
-// detail read renders through — exercised here off a small demo query
-// against the shared fetch stub, one story per state, rather than a
-// hand-built UseQueryResult (react-query's result shape isn't meant to be
-// constructed by hand).
+// The two surfaces `common.tsx` renders for every screen. QueryGate is the
+// shared loading/error/empty/loaded ladder a detail read goes through —
+// exercised off a small demo query against the shared fetch stub, one story per
+// state, rather than a hand-built UseQueryResult (react-query's result shape
+// isn't meant to be constructed by hand). WriteRefused is the other half of the
+// same honesty: what a screen says when the server refused the write.
 const meta: Meta = {
-  title: "Patterns/Query gate",
+  title: "Patterns/Screen plumbing",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -97,4 +99,31 @@ export const Loaded: Story = {
       </StoryProviders>
     );
   },
+};
+
+/** A refused write: the screen's claim as the heading, the server's cause under
+ *  it. Danger is the only tone it has — a blocked write is never milder. */
+export const Refused: Story = {
+  render: () => (
+    <StoryProviders>
+      <WriteRefused
+        titleKey="settings.saveFailed"
+        message="That signature is longer than the 2000 characters allowed."
+      />
+    </StoryProviders>
+  ),
+};
+
+/** The same refusal where the reader has a move: the verb sits at the end of
+ *  the heading's line, and drops under the body on a phone. */
+export const RefusedWithRetry: Story = {
+  render: () => (
+    <StoryProviders>
+      <WriteRefused
+        titleKey="settings.saveFailed"
+        message="The connection dropped before the save landed."
+        actions={<Button small>Retry</Button>}
+      />
+    </StoryProviders>
+  ),
 };

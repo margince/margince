@@ -47,6 +47,19 @@ const (
 // An unknown level ranks ABOVE every real one rather than below. A level this
 // build does not recognise is a level written by a newer build, and treating it
 // as weak would let this one overrule a decision it cannot even name.
+// LevelsWeakestFirst is the authority ladder in rank order, exported so a
+// caller that must express the SAME comparison in SQL derives it from here
+// rather than retyping it.
+//
+// A retyped ladder is a second answer to "who outranks whom", and the copy that
+// stops matching is the one nobody notices — a stop somebody could suddenly
+// lift. Anything NOT in this list outranks everything in it, which is rank()'s
+// own default: an unrecognised level is not a weak one, it is one this build
+// does not understand, and it must not be overruled.
+func LevelsWeakestFirst() []AuthorityLevel {
+	return []AuthorityLevel{LevelMachine, LevelUser, LevelAdmin, LevelSubject}
+}
+
 func (l AuthorityLevel) rank() int {
 	switch l {
 	case LevelMachine:

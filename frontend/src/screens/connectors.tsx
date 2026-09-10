@@ -1,10 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Mail, RefreshCw, Send, X } from "lucide-react";
+import { CalendarDays, Mail, RefreshCw, Send } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { connectorsPollInterval } from "../app/capture-progress";
-import { useRoute } from "../app/router";
 import {
   Badge,
   Button,
@@ -33,6 +32,7 @@ import {
 } from "./connector-status";
 import { isMailbox, isMailIcon } from "./connectorproviders";
 import { ConnectorContextTagRow } from "./connectors.contexttag";
+import { OAuthOutcomeNote } from "./connectors.notices";
 import { ImapConnectForm } from "./imap-connect-form";
 import { TelegramConnectForm } from "./telegram-connect-form";
 import "./connectors.css";
@@ -105,28 +105,6 @@ const OAUTH_DISCONNECT_NOTE: Partial<Record<Provider, MessageKey>> = {
   graphcal: "connectors.disconnectBodyMicrosoftNote",
 };
 
-// The OAuth callback lands back on #/settings/connections/{outcome} — the
-// route parses to id2 = "ok" | "denied" | "rejected" | "misconfigured" |
-// "bad_client" | "error". Only these are server-defined (contract-first); any
-// other value is silently ignored rather than rendering a raw route segment.
-//
-// Three of them exist so a failure nobody can fix by retrying does not tell the
-// reader to retry, and they are three rather than two because the remedies are
-// different screens: the provider refused the grant (reconnect and accept
-// everything), its API was never enabled (the vendor console), or it refused
-// this deployment's client credentials (the app card in Settings).
-const OAUTH_OUTCOME_NOTE: Record<
-  string,
-  { key: MessageKey; tone: "success" | "danger" }
-> = {
-  ok: { key: "connectors.oauthOk", tone: "success" },
-  denied: { key: "connectors.oauthDenied", tone: "danger" },
-  rejected: { key: "connectors.oauthRejected", tone: "danger" },
-  misconfigured: { key: "connectors.oauthMisconfigured", tone: "danger" },
-  bad_client: { key: "connectors.oauthBadClient", tone: "danger" },
-  error: { key: "connectors.oauthError", tone: "danger" },
-};
-
 export type ConnectorsResult = {
   // GET /connectors answers 501 code:not_implemented when this deployment
   // never wired mail capture (httperr.NotImplemented) — a calm, documented
@@ -151,59 +129,6 @@ type PublicOriginStatus =
 type ProviderReadiness = NonNullable<
   components["schemas"]["CaptureConnectionListResponse"]["providers"]
 >[number];
-
-// The OAuth return outcome (Task 2): the callback lands back on
-// #/settings/connections/{outcome} — id2 on that route only, never parsed
-// from location.hash directly (the router already owns that). Split out of
-// the panel so its dismissal state and branching stay off that function's
-// complexity budget. Dismissing (or navigating away, which unmounts this
-// card) clears it; the list itself already refetches on mount, so "ok" needs
-// no extra invalidation here.
-//
-// It sits ABOVE the row list rather than in it: it reports on what the reader
-// just did, which is not one of the card's standing decisions.
-function OAuthOutcomeNote() {
-  const t = useT();
-  const route = useRoute();
-  const oauthOutcome =
-    route.screen === "settings" && route.id === "connections"
-      ? route.id2
-      : undefined;
-  const [dismissedOutcome, setDismissedOutcome] = useState<string | null>(null);
-  // Object.hasOwn, not a bare index: a route segment like "constructor" would
-  // otherwise resolve to an inherited member and render an empty note.
-  const note =
-    oauthOutcome &&
-    oauthOutcome !== dismissedOutcome &&
-    Object.hasOwn(OAUTH_OUTCOME_NOTE, oauthOutcome)
-      ? OAUTH_OUTCOME_NOTE[oauthOutcome]
-      : undefined;
-  if (!note) {
-    return null;
-  }
-  // A Callout, not a hand-tinted paragraph: this is the surface reporting on
-  // what the reader just did, which is exactly the closed tone set Callout
-  // owns. `.connector-oauth-note` was a class no stylesheet ever declared, so
-  // every rule its name implied did nothing at all.
-  return (
-    <Callout
-      tone={note.tone}
-      live="status"
-      actions={
-        <Button
-          small
-          variant="ghost"
-          aria-label={t("connectors.dismissOutcome")}
-          onClick={() => setDismissedOutcome(oauthOutcome ?? null)}
-        >
-          <X aria-hidden /> {t("connectors.dismissOutcome")}
-        </Button>
-      }
-    >
-      {t(note.key)}
-    </Callout>
-  );
-}
 
 // A connection's identity, as the left half of its row: the provider this
 // build's own name for it, and the account it reads. One shape for a mailbox
@@ -319,15 +244,25 @@ function AddConnectionDialog({
             />
           ))}
         </SettingList>
+        {/* The fact is standing — this deployment never wired that provider —
+            but the reader learns it BY pressing Connect and it is set on that
+            press alone, so it is an `outcome` and is spoken. `info` and not
+            `warn`: an unwired provider is a documented configuration, and
+            nothing about it is wrong. */}
         {notConfigured501 && (
-          <Callout tone="danger" live="alert">
-            {t("connectors.providerNotConfigured", {
+          <Callout
+            kind="outcome"
+            title={t("connectors.providerNotConfigured", {
               provider: t(providerLabel[notConfigured501]),
             })}
-          </Callout>
+          />
         )}
         {connectError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("connectors.connectFailed")}
+          >
             {connectError}
           </Callout>
         )}
@@ -419,8 +354,8 @@ function TelegramNotice({
   }
   if (query.isError) {
     return (
-      <Callout tone="danger" live="alert">
-        {problemMessageOf(query.error, t, t("connectors.loadFailed"))}
+      <Callout tone="danger" kind="outcome" title={t("connectors.loadFailed")}>
+        {problemMessageOf(query.error, t)}
       </Callout>
     );
   }
@@ -688,34 +623,38 @@ function ConnectorRow({
           </span>
         }
         control={
-          <div className="connector-control">
-            <div className="connector-actions">
-              {needsReconnect &&
-                (OAUTH_PROVIDERS.has(conn.provider) ? (
-                  // `pending`, never `disabled`: a write already on its way is
-                  // a different unavailability from one the reader could fix,
-                  // and disabling the button they just pressed drops their
-                  // focus to <body> at the moment there is something to say.
-                  <Button small pending={connectPending} onClick={onReconnect}>
-                    <RefreshCw aria-hidden /> {t("connectors.reconnect")}
-                  </Button>
-                ) : (
-                  <Button small onClick={onImapReconnect}>
-                    <RefreshCw aria-hidden /> {t("connectors.reconnect")}
-                  </Button>
-                ))}
-              <Button small variant="ghost" onClick={onDisconnect}>
-                {t("connectors.disconnect")}
-              </Button>
-            </div>
-            {connectError && (
-              <Callout tone="danger" live="alert">
-                {connectError}
-              </Callout>
-            )}
+          <div className="connector-actions">
+            {needsReconnect &&
+              (OAUTH_PROVIDERS.has(conn.provider) ? (
+                // `pending`, never `disabled`: a write already on its way is a
+                // different unavailability from one the reader could fix, and
+                // disabling the button they just pressed drops their focus to
+                // <body> at the moment there is something to say.
+                <Button small pending={connectPending} onClick={onReconnect}>
+                  <RefreshCw aria-hidden /> {t("connectors.reconnect")}
+                </Button>
+              ) : (
+                <Button small onClick={onImapReconnect}>
+                  <RefreshCw aria-hidden /> {t("connectors.reconnect")}
+                </Button>
+              ))}
+            <Button small variant="ghost" onClick={onDisconnect}>
+              {t("connectors.disconnect")}
+            </Button>
           </div>
         }
       />
+      {/* Under the row rather than inside its control column: a notice squeezed
+          into the slot the verbs live in reads as a third button. */}
+      {connectError && (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("connectors.connectFailed")}
+        >
+          {connectError}
+        </Callout>
+      )}
       {conn.status === "connected" && mailbox && <MailPostureRow conn={conn} />}
       {conn.status === "connected" && mailbox && (
         <SignatureEnrichmentRow conn={conn} />
@@ -1198,8 +1137,12 @@ function MailConnectorsPanel() {
           <p className="t-caption">{t("connectors.loading")}</p>
         )}
         {connectors.isError && (
-          <Callout tone="danger" live="alert">
-            {problemMessageOf(connectors.error, t, t("connectors.loadFailed"))}
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("connectors.loadFailed")}
+          >
+            {problemMessageOf(connectors.error, t)}
           </Callout>
         )}
         {connectors.isSuccess && notConfigured && (

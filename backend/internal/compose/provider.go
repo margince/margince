@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -54,7 +55,13 @@ func NewProviderFor(db *database.DB) *Provider {
 	return &Provider{
 		// The fieldcatalog seam mirrors the HTTP wiring (server.go): the
 		// MCP surface's record verbs carry cf_* values too.
-		people:     people.NewProvider(db).WithFieldCatalog(customfields.NewService(pool, nil)),
+		// The stop carry mirrors the HTTP wiring (serverassembly.go) for the
+		// same reason the fieldcatalog seam does: the MCP surface merges and
+		// promotes records too, and an unwired carrier refuses every merge of
+		// a subject who holds a stop.
+		people: people.NewProvider(db).
+			WithFieldCatalog(customfields.NewService(pool, nil)).
+			WithStopCarrier(consent.NewStore(db)),
 		deals:      deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:   projects.ProviderOver(ProjectsStoreOver(db)),
 		activities: activities.NewProvider(InstallationDB(pool)),

@@ -105,7 +105,11 @@ export function LinkedInReachCard() {
             reached" chrome around the server's own refusal, so a read nobody
             managed to make looked exactly like a network that reaches nobody. */}
         {query.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            kind="outcome"
+            tone="danger"
+            title={t("linkedinReach.readFailed")}
+          >
             {problemMessageOf(query.error, t)}
           </Callout>
         )}

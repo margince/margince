@@ -60,6 +60,12 @@ func applyUnclaimedOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.Organizat
 			return false, nil
 		}
 		authority = replaceStanding
+		// The same bound the form applies, for the same reason: the header is
+		// one rendering of a longer field, and a value too long for the line is
+		// a value to shorten rather than a write to drop. A read-back that
+		// skipped it left the header blank on exactly the companies whose site
+		// said the most.
+		value = headerLine(value)
 	}
 	// Nothing to fill. Writing "" here would satisfy the fill arm's own
 	// WHERE legal_name IS NULL once and never again: the column would read as

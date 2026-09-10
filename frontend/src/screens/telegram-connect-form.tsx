@@ -177,7 +177,11 @@ export function TelegramConnectForm({
             )}
           </Field>
           {errorMessage && (
-            <Callout tone="danger" live="alert">
+            <Callout
+              tone="danger"
+              kind="outcome"
+              title={t("connectors.telegramConnectFailed")}
+            >
               {errorMessage}
             </Callout>
           )}

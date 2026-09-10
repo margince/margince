@@ -130,6 +130,10 @@ var notAnEdge = map[string]string{
 		"subject was lawful, which relates a person to a DECISION and not to another record",
 	"communication_suppression": "polymorphic in the same way, and for the same reason: an objection is " +
 		"something one subject said, not a path from them to anybody else",
+	"withdrawal_credential": "polymorphic exactly as the two above: person_id and lead_id are " +
+		"alternative HOLDERS of one credential, never both, and most rows name neither — the " +
+		"credential is keyed by the address the mail went to, which is what an opt-out acts on. " +
+		"It relates a subject to a CAPABILITY over their own mail, not to another record",
 	"activity_retention_evidence": "what a retention decision was taken on; it relates a record to a " +
 		"DECISION about it, and nothing traverses from one record to another through it",
 	"project_link_candidate": "a RETIRED table: it held questions the attribution ladder's uncertain rung " +

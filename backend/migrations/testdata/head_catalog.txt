@@ -1426,6 +1426,7 @@ public.capture_sync_state.capture_sync_state_pkey PRIMARY KEY (connection_id)
 public.capture_sync_state.connection_id uuid NOT NULL gen=- def=-
 public.capture_sync_state.consecutive_failures integer NOT NULL gen=- def=0
 public.capture_sync_state.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_sync_state.failing_since timestamp with time zone gen=- def=-
 public.capture_sync_state.last_error_class text gen=- def=-
 public.capture_sync_state.last_success_at timestamp with time zone gen=- def=-
 public.capture_sync_state.last_synced_at timestamp with time zone gen=- def=-
@@ -1732,6 +1733,8 @@ public.communication_decision_pkey CREATE UNIQUE INDEX communication_decision_pk
 public.communication_suppression acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_suppression.address text gen=- def=-
 public.communication_suppression.captured_by text NOT NULL gen=- def=-
+public.communication_suppression.carried_from uuid gen=- def=-
+public.communication_suppression.communication_suppression_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES communication_suppression(id) ON DELETE SET NULL
 public.communication_suppression.communication_suppression_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['machine'::text, 'user'::text, 'admin'::text, 'subject'::text])))
 public.communication_suppression.communication_suppression_kind CHECK ((kind = ANY (ARRAY['marketing_objection'::text, 'processing_restriction'::text, 'hard_bounce'::text, 'subject_request'::text])))
 public.communication_suppression.communication_suppression_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
@@ -3085,6 +3088,9 @@ public.idx_weekly_review_deal_review CREATE INDEX idx_weekly_review_deal_review 
 public.idx_weekly_review_driver_bar CREATE INDEX idx_weekly_review_driver_bar ON public.weekly_review_driver USING btree (weekly_review_id, period_kind, bar)
 public.idx_weekly_review_learning_review CREATE INDEX idx_weekly_review_learning_review ON public.weekly_review_learning USING btree (weekly_review_id, "position")
 public.idx_weekly_review_user CREATE INDEX idx_weekly_review_user ON public.weekly_review USING btree (user_id, local_week_start DESC)
+public.idx_withdrawal_credential_lead CREATE INDEX idx_withdrawal_credential_lead ON public.withdrawal_credential USING btree (lead_id) WHERE (lead_id IS NOT NULL)
+public.idx_withdrawal_credential_live CREATE INDEX idx_withdrawal_credential_live ON public.withdrawal_credential USING btree (lower(address), scope) WHERE (revoked_at IS NULL)
+public.idx_withdrawal_credential_person CREATE INDEX idx_withdrawal_credential_person ON public.withdrawal_credential USING btree (person_id) WHERE (person_id IS NOT NULL)
 public.import_record_map acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.import_record_map.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_record_map.external_id text NOT NULL gen=- def=-
@@ -4621,8 +4627,11 @@ public.preference_token.person_id uuid NOT NULL gen=- def=-
 public.preference_token.preference_token_person_email_id_fkey FOREIGN KEY (person_email_id) REFERENCES person_email(id) ON DELETE SET NULL
 public.preference_token.preference_token_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.preference_token.preference_token_pkey PRIMARY KEY (id)
+public.preference_token.preference_token_revocation_is_reasoned CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL)))
+public.preference_token.preference_token_revoked_reason_check CHECK ((revoked_reason = ANY (ARRAY['rotated'::text, 'expired'::text, 'erasure'::text, 'compromise'::text, 'merged_predecessor'::text])))
 public.preference_token.preference_token_token_key UNIQUE (token)
 public.preference_token.revoked_at timestamp with time zone gen=- def=-
+public.preference_token.revoked_reason text gen=- def=-
 public.preference_token.token text NOT NULL gen=- def=-
 public.preference_token_pkey CREATE UNIQUE INDEX preference_token_pkey ON public.preference_token USING btree (id)
 public.preference_token_token_key CREATE UNIQUE INDEX preference_token_token_key ON public.preference_token USING btree (token)
@@ -6297,6 +6306,31 @@ public.weekly_review_scorecard.weekly_review_scorecard_review_fkey FOREIGN KEY (
 public.weekly_review_scorecard.weekly_review_scorecard_subsets_fit CHECK (((deal_open IS NULL) OR ((deal_with_next_step <= deal_open) AND (deal_multi_threaded <= deal_open) AND (deal_close_date_sound <= deal_open))))
 public.weekly_review_scorecard_one_per_review CREATE UNIQUE INDEX weekly_review_scorecard_one_per_review ON public.weekly_review_scorecard USING btree (weekly_review_id)
 public.weekly_review_scorecard_pkey CREATE UNIQUE INDEX weekly_review_scorecard_pkey ON public.weekly_review_scorecard USING btree (id)
+public.withdrawal_credential acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.withdrawal_credential.address text NOT NULL gen=- def=-
+public.withdrawal_credential.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.withdrawal_credential.id uuid NOT NULL gen=- def=uuidv7()
+public.withdrawal_credential.issued_at timestamp with time zone NOT NULL gen=- def=now()
+public.withdrawal_credential.last_used_at timestamp with time zone gen=- def=-
+public.withdrawal_credential.lead_id uuid gen=- def=-
+public.withdrawal_credential.person_id uuid gen=- def=-
+public.withdrawal_credential.purpose_id uuid gen=- def=-
+public.withdrawal_credential.revoked_at timestamp with time zone gen=- def=-
+public.withdrawal_credential.revoked_reason text gen=- def=-
+public.withdrawal_credential.scope text NOT NULL gen=- def=-
+public.withdrawal_credential.token_hash text NOT NULL gen=- def=-
+public.withdrawal_credential.withdrawal_credential_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE SET NULL
+public.withdrawal_credential.withdrawal_credential_names_at_most_one_subject CHECK ((NOT ((person_id IS NOT NULL) AND (lead_id IS NOT NULL))))
+public.withdrawal_credential.withdrawal_credential_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE SET NULL
+public.withdrawal_credential.withdrawal_credential_pkey PRIMARY KEY (id)
+public.withdrawal_credential.withdrawal_credential_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE CASCADE
+public.withdrawal_credential.withdrawal_credential_revocation_is_reasoned CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL)))
+public.withdrawal_credential.withdrawal_credential_revoked_reason_check CHECK ((revoked_reason = ANY (ARRAY['erasure'::text, 'compromise'::text, 'merged_predecessor'::text, 'superseded'::text])))
+public.withdrawal_credential.withdrawal_credential_scope_check CHECK ((scope = ANY (ARRAY['named_purpose'::text, 'all_marketing'::text])))
+public.withdrawal_credential.withdrawal_credential_scope_names_its_target CHECK (((scope = 'named_purpose'::text) = (purpose_id IS NOT NULL)))
+public.withdrawal_credential.withdrawal_credential_token_hash_key UNIQUE (token_hash)
+public.withdrawal_credential_pkey CREATE UNIQUE INDEX withdrawal_credential_pkey ON public.withdrawal_credential USING btree (id)
+public.withdrawal_credential_token_hash_key CREATE UNIQUE INDEX withdrawal_credential_token_hash_key ON public.withdrawal_credential USING btree (token_hash)
 public.workflow_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workflow_run.applied jsonb gen=- def=-
 public.workflow_run.created_at timestamp with time zone NOT NULL gen=- def=now()

@@ -20,6 +20,7 @@ import (
 
 // deleteConsentCapabilities destroys every live capability over the subject's
 // consent record: preference_token, the emailed List-Unsubscribe URL;
+// withdrawal_credential, the longer-lived link that replaced it on that header;
 // consent_doi_token, the 72-hour double-opt-in secret in the same mailbox
 // whose only function is to authorise a GRANT; and confirm_token, the link that
 // DISPLAYS the record and carries a marketing answer back. Each is a bearer
@@ -52,6 +53,17 @@ func deleteConsentCapabilities(ctx context.Context, tx pgx.Tx, personID ids.Pers
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM confirm_token WHERE person_id = $1`, personID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's confirm-details link: %w", err)
+	}
+	// DELETED, not revoked, and that distinction matters here more than on the
+	// three above: the row carries the ADDRESS the link was written to, which
+	// outlives the person_id an anonymize-in-place erasure nulls. Revoking
+	// would leave that address standing in a table nothing else scrubs.
+	//
+	// It is also the longest-lived capability the subject holds — 24 months,
+	// where the preference token is 30 days — so a missed one is a working
+	// bearer credential for an erased person for the better part of two years.
+	if _, err := tx.Exec(ctx, `DELETE FROM withdrawal_credential WHERE person_id = $1`, personID); err != nil {
+		return fmt.Errorf("privacy: destroying the subject's withdrawal link: %w", err)
 	}
 
 	// Not a capability but the subject's own words: what they proposed as a

@@ -96,6 +96,26 @@ func (r *Registry) WithSyncInterval(d time.Duration) *Registry {
 	return r
 }
 
+// WithClock replaces the source of the instants this registry STAMPS — the
+// sync-state timestamps, not the schedule.
+//
+// The schedule is deliberately out of reach: next_sync_at is a delay the
+// database applies to its own clock, so nothing here can move it, which is the
+// property syncclock_test.go holds.
+//
+// It exists for the failure-streak case. failing_since is set once and left
+// alone across every failure after it, and the only way to see that is to fail
+// several times at instants an hour apart — which real time cannot do without
+// a sleep, and a test whose verdict depends on elapsed wall time is the
+// flakiness the suite refuses. A nil clock is ignored rather than installed:
+// a registry with no clock would panic on its first write.
+func (r *Registry) WithClock(now func() time.Time) *Registry {
+	if now != nil {
+		r.now = now
+	}
+	return r
+}
+
 // WithProgressPacing overrides how often a running backfill page writes its
 // live tally. Zero means every report is written — the pacing exists to keep a
 // long import from writing one row update per message, so removing it is only

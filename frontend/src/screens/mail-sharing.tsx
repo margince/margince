@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
@@ -30,6 +30,52 @@ function useMailSharing() {
       return data;
     },
   });
+}
+
+/**
+ * The band under the rows: what the posture costs, what the write refused, and
+ * the verb that commits it.
+ *
+ * All three belong to the CARD rather than to a row — an unsaved flip is a
+ * state of the whole card, and a notice squeezed into a row's right column
+ * would read as that switch's own answer. One component because this card
+ * carries two of them, and two inline copies of the shape had already begun to
+ * disagree about which of their notices interrupts.
+ */
+function CommitBand({
+  notice,
+  error,
+  dirty,
+  pending,
+  onSave,
+}: Readonly<{
+  notice: ReactNode;
+  error: unknown;
+  dirty: boolean;
+  pending: boolean;
+  onSave: () => void;
+}>) {
+  const t = useT();
+  if (notice === null && error === undefined && !dirty) return null;
+  return (
+    <div className="settings-panel-commit">
+      {notice}
+      {error !== undefined && (
+        <Callout
+          kind="outcome"
+          tone="danger"
+          title={t("mailSharing.saveFailed")}
+        >
+          {problemMessageOf(error, t)}
+        </Callout>
+      )}
+      {dirty && (
+        <Button small variant="primary" disabled={pending} onClick={onSave}>
+          {t("mailSharing.save")}
+        </Button>
+      )}
+    </div>
+  );
 }
 
 export function MailSharingCard() {
@@ -144,66 +190,48 @@ export function MailSharingCard() {
                     )}
                   />
                 </SettingList>
-                {(sharedShown || sharedDirty || saveShared.isError) && (
-                  <div className="settings-panel-commit">
-                    {sharedShown && (
-                      <Callout tone="warn">
+                <CommitBand
+                  notice={
+                    sharedShown ? (
+                      <Callout
+                        kind="standing"
+                        tone="warn"
+                        title={t("mailSharing.sharedPosture.warningTitle")}
+                      >
                         {t("mailSharing.sharedPosture.warning")}
                       </Callout>
-                    )}
-                    {saveShared.isError && (
-                      <Callout tone="danger" live="alert">
-                        {problemMessageOf(saveShared.error, t)}
-                      </Callout>
-                    )}
-                    {sharedDirty && (
-                      <Button
-                        small
-                        variant="primary"
-                        disabled={saveShared.isPending}
-                        onClick={() => {
-                          if (pendingShared !== null) {
-                            saveShared.mutate(pendingShared);
-                          }
-                        }}
+                    ) : null
+                  }
+                  error={saveShared.isError ? saveShared.error : undefined}
+                  dirty={sharedDirty}
+                  pending={saveShared.isPending}
+                  onSave={() => {
+                    if (pendingShared !== null) {
+                      saveShared.mutate(pendingShared);
+                    }
+                  }}
+                />
+                <CommitBand
+                  notice={
+                    shown ? null : (
+                      <Callout
+                        kind="standing"
+                        tone="warn"
+                        title={t("mailSharing.dangerTitle")}
                       >
-                        {t("mailSharing.save")}
-                      </Button>
-                    )}
-                  </div>
-                )}
-                {/* The cost of the posture and the verb that commits it belong
-                    to the CARD, not to the row: an unsaved flip is a state of
-                    the whole card, and a callout squeezed into a row's right
-                    column would read as the switch's own answer. */}
-                {(!shown || dirty || save.isError) && (
-                  <div className="settings-panel-commit">
-                    {!shown && (
-                      <Callout tone="danger" live="alert">
                         {t("mailSharing.danger")}
                       </Callout>
-                    )}
-                    {save.isError && (
-                      <Callout tone="danger" live="alert">
-                        {problemMessageOf(save.error, t)}
-                      </Callout>
-                    )}
-                    {dirty && (
-                      <Button
-                        small
-                        variant="primary"
-                        disabled={save.isPending}
-                        onClick={() => {
-                          if (pending !== null) {
-                            save.mutate(pending);
-                          }
-                        }}
-                      >
-                        {t("mailSharing.save")}
-                      </Button>
-                    )}
-                  </div>
-                )}
+                    )
+                  }
+                  error={save.isError ? save.error : undefined}
+                  dirty={dirty}
+                  pending={save.isPending}
+                  onSave={() => {
+                    if (pending !== null) {
+                      save.mutate(pending);
+                    }
+                  }}
+                />
               </>
             );
           }}

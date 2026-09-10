@@ -59,6 +59,10 @@ case "$1 ${2:-}" in
 		# issue with the wrong contents is indistinguishable from a working one
 		# unless something reads what it wrote.
 		if [ "${!i}" = "--body" ] && [ -n "${BODY_LOG:-}" ]; then j=$((i + 1)); printf '%s' "${!j}" >>"$BODY_LOG"; fi
+		# And the labels, for the same reason: the static census over the reporter
+		# proves the SOURCE names its axes, and cannot prove report() hands them
+		# to `gh`. A build that dropped label_args would satisfy the census.
+		if [ "${!i}" = "--label" ] && [ -n "${LABEL_LOG:-}" ]; then j=$((i + 1)); echo "${!j}" >>"$LABEL_LOG"; fi
 	done
 	;;
 *) echo "unexpected gh call: $*" >&2; exit 1 ;;
@@ -683,6 +687,116 @@ while IFS= read -r title; do
 	fi
 done <<<"$resolved"
 
+
+# --- the axes REACH `gh`, not only the source ------------------------------------
+#
+# One case, end to end, because the census below reads the reporter and a reader
+# could satisfy it while `report()` passed none of it on. This asserts on what the
+# stub was actually invoked with.
+export ACTION_LOG="$stub_dir/actions"
+export LABEL_LOG="$stub_dir/labels"
+: >"$ACTION_LOG"
+: >"$LABEL_LOG"
+set +e
+label_out="$(env OPEN_TITLES="" GH_TOKEN=stub REPO=owner/repo \
+	RUN_URL=https://example.test/run/1 GATE_RESULT=failure GATE_STATUS=ERROR \
+	"$root/scripts/scheduled-report.sh" 2>&1)"
+label_status=$?
+set -e
+got_labels="$(sort "$LABEL_LOG" | paste -sd, -)"
+want_labels="area: ci-tests,bug,priority: high"
+if [[ "$label_status" -ne 0 ]] || [[ "$got_labels" != "$want_labels" ]]; then
+	echo "FAIL: a filed issue does not carry its axes"
+	echo "  exit   want 0 got $label_status"
+	echo "  labels want '$want_labels' got '$got_labels'"
+	printf '  output: %s\n' "$label_out" | head -3
+	failures=$((failures + 1))
+else
+	echo "ok: a filed issue carries one priority, one area and its provenance"
+fi
+unset LABEL_LOG
+
+# --- every finding names its axes -----------------------------------------------
+#
+# docs/reference/issue-labels.md requires exactly one `priority:` and exactly one
+# `area:` on every issue, and states the invariant an auto-filer defeats:
+# UNLABELLED MEANS NOBODY HAS LOOKED AT IT YET. This reporter is the one filer in
+# the tree that files with no human present, so an arm that files on a provenance
+# word alone makes its issue claim something false about itself.
+#
+# Derived from BOTH owners and copied from neither: the arms from the reporter,
+# the vocabulary from the taxonomy page. A list kept here is exactly what let the
+# UAT arm inherit this gap — it "was written to match its siblings", and matching
+# your siblings is how a defect becomes a convention.
+labels_doc="$root/docs/reference/issue-labels.md"
+# `|| true` on both, for the reason the lane census below spells out: grep exits
+# 1 on no match and this file runs under `set -e`, so without it a taxonomy that
+# stopped matching would kill the suite mid-run with no message at all — a gate
+# that fails without saying what it found, which is barely better than one that
+# passes without looking. The empty case has to REACH the check below.
+priorities="$(grep -oE '`priority: [a-z]+`' "$labels_doc" | tr -d '`' | sed 's/^priority: //' | sort -u || true)"
+areas="$(sed -n '/^\*\*Area\*\* is where the fix lives/,/^$/p' "$labels_doc" |
+	grep -oE '`[a-z-]+`' | tr -d '`' | sort -u || true)"
+# A vocabulary that reads as empty would accept anything, which is the direction
+# a census must not fail in: it would report PASS over arms naming labels that do
+# not exist.
+if [[ -z "$priorities" ]] || [[ -z "$areas" ]]; then
+	echo "FAIL: the label taxonomy could not be read from docs/reference/issue-labels.md — the patterns stopped matching, the rule did not stop mattering"
+	failures=$((failures + 1))
+fi
+
+# EVERY report call, not only the ones with a literal title. The retraction
+# census above exempts `report "$merge_title"` because a computed title names one
+# past event and has no state to withdraw; the LABEL obligation has no such
+# exemption — that issue is read by a human like any other.
+arm_total="$(grep -cE '^  report ' "$reporter")"
+arms_with_labels="$(sed -nE 's/^  report "([^"]*)" "([^"]*)".*/\1\t\2/p' "$reporter")"
+arm_labelled="$(grep -c . <<<"$arms_with_labels" || true)"
+if [[ "$arm_total" -ne "$arm_labelled" ]]; then
+	echo "FAIL: the reporter has $arm_total report call(s) but $arm_labelled carry a quoted label list."
+	echo "      An arm filing on a bare provenance word files an issue that reads as untriaged,"
+	echo "      and this count is the only thing that notices — the arm itself works fine."
+	failures=$((failures + 1))
+fi
+
+while IFS=$'\t' read -r arm_title arm_label_list; do
+	[[ -z "$arm_title" ]] && continue
+	seen_priority=0
+	seen_area=0
+	while IFS= read -r one; do
+		[[ -z "$one" ]] && continue
+		case "$one" in
+		"priority: "*)
+			seen_priority=$((seen_priority + 1))
+			if ! grep -qxF "${one#priority: }" <<<"$priorities"; then
+				echo "FAIL: \"$arm_title\" files '$one', which is not a priority in docs/reference/issue-labels.md"
+				failures=$((failures + 1))
+			fi
+			;;
+		"area: "*)
+			seen_area=$((seen_area + 1))
+			if ! grep -qxF "${one#area: }" <<<"$areas"; then
+				echo "FAIL: \"$arm_title\" files '$one', which is not an area in docs/reference/issue-labels.md"
+				failures=$((failures + 1))
+			fi
+			;;
+		esac
+	done <<<"${arm_label_list//,/$'\n'}"
+	# EXACTLY one of each, not at least one. The rulebook says exactly, and a
+	# check that accepted two would not be holding the rule it cites — two
+	# priorities on one issue is a filter that double-counts it.
+	if [[ "$seen_priority" -ne 1 ]]; then
+		echo "FAIL: \"$arm_title\" files $seen_priority 'priority:' labels, want exactly 1"
+		failures=$((failures + 1))
+	fi
+	if [[ "$seen_area" -ne 1 ]]; then
+		echo "FAIL: \"$arm_title\" files $seen_area 'area:' labels, want exactly 1"
+		failures=$((failures + 1))
+	fi
+done <<<"$arms_with_labels"
+if [[ "$failures" -eq 0 ]]; then
+	echo "ok: all $arm_total arms name exactly one priority and one area, from the taxonomy page"
+fi
 # --- the report job is REACHED on a green run -----------------------------------
 #
 # One question per workflow, because it is one fact about the job: it must run

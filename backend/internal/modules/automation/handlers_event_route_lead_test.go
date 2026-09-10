@@ -105,24 +105,35 @@ func TestRouteLeadSpecNamesTheCatalogKey(t *testing.T) {
 	}
 }
 
-// TestRouteLeadMatchFiresOnEveryNewLead proves Match is unconditional —
-// there is no "wrong kind" of lead.created that should skip the
-// follow-up, unlike stage_change_create_task's open-only narrowing.
-func TestRouteLeadMatchFiresOnEveryNewLead(t *testing.T) {
+// TestRouteLeadMatchFiresForEveryLeadSomebodyAskedFor proves Match narrows on
+// ONE thing: whether a person asked us for anything.
+//
+// Every lead that came from a human — a form, a reply, a referral, a hand-typed
+// row — gets its follow-up, and unlike stage_change_create_task there is no
+// "wrong direction" one could have arrived from. A name the product read off a
+// public web page is the exception: nobody wrote in, so a task saying a rep owes
+// them an answer is a task about nothing.
+func TestRouteLeadMatchFiresForEveryLeadSomebodyAskedFor(t *testing.T) {
 	cases := []struct {
 		name    string
 		payload json.RawMessage
+		want    bool
 	}{
-		{"no payload", nil},
-		{"arbitrary payload", json.RawMessage(`{"source":"webinar"}`)},
+		{"no payload", nil, true},
+		{"arbitrary payload", json.RawMessage(`{"source":"webinar"}`), true},
+		{"no source system", json.RawMessage(`{}`), true},
+		{"a direct create", json.RawMessage(`{"source_system":"manual"}`), true},
+		{"an inbound capture", json.RawMessage(`{"source_system":"gmail"}`), true},
+		{"a website read", json.RawMessage(`{"source_system":"siteread"}`), false},
+		{"a crawl", json.RawMessage(`{"source_system":"crawl"}`), false},
 	}
 	for _, tc := range cases {
 		matched, err := routeLeadCreateTask{}.Match(context.Background(), workflow.Event{Payload: tc.payload})
 		if err != nil {
 			t.Fatalf("%s: Match err = %v, want nil", tc.name, err)
 		}
-		if !matched {
-			t.Errorf("%s: Match = false, want true (every new lead gets a follow-up)", tc.name)
+		if matched != tc.want {
+			t.Errorf("%s: Match = %v, want %v", tc.name, matched, tc.want)
 		}
 	}
 }

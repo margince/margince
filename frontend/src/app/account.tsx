@@ -178,7 +178,7 @@ function SignOutRow({ seat }: Readonly<{ seat?: RowSeat }>) {
           alert is not one. */}
       {logout.isError && (
         <div className="acctrowalert" role="none">
-          <Callout tone="danger" live="alert">
+          <Callout tone="danger" kind="outcome" title={t("shell.signOutErr")}>
             {problemMessageOf(logout.error, t)}
           </Callout>
         </div>

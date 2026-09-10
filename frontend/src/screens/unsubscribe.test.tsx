@@ -179,7 +179,13 @@ describe("UnsubscribeScreen", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("treats an unknown token as one neutral sentence", async () => {
+  // A 404 ON THE READ NO LONGER MEANS A DEAD LINK. A withdrawal credential
+  // outlives the preference token it rode with and carries no authority to
+  // read a consent state, so this page's opening fetch 404s for exactly the
+  // links that still work. The page keeps the button and drops everything
+  // that needed the read; the POST resolves the credential itself and refuses
+  // it if it really is dead.
+  it("still offers the stop button when the link may only withdraw", async () => {
     stubEdge({
       "GET /public/preferences/tok-123": () =>
         jsonResponse({ title: "not found" }, 404),
@@ -187,12 +193,41 @@ describe("UnsubscribeScreen", () => {
     render(
       <UnsubscribeScreen token="tok-123" purpose="business_correspondence" />,
     );
-    expect(await screen.findByText(/no longer valid/i)).toBeInTheDocument();
-    // Nothing to retry on a dead link: a retry button would invite the
-    // reader to hammer a link that will never work.
+    expect(
+      await screen.findByRole("button", {
+        name: /unsubscribe from these emails/i,
+      }),
+    ).toBeInTheDocument();
+    // And no retry, which would invite hammering a read that will never
+    // succeed for this credential.
     expect(
       screen.queryByRole("button", { name: /try again/i }),
     ).not.toBeInTheDocument();
+  });
+
+  // The press is the authority, so it has to actually work from that state.
+  it("withdraws from the read-less page", async () => {
+    let posted = false;
+    stubEdge({
+      "GET /public/preferences/tok-123": () =>
+        jsonResponse({ title: "not found" }, 404),
+      "POST /public/preferences/tok-123/unsubscribe": () => {
+        posted = true;
+        return jsonResponse({ unsubscribed: ["business_correspondence"] }, 200);
+      },
+    });
+    render(
+      <UnsubscribeScreen token="tok-123" purpose="business_correspondence" />,
+    );
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: /unsubscribe from these emails/i,
+      }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: /^unsubscribed$/i }),
+    ).toBeInTheDocument();
+    expect(posted).toBe(true);
   });
 
   it("explains a rate limit and offers a retry", async () => {
@@ -214,8 +249,10 @@ describe("UnsubscribeScreen", () => {
     stubEdge();
     render(<UnsubscribeScreen token="tok-123" purpose="no_such_purpose" />);
     expect(
-      await screen.findByText(/doesn't name a kind of email/i),
+      await screen.findByRole("heading", { name: /names nothing we send/i }),
     ).toBeInTheDocument();
+    // The way on is the point of the page, so the link is asserted too.
+    expect(screen.getByText(/open your preferences/i)).toBeInTheDocument();
   });
 
   it("early-returns honestly when the address carries no purpose", () => {

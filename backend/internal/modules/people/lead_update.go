@@ -372,6 +372,26 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 	}
 	if in.OwnerID != nil {
 		p.Set("owner_id", current.OwnerId, *in.OwnerID)
+		// Taking on an UNOWNED lead starts its response clock.
+		//
+		// The clock reads COALESCE(routed_at, created_at), so a lead that sat
+		// unowned for a week is already a week overdue the moment somebody
+		// picks it up — they inherit a breach earned while the row was nobody's.
+		// The routing automation stamps this for the same reason when it
+		// assigns; this is the hand-assignment half of the same rule.
+		//
+		// Only on the first owner. A reassignment between people keeps the
+		// original clock: the customer has been waiting since we took the lead
+		// on, and passing it along is not an answer.
+		//
+		// Through the patch rather than startLeadResponseClockTx, which the
+		// claim path uses: this write is already inside a patch that carries
+		// the audit image, and a second statement beside it would put the stamp
+		// outside the record of the change that caused it. The two agree on the
+		// condition: no owner yet, and no clock yet.
+		if current.RoutedAt == nil && current.OwnerId == nil {
+			p.Set("routed_at", nil, leadSLAClock().UTC())
+		}
 	}
 	return p, resumeRecompute, nil
 }
@@ -436,32 +456,6 @@ func applyScoreOverride(p *storekit.Patch, current crmcontracts.Lead, in UpdateL
 	return false, nil
 }
 
-// stampHumanFirstResponse adds the §18.1 first-response stamp to a patch
-// that moves the lead off `new` by a HUMAN's hand. An agent's status change
-// is not a response, and a lead already answered keeps its first stamp.
-func stampHumanFirstResponse(ctx context.Context, p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) error {
-	if in.Status == nil || current.Status != crmcontracts.LeadStatusNew || current.FirstResponseAt != nil {
-		return nil
-	}
-	if LeadStatus(*in.Status) == LeadStatusNew {
-		return nil
-	}
-	actor, err := storekit.Actor(ctx)
-	if err != nil {
-		return err
-	}
-	if actor.Type == principal.PrincipalHuman {
-		p.Set(firstResponseColumn, nil, time.Now().UTC())
-	}
-	return nil
-}
-
-// leadStatusSetByColumn records who placed the lead on its current step.
-const leadStatusSetByColumn = "status_set_by"
-
-// stampStatusSetBy records that a status written through this path was a
-// hand's doing — a human, or an agent acting for one — as opposed to the
-// system's own climb from captured activity (advanceLeadStatusTx).
 func stampStatusSetBy(ctx context.Context, p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) error {
 	if in.Status == nil || LeadStatus(*in.Status) == LeadStatus(current.Status) {
 		return nil

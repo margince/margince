@@ -70,35 +70,6 @@
   font-size: var(--fs-sm);
 }
 
-/* The risks carry a section heading of their own: the callout inside titles
-   itself with a paragraph, which is right for an inline alert and wrong for a
-   named part of a document a reader navigates by heading. */
-.mb-risks {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.mb-section-title {
-  margin: 0;
-  color: var(--textPrimary);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
-}
-
-/* A citation chip inside the risk callout takes the body ink rather than the
-   meta ink.
- *
- * --textMeta is tuned against a panel's own ground. The callout lays a tinted
- * amber wash over that ground, and in the dark theme the pair lands at 4.1:1 —
- * under AA, on the one section a reader must not skim. The chip is still
- * quieter than the sentence it follows: it is 11px and dotted-underlined, and
- * the contrast it needs is a floor rather than an emphasis. */
-.mb-risks .co-brief-cite-flat,
-.mb-risks .co-brief-cite {
-  color: var(--textContent);
-}
-
 /* The outcome to earn, with its icon in a column of its own so a two-line
    objective does not wrap under the mark. */
 .mb-objective {

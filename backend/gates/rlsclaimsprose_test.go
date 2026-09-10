@@ -20,6 +20,7 @@ package gates
 import (
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -65,12 +66,42 @@ var proseScanned = map[string]bool{
 	".example": true, ".mk": true,
 }
 
-// proseSkippedDirs are trees that are not this repository's prose: vendored
-// code, build output, and the generated client whose text comes from the
-// contract (fixing crm.yaml fixes it, and it regenerates).
-var proseSkippedDirs = map[string]bool{
-	"node_modules": true, ".git": true, "dist": true, "build": true,
-	".build": true, ".tmp": true, "coverage": true,
+// ignoredTrees answers which directories are not this repository's prose, by
+// asking git rather than by keeping a list of names.
+//
+// The list this replaced held seven names — node_modules, dist, build, .build,
+// .tmp, coverage — and every one of them is a path .gitignore already names. A
+// gate that keeps its own copy of that has become a second copy of its subject,
+// and it drifts in the direction nobody notices from the outside: a session with
+// an agent worktree under .claude/worktrees/ (ignored since it was added) had
+// this gate reporting 631 claims out of a stale copy of the whole tree, none of
+// them in anything that ships, while CI on a clean checkout stayed green. A
+// false red teaches a reader to stop reading the gate.
+//
+// It fails rather than falling back. Not getting the answer would mean walking
+// ignored trees again, which is the state this exists to leave — and a census
+// that quietly widens is one nobody can tell from one that quietly narrows.
+func ignoredTrees(t *testing.T) map[string]bool {
+	t.Helper()
+	// --directory collapses a wholly-ignored directory to one entry with a
+	// trailing slash, so the walk can skip the tree instead of every file in it.
+	out, err := exec.Command("git", "-C", "..",
+		"ls-files", "--others", "--ignored", "--exclude-standard", "--directory").Output()
+	if err != nil {
+		t.Fatalf("asking git which trees it ignores: %v", err)
+	}
+	ignored := map[string]bool{
+		// git never reports its own directory, and it is full of prose from
+		// every branch that ever mentioned the control.
+		"../.git": true,
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		if !strings.HasSuffix(line, "/") {
+			continue
+		}
+		ignored["../"+strings.TrimSuffix(line, "/")] = true
+	}
+	return ignored
 }
 
 // proseExempt are CLAIMS that cannot be fixed by editing the line they sit on.
@@ -183,6 +214,7 @@ func TestNoProseClaimsRLSStillScopesARead(t *testing.T) {
 		}
 	}
 
+	skipped := ignoredTrees(t)
 	var claims []string
 	checked := 0
 	err := filepath.WalkDir("..", func(path string, d fs.DirEntry, err error) error {
@@ -190,7 +222,7 @@ func TestNoProseClaimsRLSStillScopesARead(t *testing.T) {
 			return err
 		}
 		if d.IsDir() {
-			if proseSkippedDirs[d.Name()] {
+			if skipped[filepath.ToSlash(path)] {
 				return fs.SkipDir
 			}
 			return nil

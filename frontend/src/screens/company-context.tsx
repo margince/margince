@@ -1,11 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowRight,
-  CircleAlert,
-  RefreshCw,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -25,7 +19,6 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import {
   EvidenceMark,
   type EvidenceMarkSource,
@@ -45,7 +38,9 @@ import {
   type QueryLike,
   throwProblem,
   useMe,
+  WriteRefused,
 } from "./common";
+import { ReadWarnings, SavedNotice } from "./company-context.notices";
 import { CompanyMark } from "./companymark";
 import "./company-context.css";
 
@@ -229,9 +224,10 @@ export function ManualCompanySetup() {
             </Field>
           ))}
           {save.isError && (
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(save.error, t)}
-            </Callout>
+            <WriteRefused
+              titleKey="settings.companySaveFailed"
+              error={save.error}
+            />
           )}
         </PanelBody>
       </Panel>
@@ -720,9 +716,7 @@ function CompanyFactsCard({
                     refused. */}
                 {saved && (
                   <div className="settings-panel-commit">
-                    <Callout tone="success" live="status">
-                      {t("settings.companySaved")}
-                    </Callout>
+                    <SavedNotice />
                   </div>
                 )}
               </>
@@ -820,9 +814,10 @@ function CompanySourceCard({
         </SettingList>
         {failure !== null && (
           <div className="settings-panel-commit">
-            <Callout tone="danger" live="alert">
-              {failure}
-            </Callout>
+            <WriteRefused
+              titleKey="settings.companyRefreshFailed"
+              message={failure}
+            />
           </div>
         )}
       </PanelBody>
@@ -987,9 +982,7 @@ function CompanyProfileDialog({
           </div>
         ))}
         {error !== null && (
-          <Callout tone="danger" live="alert">
-            {error}
-          </Callout>
+          <WriteRefused titleKey="settings.companySaveFailed" message={error} />
         )}
         <div className="form-actions">
           <Button small variant="ghost" type="button" onClick={onClose}>
@@ -1124,21 +1117,21 @@ function RefreshReview(
       }
       actions={
         <>
-          {unresolved && (
-            <Callout tone="warn" icon={CircleAlert}>
-              {t("settings.companyResolveAll")}
-            </Callout>
-          )}
           {props.error && (
-            <Callout tone="danger" live="alert">
-              {props.error}
-            </Callout>
+            <WriteRefused
+              titleKey="settings.companyApplyFailed"
+              message={props.error}
+            />
           )}
+          {/* An unresolved conflict refuses the verb, so it is the verb's own
+              `reason` rather than a second notice beside it: the sentence and
+              the refusal cannot then disagree. */}
           {props.canApply && (
             <Button
               small
               variant="primary"
-              disabled={!ready || unresolved || props.confirming}
+              disabled={!ready || props.confirming}
+              reason={unresolved ? t("settings.companyResolveAll") : undefined}
               onClick={props.onConfirm}
             >
               {t("settings.companyApplyRefresh")} <ArrowRight aria-hidden />
@@ -1152,11 +1145,7 @@ function RefreshReview(
           phone, for the same reason the profile panel's eyebrow sits here. */}
       <PanelBody className="form-stack">
         <Eyebrow>{t("settings.companyRefreshReview")}</Eyebrow>
-        {props.read.warnings.map((warning) => (
-          <Callout tone="warn" icon={CircleAlert} key={warning}>
-            {warning}
-          </Callout>
-        ))}
+        <ReadWarnings warnings={props.read.warnings} />
       </PanelBody>
       {props.read.comparisons.map((item) => (
         <ComparisonRow

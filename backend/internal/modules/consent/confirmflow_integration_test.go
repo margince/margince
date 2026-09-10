@@ -16,14 +16,43 @@ package consent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// getConfirmPage drives the public GET the way a browser does and hands back
+// the decoded body, so a test can assert what actually went on the wire rather
+// than what a store method returned.
+func getConfirmPage(t *testing.T, e *channelConsentEnv, token string) map[string]any {
+	t.Helper()
+	h := NewHandlers(database.BindTo(e.store.db.Pool(), ids.From[ids.WorkspaceKind](e.ws)))
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:public_confirm",
+	})
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/public/confirm/"+token, nil).WithContext(ctx)
+	h.GetConfirmDetails(rec, req, token)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET the confirm page: status %d, body %s", rec.Code, rec.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decoding the confirm page: %v (body %s)", err, rec.Body.String())
+	}
+	return body
+}
 
 // seedMarketingPurpose plants the double-opt-in marketing lane the confirm page
 // asks about, since the shared environment seeds its own purposes by other keys.
@@ -481,5 +510,60 @@ func TestAContactWithNoAddressGetsNoConfirmLink(t *testing.T) {
 	}
 	if minted != 0 {
 		t.Errorf("%d token(s) minted for a contact with no address", minted)
+	}
+}
+
+// THE ENDPOINT ANSWERS TWO SHAPES, AND EACH ONE NOW SAYS WHICH IT IS.
+//
+// A consent link's 200 carries the subscription question; a record link's
+// carries the record card. Both always did — what the published contract said
+// was that every 200 here is a record card, so the generated client typed the
+// subscription body as one and read provenance off three fields.
+//
+// Driven through the HANDLER rather than the store, because the defect was in
+// what went on the wire: confirmCardFor and consentCardFor were each returning
+// exactly what they should, and the handler wrote a module type straight to the
+// response with no discriminator on it. A store-level test cannot see that.
+func TestEachConfirmLinkAnswersInItsOwnShape(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+
+	// The env's DOI purpose. A consent link only exists for a purpose that is
+	// confirmed by double opt-in — there is nothing for a mailed link to ask
+	consentLink, err := e.store.IssueConsentLink(e.ctx, e.person, e.doiNews, "")
+	if err != nil {
+		t.Fatalf("mint a consent link: %v", err)
+	}
+
+	body := getConfirmPage(t, e, consentLink.Token)
+	if got := body["kind"]; got != "subscription_confirmation" {
+		t.Fatalf("a consent link answered kind %v, want subscription_confirmation", got)
+	}
+	if body["purpose_key"] == nil {
+		t.Error("the subscription answer names no purpose, so the page cannot say what it is asking about")
+	}
+	// THE DISCLOSURE ASSERTION. The mail said "confirm this subscription", and
+	// this body must not carry the record: name, employer, address, phone and
+	// the provenance trail are wider than the link described and wider than its
+	// own write side allows.
+	for _, field := range []string{"full_name", "company", "email", "phone", "provenance"} {
+		if _, present := body[field]; present {
+			t.Errorf("the subscription answer carries %q — a consent link discloses the record", field)
+		}
+	}
+
+	// And the record branch still answers its own shape, with the
+	// discriminator on it. Without this the union could be satisfied by
+	// tagging everything as a subscription.
+	recordLink, err := e.store.IssueConfirmToken(e.ctx, e.person)
+	if err != nil {
+		t.Fatalf("mint a record link: %v", err)
+	}
+	record := getConfirmPage(t, e, recordLink.Token)
+	if got := record["kind"]; got != "record_confirmation" {
+		t.Fatalf("a record link answered kind %v, want record_confirmation", got)
+	}
+	if _, present := record["provenance"]; !present {
+		t.Error("the record answer carries no provenance — the Art. 14 disclosure is the point of the page")
 	}
 }

@@ -121,6 +121,19 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID
 // it. Said here because the form carries no version to pin, so nothing else in
 // this file records what stops the second save silently losing the first.
 func setCompanyColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, spec companyField, value string) (bool, error) {
+	// Bounded HERE, at the one edge both writers pass through, so the header
+	// line is derived once rather than guarded twice. The column it feeds is a
+	// display line with a CHECK behind it; the profile field it comes from is
+	// what an installation says about itself, and the contract accepts far more
+	// of that than the line can show.
+	//
+	// This used to be a length test inside the statement, and an overlong value
+	// simply did not write: the summary saved, the header stayed blank, and
+	// nothing told the caller. A prefix cannot fail that way — every value the
+	// contract accepts now reaches the header as much of itself as fits.
+	if spec.column == columnDescription {
+		value = headerLine(value)
+	}
 	var stored *string
 	if value != "" {
 		stored = &value

@@ -15742,6 +15742,11 @@ export interface components {
             last_sync_error_class?: string | null;
             /**
              * Format: date-time
+             * @description When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage's — last_synced_at moves on every postponed tick and dates the newest attempt instead.
+             */
+            sync_failing_since?: string | null;
+            /**
+             * Format: date-time
              * @description When the sweep will next pick this connection up (backoff-aware).
              */
             next_sync_due_at?: string | null;
@@ -24546,6 +24551,11 @@ export interface components {
              * @description Set on promotion (convenience mirror).
              */
             promoted_person_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Set when this lead was merged away into another, and null otherwise. It is what separates a merged-away lead from a disqualified one — both are archived and neither carries a `promoted_person_id`, so without this a reader can only see that the lead ended, not which of two very different things happened to it. Disqualified says a human judged the lead not worth pursuing; merged says it was the same lead as another one. The id names the survivor to read instead. `person` and `organization` already carry the same field for the same reason.
+             */
+            readonly merged_into_id?: string | null;
             /** Format: date-time */
             promoted_at?: string | null;
             /**
@@ -29243,11 +29253,53 @@ export interface components {
             }[];
         };
         /**
+         * @description What a confirm link answers, which depends on what the link was FOR.
+         *
+         *     A record link asks the person to check what the workspace holds about them; a consent link
+         *     asks one subscription question and must not disclose the record. Those are different
+         *     payloads and this endpoint has always returned both — the schema said only the first, so a
+         *     client that trusted the contract read `provenance` off a body that never carries it and
+         *     crashed on the subscription page.
+         *
+         *     Branch on `kind`. Adding a variant here is a contract change; adding one in the handler
+         *     without one is the defect this union closes.
+         */
+        ConfirmPage: components["schemas"]["RecordConfirmationPage"] | components["schemas"]["SubscriptionConfirmationPage"];
+        /**
+         * @description The answer for a consent link: one named subscription and the person's current answer to it.
+         *
+         *     Deliberately carries NOTHING about the record. The mail said "confirm this subscription", and
+         *     serving the record card here would hand whoever holds the link the person's name, employer,
+         *     address, phone and provenance trail — wider than the mail described and wider than this
+         *     link's own write side allows.
+         */
+        SubscriptionConfirmationPage: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "subscription_confirmation";
+            /** @description The subscription this link is about. */
+            purpose_key: string;
+            /** @description Its published name, for the page to show. */
+            purpose_label: string;
+            /**
+             * @description Their answer today, so somebody who already said yes is not asked as though they had not.
+             * @enum {string}
+             */
+            state: "unknown" | "granted" | "withdrawn";
+        };
+        /**
          * @description One contact's own view of what the workspace holds about them, for the no-login confirm page.
          *     A purpose-built projection and never the Person360 read model, which carries this workspace's
          *     working notes — owner, lifecycle, scores — rather than the subject's own data.
          */
-        ConfirmDetails: {
+        RecordConfirmationPage: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "record_confirmation";
             full_name: string;
             title: string;
             /** @description The current employer, read through the live employment relationship. Not correctable here. */
@@ -41515,13 +41567,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The contact's own view of their record. */
+            /** @description The record card or the subscription question, per the kind discriminator. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ConfirmDetails"];
+                    "application/json": components["schemas"]["ConfirmPage"];
                 };
             };
             404: components["responses"]["NotFound"];

@@ -1,6 +1,5 @@
 import type { components } from "../api/schema";
-import { SegmentedControl, StatCard } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { EmptyState, SegmentedControl, StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { Waterfall, type WaterfallStep } from "../design-system/waterfall";
 import { formatMoneyOrAbsent } from "../format/format";
@@ -33,9 +32,10 @@ export function OutlookPanel({
   // are different facts and zeros would claim the second.
   if (outlook.length === 0) {
     return (
-      <Callout tone="info" title={t("brief.weekly.outlook")}>
-        {t("brief.weekly.outlook.none")}
-      </Callout>
+      // It stands WHERE the panel would, and the panel's own heading was
+      // restated as the notice's — so it is the empty state, not a remark
+      // about a surface that is not there.
+      <EmptyState>{t("brief.weekly.outlook.none")}</EmptyState>
     );
   }
 
@@ -120,11 +120,7 @@ function BridgePanel({
     outlook.opening_landing_minor === undefined ||
     outlook.closing_landing_minor === undefined
   ) {
-    return (
-      <Callout tone="info" title={t("brief.weekly.bridge")}>
-        {t("brief.weekly.bridge.noOpening")}
-      </Callout>
-    );
+    return <EmptyState>{t("brief.weekly.bridge.noOpening")}</EmptyState>;
   }
 
   const steps: WaterfallStep[] = outlook.movement.map((bar: Bar) => ({
