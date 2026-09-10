@@ -28,7 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// seedLapsedPair seeds one exchange old enough to be past the §4 quiet
+// seedLapsedPair seeds an exchange old enough to be past the §4 quiet
 // threshold, then folds it through the REAL projection writer.
 //
 // The edge row is never inserted directly. A hand-written row is a row the
@@ -43,34 +43,55 @@ func seedLapsedPair(t *testing.T, e *Env, colleague, person ids.UUID, subject st
 // seedLapsedPairAt is the same, with the silence's AGE named — for the cases
 // that turn on which contact is oldest rather than only on being past the
 // threshold.
+//
+// TWO messages, one each way. The candidate read admits a RELATIONSHIP rather
+// than a single contact, because a lone touch is the cold mail nobody answered
+// and there is nothing there to revive — so a one-message fixture seeds exactly
+// the pair that read is right to refuse, and every caller above would be
+// resting its premise on the refusal.
+//
+// The reply is dated a day EARLIER than the send, so last_at stays the instant
+// daysAgo names and the cases that turn on whose silence is oldest still turn
+// on what they say they do.
 func seedLapsedPairAt(t *testing.T, e *Env, colleague, person ids.UUID, subject string, daysAgo int) {
 	t.Helper()
 	owner := OwnerConn(t)
 	ctx := context.Background()
 	quietSince := time.Now().UTC().AddDate(0, 0, -daysAgo)
 
-	activity := ids.NewV7()
-	if _, err := owner.Exec(ctx, `
-		INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
-		VALUES ($1, 'email', $2, $3, 'outbound', 'manual', 'human:x')`,
-		activity, subject, quietSince); err != nil {
-		t.Fatal(err)
-	}
-	LinkActivity(t, owner, activity, "person", person)
-	for _, seed := range []struct {
-		column string
-		id     ids.UUID
-		role   string
-	}{{"user_id", colleague, "from"}, {"person_id", person, "to"}} {
+	folded := []ids.UUID{}
+	for _, message := range []struct {
+		at                        time.Time
+		direction                 string
+		colleagueRole, personRole string
+	}{
+		{quietSince.AddDate(0, 0, -1), "inbound", "to", "from"},
+		{quietSince, "outbound", "from", "to"},
+	} {
+		activity := ids.NewV7()
 		if _, err := owner.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, `+seed.column+`, role) VALUES ($1, $2, $3)`,
-			activity, seed.id, seed.role); err != nil {
+			INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
+			VALUES ($1, 'email', $2, $3, $4, 'manual', 'human:x')`,
+			activity, subject, message.at, message.direction); err != nil {
 			t.Fatal(err)
 		}
+		LinkActivity(t, owner, activity, "person", person)
+		for _, seed := range []struct {
+			column string
+			id     ids.UUID
+			role   string
+		}{{"user_id", colleague, message.colleagueRole}, {"person_id", person, message.personRole}} {
+			if _, err := owner.Exec(ctx, `
+				INSERT INTO activity_participant (activity_id, `+seed.column+`, role) VALUES ($1, $2, $3)`,
+				activity, seed.id, seed.role); err != nil {
+				t.Fatal(err)
+			}
+		}
+		folded = append(folded, activity)
 	}
 	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
 	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
-		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{activity})
+		return search.RecomputeEdgesForActivities(wsCtx, tx, folded)
 	}); err != nil {
 		t.Fatalf("folding the seeded exchange into the projection: %v", err)
 	}

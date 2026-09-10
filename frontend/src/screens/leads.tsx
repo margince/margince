@@ -68,7 +68,7 @@ import {
   useViewerId,
 } from "./common";
 import type { CreateField } from "./create";
-import { CustomFieldsCard } from "./customfields.card";
+import { CustomFieldsPanel } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { EditAction } from "./edit";
 import {
@@ -1614,7 +1614,7 @@ function LeadOverviewPane({
           detectWaitingReply
         />
       )}
-      <CustomFieldsCard object="lead" record={lead} />
+      <CustomFieldsPanel object="lead" record={lead} />
     </div>
   );
 }

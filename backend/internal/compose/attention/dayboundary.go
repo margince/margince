@@ -14,6 +14,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 )
 
 // Zone answers the installation's timezone, which is what decides when "today"
@@ -76,12 +78,16 @@ func WithNoticeCases(n NoticeCases) Option {
 // yesterday's boundary and the next one today's, inside a single response — and
 // each resolution is a transaction, so asking per lane also pays three times for
 // one fact.
-func (s *Service) endOfDay(ctx context.Context, asOf time.Time) (time.Time, error) {
+// It returns the ZONE it resolved beside the boundary, because the grouping
+// below needs the same one: asked again per lane, an operator moving the
+// installation mid-read would give one lane yesterday's zone and the next
+// today's, inside a single response.
+func (s *Service) endOfDay(ctx context.Context, asOf time.Time) (time.Time, *time.Location, error) {
 	loc, err := s.location(ctx)
 	if err != nil {
-		return time.Time{}, err
+		return time.Time{}, nil, err
 	}
-	return startOfNextDay(asOf.In(loc), loc), nil
+	return startOfNextDay(asOf.In(loc), loc), loc, nil
 }
 
 // startOfDay is the other end of the same day, for a lane that looks BACK.
@@ -160,4 +166,56 @@ func sameDate(a, b time.Time) bool {
 	ay, am, ad := a.Date()
 	by, bm, bd := b.Date()
 	return ay == by && am == bm && ad == bd
+}
+
+// The five runs a dated row can fall into. Named rather than spelled at each
+// arm: the same words are the contract's enum and the client's copy keys, and a
+// typo in one of them renders a heading nobody has translated.
+const (
+	dueGroupOverdue  = "overdue"
+	dueGroupToday    = "today"
+	dueGroupTomorrow = "tomorrow"
+	dueGroupThisWeek = "this_week"
+	dueGroupLater    = "later"
+)
+
+// upcomingWeekDays is how far past today "this week" reaches. A rolling seven
+// days rather than a calendar week: on a Sunday a calendar week would name the
+// day itself, and a reader asking what is coming means the next seven days
+// whichever day they ask on.
+const upcomingWeekDays = 7
+
+// dueGroup names which run of the page a dated row belongs to, so the client
+// can head "Due tomorrow" and "Due this week" without deciding the boundary
+// itself.
+//
+// The server decides it for the reason every other boundary on this page is the
+// server's: the day's end depends on the installation's zone, and a browser
+// computing it from its own clock puts a task in a different group from the
+// count sitting above it.
+//
+// asOf and until are the same two instants the whole assembly runs on: they are
+// resolved once in assembleDay and handed down, rather than re-derived per lane.
+func dueGroup(deadlineAt, asOf, until time.Time, loc *time.Location) string {
+	// Lateness is deadline.Passed's decision, never a comparison spelled here:
+	// a list, a card and an agent tool once disagreed about a promise due at
+	// this very instant because each made the call itself.
+	if deadline.Passed(&deadlineAt, asOf) {
+		return dueGroupOverdue
+	}
+	// The rest compare against DAY BOUNDARIES rather than against the clock,
+	// which is a different question and one this file owns: where today ends,
+	// where tomorrow ends, and how far "this week" reaches.
+	tomorrowEnds := startOfNextDay(until.In(loc), loc)
+	weekEnds := until.AddDate(0, 0, upcomingWeekDays)
+	switch {
+	case deadlineAt.Before(until):
+		return dueGroupToday
+	case deadlineAt.Before(tomorrowEnds):
+		return dueGroupTomorrow
+	case deadlineAt.Before(weekEnds):
+		return dueGroupThisWeek
+	default:
+		return dueGroupLater
+	}
 }

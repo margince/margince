@@ -11,7 +11,8 @@
 import { useCallback } from "react";
 
 import type { components } from "../api/schema";
-import { Avatar, Badge, Button, Card } from "../design-system/atoms";
+import { Avatar, Badge, Button } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { useViewerId } from "./common";
@@ -47,13 +48,13 @@ export function useOwnRoute(): (route: RouteCandidate) => boolean {
 }
 
 /**
- * RoutesCard lists the ways in, the recommendation first.
+ * RoutesPanel lists the ways in, the recommendation first.
  *
  * One list, not a lead card plus a list: the server's recommendation IS the
  * head of this list, so drawing it twice would invite the two to disagree on
  * screen the moment one of them was rendered from stale data.
  */
-export function RoutesCard({
+export function RoutesPanel({
   graph,
   onAsk,
   skipLead,
@@ -70,7 +71,7 @@ export function RoutesCard({
   const routes = skipLead ? all.slice(1) : all;
   const legacy = all.length === 0 ? graph.route : undefined;
   return (
-    <Card
+    <Panel
       // With the lead drawn above this card, its rows are the OTHER ways in,
       // and a card titled "ways in" that omitted the best one would read as a
       // list that had lost its head.
@@ -79,38 +80,47 @@ export function RoutesCard({
           ? t("person.intro.otherRoutesTitle")
           : t("person.intro.routesTitle")
       }
-      sub={
-        skipLead
-          ? t("person.intro.otherRoutesSub")
-          : t("person.intro.routesSub")
-      }
     >
+      {/* How the ranking was made, in the body: both wordings run past the one
+          line the head band holds, and a reader who loses the second half
+          loses the reason to prefer a route further down the list. */}
+      <PanelBody>
+        <p className="t-sub">
+          {skipLead
+            ? t("person.intro.otherRoutesSub")
+            : t("person.intro.routesSub")}
+        </p>
+      </PanelBody>
       {routes.length === 0 && !legacy ? (
-        <p className="pn-route">{t("person.graph.noRoute")}</p>
+        <PanelBody>
+          <p className="pn-route">{t("person.graph.noRoute")}</p>
+        </PanelBody>
       ) : (
-        <ol className="pn-routes">
-          {legacy ? (
-            <li className="pn-route-row">
-              <LegacyRouteRow route={legacy} />
-            </li>
-          ) : (
-            routes.map((route, index) => (
-              <li className="pn-route-row" key={route.route_id}>
-                <RouteRow
-                  route={route}
-                  // The rank in the SERVER's list, so the first alternative
-                  // under a lead panel reads as the second way in, not the
-                  // first of a different list.
-                  rank={index + (skipLead ? 2 : 1)}
-                  lead={index === 0 && !skipLead}
-                  onAsk={onAsk}
-                />
+        <PanelBody>
+          <ol className="pn-routes">
+            {legacy ? (
+              <li className="pn-route-row">
+                <LegacyRouteRow route={legacy} />
               </li>
-            ))
-          )}
-        </ol>
+            ) : (
+              routes.map((route, index) => (
+                <li className="pn-route-row" key={route.route_id}>
+                  <RouteRow
+                    route={route}
+                    // The rank in the SERVER's list, so the first alternative
+                    // under a lead panel reads as the second way in, not the
+                    // first of a different list.
+                    rank={index + (skipLead ? 2 : 1)}
+                    lead={index === 0 && !skipLead}
+                    onAsk={onAsk}
+                  />
+                </li>
+              ))
+            )}
+          </ol>
+        </PanelBody>
       )}
-    </Card>
+    </Panel>
   );
 }
 

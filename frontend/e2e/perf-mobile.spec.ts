@@ -69,13 +69,33 @@ function nearestRank(samples: number[], quantile: number): number {
 }
 
 /**
+ * Every read the page issued, with the moment it was issued.
+ *
+ * `in_order` said the slow opens arrive on a CLOCK — indices 5, 11 and 17 of a
+ * 20-sample run, a period of six, which at that run's pace is ~33s against the
+ * 30s `STALE_TIME_MS` in src/app/queryclient.ts. What it cannot say is whether
+ * the stale refetch is what the slow sample was WAITING for, and that is the
+ * whole remaining question: a burst that fires beside a slow open and a burst
+ * that causes one look identical in a latency series.
+ *
+ * Recorded here rather than inferred from a laptop, because the two machines
+ * disagree and only the runner's answer counts. Locally the same bursts fire on
+ * the same clock and cost the open nothing, even with the renderer throttled 6x
+ * — but only the BROWSER is throttled there, while these route handlers keep a
+ * full-speed Node process to themselves. On a two-core runner they share.
+ */
+const reads: { path: string; at: number }[] = [];
+
+/**
  * Open one record from the list, and answer what the click cost.
  *
  * Extracted so the discarded first open below runs the SAME path as a measured
  * one. A warm-up that took a shortcut would leave whatever it skipped to be
  * paid by sample 1, which is the defect it exists to remove.
  */
-async function openOneRecord(page: Page): Promise<number> {
+async function openOneRecord(
+  page: Page,
+): Promise<{ startedAt: number; ms: number }> {
   await page.goto("/#/contacts");
   // Anchor on a settled screen before measuring, for the reason ac.spec.ts
   // records: a click during hydration lands on a row whose handler is not
@@ -100,7 +120,12 @@ async function openOneRecord(page: Page): Promise<number> {
   await expect(
     page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
   ).toBeVisible();
-  return Date.now() - start;
+  // The START is returned rather than left to be derived. A caller computing it
+  // as `end - ms` from its own clock reads LATER than this one did, because the
+  // await returns before that line runs — and the reads it would drop are the
+  // ones issued in the first milliseconds by the click, which are precisely the
+  // ones the window is being measured to catch.
+  return { startedAt: start, ms: Date.now() - start };
 }
 
 test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 390px", async ({
@@ -108,6 +133,13 @@ test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 39
 }) => {
   await mockApi(page);
   await throttle(page);
+  // Paths only: a full URL adds the origin to every line and answers nothing
+  // this is asking. Non-API traffic is left out — the bundle and the fonts are
+  // shaped by CDP and settle long before the first sample.
+  page.on("request", (r) => {
+    const path = new URL(r.url()).pathname;
+    if (path.startsWith("/v1/")) reads.push({ path, at: Date.now() });
+  });
 
   // ONE DISCARDED OPEN FIRST, and it is not a kindness to the number.
   //
@@ -128,8 +160,18 @@ test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 39
   await openOneRecord(page);
 
   const samples: number[] = [];
+  // One window per sample, so a read can be attributed to the open it landed
+  // inside rather than to the run as a whole.
+  const windows: { path: string; at: number }[][] = [];
   for (let i = 0; i < SAMPLES; i++) {
-    samples.push(await openOneRecord(page));
+    const before = reads.length;
+    const { startedAt, ms } = await openOneRecord(page);
+    samples.push(ms);
+    windows.push(
+      reads
+        .slice(before)
+        .filter((r) => r.at >= startedAt && r.at <= startedAt + ms),
+    );
   }
 
   const measured = nearestRank(samples, 0.95);
@@ -160,6 +202,25 @@ test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 39
     `perfbench [fast-3g/390px]: record_open_perceived ` +
       `in_order=${JSON.stringify(samples)}`,
   );
+  // The reads that were in flight during each open, aligned index-for-index with
+  // `in_order` above. This is the line that separates the two readings a clock
+  // allows: a slow open that carries reads is one waiting on them, and a slow
+  // open that carries none is a clock that only correlates.
+  console.log(
+    `perfbench [fast-3g/390px]: record_open_perceived ` +
+      `reads_in_window=${JSON.stringify(windows.map((w) => w.length))}`,
+  );
+  // And WHICH reads, for the windows that had any — the counts say a burst
+  // happened, the paths say what the app decided to re-read, and a fix has to
+  // name endpoints rather than a number.
+  windows.forEach((w, i) => {
+    if (w.length > 0) {
+      console.log(
+        `perfbench [fast-3g/390px]: record_open_perceived ` +
+          `sample=${i} ms=${samples[i]} reads=${JSON.stringify(w.map((r) => r.path))}`,
+      );
+    }
+  });
   // Written BEFORE the assertion, deliberately: a breach is the run whose
   // number a reader most wants to see, and recording afterwards would leave
   // the published page green while the run went red.

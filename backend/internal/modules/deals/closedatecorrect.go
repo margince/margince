@@ -33,6 +33,28 @@ import (
 // deal.updated payload — one spelling for all three tiers.
 const correctionFlagsKey = "flags"
 
+// basisOwnerKey names the seat whose permissions composed a correction's basis
+// sentence, inside the same evidence map.
+//
+// Stored because the sentence cannot be re-derived: it may carry a contact's
+// name and a correspondence date read under that seat's grants, and it is text
+// by the time anybody reads it back. The receipt compares this against the
+// deal's owner at read time — a deal that changed hands shows the change and
+// withholds the reason, rather than disclosing a name the new owner was never
+// entitled to see.
+const basisOwnerKey = "basis_owner"
+
+// ownerString renders a deal's owner for the evidence map. An unowned deal
+// records the empty string, which no user id equals, so a receipt on a deal
+// that has since gained an owner withholds the basis rather than matching by
+// accident.
+func ownerString(owner *ids.UUID) string {
+	if owner == nil {
+		return ""
+	}
+	return owner.String()
+}
+
 const (
 	forecastCommit   = "commit"
 	forecastBestCase = "best_case"
@@ -121,30 +143,30 @@ func setForecastCategory(p *storekit.Patch, stored *string, effective, notched s
 // That is the same "machine work that changed nothing" defect the no-op guard
 // exists to stop, one layer up.
 func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string, now time.Time, loc *time.Location, runID ids.UUID) (string, error) {
+	// Nothing to correct. A provisional date the sweep set and nobody has
+	// changed since is simply the date this deal has — there is no card to keep
+	// alive, because the correction was applied when it was made and the
+	// receipt said so that morning.
 	if !hygiene.Flagged {
-		if cand.provisional {
-			// The date itself is clean (the sweep set it), but the human
-			// has not confirmed it yet: keep the 🟡 surface alive if the
-			// previous staging expired undecided.
-			//
-			staged, err := c.ensureStaged(ctx, cand, 0, CloseDateCorrection{
-				DealID:              cand.id,
-				ExpectedCloseDate:   cand.expectedClose.Format(time.DateOnly),
-				PreviousCloseDate:   dateString(cand.expectedClose),
-				RemainingOpenStages: StagesRemaining(cand.remainingOpen),
-				Asking:              AskingIsThisDateRight,
-				Basis:               quietHoldingBasis,
-			})
-			if err != nil {
-				return "", err
-			}
-			if staged {
-				return closeDateMemberStaged, nil
-			}
-			// An unflagged provisional deal whose card is already open: the
-			// sweep looked and left everything as it was.
-			return closeDateMemberChecked, nil
-		}
+		return closeDateMemberChecked, nil
+	}
+
+	// Whose deal it is decides whether the sweep may write it.
+	//
+	// Asked BEFORE the reversal check and before any write, because a rep who
+	// switched this off has not asked to be told what the sweep would have
+	// done — they asked for their deals to be left alone, and a run that read
+	// their correspondence to build a reason it would never use would be doing
+	// work they declined.
+	var owner ids.UUID
+	if cand.ownerID != nil {
+		owner = *cand.ownerID
+	}
+	mayCorrect, err := c.policy.CorrectsWithoutAsking(ctx, owner)
+	if err != nil {
+		return "", err
+	}
+	if !mayCorrect {
 		return closeDateMemberChecked, nil
 	}
 
@@ -186,20 +208,29 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		if hygiene.Action == CloseDateActionAutoApply {
 			label = "auto_apply"
 		}
-		version, wrote, err := c.apply(ctx, cand, label, EvidenceOf(proposal, cand.expectedClose), runID, func(p *storekit.Patch) {
+		_, wrote, err := c.apply(ctx, cand, label, EvidenceOf(proposal, cand.expectedClose), runID, func(p *storekit.Patch) {
 			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
 			if !cand.provisional {
 				p.Set("close_date_provisional", false, true)
 			}
-		}, map[string]any{correctionFlagsKey: hygiene.Flags, "basis": proposal.Basis})
+		}, map[string]any{
+			correctionFlagsKey: hygiene.Flags,
+			"basis":            proposal.Basis,
+			// Stamped on this tier too, though pacedBasis names nobody: the
+			// receipt applies ONE rule to every correction rather than knowing
+			// which tier wrote which sentence, and a tier that omitted the key
+			// would have its reason withheld for the wrong reason.
+			basisOwnerKey: ownerString(cand.ownerID),
+		})
 		if err != nil {
 			return "", err
 		}
-		staged, err := c.ensureStaged(ctx, cand, version, proposal)
-		if err != nil {
-			return "", err
-		}
-		return closeDateEffect{wrote: wrote, staged: staged}.outcome(), nil
+		// APPLIED, not asked. The correction is already on the deal and the
+		// morning's receipt carries it with an Undo — a card asking a rep to
+		// confirm a date the sweep had already written was a question whose
+		// answer changed nothing, and one that expired into silence when
+		// nobody answered it.
+		return closeDateEffect{wrote: wrote}.outcome(), nil
 
 	case CloseDateActionDowngradeAndReview:
 		return c.downgradeAndReview(ctx, cand, hygiene, category, proposal, now, loc, runID)
@@ -227,28 +258,48 @@ func (c *CloseDateCorrector) downgradeAndReview(
 	// the other.
 	review := proposal
 	review.Asking = AskingIsThisDealAlive
-	version, wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch) {
-		setForecastCategory(p, cand.forecastCat, category, notched)
-		if hygiene.Provisional {
-			// Only the invariant forces a date onto a quiet deal —
-			// never an optimistic re-date on top of the downgrade.
-			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-			if !cand.provisional {
-				p.Set("close_date_provisional", false, true)
-			}
-		}
-	}, map[string]any{correctionFlagsKey: hygiene.Flags, "at_risk": true})
-	if err != nil {
-		return "", err
-	}
-	// The reason is read after the write: a failure to READ the
-	// correspondence must not abort a downgrade that has already committed.
+	// The reason, read BEFORE the write so the receipt can carry it.
+	//
+	// It ran after the write while a card followed the correction: the card was
+	// a second transaction and a failed read could be allowed to cost the
+	// sentence rather than the downgrade. The receipt is the only telling now,
+	// and quietBasis answers a fallback rather than an error, so reading it
+	// first costs the same and lands the reason on the row that reports the
+	// change.
 	review.Basis = c.quietBasis(ctx, cand.id, now, loc)
-	staged, err := c.ensureStaged(ctx, cand, version, review)
+	_, wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch) {
+		setForecastCategory(p, cand.forecastCat, category, notched)
+		// The date moves on this tier too, which is the change: a deal nobody
+		// has touched carries a date nobody believes, and leaving it while
+		// notching the forecast corrected the number and left the calendar
+		// lying. Both are the sweep's estimate, both are marked provisional,
+		// and both are on one Undo.
+		setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
+		if !cand.provisional {
+			p.Set("close_date_provisional", false, true)
+		}
+	}, map[string]any{
+		correctionFlagsKey: hygiene.Flags,
+		"at_risk":          true,
+		// The same key the paced tiers record. The receipt reads one basis
+		// whichever tier corrected the deal, so a tier that omits it renders a
+		// change with no stated reason.
+		"basis": review.Basis,
+		// WHOSE grants composed that sentence.
+		//
+		// The basis can name a contact and a correspondence date, resolved
+		// under the owner's own permissions on the night it was written. A deal
+		// handed to somebody else later would otherwise show that sentence to a
+		// rep who may hold neither person:read nor activity:read — permissions
+		// nothing re-checks, because the text is already stored. The receipt
+		// reader compares this against the deal's owner NOW and withholds the
+		// sentence when they differ.
+		basisOwnerKey: ownerString(cand.ownerID),
+	})
 	if err != nil {
 		return "", err
 	}
-	return closeDateEffect{wrote: wrote, staged: staged}.outcome(), nil
+	return closeDateEffect{wrote: wrote}.outcome(), nil
 }
 
 // answeredByAReversal reports whether somebody has already taken back the
@@ -272,32 +323,26 @@ func (c *CloseDateCorrector) answeredByAReversal(
 	return c.reversedSameQuestion(ctx, cand.id, asking)
 }
 
-// closeDateEffect is what one member's turn actually produced — the two things
-// a tier can do to a deal, each independently true or not.
+// closeDateEffect is what one member's turn actually produced.
+//
+// One field, since the sweep stopped staging cards: a tier either moved the
+// deal's own row or it did not. The ledger used to carry a third outcome for a
+// question newly put to a human, and nothing puts one any more.
 type closeDateEffect struct {
 	// wrote is a committed domain change: the deal's own row moved.
 	wrote bool
-	// staged is a question newly put to a human. An already-open card is not
-	// one, because nobody was asked anything they had not been asked already.
-	staged bool
 }
 
 // outcome names the member ledger's entry for this turn.
 //
-// A change outranks a card because it is the stronger claim: a deal whose date
-// moved AND whose confirm is open reads as changed, and the card is visible on
-// its own surface anyway. What this must never do is report either when neither
-// happened — the tier decided to act, the write found nothing to do or the
-// switch was off, and the ledger says checked.
+// What this must never do is report a change when none happened — the tier
+// decided to act, and then the write found nothing to do or the maintenance
+// switch was off. That turn is checked, not changed.
 func (e closeDateEffect) outcome() string {
-	switch {
-	case e.wrote:
+	if e.wrote {
 		return closeDateMemberChanged
-	case e.staged:
-		return closeDateMemberStaged
-	default:
-		return closeDateMemberChecked
 	}
+	return closeDateMemberChecked
 }
 
 // quietBasis is the reason the quiet review shows: which way the silence runs,

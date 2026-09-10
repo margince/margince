@@ -130,7 +130,15 @@ func owedAReply(item crmcontracts.WorklistItem) bool {
 // it under preparing would tell a rep to get ready for something they already
 // did. Recording what happened is repair.
 func closesOffAConversation(item crmcontracts.WorklistItem) bool {
-	return item.Source == crmcontracts.WorklistItemSourceMeetingOutcome
+	if item.Source == crmcontracts.WorklistItemSourceMeetingOutcome {
+		return true
+	}
+	// A silence nobody has a reason to chase is review work, which is where the
+	// worklist bands it. Left to fall through to its category it would land in
+	// "move revenue" — a lapsed contact drawn under a heading about deals — so
+	// the placement is stated here rather than inherited.
+	return item.Source == crmcontracts.WorklistItemSourceRelationshipDecay &&
+		item.Level >= levelRoutine
 }
 
 // preparesAConversation: a meeting is coming and somebody has to walk in ready.
@@ -159,6 +167,11 @@ func preparesAConversation(item crmcontracts.WorklistItem) bool {
 // row is pipeline by its category even where its subject resolves elsewhere. And
 // a relationship going quiet has no lead and no deal at risk, yet reconnecting is
 // exactly how pipeline gets built.
+//
+// A quiet relationship reaches this arm only when it is worth reviving: a
+// routine one was already claimed by closesOffAConversation above, which is
+// where the level is read. Both arms testing the level would be two spellings
+// of one rule, and the first to run would be the only one that mattered.
 func sectionBuildsPipeline(item crmcontracts.WorklistItem) bool {
 	if item.Source == crmcontracts.WorklistItemSourceRelationshipDecay {
 		return true

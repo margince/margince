@@ -397,15 +397,7 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	if clause := openTaskAssigneeClause(in.AssigneeID, arg); clause != "" {
 		where = append(where, clause)
 	}
-	if in.OpenAndDueBy != nil {
-		// Strictly before the instant, which is what deadline.Passed means and
-		// what this clause replaced. The bound the caller passes is the END of
-		// the day, so `<=` would put a task due at exactly tomorrow 00:00 on
-		// today's list — a promise reported late a day early.
-		where = append(where,
-			sprintf("a.kind = 'task' AND NOT a.is_done AND a.due_at IS NOT NULL AND a.due_at < $%d",
-				arg(*in.OpenAndDueBy)))
-	}
+	where = append(where, openTaskWindowClauses(in, arg)...)
 	if in.EntityType != nil && in.EntityID != nil {
 		entityJoin, entityWhere, entityErr := entityLinkFilter(in, arg)
 		if entityErr != nil {
@@ -422,7 +414,7 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	}
 	where = append(where, activityRowClauses(in, arg)...)
 	if in.Cursor != nil && *in.Cursor != "" {
-		if in.OpenAndDueBy != nil {
+		if in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil {
 			return "", nil, "", nil, errOpenAndDueByWithCursor
 		}
 		c, decodeErr := storekit.DecodeCursor(*in.Cursor)

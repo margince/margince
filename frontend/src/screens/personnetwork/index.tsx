@@ -22,16 +22,16 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../common";
 import { mapLabels } from "../companypeople/summary";
-import { IntroAsksCard } from "../introasks";
+import { IntroAsksPanel } from "../introasks";
 import { IntroDrawer } from "../introdrawer";
 import { type IntroRequest, useIntroRequests } from "../introrequests";
 import { usePersonGraph } from "../persongraph";
-import { availabilityLabel, RoutesCard, useOwnRoute } from "../personroutes";
+import { availabilityLabel, RoutesPanel, useOwnRoute } from "../personroutes";
 import { DecisionStrip } from "./decision";
 import { EdgeDetail } from "./edgedetail";
 import { LeadPanel } from "./leadpanel";
 import { completenessText, mapModelFromPersonGraph } from "./mapmodel";
-import { MomentsCard, momentWhyNow } from "./moments";
+import { MomentsPanel, momentWhyNow } from "./moments";
 import { RelayPanel } from "./relay";
 import "../personnetwork.css";
 
@@ -154,7 +154,7 @@ export function PersonNetworkTab({
               a card headed "other ways in" with nothing under it is worse than
               no card. */}
             {read.alternatives ? (
-              <RoutesCard
+              <RoutesPanel
                 graph={data}
                 onAsk={setAsking}
                 skipLead={read.skipLead}
@@ -182,8 +182,8 @@ export function PersonNetworkTab({
           aria-label={t("person.graph.sideColumn")}
         >
           <RelayPanel ask={read.open} />
-          <IntroAsksCard personId={personId} personName={read.targetName} />
-          {view && <MomentsCard view={view} />}
+          <IntroAsksPanel personId={personId} personName={read.targetName} />
+          {view && <MomentsPanel view={view} />}
         </aside>
       </div>
 

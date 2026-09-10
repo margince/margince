@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // newPeopleHandlers builds the person/organization/lead transport with the
@@ -115,6 +116,12 @@ type ownDomainReader struct{ store *capture.OwnDomainStore }
 
 func (o ownDomainReader) Domains(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	return o.store.ColleagueDomainsTx(ctx, tx)
+}
+
+func (o ownDomainReader) ReaderAddresses(
+	ctx context.Context, tx pgx.Tx, reader ids.UUID,
+) ([]string, error) {
+	return o.store.ReaderAddressesTx(ctx, tx, reader)
 }
 
 // NewCollectionsStore is the ONE spelling of "the collections store with

@@ -5,7 +5,7 @@
     "sites_best_partial": 0,
     "sites_best_stale": 41,
     "sites_absent": 1,
-    "scenarios": 158,
+    "scenarios": 161,
     "records": 74,
     "bindings": 10
   },
@@ -1019,9 +1019,19 @@
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml"
         },
         {
+          "name": "a_numbered_support_queue_is_one_desk",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_numbered_queue_01.yaml"
+        },
+        {
           "name": "a_private_correspondent_is_not_a_business_contact",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_01.yaml"
+        },
+        {
+          "name": "a_private_property_desk_the_owner_wrote_to_is_not_a_person",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_property_desk_outbound_01.yaml"
         },
         {
           "name": "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
@@ -1074,6 +1084,11 @@
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_noise_01.yaml"
         },
         {
+          "name": "the_owners_own_clinic_is_not_the_businesss_correspondent",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_clinic_reception_01.yaml"
+        },
+        {
           "name": "the_owners_own_lawyer_is_not_the_workspaces_contact",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/advisor_01.yaml"
@@ -1089,7 +1104,7 @@
           "state": "stale",
           "band": "supported_degraded",
           "scenarios_measured": 0,
-          "scenarios_total": 16,
+          "scenarios_total": 19,
           "runs": 48,
           "passed": 47,
           "reliability": 0.9791666666666666,
@@ -1101,9 +1116,45 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "16 scenarios it scored have changed since (the case): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more",
+          "stale_reason": "16 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more",
           "stale_cause": {
             "case_changed": [
+              "a_chased_cold_pitch_is_still_spam",
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_fluent_machine_written_pitch_is_still_spam",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "courteous_cold_pitch_is_spam",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "prompt_changed": [
+              "a_chased_cold_pitch_is_still_spam",
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_fluent_machine_written_pitch_is_still_spam",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "courteous_cold_pitch_is_spam",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "grader_changed": [
               "a_chased_cold_pitch_is_still_spam",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
@@ -1132,7 +1183,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": null,
-          "scenarios_total": 16,
+          "scenarios_total": 19,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -1155,7 +1206,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 16,
+          "scenarios_total": 19,
           "runs": 48,
           "passed": 40,
           "reliability": 0.8333333333333334,
@@ -1167,9 +1218,45 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "16 scenarios it scored have changed since (the case): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more",
+          "stale_reason": "16 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more",
           "stale_cause": {
             "case_changed": [
+              "a_chased_cold_pitch_is_still_spam",
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_fluent_machine_written_pitch_is_still_spam",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "courteous_cold_pitch_is_spam",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "prompt_changed": [
+              "a_chased_cold_pitch_is_still_spam",
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_fluent_machine_written_pitch_is_still_spam",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "courteous_cold_pitch_is_spam",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "grader_changed": [
               "a_chased_cold_pitch_is_still_spam",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",

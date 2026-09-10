@@ -1402,6 +1402,7 @@ public.capture_pending_counterparty.resolved_by_owner boolean NOT NULL gen=- def
 public.capture_pending_counterparty.served_model text gen=- def=-
 public.capture_pending_counterparty.status text NOT NULL gen=- def='pending'::text
 public.capture_pending_counterparty.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_pending_counterparty.withheld_from_workspace boolean NOT NULL gen=- def=false
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)
 public.capture_sender_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_sender_override.address text NOT NULL gen=- def=-
@@ -2022,8 +2023,11 @@ public.custom_field.version bigint NOT NULL gen=- def=1
 public.custom_field_pkey CREATE UNIQUE INDEX custom_field_pkey ON public.custom_field USING btree (id)
 public.data_subject_request acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.data_subject_request.assignee_id uuid gen=- def=-
+public.data_subject_request.channel text gen=- def=-
 public.data_subject_request.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.data_subject_request.data_subject_request_channel CHECK (((channel IS NULL) OR (channel = ANY (ARRAY['confirm_link'::text, 'email'::text, 'phone'::text, 'letter'::text, 'in_person'::text, 'operator_ui'::text]))))
 public.data_subject_request.data_subject_request_kind_check CHECK ((kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text])))
+public.data_subject_request.data_subject_request_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE SET NULL
 public.data_subject_request.data_subject_request_pkey PRIMARY KEY (id)
 public.data_subject_request.data_subject_request_status_check CHECK ((status = ANY (ARRAY['open'::text, 'in_progress'::text, 'fulfilled'::text, 'rejected'::text])))
 public.data_subject_request.dsr_assignee_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
@@ -2031,12 +2035,18 @@ public.data_subject_request.dsr_resolution_shape CHECK (((status <> ALL (ARRAY['
 public.data_subject_request.due_at timestamp with time zone NOT NULL gen=- def=-
 public.data_subject_request.id uuid NOT NULL gen=- def=uuidv7()
 public.data_subject_request.kind text NOT NULL gen=- def=-
+public.data_subject_request.person_id uuid gen=- def=-
+public.data_subject_request.receipt_reference text gen=- def=-
+public.data_subject_request.received_at timestamp with time zone gen=- def=-
 public.data_subject_request.resolution text gen=- def=-
+public.data_subject_request.source_submission_id uuid gen=- def=-
 public.data_subject_request.status text NOT NULL gen=- def='open'::text
 public.data_subject_request.subject_ref text NOT NULL gen=- def=-
 public.data_subject_request.trg_dsr_updated CREATE TRIGGER trg_dsr_updated BEFORE UPDATE ON public.data_subject_request FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.data_subject_request.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.data_subject_request_one_case_per_submission CREATE UNIQUE INDEX data_subject_request_one_case_per_submission ON public.data_subject_request USING btree (source_submission_id) WHERE (source_submission_id IS NOT NULL)
 public.data_subject_request_pkey CREATE UNIQUE INDEX data_subject_request_pkey ON public.data_subject_request USING btree (id)
+public.data_subject_request_receipt_reference CREATE UNIQUE INDEX data_subject_request_receipt_reference ON public.data_subject_request USING btree (receipt_reference) WHERE (receipt_reference IS NOT NULL)
 public.deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal.amount_minor bigint gen=- def=-
 public.deal.amount_minor_base bigint gen=- def=-

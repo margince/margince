@@ -47,7 +47,7 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 // recently filed; capping THIS order keeps the tasks nearest their deadline,
 // which is what a page capped at a dozen can actually afford to drop.
 func orderClause(in ListActivitiesInput) string {
-	if in.OpenAndDueBy != nil {
+	if in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil {
 		return " ORDER BY a.due_at ASC, a.id ASC"
 	}
 	return " ORDER BY a.occurred_at DESC, a.id DESC"
@@ -80,6 +80,9 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 		// for a caller that already holds a transaction, so it has no seam to
 		// ask — and a composite record read that carries none simply excludes
 		// no sender, which is the same open default WithOwnDomains documents.
+		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
+			return err
+		}
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}
@@ -142,7 +145,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	var page storekit.Page
 	if len(activities) > limit {
 		activities = activities[:limit]
-		if in.OpenAndDueBy == nil {
+		if in.OpenAndDueBy == nil && in.OpenAndDueAfter == nil {
 			last := activities[len(activities)-1]
 			next, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
 			if err != nil {
@@ -339,6 +342,9 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 			return err
 		}
 		var err error
+		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
+			return err
+		}
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}

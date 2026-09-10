@@ -103,15 +103,16 @@ func (w attentionWaiting) Unanswered(
 			summary = &got
 		}
 		out = append(out, attention.WaitingCustomer{
-			ActivityID:     row.ActivityID,
-			EmailSummary:   summary,
-			Subject:        row.Subject,
-			Since:          row.OccurredAt,
-			PersonID:       row.PersonID,
-			OrganizationID: row.OrganizationID,
-			DealID:         row.DealID,
-			HasOpenDeal:    row.HasOpenDeal,
-			Engaged:        row.Engaged,
+			ActivityID:         row.ActivityID,
+			EmailSummary:       summary,
+			Subject:            row.Subject,
+			Since:              row.OccurredAt,
+			PersonID:           row.PersonID,
+			OrganizationID:     row.OrganizationID,
+			DealID:             row.DealID,
+			HasOpenDeal:        row.HasOpenDeal,
+			Engaged:            row.Engaged,
+			AddressedElsewhere: row.AddressedElsewhere,
 			// Translated here, at the one boundary that already crosses from
 			// the module's vocabulary to the queue's. Only "informs us" changes
 			// a ranking; unjudged and "asks us" both leave it alone, so the

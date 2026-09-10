@@ -125,6 +125,37 @@ const waitingRepliesSQL = `
 	       -- message. Absence is never evidence: an unjudged row ranks exactly
 	       -- as it did before the column existed.
 	       coalesce(a.owed_verdict, ''),
+	       -- Whether every header recipient names somebody OTHER than the
+	       -- reader — a thread they can see because it reached their mailbox,
+	       -- addressed to a colleague.
+	       --
+	       -- Read against the reader's OWN addresses, and it has to be, because
+	       -- neither participant row answers it alone. Capture stamps the
+	       -- mailbox owner with a user_id and no address, which says the mail
+	       -- arrived here rather than who it was written to; and mailmap's
+	       -- otherParties deliberately DROPS the owner's own address from the
+	       -- header list, so their name is never among the address-bearing
+	       -- rows even when the sender wrote to them directly.
+	       --
+	       -- So the question is asked the other way round: is there an
+	       -- address-bearing recipient, and is NONE of them this reader? That
+	       -- is true exactly when the mail was written to somebody else.
+	       --
+	       -- An EMPTY address list answers false, like the colleague-domain
+	       -- rule and for the same reason: a reader whose own addresses cannot
+	       -- be resolved must not have every waiting customer quietly demoted.
+	       --
+	       -- REPORTED, never used to exclude. The caller demotes what it
+	       -- cannot prove.
+	       (coalesce(array_length(%[17]s::text[], 1), 0) > 0
+	        AND EXISTS (
+	          SELECT 1 FROM activity_participant anyTo
+	           WHERE anyTo.activity_id = a.id AND anyTo.role = 'to'
+	             AND coalesce(anyTo.address, '') <> '')
+	        AND NOT EXISTS (
+	          SELECT 1 FROM activity_participant addressed
+	           WHERE addressed.activity_id = a.id AND addressed.role = 'to'
+	             AND lower(addressed.address) = ANY(%[17]s::text[]))),
 	       EXISTS (
 	         SELECT 1 FROM activity ours
 	          WHERE ours.thread_key = a.thread_key

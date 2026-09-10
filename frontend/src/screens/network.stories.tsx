@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { PersonNetworkCard } from "./network";
+import { PersonNetworkPanel } from "./network";
 import {
   installFetchStub,
   jsonResponse,
@@ -69,7 +69,7 @@ export const WhoKnowsThem: Story = {
     });
     return (
       <StoryProviders>
-        <PersonNetworkCard id="p-1" />
+        <PersonNetworkPanel id="p-1" />
       </StoryProviders>
     );
   },
@@ -84,7 +84,7 @@ export const NobodyKnowsThem: Story = {
     });
     return (
       <StoryProviders>
-        <PersonNetworkCard id="p-1" />
+        <PersonNetworkPanel id="p-1" />
       </StoryProviders>
     );
   },

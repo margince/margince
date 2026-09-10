@@ -37,6 +37,11 @@ type counterpartyVerdictFixture struct {
 	Email       string `json:"email"`
 	Subject     string `json:"subject"`
 	Body        string `json:"body"`
+	// Direction and WroteBack carry the half of the judgment that is not in the
+	// text. A scenario that omits them describes a sender whose direction was
+	// never recorded, which is a real ledger row and reads as it did before.
+	Direction string `json:"direction"`
+	WroteBack bool   `json:"wrote_back"`
 }
 
 // counterpartyVerdictCases serves the one site that judges a first-time sender.
@@ -97,6 +102,8 @@ func (counterpartyVerdictCases) Prepare(fixture, expected json.RawMessage) (aita
 			Email:       f.Email,
 			Subject:     f.Subject,
 			Body:        f.Body,
+			Direction:   f.Direction,
+			WroteBack:   f.WroteBack,
 		},
 		expected: want,
 	}, nil

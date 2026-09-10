@@ -69,12 +69,12 @@ func replacePersonPhones(ctx context.Context, tx pgx.Tx, personID ids.PersonID, 
 		personID, keep); err != nil {
 		return fmt.Errorf("archive person phones: %w", err)
 	}
-	// Retained rows are re-placed before the new numbers land — see the
-	// ordering note above.
-	for _, p := range phones {
-		if !held[p.Phone] {
-			continue
-		}
+	// Retained rows are re-placed before the new numbers land, and demotions
+	// before promotions within that — see the ordering note above. A swap of
+	// which of two same-type numbers is primary travels this loop with both rows
+	// retained, so promoting one before demoting the other is two live primaries
+	// of one type until the statement ends, which uq_person_phone_primary refuses.
+	place := func(p PersonPhoneInput) error {
 		if _, err := tx.Exec(ctx,
 			`UPDATE person_phone SET phone_type = $3, is_primary = $4, position = $5
 			  WHERE person_id = $1 AND phone = $2 AND archived_at IS NULL`,
@@ -83,6 +83,21 @@ func replacePersonPhones(ctx context.Context, tx pgx.Tx, personID ids.PersonID, 
 				return apperrors.ErrConflict
 			}
 			return fmt.Errorf("update person phone placement: %w", err)
+		}
+		return nil
+	}
+	for _, p := range phones {
+		if held[p.Phone] && !p.IsPrimary {
+			if err := place(p); err != nil {
+				return err
+			}
+		}
+	}
+	for _, p := range phones {
+		if held[p.Phone] && p.IsPrimary {
+			if err := place(p); err != nil {
+				return err
+			}
 		}
 	}
 	return insertPersonPhones(ctx, tx, personID, source, by, fresh)

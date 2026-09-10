@@ -27,8 +27,8 @@ func TestJobMetricsNameTheWorkspaceThatOwnsTheWorkAndLeaveItEmptyForADispatcher(
 	}
 
 	want := []string{
-		`margince_job_queue_depth{queue="default",workspace_id="` + ws + `"} 2`,
-		`margince_job_queue_depth{queue="default",workspace_id=""} 1`,
+		`margince_job_queue_depth{kind="tenant_pass",queue="default",workspace_id="` + ws + `"} 2`,
+		`margince_job_queue_depth{kind="the_dispatcher",queue="default",workspace_id=""} 1`,
 	}
 	for _, line := range want {
 		if !strings.Contains(buf.String(), line) {
@@ -53,11 +53,37 @@ func TestQueueDepthSumsEveryStateAJobCanBeWaitingIn(t *testing.T) {
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
-	if !strings.Contains(buf.String(), `margince_job_queue_depth{queue="default",workspace_id=""} 23`) {
+	if !strings.Contains(buf.String(), `margince_job_queue_depth{kind="k",queue="default",workspace_id=""} 23`) {
 		t.Errorf("queue depth did not sum available+scheduled+retryable+pending\ngot:\n%s", buf.String())
 	}
-	if !strings.Contains(buf.String(), `margince_job_running{queue="default",workspace_id=""} 8`) {
+	if !strings.Contains(buf.String(), `margince_job_running{kind="k",queue="default",workspace_id=""} 8`) {
 		t.Errorf("running is its own gauge, not part of depth\ngot:\n%s", buf.String())
+	}
+}
+
+// TestQueueDepthAndRunningAreKeyedByKindToo — most kinds share the "default"
+// queue, so a queue-only breakdown collapses dozens of unrelated kinds into
+// one series named "default". An operator asking which kind is backed up,
+// or which kind is actually running, needs the kind on the wire too.
+func TestQueueDepthAndRunningAreKeyedByKindToo(t *testing.T) {
+	var buf bytes.Buffer
+	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+		{Queue: "default", Kind: "site_deep_read", Untenanted: true, State: "available", Count: 3},
+		{Queue: "default", Kind: "geocode_lookup", Untenanted: true, State: "available", Count: 5},
+		{Queue: "default", Kind: "site_deep_read", Untenanted: true, State: "running", Count: 1},
+	}}); err != nil {
+		t.Fatalf("writeJobMetrics: %v", err)
+	}
+	got := buf.String()
+	for _, want := range []string{
+		`margince_job_queue_depth{kind="site_deep_read",queue="default",workspace_id=""} 3`,
+		`margince_job_queue_depth{kind="geocode_lookup",queue="default",workspace_id=""} 5`,
+		`margince_job_running{kind="site_deep_read",queue="default",workspace_id=""} 1`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("exposition missing %q — two kinds sharing one queue must not collapse "+
+				"into one series\ngot:\n%s", want, got)
+		}
 	}
 }
 
@@ -366,7 +392,7 @@ func TestAQueueHoldingOnlyRunningWorkReportsNoAgeEither(t *testing.T) {
 	if strings.Contains(buf.String(), `margince_job_oldest_queued_age_seconds{queue="busy"`) {
 		t.Errorf("a queue whose work is all claimed reported a waiting age\ngot:\n%s", buf.String())
 	}
-	if !strings.Contains(buf.String(), `margince_job_running{queue="busy",workspace_id=""} 4`) {
+	if !strings.Contains(buf.String(), `margince_job_running{kind="k",queue="busy",workspace_id=""} 4`) {
 		t.Errorf("the running work itself went missing\ngot:\n%s", buf.String())
 	}
 }
@@ -392,7 +418,7 @@ func TestAQueueOfFutureScheduledWorkReportsNoAgeSeries(t *testing.T) {
 	if strings.Contains(buf.String(), `margince_job_oldest_queued_age_seconds{queue="nightly"`) {
 		t.Errorf("a queue whose work is all future-scheduled reported an age\ngot:\n%s", buf.String())
 	}
-	if !strings.Contains(buf.String(), `margince_job_queue_depth{queue="nightly",workspace_id=""} 4`) {
+	if !strings.Contains(buf.String(), `margince_job_queue_depth{kind="k",queue="nightly",workspace_id=""} 4`) {
 		t.Errorf("the queued work itself went missing\ngot:\n%s", buf.String())
 	}
 }
@@ -411,14 +437,14 @@ func TestAPresentButEmptyWorkspaceIsNotCountedAsADispatcher(t *testing.T) {
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
-	if !strings.Contains(buf.String(), `margince_job_queue_depth{queue="default",workspace_id=""} 1`) {
+	if !strings.Contains(buf.String(), `margince_job_queue_depth{kind="k",queue="default",workspace_id=""} 1`) {
 		t.Errorf("the real dispatcher row was disturbed\ngot:\n%s", buf.String())
 	}
-	if strings.Contains(buf.String(), `margince_job_queue_depth{queue="default",workspace_id=""} 10`) {
+	if strings.Contains(buf.String(), `margince_job_queue_depth{kind="k",queue="default",workspace_id=""} 10`) {
 		t.Error("a malformed row was folded into the dispatcher series, which is the one " +
 			"invariant these gauges promise")
 	}
-	if !strings.Contains(buf.String(), `margince_job_queue_depth{queue="default",workspace_id="malformed_workspace_id"} 9`) {
+	if !strings.Contains(buf.String(), `margince_job_queue_depth{kind="k",queue="default",workspace_id="malformed_workspace_id"} 9`) {
 		t.Errorf("the malformed row is invisible rather than flagged\ngot:\n%s", buf.String())
 	}
 }
@@ -475,7 +501,7 @@ func TestALiteralEscapeSequenceDoesNotCollideWithTheCharacterItEncodes(t *testin
 		t.Errorf("the real tab did not render as its escape\ngot:\n%s", got)
 	}
 	// The load-bearing assertion: two distinct ids, two distinct series.
-	if strings.Count(got, `margince_job_queue_depth{queue="q"`) != 2 {
+	if strings.Count(got, `margince_job_queue_depth{kind="k",queue="q"`) != 2 {
 		t.Errorf("two distinct workspace ids collapsed into one series; a duplicate label "+
 			"set makes Prometheus reject the entire scrape\ngot:\n%s", got)
 	}

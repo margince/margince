@@ -38,9 +38,16 @@ func TestTheWorklistsCopyOfALaneBoundMatchesTheLaneItself(t *testing.T) {
 			copyDecl:  `quietDealBound\s*=\s*(\d+)`,
 		},
 		{
+			// The cap the lane HANDS OVER, not the candidate set it reads.
+			//
+			// This lane ranks and cuts: it scans a wider set so the ordering has
+			// something to choose from, then returns the few worth writing. Bound
+			// to the scan depth, a page holding every row it was given still
+			// reported itself complete — the truncation flag answers "was
+			// anything dropped", and what the reader lost was dropped at the cut.
 			name:      "relationship decay",
 			ownerFile: "internal/compose/attentionlanesseam.go",
-			ownerDecl: `decayCandidateCap\s*=\s*(\d+)`,
+			ownerDecl: `decayLaneCap\s*=\s*(\d+)`,
 			copyDecl:  `decayBound\s*=\s*(\d+)`,
 		},
 	}

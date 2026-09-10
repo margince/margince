@@ -153,8 +153,12 @@ func TestADetectedDuplicateReachesTheDecisionLane(t *testing.T) {
 	}
 }
 
-// An overdue task is today's agreed work. Both halves of the filter are pinned:
-// what is due is carried, and what is done or still ahead is not.
+// An overdue task is today's agreed work, and a FINISHED one is not.
+//
+// Work still ahead is carried too, in its own run: the lane answers what is
+// owed and what is landing, and a rep whose next deadline is invisible until
+// the morning it arrives has no warning of it. What must never appear is a task
+// somebody already did.
 func TestAnOverdueTaskReachesThePlannedLane(t *testing.T) {
 	e := integration.Setup(t)
 	now := time.Now().UTC()
@@ -164,8 +168,13 @@ func TestAnOverdueTaskReachesThePlannedLane(t *testing.T) {
 
 	day := assembleFeed(e.Admin(), t, e, now)
 	got := titlesOn(day.Planned)
-	if len(got) != 1 || got[0] != "Ring the buyer back" {
-		t.Fatalf("the planned lane = %v, want only the task actually due", got)
+	if len(got) == 0 || got[0] != "Ring the buyer back" {
+		t.Fatalf("the planned lane = %v, want the overdue task leading it", got)
+	}
+	for _, title := range got {
+		if title == "Already handled" {
+			t.Errorf("a finished task reached the lane: %v", got)
+		}
 	}
 	if day.Planned[0].Overdue == nil || !*day.Planned[0].Overdue {
 		t.Error("the task is not marked overdue, so the reader cannot see which work slipped")
@@ -262,10 +271,22 @@ func TestATaskDueExactlyAtTheBoundaryBelongsToTomorrow(t *testing.T) {
 	logTask(t, e, "Due a moment before midnight", endOfDay.Add(-time.Second), false)
 	logTask(t, e, "Due exactly at midnight", endOfDay, false)
 
+	// Both are carried now — the lane also holds what is coming — so the
+	// boundary is read off the GROUP each row was given rather than off which
+	// of them reached the page.
 	day := assembleFeed(e.Admin(), t, e, now)
-	got := titlesOn(day.Planned)
-	if len(got) != 1 || got[0] != "Due a moment before midnight" {
-		t.Fatalf("the planned lane = %v, want only the task due before the day ends", got)
+	groups := map[string]string{}
+	for _, item := range day.Planned {
+		if item.Title != nil && item.DueGroup != nil {
+			groups[*item.Title] = string(*item.DueGroup)
+		}
+	}
+	if got := groups["Due a moment before midnight"]; got != "today" {
+		t.Errorf("a task due a second before midnight is grouped %q, want today", got)
+	}
+	if got := groups["Due exactly at midnight"]; got != "tomorrow" {
+		t.Errorf("a task due exactly at midnight is grouped %q, want tomorrow — the "+
+			"bound is the END of the day, so a promise dated at it is tomorrow's", got)
 	}
 }
 
@@ -343,11 +364,22 @@ func TestTheWorklistsDayEndsAtTheInstallationsMidnight(t *testing.T) {
 	logTask(t, e, "Due late tonight, local", time.Date(2026, 6, 15, 16, 30, 0, 0, time.UTC), false)
 	logTask(t, e, "Due tomorrow morning, local", time.Date(2026, 6, 15, 18, 0, 0, 0, time.UTC), false)
 
+	// Read off the GROUPS rather than off which rows reached the page: the lane
+	// carries tomorrow's work too, so what the boundary decides is which run
+	// each task lands in.
 	day := assembleFeed(e.Admin(), t, e, now)
-	got := titlesOn(day.Planned)
-	if len(got) != 1 || got[0] != "Due late tonight, local" {
-		t.Fatalf("the planned lane = %v, want only tonight's work: 18:00 UTC is 01:00 tomorrow "+
-			"where this installation is, and UTC's midnight is not its day", got)
+	groups := map[string]string{}
+	for _, item := range day.Planned {
+		if item.Title != nil && item.DueGroup != nil {
+			groups[*item.Title] = string(*item.DueGroup)
+		}
+	}
+	if got := groups["Due late tonight, local"]; got != "today" {
+		t.Errorf("tonight's work is grouped %q, want today", got)
+	}
+	if got := groups["Due tomorrow morning, local"]; got != "tomorrow" {
+		t.Errorf("work at 18:00 UTC is grouped %q, want tomorrow: that is 01:00 "+
+			"tomorrow where this installation is, and UTC's midnight is not its day", got)
 	}
 }
 

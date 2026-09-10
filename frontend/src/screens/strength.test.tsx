@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
-import { StrengthCard } from "./strength";
+import { StrengthPanel } from "./strength";
 
 // The card's whole promise is "no mystery number": the composite score never
 // renders alone, it carries the band that names it and the four factors that
@@ -55,7 +55,7 @@ function mount(body: unknown, status = 200) {
       }
     >
       <LocaleProvider initial="en">
-        <StrengthCard kind="person" id="p-1" />
+        <StrengthPanel kind="person" id="p-1" />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -140,7 +140,7 @@ describe("what the score was computed from", () => {
         }
       >
         <LocaleProvider initial="en">
-          <StrengthCard kind="person" id="p-1" onOpenEmail={onOpenEmail} />
+          <StrengthPanel kind="person" id="p-1" onOpenEmail={onOpenEmail} />
         </LocaleProvider>
       </QueryClientProvider>,
     );

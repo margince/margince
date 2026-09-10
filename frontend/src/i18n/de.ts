@@ -1847,8 +1847,6 @@ export const de = {
   "co.evidence.previous": "Vorherige Aussage",
   "co.evidence.next": "Nächste Aussage",
   "co.evidence.title": "Woher das stammt",
-  "co.relationships.title": "Verknüpfte Personen und Firmen",
-  "co.tools.title": "Daten & Werkzeuge",
   "co.prep.withheld":
     "Teile dieses Accounts sind für dich nicht sichtbar. Diese Einschätzung ist deshalb unvollständig.",
   "co.read.newActivity_one": "Ein neuer Vorgang seit deinem letzten Besuch.",
@@ -6140,6 +6138,11 @@ export const de = {
   "confirm.subscription.alreadyBody":
     "Ihr Abo für {purpose} ist bestätigt. Sie können es jederzeit über jede unserer E-Mails beenden.",
   "confirm.done.title": "Danke",
+  "confirm.receipt.title": "Wie es weitergeht",
+  "confirm.receipt.body":
+    "Nennen Sie diese Referenz, wenn Sie nach Ihrer Anfrage fragen. Wir antworten innerhalb eines Monats.",
+  "confirm.receipt.rectify": "Korrektur angefragt",
+  "confirm.receipt.erasure": "Löschung angefragt",
   "confirm.done.body":
     "Ich habe Ihre Antwort erfasst. Änderungen gehen an eine Person hier zur Übernahme, und dieser Link ist jetzt verbraucht.",
   "confirm.invalidLink":
@@ -8831,6 +8834,9 @@ export const de = {
   "worklist.pane.company": "Arbeitet für",
   "worklist.pane.role": "Rolle",
   "worklist.band.now": "Jetzt",
+  "worklist.dueGroup.tomorrow": "Morgen fällig",
+  "worklist.dueGroup.this_week": "Diese Woche fällig",
+  "worklist.dueGroup.later": "Später",
   "worklist.band.build_pipeline": "Pipeline aufbauen",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",
@@ -8913,6 +8919,8 @@ export const de = {
   "worklist.handled.about": "Wozu",
   "worklist.handled.when": "Wann",
   "worklist.handled.noRecord": "Kein Datensatz genannt",
+  "worklist.handled.wayBack": "Zurücknehmen",
+  "worklist.handled.putBackDone": "Bereits zurückgenommen",
   "worklist.handled.truncated":
     "Mehr als das. Die Liste endet bei dem, was eine Sitzung fasst.",
   "worklist.exceptions.empty": "Im Team braucht Sie gerade nichts.",
@@ -9052,6 +9060,7 @@ export const de = {
   "worklist.because.stale": "wartet schon lange",
   "worklist.because.no_reply_history": "kein Schriftwechsel bisher",
   "worklist.because.asks_nothing": "verlangt nichts von uns",
+  "worklist.because.addressed_elsewhere": "an eine Kollegin geschrieben",
   "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",
   "worklist.above.level": "Über dem Nächsten, weil es dringlichere Arbeit ist.",
   "worklist.above.deadline": "Über dem Nächsten wegen des Datums.",

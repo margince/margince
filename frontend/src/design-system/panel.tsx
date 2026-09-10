@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import { Eyebrow } from "./eyebrow";
 import {
   type SectionDetail,
@@ -96,11 +96,23 @@ export function Panel({
   children: ReactNode;
   className?: string;
 }>) {
+  // A titled panel is a LANDMARK, named by the title a reader already sees. A
+  // page of panels is then a list of regions a screen-reader user jumps
+  // between by name, which is the same way a sighted reader scans the column
+  // of titles. A bare `<section>` has no role at all until it has an
+  // accessible name, so without this the zones were invisible to that jump.
+  //
+  // The name comes from the title element rather than from a label prop: one
+  // source, so the spoken name and the printed one cannot disagree. An
+  // UNTITLED panel claims no landmark — it is a container the caller has
+  // chosen not to name, and a nameless region in the list is worse than none.
+  const titleId = useId();
   return (
     <section
       className={["panel", tone ? `panel-${tone}` : "", className ?? ""]
         .filter(Boolean)
         .join(" ")}
+      aria-labelledby={title ? titleId : undefined}
     >
       {title && (
         <header className="panel-head">
@@ -112,9 +124,13 @@ export function Panel({
               guarantees is measured on this one. */}
           <div className="panel-head-text">
             {titleLevel === 3 ? (
-              <h3 className="panel-title">{title}</h3>
+              <h3 className="panel-title" id={titleId}>
+                {title}
+              </h3>
             ) : (
-              <h2 className="panel-title">{title}</h2>
+              <h2 className="panel-title" id={titleId}>
+                {title}
+              </h2>
             )}
             {sub && <span className="panel-head-sub">{sub}</span>}
           </div>

@@ -18,6 +18,8 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -27,6 +29,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -140,6 +143,11 @@ func idleDaysOf(deal agents.SlippingDeal, now time.Time) int {
 // engine warns against, and the oldest silences are the ones worth the passes.
 const decayCandidateCap = 40
 
+// decayLaneCap is how many reconnects reach the reader. Five is what a rep can
+// write in a morning; the candidate set above it is wider so the ranking has
+// something to choose from.
+const decayLaneCap = 5
+
 // attentionDecay reads the acting rep's own lapsed relationships.
 //
 // TWO steps, and the order is the design. The projection narrows to the
@@ -177,7 +185,25 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 			// people module owns the rows and renders the predicate; search
 			// never imports a sibling, so the projection takes it as a hole.
 			func(arg func(any) int) (string, error) {
-				return people.NotDismissedClause(ctx, "e", now, arg)
+				dismissed, err := people.NotDismissedClause(ctx, "e", now, arg)
+				if err != nil {
+					return "", err
+				}
+				// AND the sender verdict's own answer. A contact capture judged
+				// personal, an advisor or noise is not a lapsed business
+				// relationship, and this lane is where that showed: a founder's
+				// clinic and a service desk sat under a heading promising new
+				// revenue. Composed here because each module renders the rule
+				// over the table it owns.
+				// The reader's own id, bound as a placeholder like every other
+				// value here: the ledger is per mailbox owner, and one rep's
+				// private verdict must not decide another rep's pipeline.
+				actor, ok := principal.Actor(ctx)
+				if !ok || actor.UserID.IsZero() {
+					return "", apperrors.ErrPermissionDenied
+				}
+				reader := fmt.Sprintf("$%d", arg(actor.UserID))
+				return dismissed + " AND " + capture.PrivateSenderClause("e", reader), nil
 			},
 		)
 		if err != nil {
@@ -271,6 +297,35 @@ func quietRelationships(
 			break
 		}
 	}
+	return rankReconnects(lapsed)
+}
+
+// rankReconnects puts the relationships worth reviving first and cuts to what a
+// rep can actually act on in a morning.
+//
+// Money leads, then how strong the relationship was, then how long it has been
+// quiet. The projection hands these over most-exchanged first, which is the
+// right CANDIDATE order — it is what stops a one-off exchange from years ago
+// crowding out a real lapse — but it says nothing about which of the survivors
+// matters most to this rep today.
+//
+// The cap is the product rule: five reconnects a rep can write. The rest are
+// not lost, they return tomorrow as the edges age, and a lane of forty names
+// under a heading promising new revenue is one a reader learns to skip.
+func rankReconnects(lapsed []attention.QuietRelationship) []attention.QuietRelationship {
+	sort.SliceStable(lapsed, func(i, j int) bool {
+		a, b := lapsed[i], lapsed[j]
+		if a.HasOpenDeal != b.HasOpenDeal {
+			return a.HasOpenDeal
+		}
+		if a.Strength.Strength != b.Strength.Strength {
+			return a.Strength.Strength > b.Strength.Strength
+		}
+		return a.QuietDays > b.QuietDays
+	})
+	if len(lapsed) > decayLaneCap {
+		return lapsed[:decayLaneCap]
+	}
 	return lapsed
 }
 
@@ -298,86 +353,6 @@ func (f attentionDealFacts) Figures(
 		}
 	}
 	return out, nil
-}
-
-// attentionTasks reads open tasks through the activities store. A task is an
-// activity of kind `task`, so this is the same read the task queue makes.
-type attentionTasks struct{ store *activities.Store }
-
-// openTasksDueBy is the ONE narrowing the lane's page and its count share.
-//
-// Narrowed in the QUERY, so the store's own bound applies to the rows that
-// qualify. Filtering the answer instead would let a colleague's twelve tasks
-// fill the page and hide the reader's own overdue one behind them — and a count
-// built from a second copy of these arms would answer a different question from
-// the page it sits beside, one arm at a time.
-//
-// The false answer means "no reader to answer for", which is a page of nothing
-// rather than a refusal.
-func openTasksDueBy(
-	ctx context.Context, until time.Time, scope attention.TaskScope, owner ids.UUID,
-) (activities.ListActivitiesInput, bool) {
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until}
-	switch scope {
-	case attention.TasksMine:
-		actor, ok := principal.Actor(ctx)
-		if !ok || actor.UserID.IsZero() {
-			// No human, no "own work" to answer for. Reading every task and
-			// calling the result theirs is the widening this narrowing exists
-			// to prevent.
-			return activities.ListActivitiesInput{}, false
-		}
-		// Exactly theirs. A task they wrote themselves carries their name from
-		// the moment it is written, so this needs no unassigned arm — and the
-		// arm it used to have is what put an automation's follow-up on every
-		// colleague's queue.
-		assignee := ids.From[ids.UserKind](actor.UserID)
-		in.OwnQueueOf = &assignee
-	case attention.TasksUnassigned:
-		in.UnassignedQueue = true
-	case attention.TasksOwnedBy:
-		// One named person's open work. The scope resolver already refused a
-		// reader whose tier does not reach past themselves, and the store's own
-		// row-scope gate still applies underneath — this narrows, never widens.
-		named := ids.From[ids.UserKind](owner)
-		in.OwnQueueOf = &named
-	case attention.TasksVisible:
-		// Every open task the reader may see; the row-scope gate in the store
-		// is the only narrowing.
-	}
-	return in, true
-}
-
-func (t attentionTasks) OpenForViewer(
-	ctx context.Context, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
-) ([]attention.Task, error) {
-	// The store answers "open and due by then" itself, so the limit bounds the
-	// rows that QUALIFY. This used to read ten times the lane and narrow
-	// afterwards, which put the bound on the wrong set: a pile of completed
-	// tasks filled the scan, the overdue promise underneath never reached the
-	// reader, and the day rendered clear while the work was still there.
-	in, ok := openTasksDueBy(ctx, until, scope, owner)
-	if !ok {
-		return nil, nil
-	}
-	in.Limit = &limit
-	rows, _, err := t.store.ListActivities(ctx, in)
-	if err != nil {
-		return nil, err
-	}
-	open := make([]attention.Task, 0, len(rows))
-	for _, row := range rows {
-		// The filter above answers only dated rows, so this skip is unreachable
-		// today. It is here because the alternative to a skip is a nil deref
-		// that panics the WHOLE day's page, and the guarantee lives in a WHERE
-		// clause one package away — too far for the next reader of this loop to
-		// see it.
-		if row.DueAt == nil {
-			continue
-		}
-		open = append(open, taskFromActivity(row))
-	}
-	return open, nil
 }
 
 // taskFromActivity carries one stored activity across the seam as a task.

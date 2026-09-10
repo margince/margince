@@ -29141,6 +29141,34 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description The answer to a confirm-link submission. `cases` names every rights request it opened — one per
+         *     corrected field under Art. 16, one for an erasure request under Art. 17. Empty when the submission
+         *     proposed nothing: a marketing answer alone opens no case.
+         */
+        ConfirmSubmissionReceipt: {
+            cases: components["schemas"]["RightsCaseReceipt"][];
+        };
+        /**
+         * @description What a data subject is told to quote when asking after a request they sent through their confirm
+         *     link. Carries the reference and the right it was opened under, never the case id — the queue that
+         *     holds the case is admin-gated, and a row id in a receipt invites being typed back in somewhere
+         *     that trusts it.
+         */
+        RightsCaseReceipt: {
+            /**
+             * @description Art. 16 correction or Art. 17 erasure.
+             * @enum {string}
+             */
+            kind: "rectify" | "erasure";
+            /** @description The quotable reference, unique across the installation. */
+            reference: string;
+            /**
+             * @description The record field a correction proposes. Absent for an erasure. A subject who corrected two
+             *     fields receives two receipts, and without this cannot tell which answer is about which.
+             */
+            field?: string;
+        };
         CreateDataSubjectRequest: {
             /** @enum {string} */
             kind: "access" | "rectify" | "erasure";
@@ -32016,6 +32044,12 @@ export interface components {
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
+             * @description Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+             * @enum {string}
+             */
+            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later";
+            /**
              * @description The version of the row this item's own verbs write to, present where it names one — a
              *     task today. Carried for the reason `email_summary` carries one: a lane that offers
              *     `complete` and `snooze` has to name the row those presses condition on, or two people
@@ -32028,6 +32062,11 @@ export interface components {
              */
             occurred_at?: string;
             /**
+             * @description The way back from work that was APPLIED rather than approved.
+             *     A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
+             */
+            undo?: components["schemas"]["AppliedUndo"];
+            /**
              * @description What this item offers. `decide` and `merge` mean the verb is irreversible and a
              *     person must choose; `complete` and `snooze` are a task's own verbs; `open` is
              *     the read-only fallback for a receipt.
@@ -32039,7 +32078,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -32404,6 +32443,11 @@ export interface components {
              */
             occurred_at: string;
             subject?: components["schemas"]["AttentionSubject"];
+            /**
+             * @description The way back, on a receipt for work that was APPLIED rather than approved.
+             *     A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
+             */
+            undo?: components["schemas"]["AppliedUndo"];
         };
         /**
          * @description What is going wrong on this lead's team, finite and caller-scoped.
@@ -33098,6 +33142,12 @@ export interface components {
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
+             * @description Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+             * @enum {string}
+             */
+            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later";
+            /**
              * @description The version of the row this item's own verbs write to, present where it names one — a
              *     task today. Carried for the reason `email_summary` carries one: a lane that offers
              *     `complete` and `snooze` has to name the row those presses condition on, or two people
@@ -33109,8 +33159,13 @@ export interface components {
              * @description When the thing being reported happened.
              */
             occurred_at?: string;
+            /**
+             * @description The way back from work that was APPLIED rather than approved.
+             *     A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
+             */
+            undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -33335,6 +33390,21 @@ export interface components {
              */
             on_behalf_of?: string;
         };
+        /** @description What a receipt needs to offer a way back from a change nobody was asked about. */
+        AppliedUndo: {
+            /**
+             * Format: uuid
+             * @description The change to put back, through the record-history restore route.
+             */
+            audit_log_id: string;
+            /**
+             * Format: int64
+             * @description The record's version as this receipt was read, for the `If-Match` the restore route requires. Carried on the receipt rather than re-read by the client: a second read would race the sweep, and a stale version is what makes the restore refuse rather than overwrite somebody else's later edit.
+             */
+            version: number;
+            /** @description Somebody already put this back. The row stays and says so rather than vanishing, which would leave a reader unsure their Undo landed. */
+            reversed: boolean;
+        };
         /**
          * @description Whether this change can be taken back, and why not when it cannot.
          *
@@ -33426,7 +33496,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "outcome_unrecorded";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -41130,7 +41200,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Booked; a minimal confirmation (no CRM record data disclosed). */
+            /**
+             * @description Booked; a minimal confirmation (no CRM record data disclosed). `marketing` reports what
+             *     became of the newsletter tick, separately from the booking itself: a question this
+             *     installation could not put — no live mailbox on the record, a purpose archived since the
+             *     form was published, no mail lane wired at all — leaves the meeting standing and says
+             *     `not_asked`, so a booker who ticked the box is not left waiting for a mail that is not
+             *     coming.
+             */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -41141,6 +41218,20 @@ export interface operations {
                         start: string;
                         /** Format: date-time */
                         end: string;
+                        /**
+                         * @description The slot is held. A booking that did not commit answers an error status instead.
+                         * @enum {string}
+                         */
+                        booking: "confirmed";
+                        /**
+                         * @description `not_requested` — the form carried no tick. `pending_confirmation` — the question
+                         *     was queued for delivery and the grant waits on the subject answering it; queued
+                         *     is not delivered. `not_asked` — the question could not be put, or this
+                         *     installation has no lane to put it on; the booking stands and no subscription
+                         *     mail follows.
+                         * @enum {string}
+                         */
+                        marketing: "not_requested" | "pending_confirmation" | "not_asked";
                     };
                 };
             };
@@ -41615,12 +41706,19 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Recorded. */
-            204: {
+            /**
+             * @description Recorded. `cases` names every rights request this submission opened — one per corrected field
+             *     under Art. 16, one for an erasure request under Art. 17 — each with the reference the subject
+             *     quotes when asking after it. Empty when the submission proposed nothing (a marketing answer
+             *     alone opens no case).
+             */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConfirmSubmissionReceipt"];
+                };
             };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];

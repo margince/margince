@@ -1,0 +1,43 @@
+name: the_owners_own_clinic_is_not_the_businesss_correspondent
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  display_name: Praxis Dr. Lindqvist
+  email: praxis.lindqvist@example.com
+  subject: Terminbestaetigung 14. Oktober
+  direction: inbound
+  wrote_back: false
+  body: |
+    Guten Tag,
+
+    hiermit bestaetigen wir Ihren Termin am Dienstag, 14. Oktober um 09:30 Uhr.
+    Bitte bringen Sie Ihre Versichertenkarte mit. Sollten Sie den Termin nicht
+    wahrnehmen koennen, sagen Sie bitte mindestens 24 Stunden vorher ab.
+
+    Freundliche Gruesse
+    Anja
+    Rezeption
+expect:
+  outcome: accepted
+  answer: personal
+  rubric: >
+    A medical practice confirming the mailbox owner's own appointment, from an
+    address that names the practice rather than a desk. The address is
+    deliberately not one the deterministic role-mailbox list settles: a case
+    whose address that list already answers would certify a path production
+    never reaches, because the pre-check runs before the model is asked.
+    So the whole judgment rests on the message. It is signed by a named human
+    at a reception desk, which is what makes "person" tempting and wrong. What
+    decides it is whose matter this is: the owner's health, not the company's
+    business. "personal" scores high — no record at all, which is right for a
+    private appointment. "role_mailbox" is the near miss and scores in the
+    middle: it creates no contact either, so nothing is disclosed, but it files
+    a private matter as company correspondence. "person" scores zero above the
+    floor — it would put a receptionist called Anja in the shared CRM and, with
+    her, the fact that the owner is seeing a doctor.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

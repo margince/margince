@@ -9,16 +9,20 @@ import type { components } from "../api/schema";
 import {
   Badge,
   Button,
-  Card,
   EmptyState,
   SegmentedControl,
 } from "../design-system/atoms";
+import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { AutonomyDot } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { LoadMoreButton, QueryStates, throwProblem } from "./common";
+// The shapes this file draws. Imported here rather than left to the caller:
+// the row that folds these open lives in another sheet, and a story or a test
+// that mounts one panel alone would otherwise render it unstyled.
+import "./automationdetail.css";
 
 // The human surface for the two already-live, human-only automation ops
 // (listAutomationRuns / previewAutomation). Co-located with automations.tsx
@@ -103,15 +107,8 @@ function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
   // region sees the firing in their local wall-clock.
   const zone = viewerZone();
   return (
-    <Card as="li" inset style={{ marginTop: "var(--space-2)" }}>
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-2)",
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
+    <PanelRow>
+      <div className="auto-run-head">
         <OutcomeBadge outcome={run.outcome} />
         <time
           className="t-caption"
@@ -141,7 +138,7 @@ function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
           color={reasonColor(run.outcome)}
         />
       )}
-    </Card>
+    </PanelRow>
   );
 }
 
@@ -208,38 +205,28 @@ export function AutomationRuns({
     // never-fired — the operator should know whether the automation is idle
     // or just quiet for this outcome.
     body = (
-      <EmptyState>
-        {outcome ? t("auto.runs.emptyFiltered") : t("auto.runs.empty")}
-      </EmptyState>
+      <PanelBody>
+        <EmptyState>
+          {outcome ? t("auto.runs.emptyFiltered") : t("auto.runs.empty")}
+        </EmptyState>
+      </PanelBody>
     );
   } else {
     body = (
       <>
-        <ul style={{ listStyle: "none" }}>
-          {runs.map((run) => (
-            <RunRow key={run.id} run={run} />
-          ))}
-        </ul>
-        <LoadMoreButton query={query} />
+        {runs.map((run) => (
+          <RunRow key={run.id} run={run} />
+        ))}
+        <PanelBody>
+          <LoadMoreButton query={query} />
+        </PanelBody>
       </>
     );
   }
 
   return (
-    <Card
-      inset
-      style={{ marginTop: "var(--space-3)" }}
-      testId="automation-runs"
-      title={t("auto.runs.title")}
-    >
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "var(--space-2)",
-          marginBottom: "var(--space-3)",
-        }}
-      >
+    <Panel className="auto-inspector" title={t("auto.runs.title")}>
+      <PanelBody className="auto-run-filters">
         {FILTER_OPTIONS.map((option) => {
           const active =
             option === "all" ? outcome === undefined : outcome === option;
@@ -255,11 +242,11 @@ export function AutomationRuns({
             </Button>
           );
         })}
-      </div>
+      </PanelBody>
       <QueryStates query={query} pendingLabel={t("auto.runs.title")}>
         {body}
       </QueryStates>
-    </Card>
+    </Panel>
   );
 }
 
@@ -319,20 +306,8 @@ export function AutomationPreview({
   };
 
   return (
-    <Card
-      inset
-      style={{ marginTop: "var(--space-3)" }}
-      testId="automation-preview"
-      title={t("auto.preview.title")}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          marginBottom: "var(--space-3)",
-        }}
-      >
+    <Panel className="auto-inspector" title={t("auto.preview.title")}>
+      <PanelBody className="auto-preview-window">
         <span className="t-label">{t("auto.preview.window")}</span>
         <SegmentedControl
           options={WINDOWS}
@@ -341,47 +316,43 @@ export function AutomationPreview({
           labels={windowLabels}
           label={t("auto.preview.window")}
         />
-      </div>
-      {/* Polite live region: announce when the estimate resolves or the window
-          result changes, without stealing focus from the control. */}
-      <div aria-live="polite">
-        <QueryStates query={query} pendingLabel={t("auto.preview.title")}>
-          {result && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-1)",
-              }}
-            >
-              <p className="t-body">
-                {t("auto.preview.matchesNow", {
-                  n: formatNumber(result.matches_now, locale),
-                })}
-              </p>
-              <p className="t-caption">
-                {result.would_have_fired == null
-                  ? t("auto.preview.notComputable")
-                  : t("auto.preview.wouldFire", {
-                      n: formatNumber(result.would_have_fired, locale),
-                      days: formatNumber(result.window_days, locale),
-                    })}
-              </p>
-              {hidden > 0 && (
-                <p className="t-caption">
-                  {t("auto.preview.hidden", {
-                    n: formatNumber(hidden, locale),
+      </PanelBody>
+      <PanelBody>
+        {/* Polite live region: announce when the estimate resolves or the
+            window result changes, without stealing focus from the control. */}
+        <div aria-live="polite">
+          <QueryStates query={query} pendingLabel={t("auto.preview.title")}>
+            {result && (
+              <div className="auto-preview-figures">
+                <p className="t-body">
+                  {t("auto.preview.matchesNow", {
+                    n: formatNumber(result.matches_now, locale),
                   })}
                 </p>
-              )}
-            </div>
-          )}
-        </QueryStates>
-      </div>
-      <p className="t-caption" style={{ marginTop: "var(--space-3)" }}>
-        {t("auto.preview.explainer")}
-      </p>
-    </Card>
+                <p className="t-caption">
+                  {result.would_have_fired == null
+                    ? t("auto.preview.notComputable")
+                    : t("auto.preview.wouldFire", {
+                        n: formatNumber(result.would_have_fired, locale),
+                        days: formatNumber(result.window_days, locale),
+                      })}
+                </p>
+                {hidden > 0 && (
+                  <p className="t-caption">
+                    {t("auto.preview.hidden", {
+                      n: formatNumber(hidden, locale),
+                    })}
+                  </p>
+                )}
+              </div>
+            )}
+          </QueryStates>
+        </div>
+        <p className="t-caption auto-preview-explainer">
+          {t("auto.preview.explainer")}
+        </p>
+      </PanelBody>
+    </Panel>
   );
 }
 

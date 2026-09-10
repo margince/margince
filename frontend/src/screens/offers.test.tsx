@@ -239,7 +239,7 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     stubOffer({ ...baseOffer, line_items: [existingLine] });
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
-    expect(screen.getByTestId("offer-line-editor")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Line items" })).toBeTruthy();
   });
 
   it("omits the line editor entirely once the offer leaves draft", async () => {
@@ -250,7 +250,7 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     });
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
-    expect(screen.queryByTestId("offer-line-editor")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Line items" })).toBeNull();
   });
 
   it("refreshes totals from the add-line response, never a client-computed sum", async () => {
@@ -466,7 +466,9 @@ describe("AI disclosure/diff banner (OP-11)", () => {
     });
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
-    expect(screen.queryByTestId("ai-disclosure-banner")).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "AI-assisted disclosure" }),
+    ).toBeNull();
   });
 });
 
@@ -686,7 +688,7 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     // Once sent, the send action and the draft-only affordances disappear.
     expect(screen.queryByTestId("send-offer")).toBeNull();
     expect(screen.queryByTestId("edit-offer-header")).toBeNull();
-    expect(screen.queryByTestId("offer-line-editor")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Line items" })).toBeNull();
   });
 
   it("renders a 422 detail verbatim when send is rejected (e.g. fx_rate_unavailable)", async () => {

@@ -273,6 +273,10 @@ func (s *Store) countWaiting(
 	if err != nil {
 		return 0, err
 	}
+	readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
+	if err != nil {
+		return 0, err
+	}
 	inner := fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,
 		liveRecord(openDealPredicate, "d"),
@@ -283,7 +287,8 @@ func (s *Store) countWaiting(
 		scopeUnbounded,
 		notSales, unlinked,
 		colleague, ownDomainSenderSQL("a", arg(ownDomains)),
-		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent))
+		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
+		fmt.Sprintf("$%d", arg(readerAddresses)))
 	var count int
 	// Counted around the whole statement rather than by replacing its SELECT
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a

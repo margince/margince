@@ -159,3 +159,29 @@ func TestABandThisContractDoesNotDeclareReachesNoReader(t *testing.T) {
 		}
 	}
 }
+
+// A lapsed relationship offers something to DO with it.
+//
+// The row carried Open and Dismiss, so the only affirmative button made the
+// work disappear — a reader with a list of relationships worth reviving had no
+// way to act on one from the page.
+func TestALapsedRelationshipOffersADraftReconnect(t *testing.T) {
+	row := classifyDecay(crmcontracts.AttentionItem{
+		Source:       crmcontracts.AttentionItemSourceRelationshipDecay,
+		Relationship: &crmcontracts.AttentionRelationshipFacts{Strength: band("strong")},
+	}, rankInstant)
+
+	if row.item.Move == nil {
+		t.Fatal("the row offers no move, so the lane still only lets a reader dismiss it")
+	}
+	if row.item.Move.Action != crmcontracts.WorklistMoveActionDraftEmail {
+		t.Errorf("the move is %q, want draft_email", row.item.Move.Action)
+	}
+	// NO activity id. The contract reads a draft_email naming a record as a
+	// REPLY, and answering a message nobody sent is the defect worklistMoveOf
+	// exists to prevent.
+	if row.item.Move.ActivityId != nil {
+		t.Error("the reconnect names an activity, so the queue draws it as a reply " +
+			"to a message that does not exist")
+	}
+}

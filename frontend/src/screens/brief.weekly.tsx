@@ -58,7 +58,7 @@ export function WeeklySection() {
   const index = useWeeklyReviewIndex();
 
   return (
-    <section id="brief-weekly" aria-label={t("brief.panel.weekly")}>
+    <section id="brief-weekly">
       <Panel
         title={t("brief.panel.weekly")}
         sub={
