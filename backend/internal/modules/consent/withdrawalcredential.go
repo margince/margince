@@ -117,29 +117,35 @@ func newWithdrawalToken() (string, error) {
 	return withdrawalTokenPrefix + base64.RawURLEncoding.EncodeToString(buf[:]), nil
 }
 
-// EnsureWithdrawalCredentialTx returns the live credential for this address and
-// scope, minting one if there is none.
+// EnsureWithdrawalCredentialTx mints the credential a message's unsubscribe
+// link carries, for this address and scope.
 //
-// IDEMPOTENT ON THE LIVE ROW, which is what the unique index enforces: re-sending
-// a newsletter reuses the link the last mail carried rather than minting a second
-// credential that works just as well. Two live links for one subscription is two
-// bearer credentials to leak, and revoking one would leave the other working.
-//
-// It returns the TOKEN only when it minted one. A credential that already exists
-// cannot produce its token again — the table holds a hash — which is the point:
-// a database read must not yield working links. A send that needs a URL for an
-// existing credential is a send whose previous link still works.
+// ONE PER SEND, and it always returns the token it minted. The table holds a
+// hash, so an existing credential cannot produce its token again — which is the
+// point, since a database read must not yield working links — and that is why
+// reuse is impossible rather than merely unwanted. Several live rows per address
+// is therefore the correct shape: each is a bearer token for stopping that
+// recipient's mail and nothing else, exactly like the messages carrying them,
+// and revocation is by SUBJECT so no row is left working behind.
 func (s *Store) EnsureWithdrawalCredentialTx(
 	ctx context.Context, tx pgx.Tx, in WithdrawalMintInput,
 ) (token string, err error) {
-	// GATED, unlike the resolve below. This MINTS a bearer credential that can
-	// stop somebody's mail for two years, so the caller has to be entitled to
-	// act on that person — the same grant IssueConfirmToken asks for, and for
-	// the same reason: a credential minted for a person is authority over them.
+	// GATED, unlike the resolve below — and gated the way the sibling mint
+	// PreferenceTokenForEmail is, because the one door that reaches this is the
+	// same door: a marketing send, already authorized against this recipient by
+	// the consent gate and by the activity it creates.
 	//
-	// person:update rather than person:read, because minting one changes what
-	// can be done to the record even though it writes no consent state.
-	if err := auth.Require(ctx, entityPerson, principal.ActionUpdate); err != nil {
+	// person:READ, not update. Asking for update refused every sender that does
+	// not hold it — an agent granted `activity:create` + `person:read`, a rep
+	// working from a read share — and refusing the mint does not stop the
+	// message. It strips the recipient's opt-out from a message going out
+	// anyway, which is the exact failure this table exists to end.
+	//
+	// The authority is also strictly LESS than the sibling's needs. A preference
+	// token reads a consent state, withdraws AND grants; this credential can
+	// stop mail and do nothing else. Demanding more for the weaker of the two
+	// had it backwards.
+	if err := auth.Require(ctx, entityPerson, principal.ActionRead); err != nil {
 		return "", err
 	}
 	address := normalizeAddress(in.Address)
@@ -164,15 +170,15 @@ func (s *Store) EnsureWithdrawalCredentialTx(
 	// deleted. The person row survives an anonymize-in-place, so the foreign
 	// key does not catch it and the fresh token resolves happily.
 	//
-	// EnsureWritableLive, not the VISIBLE twin PreferenceTokenForEmail uses.
-	// Person is a shareable table, so a manual `read` share widens visibility
-	// without widening write authority — and this path WRITES a capability
-	// over the subject's mail. A caller holding only a read share must not
-	// mint one. Live rather than plain, for the reason the preference mint
-	// gives: a plain probe answers "still there" for an anonymized tombstone,
-	// which is precisely the row the erasure race leaves behind.
+	// The VISIBLE twin, the one PreferenceTokenForEmail uses, for the reason
+	// the object grant above gives: a caller who may send this person marketing
+	// mail owes them a link that stops it. LIVE rather than plain, which is the
+	// half that matters here — a plain probe answers "still there" for an
+	// anonymized tombstone, precisely the row the erasure race leaves behind,
+	// and this path would then mint a fresh capability carrying the plaintext
+	// address for a subject the installation has certified erased.
 	if !in.PersonID.IsZero() {
-		if err := auth.EnsureWritableLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+		if err := auth.EnsureVisibleLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
 			return "", err
 		}
 		// AND HELD until this transaction commits. EnsureWritableLive reads a
