@@ -139,9 +139,38 @@ func (s *Store) EnsureWithdrawalCredentialTx(
 	//
 	// person:update rather than person:read, because minting one changes what
 	// can be done to the record even though it writes no consent state.
+	//
+	// A DELIBERATE mint asks this. The send path does not come through here —
+	// see mintWithdrawalCredentialTx below for why, and for what still holds
+	// there.
 	if err := auth.Require(ctx, entityPerson, principal.ActionUpdate); err != nil {
 		return "", err
 	}
+	return s.mintWithdrawalCredentialTx(ctx, tx, in)
+}
+
+// mintWithdrawalCredentialTx is the mint itself, without the object grant.
+//
+// The unsubscribe link a marketing message carries is minted ON THE SEND PATH,
+// under the sender's own principal, and RFC 8058 compels the message to carry
+// it. Asking person:update there asks the sender for authority over the
+// recipient in order to send them mail they can opt out of — and it is asked
+// before the code knows whether a person is involved at all: this path serves
+// an address matching NOBODY, by design, because the message is going to that
+// address regardless.
+//
+// What still holds, and is the check that actually encodes authority over a
+// named person, is EnsureWritableLive below: row-scoped, inside this
+// transaction, and closing the erasure race that a caller's earlier address
+// lookup opens. Splitting the object grant off does not touch it.
+//
+// So the two callers ask different questions, which is why they are two:
+// EnsureWithdrawalCredentialTx asks may you act on this person, and the send
+// asks may you send this message — which its own admission has already settled
+// by the time it reaches here.
+func (s *Store) mintWithdrawalCredentialTx(
+	ctx context.Context, tx pgx.Tx, in WithdrawalMintInput,
+) (token string, err error) {
 	address := normalizeAddress(in.Address)
 	if address == "" {
 		return "", &ValidationError{

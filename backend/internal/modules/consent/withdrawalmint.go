@@ -60,8 +60,12 @@ func (s *Store) WithdrawalTokenForEmail(
 				in.Scope, in.PurposeID = WithdrawalScopeNamedPurpose, purposeID
 			}
 		}
+		// The mint WITHOUT the object grant: this is the send path, whose own
+		// admission is the gate, and whose recipient may be an address no
+		// person holds. The row-scoped liveness check inside it still applies
+		// wherever a person IS named.
 		var mintErr error
-		token, mintErr = s.EnsureWithdrawalCredentialTx(ctx, tx, in)
+		token, mintErr = s.mintWithdrawalCredentialTx(ctx, tx, in)
 		return mintErr
 	})
 	if err != nil {
