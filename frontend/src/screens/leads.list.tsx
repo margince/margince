@@ -52,7 +52,7 @@ import {
 } from "./listquery";
 import {
   createdColumn,
-  lastActivityColumn,
+  lastActivityCell,
   mineEmptyNote,
   ownerColumn,
   standardViews,
@@ -447,7 +447,13 @@ function LeadsWorkbench({
               </span>
             ),
           },
-          lastActivityColumn<Lead>(t, locale, recordZone),
+          {
+            // The CELL, not the shared column: a lead's last activity is
+            // DERIVED (see lastActivityCell), so this header offers no sort.
+            key: "lastActivity",
+            header: t("list.lastActivity"),
+            cell: lastActivityCell<Lead>(locale, recordZone),
+          },
           {
             key: "source",
             header: t("lead.source"),
