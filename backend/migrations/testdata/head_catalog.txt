@@ -1730,6 +1730,29 @@ public.communication_decision_by_subject CREATE INDEX communication_decision_by_
 public.communication_decision_disagreements CREATE INDEX communication_decision_disagreements ON public.communication_decision USING btree (decided_at) WHERE ((legacy_verdict IS NOT NULL) AND (legacy_verdict <> verdict))
 public.communication_decision_one_per_decision CREATE UNIQUE INDEX communication_decision_one_per_decision ON public.communication_decision USING btree (decision_set_id, recipient_address, phase)
 public.communication_decision_pkey CREATE UNIQUE INDEX communication_decision_pkey ON public.communication_decision USING btree (id)
+public.communication_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_review.communication_review_delivery_intent_id_fkey FOREIGN KEY (delivery_intent_id) REFERENCES scheduled_send(id) ON DELETE CASCADE
+public.communication_review.communication_review_initiated_by_fkey FOREIGN KEY (initiated_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.communication_review.communication_review_kind CHECK ((kind = 'single'::text))
+public.communication_review.communication_review_pkey PRIMARY KEY (id)
+public.communication_review.communication_review_resolution_shape CHECK (((state = ANY (ARRAY['resolved'::text, 'superseded'::text, 'cancelled'::text])) = (resolved_at IS NOT NULL)))
+public.communication_review.communication_review_state CHECK ((state = ANY (ARRAY['needs_context'::text, 'needs_repair'::text, 'resolved'::text, 'superseded'::text, 'cancelled'::text])))
+public.communication_review.communication_review_superseded_by_fkey FOREIGN KEY (superseded_by) REFERENCES communication_review(id) ON DELETE RESTRICT
+public.communication_review.communication_review_supersession_shape CHECK (((state = 'superseded'::text) = (superseded_by IS NOT NULL)))
+public.communication_review.delivery_intent_id uuid gen=- def=-
+public.communication_review.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_review.initiated_by uuid gen=- def=-
+public.communication_review.kind text NOT NULL gen=- def='single'::text
+public.communication_review.opened_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_review.reason_code text NOT NULL gen=- def=-
+public.communication_review.refusals jsonb NOT NULL gen=- def='[]'::jsonb
+public.communication_review.resolved_at timestamp with time zone gen=- def=-
+public.communication_review.state text NOT NULL gen=- def='needs_context'::text
+public.communication_review.superseded_by uuid gen=- def=-
+public.communication_review_by_initiator CREATE INDEX communication_review_by_initiator ON public.communication_review USING btree (initiated_by, opened_at DESC)
+public.communication_review_one_live_per_intent CREATE UNIQUE INDEX communication_review_one_live_per_intent ON public.communication_review USING btree (delivery_intent_id) WHERE ((delivery_intent_id IS NOT NULL) AND (resolved_at IS NULL))
+public.communication_review_open CREATE INDEX communication_review_open ON public.communication_review USING btree (opened_at) WHERE (resolved_at IS NULL)
+public.communication_review_pkey CREATE UNIQUE INDEX communication_review_pkey ON public.communication_review USING btree (id)
 public.communication_suppression acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_suppression.address text gen=- def=-
 public.communication_suppression.captured_by text NOT NULL gen=- def=-

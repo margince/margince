@@ -443,6 +443,13 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 	if _, err := tx.Exec(ctx, `DELETE FROM privacy_notice_case WHERE person_id = $1`, id); err != nil {
 		return fmt.Errorf("clear the person's notice cases: %w", err)
 	}
+	// The same writer the eraser runs, for the reason the acquisition evidence
+	// above carries: both acts must clear the same tables, and a review left
+	// holding an anonymized subject's addresses is the record still naming
+	// somebody an operator was told had been anonymized.
+	if err := clearRefusedSendReviews(ctx, tx, id, addresses); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM communication_basis WHERE person_id = $1`, id); err != nil {
 		return err
 	}
