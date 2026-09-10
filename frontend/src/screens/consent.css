@@ -1,22 +1,13 @@
 /* ConsentSection layout only — the row/badge/timeline primitives themselves
  * come from atoms.css and composed.css's .timeline. Tokens only (ds-purity). */
 
-/* One purpose, as a row of the list. PanelRow's shape — a top border against the
- * row above and none on the first — rather than a bottom border with a
- * `:last-child` reset, which is the same line drawn from the other side and the
- * reason two cards in this tree could disagree about where a list ends. It is
- * inset by the Card's own padding rather than full-bleed: this surface is a Card,
- * which has no full-bleed row slot, and reaching past its padding with a negative
- * margin would be a third spelling rather than a fix. */
+/* One purpose, stacked inside its row: the state line, the verbs, and the proof
+ * log the verbs open. The row's own interval and its hairline belong to
+ * `PanelRow` — this class says only how the purpose's parts stack within it. */
 .consent-row {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--borderSubtle);
-}
-.consent-row:first-child {
-  border-top: 0;
 }
 .consent-row-head {
   display: flex;
@@ -30,14 +21,6 @@
   gap: var(--gapActions);
   flex-wrap: wrap;
 }
-/* The token field gets its own line below the actions row (the .field label-
- * above-input idiom create.tsx/privacy.tsx use) rather than sitting inline
- * among the buttons, where its label pushed the row off the buttons' shared
- * baseline. Capped width — a one-time token has no reason to stretch full row. */
-.consent-token-field {
-  margin-top: 8px;
-  max-width: 320px;
-}
 
 /* Indent + the card-inset elevation dsr-expanded uses elsewhere: without it
  * the expanded proof log reads as a sibling of the NEXT purpose row rather
@@ -47,15 +30,9 @@
   margin-left: 4px;
 }
 
-/* The per-person ask, under the per-purpose rows. Ruled off above so it does
-   not read as one more row: it is a different question, asked once about the
-   whole record rather than about a purpose. */
-.consent-confirm-ask {
-  margin-top: var(--space-4);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--borderSubtle);
-}
-
+/* The per-person ask, under the per-purpose rows. It is a body of its own so
+   the panel rules it off with its own seam: a different question, asked once
+   about the whole record rather than about a purpose. */
 .consent-confirm-ask p {
   margin-top: var(--space-2);
 }

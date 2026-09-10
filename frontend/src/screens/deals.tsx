@@ -34,7 +34,6 @@ import { activityTimeline } from "../design-system/activitytimeline";
 import {
   Badge,
   Button,
-  Card,
   DataTable,
   EmptyState,
   Modal,
@@ -53,6 +52,7 @@ import { IconAction } from "../design-system/iconaction";
 import type { ListChip } from "../design-system/listsurface";
 import type { ListColumn, ListSelection } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { Panel, PanelBody } from "../design-system/panel";
 import { FieldGuard } from "../design-system/rbac";
 import { RecordTabs } from "../design-system/recordtabs";
 import {
@@ -3520,57 +3520,61 @@ function DealApprovals({
     return null;
   }
   return (
-    <Card
-      title={t("deal.pendingApprovals")}
-      style={{ marginBottom: "var(--space-4)" }}
-    >
-      {approvals.map((approval) => (
-        <div
-          key={approval.id}
-          className="staging-card"
-          style={{ marginBottom: 8 }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
-            {/* The same two facts the approvals inbox states, said the same
+    <Panel title={t("deal.pendingApprovals")}>
+      {/* The interval between two staged cards belongs to the stack rather
+          than to each card, so the last one does not pay for a neighbour it
+          does not have. */}
+      <PanelBody className="form-stack">
+        {approvals.map((approval) => (
+          <div key={approval.id} className="staging-card">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-2)",
+              }}
+            >
+              <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
+              {/* The same two facts the approvals inbox states, said the same
                 way. Printed off the wire they read `advance_deal` and
                 `agent:capture` — the vocabulary the API speaks, on a page
                 whose reader never sees the API. */}
-            <span className="t-label">
-              {approvalKindLabel(approval.kind, t)}
-            </span>
-            <ProvenanceTag
-              provenance={provenanceOf(approval.proposed_by, viewerId)}
-            />
-          </div>
-          <ActionRow
-            className="approval-gate"
-            primary={
-              <Button
-                variant="primary"
-                small
-                onClick={() =>
-                  decide({ approvalId: approval.id, verdict: "approve" })
-                }
-              >
-                {t("trust.accept")}
-              </Button>
-            }
-          >
-            {/* Dismiss here sends the `reject` verdict — the same answer the
-                decision card's trash can gives, so it wears the same glyph. */}
-            <IconAction
-              small
-              label={t("trust.dismiss")}
-              icon={<Trash2 aria-hidden />}
-              onClick={() =>
-                decide({ approvalId: approval.id, verdict: "reject" })
+              <span className="t-label">
+                {approvalKindLabel(approval.kind, t)}
+              </span>
+              <ProvenanceTag
+                provenance={provenanceOf(approval.proposed_by, viewerId)}
+              />
+            </div>
+            <ActionRow
+              className="approval-gate"
+              primary={
+                <Button
+                  variant="primary"
+                  small
+                  onClick={() =>
+                    decide({ approvalId: approval.id, verdict: "approve" })
+                  }
+                >
+                  {t("trust.accept")}
+                </Button>
               }
-            />
-          </ActionRow>
-        </div>
-      ))}
-    </Card>
+            >
+              {/* Dismiss here sends the `reject` verdict — the same answer the
+                decision card's trash can gives, so it wears the same glyph. */}
+              <IconAction
+                small
+                label={t("trust.dismiss")}
+                icon={<Trash2 aria-hidden />}
+                onClick={() =>
+                  decide({ approvalId: approval.id, verdict: "reject" })
+                }
+              />
+            </ActionRow>
+          </div>
+        ))}
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -3606,15 +3610,20 @@ export function OffersPanel({
   const overlay = useSorMode() === "overlay";
   if (overlay) {
     return (
-      <Card title={t("deal.offers")} style={{ marginBottom: "var(--space-4)" }}>
-        <OverlayUnavailable />
-      </Card>
+      <Panel title={t("deal.offers")}>
+        <PanelBody>
+          <OverlayUnavailable />
+        </PanelBody>
+      </Panel>
     );
   }
   return (
-    <Card
+    <Panel
       title={t("deal.offers")}
-      actions={
+      // The panel's ONE verb, in the header band beside the title: a single
+      // button that opens what the panel lists belongs to the panel's name
+      // rather than to a strip under its rows.
+      titleAction={
         <Button
           small
           // `reason` disables the control AND points at the explanation. Passing
@@ -3634,46 +3643,49 @@ export function OffersPanel({
           {t("deal.newOffer")}
         </Button>
       }
-      style={{ marginBottom: "var(--space-4)" }}
     >
-      {offers &&
-        (offers.length > 0 ? (
-          <DataTable
-            label={t("deal.offers")}
-            columns={[
-              {
-                key: "offer_number",
-                header: t("deal.offerNumber"),
-                render: (offer: Offer) => offer.offer_number,
-              },
-              {
-                key: "revision",
-                header: t("deal.offerRevision"),
-                render: (offer: Offer) => String(offer.revision),
-              },
-              {
-                key: "status",
-                header: t("lead.status"),
-                render: (offer: Offer) => <Badge>{offer.status}</Badge>,
-              },
-              {
-                key: "gross",
-                header: t("deals.amount"),
-                render: (offer: Offer) => (
-                  <span className="t-mono">
-                    {formatMoney(offer.gross_minor, offer.currency, locale)}
-                  </span>
-                ),
-              },
-            ]}
-            rows={offers}
-            rowKey={(offer) => offer.id}
-            onRowClick={(offer) => navigate({ screen: "offers", id: offer.id })}
-          />
-        ) : (
-          <EmptyState>{t("deal.offersEmpty")}</EmptyState>
-        ))}
-    </Card>
+      <PanelBody>
+        {offers &&
+          (offers.length > 0 ? (
+            <DataTable
+              label={t("deal.offers")}
+              columns={[
+                {
+                  key: "offer_number",
+                  header: t("deal.offerNumber"),
+                  render: (offer: Offer) => offer.offer_number,
+                },
+                {
+                  key: "revision",
+                  header: t("deal.offerRevision"),
+                  render: (offer: Offer) => String(offer.revision),
+                },
+                {
+                  key: "status",
+                  header: t("lead.status"),
+                  render: (offer: Offer) => <Badge>{offer.status}</Badge>,
+                },
+                {
+                  key: "gross",
+                  header: t("deals.amount"),
+                  render: (offer: Offer) => (
+                    <span className="t-mono">
+                      {formatMoney(offer.gross_minor, offer.currency, locale)}
+                    </span>
+                  ),
+                },
+              ]}
+              rows={offers}
+              rowKey={(offer) => offer.id}
+              onRowClick={(offer) =>
+                navigate({ screen: "offers", id: offer.id })
+              }
+            />
+          ) : (
+            <EmptyState>{t("deal.offersEmpty")}</EmptyState>
+          ))}
+      </PanelBody>
+    </Panel>
   );
 }
 

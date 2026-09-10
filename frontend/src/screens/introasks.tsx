@@ -9,7 +9,8 @@
 // would eventually disagree with this one about what the ask's state means.
 
 import { useState } from "react";
-import { Badge, Button, Card } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import { useViewerId } from "./common";
 import { IntroDecisionDrawer } from "./introdecision";
@@ -69,19 +70,21 @@ export function IntroAsksCard({
   }
 
   return (
-    <Card title={t("person.intro.asksTitle")} sub={t("person.intro.asksSub")}>
-      <ul className="pn-asks">
-        {rows.map((ask) => (
-          <AskRow
-            key={ask.id}
-            ask={ask}
-            viewerUserId={viewerUserId}
-            complete={complete}
-            cancel={cancel}
-            onAnswer={() => setDeciding(ask)}
-          />
-        ))}
-      </ul>
+    <Panel title={t("person.intro.asksTitle")} sub={t("person.intro.asksSub")}>
+      <PanelBody>
+        <ul className="pn-asks">
+          {rows.map((ask) => (
+            <AskRow
+              key={ask.id}
+              ask={ask}
+              viewerUserId={viewerUserId}
+              complete={complete}
+              cancel={cancel}
+              onAnswer={() => setDeciding(ask)}
+            />
+          ))}
+        </ul>
+      </PanelBody>
 
       {deciding ? (
         <IntroDecisionDrawer
@@ -92,7 +95,7 @@ export function IntroAsksCard({
           onClose={() => setDeciding(undefined)}
         />
       ) : null}
-    </Card>
+    </Panel>
   );
 }
 

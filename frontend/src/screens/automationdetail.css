@@ -1,0 +1,58 @@
+/* The two inspectors an automation row folds open below its head: run history
+   and the dry-run blast radius. Layout and the --space-* scale only — every
+   control comes from the design system, and every interval reads a token so
+   these panes cannot drift a step away from the settings surface holding
+   them. */
+
+/* An inspector pays for its own step away from the line that opened it: the
+   list's gap is BETWEEN rows and says nothing about what a row unfolds. */
+.auto-inspector {
+  margin-top: var(--space-3);
+}
+
+/* The runs read's pending and error arms come from `QueryStates` rather than
+   from a `PanelBody`, so they land on the pane's own ground with no inset —
+   which printed the loading label against the panel's left edge. The inset is
+   the PANE's, named by its role, so it moves when that surface is retuned and
+   the skeleton stands exactly where the rows it reserves will. */
+.auto-inspector > .pending,
+.auto-inspector > .empty {
+  padding: var(--padPanel);
+}
+
+/* The outcome chips: one row of buttons side by side, wrapping on a narrow
+   card rather than pushing the panel's edge out. */
+.auto-run-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
+
+/* One run's headline — outcome, when, autonomy, whether it waited on a person
+   — as a single line, with the labelled detail lines stacked under it. */
+.auto-run-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* The window picker and the word naming it read as one control. */
+.auto-preview-window {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The estimate's lines sit tighter than prose: they are one figure read down,
+   not three paragraphs. */
+.auto-preview-figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* What the estimate does NOT promise, set off from the figure it qualifies. */
+.auto-preview-explainer {
+  margin-top: var(--space-3);
+}

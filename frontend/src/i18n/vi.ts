@@ -1828,8 +1828,6 @@ export const vi = {
   "co.evidence.previous": "Nhận định trước",
   "co.evidence.next": "Nhận định sau",
   "co.evidence.title": "Nguồn của thông tin này",
-  "co.relationships.title": "Người và công ty đã liên kết",
-  "co.tools.title": "Dữ liệu & công cụ",
   "co.prep.withheld":
     "Một số phần của tài khoản này bị ẩn với bạn, nên nhận định này chưa đầy đủ.",
   "co.read.newActivity_one": "Một mục mới kể từ lần bạn xem gần nhất.",

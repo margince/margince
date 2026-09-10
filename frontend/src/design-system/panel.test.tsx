@@ -2,9 +2,9 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { PanelRow } from "./panel";
+import { Panel, PanelBody, PanelRow } from "./panel";
 
 afterEach(cleanup);
 
@@ -17,6 +17,72 @@ function panelCss(): string {
 function tokensCss(): string {
   return readFileSync(join(here, "tokens.css"), "utf8");
 }
+
+// A page of zones is a page of landmarks, and the title is what names each of
+// them: a reader jumping by region hears the same word a sighted reader scans
+// the column for. A `<section>` carries no role until it has an accessible
+// name, so an unnamed panel was not in that list at all.
+describe("a titled panel is a region named by its title", () => {
+  it("names the region with the heading the panel already draws", () => {
+    render(
+      <Panel title="Consent">
+        <PanelBody>Outbound is default-deny per purpose.</PanelBody>
+      </Panel>,
+    );
+    const region = screen.getByRole("region", { name: "Consent" });
+    // Named BY the heading, not by a copy of it: the id has to point at the
+    // element the reader sees, or the two can be edited apart.
+    expect(
+      within(region).getByRole("heading", { name: "Consent", level: 2 }),
+    ).toBe(
+      document.getElementById(region.getAttribute("aria-labelledby") ?? ""),
+    );
+  });
+
+  it("names it at level 3 when the caller sits under a dialog's own title", () => {
+    render(
+      <Panel title="Rooms" titleLevel={3}>
+        <PanelBody>None yet</PanelBody>
+      </Panel>,
+    );
+    const region = screen.getByRole("region", { name: "Rooms" });
+    expect(
+      within(region).getByRole("heading", { name: "Rooms", level: 3 }),
+    ).toBeTruthy();
+  });
+
+  // Two panels on one page are two distinct landmarks. A hard-coded id would
+  // point both at the first heading and speak one name twice.
+  it("gives each panel on a page its own name", () => {
+    render(
+      <>
+        <Panel title="Consent">
+          <PanelBody>a</PanelBody>
+        </Panel>
+        <Panel title="Identity">
+          <PanelBody>b</PanelBody>
+        </Panel>
+      </>,
+    );
+    expect(screen.getByRole("region", { name: "Consent" })).not.toBe(
+      screen.getByRole("region", { name: "Identity" }),
+    );
+  });
+
+  // An untitled panel is a container the caller chose not to name, and a
+  // nameless region in a reader's landmark list is worse than no entry.
+  it("claims no landmark when there is no title to name it", () => {
+    const { container } = render(
+      <Panel>
+        <PanelBody>Rows with no head above them</PanelBody>
+      </Panel>,
+    );
+    expect(screen.queryByRole("region")).toBeNull();
+    expect(
+      container.querySelector(".panel")?.hasAttribute("aria-labelledby"),
+    ).toBe(false);
+  });
+});
 
 // The rule and the hover are two shapes, and PanelRow used to hold them
 // together: every row lit up under the pointer, so a panel of ruled blocks a

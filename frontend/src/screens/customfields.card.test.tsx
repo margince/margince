@@ -102,7 +102,7 @@ describe("CustomFieldsCard", () => {
     const { container } = render(
       <CustomFieldsCard object="deal" record={{ cf_note: "" }} />,
     );
-    expect(container.querySelector(".card")).toBeNull();
+    expect(container.querySelector(".panel")).toBeNull();
   });
 
   it("makes a value that is a web address followable, away from the record", () => {

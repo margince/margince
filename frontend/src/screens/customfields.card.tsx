@@ -3,7 +3,7 @@
 // — a field with no stored value is absent, and a record with no custom values
 // renders nothing at all rather than an empty card.
 
-import { Card } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
 import {
   customFieldDisplay,
@@ -38,44 +38,43 @@ export function CustomFieldsCard({
   }
 
   return (
-    <Card
-      title={t("cf.formSection")}
-      style={{ marginBottom: "var(--space-4)" }}
-    >
-      <dl className="firmo">
-        {rows.map(({ field, value }) => {
-          // A value that IS a web address becomes a link, and everything else
-          // stays text. A field holding the ticket, the wiki page or the ERP
-          // entry a record belongs to is the commonest thing anybody puts in a
-          // text field, and copy-and-paste was the only way to follow it. The
-          // scheme check inside customFieldHref is what keeps this from turning
-          // a stored string into something executable on click.
-          const href = customFieldHref(value);
-          return (
-            <div key={field.column_name}>
-              <dt className="t-eyebrow">{field.label}</dt>
-              <dd>
-                {href ? (
-                  // `noreferrer noopener` and a new tab: the destination is a
-                  // foreign origin nobody in this workspace vouched for, so it
-                  // learns nothing about where the reader came from and gets no
-                  // handle on the window it was opened from.
-                  <a
-                    className="link-button"
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                  >
-                    {value}
-                  </a>
-                ) : (
-                  value
-                )}
-              </dd>
-            </div>
-          );
-        })}
-      </dl>
-    </Card>
+    <Panel className="card-stack" title={t("cf.formSection")}>
+      <PanelBody>
+        <dl className="firmo">
+          {rows.map(({ field, value }) => {
+            // A value that IS a web address becomes a link, and everything else
+            // stays text. A field holding the ticket, the wiki page or the ERP
+            // entry a record belongs to is the commonest thing anybody puts in a
+            // text field, and copy-and-paste was the only way to follow it. The
+            // scheme check inside customFieldHref is what keeps this from turning
+            // a stored string into something executable on click.
+            const href = customFieldHref(value);
+            return (
+              <div key={field.column_name}>
+                <dt className="t-eyebrow">{field.label}</dt>
+                <dd>
+                  {href ? (
+                    // `noreferrer noopener` and a new tab: the destination is a
+                    // foreign origin nobody in this workspace vouched for, so it
+                    // learns nothing about where the reader came from and gets no
+                    // handle on the window it was opened from.
+                    <a
+                      className="link-button"
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      {value}
+                    </a>
+                  ) : (
+                    value
+                  )}
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
+      </PanelBody>
+    </Panel>
   );
 }

@@ -136,7 +136,10 @@ describe("the lead page's one write, read from two columns", () => {
     render(<LeadScreen id="l-1" />);
 
     await openOverride(user);
-    await user.type(await screen.findByLabelText("Score"), "90");
+    await user.type(
+      await screen.findByRole("spinbutton", { name: "Score" }),
+      "90",
+    );
     await user.type(screen.getByLabelText("Reason"), "Met the buyer");
 
     // Somebody else's write, through the SAME mutation: the owner picker in
@@ -151,9 +154,13 @@ describe("the lead page's one write, read from two columns", () => {
     // The override survives it. Before this, the shared mutation's success
     // closed the form and threw away both fields.
     await waitFor(() =>
-      expect((screen.getByLabelText("Score") as HTMLInputElement).value).toBe(
-        "90",
-      ),
+      expect(
+        (
+          screen.getByRole("spinbutton", {
+            name: "Score",
+          }) as HTMLInputElement
+        ).value,
+      ).toBe("90"),
     );
     expect((screen.getByLabelText("Reason") as HTMLInputElement).value).toBe(
       "Met the buyer",
