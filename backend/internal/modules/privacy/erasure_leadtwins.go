@@ -85,6 +85,19 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, personID ids.PersonID, e
 		     SET recipient_address = 'erased+' || id || '@example.invalid',
 		         subject_id = NULL, subject_kind = NULL
 		   WHERE subject_kind = 'lead' AND subject_id IN (SELECT id FROM wiped)
+		), leadreviews AS (
+		  -- The refused-send reviews that named this LEAD. The person sweep
+		  -- reaches a review by the person's own id or one of their addresses,
+		  -- and an unpromoted lead has neither — so a message refused for the
+		  -- lead before promotion would keep their address here after the
+		  -- person it became was erased.
+		  UPDATE communication_review
+		     SET refusals = '[]'::jsonb
+		   WHERE EXISTS (
+		           SELECT 1 FROM jsonb_array_elements(refusals) AS refusal
+		            WHERE (refusal->>'subject_kind' = 'lead'
+		                   AND refusal->>'subject_id' IN (SELECT id::text FROM wiped))
+		               OR lower(refusal->>'address') = ANY($2))
 		)
 		SELECT id FROM wiped`, nullColumnAssignments(leadCustom)),
 		personID, lowercased(emails))

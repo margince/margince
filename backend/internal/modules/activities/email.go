@@ -123,6 +123,54 @@ type DeliveryStager interface {
 	StageTx(ctx context.Context, tx pgx.Tx, in DeliveryRequest) error
 }
 
+// RefusalRecorder turns a refusal the staging call carried out of its
+// transaction into whatever durable record the installation keeps of it.
+//
+// A SECOND, OPTIONAL SEAM rather than a wider StageTx, because it runs at a
+// different MOMENT and that is the whole point: staging runs inside the
+// caller's transaction, and this runs after that transaction has unwound and
+// returned its pool connection. A recorder called from inside would either be
+// rolled back with the refusal it records, or hold a second connection while
+// the first is still checked out — and enough concurrent refusals would then
+// wait on a connection none of them can release.
+//
+// A stager that does not implement it is a composition that keeps no record,
+// which is what every fixture is and what the product was before this existed.
+type RefusalRecorder interface {
+	RecordPendingReview(ctx context.Context, err error) error
+}
+
+// recordRefusal gives a stager that keeps records the chance to keep this one,
+// once the transaction is done with. It answers the error either way, so a
+// composition with no recorder refuses exactly as it did before.
+func recordRefusal(ctx context.Context, stager DeliveryStager, err error) error {
+	recorder, ok := stager.(RefusalRecorder)
+	if !ok {
+		return err
+	}
+	return recordRefusalOn(ctx, recorder, err)
+}
+
+// recordChannelRefusal is the same offer to the channel stager, which is a
+// different interface carrying the same optional seam.
+func recordChannelRefusal(ctx context.Context, stager ChannelDeliveryStager, err error) error {
+	recorder, ok := stager.(RefusalRecorder)
+	if !ok {
+		return err
+	}
+	return recordRefusalOn(ctx, recorder, err)
+}
+
+// recordRefusalOn is the shared body both transports call once they hold a
+// recorder. A refusal recorded on mail and one recorded on a channel answer
+// the same rule because they run the same code.
+func recordRefusalOn(ctx context.Context, recorder RefusalRecorder, err error) error {
+	if err == nil {
+		return nil
+	}
+	return recorder.RecordPendingReview(ctx, err)
+}
+
 // DeliveryRequest is one message handed to the delivery machinery. Message
 // identities are UNBRACKETED throughout — the connector adds brackets when
 // it renders the header, and capture strips them when it reads one back.
