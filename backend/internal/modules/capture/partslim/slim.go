@@ -299,11 +299,6 @@ func applySplices(raw []byte, splices []splice) []byte {
 // stanza and attachment.external_part_id carry the same string.
 func PartIdentity(ordinal int) string { return "part:" + strconv.Itoa(ordinal) }
 
-// wrapBase64 encodes body and folds it at width.
-func wrapBase64(body []byte, width int) []byte {
-	return wrapBase64WithEOL([]byte(base64.StdEncoding.EncodeToString(body)), width, []byte("\r\n"))
-}
-
 // wrapBase64WithEOL folds an already-encoded run at width. A width of 0 leaves
 // it on one line.
 func wrapBase64WithEOL(b64 []byte, width int, eol []byte) []byte {
