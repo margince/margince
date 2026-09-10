@@ -19352,6 +19352,13 @@ type AuthCapabilities struct {
 // and currency are NOT here — every role reads those, and repeating them in a document
 // governed by a narrower grant would make the same fact answer to two authorities.
 type AuthenticationPolicy struct {
+	// RequireSso When true, this installation has closed the password path: an ordinary member
+	// may sign in only through a configured provider. Admins keep the password form
+	// regardless — the break-glass that stops a broken IdP from locking out the people
+	// who fix it. Password is still never removed as a mechanism; this decides who may
+	// use it, not whether it exists.
+	RequireSso bool `json:"require_sso"`
+
 	// SignInProviders Every provider this deployment mounted, each marked with whether the
 	// installation has chosen to offer it — which is a stored choice, not a
 	// guarantee the provider has working credentials. Password is never listed: it
@@ -34940,6 +34947,13 @@ type UpdateInstallationSettingsRequest struct {
 
 	// Name Rename the organization.
 	Name *string `json:"name,omitempty"`
+
+	// RequireSso Close the password path: when true, an ordinary member may sign in only through a
+	// configured provider, while an admin keeps the password form as break-glass. Omit to
+	// leave the policy unchanged. This governs who may use password sign-in, never whether
+	// the mechanism exists — an installation cannot strand itself, because admins are
+	// always exempt.
+	RequireSso *bool `json:"require_sso,omitempty"`
 
 	// Timezone The IANA reporting zone.
 	Timezone *string `json:"timezone,omitempty"`

@@ -42,6 +42,8 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 			value.Elem().SetString("x")
 		case reflect.Int:
 			value.Elem().SetInt(7)
+		case reflect.Bool:
+			value.Elem().SetBool(true)
 		case reflect.Slice:
 			// NON-EMPTY, for the same reason the scalars above are non-zero: an
 			// encoder that wrote a slice the caller did not give it would be

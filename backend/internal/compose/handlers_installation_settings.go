@@ -67,7 +67,7 @@ func (h installationSettingsHandlers) GetAuthenticationPolicy(w http.ResponseWri
 		httperr.Write(w, r, err)
 		return
 	}
-	chosen, err := h.store.SignInPolicy(r.Context())
+	chosen, requireSSO, err := h.store.SignInPolicy(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -77,6 +77,7 @@ func (h installationSettingsHandlers) GetAuthenticationPolicy(w http.ResponseWri
 	// surface.
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AuthenticationPolicy{
 		SignInProviders: h.signInProviders(chosen),
+		RequireSso:      requireSSO,
 	})
 }
 
@@ -135,6 +136,10 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// that is already harmless, and would make an admin's saved choice depend on
 	// which providers happened to be wired the day they saved it.
 	patch.EnabledOidcProviders = req.EnabledOidcProviders
+	// A bool the admin either set or omitted; the entry itself needs no
+	// validation, and an admin can never strand the installation because the
+	// break-glass admin exemption is enforced at login, not stored here.
+	patch.RequireSSO = req.RequireSso
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)

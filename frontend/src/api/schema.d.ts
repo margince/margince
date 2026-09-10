@@ -15207,6 +15207,14 @@ export interface components {
              */
             enabled_oidc_providers?: string[];
             /**
+             * @description Close the password path: when true, an ordinary member may sign in only through a
+             *     configured provider, while an admin keeps the password form as break-glass. Omit to
+             *     leave the policy unchanged. This governs who may use password sign-in, never whether
+             *     the mechanism exists — an installation cannot strand itself, because admins are
+             *     always exempt.
+             */
+            require_sso?: boolean;
+            /**
              * @description Which remaining-pipeline reading a projected landing is built from. Never frozen:
              *     it is applied on READ and stores nothing, so changing it re-computes every landing
              *     at once and re-means no stored row.
@@ -15600,6 +15608,14 @@ export interface components {
              *     is the method every installation always has and cannot switch off.
              */
             sign_in_providers: components["schemas"]["SignInProvider"][];
+            /**
+             * @description When true, this installation has closed the password path: an ordinary member
+             *     may sign in only through a configured provider. Admins keep the password form
+             *     regardless — the break-glass that stops a broken IdP from locking out the people
+             *     who fix it. Password is still never removed as a mechanism; this decides who may
+             *     use it, not whether it exists.
+             */
+            require_sso: boolean;
         };
         /** @description One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen. */
         SignInProvider: {
@@ -34298,6 +34314,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Refused with `code: sso_required` — the credentials were correct, but this installation has closed the password path (`require_sso`) and the account is not an admin. The client sends the caller to single sign-on rather than showing a password error. Admins are exempt (break-glass), so they never see this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             422: components["responses"]["ValidationError"];

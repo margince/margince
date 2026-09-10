@@ -64,7 +64,7 @@ func TestSignInPolicyAnswersItsOwnGrantAndRefusesWithoutIt(t *testing.T) {
 	holder := e.authPolicyCtx(map[string]principal.ObjectGrant{
 		"authentication_policy": {Read: true},
 	})
-	if _, err := store.SignInPolicy(holder); err != nil {
+	if _, _, err := store.SignInPolicy(holder); err != nil {
 		t.Fatalf("an authentication_policy holder was refused the sign-in policy: %v", err)
 	}
 
@@ -72,7 +72,7 @@ func TestSignInPolicyAnswersItsOwnGrantAndRefusesWithoutIt(t *testing.T) {
 	// makes load-bearing: with the Require gone, this caller reads the entry as
 	// the installation and the refusal disappears silently.
 	none := e.authPolicyCtx(map[string]principal.ObjectGrant{})
-	if _, err := store.SignInPolicy(none); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, _, err := store.SignInPolicy(none); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("read without a grant returned %v, want ErrPermissionDenied", err)
 	}
 }
@@ -113,8 +113,44 @@ func TestTheInstallationGrantDoesNotOpenTheSignInPolicy(t *testing.T) {
 	rep := e.authPolicyCtx(map[string]principal.ObjectGrant{
 		"installation_settings": {Read: true, Update: true},
 	})
-	if _, err := store.SignInPolicy(rep); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, _, err := store.SignInPolicy(rep); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("installation_settings alone opened the sign-in policy: %v", err)
+	}
+}
+
+// Enforced-SSO round-trips through the policy: an admin sets it on the same
+// installation_settings.update path its sibling uses, the authentication_policy
+// read reports it, and the login gate's own anonymous read sees the same value —
+// the three surfaces resolving one stored answer.
+func TestRequireSSORoundTripsThroughThePolicy(t *testing.T) {
+	e := SetupSearch(t)
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+
+	writer := e.authPolicyCtx(map[string]principal.ObjectGrant{
+		"installation_settings": {Read: true, Update: true},
+	})
+	on := true
+	if _, err := store.UpdateInstallation(writer, identity.InstallationPatch{RequireSSO: &on}); err != nil {
+		t.Fatalf("turning enforced-SSO on: %v", err)
+	}
+
+	reader := e.authPolicyCtx(map[string]principal.ObjectGrant{"authentication_policy": {Read: true}})
+	_, requireSSO, err := store.SignInPolicy(reader)
+	if err != nil {
+		t.Fatalf("reading the sign-in policy: %v", err)
+	}
+	if !requireSSO {
+		t.Error("the authentication_policy read did not report enforced SSO after it was turned on")
+	}
+
+	// The login gate reads it on an anonymous context, the way /auth/login does.
+	loginCtx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	enforced, err := store.SSOEnforced(loginCtx)
+	if err != nil {
+		t.Fatalf("the login gate's policy read: %v", err)
+	}
+	if !enforced {
+		t.Error("the enforced-SSO login read did not see the stored policy")
 	}
 }
 

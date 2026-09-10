@@ -295,6 +295,26 @@ var EnabledOidcProviders = settings.Define[[]string](
 	},
 ).AsInstallationIdentity()
 
+// RequireSSO closes the password path: when true, an ordinary member may sign
+// in only through a configured provider, and only an admin keeps the password
+// form — the break-glass that stops a broken IdP from locking out the people
+// who fix it (ssoenforcement.go holds the enforcement).
+//
+// Defined on installation_settings/update like EnabledOidcProviders, and read
+// back only through the authentication_policy-gated projection, so who may sign
+// in and how never rides on the aggregate every role can read.
+//
+// It SURVIVES A DATA RESET for the same reason its sibling does: a wipe clears
+// customers and deals, never a deliberate decision about who may sign in, and
+// re-opening the password path on a reset would be exactly that.
+var RequireSSO = settings.Define[bool](
+	"identity.require_sso",
+	installationSettingsObject,
+	"update",
+	false,
+	nil,
+).AsInstallationIdentity()
+
 // Definitions is identity's contribution to the settings registry.
 func Definitions() []settings.Definition {
 	return []settings.Definition{
@@ -306,6 +326,7 @@ func Definitions() []settings.Definition {
 		FiscalYearStartMonth,
 		ForecastForwardMeasure,
 		EnabledOidcProviders,
+		RequireSSO,
 		SMTPPasswordRef,
 		LicenseTokenRef,
 	}

@@ -56,6 +56,11 @@ type Service struct {
 	// module identity never imports. Nil ⟹ nothing caps seats, which is what
 	// a role that resolved no license posture means.
 	seatCeiling SeatCeiling
+	// requireSSO answers whether this installation has switched password sign-in
+	// off (enforced-SSO mode). Nil when unwired — a deployment that never
+	// composed the reader behaves exactly as one whose policy is off, so the
+	// password path stays open. See ssoenforcement.go.
+	requireSSO func(ctx context.Context) (bool, error)
 }
 
 func NewService(pool *pgxpool.Pool) *Service {
@@ -253,6 +258,12 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 		return Identity{}, "", ErrBadCredentials
 	}
 	wsID := ids.From[ids.WorkspaceKind](rawWsID)
+	// Read before the credential check so the outcome of a genuine outage is a
+	// refused login rather than a session minted against an unknown policy.
+	sso, err := s.enforcedSSO(ctx)
+	if err != nil {
+		return Identity{}, "", err
+	}
 	token, tokenHash, err := mintSessionToken()
 	if err != nil {
 		return Identity{}, "", err
@@ -264,25 +275,32 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 		if err != nil {
 			return err
 		}
+		id = Identity{UserID: account.UserID, WorkspaceID: wsID, Email: email, DisplayName: account.DisplayName, SeatType: account.SeatType}
+		var loadErr error
+		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, account.UserID)
+		if loadErr != nil {
+			return loadErr
+		}
+		// Enforced SSO closes the password path to everyone but an admin, and
+		// only AFTER the credential check above — so a wrong password is still
+		// refused first and neutrally, never answered differently because the
+		// mode is on. Rolls back before any session is minted.
+		if sso && !id.hasRole(roleAdmin) {
+			return errSSORequired
+		}
 		if err := insertSession(ctx, tx, account.UserID, tokenHash); err != nil {
 			return err
 		}
 		if err := auditLogin(ctx, tx, account.UserID, "password login"); err != nil {
 			return err
 		}
-
-		id = Identity{UserID: account.UserID, WorkspaceID: wsID, Email: email, DisplayName: account.DisplayName, SeatType: account.SeatType}
 		// Failing here would answer correct credentials with a 500 while
 		// wrong ones still got 401 — telling an attacker which passwords
 		// are right — so InstallationNameOf coalesces an absent row to
 		// the empty string rather than erroring.
 		var nameErr error
-		if id.WorkspaceName, nameErr = InstallationNameOf(ctx, tx); nameErr != nil {
-			return nameErr
-		}
-		var loadErr error
-		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, account.UserID)
-		return loadErr
+		id.WorkspaceName, nameErr = InstallationNameOf(ctx, tx)
+		return nameErr
 	})
 	if errors.Is(err, errAccountLocked) {
 		// A §27-locked account is refused, but INDISTINGUISHABLY from bad

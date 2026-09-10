@@ -281,6 +281,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '403':
+          description: >-
+            Refused with `code: sso_required` — the credentials were correct, but this
+            installation has closed the password path (`require_sso`) and the account is not an
+            admin. The client sends the caller to single sign-on rather than showing a password
+            error. Admins are exempt (break-glass), so they never see this.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /auth/oidc/{provider}/start:
@@ -22248,6 +22257,14 @@ components:
             Password sign-in is not a member of this list and cannot be removed by any value of
             it. Omit the field to leave the choice unchanged; send an empty array to offer
             password only.
+        require_sso:
+          type: boolean
+          description: |
+            Close the password path: when true, an ordinary member may sign in only through a
+            configured provider, while an admin keeps the password form as break-glass. Omit to
+            leave the policy unchanged. This governs who may use password sign-in, never whether
+            the mechanism exists — an installation cannot strand itself, because admins are
+            always exempt.
         forecast_forward_measure:
           type: string
           enum: [commit_evidence, weighted, manager_call]
@@ -22822,7 +22839,7 @@ components:
         Carries only what `authentication_policy` governs. The installation's name, timezone
         and currency are NOT here — every role reads those, and repeating them in a document
         governed by a narrower grant would make the same fact answer to two authorities.
-      required: [sign_in_providers]
+      required: [sign_in_providers, require_sso]
       properties:
         sign_in_providers:
           type: array
@@ -22832,6 +22849,14 @@ components:
             guarantee the provider has working credentials. Password is never listed: it
             is the method every installation always has and cannot switch off.
           items: { $ref: '#/components/schemas/SignInProvider' }
+        require_sso:
+          type: boolean
+          description: |
+            When true, this installation has closed the password path: an ordinary member
+            may sign in only through a configured provider. Admins keep the password form
+            regardless — the break-glass that stops a broken IdP from locking out the people
+            who fix it. Password is still never removed as a mechanism; this decides who may
+            use it, not whether it exists.
     SignInProvider:
       type: object
       additionalProperties: false

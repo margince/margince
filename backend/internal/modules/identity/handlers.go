@@ -302,6 +302,17 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 			httperr.Unauthorized(w, r, "invalid email or password")
 			return
 		}
+		if errors.Is(err, errSSORequired) {
+			// The credentials were correct; this installation has closed the
+			// password path to non-admins. A distinct code so the login screen
+			// can send the caller to single sign-on rather than show a password
+			// error for a password that was right.
+			httperr.Write(w, r, &httperr.DetailedError{
+				Status: http.StatusForbidden, Code: "sso_required",
+				Detail: "this installation requires single sign-on; use your corporate account",
+			})
+			return
+		}
 		httperr.Write(w, r, err)
 		return
 	}
