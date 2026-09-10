@@ -41174,7 +41174,7 @@ export interface operations {
              * @description Booked; a minimal confirmation (no CRM record data disclosed). `marketing` reports what
              *     became of the newsletter tick, separately from the booking itself: a question this
              *     installation could not put — no live mailbox on the record, a purpose archived since the
-             *     form was published, a mail lane that refused it — leaves the meeting standing and says
+             *     form was published, no mail lane wired at all — leaves the meeting standing and says
              *     `not_asked`, so a booker who ticked the box is not left waiting for a mail that is not
              *     coming.
              */
@@ -41189,14 +41189,16 @@ export interface operations {
                         /** Format: date-time */
                         end: string;
                         /**
-                         * @description The slot is held. A booking that did not commit answers 409 or 422 instead.
+                         * @description The slot is held. A booking that did not commit answers an error status instead.
                          * @enum {string}
                          */
                         booking: "confirmed";
                         /**
                          * @description `not_requested` — the form carried no tick. `pending_confirmation` — the question
-                         *     was mailed and the grant waits on the subject answering it. `not_asked` — the
-                         *     question could not be put; the booking stands and no subscription mail follows.
+                         *     was queued for delivery and the grant waits on the subject answering it; queued
+                         *     is not delivered. `not_asked` — the question could not be put, or this
+                         *     installation has no lane to put it on; the booking stands and no subscription
+                         *     mail follows.
                          * @enum {string}
                          */
                         marketing: "not_requested" | "pending_confirmation" | "not_asked";

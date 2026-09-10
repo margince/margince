@@ -116,3 +116,63 @@ func TestABookingSurvivesAMarketingQuestionThatCannotBeAsked(t *testing.T) {
 			"newsletter question", grants)
 	}
 }
+
+// A TICK REPORTS pending_confirmation ONLY IF A MAIL WAS ACTUALLY STAGED.
+//
+// issueLink answers a token it could not send rather than failing: an
+// installation with no relay gets a link it can see was not posted. So a nil
+// error says the row exists, never that anybody will receive it — and the
+// booking adapter builds its own consent store, which the confirmation lane is
+// not rewired onto. Reporting the nil error as pending_confirmation told every
+// booker a question was coming when none was.
+//
+// The assertion is written against what the CONFIRM TOKEN table says, so it
+// stays honest whichever way this installation is wired: a staged mail leaves a
+// delivery behind, and the outcome must agree with it.
+func TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	base := "/v1/public/booking/" + bookingSlug(t, e)
+	transactional := seededTransactionalPurposeID(t, e)
+	marketing := seededMarketingPurposeID(t, e)
+	monday := nextMonday()
+
+	body := AnyMap{
+		"start": monday.Add(2 * time.Hour), "end": monday.Add(150 * time.Minute),
+		"booker": AnyMap{"name": "Stan Staged", "email": "stan@visitor.example"},
+		"consent": AnyMap{
+			"purpose_id": transactional, "policy_version": "pp-2026-01",
+			"wording": "You agree we may contact you about this meeting.",
+			"marketing": AnyMap{
+				"purpose_id": marketing, "policy_version": "mk-2026-01",
+				"wording": "Send me your newsletter.",
+			},
+		},
+	}
+	var answer struct {
+		Marketing string `json:"marketing"`
+	}
+	if status := publicCall(t, e, "POST", base, body, nil, &answer); status != http.StatusCreated {
+		t.Fatalf("booking with a tick → %d, want 201", status)
+	}
+
+	personID := personIDByEmail(t, e, "stan@visitor.example")
+	var delivered int
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM comms_outbound o
+		  JOIN activity a ON a.id = o.activity_id
+		  JOIN activity_link l ON l.activity_id = a.id
+		 WHERE l.person_id = $1`, personID).Scan(&delivered); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "not_asked"
+	if delivered > 0 {
+		want = "pending_confirmation"
+	}
+	if answer.Marketing != want {
+		t.Errorf("the response says marketing=%q while %d confirmation mail(s) were staged, want "+
+			"%q — a booker told a question is coming waits for a mail nobody sent",
+			answer.Marketing, delivered, want)
+	}
+}

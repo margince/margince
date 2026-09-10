@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -168,9 +169,22 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, personID ids.UU
 	if m == nil {
 		return activities.MarketingNotRequested, nil
 	}
-	_, err := a.store.IssueConsentLink(ctx,
+	issued, err := a.store.IssueConsentLink(ctx,
 		ids.From[ids.PersonKind](personID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom)
 	if err == nil {
+		// STAGED, not merely minted. issueLink answers a token it could not
+		// send rather than failing — an installation with no relay gets a link
+		// it can see was not posted — so a nil error alone says the row exists,
+		// never that anybody will receive it.
+		//
+		// This adapter builds its own consent store, and the confirmation lane
+		// is rewired onto the handlers' store rather than that one. So on the
+		// production wiring today the mail is never staged, and reporting the
+		// nil error as pending_confirmation would tell every booker a question
+		// is coming when none is.
+		if !issued.Staged {
+			return activities.MarketingNotAsked, nil
+		}
 		return activities.MarketingPendingConfirmation, nil
 	}
 	// TWO KINDS OF REFUSAL, and only one of them may cost the meeting.
@@ -192,11 +206,27 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, personID ids.UU
 	// apperrors.FieldFault, which httperr renders as the 422 naming the field —
 	// and which the MCP surface reads too, where a translation done here would
 	// not reach.
-	if misdirected := new(consent.MisdirectedLinkError); errors.As(err, &misdirected) {
+	var misdirected *consent.MisdirectedLinkError
+	if errors.As(err, &misdirected) {
 		return activities.MarketingNotRequested, misdirected
 	}
-	if resolicit := new(consent.ReSolicitationError); errors.As(err, &resolicit) {
+	var resolicit *consent.ReSolicitationError
+	if errors.As(err, &resolicit) {
 		return activities.MarketingNotRequested, resolicit
+	}
+	// AN AUTHORIZATION REFUSAL IS NOT A MAIL FAILURE either, and it is the one
+	// remaining refusal that says something about the CALLER rather than about
+	// this installation's ability to ask. The mint takes auth.Require before it
+	// opens a transaction, and the person probe inside it can answer a denial
+	// or a not-found for a subject the caller may not write.
+	//
+	// In the booking path the operational grant one call earlier runs
+	// EnsureWritableLive on the same person and is fatal, so a refusal here
+	// means authority changed between two consecutive writes. That is rare and
+	// it is exactly why it must not be reported as "we could not ask": a
+	// booking form is not the place to discover a permission failure silently.
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		return activities.MarketingNotRequested, err
 	}
 	return activities.MarketingNotAsked, nil
 }
