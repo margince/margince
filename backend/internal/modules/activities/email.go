@@ -144,22 +144,29 @@ type RefusalRecorder interface {
 // once the transaction is done with. It answers the error either way, so a
 // composition with no recorder refuses exactly as it did before.
 func recordRefusal(ctx context.Context, stager DeliveryStager, err error) error {
-	return recordRefusalOn(ctx, stager, err)
+	recorder, ok := stager.(RefusalRecorder)
+	if !ok {
+		return err
+	}
+	return recordRefusalOn(ctx, recorder, err)
 }
 
 // recordChannelRefusal is the same offer to the channel stager, which is a
 // different interface carrying the same optional seam.
 func recordChannelRefusal(ctx context.Context, stager ChannelDeliveryStager, err error) error {
-	return recordRefusalOn(ctx, stager, err)
+	recorder, ok := stager.(RefusalRecorder)
+	if !ok {
+		return err
+	}
+	return recordRefusalOn(ctx, recorder, err)
 }
 
-// recordRefusalOn is the shared body both transports call. A refusal recorded
-// on mail and one recorded on a channel answer the same rule because they run
-// the same code.
-func recordRefusalOn(ctx context.Context, stager any, err error) error {
-	recorder, ok := stager.(RefusalRecorder)
-	if !ok || err == nil {
-		return err
+// recordRefusalOn is the shared body both transports call once they hold a
+// recorder. A refusal recorded on mail and one recorded on a channel answer
+// the same rule because they run the same code.
+func recordRefusalOn(ctx context.Context, recorder RefusalRecorder, err error) error {
+	if err == nil {
+		return nil
 	}
 	return recorder.RecordPendingReview(ctx, err)
 }
