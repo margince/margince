@@ -7191,7 +7191,15 @@ paths:
                     grant. Bounded because it is stored on the proof row and read back through the subject
                     access export — the same bound is enforced server-side, and the two are one rule.'
       responses:
-        '204': { description: Recorded. }
+        '200':
+          description: |
+            Recorded. `cases` names every rights request this submission opened — one per corrected field
+            under Art. 16, one for an erasure request under Art. 17 — each with the reference the subject
+            quotes when asking after it. Empty when the submission proposed nothing (a marketing answer
+            alone opens no case).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConfirmSubmissionReceipt' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -39452,6 +39460,35 @@ components:
         created_at: { type: string, format: date-time }
         # no `version`/If-Match: data_subject_request has no version column (data-model §12.5) and is a
         # single-assignee human-only workflow record (x-agent-access: human-only) — not optimistically concurrent.
+
+    ConfirmSubmissionReceipt:
+      type: object
+      description: |
+        The answer to a confirm-link submission. `cases` names every rights request it opened — one per
+        corrected field under Art. 16, one for an erasure request under Art. 17. Empty when the submission
+        proposed nothing: a marketing answer alone opens no case.
+      required: [cases]
+      properties:
+        cases:
+          type: array
+          items: { $ref: '#/components/schemas/RightsCaseReceipt' }
+
+    RightsCaseReceipt:
+      type: object
+      description: |
+        What a data subject is told to quote when asking after a request they sent through their confirm
+        link. Carries the reference and the right it was opened under, never the case id — the queue that
+        holds the case is admin-gated, and a row id in a receipt invites being typed back in somewhere
+        that trusts it.
+      required: [kind, reference]
+      properties:
+        kind: { type: string, enum: [rectify, erasure], description: 'Art. 16 correction or Art. 17 erasure.' }
+        reference: { type: string, description: 'The quotable reference, unique across the installation.' }
+        field:
+          type: string
+          description: |
+            The record field a correction proposes. Absent for an erasure. A subject who corrected two
+            fields receives two receipts, and without this cannot tell which answer is about which.
 
     CreateDataSubjectRequest:
       type: object

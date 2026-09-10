@@ -6065,6 +6065,11 @@ export const vi = {
   "confirm.subscription.alreadyBody":
     "Đăng ký {purpose} của bạn đã được xác nhận. Bạn có thể dừng bất cứ lúc nào từ email chúng tôi gửi.",
   "confirm.done.title": "Cảm ơn bạn",
+  "confirm.receipt.title": "Điều gì diễn ra tiếp theo",
+  "confirm.receipt.body":
+    "Hãy nêu mã tham chiếu này khi bạn hỏi về yêu cầu của mình. Chúng tôi trả lời trong vòng một tháng.",
+  "confirm.receipt.rectify": "Đã yêu cầu chỉnh sửa",
+  "confirm.receipt.erasure": "Đã yêu cầu xóa",
   "confirm.done.body":
     "Tôi đã ghi nhận câu trả lời của bạn. Những thay đổi sẽ được một người ở đây áp dụng, và liên kết này đã được dùng.",
   "confirm.invalidLink":

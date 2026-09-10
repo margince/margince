@@ -6269,6 +6269,11 @@ export const en = {
   "confirm.subscription.alreadyBody":
     "Your subscription to {purpose} is confirmed. You can stop it at any time from any email we send.",
   "confirm.done.title": "Thank you",
+  "confirm.receipt.title": "What happens next",
+  "confirm.receipt.body":
+    "Quote this reference if you ask us about your request. We answer within one month.",
+  "confirm.receipt.rectify": "Correction requested",
+  "confirm.receipt.erasure": "Removal requested",
   "confirm.done.body":
     "I have recorded your answer. Anything you changed goes to a person here to apply, and this link is now used up.",
   "confirm.invalidLink":

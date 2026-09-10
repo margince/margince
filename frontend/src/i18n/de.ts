@@ -6140,6 +6140,11 @@ export const de = {
   "confirm.subscription.alreadyBody":
     "Ihr Abo für {purpose} ist bestätigt. Sie können es jederzeit über jede unserer E-Mails beenden.",
   "confirm.done.title": "Danke",
+  "confirm.receipt.title": "Wie es weitergeht",
+  "confirm.receipt.body":
+    "Nennen Sie diese Referenz, wenn Sie nach Ihrer Anfrage fragen. Wir antworten innerhalb eines Monats.",
+  "confirm.receipt.rectify": "Korrektur angefragt",
+  "confirm.receipt.erasure": "Löschung angefragt",
   "confirm.done.body":
     "Ich habe Ihre Antwort erfasst. Änderungen gehen an eine Person hier zur Übernahme, und dieser Link ist jetzt verbraucht.",
   "confirm.invalidLink":

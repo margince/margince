@@ -29141,6 +29141,34 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description The answer to a confirm-link submission. `cases` names every rights request it opened — one per
+         *     corrected field under Art. 16, one for an erasure request under Art. 17. Empty when the submission
+         *     proposed nothing: a marketing answer alone opens no case.
+         */
+        ConfirmSubmissionReceipt: {
+            cases: components["schemas"]["RightsCaseReceipt"][];
+        };
+        /**
+         * @description What a data subject is told to quote when asking after a request they sent through their confirm
+         *     link. Carries the reference and the right it was opened under, never the case id — the queue that
+         *     holds the case is admin-gated, and a row id in a receipt invites being typed back in somewhere
+         *     that trusts it.
+         */
+        RightsCaseReceipt: {
+            /**
+             * @description Art. 16 correction or Art. 17 erasure.
+             * @enum {string}
+             */
+            kind: "rectify" | "erasure";
+            /** @description The quotable reference, unique across the installation. */
+            reference: string;
+            /**
+             * @description The record field a correction proposes. Absent for an erasure. A subject who corrected two
+             *     fields receives two receipts, and without this cannot tell which answer is about which.
+             */
+            field?: string;
+        };
         CreateDataSubjectRequest: {
             /** @enum {string} */
             kind: "access" | "rectify" | "erasure";
@@ -41627,12 +41655,19 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Recorded. */
-            204: {
+            /**
+             * @description Recorded. `cases` names every rights request this submission opened — one per corrected field
+             *     under Art. 16, one for an erasure request under Art. 17 — each with the reference the subject
+             *     quotes when asking after it. Empty when the submission proposed nothing (a marketing answer
+             *     alone opens no case).
+             */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConfirmSubmissionReceipt"];
+                };
             };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
