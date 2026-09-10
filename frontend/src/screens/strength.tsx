@@ -8,11 +8,11 @@ import { useRecordZone } from "../app/recordzone";
 import { ActivityReferenceList } from "../design-system/activityreferencelist";
 import {
   Badge,
-  Card,
   Disclosure,
   EmptyState,
   Skeleton,
 } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -70,7 +70,7 @@ function factorPercent(value: number): number {
   return Math.round(value * 100);
 }
 
-export function StrengthCard({
+export function StrengthPanel({
   kind,
   id,
   onOpenEmail,
@@ -94,34 +94,33 @@ export function StrengthCard({
   });
 
   return (
-    <Card
-      style={{ marginBottom: "var(--space-4)" }}
-      title={t("strength.title")}
-    >
-      {overlay && <OverlayUnavailable />}
-      {!overlay && query.isPending && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-3)",
-          }}
-        >
-          <Skeleton width="40%" />
-          <Skeleton width="90%" />
-        </div>
-      )}
-      {!overlay && query.isError && (
-        <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
-      )}
-      {!overlay && query.isSuccess && (
-        <StrengthBody
-          strength={query.data}
-          locale={locale}
-          onOpenEmail={onOpenEmail}
-        />
-      )}
-    </Card>
+    <Panel title={t("strength.title")}>
+      <PanelBody>
+        {overlay && <OverlayUnavailable />}
+        {!overlay && query.isPending && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-3)",
+            }}
+          >
+            <Skeleton width="40%" />
+            <Skeleton width="90%" />
+          </div>
+        )}
+        {!overlay && query.isError && (
+          <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
+        )}
+        {!overlay && query.isSuccess && (
+          <StrengthBody
+            strength={query.data}
+            locale={locale}
+            onOpenEmail={onOpenEmail}
+          />
+        )}
+      </PanelBody>
+    </Panel>
   );
 }
 

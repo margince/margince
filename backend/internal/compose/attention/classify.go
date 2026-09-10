@@ -116,33 +116,15 @@ func base(
 		// Carried rather than recomputed, for the reason the deadline itself
 		// is: the group was resolved against the assembly's own boundary and
 		// zone, and a second derivation here would need both again.
-		DueGroup:   carriedDueGroup(item.DueGroup),
+		DueGroup: carriedDueGroup(item.DueGroup),
+		// Carried, not re-derived: the lane decided whether there was a way
+		// back, and a queue that answered it again could offer the verb on a
+		// row the lane had already reversed.
+		Undo:       carriedUndo(item.Undo),
 		OccurredAt: item.OccurredAt,
 		Actions:    carriedActions(item.Actions),
 		Because:    []crmcontracts.WorklistReason{},
 	}
-}
-
-// carriedDueGroup moves the lane's grouping onto the queue row. The two schemas
-// declare the same five words as their own enums, so the crossing is a cast —
-// but the contract drift gate is what keeps them the same five, and a value the
-// queue's enum does not know would be a heading no client has copy for.
-func carriedDueGroup(group *crmcontracts.AttentionItemDueGroup) *crmcontracts.WorklistItemDueGroup {
-	if group == nil {
-		return nil
-	}
-	carried := crmcontracts.WorklistItemDueGroup(*group)
-	return &carried
-}
-
-// carriedActions passes the lane feed's verbs through unchanged. The queue adds
-// no authority of its own: every verb still routes to the endpoint that owns it.
-func carriedActions(actions []crmcontracts.AttentionItemActions) []crmcontracts.WorklistItemActions {
-	out := make([]crmcontracts.WorklistItemActions, 0, len(actions))
-	for _, action := range actions {
-		out = append(out, crmcontracts.WorklistItemActions(action))
-	}
-	return out
 }
 
 // classifyCommitment: a promise the rep made. Level 2 whether or not it is

@@ -208,6 +208,25 @@ type Receipt struct {
 	// state: not every approval is about one.
 	TargetType string
 	TargetID   ids.UUID
+	// Undo names the audit row the record-history restore route puts back, on
+	// a receipt for work that was APPLIED rather than approved.
+	//
+	// Absent means there is nothing to offer: an approval the system decided is
+	// already a decision somebody can revisit through the record, and a
+	// correction somebody has already reversed has no second undo in it.
+	Undo *ReceiptUndo
+}
+
+// ReceiptUndo is what a receipt needs to offer a way back.
+type ReceiptUndo struct {
+	AuditLogID ids.UUID
+	// Version of the record the restore route compares against, so two people
+	// undoing the same change do not overwrite each other silently.
+	Version int64
+	// Reversed says somebody already put this back. The row stays and says so
+	// rather than vanishing, which would leave a reader unsure their Undo
+	// landed.
+	Reversed bool
 }
 
 // FailedEffects reads the decisions the acting rep approved whose released

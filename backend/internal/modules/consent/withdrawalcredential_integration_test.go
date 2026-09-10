@@ -25,6 +25,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // mintWithdrawal mints a credential the way a send path will, returning the
@@ -578,5 +579,78 @@ func TestANamedPurposeLeadLinkDoesNotStopAllMarketing(t *testing.T) {
 	if stops != 0 {
 		t.Errorf("a link for one subscription wrote %d broad stop(s) — the lead asked to "+
 			"leave one list and every marketing message would stop", stops)
+	}
+}
+
+// THE OBJECT GRANT EACH DOOR ASKS FOR, which is the half no row probe answers.
+//
+// The two doors ask for different grants, and that difference IS the split: a
+// caller NAMING a subject makes a write claim over that record, while a send
+// resolving one from the address it is already mailing makes none — the mail is
+// going there either way, and refusing the mint would strip the recipient's
+// opt-out rather than protect them.
+//
+// Both directions on both doors, because a refusal alone would also pass
+// against a mint that refuses everybody.
+func TestTheMintDoorsAskForTheGrantTheirQuestionNeeds(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	as := func(grant principal.ObjectGrant) context.Context {
+		return principal.WithActor(e.ctx, principal.Principal{
+			Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
+			Permissions: principal.Permissions{
+				// RowScopeAll deliberately: this case is about the OBJECT grant,
+				// and a narrowed scope would refuse one probe later and prove
+				// nothing about which grant the door asked for.
+				Objects: map[string]principal.ObjectGrant{entityPerson: grant}, RowScope: principal.RowScopeAll,
+			},
+		})
+	}
+	mint := func(ctx context.Context, door func(context.Context, pgx.Tx, WithdrawalMintInput) (string, error)) error {
+		return e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+			_, err := door(ctx, tx, WithdrawalMintInput{
+				Address: "grant@example.test", Scope: WithdrawalScopeAllMarketing, PersonID: e.person,
+			})
+			return err
+		})
+	}
+
+	readOnly := as(principal.ObjectGrant{Read: true})
+	if err := mint(readOnly, e.store.EnsureWithdrawalCredentialTx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a person:read caller named a subject and minted their opt-out (err = %v); "+
+			"naming somebody is a claim of authority over that record", err)
+	}
+	if err := mint(readOnly, e.store.ensureWithdrawalCredentialForSendTx); err != nil {
+		t.Errorf("the send door refused a person:read caller (%v) — every sender without "+
+			"person:update would ship marketing mail with no working unsubscribe link", err)
+	}
+
+	none := as(principal.ObjectGrant{})
+	if err := mint(none, e.store.ensureWithdrawalCredentialForSendTx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a caller with no person grant at all minted through the send door (err = %v)", err)
+	}
+
+	// AND BOTH DOORS REACH THE SHARED VALIDATOR. It is unit-tested on its own,
+	// which says nothing about whether either door still calls it — and a door
+	// that stopped would insert a credential with nowhere to send it.
+	writable := as(principal.ObjectGrant{Read: true, Update: true})
+	for _, door := range []struct {
+		name string
+		mint func(context.Context, pgx.Tx, WithdrawalMintInput) (string, error)
+	}{
+		{"the door a caller names a subject at", e.store.EnsureWithdrawalCredentialTx},
+		{"the send door", e.store.ensureWithdrawalCredentialForSendTx},
+	} {
+		err := e.store.db.Tx(writable, func(tx pgx.Tx) error {
+			_, mintErr := door.mint(writable, tx, WithdrawalMintInput{
+				Address: "   ", Scope: WithdrawalScopeAllMarketing, PersonID: e.person,
+			})
+			return mintErr
+		})
+		var refusal *ValidationError
+		if !errors.As(err, &refusal) || refusal.Field != "address" {
+			t.Errorf("%s accepted an address of blanks (err = %v), want the shared refusal",
+				door.name, err)
+		}
 	}
 }

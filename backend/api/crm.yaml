@@ -42609,9 +42609,18 @@ components:
             `complete` and `snooze` has to name the row those presses condition on, or two people
             acting on one task each overwrite the other and neither is told.
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
+        undo:
+          allOf: [{ $ref: '#/components/schemas/AppliedUndo' }]
+          description: >-
+            The way back from work that was APPLIED rather than approved.
+
+            A receipt for an approval the system decided offers no `undo`: that decision is
+            already revisitable through the record it named. This is for a change made with
+            nobody asked — the close-date sweep's corrections — where the receipt is the only
+            telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo] }
           description: |
             What this item offers. `decide` and `merge` mean the verb is irreversible and a
             person must choose; `complete` and `snooze` are a task's own verbs; `open` is
@@ -42990,6 +42999,15 @@ components:
         occurred_at: { type: string, format: date-time, description: 'When it happened.' }
         subject:
           $ref: '#/components/schemas/AttentionSubject'
+        undo:
+          allOf: [{ $ref: '#/components/schemas/AppliedUndo' }]
+          description: >-
+            The way back, on a receipt for work that was APPLIED rather than approved.
+
+            A receipt for an approval the system decided carries none: that decision is
+            revisitable through the record it named. A change made without asking — the
+            close-date sweep's corrections — has this receipt as its only telling, so the
+            way back travels with it.
 
     TeamExceptions:
       type: object
@@ -43748,9 +43766,18 @@ components:
             `complete` and `snooze` has to name the row those presses condition on, or two people
             acting on one task each overwrite the other and neither is told.
         occurred_at: { type: string, format: date-time, description: 'When the thing being reported happened.' }
+        undo:
+          allOf: [{ $ref: '#/components/schemas/AppliedUndo' }]
+          description: >-
+            The way back from work that was APPLIED rather than approved.
+
+            A receipt for an approval the system decided offers no `undo`: that decision is
+            already revisitable through the record it named. This is for a change made with
+            nobody asked — the close-date sweep's corrections — where the receipt is the only
+            telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo] }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string
@@ -44042,6 +44069,30 @@ components:
           type: string
           format: uuid
           description: The seat whose authority the action was taken under, where it bound one.
+
+    AppliedUndo:
+      type: object
+      description: >-
+        What a receipt needs to offer a way back from a change nobody was asked about.
+      required: [audit_log_id, version, reversed]
+      properties:
+        audit_log_id:
+          type: string
+          format: uuid
+          description: The change to put back, through the record-history restore route.
+        version:
+          type: integer
+          format: int64
+          description: >-
+            The record's version as this receipt was read, for the `If-Match` the restore
+            route requires. Carried on the receipt rather than re-read by the client: a
+            second read would race the sweep, and a stale version is what makes the
+            restore refuse rather than overwrite somebody else's later edit.
+        reversed:
+          type: boolean
+          description: >-
+            Somebody already put this back. The row stays and says so rather than
+            vanishing, which would leave a reader unsure their Undo landed.
 
     MagicUndo:
       type: object

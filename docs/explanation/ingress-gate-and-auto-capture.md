@@ -256,16 +256,34 @@ and display name are trimmed in SQL first (300 / 1200 / 300 characters) and wrap
 fence. The reply must be valid JSON with the exact requested ID, a kind from a fixed list, and a
 confidence score. Anything else is rejected.
 
-The model returns one of six kinds:
+The model returns one of eight kinds:
 
 | Kind | What happens |
 |---|---|
 | `person` | Create the contact. Queue the domain for `site_triage` |
-| `role_mailbox` (e.g. `support@`) | Keep the mail visible. Create no contact — there is no person to record |
+| `role_mailbox` (e.g. `support@`, `cs6@`) | Keep the mail visible. Create no contact — there is no person to record |
 | `organization_sender` | Same as above |
 | `newsletter` | Hide the mail, and mark the domain as "not a company" |
 | `transactional` | Same as above |
 | `spam` | Same as above |
+| `advisor` | Create the contact, visible to the mailbox owner alone |
+| `personal` | Create no contact. The mail stays the owner's |
+
+A service desk is a `role_mailbox` whether or not it is numbered, and whether or
+not an agent signs with a first name: the next reply is written by somebody else.
+The same kind of desk handling the owner's OWN private affair — their landlord,
+their clinic, their bank — is `personal` instead. Whose matter it is decides,
+not what sort of organization it is.
+
+A `person` verdict does not always publish the contact. Two cases keep the record
+visible to the mailbox owner alone:
+
+- **The owner wrote first and the address has never answered.** Writing to
+  somebody is an intention rather than a relationship, and publishing it tells
+  every colleague who this rep is prospecting. The record widens on its own the
+  first time that address replies.
+- **The thread is under a confidentiality hold.** A workspace-visible contact
+  minted off held mail announces the counterparty the hold exists to keep quiet.
 
 Marking the domain matters separately from hiding the mail. A newsletter company has a real website,
 so without the mark, company triage would create it anyway the next time a named employee writes from

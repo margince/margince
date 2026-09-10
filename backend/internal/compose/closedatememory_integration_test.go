@@ -5,272 +5,124 @@
 
 package compose
 
-// What a rep's "no" means to the nightly close-date sweep.
+// What a rep's "leave my deals alone" means to the nightly close-date sweep.
 //
-// Every test here calls nextDay between the two passes, and that is the point
-// rather than a detail. The sweep proposes "today plus a stage-worth of the
-// usual pace", so two passes on the same day propose the same date and a memory
-// keyed on ANY date passes — which is how an earlier version of this fix went
-// green while remembering a refusal for exactly one night.
+// This file used to test what a rep's REFUSAL meant, when the sweep wrote a
+// date and then raised a card asking them to confirm it. There is no card now:
+// the correction is applied and the morning's receipt carries it with a way
+// back, so a refusal has nothing to land on and the memory that mattered is the
+// reversal — which correctionrevert_integration_test.go holds.
 //
-// The memory is durable and has no expiry, which is why the second half of this
-// file matters as much as the first: a key drawn too wide would let ONE refusal
-// bury every future correction on that deal, and it would fail silently —
-// proposals simply stop appearing, and nobody can point at when they stopped.
+// What is left is the setting itself, and it is worth its own file because the
+// failure it prevents is silent in both directions: a rep who switched the
+// sweep off and still finds their dates moved has no way to tell, and one who
+// left it on and sees nothing move cannot tell that either.
 //
-// SQL, all of it: what the sweep staged, and what the memory matched.
+// Every test calls nextDay between passes, for the reason the old file gave:
+// the sweep proposes "today plus a stage-worth of the usual pace", so two
+// passes on one day propose the same date and a test keyed on any date passes.
 
 import (
 	"context"
 	"testing"
+	"time"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// rejectCorrection turns down the correction standing against one deal.
-func (e *closeDateEnv) rejectCorrection(t *testing.T, dealID ids.UUID) {
+// leaveMeAlone records that this rep wants close dates left to them.
+func (e *closeDateEnv) leaveMeAlone(t *testing.T, user ids.UUID) {
 	t.Helper()
-	var approvalID ids.ApprovalID
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT id FROM approval WHERE kind = 'close_date_correction'
-		   AND target_entity_id = $1 AND status = 'pending'`,
-		dealID).Scan(&approvalID); err != nil {
-		t.Fatalf("no staged correction to reject: %v", err)
-	}
-	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
-		t.Fatalf("rejecting the correction: %v", err)
-	}
-}
-
-// proposedDateFor reads back the date the standing correction offers, so a test
-// can state that two passes really did propose DIFFERENT dates.
-func (e *closeDateEnv) proposedDateFor(t *testing.T, dealID ids.UUID) string {
-	t.Helper()
-	var proposed string
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT proposed_change ->> 'expected_close_date' FROM approval
-		  WHERE kind = 'close_date_correction' AND target_entity_id = $1
-		  ORDER BY created_at DESC LIMIT 1`, dealID).Scan(&proposed); err != nil {
-		t.Fatalf("reading the proposed date: %v", err)
-	}
-	return proposed
-}
-
-// A refused date is not proposed again the next night.
-//
-// The pending check the sweep already had cannot do this: a rejection clears
-// 'pending', so the next pass saw nothing standing and staged the same question
-// over again.
-func TestARejectedCloseDateIsNotProposedAgainTomorrow(t *testing.T) {
-	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Asked once", e.late, stringp("commit"), intp(-10), 3)
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-	e.rejectCorrection(t, id)
-
-	e.nextDay()
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-	if got := e.pendingCorrections(t, id); got != 0 {
-		t.Errorf("after a rejection the next night staged %d corrections, want 0 — "+
-			"the rep is being asked the same question again", got)
-	}
-}
-
-// The date really does move between two nights.
-//
-// Without this the test above proves nothing a same-day pair would not, and a
-// memory keyed on the proposed date would pass it while forgetting every
-// refusal by morning. This is the mutation that catches that.
-func TestTomorrowsPassProposesADifferentDate(t *testing.T) {
-	e := setupCloseDate(t)
-	tonight := e.seedSweepDeal(t, "Swept tonight", e.late, stringp("commit"), intp(-10), 3)
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-
-	// The same situation one day on, on a deal the first pass never saw. Both
-	// stand in the same stage at the same distance, so the only thing separating
-	// their proposals is which day the sweep believes it is.
-	e.nextDay()
-	tomorrow := e.seedSweepDeal(t, "Swept tomorrow", e.late, stringp("commit"), intp(-10), 3)
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-
-	first, second := e.proposedDateFor(t, tonight), e.proposedDateFor(t, tomorrow)
-	if first == second {
-		t.Errorf("both nights proposed %s, so no test in this file can tell a memory "+
-			"keyed on the date from one keyed on the question", first)
-	}
-}
-
-// A refusal on one deal says nothing about another.
-//
-// This is how a too-wide key fails, and it is the failure that hides: the
-// pipeline quietly stops raising corrections and every test about staging still
-// passes, because each one seeds its own deal.
-func TestARejectedCloseDateOnOneDealDoesNotSilenceAnother(t *testing.T) {
-	e := setupCloseDate(t)
-	declined := e.seedSweepDeal(t, "Said no here", e.late, stringp("commit"), intp(-10), 3)
-	other := e.seedSweepDeal(t, "Never asked", e.late, stringp("commit"), intp(-12), 4)
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-	e.rejectCorrection(t, declined)
-
-	e.nextDay()
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-	if got := e.pendingCorrections(t, declined); got != 0 {
-		t.Errorf("the refused deal was asked again: %d pending", got)
-	}
-	if got := e.pendingCorrections(t, other); got != 1 {
-		t.Errorf("a deal nobody refused has %d pending corrections, want 1 — "+
-			"one rejection has silenced a deal it was never about", got)
-	}
-}
-
-// A rep who sets their own date is asked again when THAT one goes stale.
-//
-// The other half of the key, and the reason it is not the deal alone. A refusal
-// is remembered forever, so a deal-only key would mean one "no" ends close-date
-// hygiene on that deal permanently: the rep refuses, sets a date themselves, it
-// slips in turn, and nobody ever tells them.
-func TestANewStandingDateIsCorrectedAgainAfterAnEarlierRefusal(t *testing.T) {
-	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Set it myself", e.late, stringp("commit"), intp(-10), 3)
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-	e.rejectCorrection(t, id)
-
-	// The rep puts their own date on the deal, and it is overdue in its turn.
-	// close_date_provisional goes false, which is what says the next correction
-	// is about THEIR date rather than about the machine's guess.
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE deal SET expected_close_date = current_date - 4,
-		        close_date_provisional = false
-		  WHERE id = $1`, id); err != nil {
-		t.Fatalf("setting the rep's own date: %v", err)
-	}
-
-	e.nextDay()
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-	if got := e.pendingCorrections(t, id); got != 1 {
-		t.Errorf("a date the rep set themselves went stale and raised %d corrections, want 1 — "+
-			"one refusal has ended close-date hygiene on this deal for good", got)
+		`INSERT INTO approval_autonomy_policy (id, user_id, kind, mode)
+		 VALUES ($1, $2, 'close_date_correction', 'manual')`,
+		ids.NewV7(), user); err != nil {
+		t.Fatalf("recording the rep's setting: %v", err)
 	}
 }
 
-// A deal that advances is asked again.
+// A rep who has said nothing gets the correction applied.
 //
-// The key is how far the deal still has to go, so moving it forward a stage is
-// a genuinely different question: the guess is drawn from a shorter distance.
-// Without this the memory would be keyed on the deal alone, with the permanent
-// silence that implies.
-func TestADealThatAdvancesAStageIsCorrectedAgain(t *testing.T) {
+// The default, and it is the whole shape of this change: the alternative asked
+// them to confirm a date the sweep had already written, which expired
+// unanswered and left the deal standing on a machine's guess with nothing on
+// the page saying so.
+func TestADealIsCorrectedForARepWhoHasSaidNothing(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Advanced", e.early, stringp("commit"), intp(-10), 3)
+	id := e.seedSweepDeal(t, "Nobody objected", e.early, stringp("commit"), intp(-10), 3)
+
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	e.rejectCorrection(t, id)
 
-	// Into the last open stage: one stage to go rather than two.
-	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE deal SET stage_id = $2 WHERE id = $1`, id, e.late); err != nil {
-		t.Fatalf("advancing the deal a stage: %v", err)
-	}
-
-	e.nextDay()
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-	if got := e.pendingCorrections(t, id); got != 1 {
-		t.Errorf("a deal that advanced a stage raised %d corrections, want 1 — "+
-			"a refusal made at one distance is silencing a question about another", got)
+	swept := e.readSwept(t, id)
+	if !swept.provisional {
+		t.Error("the deal was not corrected; a rep who has expressed no preference " +
+			"gets the sweep's hygiene, which is what the setting defaults to")
 	}
 }
 
-// A refused QUIET review is not raised again the next night either.
-//
-// The gone-quiet arm is the one that does not re-date the deal: a deal whose
-// date is still in the future keeps it, and only its forecast category is
-// notched down. So the deal does NOT end the night standing on what was
-// proposed — which is the state the other arms leave behind, and the state the
-// memory's second term recognises. Keyed on that alone, this arm forgets every
-// refusal by morning while the three above it work.
-func TestARejectedQuietReviewIsNotRaisedAgainTomorrow(t *testing.T) {
+// And a rep who switched it off is left alone.
+func TestADealIsLeftAloneForARepWhoAskedToBe(t *testing.T) {
 	e := setupCloseDate(t)
-	// Quiet for longer than the stalled threshold, and a close date still in the
-	// future: nothing forces a date onto it, so the sweep downgrades and asks
-	// whether the deal is alive rather than re-dating it.
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"),
-		intp(deals.StalledThresholdDays/2), deals.StalledThresholdDays+10)
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-	if e.readSwept(t, id).provisional {
-		t.Fatal("the deal was re-dated; this is not the arm under test")
-	}
-	e.rejectCorrection(t, id)
+	e.leaveMeAlone(t, e.Rep1)
+	id := e.seedSweepDeal(t, "Hands off", e.early, stringp("commit"), intp(-10), 3)
+	before := e.readSwept(t, id)
 
-	e.nextDay()
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingCorrections(t, id); got != 0 {
-		t.Errorf("after a rejection the next night staged %d quiet reviews, want 0 — "+
-			"the rep is asked every morning whether this deal is still alive", got)
+
+	after := e.readSwept(t, id)
+	if after.provisional != before.provisional || !sameDay(after.expectedClose, before.expectedClose) {
+		t.Errorf("a rep who turned close-date corrections off had a deal moved from "+
+			"%v to %v anyway", dayOf(before.expectedClose), dayOf(after.expectedClose))
 	}
 }
 
-// A deal that goes quiet AFTER its date was refused and then confirmed is still
-// asked about.
+// A rep on the third rung is not consenting either.
 //
-// The refusal and the later quiet review are different questions — one is "is
-// this date right", the other is "is this deal still alive" — and they can reach
-// the same stage count with the deal standing on the same day. The memory must
-// not let the first bury the second.
-func TestAQuietReviewIsStillRaisedAfterTheDateWasRefusedThenConfirmed(t *testing.T) {
+// `veto` means "show me before it lands", and reading the setting as a two-way
+// switch would take it as a yes — the failure mode of comparing against
+// "not manual" instead of against auto.
+func TestADealIsLeftAloneForARepOnVeto(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Refused then confirmed", e.late, stringp("commit"), intp(-10), 3)
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO approval_autonomy_policy (id, user_id, kind, mode, veto_window)
+		 VALUES ($1, $2, 'close_date_correction', $3, '1 hour')`,
+		ids.NewV7(), e.Rep1, "veto"); err != nil {
+		// The rung the schema allows and nothing writes yet. Spelled as the
+		// literal because approvals declares no constant for it — the mode
+		// exists in the CHECK constraint and in this test alone.
+		t.Fatalf("recording the rep's veto setting: %v", err)
+	}
+	id := e.seedSweepDeal(t, "Show me first", e.early, stringp("commit"), intp(-10), 3)
+	before := e.readSwept(t, id)
+
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	proposed := e.proposedDateFor(t, id)
-	e.rejectCorrection(t, id)
 
-	// The rep then types that very date in themselves, which confirms it: the
-	// deal stops being provisional and stands on a date a person affirmed.
-	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE deal SET expected_close_date = $2::date, close_date_provisional = false
-		  WHERE id = $1`, id, proposed); err != nil {
-		t.Fatalf("confirming the proposed date: %v", err)
+	after := e.readSwept(t, id)
+	if !sameDay(after.expectedClose, before.expectedClose) {
+		t.Errorf("a rep on veto had a deal moved from %v to %v; veto asks to see a "+
+			"change before it lands, which is not consent to it landing",
+			dayOf(before.expectedClose), dayOf(after.expectedClose))
 	}
-	// And then the deal goes quiet.
-	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE deal SET last_activity_at = now() - make_interval(days => $2)
-		  WHERE id = $1`, id, deals.StalledThresholdDays+10); err != nil {
-		t.Fatalf("letting the deal go quiet: %v", err)
-	}
+}
 
-	e.nextDay()
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
+// sameDay compares two nullable close dates by the day they name.
+func sameDay(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == b
 	}
-	if got := e.pendingCorrections(t, id); got != 1 {
-		t.Errorf("a deal that went quiet after its date was settled raised %d reviews, "+
-			"want 1 — an old refusal about the DATE is burying a question about whether "+
-			"the deal is alive", got)
+	return a.Equal(*b)
+}
+
+// dayOf renders a nullable close date for a failure message.
+func dayOf(at *time.Time) string {
+	if at == nil {
+		return "none"
 	}
+	return at.Format(time.DateOnly)
 }

@@ -30,6 +30,7 @@ import { useLocale, useT } from "../i18n";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { listReadState } from "./worklist.listread";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
+import { ReceiptUndo } from "./worklist.receiptundo";
 
 export function HandledForYouPanel() {
   const t = useT();
@@ -115,6 +116,15 @@ export function HandledForYouPanel() {
                     header: t("worklist.handled.when"),
                     render: (row: Receipt) =>
                       formatDateTime(row.occurred_at, locale, zone),
+                  },
+                  {
+                    // The one verb this panel carries, and only on the rows
+                    // that earned it. A receipt for a decision somebody made
+                    // renders an empty cell: the work was agreed to, so there
+                    // is nothing here to take back.
+                    key: "undo",
+                    header: t("worklist.handled.wayBack"),
+                    render: (row: Receipt) => <ReceiptUndo receipt={row} />,
                   },
                 ]}
               />

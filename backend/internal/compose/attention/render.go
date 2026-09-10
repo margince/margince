@@ -28,6 +28,13 @@ import (
 // lanewiring_test.go refuses the rest.
 const actionOpen crmcontracts.AttentionItemActions = "open"
 
+// actionUndo puts back a change the system made without asking.
+//
+// Offered on a receipt alone, and only on one carrying an audit row to restore:
+// the record-history route reads the before-image from it, so a card without
+// one would be a button naming nothing to reverse.
+const actionUndo crmcontracts.AttentionItemActions = "undo"
+
 // actionDismiss puts a lapsed contact aside for a while.
 //
 // Offered ONLY where a dismissal endpoint takes the row's own id, which today
@@ -402,34 +409,6 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		item.Kind = &label
 	}
 	return item
-}
-
-// receiptItem renders one thing the system did on its own.
-//
-// It offers no decision: a receipt reports a finished act, and asking the reader
-// to answer a question already answered is not a verb this lane has.
-//
-// It offers `open` only when the decision named a record. Not every approval is
-// about one, and a card that advertised the verb regardless would send a client
-// that trusts it to a destination the card never carried.
-func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
-	kind := receipt.Kind
-	occurred := receipt.OccurredAt
-	summary := receipt.Summary
-	subject := subjectOf(receipt.TargetType, receipt.TargetID)
-	actions := []crmcontracts.AttentionItemActions{}
-	if openableSubject(subject) {
-		actions = append(actions, actionOpen)
-	}
-	return crmcontracts.AttentionItem{
-		Id:         receipt.ID.String(),
-		Source:     crmcontracts.AttentionItemSource("approval"),
-		Kind:       &kind,
-		Title:      &summary,
-		Subject:    subject,
-		OccurredAt: &occurred,
-		Actions:    actions,
-	}
 }
 
 // subjectOf names the record an item concerns, when the producer named one.

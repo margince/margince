@@ -42,6 +42,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
@@ -363,11 +364,20 @@ func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}
 	token := confirmLinkToken(t, p.AppEnv)
+	// The submission answers with a receipt now. A marketing answer alone
+	// proposes no correction and asks for no erasure, so it opens no rights
+	// case — and an empty list is the assertion that says so: a helper every
+	// consent test leans on is where a marketing tick quietly filing Art. 16
+	// cases into the admin queue would first be visible.
+	var receipt crmcontracts.ConfirmSubmissionReceipt
 	if s := publicCall(t, p.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
 		"marketing_choice":  "granted",
 		"marketing_wording": "Yes, send me occasional product news.",
-	}, nil, nil); s != http.StatusOK {
+	}, nil, &receipt); s != http.StatusOK {
 		t.Fatalf("the subject spends their own link → %d, want 200", s)
+	}
+	if len(receipt.Cases) != 0 {
+		t.Fatalf("the marketing answer opened %d rights case(s), want none", len(receipt.Cases))
 	}
 }
 

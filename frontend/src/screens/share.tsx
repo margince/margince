@@ -16,7 +16,6 @@ import { navigate } from "../app/router";
 import {
   Badge,
   Button,
-  Card,
   EmptyState,
   Field,
   SearchField,
@@ -24,6 +23,7 @@ import {
   Textarea,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { formatDate, formatNumber, identifierNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -658,34 +658,49 @@ function ShareScreenBody({
 
   return (
     <div className="wrap share-screen">
-      <Card as="div" className="share-head" title={t("share.title")}>
-        <div className="share-backlink">
-          <Link2 aria-hidden />
-          <EntityRef kind={recordType} id={recordId} />
-        </div>
-        <p className="share-ceiling t-caption">
-          <ShieldCheck aria-hidden />
-          <span>
-            {t("share.ceiling.pre")}
-            <b>{t("share.ceiling.recordEmphasis")}</b>
-            {t("share.ceiling.mid")}
-            <b>{t("share.ceiling.noWider")}</b>
-            {t("share.ceiling.post")}
-          </span>
-        </p>
-      </Card>
+      <Panel title={t("share.title")}>
+        <PanelBody>
+          <div className="share-backlink">
+            <Link2 aria-hidden />
+            <EntityRef kind={recordType} id={recordId} />
+          </div>
+          <p className="share-ceiling t-caption">
+            <ShieldCheck aria-hidden />
+            <span>
+              {t("share.ceiling.pre")}
+              <b>{t("share.ceiling.recordEmphasis")}</b>
+              {t("share.ceiling.mid")}
+              <b>{t("share.ceiling.noWider")}</b>
+              {t("share.ceiling.post")}
+            </span>
+          </p>
+        </PanelBody>
+      </Panel>
 
-      {/* The mockup's at-a-glance scope chip and the client-side "can't grant
-          wider than you" (write-disabled-when-you-only-have-read) block both
-          need the CURRENT USER's own access level FOR THIS RECORD, which no
-          endpoint cheaply returns today. Rather than fake it, the ceiling is
-          server-enforced: a POST that exceeds the granter's access comes back
-          422 / approval_required and is surfaced honestly below. The
-          client-side ceiling UI is deferred until a "my access for this
-          record" read exists — same call the agent-proposed-grant card
-          (held-for-approval) made. */}
-      <Card as="div" title={t("share.grantAccess")}>
-        <div className="form-stack">
+      {/* The ceiling is SERVER-enforced: a POST that exceeds the granter's own
+          access comes back 422 / approval_required and is surfaced below. No
+          endpoint returns this reader's access for this record, so the surface
+          states the rule rather than drawing a limit it cannot know. */}
+      <Panel
+        title={t("share.grantAccess")}
+        actions={
+          <Button
+            variant="primary"
+            disabled={!subject}
+            pending={grant.isPending}
+            onClick={() => subject && submit(subject)}
+            data-testid="share-grant-submit"
+          >
+            {/* A subject who already holds a grant is not being granted one:
+                the press restates what they hold, and the word on the button
+                is the reader's last cue to which of the two they are doing. */}
+            {subject && heldBySubject.has(subjectKey(subject.kind, subject.id))
+              ? t("share.update")
+              : t("share.grant")}
+          </Button>
+        }
+      >
+        <PanelBody className="form-stack">
           <div className="field">
             <label className="t-label" htmlFor={`${headingId}-subject`}>
               {t("share.subject")}
@@ -824,34 +839,19 @@ function ShareScreenBody({
           {grantErrorMessage && (
             <p className="t-caption share-error">{grantErrorMessage}</p>
           )}
+        </PanelBody>
+      </Panel>
 
-          <Button
-            variant="primary"
-            disabled={!subject}
-            pending={grant.isPending}
-            onClick={() => subject && submit(subject)}
-            data-testid="share-grant-submit"
-          >
-            {/* A subject who already holds a grant is not being granted one:
-                the press restates what they hold, and the word on the button
-                is the reader's last cue to which of the two they are doing. */}
-            {subject && heldBySubject.has(subjectKey(subject.kind, subject.id))
-              ? t("share.update")
-              : t("share.grant")}
-          </Button>
-        </div>
-      </Card>
-
-      <Card as="div" title={t("share.whoHasAccess")}>
+      <Panel title={t("share.whoHasAccess")}>
         <QueryGate
           query={grantsQuery}
           empty={(rows) => rows.length === 0}
           pendingLabel={t("share.whoHasAccess")}
         >
           {(rows) => (
-            <ul className="share-acl-list" data-testid="share-acl-list">
+            <div data-testid="share-acl-list">
               {rows.map((g) => (
-                <li key={g.id} className="share-acl-row">
+                <PanelRow key={g.id} className="share-acl-row">
                   <div className="share-acl-who">
                     <span className="share-acl-name">
                       <SubjectKindIcon kind={g.subject_type} t={t} />
@@ -886,12 +886,12 @@ function ShareScreenBody({
                   >
                     {t("share.revoke")}
                   </Button>
-                </li>
+                </PanelRow>
               ))}
-            </ul>
+            </div>
           )}
         </QueryGate>
-      </Card>
+      </Panel>
 
       <ConfirmModal
         open={revokingId !== null}

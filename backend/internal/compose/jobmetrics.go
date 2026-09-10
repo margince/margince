@@ -45,8 +45,19 @@ var queueDepthStates = map[string]bool{
 	"pending":   true,
 }
 
-// queueKey identifies one series of the per-queue gauges.
+// queueKey identifies one series of the per-queue gauges: the age gauge,
+// which is legitimately per-queue rather than per-kind — "how long has the
+// oldest runnable job in this queue waited" does not split by which kind
+// that job is.
 type queueKey struct{ queue, workspace string }
+
+// queueKindKey identifies one series of the depth/running gauges. Kind is
+// on the wire alongside queue because most kinds share the "default" queue
+// (opts_owner: caller and every kind without its own pool), so a queue-only
+// breakdown collapses dozens of unrelated kinds into one series named
+// "default" — useless for "which kind is backed up" or "which kind is
+// actually running".
+type queueKindKey struct{ kind, queue, workspace string }
 
 // kindKey identifies one series of the per-kind gauges. Dead work is keyed
 // by kind rather than by queue because "which work will never run" is a
@@ -67,8 +78,8 @@ const (
 
 // jobSeries is one pass of the snapshot, bucketed per family.
 type jobSeries struct {
-	depth        map[queueKey]int64
-	running      map[queueKey]int64
+	depth        map[queueKindKey]int64
+	running      map[queueKindKey]int64
 	discarded    map[kindKey]int64
 	cancelled    map[kindKey]int64
 	oldest       map[queueKey]float64
@@ -80,8 +91,8 @@ type jobSeries struct {
 // seven writes.
 func aggregate(rows []jobs.StateRow) jobSeries {
 	a := jobSeries{
-		depth:        map[queueKey]int64{},
-		running:      map[queueKey]int64{},
+		depth:        map[queueKindKey]int64{},
+		running:      map[queueKindKey]int64{},
 		discarded:    map[kindKey]int64{},
 		cancelled:    map[kindKey]int64{},
 		oldest:       map[queueKey]float64{},
@@ -90,12 +101,13 @@ func aggregate(rows []jobs.StateRow) jobSeries {
 	for _, r := range rows {
 		ws := workspaceLabelFor(r)
 		qk := queueKey{queue: r.Queue, workspace: ws}
+		qkk := queueKindKey{kind: r.Kind, queue: r.Queue, workspace: ws}
 		kk := kindKey{kind: r.Kind, workspace: ws}
 		switch {
 		case queueDepthStates[r.State]:
-			a.depth[qk] += r.Count
+			a.depth[qkk] += r.Count
 		case r.State == stateRunning:
-			a.running[qk] += r.Count
+			a.running[qkk] += r.Count
 		case r.State == stateDiscarded:
 			a.discarded[kk] += r.Count
 		case r.State == stateCancelled:
@@ -204,13 +216,13 @@ func writeJobMetrics(w io.Writer, snap jobs.Snapshot) error {
 	if err := writeDeclaredInfo(w); err != nil {
 		return err
 	}
-	if err := writeQueueGauge(w, "margince_job_queue_depth",
-		"Jobs waiting to run (available + scheduled + retryable + pending) per queue and workspace. An empty workspace_id is a fleet-wide pass, which answers for the installation rather than for one tenant.",
+	if err := writeQueueKindGauge(w, "margince_job_queue_depth",
+		"Jobs waiting to run (available + scheduled + retryable + pending) per kind, queue and workspace. An empty workspace_id is a fleet-wide pass, which answers for the installation rather than for one tenant.",
 		depth); err != nil {
 		return err
 	}
-	if err := writeQueueGauge(w, "margince_job_running",
-		"Jobs currently executing per queue and workspace.",
+	if err := writeQueueKindGauge(w, "margince_job_running",
+		"Jobs currently executing per kind, queue and workspace.",
 		running); err != nil {
 		return err
 	}
@@ -239,13 +251,17 @@ func writeJobMetrics(w io.Writer, snap jobs.Snapshot) error {
 	return writeUnrecognisedKindGauge(w, snap.Rows)
 }
 
-func writeQueueGauge(w io.Writer, name, help string, series map[queueKey]int64) error {
+func writeQueueKindGauge(w io.Writer, name, help string, series map[queueKindKey]int64) error {
 	if err := writeFamilyHeader(w, name, help); err != nil {
 		return err
 	}
-	for _, k := range sortedQueueKeys(series) {
-		if _, err := fmt.Fprintf(w, "%s{queue=%s,workspace_id=%s} %d\n",
-			name, label(k.queue), label(k.workspace), series[k]); err != nil {
+	keys := sortedKeysOf(series, func(a, b queueKindKey) int {
+		return cmp.Or(cmp.Compare(a.kind, b.kind), cmp.Compare(a.queue, b.queue),
+			cmp.Compare(a.workspace, b.workspace))
+	})
+	for _, k := range keys {
+		if _, err := fmt.Fprintf(w, "%s{kind=%s,queue=%s,workspace_id=%s} %d\n",
+			name, label(k.kind), label(k.queue), label(k.workspace), series[k]); err != nil {
 			return err
 		}
 	}
@@ -277,83 +293,6 @@ func writeAgeGauge(w io.Writer, series map[queueKey]float64) error {
 	for _, k := range sortedQueueKeys(series) {
 		if _, err := fmt.Fprintf(w, "%s{queue=%s,workspace_id=%s} %.0f\n",
 			name, label(k.queue), label(k.workspace), series[k]); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// writeSweepGauges renders the pair that answers "are tenants being
-// missed". Both halves carry the same sweep label so an alert can compare
-// them; for a fan-out kind the label is the CHILD kind, which is what the
-// rows hold — mapping back to the dispatcher would be a hand-kept table.
-// For a Fleet kind that fans out to nothing (ADR-0103's collapsed pass) the
-// label is the kind's own name, and the reading is 1 (or 0, if the pass has
-// never run) rather than a true workspace count — there is no workspace
-// grain to read for it at all.
-func writeSweepGauges(w io.Writer, sweeps []jobs.SweepPass) error {
-	ordered := slices.SortedFunc(slices.Values(sweeps), func(a, b jobs.SweepPass) int {
-		return cmp.Compare(a.Kind, b.Kind)
-	})
-
-	if err := writeFamilyHeader(w, "margince_sweep_workspaces",
-		"Workspaces with a surviving child of this fleet pass. Counted per workspace rather than per pass: a child still active from an earlier fan-out is deduplicated out of the current one and writes no new row, so no batch can be identified. A workspace whose only child aged out of River's job retention is absent rather than reported as zero. For a kind that answers for the whole installation in one row rather than fanning out, this reads 1 when its latest tagged run exists — the closest reading to 'did the pass happen' when there is no workspace to count."); err != nil {
-		return err
-	}
-	for _, s := range ordered {
-		if _, err := fmt.Fprintf(w, "margince_sweep_workspaces{sweep=%s} %d\n",
-			label(s.Kind), s.Workspaces); err != nil {
-			return err
-		}
-	}
-
-	if err := writeFamilyHeader(w, "margince_sweep_workspaces_failed",
-		"Workspaces whose MOST RECENT child of this fleet pass ended discarded or cancelled — tenants whose share of the pass did not happen. A workspace that failed and then succeeded is not counted. For a kind that answers for the whole installation in one row, this reads 1 when its latest tagged run ended that way."); err != nil {
-		return err
-	}
-	for _, s := range ordered {
-		if _, err := fmt.Fprintf(w, "margince_sweep_workspaces_failed{sweep=%s} %d\n",
-			label(s.Kind), s.Failed); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// writeSweepUnitGauges renders the pair that answers the same question one
-// grain down, for the dispatchers that fan out per connection or per build.
-// The workspace pair above is the coarser reading of the same passes and can
-// mask a failed unit behind a healthy sibling in the same workspace; these two
-// cannot, because each unit is counted in its own right.
-//
-// Present ONLY for kinds whose declared unit is finer than a workspace. For
-// every other fan-out kind the unit IS the workspace, so this pair would repeat
-// the one above value for value, and two published series for one number is a
-// worse surface than one series and a documented pairing. The unit rides as a
-// label so an alert can see which grain it is reading without a lookup.
-func writeSweepUnitGauges(w io.Writer, units []jobs.SweepUnit) error {
-	ordered := slices.SortedFunc(slices.Values(units), func(a, b jobs.SweepUnit) int {
-		return cmp.Compare(a.Kind, b.Kind)
-	})
-
-	if err := writeFamilyHeader(w, "margince_sweep_units",
-		"Fan-out units with a surviving child of this fleet pass, for the dispatchers that fan out per connection or per build rather than per workspace. The unit label names the grain. Kinds that fan out per workspace are absent here and reported by margince_sweep_workspaces, which is the same measurement for them."); err != nil {
-		return err
-	}
-	for _, u := range ordered {
-		if _, err := fmt.Fprintf(w, "margince_sweep_units{sweep=%s,unit=%s} %d\n",
-			label(u.Kind), label(fanOutUnitName(u.Unit)), u.Units); err != nil {
-			return err
-		}
-	}
-
-	if err := writeFamilyHeader(w, "margince_sweep_units_failed",
-		"Fan-out units whose MOST RECENT child of this fleet pass ended discarded or cancelled. Unlike the per-workspace pair, a failed connection is counted even when a sibling connection in the same workspace succeeded afterwards -- which is the masking this pair exists to remove."); err != nil {
-		return err
-	}
-	for _, u := range ordered {
-		if _, err := fmt.Fprintf(w, "margince_sweep_units_failed{sweep=%s,unit=%s} %d\n",
-			label(u.Kind), label(fanOutUnitName(u.Unit)), u.Failed); err != nil {
 			return err
 		}
 	}

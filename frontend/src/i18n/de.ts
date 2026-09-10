@@ -1847,8 +1847,6 @@ export const de = {
   "co.evidence.previous": "Vorherige Aussage",
   "co.evidence.next": "Nächste Aussage",
   "co.evidence.title": "Woher das stammt",
-  "co.relationships.title": "Verknüpfte Personen und Firmen",
-  "co.tools.title": "Daten & Werkzeuge",
   "co.prep.withheld":
     "Teile dieses Accounts sind für dich nicht sichtbar. Diese Einschätzung ist deshalb unvollständig.",
   "co.read.newActivity_one": "Ein neuer Vorgang seit deinem letzten Besuch.",
@@ -8936,6 +8934,8 @@ export const de = {
   "worklist.handled.about": "Wozu",
   "worklist.handled.when": "Wann",
   "worklist.handled.noRecord": "Kein Datensatz genannt",
+  "worklist.handled.wayBack": "Zurücknehmen",
+  "worklist.handled.putBackDone": "Bereits zurückgenommen",
   "worklist.handled.truncated":
     "Mehr als das. Die Liste endet bei dem, was eine Sitzung fasst.",
   "worklist.exceptions.empty": "Im Team braucht Sie gerade nichts.",

@@ -78,7 +78,8 @@ const clearedSenderBatch = 500
 // instead would release mail on the strength of somebody else's clearance.
 const clearedSenderWidenDue = `EXISTS (
 			SELECT 1 FROM capture_pending_counterparty p
-			 WHERE p.email = $1 AND p.status = 'real' AND p.kind = 'person')
+			 WHERE p.email = $1 AND p.status = 'real' AND p.kind = 'person'
+			   AND NOT p.withheld_from_workspace)
 	   AND i.posture_at_import = 'classified'
 	   AND i.verdict_status IS NULL
 	   AND NOT EXISTS (
@@ -260,7 +261,8 @@ func senderClearedPersonTx(ctx context.Context, tx pgx.Tx, email string) (bool, 
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM capture_pending_counterparty
-			 WHERE email = $1 AND status = 'real' AND kind = 'person')`,
+			 WHERE email = $1 AND status = 'real' AND kind = 'person'
+			   AND NOT withheld_from_workspace)`,
 		folded).Scan(&cleared)
 	if err != nil {
 		return false, fmt.Errorf("capture: reading whether this sender is already judged a person: %w", err)

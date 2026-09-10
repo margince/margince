@@ -32,15 +32,16 @@ import (
 
 // The reasons that are not about a deal's correspondence, kept beside the ones
 // that are so all of this surface's prose reads as one voice.
+//
+// The reason is written for a RECEIPT rather than for a card. The sweep has
+// already moved the date by the time a person reads this, so the sentence says
+// what was done and why, and never asks them to confirm anything: the way back
+// is the Undo on the row, not an approval they have to go and find.
 const (
 	// quietFallbackBasis stands in when the correspondence could not be read.
 	// It says the deal is quiet and does not pretend to know more, which is
 	// the honest version of what the sweep has at that point.
-	quietFallbackBasis = "This deal has gone quiet and we could not read its correspondence — check the account before confirming."
-
-	// quietHoldingBasis explains a card that is simply still waiting: the
-	// sweep already set this date, and nobody has confirmed it yet.
-	quietHoldingBasis = "This date was set automatically by an earlier nightly check and has not been confirmed by anyone yet."
+	quietFallbackBasis = "This deal has gone quiet and we could not read its correspondence — check the account."
 )
 
 // pacedBasis says where a proposed date came from, without showing the

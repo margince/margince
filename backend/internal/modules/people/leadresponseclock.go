@@ -75,8 +75,17 @@ func startLeadResponseClockTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error
 	if _, err := storekit.LockRow(ctx, tx, "lead", id, storekit.LiveOnly); err != nil {
 		return err
 	}
+	// The breach stamp goes with it. A lead that sat unowned past its target
+	// was escalated to the intake seat and carries sla_breached_at; taking it on
+	// starts a NEW deadline from routed_at, and the scan admits only
+	// `sla_breached_at IS NULL` — so leaving the old stamp makes the fresh
+	// promise unbreachable and nobody is ever told this rep went quiet.
+	//
+	// Under the same `routed_at IS NULL` guard, which is what keeps it honest:
+	// it clears only the breach earned while the row was nobody's, never one a
+	// rep earned on a clock that had already started.
 	if _, err := tx.Exec(ctx,
-		`UPDATE lead SET routed_at = $2
+		`UPDATE lead SET routed_at = $2, sla_breached_at = NULL
 		  WHERE id = $1 AND routed_at IS NULL AND archived_at IS NULL`,
 		id, leadSLAClock().UTC()); err != nil {
 		return fmt.Errorf("people: starting the lead response clock: %w", err)
