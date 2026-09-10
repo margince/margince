@@ -42,10 +42,47 @@ func (f fixedDomains) Domains(context.Context, pgx.Tx) ([]string, error) {
 	return []string(f), nil
 }
 
+// The reader's own addresses answer empty here: a suite about DOMAINS must not
+// have its rows quietly demoted by the addressing test, and empty admits
+// everyone exactly as an empty domain list does.
+func (f fixedDomains) ReaderAddresses(context.Context, pgx.Tx, ids.UUID) ([]string, error) {
+	return nil, nil
+}
+
 // storeKnowing builds the queue store with a colleague-domain answer bound.
 func storeKnowing(e *loadEnv, domains ...string) *Store {
 	return NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).
 		WithOwnDomains(fixedDomains(domains))
+}
+
+// knownAddresses binds the reader's own addresses alongside the domains, for
+// the suite that tests who a message was written TO.
+type knownAddresses struct {
+	fixedDomains
+	addresses []string
+}
+
+func (k knownAddresses) ReaderAddresses(context.Context, pgx.Tx, ids.UUID) ([]string, error) {
+	return k.addresses, nil
+}
+
+func storeAddressing(e *loadEnv, addresses ...string) *Store {
+	return NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).
+		WithOwnDomains(knownAddresses{addresses: addresses})
+}
+
+// addressedTo stamps header recipients on a seeded message, and ALSO the
+// synthetic row capture writes for the mailbox owner — which is the whole
+// difficulty: on a captured message both exist, and only one of them says
+// anything about the envelope.
+func (e *loadEnv) addressedTo(t *testing.T, activity ids.UUID, owner ids.UUID, headers ...string) {
+	t.Helper()
+	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, user_id)
+		VALUES ($1, $2, 'to', $3)`, ids.NewV7(), activity, owner)
+	for _, address := range headers {
+		e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address)
+			VALUES ($1, $2, 'to', $3)`, ids.NewV7(), activity, address)
+	}
 }
 
 // waitingFrom seeds one otherwise-qualifying wait from a named address.
@@ -277,5 +314,89 @@ func TestALaterOutboundIsNotEngagement(t *testing.T) {
 	}
 	if row.Engaged {
 		t.Error("a not-yet-sent outbound counted as engagement")
+	}
+}
+
+// Written to a colleague, seen by this reader.
+//
+// This is the case the whole column exists for, and the one a naive rule gets
+// backwards: capture stamps the mailbox owner as a recipient on every inbound
+// message, so a participant row with this reader's user_id is present on mail
+// addressed entirely to somebody else. Only the HEADER says who was written to.
+func TestAMessageWrittenToAColleagueIsNotAddressedToTheReader(t *testing.T) {
+	e := setupLoad(t)
+	person := e.buyer(t)
+	activity := e.waitingFrom(t, "Connect me with your team", "buyer@customer.test", person)
+	e.addressedTo(t, activity, e.rep, "colleague@ours.test")
+
+	row, found := present(t, storeAddressing(e, "reader@ours.test"), e, activity)
+	if !found {
+		t.Fatal("the message left the queue entirely — it is real mail and must " +
+			"stay on the page, demoted rather than dropped")
+	}
+	if row.AddressedToReader {
+		t.Error("a message whose only header recipient is a colleague reads as " +
+			"addressed to this reader; the synthetic participant row capture " +
+			"writes for the mailbox owner is being counted as evidence")
+	}
+}
+
+// And one actually written to them still is.
+//
+// The premise guard for the case above: without it the same assertion passes
+// against a rule that answers "not yours" to everything, which would demote
+// every genuine waiting customer.
+func TestAMessageWrittenToTheReaderIsAddressedToThem(t *testing.T) {
+	e := setupLoad(t)
+	person := e.buyer(t)
+	activity := e.waitingFrom(t, "About the retrofit", "buyer@customer.test", person)
+	e.addressedTo(t, activity, e.rep, "colleague@ours.test", "reader@ours.test")
+
+	row, found := present(t, storeAddressing(e, "reader@ours.test"), e, activity)
+	if !found {
+		t.Fatal("the message is not in the queue at all")
+	}
+	if !row.AddressedToReader {
+		t.Error("a message naming this reader on its To line reads as somebody " +
+			"else's, so their own waiting customers are demoted")
+	}
+}
+
+// A message with no header recipients at all counts as addressed.
+//
+// Some connectors record none, and answering "not yours" there would demote
+// every message they captured — a silent failure across a whole integration.
+func TestAMessageNamingNoRecipientCountsAsAddressedToTheReader(t *testing.T) {
+	e := setupLoad(t)
+	person := e.buyer(t)
+	activity := e.waitingFrom(t, "No headers here", "buyer@customer.test", person)
+	// Only the synthetic row: what a connector that records no recipients
+	// leaves behind.
+	e.addressedTo(t, activity, e.rep)
+
+	row, found := present(t, storeAddressing(e, "reader@ours.test"), e, activity)
+	if !found {
+		t.Fatal("the message is not in the queue at all")
+	}
+	if !row.AddressedToReader {
+		t.Error("a message with no header recipients reads as somebody else's, " +
+			"which demotes everything a connector like that captures")
+	}
+}
+
+// A reader whose addresses cannot be resolved sees everything, unchanged.
+func TestAnUnknownReaderAddressAdmitsEveryMessage(t *testing.T) {
+	e := setupLoad(t)
+	person := e.buyer(t)
+	activity := e.waitingFrom(t, "About the retrofit", "buyer@customer.test", person)
+	e.addressedTo(t, activity, e.rep, "colleague@ours.test")
+
+	row, found := present(t, storeAddressing(e), e, activity)
+	if !found {
+		t.Fatal("the message is not in the queue at all")
+	}
+	if !row.AddressedToReader {
+		t.Error("an empty address list demoted a message; a reader whose own " +
+			"addresses are unknown must not have their waiting mail quietly sink")
 	}
 }

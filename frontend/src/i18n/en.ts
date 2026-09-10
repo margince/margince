@@ -9177,6 +9177,7 @@ export const en = {
   "worklist.because.stale": "waiting a long time",
   "worklist.because.no_reply_history": "no reply history",
   "worklist.because.asks_nothing": "asks nothing of us",
+  "worklist.because.addressed_elsewhere": "written to a colleague",
   "worklist.above.pin": "Above the next because you pinned it.",
   "worklist.above.level":
     "Above the next because it is a more pressing kind of work.",

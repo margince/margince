@@ -22,10 +22,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -416,4 +416,46 @@ func retirePendingForIdentityTx(ctx context.Context, tx pgx.Tx, user ids.UUID, i
 		return fmt.Errorf("capture: retiring the open questions about a claimed address: %w", err)
 	}
 	return nil
+}
+
+// ReaderAddressesTx is one seat's own email addresses: what they declared, plus
+// the account label of every mailbox they have connected.
+//
+// The waiting queue asks it to tell "this message was addressed to me" from
+// "this message was addressed to a colleague and I can see it". Both look
+// identical on a captured row otherwise, because capture stamps the mailbox
+// owner as a recipient on every inbound message it stores — so the header is
+// the only evidence of who was actually written to.
+//
+// Named rather than acting: this reads a seat the CALLER names, where the
+// sink's own gates read whoever is acting. The waiting queue runs for a reader
+// and must not inherit whichever principal opened the transaction.
+func (s *OwnDomainStore) ReaderAddressesTx(
+	ctx context.Context, tx pgx.Tx, user ids.UUID,
+) ([]string, error) {
+	if user == ids.Nil {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT value FROM capture_owner_identity
+		 WHERE user_id = $1 AND kind = 'address'
+		 UNION
+		SELECT account_label FROM capture_connection
+		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
+`, user)
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading a reader's own addresses: %w", err)
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var address string
+		if err := rows.Scan(&address); err != nil {
+			return nil, err
+		}
+		if folded := strings.ToLower(strings.TrimSpace(address)); folded != "" {
+			out = append(out, folded)
+		}
+	}
+	return out, rows.Err()
 }
