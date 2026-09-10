@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -400,5 +401,37 @@ func TestOnlyAReceiptCollisionIsWorthRedrawing(t *testing.T) {
 				t.Errorf("isReceiptCollision(%v) = %v, want %v", c.err, got, c.want)
 			}
 		})
+	}
+}
+
+// A FAILURE THAT IS NOT A RECEIPT COLLISION IS RETURNED AT ONCE, not redrawn.
+//
+// The redraw exists for exactly one fault — two cases minting the same
+// reference — and spending three attempts on anything else holds the
+// transaction open while reporting the same error three times. So the loop has
+// to tell them apart, and nothing held that.
+//
+// It also exercises the savepoint's rollback on the path where it matters: the
+// rollback has to TAKE, because every attempt after a rollback that did not
+// would fail on the aborted transaction rather than on what actually went
+// wrong. The proof is in the error that comes back — the foreign-key fault the
+// first attempt hit, not the abort a second one would have reported.
+func TestAFailureThatIsNotAReceiptCollisionIsNotRedrawn(t *testing.T) {
+	e := setupChannelConsent(t)
+	// A subject with no person row, so the insert fails on the foreign key.
+	stranger := ids.From[ids.PersonKind](ids.NewV7())
+
+	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		_, caseErr := openRightsCaseTx(context.Background(), tx, stranger, ids.NewV7(),
+			submissionErasure, time.Now())
+		return caseErr
+	})
+	if err == nil {
+		t.Fatal("opening a rights case for a subject with no record succeeded — this test " +
+			"no longer reaches the failure arm it is about")
+	}
+	if !storekit.IsForeignKeyViolation(err) {
+		t.Errorf("error = %v, want the foreign-key fault the FIRST attempt hit; anything else "+
+			"means the redraw ran and reported what the aborted transaction said instead", err)
 	}
 }

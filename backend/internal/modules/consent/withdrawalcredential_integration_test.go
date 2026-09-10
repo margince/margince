@@ -629,4 +629,28 @@ func TestTheMintDoorsAskForTheGrantTheirQuestionNeeds(t *testing.T) {
 	if err := mint(none, e.store.ensureWithdrawalCredentialForSendTx); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a caller with no person grant at all minted through the send door (err = %v)", err)
 	}
+
+	// AND BOTH DOORS REACH THE SHARED VALIDATOR. It is unit-tested on its own,
+	// which says nothing about whether either door still calls it — and a door
+	// that stopped would insert a credential with nowhere to send it.
+	writable := as(principal.ObjectGrant{Read: true, Update: true})
+	for _, door := range []struct {
+		name string
+		mint func(context.Context, pgx.Tx, WithdrawalMintInput) (string, error)
+	}{
+		{"the door a caller names a subject at", e.store.EnsureWithdrawalCredentialTx},
+		{"the send door", e.store.ensureWithdrawalCredentialForSendTx},
+	} {
+		err := e.store.db.Tx(writable, func(tx pgx.Tx) error {
+			_, mintErr := door.mint(writable, tx, WithdrawalMintInput{
+				Address: "   ", Scope: WithdrawalScopeAllMarketing, PersonID: e.person,
+			})
+			return mintErr
+		})
+		var refusal *ValidationError
+		if !errors.As(err, &refusal) || refusal.Field != "address" {
+			t.Errorf("%s accepted an address of blanks (err = %v), want the shared refusal",
+				door.name, err)
+		}
+	}
 }
