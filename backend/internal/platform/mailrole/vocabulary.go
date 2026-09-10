@@ -22,7 +22,7 @@ package mailrole
 // Words that name a function AND are ordinary business vocabulary stay OUT,
 // however role-like they look: `team`, `group`, `partner`, `business`, `media`,
 // `general`, `personal`, `security`, `legal`, `finance`, `payments`, `orders`,
-// `service`, `contact`, `help`, `news`, `press`, `admin`, `alerts`. Each is a
+// `contact`, `help`, `news`, `press`, `admin`, `alerts`, `care`. Each is a
 // real word other lists in this tree legitimately hold — an RBAC object, a
 // refusal phrase, an org-name stopword — and matching them here would refuse
 // contacts on a word a person's address may honestly contain. The AI verdict
@@ -42,9 +42,25 @@ var roleTokens = map[string]struct{}{
 	"enquiry": {}, "inquiries": {}, "office": {}, "welcome": {}, "postmaster": {},
 	"mail": {}, "post": {},
 
-	// Answering a customer
+	// Answering a customer. `cs` is the borderline one and it is admitted
+	// deliberately: it is two letters and could be somebody's initials, but the
+	// two outcomes are not symmetric. A wrong role_mailbox creates NO contact
+	// and the owner can still say `business`; a wrong person puts a service
+	// desk in the shared CRM under a made-up human name, which is the defect
+	// this list exists to prevent and which nothing retracts today.
 	"support": {}, "helpdesk": {}, "service": {}, "servicedesk": {}, "customercare": {},
-	"hotline": {}, "kundenservice": {},
+	"hotline": {}, "kundenservice": {}, "cs": {}, "customerservice": {},
+	"kundendienst": {}, "kundenbetreuung": {},
+
+	// A desk somebody walks up to, or writes to for an appointment. A clinic
+	// reception and a hotel booking address answer for the organization exactly
+	// as a support queue does.
+	"reception": {}, "rezeption": {}, "frontdesk": {}, "concierge": {},
+	"booking": {}, "reservation": {}, "reservierung": {},
+
+	// Managing a building or a tenancy — the case that put a property
+	// management desk in this tree as a person called "City Garden CS6".
+	"hausverwaltung": {}, "mieterservice": {}, "tenants": {},
 
 	// Money
 	"billing": {}, "invoice": {}, "invoices": {}, "invoicing": {},

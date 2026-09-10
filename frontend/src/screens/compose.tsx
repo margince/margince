@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, ChevronUp, Clock, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import {
   type ReactNode,
   useCallback,
@@ -10,23 +10,14 @@ import {
 } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import {
-  Badge,
-  Button,
-  Checkbox,
-  Modal,
-  TextInput,
-} from "../design-system/atoms";
-import { Calendar, type ISODay, isoDay } from "../design-system/calendar";
+import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Eyebrow } from "../design-system/eyebrow";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Popover } from "../design-system/popover";
 import {
   liveProjects,
   type PickableProject,
@@ -34,21 +25,16 @@ import {
   type ProjectScope,
   useSoleProjectDefault,
 } from "../design-system/projectpicker";
-import {
-  RecordPicker,
-  type RecordPickerCandidate,
-} from "../design-system/recordpicker";
 import { paragraphsFrom, RichText } from "../design-system/richtext";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import type { TokenSuggestion } from "../design-system/tokeninput";
 import {
-  formatDateAbbrev,
   formatDateTime,
   INTL_LOCALE,
   identifierNumber,
 } from "../format/format";
-import { viewerZone, zoneNameAndOffset } from "../format/timezone";
+import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys } from "./activitykeys";
@@ -76,12 +62,26 @@ import {
   useCarriageBlocks,
 } from "./composeattachments";
 import {
+  AccountDraftContext,
+  DraftOffer,
+  DraftReasons,
+  openCited,
+  type PendingAction,
+} from "./composedraftcontext";
+import {
   AddressBlock,
   FieldNeed,
   recipientSuggestions,
   SubjectRow,
   TransportRow,
 } from "./composehead";
+import { RELINK_KINDS, type RelinkKind, RelinkModal } from "./composerelink";
+import {
+  momentLabel,
+  momentOf,
+  ScheduleDialog,
+  ScheduleMenu,
+} from "./composeschedule";
 import {
   ConversationChoices,
   ThreadPane,
@@ -99,7 +99,6 @@ import {
   useProjectRecord,
   withSubjectTag,
 } from "./projectrecord";
-import { Citations } from "./record360";
 import { SCHEDULED_SCREEN } from "./scheduledsends";
 import { SendPermission } from "./sendpermission";
 import { useSendPermission } from "./usesendpermission";
@@ -124,255 +123,6 @@ type DraftProvenance = Pick<
   "ai_generated" | "ai_disclosure" | "voice_profile_version" | "voice_degraded"
 >;
 
-// The link targets a relink can point at (relinkActivity's entity_type enum,
-// minus `activity` — a relink never points at another activity). Reused by
-// ComposeModal and TimelineActions so the whole surface speaks one vocabulary.
-//
-// An ARRAY with the type derived from it, rather than a bare union, because the
-// picker below has to decide at RUNTIME whether a search hit is one of these.
-export const RELINK_KINDS = [
-  "person",
-  "organization",
-  "deal",
-  "lead",
-  "project",
-] as const;
-export type RelinkKind = (typeof RELINK_KINDS)[number];
-
-// Whether a cross-object search hit is something a message can be filed
-// against. Asked as an ADMISSION rather than as a list of exclusions: the
-// skip-list form named `activity` and `tag`, and silently admitted every type
-// /search learned to return afterwards — which is how a product and an offer
-// template became relink targets the moment the search enum widened. What this
-// endpoint accepts is bounded and known; what search returns is not.
-function isRelinkKind(type: string): type is RelinkKind {
-  return (RELINK_KINDS as readonly string[]).includes(type);
-}
-
-// The relink target is chosen via cross-object search (/search covers every
-// kind; the per-entity list endpoints don't all expose `q`). Each candidate's
-// entity_type comes from its SearchResult.type, remembered here so the confirm
-// can recover it — RecordPickerCandidate itself only carries {id,name}.
-// Anything the relink enum does not name is dropped.
-function useSearchTargets() {
-  const kindById = useRef(new Map<string, RelinkKind>());
-  const search = useCallback(
-    async (q: string): Promise<RecordPickerCandidate[]> => {
-      const { data, error } = await api.GET("/search", {
-        params: { query: { q, limit: 10 } },
-      });
-      if (error) throwProblem(error);
-      const out: RecordPickerCandidate[] = [];
-      for (const result of data.data) {
-        // Only what a relink may point at. An activity is the message itself, a
-        // tag is a word rather than something a message can be about, and a
-        // catalog row is neither — none of them is a record this can be filed
-        // against, and the endpoint's own enum is what says so.
-        if (!result.type || !isRelinkKind(result.type)) continue;
-        kindById.current.set(result.id, result.type);
-        out.push({ id: result.id, name: result.title ?? result.id });
-      }
-      return out;
-    },
-    [],
-  );
-  return { search, kindOf: (id: string) => kindById.current.get(id) ?? null };
-}
-
-// A 🟢 internal association (no autonomy dot): move or also-link a captured
-// activity's typed link to the right person/org/deal/lead. Idempotent on the
-// backend — re-relinking the same target is a no-op that still answers 200.
-// `threadKey` is the activity's conversation key when it has one. With it the
-// dialog offers to move the whole thread through `relinkThread`, which applies
-// this same association to every message of the conversation the rep may
-// edit, in one transaction — a mis-filed conversation is usually mis-filed
-// whole.
-// What one confirmed relink asks for, read at the moment the reader confirmed
-// it rather than at whichever render the mutation's options were last armed on.
-type RelinkRequest = Readonly<{
-  activityId: string;
-  threadKey?: string | null;
-  target: RecordPickerCandidate;
-  version?: number | null;
-  thread: boolean;
-  replace: boolean;
-}>;
-
-export function RelinkModal({
-  activityId,
-  activityVersion,
-  threadKey,
-  entityType,
-  entityId,
-  open,
-  onClose,
-}: Readonly<{
-  activityId: string;
-  // The version the reader's copy of the activity was read at, sent as
-  // If-Match so a relink cannot overwrite a change nobody saw. Absent only
-  // where the caller genuinely has none; the thread door takes no version at
-  // all, since one cannot condition a move across many activities.
-  activityVersion?: number | null;
-  threadKey?: string | null;
-  entityType: RelinkKind;
-  entityId: string;
-  open: boolean;
-  onClose: () => void;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const { search, kindOf } = useSearchTargets();
-  const [target, setTarget] = useState<RecordPickerCandidate | null>(null);
-  const [replace, setReplace] = useState(false);
-  const [wholeThread, setWholeThread] = useState(false);
-
-  // What the confirm decided arrives as the mutation's VARIABLE — ALL of it,
-  // including which activity and which conversation, because a mixture is worse
-  // than either: a fresh `thread` read beside a stale `threadKey` falls through
-  // the thread door into the single relink, where the version guard has already
-  // been skipped on the strength of `thread` being true.
-  //
-  // Read through this closure each would be the value from the
-  // render before the confirm was enabled, because react-query re-arms a
-  // mutation's options in a passive effect: a version that landed just before
-  // the click would refuse a relink that is perfectly valid, and a toggle
-  // flipped at the same moment would move the wrong set. The remaining guard is
-  // a real path and stays — `kindOf` answers from the search results, and a
-  // target whose remembered kind was lost must be surfaced rather than relinked
-  // to nothing.
-  const mutation = useMutation({
-    mutationFn: async ({
-      activityId,
-      threadKey,
-      target,
-      version,
-      thread,
-      replace,
-    }: RelinkRequest) => {
-      const kind = kindOf(target.id);
-      if (!kind) {
-        throwProblem({ title: t("compose.relinkTarget") });
-      }
-      // A relink of ONE activity conditions on the version this reader saw, and
-      // a copy that arrived without one cannot make that claim. Refused by name
-      // rather than through requireVersion's bare throw: the reader sees the
-      // mutation's error, and "something went wrong" is not a thing anyone can
-      // act on when the answer is "reopen it and try again".
-      if (!thread && version == null) {
-        throwProblem({ title: t("compose.relinkNoVersion") });
-      }
-      if (threadKey && thread) {
-        const { data, error } = await api.POST("/activities/relink-thread", {
-          params: { header: { "Idempotency-Key": crypto.randomUUID() } },
-          body: {
-            thread_key: threadKey,
-            entity_type: kind,
-            entity_id: target.id,
-            replace_existing_of_type: replace,
-          },
-        });
-        if (error) throwProblem(error);
-        return data;
-      }
-      const { data, error } = await api.POST("/activities/{id}/relink", {
-        params: {
-          // The version the reader's copy was read at, so a relink cannot
-          // overwrite a change nobody saw. requireVersion refuses the write
-          // rather than sending it unpinned: unpinned is last-write-wins, and
-          // the mutation's own error path is what tells the reader it did not
-          // go through.
-          //
-          // The idempotency key travels INSIDE the precondition rather than in
-          // a `header:` of its own: they are one slot, and written twice the
-          // later wins.
-          ...ifMatch(requireVersion(version ?? undefined), {
-            "Idempotency-Key": crypto.randomUUID(),
-          }),
-          path: { id: activityId },
-        },
-        body: {
-          entity_type: kind,
-          entity_id: target.id,
-          replace_existing_of_type: replace,
-        },
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
-    onSuccess: () => {
-      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      // A relink is exactly the write that changes where a reply files, and the
-      // composer's filing line reads the activity to say so. Without this the
-      // line keeps naming the project the activity was moved AWAY from, which
-      // is a wrong answer to the one question it exists to answer.
-      queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
-      onClose();
-    },
-  });
-
-  return (
-    <ConfirmModal
-      open={open}
-      onClose={onClose}
-      title={t("compose.relinkTitle")}
-      confirmLabel={t("compose.relinkConfirm")}
-      confirmDisabled={!target}
-      onConfirm={() =>
-        target &&
-        mutation.mutate({
-          activityId,
-          threadKey,
-          target,
-          version: activityVersion,
-          thread: wholeThread,
-          replace,
-        })
-      }
-      pending={mutation.isPending}
-      error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
-    >
-      <div className="compose-fields">
-        <RecordPicker
-          label={t("compose.relinkTarget")}
-          searchTargets={search}
-          onPick={setTarget}
-          selected={target}
-        />
-        <Checkbox
-          className="t-body"
-          label={t("compose.relinkReplace")}
-          checked={replace}
-          onChange={(event) => setReplace(event.target.checked)}
-        />
-        <p className="t-caption">{t("compose.relinkReplaceHint")}</p>
-        {threadKey && (
-          <>
-            <Checkbox
-              className="t-body"
-              label={t("compose.relinkThread")}
-              checked={wholeThread}
-              onChange={(event) => setWholeThread(event.target.checked)}
-            />
-            <p className="t-caption">{t("compose.relinkThreadHint")}</p>
-          </>
-        )}
-      </div>
-    </ConfirmModal>
-  );
-}
-
-// Fill the form from a served draft, without ever clobbering a field the rep
-// already edited.
-//
-// The reference, the disclosure and the reasons all describe the WORDS they
-// were served with, so all three ride on exactly the condition that applies
-// the body. A re-draft over text the rep already wrote keeps that text —
-// adopting the newer reference would report a stranger's draft as the rep's
-// own edit of it, the newer disclosure would credit a model with words a
-// human typed, and the newer reasons would explain a draft nobody is looking
-// at.
 function fillFromDraft(
   result: Extract<DraftResult, { available: true }>,
   form: Readonly<{
@@ -912,7 +662,7 @@ async function draftFromAccount({
 // model is not configured" — and a rehearsal spent an afternoon looking for a
 // missing provider that was never missing: the person page simply made no
 // request at all.
-type DraftUnavailable = "no_model" | "unsupported_origin";
+export type DraftUnavailable = "no_model" | "unsupported_origin";
 
 type DraftResult =
   | { available: false; reason: DraftUnavailable }
@@ -1049,240 +799,6 @@ function composedLinks(
   add("deal", chosen.dealId);
   add("project", chosen.projectId);
   return links;
-}
-// The account-started path's three choices: who this is to, which open deal
-// it is about, and which project it belongs to.
-//
-// All are read off the account's own 360 rather than a fresh search, for the
-// reason the whole draft is: the endpoint grounds itself in the caller's view
-// of the account, so a contact this picker offers that the view does not carry
-// would be one the draft then refuses.
-function AccountDraftContext({
-  orgId,
-  recipientId,
-  onRecipientChange,
-  dealId,
-  onDealChange,
-}: Readonly<{
-  orgId: string;
-  recipientId: string;
-  onRecipientChange: (next: string) => void;
-  dealId: string;
-  onDealChange: (next: string) => void;
-}>) {
-  const t = useT();
-  const query = useOrganization360(orgId);
-  // An overlay workspace has no native 360 to ground from; the endpoint
-  // refuses there too, so the pickers simply have nothing to offer.
-  const view = query.data?.state === "ready" ? query.data.view : undefined;
-  const contacts = view?.people?.data ?? [];
-  const deals = view?.deals?.data ?? [];
-
-  // No contact on the account is an honest dead end for the DRAFT — the model
-  // has no relationship to write from — and saying so beats an empty picker the
-  // rep tries and cannot use. They can still type an address into To and write
-  // the mail themselves.
-  //
-  // The PROJECT picker survives that dead end, and must: which body of work a
-  // message is about has nothing to do with whether the account has a contact
-  // yet. Returning early here took the project choice away from exactly the
-  // message that most needs it — a check-in to an account nobody has spoken to
-  // in a while, which is the first mail on a fresh delivery and the one with no
-  // thread to inherit a project from. It would land unfiled, and the ladder
-  // would ask about it in Approvals afterwards instead.
-  if (query.isSuccess && contacts.length === 0) {
-    return <p className="t-caption">{t("compose.noGroundableRecipient")}</p>;
-  }
-  return (
-    <>
-      <label className="t-body compose-check">
-        {t("compose.draftTo")}
-        <Select
-          aria-label={t("compose.draftTo")}
-          options={[
-            { value: "", label: t("compose.draftToUnset") },
-            ...contacts.map((contact) => ({
-              value: contact.person_id,
-              label: contact.full_name,
-            })),
-          ]}
-          value={recipientId}
-          onChange={onRecipientChange}
-        />
-      </label>
-      {deals.length > 0 && (
-        <label className="t-body compose-check">
-          {t("compose.relatedTo")}
-          <Select
-            aria-label={t("compose.relatedTo")}
-            options={[
-              { value: "", label: t("compose.relatedToNone") },
-              ...deals.map((deal) => ({
-                value: deal.deal_id,
-                label: deal.name,
-              })),
-            ]}
-            value={dealId}
-            onChange={onDealChange}
-          />
-        </label>
-      )}
-    </>
-  );
-}
-
-// A reason's chip opens the record it names. Only the two kinds that HAVE a
-// screen are routed: a fact or a profile field has a receipt rather than a
-// page, and this dialog is the wrong place to open one over.
-function openCited(entityType: string, entityId: string) {
-  if (entityType === "deal") {
-    navigate({ screen: "deals", id: entityId });
-  }
-  if (entityType === "person") {
-    navigate({ screen: "contacts", id: entityId });
-  }
-}
-
-// What the draft was written from, in the two shapes State D draws: a "Based
-// on" line naming the inputs in order, and a row of "Why this draft?" chips.
-//
-// Both render the SAME reasons — they are one answer read two ways, which is
-// why the server sends parts rather than a sentence. The line is for scanning
-// before reading the draft; the chips are for checking one input after.
-//
-// A reason carrying evidence is pressable and opens the record it names. One
-// without — the rep's own instruction — is flat, because there is nothing to
-// open and a chip that looks pressable and is not is worse than a plain one.
-function DraftReasons({
-  reasons,
-  onOpenRecord,
-  onOpenEmail,
-}: Readonly<{
-  reasons: readonly components["schemas"]["AccountDraftReason"][];
-  onOpenRecord?: (entityType: string, entityId: string) => void;
-  // Opens the message a reason rests on, in this modal's own drawer.
-  onOpenEmail?: (activityId: string) => void;
-}>) {
-  const t = useT();
-  if (reasons.length === 0) {
-    return null;
-  }
-  return (
-    <div className="compose-reasons">
-      <p className="t-caption">
-        {t("compose.basedOn", {
-          inputs: reasons.map((reason) => reason.label).join(" · "),
-        })}
-      </p>
-      <p className="t-caption">{t("compose.whyThisDraft")}</p>
-      <ul className="chips">
-        {reasons.map((reason) => (
-          <li key={`${reason.kind}:${reason.label}`}>
-            {reason.label}
-            {/* The record behind the reason, through the one citation
-                renderer. It used to be a link-button wrapping the LABEL and
-                calling onOpenRecord with whatever kind the reason carried —
-                so a reason grounded in a conversation offered a control that
-                routed nowhere, and a reason grounded in nothing at all still
-                looked pressable because the guard only asked whether a
-                handler existed. The citation asks what the record IS. */}
-            {reason.evidence_ref && (
-              <Citations
-                evidence={[reason.evidence_ref]}
-                onOpenRecord={onOpenRecord}
-                onOpenEmail={onOpenEmail}
-              />
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-// One control's worth of mutation state, flattened so a presentational child
-// renders a pending/failed action without speaking react-query. `disabled` is
-// wider than `pending`: a control is also barred while a sibling action that
-// would contradict it is in flight.
-type PendingAction = Readonly<{
-  run: () => void;
-  pending: boolean;
-  disabled: boolean;
-  error: string | null;
-}>;
-
-// The drawer BEFORE a machine has written anything: what the rep wants said,
-// and the one control that asks for it. It is the pre-draft face of the same
-// block the disclosure band takes over once a draft exists — the two never
-// show together, because the band's whole claim is about words that are on
-// screen.
-//
-// Rejecting a draft is not here. It is a verdict on the finished words and it
-// sits in the action row with the other verdicts (send, cancel), where a rep
-// decides what happens to the message rather than how it gets written.
-function DraftOffer({
-  intent,
-  onIntentChange,
-  draft,
-  unavailable,
-}: Readonly<{
-  intent: string;
-  onIntentChange: (next: string) => void;
-  draft: PendingAction;
-  unavailable: DraftUnavailable | null;
-}>) {
-  const t = useT();
-  return (
-    <div className="compose-offer">
-      <div className="compose-draftbar">
-        <TextInput
-          // A NAME, not just a placeholder. The placeholder is the example and
-          // disappears the moment the reader types; a field whose only name was
-          // the example had none at all the instant it held anything.
-          aria-label={t("compose.intentLabel")}
-          placeholder={t("compose.intent")}
-          value={intent}
-          onChange={(event) => onIntentChange(event.target.value)}
-        />
-        {/* The agent's own verb, so it carries the agent's own colour and its
-            mark. Drawn as an ordinary ghost button it read as the quietest
-            control in the drawer when it is the one thing in here a machine
-            does. Indigo means "Margince does this" everywhere else on the
-            record; a composer that said it in grey is the one surface where
-            the reader has to guess. */}
-        <Button
-          small
-          variant="ai"
-          onClick={draft.run}
-          disabled={draft.disabled}
-          pending={draft.pending}
-          busyLabel={t("compose.drafting")}
-        >
-          <Sparkles aria-hidden="true" />
-          {t("compose.draftWithAi")}
-        </Button>
-      </div>
-      {unavailable && (
-        <p className="t-caption">
-          {unavailable === "no_model"
-            ? t("compose.draftUnavailable")
-            : t("compose.draftUnsupportedHere")}
-        </p>
-      )}
-      {/* The failure appears without any navigation, so it is announced rather
-          than merely coloured: a rep who cannot see the line has to be told
-          the draft did not land, on the same terms the send refusals are. */}
-      {!unavailable && draft.error && (
-        <p
-          className="t-caption"
-          role="alert"
-          style={{ color: "var(--dangerText)" }}
-        >
-          {draft.error}
-        </p>
-      )}
-    </div>
-  );
 }
 
 // The ways a send is refused for a reason the rep can act on, as opposed to
@@ -2075,233 +1591,14 @@ function useProjectFiling(input: {
   return { projectId, setProjectId: setPicked };
 }
 
-// The three moments a rep actually picks when they choose not to send now.
-//
-// Built from a `Date` the caller passes rather than read off the clock in
-// here, so the presets a test sees are the presets it set up.
-function schedulePresets(now: Date): readonly {
-  key: MessageKey;
-  at: Date;
-}[] {
-  const at = (days: number, hour: number) => {
-    const day = new Date(now);
-    day.setDate(day.getDate() + days);
-    day.setHours(hour, 0, 0, 0);
-    return day;
-  };
-  // Monday from a Monday is NEXT Monday: a rep picking "Monday morning" on a
-  // Monday afternoon means the one that has not happened yet.
-  const untilMonday = (8 - now.getDay()) % 7 || 7;
-  return [
-    { key: "compose.scheduleTomorrow", at: at(1, 8) },
-    { key: "compose.scheduleAfternoon", at: at(1, 13) },
-    { key: "compose.scheduleMonday", at: at(untilMonday, 8) },
-  ];
-}
-
-// The hours a business message is actually scheduled for. Four, not a clock:
-// the choice is "start of the day, mid-morning, after lunch, end of the day",
-// and a rep who wants 11:47 is not a rep this control is for.
-const SCHEDULE_HOURS = [8, 9, 13, 17] as const;
-
-// A moment as `datetime-local` spells it: the wall clock, no offset. Built
-// field by field rather than sliced out of an ISO string, because
-// `toISOString` is UTC and would move every preset by the reader's own offset.
-function localMoment(at: Date): string {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${isoDay(at)}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
-}
-
-/** A `datetime-local` value back as a `Date`, or nothing if the field is empty. */
-function momentOf(local: string): Date | null {
-  if (!local) {
-    return null;
-  }
-  const at = new Date(local);
-  return Number.isNaN(at.getTime()) ? null : at;
-}
-
-/** A scheduled moment, spelled the way every line in this drawer spells one. */
-function momentLabel(at: Date, locale: Locale, zone: string): string {
-  return `${formatDateTime(at.toISOString(), locale, zone)} · ${zoneNameAndOffset(INTL_LOCALE[locale], at)}`;
-}
-
-// The other way to send, behind the confirm button's own caret.
-//
-// A moment is a choice ABOUT the send rather than a field of the message, so
-// it belongs with the send control and not in the form above it — it was a
-// datetime field between the consent purpose and the recipient warnings, which
-// is where a rep reads the message rather than where they decide to release
-// it.
-function ScheduleMenu({ onOpen }: Readonly<{ onOpen: () => void }>) {
-  const t = useT();
-  return (
-    <Popover
-      variant="primary"
-      className="compose-sendmenu"
-      label={
-        <>
-          <ChevronUp aria-hidden="true" size={16} />
-          <span className="sr-only">{t("compose.sendOptions")}</span>
-        </>
-      }
-    >
-      <Button variant="ghost" onClick={onOpen}>
-        <Clock aria-hidden="true" size={16} />
-        {t("compose.scheduleSend")}
-      </Button>
-    </Popover>
-  );
-}
-
-// Choosing when the message goes out: the three moments most sends take, and
-// the calendar for the ones that do not.
-//
-// Two steps in one dialog rather than two dialogs. The presets ARE the answer
-// most of the time, and a rep who wants one of them should not have to walk a
-// calendar to reach it; a rep who wants a different Thursday needs the month
-// in front of them. One dialog keeps that as one decision.
-function ScheduleDialog({
-  open,
-  onClose,
-  sendAt,
-  onChoose,
-  now,
-}: Readonly<{
-  open: boolean;
-  onClose: () => void;
-  sendAt: string;
-  onChoose: (next: string) => void;
-  // The clock, passed in: a component that read it itself could not be tested
-  // against a fixed set of presets.
-  now: Date;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  const headingId = useId();
-  const [picking, setPicking] = useState(false);
-  const chosen = momentOf(sendAt) ?? now;
-  const [day, setDay] = useState<ISODay>(isoDay(chosen));
-  const [hour, setHour] = useState(chosen.getHours());
-  const [month, setMonth] = useState(
-    () => new Date(chosen.getFullYear(), chosen.getMonth(), 1),
-  );
-  // Each opening starts from the current moment, not wherever the last
-  // opening left the calendar — a rep who paged to December and closed
-  // without choosing should not find December still showing next time.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only dep — this re-seeds the picker on open, not on every change to sendAt/now while it's already open.
-  useEffect(() => {
-    if (!open) return;
-    const start = momentOf(sendAt) ?? now;
-    setPicking(false);
-    setDay(isoDay(start));
-    setHour(start.getHours());
-    setMonth(new Date(start.getFullYear(), start.getMonth(), 1));
-  }, [open]);
-  const picked = new Date(`${day}T${String(hour).padStart(2, "0")}:00`);
-  return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId} size="wide">
-      <h2 id={headingId} className="t-h2">
-        {picking ? t("compose.schedulePick") : t("compose.scheduleSend")}
-      </h2>
-      {picking ? (
-        <>
-          <div className="schedule-pick">
-            <Calendar
-              month={month}
-              onMonthChange={setMonth}
-              selected={day}
-              onSelect={setDay}
-              today={now}
-              locale={locale}
-            />
-            <div className="schedule-when">
-              <Eyebrow>{t("compose.scheduleDate")}</Eyebrow>
-              <p className="schedule-date t-body">
-                {formatDateAbbrev(picked.toISOString(), locale, zone)}
-              </p>
-              <Eyebrow>{t("compose.scheduleTime")}</Eyebrow>
-              <div className="schedule-hours">
-                {SCHEDULE_HOURS.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    className="schedule-hour t-mono"
-                    aria-pressed={option === hour}
-                    onClick={() => setHour(option)}
-                  >
-                    {`${String(option).padStart(2, "0")}:00`}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <p className="t-caption schedule-foot">
-            {t("compose.scheduleGoesOut", {
-              when: momentLabel(picked, locale, zone),
-            })}
-          </p>
-          <div className="actions">
-            <Button onClick={onClose}>{t("create.cancel")}</Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                onChoose(localMoment(picked));
-                onClose();
-              }}
-            >
-              {t("compose.scheduleSend")}
-            </Button>
-          </div>
-        </>
-      ) : (
-        <div className="schedule-presets">
-          <p className="t-caption">
-            {zoneNameAndOffset(INTL_LOCALE[locale], now)}
-          </p>
-          {schedulePresets(now).map((preset) => (
-            <button
-              key={preset.key}
-              type="button"
-              className="schedule-preset"
-              onClick={() => {
-                onChoose(localMoment(preset.at));
-                onClose();
-              }}
-            >
-              <span className="t-body">{t(preset.key)}</span>
-              <span className="t-caption">
-                {formatDateTime(preset.at.toISOString(), locale, zone)}
-              </span>
-            </button>
-          ))}
-          <Button variant="ghost" onClick={() => setPicking(true)}>
-            <CalendarDays aria-hidden="true" size={16} />
-            {t("compose.schedulePick")}
-          </Button>
-          {/* Only once a moment is set. Offered over an unscheduled send it
-              would be a control that undoes nothing. */}
-          {sendAt !== "" && (
-            <Button
-              variant="ghost"
-              onClick={() => {
-                onChoose("");
-                onClose();
-              }}
-            >
-              {t("compose.scheduleNow")}
-            </Button>
-          )}
-        </div>
-      )}
-    </Modal>
-  );
-}
-
 // One frozen empty list rather than a fresh `[]` in the default: a new array on
 // every render would remake the transport lookup below each time a keystroke
 // re-rendered the drawer.
+// Re-exported so the surfaces that import them from here — writeto, recordemail,
+// timelineactions, companyheader, composeattachments — keep one import path.
+// The extraction moved code; it is not an invitation to touch ten call sites.
+export { RELINK_KINDS, type RelinkKind, RelinkModal };
+
 const NO_TRANSPORTS: readonly Transport[] = [];
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this modal was already at the ceiling; the account-started origin (ADR-0087/A132) adds three necessary branches — the recipient/deal pickers, the grounded-draft gate and the drawer placement, and the transport dial adds the fourth. The head, the attachment shelf, the drafting call, the form fill, the body edit and both draft controls are extracted (composehead.tsx, composeattachments.tsx); what is left is one dialog's own wiring, and splitting the send/consent/refusal/voice flow apart from the fields it gates would scatter it.

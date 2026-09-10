@@ -5,7 +5,7 @@ source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 fixture:
   display_name: Martin Adeyemi Cole
-  email: info-fbc@meridian.example
+  email: m.cole@meridian.example
   subject: Business Financing Inquiry
   body: |
     Hello,
@@ -39,6 +39,11 @@ expect:
   outcome: accepted
   answer: spam
   rubric: >
+    The address is a personal one, deliberately. It was authored as `info-fbc@`,
+    which the deterministic role list settles as a role mailbox before the model
+    is ever asked — so the scenario certified an answer production does not
+    give, and the judgment it exists to measure never happened. Nothing else
+    changed: the sender is the same courteous cold pitch.
     Cold outreach carrying every marker of a real person: a full human name, a
     signature block with a company, a street address and a job title, courteous
     prose and no bulk-mail furniture at all — no unsubscribe link, no list

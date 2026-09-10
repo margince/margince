@@ -464,6 +464,20 @@ func TestSendMessageRefusesWithoutConsentForThePurpose(t *testing.T) {
 		t.Fatalf("reply under an ungranted purpose → %d %q, want 409 consent_not_granted", status, code)
 	}
 	c.assertNoOutboundEffect(t, "a suppressed reply")
+
+	// AND IT LEAVES A REVIEW, like a refused mail does. A message the engine
+	// stopped is the same piece of work whichever transport it was going out
+	// on, and a rep reading a code with no record is the same dead end. The
+	// channel path refused without recording anything until this landed.
+	var reviews int
+	if err := c.Owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM communication_review WHERE resolved_at IS NULL`).Scan(&reviews); err != nil {
+		t.Fatalf("counting the reviews: %v", err)
+	}
+	if reviews != 1 {
+		t.Errorf("%d review(s) after a refused channel reply, want 1 — the rep read a code and "+
+			"the installation kept no record of what it refused", reviews)
+	}
 }
 
 // A person who blocked the bot cannot be reached, and blocking does NOT archive
