@@ -74,25 +74,39 @@ func (h Handlers) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, to
 //
 // A PREFERENCE TOKEN gets the real list, which it has always had: it is the
 // credential the preference centre runs on, its holder can read the whole
-// consent state on the next GET anyway, and the unsubscribe screen uses the
-// empty list to say "already off" rather than "stopped".
+// consent state on the next GET anyway, and the screen uses the names.
 //
-// A WITHDRAWAL CREDENTIAL gets nothing back but the count's shape. It is a
-// long-lived bearer token that may deliberately NOT read a consent state, and
-// the difference between a populated list and an empty one is that state: it
-// says whether the recipient had already unsubscribed, and an all-marketing
-// press would otherwise enumerate the purpose keys the workspace runs. Anyone
-// holding a link found in a forwarded mail could ask.
+// A WITHDRAWAL CREDENTIAL gets the COUNT and not the names. It is a long-lived
+// bearer token deliberately not allowed to read a consent state, and the
+// purpose keys are that state: an all-marketing press would otherwise
+// enumerate every marketing purpose the workspace runs, to anyone holding a
+// link out of a forwarded mail.
 //
-// The recipient loses nothing. Their press did what it said; whether it moved
-// anything is our bookkeeping, and the page they land on tells them they are
-// unsubscribed either way.
+// WHAT IT DOES KEEP is whether anything moved, and an earlier version of this
+// threw that away too. Returning an empty list for a successful first press
+// made the page say "these emails were already switched off, nothing changed"
+// to somebody who had just switched them off — the response is what the screen
+// reads to tell a real withdrawal from a replay. Hiding the names is the
+// privacy property; hiding the outcome was a bug wearing its clothes.
+//
+// The placeholder is opaque and constant, so a count is all a prober learns:
+// that this press moved something, which they already know because they made
+// it happen.
 func answeredKeys(withdrawn []string, viaCredential bool) []string {
-	if viaCredential {
-		return []string{}
+	if !viaCredential {
+		return withdrawn
 	}
-	return withdrawn
+	anonymous := make([]string, len(withdrawn))
+	for i := range anonymous {
+		anonymous[i] = withdrawalStoppedPlaceholder
+	}
+	return anonymous
 }
+
+// withdrawalStoppedPlaceholder stands in for a purpose name the presser may
+// not learn. The screen counts the list rather than rendering it, so a
+// constant is enough and a real key would defeat the point.
+const withdrawalStoppedPlaceholder = "stopped"
 
 // unsubscribe stops what this press asked to stop.
 //
@@ -109,6 +123,17 @@ func (h Handlers) unsubscribe(
 ) ([]string, error) {
 	if params.Purpose != nil && strings.TrimSpace(*params.Purpose) != "" {
 		named := strings.ToLower(strings.TrimSpace(*params.Purpose))
+		if viaCredential {
+			// THE CREDENTIAL'S SCOPE BOUNDS WHAT THE REQUEST MAY NAME. A
+			// named-purpose credential has already had its own key written
+			// into params by oneClickSubject, so reaching here with a
+			// different one is impossible; an ALL-MARKETING credential,
+			// though, would otherwise stop whatever the query string asked
+			// for — including business correspondence, which is the thing the
+			// class filter below exists to spare. The scope says marketing,
+			// so a purpose outside that class is beyond the link's authority.
+			return h.store.WithdrawMarketingNamed(ctx, personID, named)
+		}
 		return h.store.PublicWithdrawAll(ctx, personID, []string{named})
 	}
 	if viaCredential {
@@ -182,17 +207,16 @@ var errNoConsentSubject = errors.New("consent: this link names no person")
 
 // stopForCredential records the press for a subject with no consent state.
 //
-// It answers the SAME body a person's press answers, with an empty list: the
-// mailbox provider posting this cannot tell the two subjects apart and must
-// not learn which it got. An empty list already means "nothing moved" on the
-// person path, which is exactly true here too.
+// It answers the SAME body a person's press answers, so the mailbox provider
+// posting this cannot tell the two subjects apart and does not learn which it
+// got. The list is empty because a stop is one row rather than a set of
+// purposes — there are no names to count here, and the page says the recipient
+// is unsubscribed either way.
 func (h Handlers) stopForCredential(w http.ResponseWriter, r *http.Request, token string) {
-	ref, err := h.store.ResolveWithdrawalToken(r.Context(), token)
-	if err != nil {
-		writeConsentErr(w, r, err)
-		return
-	}
-	if err := h.store.StopForCredential(r.Context(), ref); err != nil {
+	// The TOKEN, not the ref the caller already resolved: the store re-resolves
+	// inside the transaction that writes, so an erasure committing in between
+	// is decisive rather than raced. See StopForCredential.
+	if err := h.store.StopForCredential(r.Context(), token); err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}

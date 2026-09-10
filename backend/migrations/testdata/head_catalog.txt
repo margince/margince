@@ -3088,6 +3088,7 @@ public.idx_weekly_review_driver_bar CREATE INDEX idx_weekly_review_driver_bar ON
 public.idx_weekly_review_learning_review CREATE INDEX idx_weekly_review_learning_review ON public.weekly_review_learning USING btree (weekly_review_id, "position")
 public.idx_weekly_review_user CREATE INDEX idx_weekly_review_user ON public.weekly_review USING btree (user_id, local_week_start DESC)
 public.idx_withdrawal_credential_lead CREATE INDEX idx_withdrawal_credential_lead ON public.withdrawal_credential USING btree (lead_id) WHERE (lead_id IS NOT NULL)
+public.idx_withdrawal_credential_live CREATE INDEX idx_withdrawal_credential_live ON public.withdrawal_credential USING btree (lower(address), scope) WHERE (revoked_at IS NULL)
 public.idx_withdrawal_credential_person CREATE INDEX idx_withdrawal_credential_person ON public.withdrawal_credential USING btree (person_id) WHERE (person_id IS NOT NULL)
 public.import_record_map acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.import_record_map.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5794,7 +5795,6 @@ public.uq_weekly_review_learning_slot CREATE UNIQUE INDEX uq_weekly_review_learn
 public.uq_weekly_review_movement_bar CREATE UNIQUE INDEX uq_weekly_review_movement_bar ON public.weekly_review_movement USING btree (weekly_review_id, period_kind, bar)
 public.uq_weekly_review_outlook_period CREATE UNIQUE INDEX uq_weekly_review_outlook_period ON public.weekly_review_outlook USING btree (weekly_review_id, period_kind)
 public.uq_weekly_review_user_week CREATE UNIQUE INDEX uq_weekly_review_user_week ON public.weekly_review USING btree (user_id, local_week_start)
-public.uq_withdrawal_credential_live CREATE UNIQUE INDEX uq_withdrawal_credential_live ON public.withdrawal_credential USING btree (lower(address), scope, COALESCE(purpose_id, '00000000-0000-0000-0000-000000000000'::uuid)) WHERE (revoked_at IS NULL)
 public.user_record_view acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.user_record_view.entity_id uuid NOT NULL gen=- def=-
 public.user_record_view.entity_type text NOT NULL gen=- def=-

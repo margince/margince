@@ -87,12 +87,31 @@ CREATE TABLE withdrawal_credential (
     CHECK (NOT (person_id IS NOT NULL AND lead_id IS NOT NULL))
 );
 
--- ONE LIVE CREDENTIAL per address and scope, so re-sending a newsletter reuses
--- the link the last mail carried instead of minting a second one that works
--- just as well. Two live links for one subscription is two bearer credentials
--- to leak, and revoking one would leave the other working.
-CREATE UNIQUE INDEX uq_withdrawal_credential_live
-  ON withdrawal_credential (lower(address), scope, coalesce(purpose_id, '00000000-0000-0000-0000-000000000000'::uuid))
+-- ONE CREDENTIAL PER MESSAGE, and deliberately NOT one per subscription.
+--
+-- The tempting invariant is a unique index over (address, scope, purpose) for
+-- live rows: one subscription, one credential, one thing to leak. It cannot
+-- work here, and the reason is the hashing two blocks up. A second send that
+-- finds an existing credential cannot reuse its link, because the table holds
+-- only a digest and the token is unrecoverable. That leaves two options and
+-- both are worse than several live rows:
+--
+--   return nothing, and the send path — which reads an empty token as "no
+--   unsubscribe surface" — ships a message with no header at all;
+--
+--   revoke the old one and mint fresh, which kills the link in the message
+--   the recipient already has. The older mail is the one they are most likely
+--   to press, so this breaks exactly the case the whole table exists for.
+--
+-- So every send mints its own, and every message a recipient holds carries a
+-- link that works. The cost is several live credentials per address, which is
+-- bounded by how many messages we sent them and is the same exposure the
+-- messages themselves already are: each one is a bearer token for stopping
+-- that recipient's mail and nothing else. Revocation is by SUBJECT rather than
+-- by row for the same reason — erasure, compromise and merge all sweep every
+-- credential the subject holds, so no single row is left working behind.
+CREATE INDEX idx_withdrawal_credential_live
+  ON withdrawal_credential (lower(address), scope)
   WHERE revoked_at IS NULL;
 
 -- The erasure and merge sweeps reach this table by subject.

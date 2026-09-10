@@ -190,41 +190,21 @@ func (s *Store) EnsureWithdrawalCredentialTx(
 	if err != nil {
 		return "", err
 	}
-	// ON CONFLICT DO NOTHING against the live index, then read back: the mint
-	// races itself whenever two sends to one address are prepared at once, and
-	// the loser must return the winner's credential rather than an error. The
-	// RETURNING arm tells the two apart — a row comes back only when this
-	// statement inserted it, which is exactly when the token is disclosable.
-	var inserted bool
-	err = tx.QueryRow(ctx, `
+	// EVERY SEND MINTS ITS OWN, so every message a recipient holds carries a
+	// link that works. The first spelling had a unique index over the live rows
+	// and tried to reuse — which the hash makes impossible, since the token is
+	// unrecoverable — so it returned nothing and the send shipped no header.
+	// The second revoked the old credential and minted fresh, which killed the
+	// link in the mail the recipient already had. Both traded away the thing
+	// this table exists to provide. See the migration for the full argument.
+	if _, err := tx.Exec(ctx, `
 		INSERT INTO withdrawal_credential
 		    (token_hash, address, person_id, lead_id, scope, purpose_id, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, now() + $7::interval)
-		ON CONFLICT DO NOTHING
-		RETURNING true`,
+		VALUES ($1, $2, $3, $4, $5, $6, now() + $7::interval)`,
 		hashPublicToken(minted), address,
 		zeroAsNull(in.PersonID.UUID), zeroAsNull(in.LeadID.UUID),
 		in.Scope, zeroAsNull(in.PurposeID),
-		withdrawalCredentialLife.String()).Scan(&inserted)
-	if errors.Is(err, pgx.ErrNoRows) {
-		// A live credential already covers this address and scope, and its
-		// plaintext is unrecoverable by construction — the table holds a hash.
-		//
-		// SO THIS MESSAGE NEEDS ITS OWN, and returning nothing was wrong: the
-		// send path treats an empty token as "no unsubscribe surface" and
-		// carries no header. For a person that degraded to the preference
-		// token; for a LEAD there is no fallback at all, so every send after
-		// the first went out with no working opt-out — the exact defect this
-		// file exists to close, reintroduced one message later.
-		//
-		// The old credential is superseded rather than left live, so one
-		// subscription still has one credential. Its link stops working, which
-		// is the cost of hashing: we cannot reissue what we cannot read. The
-		// recipient's newest message always carries a working link, and that
-		// is the one they press.
-		return s.supersedeAndMint(ctx, tx, in, address, minted)
-	}
-	if err != nil {
+		withdrawalCredentialLife.String()); err != nil {
 		return "", fmt.Errorf("consent: minting the withdrawal credential: %w", err)
 	}
 	return minted, nil
@@ -405,36 +385,4 @@ func (s *Store) purposeKeyByID(ctx context.Context, purposeID ids.UUID) (string,
 		return "", fmt.Errorf("consent: reading the purpose the link was minted for: %w", err)
 	}
 	return key, nil
-}
-
-// supersedeAndMint retires the credential already covering this address and
-// scope, then writes the fresh one this message will carry.
-//
-// EXPIRY IS RETIRED HERE TOO. The live index keys on revoked_at alone, so an
-// expired-but-unrevoked row keeps occupying the slot while the resolver has
-// stopped honouring it — a link that is dead and un-replaceable at once.
-// Superseding covers both cases in one statement.
-func (s *Store) supersedeAndMint(
-	ctx context.Context, tx pgx.Tx, in WithdrawalMintInput, address, minted string,
-) (string, error) {
-	if _, err := tx.Exec(ctx, `
-		UPDATE withdrawal_credential
-		   SET revoked_at = now(), revoked_reason = $4
-		 WHERE lower(address) = $1 AND scope = $2
-		   AND coalesce(purpose_id, '00000000-0000-0000-0000-000000000000'::uuid) = coalesce($3, '00000000-0000-0000-0000-000000000000'::uuid)
-		   AND revoked_at IS NULL`,
-		address, in.Scope, zeroAsNull(in.PurposeID), WithdrawalRevokedSuperseded); err != nil {
-		return "", fmt.Errorf("consent: superseding the previous withdrawal credential: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO withdrawal_credential
-		    (token_hash, address, person_id, lead_id, scope, purpose_id, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, now() + $7::interval)`,
-		hashPublicToken(minted), address,
-		zeroAsNull(in.PersonID.UUID), zeroAsNull(in.LeadID.UUID),
-		in.Scope, zeroAsNull(in.PurposeID),
-		withdrawalCredentialLife.String()); err != nil {
-		return "", fmt.Errorf("consent: minting the replacement withdrawal credential: %w", err)
-	}
-	return minted, nil
 }

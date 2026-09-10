@@ -69,8 +69,13 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, personID ids.PersonID, e
 		  DELETE FROM communication_basis
 		  WHERE lead_id IN (SELECT id FROM wiped)
 		), leadsuppressions AS (
+		  -- BY ADDRESS TOO, because a public unsubscribe press can record a
+		  -- stop against an address no record held at the time. Nothing keyed
+		  -- by subject reaches such a row, and it carries the erased
+		  -- address in plaintext.
 		  DELETE FROM communication_suppression
 		  WHERE lead_id IN (SELECT id FROM wiped)
+		     OR (address IS NOT NULL AND lower(address) = ANY($2))
 		), leadcredentials AS (
 		  DELETE FROM withdrawal_credential
 		  WHERE lead_id IN (SELECT id FROM wiped)

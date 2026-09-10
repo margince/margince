@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -80,16 +81,18 @@ func TestAWithdrawalLinkSurvivesTheReadTokensRotation(t *testing.T) {
 	}
 }
 
-// EVERY MESSAGE CARRIES A WORKING LINK, and one subscription still has one
-// live credential.
+// EVERY MESSAGE A RECIPIENT HOLDS CARRIES A LINK THAT WORKS.
 //
-// The first spelling returned nothing on the second send, reasoning that the
-// existing link still worked. It does — but the send path reads an empty
-// token as "no unsubscribe surface" and ships no header at all. For a person
-// that quietly degraded to the preference token; for a LEAD there is no
-// fallback, so every send after the first went out with no opt-out. So the
-// old credential is superseded and a fresh one minted.
-func TestEverySendCarriesAWorkingLinkAndOnlyOneStaysLive(t *testing.T) {
+// This took three attempts and the first two were both wrong. A unique index
+// over the live rows, reusing the existing credential, cannot work: the table
+// holds a hash, so there is no token to reuse, and the mint returned nothing —
+// which the send path reads as "no unsubscribe surface" and ships no header.
+// Superseding the old credential and minting fresh fixed that and broke
+// something worse: it killed the link in the message the recipient already
+// had, which is the older mail they are most likely to press.
+//
+// So every send mints its own and the old ones keep working.
+func TestAnOlderMessagesLinkKeepsWorkingAfterANewerSend(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	address := "subject-" + e.person.String() + "@example.test"
@@ -102,37 +105,17 @@ func TestEverySendCarriesAWorkingLinkAndOnlyOneStaysLive(t *testing.T) {
 		t.Fatal("a send got no token, so its message carries no List-Unsubscribe header")
 	}
 	if first == second {
-		t.Fatal("the second send reissued the first token, which the hash makes impossible " +
-			"to do honestly — it can only mean the mint read it back from somewhere")
+		t.Fatal("two sends carried the same token, which the hash makes impossible to do " +
+			"honestly — the mint can only have read it back from somewhere")
 	}
-	var live int
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM withdrawal_credential
-		  WHERE lower(address) = lower($1) AND revoked_at IS NULL`, address).Scan(&live); err != nil {
-		t.Fatalf("counting live credentials: %v", err)
+	// THE OLD ONE IS THE POINT. A person pressing unsubscribe in last month's
+	// newsletter is the case this whole table exists for.
+	if _, err := e.store.ResolveWithdrawalToken(e.ctx, first); err != nil {
+		t.Errorf("the earlier message's link stopped working when a newer send went out: %v — "+
+			"that is the expiring-link defect this table replaced", err)
 	}
-	if live != 1 {
-		t.Errorf("%d live credentials for one subscription, want 1 — two working links is "+
-			"two bearer credentials to leak, and revoking one leaves the other alive", live)
-	}
-	// The newest link works, which is the one in the message the recipient
-	// most recently received.
 	if _, err := e.store.ResolveWithdrawalToken(e.ctx, second); err != nil {
 		t.Errorf("the newest link does not work: %v", err)
-	}
-	// The superseded one does not, and says so in the row rather than merely
-	// vanishing.
-	if _, err := e.store.ResolveWithdrawalToken(e.ctx, first); err == nil {
-		t.Error("the superseded link still resolves, so one subscription has two live credentials")
-	}
-	var reason string
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT revoked_reason FROM withdrawal_credential
-		  WHERE lower(address) = lower($1) AND revoked_at IS NOT NULL`, address).Scan(&reason); err != nil {
-		t.Fatalf("reading the superseded row: %v", err)
-	}
-	if reason != WithdrawalRevokedSuperseded {
-		t.Errorf("the retired credential says %q, want %q", reason, WithdrawalRevokedSuperseded)
 	}
 }
 
@@ -338,12 +321,7 @@ func TestALeadsPressRecordsAStopRatherThanRefusing(t *testing.T) {
 		LeadID:  ids.From[ids.LeadKind](leadID),
 		Scope:   WithdrawalScopeAllMarketing,
 	})
-	ref, err := e.store.ResolveWithdrawalToken(e.ctx, token)
-	if err != nil {
-		t.Fatalf("resolving the lead's link: %v", err)
-	}
-
-	if err := e.store.StopForCredential(e.ctx, ref); err != nil {
+	if err := e.store.StopForCredential(e.ctx, token); err != nil {
 		t.Fatalf("the lead's press did not record a stop: %v", err)
 	}
 
@@ -360,7 +338,7 @@ func TestALeadsPressRecordsAStopRatherThanRefusing(t *testing.T) {
 
 	// A REPLAY CHANGES NOTHING. Mailbox providers retry, and two live rows of
 	// one kind would mean the second lift re-enables mail the first refused.
-	if err := e.store.StopForCredential(e.ctx, ref); err != nil {
+	if err := e.store.StopForCredential(e.ctx, token); err != nil {
 		t.Fatalf("the replayed press errored: %v", err)
 	}
 	if err := e.owner.QueryRow(context.Background(),
@@ -467,29 +445,138 @@ func TestAnAllMarketingLinkLeavesBusinessCorrespondenceRunning(t *testing.T) {
 	}
 }
 
-// A CREDENTIAL PRESS TELLS THE PRESSER NOTHING ABOUT THE CONSENT STATE.
+// A CREDENTIAL PRESS HIDES THE PURPOSE NAMES AND KEEPS THE OUTCOME.
 //
-// The response used to name the purposes it changed, and an empty list meant
-// "already unsubscribed". That is consent state, disclosed through a mutation
-// to a long-lived bearer token that is specifically not allowed to read one:
-// anyone holding a link out of a forwarded mail could ask whether the
-// recipient had already opted out, and an all-marketing press would enumerate
-// the workspace's purpose keys besides.
-func TestACredentialPressDisclosesNoConsentState(t *testing.T) {
-	first := answeredKeys([]string{"newsletter_blast", "cold_calling"}, true)
-	second := answeredKeys([]string{}, true)
-	if len(first) != 0 {
-		t.Errorf("a credential press answered %v — that names the purposes this workspace "+
-			"runs and says the recipient was still subscribed", first)
+// The response used to name the purposes it changed. Those names are consent
+// state, handed to a bearer token specifically not allowed to read one: an
+// all-marketing press would enumerate every marketing purpose the workspace
+// runs, to anyone holding a link out of a forwarded mail.
+//
+// The first fix returned an empty list instead, which threw away one thing too
+// many: the screen reads that list to tell a real withdrawal from a replay, so
+// a successful first press told the recipient "these were already switched
+// off, nothing changed".
+func TestACredentialPressHidesNamesButNotWhetherItWorked(t *testing.T) {
+	stopped := answeredKeys([]string{"newsletter_blast", "cold_calling"}, true)
+	replayed := answeredKeys([]string{}, true)
+
+	if len(stopped) != 2 {
+		t.Errorf("a press that stopped 2 purposes answered %d — the page reads this to say "+
+			"whether anything changed", len(stopped))
 	}
-	if len(first) != len(second) {
-		t.Error("a first press and a replayed one answer differently, so the response " +
-			"still says whether the recipient had already unsubscribed")
+	if len(replayed) != 0 {
+		t.Errorf("a replayed press answered %v, want nothing moved", replayed)
 	}
-	// The preference token keeps the real list: its holder can read the whole
-	// state on the next GET anyway, and the unsubscribe screen uses the empty
-	// list to say "already off" rather than "stopped".
-	if got := answeredKeys([]string{"newsletter_blast"}, false); len(got) != 1 {
+	for _, key := range stopped {
+		if key == "newsletter_blast" || key == "cold_calling" {
+			t.Errorf("the response names %q, which tells the presser what this workspace "+
+				"markets and whether the recipient was subscribed", key)
+		}
+	}
+	// The preference token keeps the real names: its holder can read the whole
+	// state on the next GET anyway, and its screen renders them.
+	if got := answeredKeys([]string{"newsletter_blast"}, false); len(got) != 1 || got[0] != "newsletter_blast" {
 		t.Errorf("a preference-token press answered %v, want the purposes it changed", got)
+	}
+}
+
+// AN ALL-MARKETING LINK CANNOT BE POINTED AT BUSINESS CORRESPONDENCE.
+//
+// The class filter only ran when the request named no purpose. A mailbox
+// provider — or anyone holding the link — could name one in the query string
+// and the named-purpose branch took it as given, which is right for a
+// preference token and wrong for a credential whose scope says marketing.
+func TestAnAllMarketingLinkRefusesToStopCorrespondenceByName(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+	for _, p := range []struct{ key, class string }{
+		{"newsletter_blast", "marketing"},
+		{"business_correspondence", "business_correspondence"},
+	} {
+		if _, err := e.owner.Exec(context.Background(),
+			`INSERT INTO consent_purpose (key, label, class) VALUES ($1, $1, $2)
+			 ON CONFLICT (key) DO UPDATE SET class = EXCLUDED.class`, p.key, p.class); err != nil {
+			t.Fatalf("seeding purpose %s: %v", p.key, err)
+		}
+	}
+
+	// THROUGH THE HANDLER, not the store method it routes to. The first
+	// version of this called WithdrawMarketingNamed directly and passed with
+	// the routing guard disabled — it proved the store method works and said
+	// nothing about whether the press reaches it.
+	named := "business_correspondence"
+	stopped, err := Handlers{store: e.store}.unsubscribe(e.ctx, e.person,
+		crmcontracts.OneClickUnsubscribeParams{Purpose: &named}, true)
+	if err != nil {
+		t.Fatalf("the press errored: %v", err)
+	}
+	if len(stopped) != 0 {
+		t.Errorf("an all-marketing link stopped %v — the recipient asked to leave a mailing "+
+			"list and would stop receiving replies to their own enquiries", stopped)
+	}
+
+	// And a purpose it MAY stop still stops, or the guard has just broken the
+	// ordinary press.
+	marketing := "newsletter_blast"
+	stopped, err = Handlers{store: e.store}.unsubscribe(e.ctx, e.person,
+		crmcontracts.OneClickUnsubscribeParams{Purpose: &marketing}, true)
+	if err != nil {
+		t.Fatalf("the ordinary press errored: %v", err)
+	}
+	if len(stopped) != 1 {
+		t.Errorf("the link stopped %v, want the marketing purpose it names", stopped)
+	}
+
+	// A PREFERENCE TOKEN IS UNCHANGED, which is the other half of the rule:
+	// narrowing the legacy sweep would change what links already in mailboxes
+	// do, and that belongs to the slice owning the purpose vocabulary.
+	stopped, err = Handlers{store: e.store}.unsubscribe(e.ctx, e.person,
+		crmcontracts.OneClickUnsubscribeParams{Purpose: &named}, false)
+	if err != nil {
+		t.Fatalf("the legacy press errored: %v", err)
+	}
+	if len(stopped) != 1 {
+		t.Errorf("a preference-token press stopped %v, want the purpose it named — this "+
+			"slice must not change what an existing link does", stopped)
+	}
+}
+
+// A NAMED-PURPOSE LINK HELD BY A LEAD STOPS NOTHING RATHER THAN EVERYTHING.
+//
+// communication_suppression binds by KIND and carries no purpose column, so
+// the only stop it can record for a lead is a broad one. Writing that for a
+// link minted to leave a single list would stop every marketing message —
+// more than the recipient asked for and more than the link was issued to do.
+func TestANamedPurposeLeadLinkDoesNotStopAllMarketing(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedMarketingPurpose(t, e)
+	purpose := marketingPurposeID(t, e)
+	var leadID ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`INSERT INTO lead (full_name, email, source, captured_by)
+		 VALUES ('Narrow Lead', $1, 'test', 'human:x') RETURNING id`,
+		"narrow-lead@example.test").Scan(&leadID); err != nil {
+		t.Fatalf("seeding the lead: %v", err)
+	}
+	token := mintWithdrawal(t, e, WithdrawalMintInput{
+		Address:   "narrow-lead@example.test",
+		LeadID:    ids.From[ids.LeadKind](leadID),
+		Scope:     WithdrawalScopeNamedPurpose,
+		PurposeID: purpose.UUID,
+	})
+
+	if err := e.store.StopForCredential(e.ctx, token); err != nil {
+		t.Fatalf("the press errored: %v", err)
+	}
+
+	var stops int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM communication_suppression
+		  WHERE lead_id = $1 AND revoked_at IS NULL`, leadID).Scan(&stops); err != nil {
+		t.Fatalf("counting: %v", err)
+	}
+	if stops != 0 {
+		t.Errorf("a link for one subscription wrote %d broad stop(s) — the lead asked to "+
+			"leave one list and every marketing message would stop", stops)
 	}
 }

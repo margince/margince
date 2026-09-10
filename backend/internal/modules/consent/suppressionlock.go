@@ -46,8 +46,21 @@ func lockSubjectSuppressions(ctx context.Context, tx pgx.Tx, subject ids.UUID) e
 	if subject.IsZero() {
 		return nil
 	}
+	return lockStopKey(ctx, tx, subject.String())
+}
+
+// lockStopKey is the lock over a key that is not a record id.
+//
+// An unsubscribe link can name an ADDRESS that no record holds, and two
+// presses on it must still queue. The lock has always hashed a string, so the
+// address is a key like any other — what this adds is a caller that has no
+// uuid to offer and must not invent one.
+func lockStopKey(ctx context.Context, tx pgx.Tx, key string) error {
+	if key == "" {
+		return nil
+	}
 	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, subject.String()); err != nil {
+		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, key); err != nil {
 		return fmt.Errorf("consent: serialising stop writes for this subject: %w", err)
 	}
 	return nil

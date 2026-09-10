@@ -116,7 +116,9 @@ var ratifiedDestinations = map[string]string{
 	"resolveWithdrawalTokenTx":          "is the same resolve inside a caller's transaction",
 	"legacyPreferenceTokenAsWithdrawal": "looks up an OLD preference token and returns a withdrawal ref, never the token",
 	"HasPrefix":                         "reads the credential's family prefix and returns a bool; a prefix test discloses nothing the link's own shape does not",
-	"stopForCredential":                 "resolves the token and records the stop it presses, returning nothing about the token itself",
+	"StopForCredential":                 "re-resolves the token inside the transaction that writes and returns nothing about it. It receives the plaintext DELIBERATELY: resolving in the handler and writing in a second transaction let an erasure commit in the gap, after which the write put the erased plaintext address back",
+
+	"stopForCredential": "resolves the token and records the stop it presses, returning nothing about the token itself",
 
 	"oneClickSubject": "resolves the press to the person it acts for, trying both credential families, and returns that person and the withdrawal scope — never the token",
 }

@@ -51,14 +51,37 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	if ref.LeadID.IsZero() && ref.Address == "" {
 		return apperrors.ErrNotFound
 	}
+	// A NAMED-PURPOSE LINK CANNOT BE HONOURED HERE, so it stops nothing rather
+	// than stopping too much.
+	//
+	// communication_suppression has no purpose column: a row binds by KIND,
+	// and the objection kind binds every marketing message. So the only stop
+	// this table can record for a lead is a broad one, and writing it for a
+	// link minted to stop a single subscription would exceed the authority the
+	// recipient was handed — they asked to leave one list and would find every
+	// marketing message stopped.
+	//
+	// The narrow stop needs a per-purpose shape for subjects who hold no
+	// person_consent rows, which is a schema question this slice does not
+	// answer. Until then a named-purpose lead link is issued and declines to
+	// act, which is visible in the audit as nothing happening rather than as
+	// the wrong thing happening.
+	if ref.Scope == WithdrawalScopeNamedPurpose {
+		return nil
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
-	// ON CONFLICT DO NOTHING against the live index: a second press of the
-	// same link is the same person saying the same thing, and two live rows of
-	// one kind would mean the second lift silently re-enables mail the first
-	// was still refusing.
+	// SERIALISED FIRST, because NOT EXISTS does not serialise: two concurrent
+	// first presses — a mailbox provider retrying while the first is still in
+	// flight — both read "no live stop" and both insert, leaving two live rows
+	// of one kind. The second lift would then silently re-enable mail the
+	// first was still refusing. The lock is the one every writer of this
+	// subject's stops takes, so a carry or a lift queues behind this too.
+	if err := lockStopKey(ctx, tx, stopSubjectKey(ref)); err != nil {
+		return err
+	}
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO communication_suppression
 		    (lead_id, address, kind, source, captured_by, decided_by_level)
@@ -98,10 +121,25 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	return nil
 }
 
-// StopForCredential is StopForCredentialTx in its own transaction, for the
-// public handler that has none of its own.
-func (s *Store) StopForCredential(ctx context.Context, ref WithdrawalRef) error {
+// StopForCredential is the press in its own transaction, for the public
+// handler that has none of its own.
+//
+// IT RE-RESOLVES THE TOKEN INSIDE THAT TRANSACTION rather than trusting a ref
+// resolved a moment earlier. The two used to be separate transactions with
+// nothing between them: an erasure committing in the gap left the caller
+// holding a ref naming a subject and an address that no longer exist, and the
+// insert wrote that plaintext address back. An anonymize-in-place leaves the
+// lead row standing, so the foreign key does not catch it.
+//
+// Re-resolving inside the write makes the erasure's own deletion of the
+// credential decisive: a token whose row is gone answers not-found here, and
+// the press writes nothing.
+func (s *Store) StopForCredential(ctx context.Context, token string) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		ref, err := resolveWithdrawalTokenTx(ctx, tx, token)
+		if err != nil {
+			return err
+		}
 		return s.StopForCredentialTx(ctx, tx, ref)
 	})
 }
@@ -147,4 +185,47 @@ func (s *Store) WithdrawMarketingForCredential(
 		return []string{}, nil
 	}
 	return s.PublicWithdrawAll(ctx, personID, keys)
+}
+
+// WithdrawMarketingNamed stops ONE purpose, and only if it is one an
+// all-marketing link may stop.
+//
+// The named-purpose branch of the one-click path used to take the query
+// string as given, which is right for a preference token — the mailbox
+// provider names the purpose the message was sent under, and second-guessing
+// it would refuse a legitimate press. A withdrawal credential is different:
+// its scope is part of the credential, so a request naming a purpose outside
+// that scope is asking the link to exceed itself.
+//
+// A purpose outside the marketing classes answers "nothing changed" rather
+// than an error. The presser is a mailbox provider acting on a header, not a
+// person who typed something wrong, and a 4xx would turn a press we simply
+// decline to widen into a delivery failure they retry.
+func (s *Store) WithdrawMarketingNamed(
+	ctx context.Context, personID ids.PersonID, key string,
+) ([]string, error) {
+	var allowed bool
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT EXISTS (
+			  SELECT 1 FROM consent_purpose
+			   WHERE key = $1 AND archived_at IS NULL
+			     AND class IN ('marketing', 'phone_outreach'))`, key).Scan(&allowed)
+	}); err != nil {
+		return nil, fmt.Errorf("consent: checking whether this link may stop that purpose: %w", err)
+	}
+	if !allowed {
+		return []string{}, nil
+	}
+	return s.PublicWithdrawAll(ctx, personID, []string{key})
+}
+
+// stopSubjectKey is what this press locks under: the lead when one holds the
+// address, and the address itself when none does — so two presses on an
+// address no record names still queue.
+func stopSubjectKey(ref WithdrawalRef) string {
+	if !ref.LeadID.IsZero() {
+		return ref.LeadID.String()
+	}
+	return ref.Address
 }
