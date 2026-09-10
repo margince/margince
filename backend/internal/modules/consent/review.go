@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -210,7 +211,11 @@ func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
 	out := make([]RefusedRecipient, 0, len(denied))
 	for _, d := range denied {
 		refusal := RefusedRecipient{
-			Address:     d.Recipient.Email,
+			// NORMALIZED ON THE WAY IN, because the erasure sweeps match on it.
+			// An address stored with the whitespace or the casing a caller
+			// typed is one a lowercased, trimmed comparison walks past — and
+			// what it walks past is an erased subject's mailbox.
+			Address:     strings.ToLower(strings.TrimSpace(d.Recipient.Email)),
 			SubjectKind: d.SubjectKind,
 			ReasonCode:  d.ReasonCode,
 			Category:    string(d.Resolved),
@@ -285,6 +290,24 @@ func zeroUUIDAsNull(id ids.UUID) *ids.UUID {
 
 // RecordRefusal opens a review for a refusal that is about to roll back its own
 // transaction.
+//
+// A KNOWN RACE, stated rather than hidden: this write takes no subject lock, so
+// a refusal committing while an erasure sweeps can land a review naming an
+// address the sweep has already cleared.
+//
+// It is not closed by locking here. The erasure holds its address locks for the
+// length of its own transaction, and this one begins after the send transaction
+// has unwound — there is no moment when both are open for a lock to order. What
+// would close it is recording the refusal inside the send's transaction, which
+// is exactly what cannot happen: that transaction rolls back and takes the row
+// with it.
+//
+// The exposure is bounded and the direction is the safe one. What survives is a
+// snapshot of a message that was REFUSED — never sent, so nothing was disclosed
+// — naming an address the installation was told to forget. It is cleared by the
+// next erasure or anonymization of that subject, and until then it sits in a
+// row only the initiator can read. The alternative, dropping the review when a
+// refusal races a sweep, loses the record of a send that stopped.
 //
 // ITS OWN TRANSACTION, and that is forced rather than chosen. A staging refusal
 // answers an error, and the caller returns it — which rolls back everything

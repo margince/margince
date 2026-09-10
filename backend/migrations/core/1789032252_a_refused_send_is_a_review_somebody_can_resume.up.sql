@@ -51,7 +51,15 @@ CREATE TABLE communication_review (
     opened_at timestamptz NOT NULL DEFAULT now(),
     resolved_at timestamptz,
     -- Which review replaced this one, when a fresh attempt supersedes it.
-    superseded_by uuid REFERENCES communication_review(id) ON DELETE SET NULL,
+    --
+    -- ON DELETE RESTRICT, not SET NULL. The CHECK below requires a superseded
+    -- review to name its successor, so nulling this column on the successor's
+    -- deletion would leave the predecessor violating its own constraint —
+    -- a row the database would then refuse every later update to. Refusing the
+    -- delete instead is the honest answer: a review that replaced another is
+    -- the reason that other one is closed, and removing it would leave the
+    -- first claiming a supersession nothing records.
+    superseded_by uuid REFERENCES communication_review(id) ON DELETE RESTRICT,
 
     CONSTRAINT communication_review_state CHECK (state = ANY (ARRAY[
         'needs_context'::text, 'needs_repair'::text,

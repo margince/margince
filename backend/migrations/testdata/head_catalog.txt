@@ -1737,7 +1737,7 @@ public.communication_review.communication_review_kind CHECK ((kind = 'single'::t
 public.communication_review.communication_review_pkey PRIMARY KEY (id)
 public.communication_review.communication_review_resolution_shape CHECK (((state = ANY (ARRAY['resolved'::text, 'superseded'::text, 'cancelled'::text])) = (resolved_at IS NOT NULL)))
 public.communication_review.communication_review_state CHECK ((state = ANY (ARRAY['needs_context'::text, 'needs_repair'::text, 'resolved'::text, 'superseded'::text, 'cancelled'::text])))
-public.communication_review.communication_review_superseded_by_fkey FOREIGN KEY (superseded_by) REFERENCES communication_review(id) ON DELETE SET NULL
+public.communication_review.communication_review_superseded_by_fkey FOREIGN KEY (superseded_by) REFERENCES communication_review(id) ON DELETE RESTRICT
 public.communication_review.communication_review_supersession_shape CHECK (((state = 'superseded'::text) = (superseded_by IS NOT NULL)))
 public.communication_review.delivery_intent_id uuid gen=- def=-
 public.communication_review.id uuid NOT NULL gen=- def=uuidv7()

@@ -120,33 +120,65 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 		return err
 	}
 	if err := refuseAtStaging(set); err != nil {
-		return s.reviewFor(ctx, set, err)
+		// CARRIED OUT, NOT WRITTEN HERE. Recording the review needs its own
+		// transaction — this one is about to roll back and would take the row
+		// with it — and opening one now would hold two connections from the
+		// same pool at once. Sixteen concurrent refusals would then wait on
+		// each other for a connection none of them can release.
+		//
+		// So the snapshot travels on the error, and whoever unwinds the
+		// transaction writes it once the connection is back.
+		return &pendingReviewError{set: set, cause: err}
 	}
 	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
 		Workspace: ws, DeliveryID: id.String(),
 	}, sendInsertOpts())
 }
 
-// reviewFor records what this refusal was about and hands the caller an error
-// naming it, so the rep gets a reference instead of a code.
+// pendingReviewError is a refusal travelling out of the transaction it stopped,
+// carrying what the engine decided, so a review can be recorded after that
+// transaction has unwound and given its connection back.
 //
-// The review is written OUTSIDE the caller's transaction, because returning
-// this error rolls that transaction back and would take the review with it.
-// consent.Gate.RecordRefusal owns that decision and explains what it costs.
+// It exists only between the staging call and RecordPendingReview. Nothing
+// outside this file should see one: the recorder replaces it with the refusal
+// the caller expects, wrapped with the review's reference.
+type pendingReviewError struct {
+	set   commsauthz.DecisionSet
+	cause error
+}
+
+func (e *pendingReviewError) Error() string { return e.cause.Error() }
+
+// Unwrap keeps the refusal's identity reachable, so a caller that never runs
+// the recorder — a path this wiring has not reached yet — still answers the
+// same 409 it always did rather than an unrecognised error.
+func (e *pendingReviewError) Unwrap() error { return e.cause }
+
+// RecordPendingReview turns a carried refusal into a durable review, AFTER the
+// transaction that refused has finished unwinding.
+//
+// Called on the way out rather than at the point of refusal, because the
+// staging call runs inside the caller's transaction and writing there would
+// either be rolled back with it or hold a second pool connection while the
+// first is still checked out.
 //
 // A FAILURE TO RECORD DOES NOT REPLACE THE REFUSAL. The send is refused either
 // way, and answering a storage fault instead would tell the rep their message
 // was fine and the database was not. The original refusal is what they need to
 // see; the missing review is an operator's problem, not theirs.
-func (s commsStager) reviewFor(ctx context.Context, set commsauthz.DecisionSet, refusal error) error {
+func (s commsStager) RecordPendingReview(ctx context.Context, err error) error {
+	var pending *pendingReviewError
+	if !errors.As(err, &pending) {
+		return err
+	}
 	if s.authority == nil {
-		return refusal
+		return pending.cause
 	}
-	review, err := s.authority.RecordRefusal(ctx, set, ids.UUID{})
-	if err != nil || review.ID.IsZero() {
-		return refusal
+	review, recordErr := s.authority.RecordRefusal(ctx, pending.set, ids.UUID{})
+	if recordErr != nil || review.ID.IsZero() {
+		return pending.cause
 	}
-	return &consent.SendRefusedError{ReviewID: review.ID, Cause: refusal}
+	return &consent.SendRefusedError{ReviewID: review.ID, Cause: pending.cause}
 }
 
 // StageChannelTx is the same staging for a channel reply: the channel-shaped row
@@ -183,7 +215,10 @@ func (s commsStager) StageChannelTx(ctx context.Context, tx pgx.Tx, in activitie
 		return err
 	}
 	if err := refuseAtStaging(set); err != nil {
-		return err
+		// Carried out for the email path's reason: this transaction is about
+		// to roll back, and opening a second one now would hold two pool
+		// connections at once.
+		return &pendingReviewError{set: set, cause: err}
 	}
 	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
 		Workspace: ws, DeliveryID: id.String(),
