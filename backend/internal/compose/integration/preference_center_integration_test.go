@@ -111,6 +111,37 @@ func unsubscribeLinkIn(t *testing.T, body string) string {
 	return ""
 }
 
+// manageLinkIn reads the "Manage your preferences" destination out of a sent
+// body. It is a SEPARATE link from the unsubscribe one and now carries a
+// separate credential: stopping mail and reading a record are different rights,
+// and the token that outlives a message on purpose is not the one the
+// preference centre can resolve.
+func manageLinkIn(t *testing.T, body string) string {
+	t.Helper()
+	for _, line := range strings.Split(body, "\n") {
+		if link, ok := strings.CutPrefix(line, "Manage your preferences: "); ok {
+			return strings.TrimSpace(link)
+		}
+	}
+	t.Fatalf("no manage-preferences link in the sent body:\n%s", body)
+	return ""
+}
+
+// manageTokenFromLink pulls the preference token out of that hash route.
+func manageTokenFromLink(t *testing.T, link string) string {
+	t.Helper()
+	u, err := url.Parse(link)
+	if err != nil {
+		t.Fatalf("parsing the manage link %q: %v", link, err)
+	}
+	route := strings.SplitN(u.Fragment, "?", 2)[0]
+	token := strings.TrimPrefix(route, "/preferences/")
+	if token == "" || token == route {
+		t.Fatalf("manage link has no token: %q", u.Fragment)
+	}
+	return token
+}
+
 func tokenFromLink(t *testing.T, link string) string {
 	t.Helper()
 	u, err := url.Parse(link)
@@ -159,8 +190,13 @@ func createNewsletterPurpose(t *testing.T, c *consentEnv) string {
 // transactional (locked) send that carries no unsubscribe surface at all.
 // The machine List-Unsubscribe header derives from the SAME token and URL
 // and is asserted where it is now built, on the send path itself
-// (activities.Store.SendEmail). Returns the preference token the send minted.
-func sendAndAssertUnsubscribeLink(t *testing.T, c *consentEnv) string {
+// (activities.Store.SendEmail).
+//
+// Returns BOTH credentials the send hands the recipient, because they are two
+// different rights and no longer one token: stop is the withdrawal credential
+// the unsubscribe links carry, which outlives the message on purpose and reads
+// nothing; manage is the preference token the preference centre resolves.
+func sendAndAssertUnsubscribeLink(t *testing.T, c *consentEnv) (stop, manage string) {
 	t.Helper()
 	// The marketing send carries the one-click link, built from the
 	// configured base — NOT from the request Host.
@@ -173,6 +209,7 @@ func sendAndAssertUnsubscribeLink(t *testing.T, c *consentEnv) string {
 		t.Fatalf("unsubscribe link = %q, want the human unsubscribe page on the configured base", link)
 	}
 	token := tokenFromLink(t, link)
+	manageToken := manageTokenFromLink(t, manageLinkIn(t, transmittedBody(t, c)))
 
 	// A forged Host / X-Forwarded-Proto must NOT redirect the tokenized
 	// link to an attacker's domain (token-exfiltration guard). Asserted on
@@ -196,7 +233,7 @@ func sendAndAssertUnsubscribeLink(t *testing.T, c *consentEnv) string {
 	if _, tbody := sendMarketing(t, c.AppEnv, c.activityID, "transactional", "", ""); strings.Contains(tbody, "/unsubscribe") {
 		t.Fatalf("transactional send carried an unsubscribe link:\n%s", tbody)
 	}
-	return token
+	return token, manageToken
 }
 
 // prefView is the no-login preference center's response shape.
@@ -288,10 +325,15 @@ func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
 	newsletterID := createNewsletterPurpose(t, c)
 	grantPurpose(t, c, newsletterID)
 
-	token := sendAndAssertUnsubscribeLink(t, c)
+	// TWO CREDENTIALS, because the send hands out two. The stop token presses
+	// the one-click endpoint; the manage token reads the preference centre.
+	// They were one token until the withdrawal credential landed, and this test
+	// used it for both — which is how the manage link came to resolve nothing
+	// without any test noticing.
+	token, manageToken := sendAndAssertUnsubscribeLink(t, c)
 
 	// The no-login preference center recognizes the recipient by token.
-	view := readPreferenceView(t, c, token)
+	view := readPreferenceView(t, c, manageToken)
 	if s, _ := purposeStateOf(t, view, "newsletter"); s != "granted" {
 		t.Fatalf("newsletter shows %q before opt-out, want granted", s)
 	}
@@ -305,7 +347,7 @@ func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
 	if s := publicCall(t, c.AppEnv, "GET", "/v1/public/preferences/"+token+"/unsubscribe", nil, nil, nil); s != http.StatusMethodNotAllowed {
 		t.Fatalf("GET on the unsubscribe path → %d, want 405", s)
 	}
-	if s, _ := purposeStateOf(t, readPreferenceView(t, c, token), "newsletter"); s != "granted" {
+	if s, _ := purposeStateOf(t, readPreferenceView(t, c, manageToken), "newsletter"); s != "granted" {
 		t.Fatalf("a GET changed newsletter to %q — the one-click surface must be POST-only", s)
 	}
 
@@ -316,10 +358,19 @@ func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
 	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/preferences/"+token+"/unsubscribe?purpose=newsletter", nil, nil, &unsub); s != http.StatusOK {
 		t.Fatalf("one-click unsubscribe → %d", s)
 	}
-	if len(unsub.Unsubscribed) != 1 || unsub.Unsubscribed[0] != "newsletter" {
-		t.Fatalf("unsubscribed = %v, want [newsletter]", unsub.Unsubscribed)
+	// ONE ENTRY, and its VALUE is deliberately opaque. A withdrawal credential
+	// is pressed by whoever holds the link, and naming the purposes it stopped
+	// would tell them which subscriptions this address holds — which the press
+	// itself never proved they are entitled to know. What the page renders is
+	// the count, so the count is what this asserts.
+	if len(unsub.Unsubscribed) != 1 {
+		t.Fatalf("unsubscribed = %v, want exactly one stopped purpose", unsub.Unsubscribed)
 	}
-	if s, _ := purposeStateOf(t, readPreferenceView(t, c, token), "newsletter"); s != "withdrawn" {
+	if unsub.Unsubscribed[0] == "newsletter" {
+		t.Errorf("the answer named the purpose it stopped — a credential press must not tell its "+
+			"holder which subscriptions this address carries: %v", unsub.Unsubscribed)
+	}
+	if s, _ := purposeStateOf(t, readPreferenceView(t, c, manageToken), "newsletter"); s != "withdrawn" {
 		t.Fatalf("newsletter still %q after one-click, want withdrawn", s)
 	}
 
@@ -355,14 +406,24 @@ func TestPreferenceTokenNeverReachesTheRecordedActivity(t *testing.T) {
 	if status != http.StatusAccepted {
 		t.Fatalf("marketing send → %d, want 202", status)
 	}
-	token := tokenFromLink(t, unsubscribeLinkIn(t, transmittedBody(t, c)))
-	if !strings.HasPrefix(token, "pref_") {
-		t.Fatalf("the transmitted message carries no usable token: %q", token)
+	// BOTH credentials, because the send now hands out two and either one in a
+	// durable row is the leak this test exists to catch. The stop token is the
+	// stronger case: it outlives the message on purpose, so a copy of it in the
+	// timeline is a working unsubscribe capability sitting where any reader of
+	// the record can press it.
+	body := transmittedBody(t, c)
+	token := tokenFromLink(t, unsubscribeLinkIn(t, body))
+	if !strings.HasPrefix(token, "wd_") {
+		t.Fatalf("the transmitted message carries no usable stop token: %q", token)
+	}
+	manageToken := manageTokenFromLink(t, manageLinkIn(t, body))
+	if !strings.HasPrefix(manageToken, "pref_") {
+		t.Fatalf("the transmitted message carries no usable manage token: %q", manageToken)
 	}
 
 	// The 202 the sender reads back.
-	if strings.Contains(recorded, token) {
-		t.Fatalf("the 202 response echoed the recipient's preference token:\n%s", recorded)
+	if strings.Contains(recorded, token) || strings.Contains(recorded, manageToken) {
+		t.Fatalf("the 202 response echoed a credential from the recipient's message:\n%s", recorded)
 	}
 	// The durable row, through the authenticated timeline read that serves it.
 	var page struct {
@@ -429,7 +490,9 @@ func TestPreferenceCenterRevokedTokenReadsAsAbsent(t *testing.T) {
 	grantPurpose(t, c, newsletter.ID)
 
 	sendMarketing(t, c.AppEnv, c.activityID, "newsletter", "", "")
-	token := tokenFromLink(t, unsubscribeLinkIn(t, transmittedBody(t, c)))
+	// The MANAGE token, because this test is about what the preference centre
+	// resolves. The stop token beside it reads nothing by design.
+	token := manageTokenFromLink(t, manageLinkIn(t, transmittedBody(t, c)))
 
 	// Live token resolves.
 	if s := publicCall(t, c.AppEnv, "GET", "/v1/public/preferences/"+token, nil, nil, nil); s != http.StatusOK {
@@ -437,7 +500,11 @@ func TestPreferenceCenterRevokedTokenReadsAsAbsent(t *testing.T) {
 	}
 
 	if _, err := c.Owner.Exec(context.Background(),
-		`UPDATE preference_token SET revoked_at = now() WHERE token = $1`, token); err != nil {
+		// The reason is not decoration: a paired CHECK refuses a revocation that
+		// does not name one, so a row revoked without it never existed and this
+		// test would be asserting against a token that is still live.
+		`UPDATE preference_token SET revoked_at = now(), revoked_reason = 'compromise'
+		  WHERE token = $1`, token); err != nil {
 		t.Fatalf("revoke token: %v", err)
 	}
 

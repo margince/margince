@@ -28,7 +28,18 @@ import (
 // (transactional) purpose, or an address no person holds — in which case
 // the send carries no unsubscribe header.
 type UnsubscribeLinker interface {
+	// UnsubscribeToken answers the credential the STOP links carry, and ok is
+	// false when this address has no unsubscribe surface at all.
 	UnsubscribeToken(ctx context.Context, recipientEmail, purposeKey string) (token string, ok bool, err error)
+	// ManageToken answers the credential the preference centre resolves, which
+	// is a different capability and now a different kind of token.
+	//
+	// A SEPARATE METHOD rather than a second return value, because the two
+	// have different failure meanings. No stop token means this send carries no
+	// unsubscribe surface and the header is omitted. No manage token means the
+	// recipient has nothing to manage — a lead-only address holds no person
+	// record — and the send still goes out with its stop links intact.
+	ManageToken(ctx context.Context, recipientEmail string) (token string, ok bool, err error)
 }
 
 // WithUnsubscribe wires the RFC 8058 linker onto the send path. A send
@@ -163,16 +174,46 @@ type unsubscribeLinks struct {
 // surfaces that way, static hosting needs no server fallback for them, and
 // the token stays out of ordinary web-server access logs until the page
 // deliberately calls the API with it.
-func unsubscribeLinksFor(baseURL, token, purposeKey string, lang textlang.Lang) unsubscribeLinks {
+func unsubscribeLinksFor(baseURL string, tokens unsubscribeTokens, purposeKey string, lang textlang.Lang) unsubscribeLinks {
 	purpose := strings.ToLower(strings.TrimSpace(purposeKey))
 	query := "?lang=" + url.QueryEscape(string(lang))
-	return unsubscribeLinks{
-		oneClick: baseURL + "/v1/public/preferences/" + url.PathEscape(token) +
-			"/unsubscribe?purpose=" + url.QueryEscape(purpose),
-		unsubscribe: baseURL + "/#/unsubscribe/" + url.PathEscape(token) + "/" +
-			url.PathEscape(purpose) + query,
-		manage: baseURL + "/#/preferences/" + url.PathEscape(token) + query,
+	manageToken := tokens.manage
+	if manageToken == "" {
+		manageToken = tokens.stop
 	}
+	return unsubscribeLinks{
+		oneClick: baseURL + "/v1/public/preferences/" + url.PathEscape(tokens.stop) +
+			"/unsubscribe?purpose=" + url.QueryEscape(purpose),
+		unsubscribe: baseURL + "/#/unsubscribe/" + url.PathEscape(tokens.stop) + "/" +
+			url.PathEscape(purpose) + query,
+		manage: baseURL + "/#/preferences/" + url.PathEscape(manageToken) + query,
+	}
+}
+
+// unsubscribeTokens is the two capabilities one send hands a recipient.
+//
+// TWO, because stopping mail and reading a record are different rights and the
+// credentials for them now differ in kind. The stop token is a withdrawal
+// credential: long-lived on purpose, so the link in a message somebody kept
+// still works months later, and it reads nothing. The manage token is a
+// preference token, which is what the preference centre resolves — it slides
+// and is rotated by the next send, and it can show the subject their own
+// purposes.
+//
+// Passing one token for both is what broke the manage page: every link carried
+// the withdrawal credential, the preference centre resolved nothing, and a
+// recipient clicking "Manage preferences" got a page that could not read them.
+// The visible unsubscribe page degrades to withdraw-only in that case, which is
+// still honest; the manage page has nothing to degrade to.
+type unsubscribeTokens struct {
+	// stop is what the one-click endpoint and the human unsubscribe page carry.
+	// It must outlive the message it was sent in.
+	stop string
+	// manage is what the preference centre resolves. Empty when this send could
+	// mint none — a lead-only recipient holds no person record to manage — and
+	// the manage link then falls back to the stop token, which draws the
+	// withdraw-only page rather than a dead link.
+	manage string
 }
 
 // htmlFooter renders the unsubscribe links as markup, for the alternative part.
@@ -295,8 +336,17 @@ func (s *Store) deliverability(
 	}
 	lang := s.footerLanguage(ctx, body, subject)
 	words := mailcopy.For(string(lang))
-	live := unsubscribeLinksFor(s.publicBaseURL, token, surface.purposeKey, lang)
-	redacted := unsubscribeLinksFor(s.publicBaseURL, redactedToken, surface.purposeKey, lang)
+	// Asked AFTER the stop token, and its failure is not the send's. A
+	// recipient who cannot be given a preference centre can still be given a
+	// way to stop, which is the link that matters.
+	manageToken, _, err := s.unsubscribe.ManageToken(ctx, recipients[0])
+	if err != nil {
+		return sendDeliverability{}, err
+	}
+	live := unsubscribeLinksFor(s.publicBaseURL,
+		unsubscribeTokens{stop: token, manage: manageToken}, surface.purposeKey, lang)
+	redacted := unsubscribeLinksFor(s.publicBaseURL,
+		unsubscribeTokens{stop: redactedToken, manage: redactedToken}, surface.purposeKey, lang)
 	return sendDeliverability{
 		listUnsubscribe: listUnsubscribeHeader(live.oneClick),
 		links:           live,

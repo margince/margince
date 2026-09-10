@@ -28,9 +28,23 @@ type stubUnsubscribeLinker struct {
 	token string
 	ok    bool
 	err   error
+	// manage overrides what the preference-centre link carries, for the cases
+	// that turn on the two credentials being different.
+	manage string
 }
 
 func (l stubUnsubscribeLinker) UnsubscribeToken(context.Context, string, string) (string, bool, error) {
+	return l.token, l.ok, l.err
+}
+
+// ManageToken answers the same token unless the case sets its own. The stop
+// credential and the preference token differ in production, and a case that
+// cares says so; the rest are asserting on the stop links, where a second
+// distinct value would only add noise.
+func (l stubUnsubscribeLinker) ManageToken(context.Context, string) (string, bool, error) {
+	if l.manage != "" {
+		return l.manage, true, nil
+	}
 	return l.token, l.ok, l.err
 }
 
