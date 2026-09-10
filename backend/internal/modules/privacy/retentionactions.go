@@ -262,6 +262,15 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		_, err = tx.Exec(ctx, `DELETE FROM confirm_token WHERE person_id = $1`, id)
 	}
 	if err == nil {
+		// The withdrawal link goes too, and it is the one that would linger
+		// longest: 24 months against the double-opt-in token's weeks. It also
+		// HOLDS THE ADDRESS the link was written to, in its own column, which
+		// is precisely the content the statement above just cleared from the
+		// person row — so leaving it would keep an anonymized subject's mailbox
+		// legible in a table the anonymization did not touch.
+		_, err = tx.Exec(ctx, `DELETE FROM withdrawal_credential WHERE person_id = $1`, id)
+	}
+	if err == nil {
 		// And what came back through it, which is the subject's own name and
 		// address in plaintext — exactly the content the anonymization above
 		// just cleared from the person row.

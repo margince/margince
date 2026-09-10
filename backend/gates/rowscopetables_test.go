@@ -400,5 +400,30 @@ const (
 	// person never gets here. The read hands back no row: it returns one uuid,
 	// which is either the id the caller already named or the survivor that id
 	// now resolves to.
-	modulesTierUnscopedCeiling = 100
+	//
+	// THE FIFTH RISE, +3, and all three are the public withdrawal resolve.
+	// consent.resolveWithdrawalTokenTx projects person_id and lead_id off
+	// withdrawal_credential, and legacyPreferenceTokenAsWithdrawal projects
+	// person_id off preference_token, so a one-click unsubscribe can act.
+	//
+	// There is NO row scope to reach on this edge and there cannot be: the
+	// surface is anonymous by construction — RFC 8058 requires the POST to work
+	// with no session, from a mail client, and a scope needs a seat to narrow
+	// to. Possession of the emailed credential IS the authority, which is the
+	// posture ResolvePreferenceToken and ResolveConfirmToken already hold and
+	// which ungatedEntryPoints records for all three. What bounds it instead is
+	// the credential's narrowness: the ref carries an address and a scope, so a
+	// holder cannot read a consent state, cannot grant, and cannot reach
+	// business correspondence.
+	//
+	// THE SIXTH RISE, +1, and it is the same public edge again.
+	// consent.bindWithdrawalSubject reads person_email and lead to attach the
+	// record holding the address a withdrawal link is being minted for. It runs
+	// on the SEND path, under the system principal that composes outbound mail,
+	// which holds no seat to narrow to — the same posture every send-path read
+	// of a recipient has. What bounds it is the address: the caller does not
+	// choose an id, it hands over the address the message is already going to,
+	// and a match on two records resolves to no subject at all rather than
+	// picking one.
+	modulesTierUnscopedCeiling = 104
 )
