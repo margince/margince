@@ -16,7 +16,11 @@ so a build meant for testing does not become the download the release page
 offers by default — and the D13 deployment promotes non-suffixed tags only, so
 tagging a candidate deploys nothing.
 
-If the run fails, no release appears. Fix the tree, delete the tag, tag again:
+A run that fails before the release job leaves nothing behind. A run killed
+during it can leave a release holding only some of its assets — the lane
+serialises rather than cancels for exactly that reason — so check the
+releases page rather than assuming nothing happened. Either way: fix the
+tree, delete the tag, and tag again:
 
 ```sh
 git push --delete origin v0.0.1 && git tag -d v0.0.1
@@ -32,8 +36,8 @@ Two release kinds live here, and they carry different versions:
 | | `release-tag.yml` | `release.yml` |
 |---|---|---|
 | Trigger | a `v*` tag | manual dispatch |
-| Version | `v0.0.1` (semver) | `YYYY.edition.bugfix` |
-| Publishes to | the GitHub release page | the dist service at `test.margince.com` |
+| Version | `v0.0.1` (semver) | `YYYY.edition.bugfix` — today `1970.<run>`, the epoch-pinned placeholder |
+| Publishes to | the GitHub release page | the dist service at `dist.test.margince.com` |
 | Carries | both desktop bundles | the incremental patch, SBOMs, role images |
 
 The dist service's version grammar (`pkg/version` in
@@ -44,8 +48,10 @@ named both ways, and neither lane tries.
 
 ## To build a bundle without releasing anything
 
-Dispatch a desktop lane directly. Each takes a `ref` and uploads its folder as a
-run artifact:
+Dispatch a desktop lane directly. Each takes a `ref` and uploads its bundle
+as a run artifact — the Windows lane the folder itself, the macOS lane a
+tarball, because an artifact upload drops the executable bit and tar
+preserves it:
 
 ```sh
 gh workflow run desktop-macos.yml --ref main
