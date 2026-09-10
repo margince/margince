@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { RECORDS } from "./records";
 import { mockApi } from "./seed";
 import { itemsOf } from "./waits";
 
@@ -22,18 +23,14 @@ import { itemsOf } from "./waits";
  * jsdom has no box model and would have passed throughout.
  *
  * EVERY record that carries a context column, not just the one a defect was
- * reported on: the invariant belongs to the strip, and five pages draw it.
+ * reported on: the invariant belongs to the strip, so the sweep reads the one
+ * list of record pages in `./records`, whose census — `src/app/recordcensus.test.ts`
+ * — fails when a screen the shell gives a record column to has no route in it.
  */
 
 // Above the fold the context column is BESIDE the work column and can be run
 // under; below 1100px it stacks underneath and the question does not arise.
 const RAILED_WIDTHS = [1280, 1440, 1600];
-
-const RECORDS = [
-  { name: "contact", route: "/#/contacts/p-anna" },
-  { name: "lead", route: "/#/leads/l-1" },
-  { name: "company", route: "/#/companies/o-brandt" },
-];
 
 async function openRecord(page: Page, route: string) {
   await mockApi(page);
@@ -41,14 +38,10 @@ async function openRecord(page: Page, route: string) {
   await expect(page.locator(".recordtabs-tab").first()).toBeVisible();
   // The pane is what the strip must stand clear of, and it starts closed. A
   // test that measured before opening it would measure a page with no
-  // neighbour and pass on every record. The switch stands with the record's
-  // verbs on the pages that keep it there, and at the end of the tab row on
-  // the pages that have taken the design's glance.
-  await page
-    .locator(".record-actions, .recordtabs-trailing")
-    .locator("button[aria-pressed]")
-    .first()
-    .click();
+  // neighbour and pass on every record. The switch that opens it stands at the
+  // end of the tab row, the same place on every record page, so one locator
+  // reaches it everywhere and a switch found anywhere else is the defect.
+  await page.locator(".recordtabs-trailing button[aria-pressed]").click();
   await expect(page.locator(".record-aside")).toBeVisible();
 }
 
@@ -97,13 +90,13 @@ test.describe("the record tab strip", () => {
   // TOGETHER under the broken rule, so any assertion comparing the two passes
   // in both states.
   //
-  // Only the company and the contact can fail it, and that is a fact about the
-  // product rather than a gap here: the breakout lives in `@container work`,
-  // which `mainClasses` opens for GRIDDED_RECORD_SCREENS alone, so the lead's
-  // strip takes the narrower fallback and has nothing to overhang with. It is
-  // swept anyway — if the lead ever joins that set, this is the assertion that
-  // has to be true of it on the day it does, and a record left out of the sweep
-  // is a record nobody notices is not being measured.
+  // Every record here can fail it: the breakout lives in `@container work`,
+  // which `mainClasses` opens for the screens GRIDDED_RECORD_SCREENS names —
+  // the same set `./records` is censused against by
+  // `src/app/recordcensus.test.ts` — so every record swept here
+  // has a container to size itself from and something to overhang with. A
+  // record left out of the sweep is a record nobody notices is not being
+  // measured.
   //
   // 2200px is in the list because the reading column is CAPPED there
   // (--pageColumn) while the work column keeps growing, so the `@container work`

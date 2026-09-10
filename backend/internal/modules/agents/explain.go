@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // explain turns the sentinel taxonomy into messages an agent can act on —
@@ -42,6 +43,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		unknownTool *UnknownToolError
 		steppedUp   *StepUpStagedError
 		overQuota   *auth.VolumeExceededError
+		staged      *workflow.StagedApprovalError
 	)
 	switch {
 	case errors.As(err, &steppedUp):
@@ -75,12 +77,26 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		return "This agent has reached a volume limit for this window that no approval lifts. Stop calling this tool " +
 			"and tell the user what is blocking it; the same call can succeed after the window rolls. (" +
 			overQuota.Error() + ")"
+	case errors.As(err, &staged):
+		// A 🟡 call that reached the inbox, and the branch that says WHAT is
+		// waiting there. It is not this credential's to release — the one that
+		// proposed an action does not answer it — so the caller's job is to
+		// relay, and it can only relay a description it was given: an agent sent
+		// to read_approval for the sentence tells the user a change is pending
+		// and cannot say which.
+		//
+		// COMPOSED HERE rather than by quoting err.Error(), which is what the
+		// other branches do. The summary carries a caller-chosen field name and
+		// a workspace-authored record label, and this text lands in a transcript
+		// whose later prompts the same run reads — so it is escaped and bounded
+		// on the way out, the same treatment faultExplanation gives every echo.
+		// Quoting the error whole would have carried the unescaped original
+		// beside the escaped copy.
+		return stagedExplanation(staged)
 	case errors.Is(err, apperrors.ErrRequiresApproval):
-		// Where the answer comes from, because the alternative is a caller that
-		// waits for something nobody knows to do. It is not this credential's to
-		// give — the one that proposed an action does not release it — but the
-		// proposal is now readable from here, so an agent can show the person
-		// what it is waiting on instead of describing it from memory.
+		// An approval is required and nothing was staged to carry it — a surface
+		// with no inbox, or a tool that cannot describe its own staging target.
+		// There is no proposal to point at, so the answer says what it can.
 		return "This is a confirm-first (🟡) action: a person answers it before it runs, and not the " +
 			"credential that proposed it. Nothing was changed. Tell the user it is waiting — list_approvals " +
 			"shows it, read_approval shows what it would do, and they release it in the CRM. (" + err.Error() + ")"
@@ -216,20 +232,25 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 // quotes the caller's own token back, since a refused plan names the target it
 // could not resolve, into a transcript later prompts of this run read.
 //
-// THREE FIGURES, and each answers a different question about whose words are
+// FOUR FIGURES, and each answers a different question about whose words are
 // being echoed. A classified fault's detail is OURS and names closed
 // vocabularies, so it gets MaxFaultDetail. The per-field remedy is also ours
 // and borrows httperr.MaxFaultText, the same number that package applies on
 // the module-declared path. The flattened field:code fallthrough is the
 // caller's own list, as long as they chose to make it, so it keeps
-// maxBadArgsDetail. They agreed on one number until a closed set was measured
-// against a budget sized for an argument-name echo and lost.
+// maxBadArgsDetail.
 //
 // The field and the code get the same treatment because nothing in the taxonomy
 // PROMISES they are ours either. A field slot fed from a caller-chosen key is
 // one new fault type away, and a newline in it forges a frame exactly as one in
 // a message would; the bound belongs to the position, not to the current
 // occupants.
+//
+// A FOURTH figure sits beside these three, on the staged branch rather than in
+// this function: stagedExplanation echoes an approval summary at
+// workflow.MaxStagedSummary. It is listed here because this is where a reader
+// comes to ask what the tool surface bounds and why, and a figure applied
+// elsewhere but absent from the table is a figure nobody knows to keep true.
 func faultExplanation(fault httperr.Fault) string {
 	if len(fault.Fields) == 0 {
 		return echoSafe(fault.Code, maxBadArgsDetail) + ": " + echoSafe(fault.Detail, MaxFaultDetail)
@@ -302,3 +323,34 @@ func faultExplanation(fault httperr.Fault) string {
 // dozens wrong has not made dozens of mistakes; they have the grammar wrong,
 // and the answer says so rather than proving it at length.
 const maxRemedyBudget = 4 * httperr.MaxFaultText
+
+// stagedExplanation is what a caller is told about a 🟡 call now sitting in a
+// human's inbox: what it would do, and which of the two moves to make.
+//
+// The summary is the sentence the human's own card carries, so the person and
+// the agent are waiting on one described thing.
+//
+// IT ALSO SAYS WHAT IS NOT BLOCKED, because an agent reads a refusal as a stop.
+// Asked to merge two words and then give the survivor a meaning, a measured run
+// staged the merge, relayed the summary correctly, and finished with "Confirm
+// and I'll proceed, then add the description afterward" — deferring an
+// independent auto-execute write behind a human's answer it never needed. The
+// approval binds one call; nothing in the answer said so. It is escaped and bounded here
+// because a caller chose part of it — a field name off the patch — and a
+// workspace record supplied the rest, and neither is this program's prose.
+func stagedExplanation(staged *workflow.StagedApprovalError) string {
+	what := "Nothing was changed."
+	if staged.Summary != "" {
+		what = "Nothing was changed yet; it would " +
+			echoSafe(staged.Summary, workflow.MaxStagedSummary) + "."
+	}
+	if staged.AlreadyApproved {
+		return "A person has ALREADY approved this exact call. " + what +
+			" Do not stage another: repeat this call with \"approval_id\": \"" +
+			staged.ApprovalID.String() + "\"."
+	}
+	return "Confirm-first (🟡): a person answers this before it runs. " + what +
+		" Tell them that, in those words; they release it in the CRM, and this exact call then " +
+		"repeats with \"approval_id\": \"" + staged.ApprovalID.String() + "\". " +
+		"Blocks THIS call only — do the rest of what you were asked that does not depend on it."
+}

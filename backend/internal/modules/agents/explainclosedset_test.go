@@ -22,6 +22,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
+// newTestDispatcher is the wiring every case here needs and none of them is
+// about: a dispatcher with a logger that goes nowhere.
+func newTestDispatcher() *Dispatcher {
+	return NewDispatcher(nil, nil, "t", "0").
+		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
+}
+
 // closedSetRefusal is the shape both real producers take: one detail carrying
 // prose that names what was refused and then the whole set that would have
 // worked, with NO per-field breakdown. The set is last because that is how a
@@ -57,8 +64,7 @@ func TestARefusalDeliversTheWholeClosedSet(t *testing.T) {
 		"record_table", "callout", "evidence_drawer",
 	}
 
-	got := NewDispatcher(nil, nil, "t", "0").
-		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))).explain("compose_analytics_report", closedSetRefusal(blockKindRefusal(members)))
+	got := newTestDispatcher().explain("compose_analytics_report", closedSetRefusal(blockKindRefusal(members)))
 
 	for _, member := range members {
 		if !strings.Contains(got, member) {
@@ -74,8 +80,7 @@ func TestARefusalDeliversTheWholeClosedSet(t *testing.T) {
 // ceiling at all: the detail lands in a transcript whose later prompts the same
 // model reads, so an unbounded one is an unbounded write into every one of them.
 func TestAnOverlongDetailIsStillCut(t *testing.T) {
-	got := NewDispatcher(nil, nil, "t", "0").
-		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))).explain("compose_analytics_report",
+	got := newTestDispatcher().explain("compose_analytics_report",
 		closedSetRefusal(strings.Repeat("x", MaxFaultDetail+64)))
 
 	if !strings.Contains(got, "…") {
@@ -96,8 +101,7 @@ func TestAnOverlongDetailIsStillCut(t *testing.T) {
 func TestARefusalUnderTheCeilingIsUntouched(t *testing.T) {
 	detail := blockKindRefusal([]string{"title", "summary", "callout"})
 
-	got := NewDispatcher(nil, nil, "t", "0").
-		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))).explain("compose_analytics_report", closedSetRefusal(detail))
+	got := newTestDispatcher().explain("compose_analytics_report", closedSetRefusal(detail))
 
 	if !strings.Contains(got, detail) {
 		t.Errorf("a refusal inside the ceiling did not travel verbatim:\nwant substring: %s\ngot: %s", detail, got)

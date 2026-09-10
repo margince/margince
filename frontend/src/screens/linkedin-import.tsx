@@ -135,7 +135,11 @@ function LinkedInProfileRow() {
     // between whatever it holds, so a surface standing in for a row lines up
     // with the rows around it.
     return (
-      <Callout tone="danger" live="alert">
+      <Callout
+        kind="outcome"
+        tone="danger"
+        title={t("linkedinImport.profileReadFailed")}
+      >
         {problemMessageOf(account.error, t)}
       </Callout>
     );
@@ -201,7 +205,11 @@ function LinkedInProfileRow() {
             )}
           </Field>
           {save.isError && (
-            <Callout tone="danger" live="alert">
+            <Callout
+              kind="outcome"
+              tone="danger"
+              title={t("linkedinImport.saveFailed")}
+            >
               {problemMessageOf(save.error, t)}
             </Callout>
           )}
@@ -297,11 +305,13 @@ export function LinkedInImportCard() {
           <p className="t-sub">{t("linkedinImport.working")}</p>
         )}
         {importer.isError && (
-          <div data-testid="linkedin-import-error">
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(importer.error, t)}
-            </Callout>
-          </div>
+          <Callout
+            kind="outcome"
+            tone="danger"
+            title={t("linkedinImport.importFailed")}
+          >
+            {problemMessageOf(importer.error, t)}
+          </Callout>
         )}
         {importer.isSuccess && <ImportResult summary={importer.data} />}
       </PanelBody>

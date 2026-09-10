@@ -181,13 +181,3 @@
   gap: var(--space-3);
   flex-wrap: wrap;
 }
-
-/* The first-binding affordance, inside the callout that explains why the form
- * is not here yet. A row because there may be two providers keyed, and the
- * choice between them is one decision rather than a list to work down. */
-.ai-routing-start {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  margin-top: var(--space-3);
-}

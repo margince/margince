@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"sync"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -40,11 +41,18 @@ type Handlers struct {
 	// (OPS-CFG-12), injected by WithUploadLimit. Zero refuses every upload,
 	// which is the honest reading of "nobody has said" for a bound.
 	uploadLimit int64
+	// logoWritesInFlight tracks which object keys already have a trimmed-logo
+	// write-back running (see streamLogo/writeBackTrimmedLogo): a pointer, so
+	// every copy this builder's With* chain produces still shares the one map
+	// the routes it is eventually bound to will serve concurrent requests
+	// through. Allocated once here rather than lazily, so a stream that never
+	// calls WithBlobstore still holds a usable, if unused, map.
+	logoWritesInFlight *sync.Map
 }
 
 // NewHandlers builds the module's HTTP surface over a workspace-bound handle.
 func NewHandlers(db *database.DB) Handlers {
-	return Handlers{store: NewStore(db)}
+	return Handlers{store: NewStore(db), logoWritesInFlight: &sync.Map{}}
 }
 
 // WithMatchStager wires the pass that turns this member's suggested LinkedIn
@@ -125,6 +133,14 @@ func (h Handlers) WithSeatReadsLeads(reads SeatReadsLeads) Handlers {
 // WithDealOpener wires the deals-side seam a qualify call opens its deal on.
 func (h Handlers) WithDealOpener(opener LeadDealOpener) Handlers {
 	h.store = h.store.WithDealOpener(opener)
+	return h
+}
+
+// WithStopCarrier wires the consent-side seam that carries a retiring
+// subject's recorded stops onto the record surviving them. Unwired, a merge
+// refuses rather than dropping the stop — see stopcarry.go.
+func (h Handlers) WithStopCarrier(carrier StopCarrier) Handlers {
+	h.store = h.store.WithStopCarrier(carrier)
 	return h
 }
 

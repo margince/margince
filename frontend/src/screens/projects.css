@@ -37,14 +37,6 @@
   color: var(--textMeta);
 }
 
-/* The band under the header: the stepper, the readings plate, the filing line.
-   One column, each block on its own row. */
-.project-band {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
 .project-coverage {
   margin: 0;
   color: var(--textMeta);

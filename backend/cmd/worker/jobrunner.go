@@ -230,7 +230,11 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// The registry that resolves a staged delivery's mailbox: the SAME
 		// sweep registry the capture polls use, so the connector set that
 		// syncs a mailbox is the one that transmits from it.
-		SendRegistry:      captureReg,
+		SendRegistry: captureReg,
+		// The origin a fired message builds its unsubscribe link on — the same
+		// pair sendPath hands the api's immediate send, so a message scheduled
+		// for later carries the link a message sent now would.
+		SendOrigin:        compose.SendOrigin{PublicBaseURL: cfg.publicBaseURL, Environment: cfg.posture},
 		SendPacing:        compose.SendPacing{Limit: cfg.sendRateLimit, Window: cfg.sendRateWindow, MaxAge: cfg.sendMaxAge},
 		CloseDateInterval: cfg.closeDateInterval,
 		ReconcileInterval: cfg.reconcileInterval,

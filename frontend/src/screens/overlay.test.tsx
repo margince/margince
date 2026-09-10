@@ -284,7 +284,7 @@ describe("the overlay card", () => {
     });
     render(<OverlayCard />);
     expect(
-      await screen.findByText(/cannot be measured right now/),
+      await screen.findByText("The call budget cannot be measured"),
     ).toBeTruthy();
     expect(screen.queryByText("Shedding load")).toBeNull();
     expect(screen.queryByText(/Headroom:/)).toBeNull();

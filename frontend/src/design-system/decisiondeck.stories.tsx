@@ -296,9 +296,12 @@ export const CommitFailed: Story = {
     items: MANY,
     commitState: "failed",
     notice: (
-      <Callout tone="danger">
-        Those decisions were not recorded. Nothing was sent — press commit
-        again.
+      <Callout
+        tone="danger"
+        kind="outcome"
+        title="Those decisions were not recorded"
+      >
+        Nothing was sent — press commit again.
       </Callout>
     ),
   },

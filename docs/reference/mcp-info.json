@@ -10,16 +10,16 @@
   "totals": {
     "tools": 75,
     "resources": 12,
-    "tool_catalog_bytes": 215471,
+    "tool_catalog_bytes": 215535,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 55013,
+    "approx_wire_tokens_total": 55029,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 53039,
-      "input_schema_bytes": 45537,
-      "output_schema_bytes": 100704,
-      "description_plus_input_schema_bytes": 98576
+      "description_bytes": 53073,
+      "input_schema_bytes": 45533,
+      "output_schema_bytes": 100738,
+      "description_plus_input_schema_bytes": 98606
     }
   },
   "tools": {
@@ -4741,7 +4741,7 @@
           "readOnlyHint": true,
           "title": "Read the forecast"
         },
-        "description": "What a period is expected to close, in four readings. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. Read `eligible_count` against `priced_count` before quoting a total: an unpriced deal is real pipeline contributing zero money. `fx_missing_count` is priced deals no rate could convert — also absent from the totals rather than counted as zero. Quote `as_of`, `timezone` and `base_currency` with the number: a total placed in the reader's own zone is a different total. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "What a period is expected to close, in four readings. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover, and it is absent only when they cover every eligible deal — so quoting a total without it reports a partial pipeline as a complete one. `eligible_count`, `priced_count` and `fx_missing_count` are the counts it is written from. Quote `as_of`, `timezone` and `base_currency` with the number: a total placed in the reader's own zone is a different total. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -4792,6 +4792,9 @@
                 },
                 "confirmed_date_count": {
                   "type": "integer"
+                },
+                "coverage_note": {
+                  "type": "string"
                 },
                 "current_call": {
                   "type": "object"
@@ -8682,14 +8685,14 @@
               "maxLength": 255,
               "type": "string"
             },
-            "record_id": {
+            "lead_id": {
               "description": "The lead to qualify",
               "format": "uuid",
               "type": "string"
             }
           },
           "required": [
-            "record_id"
+            "lead_id"
           ],
           "type": "object"
         },

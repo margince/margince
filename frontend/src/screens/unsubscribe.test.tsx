@@ -214,8 +214,10 @@ describe("UnsubscribeScreen", () => {
     stubEdge();
     render(<UnsubscribeScreen token="tok-123" purpose="no_such_purpose" />);
     expect(
-      await screen.findByText(/doesn't name a kind of email/i),
+      await screen.findByRole("heading", { name: /names nothing we send/i }),
     ).toBeInTheDocument();
+    // The way on is the point of the page, so the link is asserted too.
+    expect(screen.getByText(/open your preferences/i)).toBeInTheDocument();
   });
 
   it("early-returns honestly when the address carries no purpose", () => {

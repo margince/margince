@@ -194,7 +194,7 @@ func (p *preflightEnv) countDeliveries(t *testing.T) int {
 func (p *preflightEnv) fire(t *testing.T, id ids.UUID) {
 	t.Helper()
 	ws := p.workspaceID(t)
-	if err := compose.DriveScheduledSendForTest(context.Background(), p.Pool, ws, id); err != nil {
+	if err := compose.DriveScheduledSendForTest(context.Background(), p.Pool, ws, id, compose.SendOrigin{PublicBaseURL: preflightBaseURL}); err != nil {
 		t.Fatalf("driving the scheduled-send timer: %v", err)
 	}
 }
@@ -227,9 +227,33 @@ func (p *preflightEnv) setDueAt(t *testing.T, id ids.UUID, at time.Time) {
 
 // withdrawConsent revokes the recipient's grant for the purpose the scheduled
 // message was written under, through the real consent surface.
+//
+// The fixture's own deal is closed first. An open deal is a legitimate-interest
+// basis independent of the purpose consent below (resolveCategory's live-deal
+// arm runs before any purpose is asked about), and a withdrawal scoped to one
+// purpose does not reach a DIFFERENT basis — so every caller of this helper
+// wants the same thing: no basis should survive but the one just withdrawn.
 func (p *preflightEnv) withdrawConsent(t *testing.T) {
 	t.Helper()
+	p.closeDealAsLost(t)
 	p.setTransactionalConsent(t, "withdrawn")
+}
+
+// closeDealAsLost closes the fixture's deal, when the caller staked one via
+// stakeADeal, so the live-deal evidence arm can no longer fire —
+// liveDealInLinks requires status = 'open'. A no-op otherwise: stakeADeal is
+// opt-in, and most withdrawConsent callers have no deal to close.
+func (p *preflightEnv) closeDealAsLost(t *testing.T) {
+	t.Helper()
+	if p.dealID == "" {
+		return
+	}
+	stages := apptest.DiscoverSeededPipeline(t, p.AppEnv)
+	if status := p.Call(t, "POST", "/v1/deals/"+p.dealID+"/advance", AnyMap{
+		"to_stage_id": stages.Lost, "lost_reason": "test: closing the fixture's evidence",
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("close the fixture's deal → %d", status)
+	}
 }
 
 // setTransactionalConsent moves the recipient's transactional grant either way,
@@ -269,6 +293,7 @@ func (p *preflightEnv) setTransactionalConsent(t *testing.T, state string) {
 func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	activitiesBefore := p.countActivities(t, "true")
 	deliveriesBefore := p.countDeliveries(t)
@@ -313,6 +338,7 @@ func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
 func TestAConfirmedReceiptCarriesTheScheduledSendToSent(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	p.makeDue(t, id)
@@ -342,6 +368,7 @@ func TestAConfirmedReceiptCarriesTheScheduledSendToSent(t *testing.T) {
 func TestFilteringByStatusFindsTheStateTheListActuallyShows(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	p.makeDue(t, id)
@@ -465,7 +492,8 @@ func (p *preflightEnv) rowVersion(t *testing.T, id ids.UUID) int64 {
 // for a worker whose attempt failed and is now holding what it saw.
 func (p *preflightEnv) holdAs(t *testing.T, id ids.UUID, reason string, observed int64) error {
 	t.Helper()
-	return compose.HoldScheduledSendForTest(context.Background(), p.Pool, p.workspaceID(t), id, reason, observed)
+	return compose.HoldScheduledSendForTest(context.Background(), p.Pool, p.workspaceID(t), id, reason, observed,
+		compose.SendOrigin{PublicBaseURL: preflightBaseURL})
 }
 
 // runRecovery drives the recovery pass once, through the production worker on
@@ -473,7 +501,7 @@ func (p *preflightEnv) holdAs(t *testing.T, id ids.UUID, reason string, observed
 // and a helper that supplied one would prove only that the helper works.
 func (p *preflightEnv) runRecovery(t *testing.T) error {
 	t.Helper()
-	return compose.DriveScheduledSendRecoveryForTest(context.Background(), p.Pool)
+	return compose.DriveScheduledSendRecoveryForTest(context.Background(), p.Pool, compose.SendOrigin{PublicBaseURL: preflightBaseURL})
 }
 
 // releasedActivity reads the activity a fired scheduled send produced.
@@ -808,6 +836,7 @@ func TestACancelledMessageIsNotSentWhenItsTimerFires(t *testing.T) {
 func TestTwoTimersFiringTheSameMessageSendItOnce(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	activitiesBefore := p.countActivities(t, "true")
@@ -837,6 +866,7 @@ func TestTwoTimersFiringTheSameMessageSendItOnce(t *testing.T) {
 func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	// A record the anchor does not carry — the shape a project attached to the
 	// deal after the conversation began takes.

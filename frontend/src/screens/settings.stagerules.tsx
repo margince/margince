@@ -3,14 +3,14 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
-import { BusyMark, Button, EmptyState } from "../design-system/atoms";
+import { Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Switch } from "../design-system/switch";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, QueryStates, throwProblem } from "./common";
 
 type TransitionPolicy = components["schemas"]["TransitionPolicy"];
 type TransitionRecord = components["schemas"]["StageTransitionRecord"];
@@ -91,12 +91,6 @@ export function StageRulesCard({
     },
   });
 
-  if (rules.isError) {
-    return <Callout tone="warn">{problemMessageOf(rules.error, t)}</Callout>;
-  }
-  if (rules.isPending) {
-    return <BusyMark />;
-  }
   if (transitions.length === 0) {
     return <EmptyState>{t("stageAutomation.noRules")}</EmptyState>;
   }
@@ -107,35 +101,46 @@ export function StageRulesCard({
       rule,
     ]),
   );
+  // The read's own pending and failed faces, rather than this card's: a
+  // failure here replaces the whole section, and the shared pair keeps the
+  // server's account of it and offers the reader the retry.
   return (
-    <section>
-      <h3 className="t-caption">{t("stageAutomation.rules")}</h3>
-      <p className="t-caption">{t("stageAutomation.rulesIntro")}</p>
-      {save.isError && (
-        <Callout tone="warn">{problemMessageOf(save.error, t)}</Callout>
-      )}
-      <ul className="u-list-reset">
-        {transitions.map((row) => (
-          <TransitionRule
-            key={keyOf(row.from_stage_id, row.to_stage_id)}
-            row={row}
-            rule={byTransition.get(keyOf(row.from_stage_id, row.to_stage_id))}
-            pipelineId={pipelineId}
-            mayChange={mayChange}
-            reportWindowDays={reportWindowDays}
-            saving={save.isPending}
-            onToggle={(mode, version) =>
-              save.mutate({
-                from: row.from_stage_id,
-                to: row.to_stage_id,
-                mode,
-                version,
-              })
-            }
-          />
-        ))}
-      </ul>
-    </section>
+    <QueryStates query={rules} pendingLabel={t("stageAutomation.rulesLoading")}>
+      <section>
+        <h3 className="t-caption">{t("stageAutomation.rules")}</h3>
+        <p className="t-caption">{t("stageAutomation.rulesIntro")}</p>
+        {save.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("stageAutomation.saveFailed")}
+          >
+            {problemMessageOf(save.error, t)}
+          </Callout>
+        )}
+        <ul className="u-list-reset">
+          {transitions.map((row) => (
+            <TransitionRule
+              key={keyOf(row.from_stage_id, row.to_stage_id)}
+              row={row}
+              rule={byTransition.get(keyOf(row.from_stage_id, row.to_stage_id))}
+              pipelineId={pipelineId}
+              mayChange={mayChange}
+              reportWindowDays={reportWindowDays}
+              saving={save.isPending}
+              onToggle={(mode, version) =>
+                save.mutate({
+                  from: row.from_stage_id,
+                  to: row.to_stage_id,
+                  mode,
+                  version,
+                })
+              }
+            />
+          ))}
+        </ul>
+      </section>
+    </QueryStates>
   );
 }
 
@@ -247,21 +252,28 @@ function SuspendedRule({
   });
 
   return (
-    <Callout tone="warn">
-      <p>{t("stageAutomation.suspended")}</p>
-      {rule.suspended_reason && <p>{rule.suspended_reason}</p>}
-      {rule.suspended_at && (
-        <p className="t-caption">
-          {t("stageAutomation.suspendedSince", {
-            date: formatDate(rule.suspended_at, locale, zone),
-          })}
-        </p>
-      )}
-      {mayChange && (
-        <Button onClick={() => setAsking(true)}>
-          {t("stageAutomation.resume")}
-        </Button>
-      )}
+    <>
+      <Callout
+        tone="warn"
+        kind="event"
+        title={t("stageAutomation.suspended")}
+        actions={
+          mayChange ? (
+            <Button onClick={() => setAsking(true)}>
+              {t("stageAutomation.resume")}
+            </Button>
+          ) : undefined
+        }
+      >
+        {rule.suspended_reason && <p>{rule.suspended_reason}</p>}
+        {rule.suspended_at && (
+          <p>
+            {t("stageAutomation.suspendedSince", {
+              date: formatDate(rule.suspended_at, locale, zone),
+            })}
+          </p>
+        )}
+      </Callout>
       <ConfirmModal
         open={asking}
         onClose={() => setAsking(false)}
@@ -278,7 +290,7 @@ function SuspendedRule({
           })}
         </p>
       </ConfirmModal>
-    </Callout>
+    </>
   );
 }
 

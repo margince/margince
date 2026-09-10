@@ -115,8 +115,8 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		folded AS (
 		    SELECT t.person_a, t.person_b,
 		           max(a.occurred_at) AS last_at,
-		           count(DISTINCT a.id) FILTER (WHERE a.occurred_at >= `+window+`) AS count_90d,
-		           count(DISTINCT a.id) AS count_total
+		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`) AS count_90d,
+		           count(DISTINCT `+graphInteractionUnit+`) AS count_total
 		      FROM target t
 		      JOIN activity_participant pa
 		        ON pa.person_id = t.person_a AND pa.role IN `+interactionRoles+`

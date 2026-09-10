@@ -308,13 +308,19 @@ jobs:
     # to publish main's verdict was the one job whose failure nobody was told
     # about.
     needs: [gates, integration, frontend, uat, sonar]
+    # Every result, not only the failures. The reporter files a finding for a red
+    # lane and RETRACTS one for a green lane, and a job that runs only when
+    # something failed can do the first but never the second: the issue outlives
+    # its fix until somebody closes it by hand, and the tracker reports a red
+    # main over a green tree. Re-adding a `result == 'failure'` clause here
+    # breaks retraction silently — the run is green, the job is skipped, nothing
+    # fails — so scripts/test-scheduled-report.sh asserts this condition names no
+    # lane result at all.
+    #
+    # `!cancelled()` and nothing else: a skipped lane must reach the reporter as
+    # `skipped`, which it reads as neither a red nor a green.
     if: >-
       !cancelled()
-      && (needs.gates.result == 'failure'
-      || needs.integration.result == 'failure'
-      || needs.frontend.result == 'failure'
-      || needs.uat.result == 'failure'
-      || needs.sonar.result == 'failure')
     runs-on: ubuntu-latest
     permissions:
       contents: read

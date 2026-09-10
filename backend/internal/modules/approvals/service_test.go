@@ -732,6 +732,93 @@ func TestEverySelfOnlyShapeIsWithheldFromEverySeatButTheOneItWasStagedFor(t *tes
 	}
 }
 
+// A rep's own morning work is decided by the rep, and the nil case is the
+// opposite of the self-only one above: a proposal recording nobody stays SHARED
+// rather than being withheld from everybody.
+//
+// Table-driven over the map so a kind enrolled tomorrow is covered without an
+// edit here — the enrolment is the decision, and a test that had to be updated
+// alongside it would be a second list to forget.
+func TestAProposalStagedForARepIsDecidedByThatRepAlone(t *testing.T) {
+	mine, theirs := ids.NewV7(), ids.NewV7()
+	subject := ids.From[ids.UserKind](mine)
+	rep := principal.Principal{UserID: mine, Permissions: principal.Permissions{RowScope: principal.RowScopeAll}}
+	manager := principal.Principal{UserID: theirs, Permissions: principal.Permissions{RowScope: principal.RowScopeAll}}
+
+	if len(decidedByTheSeatStagedFor) == 0 {
+		t.Fatal("no kind is enrolled at all — this walk covers nothing")
+	}
+	for kind := range decidedByTheSeatStagedFor {
+		t.Run(kind, func(t *testing.T) {
+			if selfOnlyKinds[kind] {
+				t.Fatal("this kind is ALSO self-only, so the arm under test never runs " +
+					"and the nil case below asserts the opposite rule")
+			}
+			forTheRep := row{Kind: kind, OnBehalfOf: &subject}
+			if !withheldFromOtherSeats(manager, forTheRep) {
+				t.Error("a colleague may decide a proposal staged for somebody else — " +
+					"answering it takes the question away from the rep who was going to act on it")
+			}
+			if withheldFromOtherSeats(rep, forTheRep) {
+				t.Error("the rep it was staged for cannot see their own proposal")
+			}
+			// An unowned deal records nobody. Nothing here is one person's
+			// private business, so it stays everybody's rather than nobody's.
+			unowned := row{Kind: kind}
+			if withheldFromOtherSeats(manager, unowned) {
+				t.Error("a proposal on a deal nobody owns was withheld from everyone, " +
+					"so nobody can act on it at all")
+			}
+		})
+	}
+}
+
+// The write side and the read side must narrow the SAME kinds.
+//
+// They run on opposite sides of one row — subjectScopedShape when it is staged,
+// withheldFromOtherSeats when it is read — and a kind narrowed on the read side
+// alone still matches across members on the write side. One seat's pending
+// proposal is then joined and handed to another, or superseded by it, or
+// suppressed by its rejection; each time the surviving row names a seat the
+// reader is not, so it is withheld from the person it was staged for.
+//
+// Derived from the maps rather than listed, so enrolling a kind in either one
+// carries the obligation with it.
+func TestEveryKindNarrowedOnReadIsAlsoNarrowedOnStaging(t *testing.T) {
+	seatNarrowed := map[string]bool{}
+	for kind := range selfOnlyKinds {
+		seatNarrowed[kind] = true
+	}
+	for kind := range decidedByTheSeatStagedFor {
+		seatNarrowed[kind] = true
+	}
+	if len(seatNarrowed) == 0 {
+		t.Fatal("no seat-narrowed kind found at all — this walk covers nothing")
+	}
+	for kind := range seatNarrowed {
+		t.Run(kind, func(t *testing.T) {
+			if !subjectScopedShape(StageInput{Kind: kind}) {
+				t.Error("this kind is decided by one seat but staged as if shared, so " +
+					"staging matches across members: a colleague's proposal is joined, " +
+					"superseded or suppressed by it, and the survivor names a seat the " +
+					"reader is not")
+			}
+		})
+	}
+
+	// The positive control. Without it this passes just as well if
+	// subjectScopedShape started answering true to everything, which would
+	// split every shared team proposal into one row per person.
+	shared := "merge_records"
+	if seatNarrowed[shared] {
+		t.Fatalf("the control kind %q is itself seat-narrowed, so it proves nothing", shared)
+	}
+	if subjectScopedShape(StageInput{Kind: shared}) {
+		t.Errorf("a SHARED kind was staged per-seat, which splits one team's proposal " +
+			"into a row for each member")
+	}
+}
+
 // DecisionGrantObjects is what the composition layer's satisfiability gate reads,
 // and it is load-bearing only if it names the SAME objects requireDecisionGrants
 // enforces. A gate certifying an object the decision does not demand — or blind to

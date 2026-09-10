@@ -143,7 +143,7 @@ export function PasswordSettingRow({
           element apart, and the only thing telling them apart was reading the
           sentence. */}
       {done && (
-        <Callout tone="success" live="status">
+        <Callout kind="outcome" tone="success" title={t("password.doneTitle")}>
           {t("password.done")}
         </Callout>
       )}
@@ -165,7 +165,11 @@ export function PasswordSettingRow({
               {t("password.title")}
             </h2>
             {change.isError && (
-              <Callout tone="danger" live="alert">
+              <Callout
+                kind="outcome"
+                tone="danger"
+                title={t("password.changeFailedTitle")}
+              >
                 {problemMessageOf(change.error, t, t("password.errorGeneric"))}
               </Callout>
             )}

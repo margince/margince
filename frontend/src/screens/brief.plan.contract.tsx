@@ -80,7 +80,7 @@ function CapacityLine({
   // tone would stop meaning anything and a reader would learn to skip it.
   if (!crowded) return <p className="plan-capacity">{line}</p>;
   return (
-    <Callout tone="warn" title={t("plan.contract.crowded")}>
+    <Callout tone="warn" kind="standing" title={t("plan.contract.crowded")}>
       {t("plan.contract.crowdedBody", {
         committed: n(committed),
         commitments: n(commitments),

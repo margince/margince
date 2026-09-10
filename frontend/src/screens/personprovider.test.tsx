@@ -1089,9 +1089,7 @@ describe("watching a run that is still moving", () => {
       </StoryProviders>,
     );
 
-    expect(
-      await screen.findByText("Answer received. Putting it on the record."),
-    ).toBeDefined();
+    expect(await screen.findByText("Answer received")).toBeDefined();
     expect(screen.queryByText(/Asking Surfe/)).toBeNull();
   });
 
@@ -1121,7 +1119,7 @@ describe("watching a run that is still moving", () => {
       </StoryProviders>,
     );
 
-    await screen.findByText("Answer received. Putting it on the record.");
+    await screen.findByText("Answer received");
     expect(screen.queryByRole("button", { name: /Buy / })).toBeNull();
     expect(screen.queryByRole("button", { name: /Check again/ })).toBeNull();
   });

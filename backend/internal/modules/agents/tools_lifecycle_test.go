@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -526,3 +527,64 @@ func TestRelinkActivityHandsTheWriteTheVersionItsGateBound(t *testing.T) {
 		}
 	})
 }
+
+// THE OTHER DIRECTION, which the gate above cannot see because it walks the
+// ADVERTISED list: a value the server enforces and never advertises.
+//
+// Both halves are one invariant — the schema is the vocabulary the server
+// enforces — and they fail differently. Advertised-and-refused sends a caller to
+// do as they were told and refuses them for it, which is what the gate above
+// catches. Enforced-and-unadvertised is quieter and worse for a model: the
+// server would accept the value and no caller is ever told it exists, so the
+// capability is unreachable through the surface that documents it.
+//
+// Nothing in this tree drives these tools with a value a human did not first
+// read off the predicate, so neither direction shows up as a failing call.
+func TestEveryEnforcedEnumValueIsAlsoAdvertised(t *testing.T) {
+	t.Parallel()
+
+	// Each pair is one tool's advertised property beside the Go vocabulary its
+	// handler enforces — the schema literal a client reads against the
+	// predicate that actually decides.
+	mirrors := []struct {
+		property   string
+		spec       mcp.ToolSpec
+		vocabulary []string
+	}{
+		{"to_phase", advanceProjectPhase{}.Spec(), projectPhaseNames()},
+		{"entity_type", relinkActivity{}.Spec(), relinkTargetNames()},
+		{"entity_type", relinkActivities{}.Spec(), relinkTargetNames()},
+		{"entity_type", relinkThread{}.Spec(), relinkTargetNames()},
+		{"record_type", listRecords{}.Spec(), slices.Clone(listRecordTypes)},
+		{"record_type", archiveRecord{}.Spec(), slices.Clone(archivableRecordTypes)},
+		{"depth", enrichCompany{}.Spec(), []string{
+			string(EnrichDepthPage), string(EnrichDepthSite), string(EnrichDepthTechnical),
+		}},
+	}
+
+	for _, mirror := range mirrors {
+		t.Run(mirror.spec.Name+"."+mirror.property, func(t *testing.T) {
+			t.Parallel()
+			advertised := advertisedEnum(t, mirror.spec.InputSchema, mirror.property)
+			if len(mirror.vocabulary) == 0 {
+				t.Fatalf("%s.%s's enforced vocabulary came back empty",
+					mirror.spec.Name, mirror.property)
+			}
+			for _, member := range mirror.vocabulary {
+				if !slices.Contains(advertised, member) {
+					t.Errorf("%s.%s ENFORCES %q and never advertises it, so the server accepts a "+
+						"value no caller is told about: advertised %v",
+						mirror.spec.Name, mirror.property, member, advertised)
+				}
+			}
+		})
+	}
+}
+
+// OUT OF REACH HERE: run_analytics_query's aggregate functions and comparison
+// operators are the two largest hand-typed enums on the surface, and the ones a
+// caller is likeliest to guess wrong — but analyticsquery lives in compose,
+// downstream of this package, so their pair needs a file that can see both
+// sides. And an enum with no Go predicate behind it cannot be compared at all:
+// where the schema IS the only statement of the vocabulary, there is nothing to
+// hold it against.

@@ -71,18 +71,6 @@
   flex-wrap: wrap;
 }
 
-/* A row's control column when it has to report as well as offer: the strip of
-   verbs, and under it the reason the last press failed. The reason belongs
-   directly beneath the button that produced it — a shared error band further
-   down the card names no button at all. */
-.connector-control {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
 /* The history import belongs to the mailbox row ABOVE it, not beside it, so it
    stands as its own child of the list and gives up the hairline that would
    otherwise read as a row of its own. (It is a sibling rather than a

@@ -11,6 +11,7 @@ import {
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
+import { SubscriptionConfirm } from "./confirmsubscription";
 import {
   explainPublicError,
   LinkInvalidError,
@@ -102,31 +103,48 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   // is how the two drift.
   const marketingWording = t("confirm.marketing.ask");
 
+  // Narrowed BEFORE any record field is read, including here. A subscription
+  // body carries no correctable field at all, and indexing it by `full_name` is
+  // the same mistake the discriminator exists to stop. The typechecker says so
+  // now that the union is honest, which is how this one was found — it ran on
+  // both bodies before, silently.
+  const record = card?.kind === "record_confirmation" ? card : undefined;
+
   const corrections = useMemo(() => {
-    if (!card) {
+    if (!record) {
       return [];
     }
     return CORRECTABLE.filter(
-      (field) => edits[field] !== undefined && edits[field] !== card[field],
+      (field) => edits[field] !== undefined && edits[field] !== record[field],
     ).map((field) => ({ field, value: edits[field] ?? "" }));
-  }, [card, edits]);
+  }, [record, edits]);
 
   const submit = useMutation({
+    // THE RECORD PAGE'S OWN SUBMIT, and only that.
+    //
+    // A consent link never reaches here — SubscriptionConfirm owns its own
+    // mutation. This one used to serve both, which is what let a subscription
+    // post the record page's marketing sentence as its consent evidence.
     mutationFn: async () => {
+      const body = {
+        corrections,
+        request_erasure: erasure,
+        ...(marketing
+          ? { marketing_choice: marketing, marketing_wording: marketingWording }
+          : {}),
+      };
       const { error, response } = await api.POST("/public/confirm/{token}", {
         params: { path: { token } },
-        body: {
-          corrections,
-          request_erasure: erasure,
-          ...(marketing
-            ? {
-                marketing_choice: marketing,
-                marketing_wording: marketingWording,
-              }
-            : {}),
-        },
+        body,
       });
-      if (error) {
+      // GATED ON THE STATUS, NOT ON `error`.
+      //
+      // openapi-fetch returns `{error: undefined}` for a non-2xx whose body is
+      // empty — a 502 from a proxy, a 500 that wrote no problem document. A
+      // guard that only asks whether `error` is truthy therefore reads those as
+      // success, and this page's success state tells somebody their consent
+      // was recorded when the request never reached the writer.
+      if (!response.ok) {
         if (response.status === 404) {
           throw new LinkInvalidError();
         }
@@ -152,6 +170,20 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         <EmptyState>{explainPublicError(details.error, t)}</EmptyState>
       </div>
     );
+  }
+  // THE DISCRIMINATOR, ASKED BEFORE ANY RECORD FIELD IS READ.
+  //
+  // This endpoint answers two bodies and always has: a record card for a
+  // record link, one subscription question for a consent link. Until the
+  // contract grew `kind` nothing on the wire said which had arrived, so every
+  // read below — `card.provenance.length` above all — was taken off a body
+  // that might not carry it.
+  //
+  // The consent link goes to its own page, which owns its own submit. Sharing
+  // one meant posting the record page's marketing sentence as the proof of a
+  // subscription, and rendering a refusal nowhere.
+  if (card.kind === "subscription_confirmation") {
+    return <SubscriptionConfirm token={token} card={card} />;
   }
   if (done) {
     return (

@@ -120,14 +120,14 @@ func TestDescriptionsCarryNoControlCharacters(t *testing.T) {
 func TestWriteToolsRefuseFieldsTheRecordCannotStore(t *testing.T) {
 	cases := []struct {
 		name       string
-		shapes     map[datasource.EntityType]reflect.Type
+		shapes     writeShapes
 		recordType string
 		fields     string
 		wantNamed  string
 	}{
-		{"organization_id on a person create", createShapes, "person", `{"full_name":"A","organization_id":"x"}`, "organization_id"},
-		{"source on a person update", updateShapes, "person", `{"source":"manual"}`, "source"},
-		{"a typo next to a real field", createShapes, "organization", `{"displayname":"Firecrawl"}`, "displayname"},
+		{"organization_id on a person create", createWriteShapes, "person", `{"full_name":"A","organization_id":"x"}`, "organization_id"},
+		{"source on a person update", updateWriteShapes, "person", `{"source":"manual"}`, "source"},
+		{"a typo next to a real field", createWriteShapes, "organization", `{"displayname":"Firecrawl"}`, "displayname"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -164,13 +164,13 @@ func TestWriteToolsAcceptRealFieldsAndTheCustomFieldChannel(t *testing.T) {
 		`{"full_name":"Alex Nucci","cf_priority":"high"}`,
 		`{}`,
 	} {
-		if err := rejectUnknownFields(createShapes, "person", json.RawMessage(fields)); err != nil {
+		if err := rejectUnknownFields(createWriteShapes, "person", json.RawMessage(fields)); err != nil {
 			t.Errorf("rejectUnknownFields(%s) = %v, want accepted", fields, err)
 		}
 	}
 	// An unknown record_type is the provider's refusal to make: it answers
 	// with the vocabulary it serves, which this check cannot.
-	if err := rejectUnknownFields(createShapes, "invoice", json.RawMessage(`{"anything":1}`)); err != nil {
+	if err := rejectUnknownFields(createWriteShapes, "invoice", json.RawMessage(`{"anything":1}`)); err != nil {
 		t.Errorf("unknown record_type = %v, want it left to the provider", err)
 	}
 }
@@ -287,7 +287,7 @@ func TestWriteToolsRefuseTheCustomFieldPrefixWithNoSlug(t *testing.T) {
 		"null body":   `null`,
 	} {
 		t.Run(name, func(t *testing.T) {
-			err := rejectUnknownFields(createShapes, "person", json.RawMessage(fields))
+			err := rejectUnknownFields(createWriteShapes, "person", json.RawMessage(fields))
 			if err == nil {
 				t.Fatalf("%s was accepted — the value would be discarded with no signal", fields)
 			}
@@ -299,7 +299,7 @@ func TestWriteToolsRefuseTheCustomFieldPrefixWithNoSlug(t *testing.T) {
 	}
 	// A real slug still passes: whether that field is ACTIVE is the store's
 	// question, and refusing it here would break every workspace that has one.
-	if err := rejectUnknownFields(createShapes, "person", json.RawMessage(`{"full_name":"A","cf_priority":"high"}`)); err != nil {
+	if err := rejectUnknownFields(createWriteShapes, "person", json.RawMessage(`{"full_name":"A","cf_priority":"high"}`)); err != nil {
 		t.Errorf("a real custom-field key was refused: %v", err)
 	}
 }
@@ -369,4 +369,74 @@ func recordTypeEnum(t *testing.T, tool string, raw json.RawMessage) []string {
 		t.Fatalf("%s advertises no record_type enum — this walk would pass vacuously", tool)
 	}
 	return parsed.Properties.RecordType.Enum
+}
+
+// A refusal hands back the SHAPE, because the name alone leaves the next
+// refusal in place.
+//
+// Measured: a run told `organization` accepts `domains` sent
+// `["example.test"]`, was refused for an array of strings, and only then
+// learned the item shape; another omitted `relationship.kind` because nothing
+// had said which fields are required. Both facts are in the generated line the
+// tool description deliberately does not recite — reciting it THERE costs every
+// call, and a refusal costs only the caller who needed it.
+func TestARefusedFieldListCarriesTypesAndWhatIsRequired(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		what   string
+		shapes writeShapes
+		record string
+		fields string
+		says   []string
+	}{
+		{
+			what: "an organization create", shapes: createWriteShapes, record: "organization",
+			fields: `{"name":"Terralogic","domain":"terralogic.test"}`,
+			says: []string{
+				// The item shape, which a name list cannot carry.
+				"domains?: [{domain: string, is_primary?: boolean}]",
+				// Required, marked by the ABSENCE of a `?`.
+				"display_name: string",
+			},
+		},
+		{
+			what: "a relationship create", shapes: createWriteShapes, record: "relationship",
+			fields: `{"who":"x"}`,
+			// The closed vocabulary of a required field, in the same line.
+			says: []string{`kind: "employment"|`, "person_id?: uuid"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.what, func(t *testing.T) {
+			t.Parallel()
+			err := rejectUnknownFields(tc.shapes, tc.record, json.RawMessage(tc.fields))
+			var bad *BadArgsError
+			if !errors.As(err, &bad) {
+				t.Fatalf("err = %v, want a BadArgsError", err)
+			}
+			for _, want := range tc.says {
+				if !strings.Contains(bad.Guidance, want) {
+					t.Errorf("the guidance does not carry %q, so the caller learns the name and "+
+						"is refused again on the shape:\n%s", want, bad.Guidance)
+				}
+			}
+		})
+	}
+}
+
+// And an update's shape is the UPDATE's, not the create's — the two differ, and
+// handing back the wrong one sends a caller to a field this door does not take.
+func TestARefusedUpdateCarriesTheUpdateShape(t *testing.T) {
+	t.Parallel()
+	err := rejectUnknownFields(updateWriteShapes, "relationship", json.RawMessage(`{"who":"x"}`))
+	var bad *BadArgsError
+	if !errors.As(err, &bad) {
+		t.Fatalf("err = %v, want a BadArgsError", err)
+	}
+	if strings.Contains(bad.Guidance, "kind:") {
+		t.Errorf("an update-door refusal offers `kind`, which only the create body takes:\n%s", bad.Guidance)
+	}
+	if !strings.Contains(bad.Guidance, "role?: string") {
+		t.Errorf("the update-door refusal does not carry that door's own shape:\n%s", bad.Guidance)
+	}
 }

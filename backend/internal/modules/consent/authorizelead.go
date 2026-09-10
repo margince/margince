@@ -168,8 +168,10 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 	// miss — ClassTransactional returns an unconditional allow without reading
 	// any grant, so a lead would take authority from a purpose row nobody
 	// checked against lead grants.
+	address, channelProvider, channelUserID := recipientSubjectAddress(r)
 	res, err := g.resolveAndRecord(ctx, tx, req, subjectRef{
-		Kind: entityLead, ID: leadID, Address: r.Email,
+		Kind: entityLead, ID: leadID, Address: address,
+		ChannelProvider: channelProvider, ChannelUserID: channelUserID,
 	}, phase, suppressed)
 	if err != nil {
 		return commsauthz.Decision{}, err
@@ -179,7 +181,10 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		// person_consent, so a lead who withdrew would be sent the very message
 		// they stopped.
 		stopped, err := withdrawalCovers(ctx, tx,
-			subjectRef{Kind: entityLead, ID: leadID, Address: r.Email}, res.Category)
+			subjectRef{
+				Kind: entityLead, ID: leadID, Address: address,
+				ChannelProvider: channelProvider, ChannelUserID: channelUserID,
+			}, res.Category)
 		if err != nil {
 			return commsauthz.Decision{}, err
 		}

@@ -97,16 +97,28 @@ describe("money formatting (B-EP09.17)", () => {
 // EXACT strings, because the assertion shape is what let it run unnoticed:
 // `toContain("420")` is satisfied by "€420k", by "€420.0k" AND by the
 // uncompacted "€420,000.00", so it could not tell the three apart.
+//
+// The one thing NOT pinned is the suffix's letter case: ICU 76 renders the
+// thousands marker "k", ICU 77 "K", and which a reader sees is the ICU build's
+// call, not this module's. So the compact figure is folded to lower case before
+// comparison — the digit, the decimal and the symbol stay exact, which is what
+// tells the three figures apart; only the case floats.
 describe("a money figure abbreviated for a KPI slot", () => {
   it("drops a decimal a round figure does not need", () => {
-    expect(formatMoneyCompact(42_000_000, "EUR", "en")).toBe("€420k");
+    expect(formatMoneyCompact(42_000_000, "EUR", "en").toLowerCase()).toBe(
+      "€420k",
+    );
   });
 
   // The maximum earns its keep here: rounded to whole thousands these two
   // figures are the same number on the page.
   it("keeps the decimal that tells two figures apart", () => {
-    expect(formatMoneyCompact(18_640_000, "EUR", "en")).toBe("€186.4k");
-    expect(formatMoneyCompact(18_690_000, "EUR", "en")).toBe("€186.9k");
+    expect(formatMoneyCompact(18_640_000, "EUR", "en").toLowerCase()).toBe(
+      "€186.4k",
+    );
+    expect(formatMoneyCompact(18_690_000, "EUR", "en").toLowerCase()).toBe(
+      "€186.9k",
+    );
   });
 
   // Below the threshold the long form is no wider and carries every digit, so
@@ -120,7 +132,9 @@ describe("a money figure abbreviated for a KPI slot", () => {
   // minor unit, so 420,000 minor units is ₫420k; dividing by Intl's count
   // instead would draw ₫4.2k, a figure the record does not hold.
   it("abbreviates on the stored scale, not Intl's own count", () => {
-    expect(formatMoneyCompact(420_000, "VND", "en")).toBe("₫420k");
+    expect(formatMoneyCompact(420_000, "VND", "en").toLowerCase()).toBe(
+      "₫420k",
+    );
   });
 });
 

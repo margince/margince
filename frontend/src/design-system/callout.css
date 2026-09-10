@@ -1,51 +1,66 @@
 /* Callout — what the surface says about itself.
  *
- * A ROW on the recessed ground with a dot in the tone's colour before its
- * first words, never a filled coloured box: colour on this page means one
- * thing at a time, and a tinted plate shouts over the record it sits in. The
- * words carry the meaning; the dot and the icon slot double it for a reader
- * who reads colour, and the title in the tone's ink for one who does not. */
+ * A bordered card on the pane's ground carrying the tone's ICON before its
+ * first words, never a filled coloured box: colour on this page means one thing
+ * at a time, and a tinted plate shouts over the record it sits in. The words
+ * carry the meaning; the icon's SHAPE doubles it for a reader who does not read
+ * colour, which the dot this replaced could not — dots differing only in hue
+ * are one signal wearing several coats.
+ *
+ * ONE anatomy, at one density: icon | heading over an optional body | the verbs
+ * at the END | the dismiss after them. There is no second face. The two this
+ * replaced differed in whether the first words were a heading, so no two
+ * notices down a page scanned alike, and tone reached the ink of one of them
+ * and not the other's. */
 
 .callout {
-  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-md);
   background: var(--pane);
   color: var(--textContent);
 }
 
-/* The tone's dot, before the first words. Neutral for a plain notice, so the
- * shape is the same whatever the tone and only the colour changes. */
-.callout::before {
-  content: "";
-  position: absolute;
-  inset-block-start: calc(var(--space-3) + 5px);
-  inset-inline-start: var(--space-3);
-  inline-size: 7px;
-  block-size: 7px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--textTertiary);
-}
-
 .callout-icon {
   display: flex;
   flex: none;
-  /* Aligns the glyph with the first line of text rather than with the box: a
-   * centred icon drifts downward as the body grows. */
-  margin-top: 2px;
-  color: var(--textMeta);
+  align-items: center;
+  /* The glyph centres on the heading's OWN first line, rather than on an offset
+   * typed once and left behind: the box is exactly that line tall, so the pair
+   * stays aligned when the ramp or the leading moves. A 2px nudge was the
+   * previous answer, and it sat the glyph below the cap it was meant to be
+   * beside. */
+  block-size: calc(var(--fs-sm) * var(--lh-snug));
 }
 
+/* Everything between the icon and the dismiss: the words, then the verbs on the
+ * heading's own line — a card's shape rather than a paragraph's. */
 .callout-body {
   display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+/* At phone width the verbs drop BELOW the words instead: a column at the end of
+ * a 390px row leaves neither half a measure anybody can read. */
+@media (max-width: 640px) {
+  .callout-body {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+}
+
+.callout-copy {
+  display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: var(--space-2);
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .callout-title {
@@ -53,7 +68,6 @@
   font-weight: var(--fw-semibold);
   font-size: var(--fs-sm);
   line-height: var(--lh-snug);
-  color: var(--textPrimary);
 }
 
 .callout-text {
@@ -71,36 +85,68 @@
   margin-top: var(--space-2);
 }
 
+/* The prose may be a LIST — a refusal naming the fields it would not write, a
+ * warning naming what it will stop. It reads as sentences with a marker rather
+ * than as a nested document, so it keeps the paragraph's rhythm and gives the
+ * marker its width instead of the browser's 40px indent. `list-style` is named
+ * because the reset in front of every sheet here removes it, which is what
+ * `.richtext-input` says again for the same reason: a list with no marker is a
+ * stack of sentences pretending to be one thing. */
+.callout-text > ul {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  list-style: disc;
+}
+
+.callout-text > p + ul {
+  margin-top: var(--space-2);
+}
+
 .callout-actions {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--gapActions);
   align-items: center;
+  /* The verbs end where the card ends, and a second line of them hugs the same
+   * edge rather than starting under the first: one right margin for the reader
+   * to find, not two. */
+  justify-content: flex-end;
 }
 
-.callout-warn::before,
-.callout-warn .callout-icon,
-.callout-warn .callout-title {
-  color: var(--warn);
-}
-.callout-warn::before {
-  background: var(--warn);
+.callout-dismiss {
+  display: flex;
+  flex: none;
 }
 
-.callout-danger::before,
-.callout-danger .callout-icon,
-.callout-danger .callout-title {
-  color: var(--dangerText);
-}
-.callout-danger::before {
-  background: var(--danger);
+/* Tone reaches TWO things and nothing else: the glyph and the heading, in ONE
+ * ink, because they are one claim read twice — a shape for the reader who does
+ * not read colour and a colour for the one who is scanning. A single custom
+ * property, so the pair cannot be given two different values by two rules that
+ * later move apart. */
+.callout-icon,
+.callout-title {
+  color: var(--callout-ink);
 }
 
-.callout-success::before,
-.callout-success .callout-icon,
-.callout-success .callout-title {
-  color: var(--success);
+.callout-info {
+  --callout-ink: var(--textPrimary);
 }
-.callout-success::before {
-  background: var(--success);
+
+/* `accent` is `info` said emphatically — the ask, the lead — in the brand
+ * accent and never in `--ai`, which claims a machine wrote what follows. */
+.callout-accent {
+  --callout-ink: var(--accentText);
+}
+
+.callout-warn {
+  --callout-ink: var(--warn);
+}
+
+.callout-danger {
+  --callout-ink: var(--dangerText);
+}
+
+.callout-success {
+  --callout-ink: var(--success);
 }

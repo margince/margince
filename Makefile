@@ -26,7 +26,8 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation \
   check-extension-modules \
   no-jurisdiction test-no-jurisdiction \
   pkg-freeze test-desktop-launcher changelog-sections \
-  test-changelog-sections test-dev-postgres-container test-e2e-llm-check
+  test-changelog-sections test-dev-postgres-container test-e2e-llm-check \
+  test-craft-review
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
 # CI runner and an 18-core laptop each get the width they have without anybody
@@ -62,7 +63,7 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -282,7 +283,7 @@ dev-sweep:
 dev-logs:
 	@bash scripts/dev-logs.sh
 
-build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln tools tools-go infra-logs infra-reset:
+build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln tools tools-go infra-logs infra-reset:
 	$(MAKE) -C backend $@
 
 ## check-fe — the frontend half of the gate (part of `make check`). Fails loudly
@@ -786,6 +787,21 @@ fe-uat:
 test-craft-pin:
 	@./scripts/test-craft-pin.sh
 
+## fe-edge-padding — no text printed against the edge of the box holding it.
+## Renders the WHOLE story catalog in headless Chromium at 1280px and 420px and
+## fails on a box that draws a visible edge with no inline padding between that
+## edge and its text — the defect `.card` + a caller class that re-declares
+## `padding` with a zero inline half produces, which no stylesheet reader can
+## see because the two rules are correct apart and wrong together. A browser is
+## the only instrument that answers it: jsdom does not resolve var(), so the
+## fixed rule reads back identical to the broken one. A story it could not read
+## fails the run rather than passing quietly. WHOLE-TREE and minutes long, so
+## like fe-clock-drift it is not in `make check`. Optional: ARGS="--filter <id>".
+fe-edge-padding:
+	cd frontend && pnpm install --frozen-lockfile && \
+		pnpm exec playwright install chromium >/dev/null 2>&1 && \
+		node scripts/check-edge-padding.mjs $(ARGS)
+
 ## craft-static — the deterministic code-craftsmanship gate (ADR-0045) over
 ## every hand-written Go tree, strict: BLOCKER and MAJOR findings both fail it.
 ## The pre-push hook (.githooks/pre-push) runs the same bar diff-scoped; this
@@ -806,6 +822,30 @@ craft-static: test-craft-pin
 		"$$bin" static --strict --root extensions && \
 		"$$bin" static --strict --root fixtures && \
 		"$$bin" static --strict --root desktop
+
+## craft-review — the OPT-IN model-driven arm of the craftsmanship gate: send
+## this branch's diff to an external model API and get a reading of what a
+## syntax tree cannot see. It calls a paid API, so nothing calls it for you —
+## no hook, no CI job, no prerequisite. `make craft-static` is the arm that is
+## enforced and it is the one that blocks a push.
+##
+##   ANTHROPIC_API_KEY=... make craft-review              # vs origin/main
+##   ANTHROPIC_API_KEY=... BASE=<ref> make craft-review
+##
+## It refuses rather than reporting a pass it did not earn: with no key, and
+## again when the reviewer comes back having skipped, because that answer is
+## `verdict: PASS` with no findings and is otherwise indistinguishable from a
+## clean diff. test-craft-review holds both refusals.
+craft-review: test-craft-pin
+	@./scripts/craft-review.sh
+
+## test-craft-review — prove craft-review refuses a reading that did not happen:
+## no key, a result the reviewer skipped, and a blocking verdict it must not
+## swallow, against a real reading it must not refuse. The reviewer is stubbed —
+## it is an external HTTP boundary, and a test that called it would spend a paid
+## request to assert on a refusal that never gets that far.
+test-craft-review:
+	@./scripts/test-craft-review.sh
 
 ## test-desktop-launcher — the launcher's own suite. It exists because a test
 ## lane that cannot reach a module is a test lane that proves nothing about it,

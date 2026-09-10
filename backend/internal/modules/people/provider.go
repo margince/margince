@@ -43,6 +43,16 @@ func (p *Provider) WithFieldCatalog(catalog fieldcatalog.Reader) *Provider {
 	return p
 }
 
+// WithStopCarrier wires the consent-side stop carry into the provider's
+// store (see Store.WithStopCarrier). The MCP surface merges and promotes
+// records exactly as the HTTP handlers do, so it needs the same seam: without
+// it every merge of a subject holding a live stop refuses, which is precisely
+// the record the carry exists to protect.
+func (p *Provider) WithStopCarrier(carrier StopCarrier) *Provider {
+	p.store = p.store.WithStopCarrier(carrier)
+	return p
+}
+
 func ref(t datasource.EntityType, id openapi_types.UUID) datasource.EntityRef {
 	return datasource.EntityRef{Type: t, ID: ids.UUID(id)}
 }

@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -334,12 +333,13 @@ function JobHealthBody({
     <>
       {dead > 0 && (
         // The one thing on this card an operator must not scroll past: dead
-        // work does not resume on its own. `alert` because it appears when the
-        // report lands, and it names a failure the reader has to act on.
+        // work does not resume on its own. An `event` would be mentioned
+        // quietly; this one interrupts, because the reader has to act on it and
+        // nothing else on the page says so again.
         <Callout
           tone="danger"
+          kind="event"
           live="alert"
-          icon={TriangleAlert}
           title={t("jobs.deadTitle")}
         >
           <p>{t("jobs.deadBody", { count: formatNumber(dead, locale) })}</p>

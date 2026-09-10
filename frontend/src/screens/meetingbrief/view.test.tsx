@@ -176,7 +176,7 @@ describe("the preparation plan", () => {
     );
   });
 
-  it("draws one warn callout, not two", () => {
+  it("draws one warn panel, not two", () => {
     const withRisk = {
       ...briefWithPlan,
       plan: {
@@ -213,7 +213,7 @@ describe("the preparation plan", () => {
     // The plan's risk carries a response; the sections' list does not. Showing
     // both would put two warnings on one screen, which is how a reader learns
     // to skip warnings.
-    expect(container.querySelectorAll(".callout-warn")).toHaveLength(1);
+    expect(container.querySelectorAll(".panel-warn")).toHaveLength(1);
     expect(screen.getByText("Own the delay and name a date.")).toBeTruthy();
   });
 

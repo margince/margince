@@ -39,7 +39,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { paragraphsFrom, RichText } from "../design-system/richtext";
-import { Select, type SelectOption } from "../design-system/select";
+import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import type { TokenSuggestion } from "../design-system/tokeninput";
 import {
@@ -61,15 +61,19 @@ import {
   useViewerId,
 } from "./common";
 import { recordNamesIn, useOrganization360 } from "./company360";
+import { StaleThreadNotice, VoiceDegradedNotice } from "./compose.notices";
 import {
   asksWhy,
   type CommunicationContext,
   contextFor,
+  contextOptions,
 } from "./compose-context";
 import {
   AttachAction,
   AttachedFiles,
+  CarriageNotice,
   type ChosenFile,
+  useCarriageBlocks,
 } from "./composeattachments";
 import {
   AddressBlock,
@@ -1394,29 +1398,6 @@ function sharedUnsubscribeAhead(
   return addressees.size > 1;
 }
 
-// The categories a rep may claim, in the order a first message is usually
-// about. The unset entry is a real OPTION rather than the select's placeholder:
-// a placeholder is only a face for an unset value, and a rep who picked one has
-// to be able to come back to none before sending.
-//
-// The five subject-serving categories are absent, and not by omission — the
-// contract's enum excludes them, because a caller who could claim one could
-// dress marketing as a security warning and reach somebody who has objected.
-// They are the installation's own controller mail and nothing a rep composes.
-function contextOptions(t: ReturnType<typeof useT>): SelectOption[] {
-  return [
-    { value: "", label: "—" },
-    { value: "requested_followup", label: t("compose.why.requestedFollowup") },
-    { value: "active_deal_followup", label: t("compose.why.activeDeal") },
-    { value: "precontract_quote", label: t("compose.why.quote") },
-    { value: "customer_service", label: t("compose.why.service") },
-    { value: "invoice_or_payment", label: t("compose.why.invoice") },
-    { value: "contract_notice", label: t("compose.why.contract") },
-    { value: "account_notice", label: t("compose.why.account") },
-    { value: "marketing", label: t("compose.why.marketing") },
-  ];
-}
-
 // Send preconditions differ by wire shape: mail needs an addressee and a
 // subject on top of a body; a channel reply carries neither (design §9.3 —
 // the recipient is resolved server-side, and a channel has no subject line),
@@ -1613,13 +1594,7 @@ function DraftBand({
           zone={zone}
           onClose={() => setOpenEmail(null)}
         />
-        {provenance.voice_degraded && (
-          // The one loss a sender cannot see in the text: their own voice is
-          // the register nobody proofreads for.
-          <Callout tone="warn" live="status">
-            {t("compose.voiceDegraded")}
-          </Callout>
-        )}
+        <VoiceDegradedNotice degraded={provenance.voice_degraded} />
         {provenance.voice_profile_version != null && (
           <>
             <p className="t-caption">
@@ -2441,6 +2416,10 @@ export function ComposeModal({
   // The files this message will carry, as references to paper already on the
   // record — see composeattachments.tsx for why an upload files it first.
   const [files, setFiles] = useState<readonly ChosenFile[]>([]);
+  // Where this message breaks the channel's carriage bounds (empty for mail):
+  // the shelf warns and the send refuses here, ahead of the park comms/gates.go
+  // carriageRefusal raises after staging.
+  const carriageBlocks = useCarriageBlocks(channel?.id, files, body);
   const [intent, setIntent] = useState(askedIntent ?? "");
   // Keyed on what the CALLER asked for, so a second moment action opening the
   // same composer replaces the first one's reason instead of leaving the reader
@@ -3269,9 +3248,10 @@ export function ComposeModal({
         // rejection is in flight, which is a genuine "not now".
         confirmDisabled={rejectionInFlight}
         onConfirm={() => {
-          if (missing.length > 0) {
+          // A missing field or a carriage block keeps the press from sending;
+          // marking and focusing is harmless when only the latter is present.
+          if (missing.length > 0 || carriageBlocks.length > 0) {
             setAttempted(true);
-            // After the paint that marks them, or there is nothing to find.
             globalThis.requestAnimationFrame(focusFirstMissing);
             return;
           }
@@ -3338,21 +3318,17 @@ export function ComposeModal({
               selected={transport}
               onChange={changeTransport}
             />
-            {/* The conversation the caller named cannot be answered any more.
-            Said rather than silently fallen back from: the reader asked to
-            answer one thread, and the composer is open on another. */}
-            {staleThread && (
-              <Callout tone="warn" live="status">
-                {t("compose.threadGone")}
-              </Callout>
-            )}
+            <StaleThreadNotice stale={staleThread} />
             {/* Whose conversation this is. Not a warning and not a refusal —
             covering for a colleague is ordinary work — so it states the fact
             and lets the reader decide. Info rather than warn for that reason,
             and no live region: it renders with the drawer rather than in
             answer to anything the reader just did. */}
             {answeringColleaguesMail && (
-              <Callout tone="info">
+              <Callout
+                kind="standing"
+                title={t("compose.colleagueMailboxTitle")}
+              >
                 {plural("compose.colleagueMailbox", colleagueMailboxes.length, {
                   names: new Intl.ListFormat(INTL_LOCALE[locale], {
                     style: "long",
@@ -3437,8 +3413,6 @@ export function ComposeModal({
                 linkPrompt: t("richtext.linkPrompt"),
               }}
               hint={t("compose.bodyHint")}
-              // The paperclip sits with bold and italic because it is the same
-              // kind of thing: something you do to the message you are writing.
               actions={
                 <AttachAction
                   entityType={entityType}
@@ -3464,6 +3438,8 @@ export function ComposeModal({
               onChange={setFiles}
               disabled={rejectionInFlight}
             />
+            {/* Why it cannot go as attached, beside the files it is about. */}
+            <CarriageNotice channel={channel?.label} blocks={carriageBlocks} />
             {/* Only over the machine's OWN untouched words: a rewrite replaces the
             body, and once the rep has edited it there is no model draft left
             to rewrite — only their work to throw away. */}

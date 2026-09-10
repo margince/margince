@@ -275,7 +275,14 @@ func refuseUnaskableOperand(filter listFilter, operand string) error {
 	if len(filter.Enum) == 0 || slices.Contains(filter.Enum, operand) {
 		return nil
 	}
-	return &BadArgsError{Cause: errors.New(filter.Name + " is one of " + strings.Join(filter.Enum, ", "))}
+	// Same split as refuseUnimportableObject: the operand the caller sent is
+	// bounded in Cause and says WHICH value was refused, and the closed set is
+	// ours in Guidance so a long operand cannot spend its budget.
+	return &BadArgsError{
+		Cause:    fmt.Errorf("%s %q is not a value it takes", filter.Name, operand),
+		Field:    filter.Name,
+		Guidance: filter.Name + " is one of: " + strings.Join(filter.Enum, ", "),
+	}
 }
 
 // describeNames lists a record type's filters for a refusal, or says plainly

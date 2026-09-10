@@ -50,7 +50,7 @@ func (p *preflightEnv) scheduleAsAgent(t *testing.T, actor principal.Principal, 
 			Subject:        "Monday morning",
 			Body:           "Written the night before, by a tool.",
 			ConsentPurpose: "transactional",
-		}, at)
+		}, at, compose.SendOrigin{PublicBaseURL: preflightBaseURL})
 	if err != nil {
 		t.Fatalf("scheduling as an agent: %v", err)
 	}
@@ -91,6 +91,7 @@ func (p *preflightEnv) auditActor(t *testing.T, entityType string, entityID ids.
 func TestAnAgentScheduledSendFiresUnderTheAgentThatScheduledIt(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	// A REAL passport row, not an invented id: the fire path re-authenticates
 	// the stored passport, so an agent carrying one that was never issued is
@@ -158,6 +159,7 @@ func TestAnAgentScheduledSendFiresUnderTheAgentThatScheduledIt(t *testing.T) {
 func TestAnAgentWithNoHumanBehindItStillRecordsWhichAgent(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	// No OnBehalfOf and no passport. UserID is the agent's OWN row, which is
 	// exactly what must not be copied into a column meaning "the human".

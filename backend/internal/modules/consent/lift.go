@@ -130,6 +130,16 @@ func requireReason(reason, act string) error {
 func (s *Store) liftAdmittedTx(
 	ctx context.Context, tx pgx.Tx, in LiftInput, sub subject, level commsauthz.AuthorityLevel,
 ) error {
+	// FIRST, before anything that reads the subject's row. The count below and
+	// the level read want every concurrent writer of this subject's stops to be
+	// committed or not-yet-started, never half-applied — and the lock has to be
+	// the transaction's FIRST, because a merge holds the person row while it
+	// reaches for this same advisory lock. Taking EnsureRetractable first would
+	// invert the order between the two and deadlock; see suppress.go, where it
+	// did exactly that.
+	if err := lockSubjectSuppressions(ctx, tx, sub.id); err != nil {
+		return err
+	}
 	// EnsureRetractable, which IS EnsureWritable and says so: this is a write
 	// that RELEASES rather than adds, and it reaches an archived subject on
 	// purpose. The named spelling is what distinguishes that deliberate reach
@@ -140,17 +150,6 @@ func (s *Store) liftAdmittedTx(
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
-	}
-
-	// The row is read INSIDE the transaction that revokes it, so the level this
-	// decision rests on is the level still on the row when the write lands. Read
-	// outside and a concurrent lift could change it between the check and the
-	// update — the shape that lets a rep's request act on an admin's answer.
-	// Before the read, so the count below observes every concurrent lift of this
-	// person as committed or not-yet-started, never as half-applied.
-	if _, err = tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, sub.id.String()); err != nil {
-		return fmt.Errorf("consent: serialising lifts for this person: %w", err)
 	}
 
 	var decided string

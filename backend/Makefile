@@ -462,6 +462,19 @@ bench-capture: composition ## CAP-PARAM-1 capture-to-timeline latency, 60s p95 (
 	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestCaptureToTimelineLatencyBudget -count=1 -v -timeout 15m ./internal/compose/integration/capture
 	@$(MAKE) --no-print-directory perfdoc
 
+# AC-W2, and the newest arrival in this lane. It gated the standing integration
+# lane until a health check read p50=13ms against a p95 of 201.6ms and filed
+# main as broken over the 1.6ms: six shards share one Postgres there, and what a
+# contended runner measures is the runner. The regression it existed to catch is
+# held in the lane deterministically now, by the sequential-scan count in
+# workflow_dispatch_integration_test.go.
+#
+# It writes no record and so does not re-render the page: AC-W2 is not a
+# published budget row, and a target that renders nothing new should not claim a
+# measurement the page never shows.
+bench-dispatch: composition ## AC-W2 workflow trigger->dispatch p95, 200ms over the seeded dataset (needs db-up)
+	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestWorkflowTriggerToDispatchP95HoldsOnTheSeededDataset -count=1 -v -timeout 15m ./internal/compose/integration
+
 # The published page is re-rendered from EVERY record, not only the one the run
 # just wrote, so a partial run still produces a complete and current page: the
 # rows it did not measure keep their own stamps and their own dates.

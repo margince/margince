@@ -80,13 +80,12 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 		if err != nil {
 			return crmcontracts.ContractListResponse{}, err
 		}
-		where = append(where, storekit.SQLf("(created_at, id) < ($%d, $%d)",
-			arg(cursor.CreatedAt), arg(cursor.ID)))
+		where = append(where, continueAfterTerm(cursor, arg))
 	}
 
 	limit := storekit.ClampLimit(in.Limit)
 	rows, err := tx.Query(ctx, storekit.SQLf(
-		`SELECT %s, %s FROM contract WHERE %s ORDER BY created_at DESC, id DESC LIMIT $%d`,
+		`SELECT %s, %s FROM contract WHERE %s ORDER BY `+termOrder+` LIMIT $%d`,
 		contractColumns, underContractSQL(asOfPos), strings.Join(where, " AND "), arg(limit+1)), args...)
 	if err != nil {
 		return crmcontracts.ContractListResponse{}, fmt.Errorf("list contracts: %w", err)
@@ -114,7 +113,7 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 	if len(contracts) > limit {
 		contracts = contracts[:limit]
 		last := contracts[len(contracts)-1]
-		next, err := storekit.EncodeCursor(cursorTime(last.CreatedAt), ids.UUID(last.Id))
+		next, err := termCursor(last)
 		if err != nil {
 			return crmcontracts.ContractListResponse{}, err
 		}
@@ -158,7 +157,7 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 	}
 	lim := storekit.ClampLimit(limit)
 	rows, err := tx.Query(ctx, storekit.SQLf(
-		`SELECT %s, %s FROM contract WHERE %s ORDER BY created_at DESC, id DESC LIMIT $%d`,
+		`SELECT %s, %s FROM contract WHERE %s ORDER BY `+termOrder+` LIMIT $%d`,
 		contractColumns, underContractSQL(asOfPos), strings.Join(where, " AND "), arg(lim+1)), args...)
 	if err != nil {
 		return crmcontracts.ContractListResponse{}, fmt.Errorf("list project contracts: %w", err)
@@ -184,4 +183,86 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 		page.HasMore = true
 	}
 	return crmcontracts.ContractListResponse{Data: contracts, Page: page}, nil
+}
+
+// termOrder is how an account's agreements are ordered, in both list queries.
+//
+// BY TERM, not by when the row was written. A reader looking at a contract list
+// is asking which agreement is CURRENT, and ordering by creation answered a
+// different question: an older agreement imported today sorted ahead of a newer
+// one created last week, so the page presented the wrong agreement as current.
+//
+// NULLS LAST because an imported agreement often carries no start date, and a
+// term we know no start for is not the newest one — it is the one we know least
+// about. Floating it to the top would misinform exactly the reader this
+// ordering is for, and on an account whose contracts were all imported, an
+// arbitrary undated row would present itself as current.
+//
+// created_at is the tiebreak among terms beginning on the same day, and the
+// only ordering left among undated ones. id breaks the remaining tie so the
+// order is total — a keyset cursor over a non-total order repeats or skips rows
+// at a page boundary.
+//
+// A constant both queries reference, rather than the clause written out twice:
+// they are one order, and the index (contract_account_ix) is built to serve
+// this exact clause, null placement included. Two copies could drift from each
+// other and from the index, and a page that no longer matches its index is
+// served by a sort node over the whole account without saying so.
+const termOrder = "starts_on DESC NULLS LAST, created_at DESC, id DESC"
+
+// continueAfterTerm renders the keyset predicate that resumes a page after the
+// row a cursor names, matching termOrder including where it puts NULLs.
+//
+// THE NULL HANDLING IS THE PART THAT GOES WRONG. Under `DESC NULLS LAST` every
+// dated term precedes every undated one, so the continuation asks a different
+// question on each side of that boundary:
+//
+//   - after a DATED row, the rest of the page is the terms ordering below it
+//     AND every undated term, because all of those come later;
+//   - after an UNDATED row, only undated terms remain — admitting a dated one
+//     would serve a row the reader already passed.
+//
+// A single tuple comparison cannot say that: `(starts_on, created_at, id) <
+// (…)` is NULL-valued whenever either side is NULL, so it admits nothing at all
+// once the page crosses into the undated tail, and the list ends early while
+// rows remain.
+func continueAfterTerm(cursor storekit.Cursor, arg func(any) int) string {
+	if cursor.SortKey == nil {
+		// The cursor names an undated term: the tail is undated terms only.
+		return storekit.SQLf("starts_on IS NULL AND (created_at, id) < ($%d, $%d)",
+			arg(cursor.CreatedAt), arg(cursor.ID))
+	}
+	// Each branch registers ONLY the arguments its own clause names. An
+	// argument passed and never referenced has no type Postgres can infer from
+	// anywhere, and it answers 42P18 for a parameter that is simply unused —
+	// a confusing failure to meet at a page boundary, and one that reads as a
+	// cast problem rather than an arity one.
+	//
+	// ::date because the token carries the start date as TEXT, and a row
+	// comparison gives Postgres nothing to infer it from.
+	return storekit.SQLf(
+		"((starts_on IS NOT NULL AND (starts_on, created_at, id) < ($%d::date, $%d, $%d)) OR starts_on IS NULL)",
+		arg(*cursor.SortKey), arg(cursor.CreatedAt), arg(cursor.ID))
+}
+
+// termCursor mints the token that continues a page after one contract,
+// carrying the term the ordering is by.
+//
+// SortKey holds the start date, and nil is not "unset" here — it is the row's
+// own NULL, which continueAfterTerm reads as "the page is into the undated
+// tail". SortField and SortDesc record which ordering the token was minted
+// under, so a cursor from a differently ordered list is legible rather than
+// silently applied to this one.
+func termCursor(c crmcontracts.Contract) (string, error) {
+	cur := storekit.Cursor{
+		CreatedAt: cursorTime(c.CreatedAt),
+		ID:        ids.UUID(c.Id),
+		SortField: "starts_on",
+		SortDesc:  true,
+	}
+	if c.StartsOn != nil {
+		key := c.StartsOn.String()
+		cur.SortKey = &key
+	}
+	return storekit.EncodeOpaque(cur)
 }

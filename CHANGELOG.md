@@ -597,6 +597,24 @@ numbers appear here when releases start.
 
 ### Fixed
 
+- **A sentence a card shows instead of content no longer prints against the
+  card's edge.** `EmptyState` draws its sentence on a recessed plate, and the
+  plate re-declared the card's padding while leaving the inline half at zero —
+  so "No offers yet", "Nothing related yet." and every other bare empty state in
+  the product sat hard against the left edge of the grey plate holding them. The
+  plate now names the card's own inset (`--padCard`) and raises only the block
+  half, which is the half it has a reason to change. Three more boxes had the
+  same defect for their own reasons and are fixed with it: the first-run
+  instructional state, the heading of the onboarding read's facts block, and a
+  board's caveat about a failed read handed to a list surface's body slot. In a
+  stack, a list row's title also stopped painting the frozen column's ground —
+  an opaque patch over the card's translucent one — since nothing is frozen when
+  the table is a column of cards. `make fe-edge-padding` renders the whole story
+  catalog at two widths and fails on a box that draws a visible edge with no
+  inline padding between that edge and its text; a stylesheet reader cannot see
+  this defect, because the two rules that make it are correct apart and wrong
+  only together.
+
 - **A record page no longer offers a write the server will refuse.** A rep
   holding the deal grant opened a colleague's deal, was offered Edit, the
   upload, New offer, the stakeholder edges and the stage move, and learned from

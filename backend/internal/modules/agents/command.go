@@ -295,7 +295,7 @@ func (createResolver) Subject(_ context.Context, cmd CreateCommand) (StageInfo, 
 // fine, and a resolver that cannot tell which door asked has no way to
 // answer "does the executor support this" correctly for both.
 func (createResolver) Guards(_ context.Context, cmd CreateCommand) error {
-	return rejectUnknownFields(createShapes, cmd.RecordType, cmd.Fields)
+	return rejectUnknownFields(createWriteShapes, cmd.RecordType, cmd.Fields)
 }
 
 // PatchCommand is one whole-record field patch, whichever door asked for it.
@@ -362,7 +362,7 @@ func (patchResolver) Subject(_ context.Context, cmd PatchCommand) (StageInfo, er
 // webhook_subscription) are patched by their own module rather than through
 // this seam.
 func (p patchResolver) Guards(ctx context.Context, cmd PatchCommand) error {
-	if err := rejectUnknownFields(updateShapes, cmd.RecordType, cmd.Fields); err != nil {
+	if err := rejectUnknownFields(updateWriteShapes, cmd.RecordType, cmd.Fields); err != nil {
 		return err
 	}
 	if !servedByTheRecordSeam(cmd.RecordType) {

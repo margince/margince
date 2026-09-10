@@ -11,6 +11,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { EvidenceReceipt } from "../design-system/evidencereceipt";
 import { MoneyInput } from "../design-system/moneyinput";
+import { Panel, PanelBody } from "../design-system/panel";
 import { StatStrip } from "../design-system/statstrip";
 import { formatMoneyOrAbsent, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -120,25 +121,32 @@ function ForecastAnswer({
 
   return (
     <>
-      <Callout tone="info" title={t("forecast.question")}>
-        {/* The call and the supported figure, and the gap between them. A
-            reader shown only one of the two has no way to tell whether the
-            call is ahead of the evidence or behind it. */}
-        {readings.current_call
-          ? t("forecast.answerWithCall", {
-              call: money(readings.current_call.amount_minor),
-              evidence: money(readings.evidence_minor),
-            })
-          : t("forecast.answerNoCall", {
-              evidence: money(readings.evidence_minor),
-            })}
-      </Callout>
+      {/* The screen's own answer, so it is the screen's own section: a Callout
+          says something ABOUT a surface, and this IS the surface's content —
+          the question as the panel's title and the answer as its body. */}
+      <Panel title={t("forecast.question")}>
+        <PanelBody>
+          {/* The call and the supported figure, and the gap between them. A
+              reader shown only one of the two has no way to tell whether the
+              call is ahead of the evidence or behind it. */}
+          <p>
+            {readings.current_call
+              ? t("forecast.answerWithCall", {
+                  call: money(readings.current_call.amount_minor),
+                  evidence: money(readings.evidence_minor),
+                })
+              : t("forecast.answerNoCall", {
+                  evidence: money(readings.evidence_minor),
+                })}
+          </p>
+        </PanelBody>
+      </Panel>
 
       {/* An unpriced deal is real pipeline contributing zero money, so the gap
           between eligible and priced is stated beside the total rather than
           left in the receipt alone. */}
       {readings.priced_count < readings.eligible_count && (
-        <Callout tone="warn" title={t("forecast.partialTitle")}>
+        <Callout tone="warn" kind="standing" title={t("forecast.partialTitle")}>
           {t("forecast.partial", {
             priced: formatNumber(readings.priced_count, locale),
             eligible: formatNumber(readings.eligible_count, locale),

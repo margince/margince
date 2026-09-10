@@ -366,6 +366,14 @@ describe("the kinds the rail asks for", () => {
       // a rep reads a handful of companies in a day, not ten.
       "site_read",
       "summarize",
+      // Reading a meeting transcript for the next steps in it. It reaches one
+      // person's feed: the run row records who pressed the button, so the
+      // occurrence is theirs rather than the workspace's — which is also why it
+      // is no longer SYSTEM_SWEEP's "belongs to nobody in particular". And it
+      // fits: a rep reads the transcript of a meeting they sat in, a handful a
+      // week, and uq_transcript_read_inflight allows one in flight per
+      // transcript however often the button is pressed.
+      "transcript_propose",
       // What the week TAUGHT, on the same terms as the sentence above it: one
       // occurrence per rep per week, scoped to that rep by ResolveActor. It
       // earns real copy rather than the system-sweep line for the same reason —

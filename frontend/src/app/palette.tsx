@@ -16,7 +16,7 @@ import {
   customPaletteScreens,
   resolveCustomLabel,
 } from "./custom";
-import { NAV } from "./nav";
+import { CREATE_ID, NAV } from "./nav";
 import { navigate, type Route } from "./router";
 import {
   SEARCH_HIT_KIND_KEY,
@@ -124,7 +124,7 @@ export function useBuiltinCommands(): Command[] {
         id: "action:new-deal",
         label: t("action.newDeal"),
         type: "action",
-        route: { screen: "deals", id: "new" },
+        route: { screen: "deals", id: CREATE_ID },
       },
       {
         id: "action:read-company",
@@ -140,12 +140,9 @@ export function useBuiltinCommands(): Command[] {
       },
     ];
     // Every settings entry, derived from the register rather than hand-listed.
-    // Two of them used to be named here and the rest were left out on the
-    // grounds that "the rail door beside them" reached them — which was never
-    // true of settings: no settings entry is a rail row, so an entry this list
-    // omits is an entry only a reader who already knows the shelving can open.
-    // Deriving also means a tab added to the register arrives here, instead of
-    // being the third one somebody notices is missing.
+    // No settings entry is a rail row, so nothing else reaches them: a
+    // hand-listed set omits entries only a reader who already knows the
+    // shelving can open, where deriving brings a new tab here for free.
     //
     // Gated on the SAME predicate the settings level uses, because that level
     // falls back to Account for an entry the principal may not open — so an
@@ -499,10 +496,14 @@ export function CommandPalette({
         </div>
         <div className="palette-list">
           {/* A failed search says so and keeps the builtin commands beside it.
-              It is not an EmptyState: the list is not empty, and the one thing
-              a reader must not conclude is that the workspace holds nothing. */}
+              Neither an EmptyState nor `danger`: the list is not empty, and the
+              one thing a reader must not conclude is that there is nothing. */}
           {search.failed && (
-            <Callout tone="warn" live="status" className="palette-notice">
+            <Callout
+              tone="warn"
+              kind="outcome"
+              title={t("palette.searchFailedTitle")}
+            >
               {t("palette.searchFailed")}
             </Callout>
           )}
@@ -557,11 +558,10 @@ export function CommandPalette({
 }
 
 // Global ⌘K / Ctrl+K binding (AC-shell-3).
-// The palette answers to Meta+K and Ctrl+K both, but an affordance may only
-// advertise one, and it has to be the one the reader's keyboard has: a Windows
-// user told to press ⌘K is being told to press a key that is not there. Pure in
-// its argument so the call site passes `navigator.platform` and this stays
-// testable without stubbing the platform.
+// Both chords work, but an affordance may only advertise ONE and it has to be
+// the one the reader's keyboard has: a Windows user told to press ⌘K is told to
+// press a key that is not there. Pure in its argument, so the call site passes
+// `navigator.platform` and this stays testable without stubbing it.
 /**
  * The chord as its KEYS, because the one surface that draws it draws a cap per
  * key (app/topbar.tsx).

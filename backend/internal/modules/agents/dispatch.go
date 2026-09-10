@@ -27,6 +27,7 @@ import (
 	"log/slog"
 	"slices"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -306,7 +307,10 @@ func (s *Dispatcher) eraOwned(req rpcRequest, fr framing) (rpcResponse, bool) {
 func methodNotFound(req rpcRequest) rpcResponse {
 	return rpcResponse{
 		JSONRPC: jsonRPCVersion, ID: req.ID,
-		Error: &rpcError{Code: codeMethodNotFound, Message: "method not found: " + req.Method},
+		// The method is the caller's own string off the JSON body, bounded and
+		// escaped for the reason UnknownToolError bounds a tool name: both are
+		// chosen freely and both land in a transcript the same run reads back.
+		Error: &rpcError{Code: codeMethodNotFound, Message: "method not found: " + httperr.QuoteCaller(req.Method)},
 	}
 }
 
@@ -374,7 +378,14 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 		Arguments json.RawMessage `json:"arguments"`
 	}
 	if err := json.Unmarshal(params, &p); err != nil {
-		return toolError("malformed tools/call params: " + err.Error())
+		// Same reason decodeArgs masks its decoder: encoding/json describes this
+		// program, not anything the caller can fix, and the withheld words go
+		// to the operator instead of into the model's transcript.
+		safe, withheld := httperr.SafeDecodeError(err)
+		if withheld {
+			s.log.Warn("mcp: unnamed tools/call params decode failure", "err", err)
+		}
+		return toolError("malformed tools/call params: " + safe.Error())
 	}
 	if p.Arguments == nil {
 		p.Arguments = json.RawMessage(`{}`)

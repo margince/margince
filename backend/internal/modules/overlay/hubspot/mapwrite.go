@@ -6,6 +6,7 @@ package hubspot
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -36,6 +37,13 @@ import (
 type writeMapping struct {
 	ObjectClass string
 	Props       map[string]string
+	// Dropped is the canonical fields the caller asked to write that this
+	// projection cannot send, in name order. It is what turns a silent drop
+	// into one somebody can see: the write still succeeds — the incumbent has
+	// the fields it can hold — but an operator reading the log knows which
+	// values did not leave, instead of learning it from a user reporting that
+	// an edit reverted itself.
+	Dropped []string
 }
 
 // mapWrite projects a canonical write (the entity type + the canonical field
@@ -51,13 +59,22 @@ func mapWrite(canonicalClass string, fields map[string]any, forUpdate bool) (wri
 	switch canonicalClass {
 	case personTarget:
 		props, err := copyDirect(fields, personWriteFields, forUpdate)
-		return writeMapping{ObjectClass: objectClassContacts, Props: props}, err
+		return writeMapping{
+			ObjectClass: objectClassContacts, Props: props,
+			Dropped: droppedFields(fields, deferredPersonWrites),
+		}, err
 	case organizationTarget:
 		props, err := copyDirect(fields, organizationWriteFields, forUpdate)
-		return writeMapping{ObjectClass: objectClassCompanies, Props: props}, err
+		return writeMapping{
+			ObjectClass: objectClassCompanies, Props: props,
+			Dropped: droppedFields(fields, deferredOrganizationWrites),
+		}, err
 	case leadTarget:
 		props, err := copyDirect(fields, leadWriteFields, forUpdate)
-		return writeMapping{ObjectClass: objectClassLeads, Props: props}, err
+		return writeMapping{
+			ObjectClass: objectClassLeads, Props: props,
+			Dropped: droppedFields(fields, deferredLeadWrites),
+		}, err
 	case dealTarget:
 		return mapWriteDeal(fields, forUpdate)
 	case activityTarget:
@@ -70,6 +87,11 @@ func mapWrite(canonicalClass string, fields map[string]any, forUpdate bool) (wri
 // directWriteField is one canonical field that projects 1:1 onto a HubSpot
 // property by a straight string copy. The read-only canonical fields simply
 // have no entry — that absence is what makes them never written.
+// canonicalOwnerID is the canonical field every class defers for the same
+// reason: writing it back needs the reverse owner user-map resolution, which
+// resolves a Margince user to the incumbent's own owner id.
+const canonicalOwnerID = "owner_id"
+
 type directWriteField struct {
 	Canonical string
 	HSProp    string
@@ -88,13 +110,62 @@ var personWriteFields = []directWriteField{
 	{Canonical: "title", HSProp: "jobtitle"},
 }
 
+// deferredPersonWrites — the same obligation as deferredOrganizationWrites, for
+// the fields updatePerson lets a caller send.
+var deferredPersonWrites = map[string]string{
+	"full_name": "the assembled display field (OVA-MAP-3): splitting a display string back into " +
+		"first/last is ambiguous and lossy, and first_name/last_name above already carry the parts",
+	"emails":         "a 1:N child collection, not a contact property — the inverse needs the child writer",
+	"phones":         "the same 1:N child shape as emails",
+	"social":         "a 1:N child collection, and HubSpot's social properties are per-network singletons",
+	targetAddress:    "the structured-address assembler has no simple 1:1 inverse yet",
+	canonicalOwnerID: "needs the reverse owner user-map resolution, canonical user → incumbent owner id",
+	"visibility": "capture privacy is a Margince access-control property, not a fact about the contact — " +
+		"the incumbent has no counterpart and must not be told who may see a row here",
+}
+
 // organizationWriteFields — the inverse of companiesMapping's 1:1 columns.
-// size_band is read-only: numberofemployees→size_band is a lossy band bucketing
-// (employees_to_size_band) with no unambiguous inverse. address, domains, and
-// owner_id are the same V1 deferrals as person's.
 var organizationWriteFields = []directWriteField{
 	{Canonical: "display_name", HSProp: propName},
 	{Canonical: industryField, HSProp: industryField},
+}
+
+// deferredOrganizationWrites is every field a caller may PATCH on an
+// organization that this projection does NOT carry, each with the reason.
+//
+// It exists because the alternative is silence, and silence here is the defect:
+// a canonical field absent from the projection is accepted by the door, audited,
+// emitted as an update — and never sent. The next overlay read returns the old
+// value, so the edit looks to a user like somebody else reverted it.
+//
+// Three of these were not deferrals at all until this list existed. legal_name,
+// linkedin_url and description were simply never added when their columns
+// landed, and three separate column changes each failed to notice the same
+// obligation — which is one missing rule rather than three mistakes.
+// Held by: TestEveryOverlayWritableFieldProjectsOrSaysWhyNot
+// (backend/gates/overlaywritecoverage_test.go) — a field the contract lets a
+// caller write is either here or in the projection above, and the same rule
+// answers for person and lead.
+var deferredOrganizationWrites = map[string]string{
+	"size_band": "read-only: numberofemployees→size_band is a lossy band bucketing " +
+		"(employees_to_size_band) with no unambiguous inverse — writing back the band's floor would " +
+		"report a headcount nobody stated",
+	targetAddress:    "the structured-address assembler has no simple 1:1 inverse yet (the V1 write-back deferral)",
+	"domains":        "a 1:N child collection, not a company property — the inverse needs the child writer",
+	canonicalOwnerID: "needs the reverse owner user-map resolution, canonical user → incumbent owner id",
+	"legal_name": "HubSpot declares no counterpart property, so there is nothing to be the inverse OF. " +
+		"Projecting it onto a custom property would invent a mapping the read side does not make",
+	"linkedin_url": "the READ side does not carry it either (companiesMapping maps no LinkedIn property), " +
+		"so a write alone would push a value the next read cannot bring back — the field would oscillate. " +
+		"Both halves land together; the read half is issue #1027",
+	"description": "same shape as linkedin_url, plus a real choice: `about_us` and the CRM `description` " +
+		"property are both candidates and behave differently, and the write must be the inverse of " +
+		"whichever the read takes. The read half is issue #1026",
+	"lifecycle": "HubSpot's lifecyclestage names a different axis from our lifecycle and the two " +
+		"vocabularies do not correspond term for term; issue #1028 holds the read half and the transform " +
+		"both directions would need",
+	"parent_org_id":      "a company-to-company association, not a property — it writes through the association API rather than through this projection",
+	"relationship_types": "a Margince concept with no HubSpot counterpart: the incumbent models no such classification",
 }
 
 // leadWriteFields — OVA-MAP-W5's writable Leads-object property that has a
@@ -116,6 +187,22 @@ var organizationWriteFields = []directWriteField{
 // read-only and absent here too.
 var leadWriteFields = []directWriteField{
 	{Canonical: targetFullName, HSProp: "hs_lead_name"},
+}
+
+// deferredLeadWrites — the same obligation, for the fields updateLead lets a
+// caller send. The status/label reasoning is in leadWriteFields' own comment.
+var deferredLeadWrites = map[string]string{
+	"status": "waits on a pinned bidirectional value map: the read keeps hs_lead_label a RAW passthrough, " +
+		"so writing a canonical status token into it would be the untransformed projection the read declined",
+	"email":                 "DERIVED through the required contact association, not a Leads-object property Margince can write",
+	"company_name":          "derived the same way, through the association rather than a property",
+	canonicalOwnerID:        "needs the reverse owner user-map resolution",
+	"title":                 "a property of the associated CONTACT, not of the Leads object",
+	"source":                "no Leads-object counterpart; the incumbent records lead provenance differently",
+	"score":                 "a Margince-computed figure, and writing it would publish our model's output as though the incumbent had produced it",
+	"score_override_reason": "the human sentence explaining a score override — same reason as score",
+	"project_id":            "a Margince association with no Leads-object counterpart",
+	"candidate_org_key":     "a matching key internal to our own resolution, never an incumbent property",
 }
 
 // stringProp reads a canonical STRING field's writable value. present reports
@@ -173,6 +260,24 @@ func copyDirect(fields map[string]any, table []directWriteField, forUpdate bool)
 		}
 	}
 	return props, nil
+}
+
+// droppedFields is the canonical fields this write ASKED for that the
+// projection cannot send, named so a caller of mapWrite can say so.
+//
+// The deferral maps are the source, which is what keeps them honest: a field
+// deferred with a reason is a field this function reports, so the reasons are
+// load-bearing rather than a comment that drifts. A patch naming only projected
+// fields answers nil.
+func droppedFields(fields map[string]any, deferred map[string]string) []string {
+	var dropped []string
+	for field := range fields {
+		if _, isDeferred := deferred[field]; isDeferred {
+			dropped = append(dropped, field)
+		}
+	}
+	sort.Strings(dropped)
+	return dropped
 }
 
 // mapWriteDeal — OVA-MAP-W2. name/expected_close_date project directly;

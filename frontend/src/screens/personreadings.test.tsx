@@ -320,8 +320,10 @@ describe("what they decide and when we next meet", () => {
     const deal = card(grid, "Deals they decide");
     // en-GB compact notation, one decimal: the reader's own spelling. The
     // sample carries a real tenth, because whether a whole thousand shows a
-    // trailing ".0" is the ICU build's decision, not this reading's.
-    expect(within(deal).getByText("€185.5k")).toBeTruthy();
+    // trailing ".0" is the ICU build's decision, not this reading's — and the
+    // suffix's letter case (k vs K) is the ICU build's call too, so it is
+    // matched case-insensitively.
+    expect(within(deal).getByText(/€185\.5k/i)).toBeTruthy();
     expect(within(deal).getByText(/Negotiation/)).toBeTruthy();
     const meeting = card(grid, "Next meeting");
     expect(within(meeting).getByText("Demo, Product Cloud")).toBeTruthy();

@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "./mefixture";
+import { CREATE_ID } from "./nav";
 import {
   type Command,
   CommandPalette,
@@ -19,8 +20,10 @@ import {
 } from "./palette";
 
 // B-EP09.5 (AC-shell-3..7) and RS-1 (live /search records + see-all)
-// acceptance. B-EP09.6 (AC-shell-8) covered the record-scoped Ask composer,
-// which the agent surfaces that carried it no longer offer.
+// acceptance. AC-shell-8 is no longer about this file: it covered the
+// record-scoped Ask composer, and now covers the claim that composer carried
+// about what the agent can reach — asserted on the panel that carries it, in
+// frontend/e2e/ac.spec.ts and agentrail.scope.test.tsx.
 
 afterEach(() => {
   cleanup();
@@ -66,7 +69,7 @@ const commands: Command[] = [
     id: "action:new-deal",
     label: "New deal",
     type: "action",
-    route: { screen: "deals", id: "new" },
+    route: { screen: "deals", id: CREATE_ID },
   },
   {
     id: "record:brandt",

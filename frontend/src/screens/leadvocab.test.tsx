@@ -244,8 +244,10 @@ describe("LeadSourcesCard", () => {
       "Trade show",
     )) as HTMLInputElement;
     expect(input.disabled).toBe(true);
+    // The card's band says the posture as a heading, so it carries no full
+    // stop; the same claim reaches the handling card's switch as a sentence.
     expect(
-      screen.getByText("Only an admin or ops seat changes this list."),
+      screen.getByText("Only an admin or ops seat changes this list"),
     ).toBeTruthy();
     // Both verbs the card offers a writer: the one that OPENS the dialog and
     // the one that submits it. Read from the catalog under the keys the card

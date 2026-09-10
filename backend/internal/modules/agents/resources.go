@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -144,7 +145,19 @@ func (s *Dispatcher) readResource(ctx context.Context, params json.RawMessage, f
 		URI string `json:"uri"`
 	}
 	if err := json.Unmarshal(params, &p); err != nil {
-		return resourceContents{}, &rpcError{Code: codeInvalidParams, Message: "invalid params: " + err.Error()}
+		// SafeDecodeError, not err.Error(): what encoding/json says here
+		// describes THIS program — a Go struct field, a Go type — which an agent
+		// can neither act on nor is entitled to read, and it lands in a
+		// transcript whose later prompts the same run reads. decodeArgs refuses
+		// it for exactly this reason; this decoder is the same door.
+		safe, withheld := httperr.SafeDecodeError(err)
+		if withheld {
+			s.log.Warn("mcp: unnamed resources/read params decode failure", "err", err)
+		}
+		return resourceContents{}, &rpcError{
+			Code:    codeInvalidParams,
+			Message: "invalid params: " + safe.Error(),
+		}
 	}
 	// An absent, null or empty uri is a request this server could not read,
 	// not a resource that is missing — a different thing for the caller to
@@ -153,16 +166,16 @@ func (s *Dispatcher) readResource(ctx context.Context, params json.RawMessage, f
 		return resourceContents{}, &rpcError{Code: codeInvalidParams, Message: "invalid params: resources/read needs a non-empty \"uri\""}
 	}
 	if s.resources == nil {
-		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: "no resource at " + p.URI}
+		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: noResourceAt(p.URI)}
 	}
 	if !s.readableByThisCaller(ctx, p.URI) {
 		// The same answer an unknown URI gets: a caller whose scopes do not
 		// reach a document must not learn that it exists.
-		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: "no resource at " + p.URI}
+		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: noResourceAt(p.URI)}
 	}
 	contents, err := s.resources.ReadResource(ctx, p.URI)
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: "no resource at " + p.URI}
+		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: noResourceAt(p.URI)}
 	}
 	if err == nil && isAppDocument(contents.MIMEType) && !s.appsOffered(fr) {
 		// Judged on what the provider actually SERVED, not on what the
@@ -170,12 +183,16 @@ func (s *Dispatcher) readResource(ctx context.Context, params json.RawMessage, f
 		// catalogue names the first advertiser while this read takes the first
 		// that serves, and the bytes in hand are what the client would have to
 		// render.
-		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: "no resource at " + p.URI}
+		return resourceContents{}, &rpcError{Code: resourceNotFound, Message: noResourceAt(p.URI)}
 	}
 	if err != nil {
 		// The cause is server-side knowledge (a pool fault, a wrapped SQL
 		// error); the client learns only that the read did not happen.
-		s.log.Error("mcp: reading resource", "uri", p.URI, "err", err)
+		// The URI is bounded in the OPERATOR's log too. It is caller-controlled
+		// and limited only by the transport's cap, and a caller who can provoke
+		// a provider error can otherwise drive megabytes per call into it. What
+		// the line is worth is which URI, not all of it.
+		s.log.Error("mcp: reading resource", "uri", httperr.QuoteCaller(p.URI), "err", err)
 		return resourceContents{}, &rpcError{Code: codeInternalError, Message: "the resource could not be read; retry, and if it persists ask an administrator to check the server logs"}
 	}
 	return resourceContents{Contents: []resourceContentBlock{{
@@ -187,6 +204,23 @@ func (s *Dispatcher) readResource(ctx context.Context, params json.RawMessage, f
 		// bytes with the other provider's rules. See mcp.ResourceContents.UI.
 		Meta: resourceMetaFor(mcp.Resource{URI: contents.URI, UI: contents.UI}),
 	}}}, nil
+}
+
+// noResourceAt renders the not-found answer, so that no branch can quote the
+// caller's URI back raw by forgetting to.
+//
+// The URI arrives off the JSON body, where nothing bounds it but the transport's
+// megabyte cap, and the answer lands in a transcript whose later prompts the same
+// run reads. Raw, it carried both an unbounded write and a character the reader
+// treats as a line ending. Bounded and escaped, it still says which URI was
+// asked for — which is the whole value of naming it.
+//
+// Every branch that answers not-found answers IDENTICALLY on purpose: an unknown
+// URI, one this caller's scopes do not reach, one the provider does not serve,
+// and an app document on a surface not offering apps. A caller must not be able
+// to tell "does not exist" from "not yours".
+func noResourceAt(uri string) string {
+	return "no resource at " + httperr.QuoteCaller(uri)
 }
 
 // isAppDocument reports whether a document is an interactive view.

@@ -22,13 +22,16 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -52,12 +55,27 @@ type SuppressInput struct {
 	Reason string
 }
 
-// suppressibleKind is the one kind a seat may write.
+// The kinds a seat may write, and the two are a different shape of thing.
 //
-// A rep relaying "please stop emailing me" is recording the SUBJECT'S request,
-// not adjudicating an Art. 21 objection or a statutory restriction — those two
-// carry legal consequences a phone call does not establish, and a hard bounce
-// is a fact about a mailbox that only the mail path can observe.
+// subject_request is "they asked us to stop contacting them" — broad, and the
+// scope the subject actually named is whatever the rep was told.
+//
+// marketing_objection is Art. 21(2)/(3): an objection to direct marketing. It
+// is deliberately writable BY HAND, because the article gives the subject an
+// unconditional right exercised "at any time" and by any means. Requiring a
+// signed form or a self-service link before one could be recorded would put a
+// condition on an unconditional right, and the practical effect was worse than
+// the theory: nothing wrote this kind at all, so a rep told "stop the
+// newsletter" on the phone had only subject_request — which stopped the
+// invoices too.
+//
+// A processing restriction and a hard bounce stay machine-written: the first is
+// an Art. 18 legal state with its own workflow, the second a fact about a
+// mailbox only the mail path can observe.
+var suppressibleKinds = []string{"subject_request", commsauthz.ReasonObjection}
+
+// suppressibleKind is the kind a seat writes when the subject asked to stop
+// being contacted at all, as opposed to objecting to marketing.
 const suppressibleKind = "subject_request"
 
 // auditFieldKind is the wire request body's own field name, named so a
@@ -96,11 +114,11 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 	if err != nil {
 		return subject{}, "", err
 	}
-	if in.Kind != suppressibleKind {
+	if !slices.Contains(suppressibleKinds, in.Kind) {
 		return subject{}, "", &ValidationError{
 			Field: auditFieldKind,
-			Reason: "a person may record that the subject asked us to stop; an objection, a " +
-				"processing restriction and a bounce are not recorded by hand here",
+			Reason: "a person may record that the subject asked us to stop, or objected to " +
+				"marketing; a processing restriction and a bounce are not recorded by hand here",
 		}
 	}
 	// The BOUND only. The contract makes this reason optional (`required: [kind]`),
@@ -117,7 +135,66 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
 		return subject{}, "", err
 	}
-	return sub, authorityOf(ctx), nil
+	return sub, levelFor(ctx, in.Kind), nil
+}
+
+// survivingSubject resolves a person to whichever record survives them, so a
+// stop always lands where the send path will read it.
+//
+// One hop, not a walk. The merge writes merged_into_id to the SURVIVOR, and a
+// survivor that is itself later merged has its own stops carried on by that
+// merge — so the chain is maintained by the carry rather than followed here.
+func survivingSubject(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, error) {
+	var canonical ids.UUID
+	err := tx.QueryRow(ctx,
+		`SELECT coalesce(merged_into_id, id) FROM person WHERE id = $1`, id).Scan(&canonical)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// A person who does not exist answers ErrNotFound, the same as one this
+		// caller may not see. EnsureWritable below would have said so anyway;
+		// this read runs first, so it has to keep the same silence rather than
+		// turn "no such row" into a distinguishable error.
+		return ids.UUID{}, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return ids.UUID{}, fmt.Errorf("consent: resolving the person a stop belongs to: %w", err)
+	}
+	return canonical, nil
+}
+
+// levelFor answers whose decision this stop is, which is what decides who may
+// later lift it.
+//
+// AN OBJECTION IS THE SUBJECT'S ACT, whoever typed it. Art. 21 gives the right
+// to the data subject; a rep relaying the phone call is a courier, not the
+// author, and recording their seat level would let another seat of equal or
+// greater rank lift a stop the subject asked for. CanOverrule refuses to rank
+// anything above LevelSubject, so stamping it here is what makes the objection
+// hold against the whole staff.
+//
+// THE COST IS REAL AND CURRENTLY WORSE THAN THE DESIGN INTENDS. The plan has a
+// subject-initiated reversal and a per-message exception path; NEITHER EXISTS
+// YET. PublicSaveChoices writes person_consent and never touches this table, so
+// today a mistyped objection is undone by a database correction and nothing
+// else.
+//
+// Shipping it anyway, because the alternative was worse in the direction that
+// matters: with no writer at all, a rep told "stop the newsletter" recorded a
+// subject_request, which stopped that person's invoices. A stop too hard to
+// lift is an awkward conversation. A stop too easy to lift is mail somebody
+// explicitly refused, and one that was never recordable is both.
+//
+// The reversal path is the slice that closes this; the door's own description
+// in crm.yaml says plainly that nothing lifts one today, so nobody records one
+// expecting an undo button.
+//
+// subject_request keeps the seat's own level: it is the rep's report of a
+// conversation, with no article behind it, and an admin correcting a
+// misheard "stop everything" should not need the subject on the phone.
+func levelFor(ctx context.Context, kind string) commsauthz.AuthorityLevel {
+	if kind == commsauthz.ReasonObjection {
+		return commsauthz.LevelSubject
+	}
+	return authorityOf(ctx)
 }
 
 // authorityOf reads the caller's tier from the authenticated principal.
@@ -140,6 +217,22 @@ func authorityOf(ctx context.Context) commsauthz.AuthorityLevel {
 func (s *Store) suppressAdmittedTx(
 	ctx context.Context, tx pgx.Tx, in SuppressInput, sub subject, level commsauthz.AuthorityLevel,
 ) error {
+	// SERIALISED WITH THE OTHER WRITERS OF THIS SUBJECT'S STOPS, which before
+	// this call was nobody: this insert took no lock, so a merge carrying the
+	// subject's stops onto a survivor could read "no stops here" while this
+	// transaction was moments from committing one. The stop then existed only
+	// on the record the merge retired, which no send evaluates. Taking the same
+	// lock the lift and the carry take makes the three queue.
+	//
+	// BEFORE EnsureWritable, and that order is the whole of it. EnsureWritable
+	// reads the person row, and a merge holds that row locked while it reaches
+	// for this same advisory lock. Taking them the other way round inverts the
+	// order between the two transactions and Postgres reports a deadlock — it
+	// did, in TestAStopRecordedDuringAMergeStillReachesTheSurvivor, which is
+	// why the lock is the first thing this function does.
+	if err := lockSubjectSuppressions(ctx, tx, sub.id); err != nil {
+		return err
+	}
 	// auth.EnsureWritable, the same probe recordAdmittedTx runs for a
 	// withdrawal — row scope, capture privacy and write authority together. A
 	// bare existence check would let somebody stop a contact they cannot open:
@@ -153,6 +246,25 @@ func (s *Store) suppressAdmittedTx(
 	if err := auth.EnsureWritable(ctx, tx, sub.entityType, sub.id); err != nil {
 		return err
 	}
+	// SETTLED AGAINST A MERGE, for the reason PromotePersonCohortTx settles the
+	// person a cohort belongs to: no reader of communication_suppression walks
+	// merged_into_id, so a stop written onto a retired id sits on a record no
+	// send evaluates. The merge that retired it has already carried the stops
+	// it could see; one recorded a moment later would otherwise be lost, which
+	// is the orphaned-stop defect arriving through the back door.
+	//
+	// AFTER EnsureWritable, which is what bounds this read: the caller has just
+	// been shown to reach the row they named, so following its merge pointer
+	// discloses nothing they could not already see. Reading first would answer
+	// "which record survives this one" to somebody with no claim on either.
+	//
+	// The lock above is what makes the answer trustworthy: a merge naming this
+	// person is either committed before it, and visible here, or has not begun.
+	subjectID, err := survivingSubject(ctx, tx, sub.id)
+	if err != nil {
+		return err
+	}
+	sub.id = subjectID
 	// storekit.CapturedBy, which is the write shape's own reader: it resolves
 	// the authenticated principal to the string every audited table stores, so
 	// a suppression names its author the same way every other row does.

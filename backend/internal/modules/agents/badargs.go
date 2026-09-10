@@ -104,10 +104,9 @@ const maxBadArgsDetail = 200
 // own argument names and is mostly their words, so 200 is generous. A
 // classified fault's detail is OURS: it names what was refused and then, for
 // every closed vocabulary on this surface, lists the whole set that would have
-// worked. Sharing one figure meant the set was measured against a budget sized
-// for something else, and it lost: a report's block grammar never reached a
-// caller at all, and the analytics populations arrived cut mid-name — worse than
-// absent, because a truncated list reads as a complete one.
+// worked. A set measured against a budget sized for an argument-name echo does
+// not fit, and a truncated set is worse than an absent one — it reads as
+// complete, so a caller stops looking for what was removed.
 //
 // The caller's share of one of these is bounded at its SOURCE
 // (httperr.QuoteCaller), so this figure is spent on our own text rather than on
@@ -205,6 +204,20 @@ func boundDetail(s string, n int) string {
 	return s[:cut] + "…"
 }
 
+// invalidByteAt says whether the byte at i is one UTF-8 cannot decode, as
+// opposed to the first byte of a legitimately encoded U+FFFD.
+//
+// The two are indistinguishable to a range loop — both yield RuneError — and
+// telling them apart by re-validating the single byte gets it WRONG for the
+// legitimate one: the lead byte of U+FFFD (0xEF) is not valid UTF-8 on its own,
+// so a caller who sent a replacement character had it reported back as a bare
+// \xef with its two continuation bytes dropped. The decode WIDTH is what
+// separates them: one byte means the decoder gave up, three means it succeeded.
+func invalidByteAt(s string, i int) bool {
+	_, size := utf8.DecodeRuneInString(s[i:])
+	return size == 1
+}
+
 // echoSafe prepares caller-authored text for a tool result: bounded, and with
 // everything that does not PRINT rendered as a visible escape.
 //
@@ -238,12 +251,20 @@ func echoSafe(s string, n int) string {
 			b.WriteString(`\r`)
 		case r == '\t':
 			b.WriteString(`\t`)
-		case r == utf8.RuneError && !utf8.ValidString(s[i:i+1]):
+		case r == utf8.RuneError && invalidByteAt(s, i):
 			// A byte that is not UTF-8 at all. Ranging yields RuneError for it,
-			// which IS printable, so writing the rune back would silently
-			// replace the caller's byte with U+FFFD and report a name they did
-			// not send. The byte itself is what they sent.
+			// which IS printable, so writing the rune back would replace the
+			// caller's byte with U+FFFD and report a name they did not send.
 			fmt.Fprintf(&b, `\x%02x`, s[i])
+		case !unicode.IsPrint(r) && r > 0xFFFF:
+			// An UNPRINTABLE rune above the BMP, and the printability test comes
+			// first for a reason: an emoji and a CJK extension character are
+			// both astral AND printable, so escaping every astral rune would
+			// mangle a real name. `\u` takes no more than four digits, so
+			// `\ue0020` for U+E0020 is not a legal escape anywhere and reads as
+			// `\ue002` followed by a `0` — and U+E0000..U+E007F is the tag block
+			// used to smuggle invisible text.
+			fmt.Fprintf(&b, `\U%08x`, r)
 		case !unicode.IsPrint(r):
 			fmt.Fprintf(&b, `\u%04x`, r)
 		default:

@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { useT } from "../../i18n";
+import { WriteRefused } from "../common";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
 import { CompanyStep } from "../onboarding-company-form";
 import { ManualCompanyInterview } from "../onboarding-manual-interview";
@@ -184,36 +184,41 @@ export function CompanyActArtifact(props: CompanyActArtifactProps) {
   );
 }
 
-// What the pane says about the press it just refused. `alert`, not `status`:
-// the reader pressed Continue and nothing happened, so this interrupts —
-// exactly the case the Callout contract reserves it for. The action beside it
-// is the one look that can end the state named, where there is one; where
-// Continue is blocked it IS the route forward, which is why it is the notice
-// that carries it rather than the board's foot bar.
+// What the pane says about the press it just refused: the shared refusal
+// notice, which interrupts because the reader pressed Continue and nothing
+// happened.
+//
+// The action beside it is the one look that can end the state named, where
+// there is one; where Continue is blocked it IS the route forward, which is why
+// it is the notice that carries it rather than the board's foot bar.
+//
+// The wrapper carries the pin. `conversation.css` sticks
+// `.ob-conv-artifact > .ob-conv-refusal` to the pane's head, and the notice
+// itself has no layout hook — a sticky offset belongs to the strip the pane
+// owns rather than to the primitive inside it.
 function RefusalNotice({
   refusal,
 }: Readonly<{ refusal: ConfirmRefusal }>): ReactNode {
   const t = useT();
   return (
-    <Callout
-      tone="warn"
-      live="alert"
-      className="ob-conv-refusal"
-      actions={
-        refusal.retry === null ? undefined : (
-          <Button
-            small
-            variant="ghost"
-            pending={refusal.retry.busy}
-            onClick={refusal.retry.run}
-          >
-            {t("common.retry")}
-          </Button>
-        )
-      }
-    >
-      <p>{refusal.message}</p>
-    </Callout>
+    <div className="ob-conv-refusal">
+      <WriteRefused
+        titleKey="ob.conv.review.refusalTitle"
+        message={refusal.message}
+        actions={
+          refusal.retry === null ? undefined : (
+            <Button
+              small
+              variant="ghost"
+              pending={refusal.retry.busy}
+              onClick={refusal.retry.run}
+            >
+              {t("common.retry")}
+            </Button>
+          )
+        }
+      />
+    </div>
   );
 }
 

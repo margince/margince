@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
+import { en } from "../i18n/en";
 import { MirrorUserMapCard } from "./overlay-usermap";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -252,7 +253,10 @@ export const DirectoryUnreadable: Story = {
     const canvas = within(canvasElement);
     const mapButtons = await canvas.findAllByRole("button", { name: "Map" });
     await userEvent.click(mapButtons[0]);
-    await screen.findByText(/could not be read/);
+    // The HEADING, read out of the catalog: the server's own detail under it
+    // says "the HubSpot directory could not be read" too, so a regex spanning
+    // both matches twice and rejects.
+    await screen.findByText(en["overlay.userMap.directoryFailedTitle"]);
   },
 };
 

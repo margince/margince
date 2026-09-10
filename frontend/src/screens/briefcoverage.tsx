@@ -33,16 +33,30 @@ export function BriefCoverage({ day }: Readonly<{ day: Worklist }>) {
     return null;
   }
   return (
-    <Callout tone="info" className="brief-notice brief-coverage">
+    // `.brief-notice` is the BRIEF PAGE's rhythm — `.brief-wrap >
+    // .brief-notice + .brief-notice` spaces this against the changed-since
+    // strip beside it (brief.css) — so it sits on a wrapper the page owns, and
+    // the disclosure stands OUTSIDE the notice: a callout's body is prose, and
+    // a container holding a FactList behind a control was this primitive doing
+    // a section's job.
+    <div className="brief-notice brief-coverage">
       {/* The refusals first and outside the disclosure: a source the reader may
           not see at all is a fact about their day, not a detail to expand. A
           bounded source is the detail — the page did read it, and there is
           simply more behind it. */}
-      {missing.map((source) => (
-        <p key={source.source} className="t-caption">
-          {sourceUnavailableText(source, t)}
-        </p>
-      ))}
+      {missing.length > 0 && (
+        <Callout
+          tone="info"
+          kind="standing"
+          title={t("brief.coverage.unavailable")}
+        >
+          <ul>
+            {missing.map((source) => (
+              <li key={source.source}>{sourceUnavailableText(source, t)}</li>
+            ))}
+          </ul>
+        </Callout>
+      )}
       {/* The summary names what is behind it rather than restating the
           caveat. Brief already carries that sentence, on the readings strip's
           own floor slot where it qualifies the figures it is about — and this
@@ -68,6 +82,6 @@ export function BriefCoverage({ day }: Readonly<{ day: Worklist }>) {
           />
         </Disclosure>
       )}
-    </Callout>
+    </div>
   );
 }

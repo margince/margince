@@ -21,25 +21,6 @@
   gap: var(--space-5);
   min-width: 0;
 }
-/* A glance pane's head is its first LINE, not a band: the title in the display
-   face, whatever count it carries on the same baseline, and the way to the
-   rest of it at the row's end as a TEXT link — a column of bordered buttons
-   down the right of four panes read as four controls before it read as four
-   heads (DESIGN.md §7). The body follows on the same ground with no rule
-   between. */
-.co-glance-cols .panel > .panel-head {
-  min-height: 0;
-  align-items: baseline;
-  padding-top: var(--padPanel);
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-/* One rung up from a card title: a glance pane is a section of the account's
-   own reading rather than one card among many, and at the card size the four
-   heads sat under the 360 without leading anything. */
-.co-glance-cols .panel > .panel-head .panel-title {
-  font-size: var(--fs-h2);
-}
 /* One column as soon as two would squeeze a list to nothing. Measured against
    the STACK these columns sit in (company360.css's `.co-overview-stack`), not
    the window and not the `work` container: `work` is the record's whole

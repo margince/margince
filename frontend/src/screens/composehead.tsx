@@ -256,7 +256,15 @@ export function AddressBlock({
           a warning rather than a refusal: the rep may know something the ledger
           does not, and a bounce is a fact about the past. */}
       {deadRecipients.length > 0 && (
-        <Callout tone="warn" live="status">
+        <Callout
+          tone="warn"
+          kind="standing"
+          // Standing on open, yet it also appears as a rep TYPES a recipient,
+          // and a reader who cannot see the field would otherwise never learn
+          // the address they just added is dead.
+          live="status"
+          title={t("compose.deadRecipientsTitle")}
+        >
           {t("compose.deadRecipients", {
             addresses: deadRecipients.join(", "),
           })}

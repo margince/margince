@@ -51,10 +51,17 @@ func newCountingBlobstore() *countingBlobstore {
 }
 
 func (c *countingBlobstore) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
+	err := c.Store.Put(ctx, key, r, size, contentType)
+	if err != nil {
+		return err
+	}
+	// Recorded only once the write has actually landed: a waiter polling
+	// putCount for a background write-back must see the count rise no
+	// sooner than the bytes it counts are readable back out.
 	c.mu.Lock()
 	c.put = append(c.put, key)
 	c.mu.Unlock()
-	return c.Store.Put(ctx, key, r, size, contentType)
+	return nil
 }
 
 func (c *countingBlobstore) Get(ctx context.Context, key string) (io.ReadCloser, blobstore.Object, error) {
@@ -69,6 +76,19 @@ func (c *countingBlobstore) getCount() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.gets
+}
+
+// putCount reports how many times Put wrote to key so far.
+func (c *countingBlobstore) putCount(key string) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	n := 0
+	for _, k := range c.put {
+		if k == key {
+			n++
+		}
+	}
+	return n
 }
 
 func (c *countingBlobstore) Delete(ctx context.Context, key string) error {

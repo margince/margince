@@ -9,12 +9,13 @@ import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import {
   Button,
+  EmptyState,
   Field,
   OverflowMenu,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { Callout, type CalloutTone } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -59,7 +60,10 @@ export function DealRoomPage({ dealId }: Readonly<{ dealId: string }>) {
         {room ? (
           <RoomPage room={room} dealId={dealId} />
         ) : roomQuery.isSuccess ? (
-          <Callout tone="info">{t("roompage.none")}</Callout>
+          // No room YET, the one thing an empty state may claim.
+          <EmptyState>
+            <p>{t("roompage.none")}</p>
+          </EmptyState>
         ) : null}
       </QueryStates>
     </div>
@@ -212,6 +216,18 @@ function ViewAsBuyerButton({ room }: Readonly<{ room: DealRoom }>) {
   );
 }
 
+/**
+ * One band for every standing state of a room: five that differed only in tone
+ * and wording had each drawn their own. `standing`, and so silent — the state
+ * is true as the page renders — and the claim IS the notice, with no body.
+ */
+function StateNotice({
+  tone,
+  claim,
+}: Readonly<{ tone?: CalloutTone; claim: string }>) {
+  return <Callout tone={tone} kind="standing" title={claim} />;
+}
+
 // The state, said in the words a rep needs: what the buyer sees right now,
 // and the way back where there is one.
 function StateBanner({ room }: Readonly<{ room: DealRoom }>) {
@@ -220,20 +236,22 @@ function StateBanner({ room }: Readonly<{ room: DealRoom }>) {
   const recordZone = useRecordZone();
   switch (room.state) {
     case "paused":
-      return <Callout tone="warn">{t("roompage.banner.paused")}</Callout>;
+      return <StateNotice tone="warn" claim={t("roompage.banner.paused")} />;
     case "closed":
-      return <Callout tone="info">{t("roompage.banner.closed")}</Callout>;
+      return <StateNotice claim={t("roompage.banner.closed")} />;
     case "expired":
-      return <Callout tone="warn">{t("roompage.banner.expired")}</Callout>;
+      return <StateNotice tone="warn" claim={t("roompage.banner.expired")} />;
     case "archived":
-      return <Callout tone="danger">{t("roompage.banner.archived")}</Callout>;
+      return (
+        <StateNotice tone="danger" claim={t("roompage.banner.archived")} />
+      );
     default:
       return room.expires_at ? (
-        <Callout tone="info">
-          {t("roompage.banner.liveUntil", {
+        <StateNotice
+          claim={t("roompage.banner.liveUntil", {
             when: formatDateAbbrev(room.expires_at, locale, recordZone),
           })}
-        </Callout>
+        />
       ) : null;
   }
 }

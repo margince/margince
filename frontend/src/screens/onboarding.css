@@ -545,10 +545,20 @@
   background: var(--bgElevated);
   box-shadow: var(--shadow-card);
 }
-.core-findings > h2 {
+/* The facts block wraps its heading in a <section> of its own, so the card's
+   inset reaches it only if that heading is named here too — a child selector
+   alone left the title printing against the card's border while the grid below
+   it, which pads itself, sat correctly inset. */
+.core-findings > h2,
+.live-fact-preview > h2 {
   margin: var(--space-5) var(--space-5) 0;
   font-family: var(--f-display);
   font-size: var(--fs-h2);
+}
+/* That section already carries the interval to the block above it; the heading
+   adding the card's own top step again would open a second gap. */
+.live-fact-preview > h2 {
+  margin-top: 0;
 }
 .core-findings > p {
   margin: var(--space-1) var(--space-5) 0;

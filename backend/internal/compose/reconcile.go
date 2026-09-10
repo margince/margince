@@ -140,7 +140,32 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 	if err != nil {
 		return fmt.Errorf("compose: marshal follow-up identity: %w", err)
 	}
-	_, _, err = s.svc.StageUnlessDeclined(ctx, approvals.StageInput{
+	// The task proposal records the deal's owner as the human it is FOR, the
+	// same as the drafted reply beside it.
+	//
+	// It is one rep's morning work: the follow-up it asks for lands on their
+	// deal, and approvals narrows a proposal to the seat it names. Staged under
+	// the sweep alone — as this path did — the row named nobody, so it appeared
+	// on every colleague's queue who held the grant, and a manager could answer
+	// a question the rep never saw.
+	//
+	// Only the owner's IDENTITY is needed here, not their authority: nothing in
+	// this staging reads under it. That is why this asks dealOwner rather than
+	// contextFor, which also resolves grants and would refuse a deal whose owner
+	// has since been suspended — a card that should still be filed for them.
+	staged := ctx
+	if s.owner.db != nil {
+		owner, err := s.owner.dealOwner(ctx, dealID)
+		if err != nil {
+			return err
+		}
+		// An unowned deal records nobody, which is what it honestly is: the
+		// proposal stays shared rather than being withheld from everyone.
+		if !owner.IsZero() {
+			staged = onBehalfOf(ctx, owner)
+		}
+	}
+	_, _, err = s.svc.StageUnlessDeclined(staged, approvals.StageInput{
 		Kind:           deals.FollowUpReconcileKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
@@ -248,11 +273,23 @@ func onBehalfOfOwner(sweepCtx, ownerCtx context.Context) context.Context {
 	if !ok || owner.UserID.IsZero() {
 		return sweepCtx
 	}
+	return onBehalfOf(sweepCtx, owner.UserID)
+}
+
+// onBehalfOf stamps one member as the human a staging acts for, leaving the
+// acting principal the sweep's own.
+//
+// Both halves are load-bearing, which is why this is one function rather than a
+// line at each call site. The actor stays the sweep, so the row remains a server
+// proposal with a NULL passport that the release executor may run, and its
+// provenance stays honest — no rep asked for this card. on_behalf_of names who
+// it is FOR, and that is what approvals narrows the decision to.
+func onBehalfOf(sweepCtx context.Context, owner ids.UUID) context.Context {
 	sweep, ok := principal.Actor(sweepCtx)
 	if !ok {
 		return sweepCtx
 	}
-	sweep.OnBehalfOf = owner.UserID
+	sweep.OnBehalfOf = owner
 	return principal.WithActor(sweepCtx, sweep)
 }
 

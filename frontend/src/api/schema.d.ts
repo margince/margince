@@ -9606,7 +9606,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List the workspace's consent purposes (e.g. transactional, marketing_email, profiling). */
+        /**
+         * List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
+         * @description UNPAGED, deliberately. A workspace's consent purposes are configuration — a handful of
+         *     them, set up once — so the answer is the whole set and `page` reports `has_more: false`.
+         *
+         *     It used to declare `cursor` and `limit` and honour neither: `?limit=5` returned the
+         *     catalog, and a caller who sized a page got everything. Nothing was hidden, and nothing
+         *     was kept either. Removing the dial makes the surface true rather than adding paging
+         *     machinery with no user.
+         */
         get: operations["listConsentPurposes"];
         put?: never;
         /** Define a consent purpose. 🟢 admin write. */
@@ -9841,13 +9850,27 @@ export interface paths {
          *     to stop stays stopped until somebody with the authority to lift it says otherwise.
          *
          *     **Who may lift it is part of the record.** The row carries the authority of whoever wrote
-         *     it, taken from the session and never from this body. A rep's row is liftable by an admin
-         *     and not by another rep; nothing an installation can do lifts the subject's own Art. 21
-         *     objection, which is a different kind this door cannot write.
+         *     it, taken from the session and never from this body. A rep's `subject_request` row is
+         *     liftable by an admin and not by another rep.
          *
-         *     The only kind recordable here is `subject_request`. An objection and a processing
-         *     restriction carry legal consequences a relayed phone call does not establish, and a hard
-         *     bounce is a fact about a mailbox only the mail path observes.
+         *     A `marketing_objection` is different: it is recorded at the SUBJECT'S authority whoever
+         *     types it, because Art. 21 gives the right to the data subject and a rep relaying the call
+         *     is a courier rather than its author.
+         *
+         *     **Nothing lifts it today.** No seat outranks the subject, and the subject-initiated
+         *     reversal that would let them take it back is not built yet — the preference centre writes
+         *     consent state and never touches a suppression. Record one only when the person actually
+         *     asked for it: a mistake currently needs a database correction, not a product action.
+         *
+         *     Two kinds are recordable here. `subject_request` is "stop contacting me", and it stops
+         *     every category except the three the controller owes regardless of what the subject wants
+         *     sent: a privacy notice, a security warning, and the confirmation that an opt-out was
+         *     recorded. `marketing_objection` is Art. 21(2) and stops marketing only, so the invoice the
+         *     same person is owed still goes.
+         *
+         *     A processing restriction and a hard bounce are not recordable by hand: the first is an
+         *     Art. 18 legal state with its own workflow, the second a fact about a mailbox only the mail
+         *     path observes.
          */
         post: operations["suppressPerson"];
         delete?: never;
@@ -10633,7 +10656,15 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List the owner's corpus manifest and live meter; source text is never returned. */
+        /**
+         * List the owner's corpus manifest and live meter; source text is never returned.
+         * @description UNPAGED, deliberately, and for the same reason listConsentPurposes is: one voice
+         *     profile's corpus sources are configuration rather than accumulated data, so the answer
+         *     is the whole manifest.
+         *
+         *     It declared `cursor` and `limit` and honoured neither. Removing the dial is free now
+         *     and stops being free once a client depends on the parameter being accepted.
+         */
         get: operations["listVoiceCorpusSources"];
         put?: never;
         /**
@@ -24515,6 +24546,11 @@ export interface components {
              * @description Set on promotion (convenience mirror).
              */
             promoted_person_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Set when this lead was merged away into another, and null otherwise. It is what separates a merged-away lead from a disqualified one — both are archived and neither carries a `promoted_person_id`, so without this a reader can only see that the lead ended, not which of two very different things happened to it. Disqualified says a human judged the lead not worth pursuing; merged says it was the same lead as another one. The id names the survivor to read instead. `person` and `organization` already carry the same field for the same reason.
+             */
+            readonly merged_into_id?: string | null;
             /** Format: date-time */
             promoted_at?: string | null;
             /**
@@ -29212,11 +29248,53 @@ export interface components {
             }[];
         };
         /**
+         * @description What a confirm link answers, which depends on what the link was FOR.
+         *
+         *     A record link asks the person to check what the workspace holds about them; a consent link
+         *     asks one subscription question and must not disclose the record. Those are different
+         *     payloads and this endpoint has always returned both — the schema said only the first, so a
+         *     client that trusted the contract read `provenance` off a body that never carries it and
+         *     crashed on the subscription page.
+         *
+         *     Branch on `kind`. Adding a variant here is a contract change; adding one in the handler
+         *     without one is the defect this union closes.
+         */
+        ConfirmPage: components["schemas"]["RecordConfirmationPage"] | components["schemas"]["SubscriptionConfirmationPage"];
+        /**
+         * @description The answer for a consent link: one named subscription and the person's current answer to it.
+         *
+         *     Deliberately carries NOTHING about the record. The mail said "confirm this subscription", and
+         *     serving the record card here would hand whoever holds the link the person's name, employer,
+         *     address, phone and provenance trail — wider than the mail described and wider than this
+         *     link's own write side allows.
+         */
+        SubscriptionConfirmationPage: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "subscription_confirmation";
+            /** @description The subscription this link is about. */
+            purpose_key: string;
+            /** @description Its published name, for the page to show. */
+            purpose_label: string;
+            /**
+             * @description Their answer today, so somebody who already said yes is not asked as though they had not.
+             * @enum {string}
+             */
+            state: "unknown" | "granted" | "withdrawn";
+        };
+        /**
          * @description One contact's own view of what the workspace holds about them, for the no-login confirm page.
          *     A purpose-built projection and never the Person360 read model, which carries this workspace's
          *     working notes — owner, lifecycle, scores — rather than the subject's own data.
          */
-        ConfirmDetails: {
+        RecordConfirmationPage: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "record_confirmation";
             full_name: string;
             title: string;
             /** @description The current employer, read through the live employment relationship. Not correctable here. */
@@ -41484,13 +41562,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The contact's own view of their record. */
+            /** @description The record card or the subscription question, per the kind discriminator. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ConfirmDetails"];
+                    "application/json": components["schemas"]["ConfirmPage"];
                 };
             };
             404: components["responses"]["NotFound"];
@@ -48246,21 +48324,7 @@ export interface operations {
     };
     listConsentPurposes: {
         parameters: {
-            query?: {
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
-                limit?: components["parameters"]["Limit"];
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -48696,10 +48760,13 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * @description Which stop this is. Only the subject's own request is recordable by hand.
+                     * @description Which stop this is. `subject_request` is "stop contacting me" and reaches every
+                     *     category but the three the controller owes anyway. `marketing_objection` is
+                     *     Art. 21(2), reaches marketing only, and is recorded at the subject's own
+                     *     authority so no seat can lift it.
                      * @enum {string}
                      */
-                    kind: "subject_request";
+                    kind: "subject_request" | "marketing_objection";
                     /**
                      * @description What the person was told, in their words. Stored because a suppression somebody
                      *     later asks to lift is only reviewable if the record says why it was made.
@@ -49811,21 +49878,7 @@ export interface operations {
     };
     listVoiceCorpusSources: {
         parameters: {
-            query?: {
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
-                limit?: components["parameters"]["Limit"];
-            };
+            query?: never;
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */

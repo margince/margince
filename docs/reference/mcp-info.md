@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 75 |
 | Resources | 12 |
-| Tool catalog | 210.4 KB |
+| Tool catalog | 210.5 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 55013 |
+| Approx. wire tokens | 55029 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,7 +29,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 98.3 KB | 46% | **No** — a result's shape, never listed to a model |
+| Output schemas | 98.4 KB | 46% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.8 KB | 24% | Yes, every step |
 | Input schemas | 44.5 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
@@ -5355,7 +5355,7 @@ The difference between two forecast snapshots, classified into named causes. Ope
 
 **Read the forecast**
 
-What a period is expected to close, in four readings. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. Read `eligible_count` against `priced_count` before quoting a total: an unpriced deal is real pipeline contributing zero money. `fx_missing_count` is priced deals no rate could convert — also absent from the totals rather than counted as zero. Quote `as_of`, `timezone` and `base_currency` with the number: a total placed in the reader's own zone is a different total. (Governance: runs immediately; requires passport scope "read".)
+What a period is expected to close, in four readings. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover, and it is absent only when they cover every eligible deal — so quoting a total without it reports a partial pipeline as a complete one. `eligible_count`, `priced_count` and `fx_missing_count` are the counts it is written from. Quote `as_of`, `timezone` and `base_currency` with the number: a total placed in the reader's own zone is a different total. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -5416,6 +5416,9 @@ What a period is expected to close, in four readings. `won` counts deals by the 
         },
         "confirmed_date_count": {
           "type": "integer"
+        },
+        "coverage_note": {
+          "type": "string"
         },
         "current_call": {
           "type": "object"
@@ -9483,14 +9486,14 @@ Fill in what a lead's own data already implies — today the company name, from 
       "maxLength": 255,
       "type": "string"
     },
-    "record_id": {
+    "lead_id": {
       "description": "The lead to qualify",
       "format": "uuid",
       "type": "string"
     }
   },
   "required": [
-    "record_id"
+    "lead_id"
   ],
   "type": "object"
 }

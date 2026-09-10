@@ -1,10 +1,8 @@
 # Make targets
 
-The real Makefile is `backend/Makefile`; the root Makefile delegates the
-backend targets and adds the frontend lane. In `backend/`, `make` (or `make
-help`) lists targets with descriptions. Every target that listing advertises
-also runs as `make <name>` from the repo root, which `make-target-parity`
-enforces — so a command copied out of here works from either directory.
+The real Makefile is `backend/Makefile`; the root one delegates its targets and
+adds the frontend lane. `make help` in `backend/` lists them with descriptions, and
+every one it advertises also runs from the root — `make-target-parity` enforces it.
 
 ## Everyday
 
@@ -153,18 +151,18 @@ deriving it the first time.
 | `bench-perf-check` | The same budgets on the **SMB** tier, writing nothing — what the weekly scheduled workflow runs (needs `db-up`) |
 | `bench-record` | PERF-1/PERF-4: record open and save p50/p95/p99, measured over HTTP against the booted app (needs `db-up`) |
 | `bench-capture` | CAP-PARAM-1: capture-to-timeline latency, 60 s p95, over the auto-create path (needs `db-up`) |
+| `bench-dispatch` | AC-W2: workflow trigger→dispatch p95 against the 200 ms budget (needs `db-up`). Writes no record, AC-W2 having no published budget row, so it is the one `bench-*` target that re-renders nothing |
 | `perfdoc` | Re-render `docs/reference/performance-budgets.md` from the committed benchmark records. Every `bench-*` target runs it as its last step, so the page updates on every measurement; run it alone after editing the published-budget table in `backend/tools/gen-perfdoc` |
 | `tidy` | `go mod tidy` |
 
 ### The `bench` lane — measurements, run by hand
 
-`bench-perf`, `bench-perf-check`, `bench-record` and `bench-capture` all carry
-`//go:build integration && bench`, so **no MERGE gate runs them**: not `make
-check`, not the integration lane. They report
-the numbers behind the budgets `acceptance-standards.md` publishes rather than
-gating a merge on them, which is why each prints p50/p95/p99 beside its budget
-instead of only passing or failing. `bench-mobile` below is the frontend half of
-the same posture.
+`bench-perf`, `bench-perf-check`, `bench-record`, `bench-capture` and
+`bench-dispatch` carry `//go:build integration && bench`, so **no MERGE gate runs
+them**: not `make check`, not the integration lane. They report the numbers behind
+the budgets `acceptance-standards.md` publishes rather than gating on them, which
+is why each prints p50/p95/p99 beside its budget. `bench-mobile` below is the
+frontend half of the same posture.
 
 They are still **type-checked** on every `make check`: both golangci passes carry
 the tag, and `gates/lintbuildtagreach_test.go` fails if either stops. That is load-bearing rather than
@@ -172,7 +170,7 @@ tidiness — nothing scheduled compiles these files, so without it a renamed hel
 would break them silently and nobody would find out until the next person ran a
 benchmark by hand and had to debug the harness instead of reading a number.
 
-Each target's last step re-renders `docs/reference/performance-budgets.md` from
+Each target that publishes a budget re-renders `performance-budgets.md` from
 **every** committed record, not just the one it wrote — so a partial run still
 leaves a complete page, with the rows it did not measure keeping their own dates
 and their own machines. A budget no record covers renders as `not measured`
@@ -199,6 +197,8 @@ number stays a human's act — a machine must never write its own numbers into t
 tree. The write-path regression the standing canary once caught by TIMING OUT
 rather than by measuring is held deterministically now, by the `seq_scan` count
 in `lastactivity_integration_test.go`.
+
+`bench-dispatch` arrived on a `main-health` p95 of 201.63 ms against 200 ms.
 
 ## Root-only (frontend lane)
 
@@ -311,6 +311,8 @@ Neither costs anything to check, and skipping them costs a debugging session.
 |---|---|
 | `test-craft-pin` | Prove the pinned craftsmanship gate is actually pinned: all four platform digests are real sha256s, the resolver yields the gate from its own cache path rather than something found on `PATH`, and the cached binary still matches its digest. A prerequisite of `craft-static`, so it runs wherever the gate runs and nowhere it does not — enrolling it in `ROOT_SCRIPT_GATES` would put a network fetch inside `make check-backend`, whose CI job otherwise never reaches the network and should not start failing on a download flake. It exists because the failure it catches is silent: a resolver that quietly fell back to some other `craft` would turn every craft lane green against an unknown rubric, and nothing downstream could tell |
 | `craft-static` | Full deterministic craftsmanship sweep of `backend/`, `extensions/` and `fixtures/` (each a separate Go module, so `./...` never reaches the latter two), **strict**: BLOCKER and MAJOR findings both fail it, MINOR is advisory. Green — the backlog was cleared to arm this bar. The pre-push hook runs the same bar diff-scoped, and CI's `craftsmanship` job runs this target as a required check. Size ceilings: 80 code lines / 500 file lines for product code, 160 / 1000 for `*_test.go`; a comment-only line is not length, so this check agrees with golangci's `funlen` (`ignore-comments`). Every threshold has a flag: `--max-func-lines`, `--max-file-lines`, `--max-test-func-lines`, `--max-test-file-lines` |
+| `craft-review` | **Opt-in, and the only craft target that is not enforced anywhere.** The model-driven arm: sends this branch's diff (`BASE`, default `origin/main`) to an external model API and reports what a syntax tree cannot see — the judgement calls in the rubric, not the countable properties. No hook runs it, no CI job runs it, and it blocks no push; `craft-static` is the arm that does all three. It calls a paid API and needs `ANTHROPIC_API_KEY`, which nothing sets for you. It **refuses** rather than reporting a pass it did not earn: with no key, and again when the reviewer comes back having skipped — that answer is `verdict: PASS` with an empty findings list, which is indistinguishable from a clean diff, so relaying it would report a clean review to everyone who has not activated it. Result JSON is kept at `.tmp/craft/review-result.json`. **Revisit 2026-12-01**: if nobody has run it by then, delete the arm and correct the two statements in AGENTS.md that describe it — the gate prompt fed from `## Craftsmanship`, and the rubric named as the standard |
+| `test-craft-review` | Prove `craft-review` refuses a reading that did not happen: no key, a result the reviewer skipped, and a blocking verdict it must not swallow — against a real reading it must not refuse, so the refusals are the two cases they name rather than a wrapper that never passes. The reviewer is stubbed: it is an external HTTP boundary, and a test that called it would spend a paid request to assert on a refusal that never gets that far. Pure shell — no network, no key. A `check-backend` gate |
 | `test-desktop-launcher` | The desktop launcher's own suite. `desktop/launcher` is its own module and deliberately outside `go.work` — it supervises the shipped binaries as child processes rather than importing them — so neither the workspace nor `./...` inside `backend` can reach it, and its tests ran nowhere before this lane existed. Runs with `GOWORK=off`, as that module's `go.mod` requires. A `check-backend` prerequisite |
 | `craft-residue` | Fail if any unresolved `CRAFT-FIX`/`CRAFT-DISPUTE` review-loop marker is left in the backend tree. CI's `craft-residue` job runs it on **every** non-draft change, docs included |
 | `secret-scan` | No hardcoded credential reaches `main`: gitleaks over a clean `git archive HEAD` export, policy in `.gitleaks.toml`. Scans the committed tree, not the working tree — gitleaks ignores `.gitignore`, so an in-place scan would read a sibling worktree or your real `.env.local` and differ per machine. Installs nothing on your machine and needs no account: `scripts/gitleaks-pin.sh` fetches the version- and checksum-pinned scanner into `.tmp/` on first use, so the binary — and therefore the verdict — is the one CI's `secret-scan` job runs on every non-draft change |

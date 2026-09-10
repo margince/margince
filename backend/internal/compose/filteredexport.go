@@ -198,6 +198,12 @@ func readRowsByID(ctx context.Context, tx pgx.Tx, table string, columns []string
 	if err := pgRows.Err(); err != nil {
 		return nil, err
 	}
+	// The masks above answer what this ROLE may see of a row. This answers what
+	// THIS READER may see of the rows it names, which is a different question
+	// and the one the export never asked.
+	if err := withholdUnreadableReferences(ctx, tx, table, columns, out); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 

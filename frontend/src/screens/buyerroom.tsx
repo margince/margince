@@ -26,13 +26,12 @@ import "./buyerroom.css";
 
 // The Deal Room as its BUYER sees it — the one screen an outside person ever
 // reaches in this app. Anonymous: no seat, no cookie. The invitation link lands
-// on `#/room?c=<credential>`; the credential comes out of the address bar as the
-// router reads the hash (app/router.tsx's takeHashCredential, which is ahead of
-// every gate that can render instead of this screen), and this screen takes it
-// from there and exchanges it for a room session the tab keeps in
-// sessionStorage and presents as a Bearer on every call. A dead link, a paused
-// room and an expired one each get their own honest screen and their own way
-// back, and none of them names anything the link did not already name.
+// on `#/room?c=<credential>`; the router takes the credential off the hash
+// (app/router.tsx's takeHashCredential, ahead of every gate that can render
+// instead of this screen) and this screen exchanges it for a room session the
+// tab keeps in sessionStorage and presents as a Bearer on every call. A dead
+// link, a paused room and an expired one each get an honest screen and a way
+// back, none naming anything the link did not.
 
 type BuyerRoomView = components["schemas"]["BuyerRoomView"];
 
@@ -93,11 +92,10 @@ function retireOnRefusal(onSessionLost: () => void) {
 export function BuyerRoomScreen() {
   // Read at mount AND whenever the address changes to carry a new one.
   //
-  // A SECOND link pasted into a tab already sitting on #/room changes only the
-  // hash, which React does not treat as a new mount. Reading once meant that
-  // link was ignored and the tab went on presenting whatever session it already
-  // held, including a dead one: the buyer sees "Nothing published yet" for a
-  // room that has published, and concludes the link is broken.
+  // A SECOND link pasted into a tab already on #/room changes only the hash,
+  // which React does not treat as a new mount. Read once, that link is ignored
+  // and the tab keeps whatever session it holds, including a dead one: the
+  // buyer sees "Nothing published yet" and concludes the link is broken.
   const [credential, setCredential] = useState(() =>
     takeHashCredential(ROOM_ROUTE),
   );
@@ -139,40 +137,36 @@ export function BuyerRoomScreen() {
   });
 
   // A fresh link outranks a kept session: the person clicked it on purpose.
-  // Exchanged at most ONCE per mount, held in a ref rather than in state:
-  // the credential is single-use, and an effect that runs twice (StrictMode
-  // replays mount effects in development) would consume it on the first run
-  // and be refused on the second, showing a dead-link page for a live link.
-  //
-  // The token is taken from the promise rather than from an onSuccess option:
-  // the replayed mount unsubscribes the first observer, and an option callback
-  // on an observer nobody listens to never runs.
+  // Exchanged at most ONCE per mount, held in a ref rather than in state: the
+  // credential is single-use, and an effect that runs twice (StrictMode replays
+  // mount effects in development) would spend it on the first run and be
+  // refused on the second, showing a dead-link page for a live link. The token
+  // comes off the promise rather than an onSuccess option, because the replayed
+  // mount unsubscribes the first observer and an option callback on an observer
+  // nobody listens to never runs.
   const exchangeAsync = exchange.mutateAsync;
   // Every credential this tab has ALREADY spent, not merely the last one. A
-  // link is single-use, so A → B → A must not send A a second time: the server
-  // refuses the replay, and the refusal would then displace the working session
-  // B had just opened.
+  // link is single-use, so A → B → A must not send A twice: the server refuses
+  // the replay, and that refusal would displace the session B just opened.
   const spent = useRef(new Set<string>());
-  // Which credential the tab is currently exchanging. A reply that arrives for
-  // anything else is a superseded link answering late, and must not touch the
-  // session — two links pasted in quick succession would otherwise race, and
-  // whichever answered last would win regardless of which the person meant.
+  // Which credential the tab is currently exchanging. A reply for anything else
+  // is a superseded link answering late and must not touch the session — two
+  // links pasted in quick succession would race, and whichever answered last
+  // would win regardless of which the person meant.
   const awaiting = useRef<string | null>(null);
   useEffect(() => {
     if (!credential || spent.current.has(credential)) {
       return;
     }
     spent.current.add(credential);
-    // Out of the router's memory as well, which is where the address used to
-    // hold it: this tab is spending it now, and a remount that found it there
-    // would spend it again and be refused for a session that is working.
+    // Out of the router's memory as well: this tab is spending it now, and a
+    // remount that found it there would spend it again and be refused.
     forgetHashCredential(ROOM_ROUTE, credential);
     awaiting.current = credential;
     // The session the tab already holds is KEPT while the new link is checked.
-    // Clearing it first showed the dead-link page over a room the person could
-    // still read whenever the new link turned out to be expired — and a refresh
-    // then brought that room back from storage, which is a different answer to
-    // the same question a moment apart.
+    // Cleared first, an expired new link drew the dead-link page over a room
+    // the person could still read, and a refresh brought it back from storage —
+    // two answers to one question a moment apart.
     setRefusal(null);
     exchangeAsync(credential).then(
       (issued) => {
@@ -293,7 +287,11 @@ function LinkRequest() {
   });
   if (request.isSuccess) {
     return (
-      <Callout tone="success" live="status">
+      <Callout
+        tone="success"
+        kind="outcome"
+        title={t("buyer.linkRequestedTitle")}
+      >
         {t("buyer.linkRequested")}
       </Callout>
     );
@@ -448,12 +446,11 @@ type BuyerRoomDocument = components["schemas"]["BuyerRoomDocument"];
 
 // The buyer's one verb on a document: take a copy of it.
 //
-// There is no "confirm this version" and no "request changes". Sharing a
-// document with a buyer is sharing it — asking them to formally accept each
-// file turns a room into an approval queue nobody asked for, and the buyer
-// reading "Confirm this version" under a transcript cannot tell what they
-// would be agreeing to. Anything they want to say about a document they say in
-// the thread under it, which is the whole point of the board.
+// No "confirm this version" and no "request changes". Asking a buyer to
+// formally accept each file turns a room into an approval queue nobody asked
+// for, and one reading "Confirm this version" under a transcript cannot tell
+// what they would be agreeing to. What they want to say goes in the thread
+// under it, which is the whole point of the board.
 function BuyerDocumentVerbs({
   token,
   doc,
@@ -461,10 +458,9 @@ function BuyerDocumentVerbs({
   const t = useT();
   const download = useMutation({
     mutationKey: ["buyer-room-document-download"],
-    // The failure line rides as a mutation VARIABLE rather than being read off
-    // `t` inside the function. A mutationFn is re-armed in a passive effect, so
-    // a closure read here is the render-before-last's — for a translator that
-    // means the locale the reader has just left.
+    // The failure line rides as a mutation VARIABLE rather than off `t` inside
+    // the function: a mutationFn is re-armed in a passive effect, so a closure
+    // read here is the render-before-last's — the locale just left behind.
     mutationFn: async (input: {
       documentId: string;
       filename: string;
@@ -655,17 +651,16 @@ const ACCESS_TITLE: Record<string, MessageKey> = {
   expired: "buyer.expiredTitle",
 };
 
-// Why this reader may not write in the conversation, in the order that
-// binds first: a preview never writes, a room that is not open takes nothing
-// more, a read-only seat may only read. Undefined when they may.
+// Why this reader may not write in the conversation, in the order that binds
+// first: a preview never writes, a room that is not open takes nothing more, a
+// read-only seat may only read. Undefined when they may.
 //
 // The access test names the ONE state that admits a write rather than the
 // states that refuse one. `BuyerRoomAccess` is a plain string on the wire, not
-// a union, so the compiler cannot say which values exist and a fifth state
-// added on the server would reach this untouched — listing the refusals means
-// it arrives here writable, which is the wrong way for a write gate to be
-// wrong. `paused` and `expired` do not reach this code today (RoomView answers
-// them with their own screen first), and this does not rely on that.
+// a union, so a fifth state added on the server reaches this untouched —
+// listing the refusals would let it arrive writable, the wrong way for a write
+// gate to be wrong. `paused` and `expired` do not reach this code today
+// (RoomView answers them first), and this does not rely on that.
 function conversationRefusal(
   view: BuyerRoomView,
   t: ReturnType<typeof useT>,
@@ -689,11 +684,9 @@ function conversationRefusal(
 }
 
 // The two access states this page draws a hero for, and what the pill says
-// about each. `BuyerRoomAccess` is a plain string on the wire rather than a
-// closed union, so this names the states it can speak for and stays silent
-// about anything else — a pill is a claim, and a build that has not heard of
-// the state it is describing has no claim to make. `paused` and `expired`
-// never reach here: RoomView answers each with its own screen first.
+// about each. `BuyerRoomAccess` is a plain wire string rather than a closed
+// union, so this names the states it can speak for and stays silent about the
+// rest: a build that has not heard of a state has no claim to make about it.
 const ACCESS_PILL: Record<
   string,
   { label: MessageKey; tone?: "success"; live?: boolean }
@@ -704,9 +697,9 @@ const ACCESS_PILL: Record<
 
 // The buyer's first screenful, and the only part of this page that is the
 // SELLER's rather than the product's: what the room is called, what they wrote
-// to open it, whether it is still taking answers, and who is on the other end.
-// It is a hero rather than a header because this page is the one thing a client
-// ever sees of Margince — a form with a heading on it would be the wrong first
+// to open it, whether it still takes answers, and who is on the other end. A
+// hero rather than a header because this page is the one thing a client ever
+// sees of Margince, and a form with a heading on it would be the wrong first
 // impression of the deal it carries.
 function BuyerHero({
   title,
@@ -750,14 +743,27 @@ function BuyerHero({
 }
 
 // Whom to ask, as a buyer reads it: the seller's own name while their seat
-// stands, and the product's word for "somebody there" when it is gone. Both
+// stands, and the product's word for "somebody there" once it is gone. Both
 // screens that name a steward say it through this, so a room cannot address a
-// buyer to a person on one screen and to nobody on the next.
+// buyer to a person on one and to nobody on the next.
 function stewardLabel(
   name: string | null | undefined,
   t: ReturnType<typeof useT>,
 ): string {
   return name ?? t("buyer.stewardUnknown");
+}
+
+/**
+ * The one preview banner: `RoomView` returns from two branches — the closed
+ * room and the live one — and a copy in each is two places to change.
+ */
+function PreviewBanner() {
+  const t = useT();
+  return (
+    <Callout tone="info" kind="standing" title={t("buyer.previewBannerTitle")}>
+      {t("buyer.previewBanner")}
+    </Callout>
+  );
 }
 
 function RoomView({
@@ -772,19 +778,15 @@ function RoomView({
   const t = useT();
   const steward = stewardLabel(view.steward_name, t);
   // Whether this reader may write is the ANSWER to `conversationRefusal`, not
-  // a second opinion sitting beside it: a reader who was given a reason may
-  // not write, and one who may write has no reason to show. Spelled apart the
-  // two drifted — the refusal named a preview and the write test never
-  // mentioned one, so a preview whose seat carried `comment` would have been
-  // handed a live composer. That combination does not arise today only
-  // because the server mints every preview seat read-only.
+  // a second opinion beside it: a reader given a reason may not write, and one
+  // who may write has no reason to show. Spelled apart the two drifted, and a
+  // preview seat carrying `comment` would have been handed a live composer —
+  // which does not arise today only because every preview seat is read-only.
   const writeRefusal = conversationRefusal(view, t);
   if (view.access === "paused" || view.access === "expired") {
     return (
       <>
-        {view.preview ? (
-          <Callout tone="info">{t("buyer.previewBanner")}</Callout>
-        ) : null}
+        {view.preview ? <PreviewBanner /> : null}
         <Panel title={t(ACCESS_TITLE[view.access])}>
           <PanelBody>
             <p>
@@ -819,9 +821,7 @@ function RoomView({
   }
   return (
     <>
-      {view.preview ? (
-        <Callout tone="info">{t("buyer.previewBanner")}</Callout>
-      ) : null}
+      {view.preview ? <PreviewBanner /> : null}
       <BuyerHero
         title={view.room.title}
         welcome={view.room.welcome_message ?? ""}

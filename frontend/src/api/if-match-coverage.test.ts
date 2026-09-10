@@ -50,7 +50,10 @@ const UNPINNED_WRITES: readonly string[] = [
   // screenful of rows at once, and it was the verb of three in that bar that
   // could not lose a race it should lose.
   "screens/companyheader.tsx DELETE /organizations/{id}",
-  "screens/contacts.tsx DELETE /people/{id}",
+  // PersonEditMergeArchive's own archive, shared by PersonScreen (contacts.tsx)
+  // and PersonPageV2 — the entry moved here with it, the same move merge-org's
+  // own line made out of organizations.tsx.
+  "screens/personeditmergearchive.tsx DELETE /people/{id}",
   "screens/personrail.tsx DELETE /relationships/{id}",
   "screens/relationships.tsx DELETE /relationships/{id}",
   "screens/contractform.tsx PATCH /contracts/{id}",

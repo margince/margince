@@ -34,8 +34,18 @@ import (
 // Asked of the SHAPE rather than of a kind list at each statement, so a kind
 // added to selfOnlyKinds, or a table enrolled in probeOwnerOnly, inherits the
 // narrowing instead of quietly staying shared.
+//
+// It must answer for EVERY kind decidable narrows to a seat, not only the
+// self-only ones. The two run on opposite sides of one row — this when it is
+// written, decidable when it is read — so a kind narrowed on the read side
+// alone still MATCHES across members on the write side, and the mismatch has
+// three shapes, all silent: one seat's pending proposal is joined and handed
+// back to another, a second seat's differing payload supersedes the first's,
+// and one seat's rejection suppresses the other's. Each time, the row that
+// survives names a seat the reader is not, so it is withheld from the very
+// person it was staged for.
 func subjectScopedShape(in StageInput) bool {
-	if selfOnlyKinds[in.Kind] {
+	if selfOnlyKinds[in.Kind] || decidedByTheSeatStagedFor[in.Kind] {
 		return true
 	}
 	var targetType *string

@@ -3751,27 +3751,6 @@ func (e ComputedFieldKind) Valid() bool {
 	}
 }
 
-// Defines values for ConfirmDetailsMarketingState.
-const (
-	ConfirmDetailsMarketingStateGranted   ConfirmDetailsMarketingState = "granted"
-	ConfirmDetailsMarketingStateUnknown   ConfirmDetailsMarketingState = "unknown"
-	ConfirmDetailsMarketingStateWithdrawn ConfirmDetailsMarketingState = "withdrawn"
-)
-
-// Valid indicates whether the value is a known member of the ConfirmDetailsMarketingState enum.
-func (e ConfirmDetailsMarketingState) Valid() bool {
-	switch e {
-	case ConfirmDetailsMarketingStateGranted:
-		return true
-	case ConfirmDetailsMarketingStateUnknown:
-		return true
-	case ConfirmDetailsMarketingStateWithdrawn:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ConnectChannelRequestProvider.
 const (
 	ConnectChannelRequestProviderTelegram ConnectChannelRequestProvider = "telegram"
@@ -10534,6 +10513,42 @@ func (e RecordClaimRecordType) Valid() bool {
 	}
 }
 
+// Defines values for RecordConfirmationPageKind.
+const (
+	RecordConfirmation RecordConfirmationPageKind = "record_confirmation"
+)
+
+// Valid indicates whether the value is a known member of the RecordConfirmationPageKind enum.
+func (e RecordConfirmationPageKind) Valid() bool {
+	switch e {
+	case RecordConfirmation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordConfirmationPageMarketingState.
+const (
+	RecordConfirmationPageMarketingStateGranted   RecordConfirmationPageMarketingState = "granted"
+	RecordConfirmationPageMarketingStateUnknown   RecordConfirmationPageMarketingState = "unknown"
+	RecordConfirmationPageMarketingStateWithdrawn RecordConfirmationPageMarketingState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the RecordConfirmationPageMarketingState enum.
+func (e RecordConfirmationPageMarketingState) Valid() bool {
+	switch e {
+	case RecordConfirmationPageMarketingStateGranted:
+		return true
+	case RecordConfirmationPageMarketingStateUnknown:
+		return true
+	case RecordConfirmationPageMarketingStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordConsentRequestNewState.
 const (
 	RecordConsentRequestNewStateGranted   RecordConsentRequestNewState = "granted"
@@ -12295,6 +12310,42 @@ func (e StartBackfillRequestWindow) Valid() bool {
 	}
 }
 
+// Defines values for SubscriptionConfirmationPageKind.
+const (
+	SubscriptionConfirmation SubscriptionConfirmationPageKind = "subscription_confirmation"
+)
+
+// Valid indicates whether the value is a known member of the SubscriptionConfirmationPageKind enum.
+func (e SubscriptionConfirmationPageKind) Valid() bool {
+	switch e {
+	case SubscriptionConfirmation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubscriptionConfirmationPageState.
+const (
+	SubscriptionConfirmationPageStateGranted   SubscriptionConfirmationPageState = "granted"
+	SubscriptionConfirmationPageStateUnknown   SubscriptionConfirmationPageState = "unknown"
+	SubscriptionConfirmationPageStateWithdrawn SubscriptionConfirmationPageState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the SubscriptionConfirmationPageState enum.
+func (e SubscriptionConfirmationPageState) Valid() bool {
+	switch e {
+	case SubscriptionConfirmationPageStateGranted:
+		return true
+	case SubscriptionConfirmationPageStateUnknown:
+		return true
+	case SubscriptionConfirmationPageStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TagColor.
 const (
 	TagColorAmber  TagColor = "amber"
@@ -13755,22 +13806,22 @@ func (e VoiceProfileEvaluationRepeatsPerPrompt) Valid() bool {
 
 // Defines values for VoiceProfileVersionReason.
 const (
-	VoiceProfileVersionReasonAutomatic  VoiceProfileVersionReason = "automatic"
-	VoiceProfileVersionReasonManual     VoiceProfileVersionReason = "manual"
-	VoiceProfileVersionReasonOnboarding VoiceProfileVersionReason = "onboarding"
-	VoiceProfileVersionReasonRollback   VoiceProfileVersionReason = "rollback"
+	Automatic  VoiceProfileVersionReason = "automatic"
+	Manual     VoiceProfileVersionReason = "manual"
+	Onboarding VoiceProfileVersionReason = "onboarding"
+	Rollback   VoiceProfileVersionReason = "rollback"
 )
 
 // Valid indicates whether the value is a known member of the VoiceProfileVersionReason enum.
 func (e VoiceProfileVersionReason) Valid() bool {
 	switch e {
-	case VoiceProfileVersionReasonAutomatic:
+	case Automatic:
 		return true
-	case VoiceProfileVersionReasonManual:
+	case Manual:
 		return true
-	case VoiceProfileVersionReasonOnboarding:
+	case Onboarding:
 		return true
-	case VoiceProfileVersionReasonRollback:
+	case Rollback:
 		return true
 	default:
 		return false
@@ -16332,12 +16383,15 @@ func (e ListPeopleParamsTagMode) Valid() bool {
 
 // Defines values for SuppressPersonJSONBodyKind.
 const (
-	SubjectRequest SuppressPersonJSONBodyKind = "subject_request"
+	MarketingObjection SuppressPersonJSONBodyKind = "marketing_objection"
+	SubjectRequest     SuppressPersonJSONBodyKind = "subject_request"
 )
 
 // Valid indicates whether the value is a known member of the SuppressPersonJSONBodyKind enum.
 func (e SuppressPersonJSONBodyKind) Valid() bool {
 	switch e {
+	case MarketingObjection:
+		return true
 	case SubjectRequest:
 		return true
 	default:
@@ -16413,16 +16467,16 @@ func (e SubmitConfirmDetailsJSONBodyMarketingChoice) Valid() bool {
 
 // Defines values for UpdatePreferencesJSONBodyChoicesState.
 const (
-	Granted   UpdatePreferencesJSONBodyChoicesState = "granted"
-	Withdrawn UpdatePreferencesJSONBodyChoicesState = "withdrawn"
+	UpdatePreferencesJSONBodyChoicesStateGranted   UpdatePreferencesJSONBodyChoicesState = "granted"
+	UpdatePreferencesJSONBodyChoicesStateWithdrawn UpdatePreferencesJSONBodyChoicesState = "withdrawn"
 )
 
 // Valid indicates whether the value is a known member of the UpdatePreferencesJSONBodyChoicesState enum.
 func (e UpdatePreferencesJSONBodyChoicesState) Valid() bool {
 	switch e {
-	case Granted:
+	case UpdatePreferencesJSONBodyChoicesStateGranted:
 		return true
-	case Withdrawn:
+	case UpdatePreferencesJSONBodyChoicesStateWithdrawn:
 		return true
 	default:
 		return false
@@ -21211,27 +21265,6 @@ type ConfirmCompanySiteReadRequest struct {
 	SelectedFactKeys []string `json:"selected_fact_keys"`
 }
 
-// ConfirmDetails One contact's own view of what the workspace holds about them, for the no-login confirm page.
-// A purpose-built projection and never the Person360 read model, which carries this workspace's
-// working notes — owner, lifecycle, scores — rather than the subject's own data.
-type ConfirmDetails struct {
-	// Company The current employer, read through the live employment relationship. Not correctable here.
-	Company  string `json:"company"`
-	Email    string `json:"email"`
-	FullName string `json:"full_name"`
-
-	// MarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
-	MarketingState ConfirmDetailsMarketingState `json:"marketing_state"`
-	Phone          string                       `json:"phone"`
-
-	// Provenance Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.
-	Provenance []ConfirmFieldOrigin `json:"provenance"`
-	Title      string               `json:"title"`
-}
-
-// ConfirmDetailsMarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
-type ConfirmDetailsMarketingState string
-
 // ConfirmFieldOrigin One line of where a held value came from, for the Art. 14 disclosure on the confirm page.
 type ConfirmFieldOrigin struct {
 	Field string `json:"field"`
@@ -21239,6 +21272,20 @@ type ConfirmFieldOrigin struct {
 	// RecordedAt The date the value was recorded, as YYYY-MM-DD.
 	RecordedAt string `json:"recorded_at"`
 	Source     string `json:"source"`
+}
+
+// ConfirmPage What a confirm link answers, which depends on what the link was FOR.
+//
+// A record link asks the person to check what the workspace holds about them; a consent link
+// asks one subscription question and must not disclose the record. Those are different
+// payloads and this endpoint has always returned both — the schema said only the first, so a
+// client that trusted the contract read `provenance` off a body that never carries it and
+// crashed on the subscription page.
+//
+// Branch on `kind`. Adding a variant here is a contract change; adding one in the handler
+// without one is the defect this union closes.
+type ConfirmPage struct {
+	union json.RawMessage
 }
 
 // ConfirmRequestIssued A confirm link that now exists, and whether a message carrying it was queued. What
@@ -25599,6 +25646,9 @@ type Lead struct {
 
 	// LinkedinUrl Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key.
 	LinkedinUrl *string `json:"linkedin_url,omitempty"`
+
+	// MergedIntoId Set when this lead was merged away into another, and null otherwise. It is what separates a merged-away lead from a disqualified one — both are archived and neither carries a `promoted_person_id`, so without this a reader can only see that the lead ended, not which of two very different things happened to it. Disqualified says a human judged the lead not worth pursuing; merged says it was the same lead as another one. The id names the survivor to read instead. `person` and `organization` already carry the same field for the same reason.
+	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
 
 	// NextTaskDueAt Due time of the earliest open task linked to this lead; undated tasks follow dated ones.
 	NextTaskDueAt *time.Time `json:"next_task_due_at,omitempty"`
@@ -31646,6 +31696,31 @@ type RecordClaim struct {
 // RecordClaimRecordType defines model for RecordClaim.RecordType.
 type RecordClaimRecordType string
 
+// RecordConfirmationPage One contact's own view of what the workspace holds about them, for the no-login confirm page.
+// A purpose-built projection and never the Person360 read model, which carries this workspace's
+// working notes — owner, lifecycle, scores — rather than the subject's own data.
+type RecordConfirmationPage struct {
+	// Company The current employer, read through the live employment relationship. Not correctable here.
+	Company  string                     `json:"company"`
+	Email    string                     `json:"email"`
+	FullName string                     `json:"full_name"`
+	Kind     RecordConfirmationPageKind `json:"kind"`
+
+	// MarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
+	MarketingState RecordConfirmationPageMarketingState `json:"marketing_state"`
+	Phone          string                               `json:"phone"`
+
+	// Provenance Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.
+	Provenance []ConfirmFieldOrigin `json:"provenance"`
+	Title      string               `json:"title"`
+}
+
+// RecordConfirmationPageKind defines model for RecordConfirmationPage.Kind.
+type RecordConfirmationPageKind string
+
+// RecordConfirmationPageMarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
+type RecordConfirmationPageMarketingState string
+
 // RecordConsentRequest defines model for RecordConsentRequest.
 type RecordConsentRequest struct {
 	LawfulBasis *string                      `json:"lawful_basis,omitempty"`
@@ -33982,6 +34057,31 @@ type StartCompanySiteReadRequest struct {
 	// Url Public company website to read.
 	Url string `json:"url"`
 }
+
+// SubscriptionConfirmationPage The answer for a consent link: one named subscription and the person's current answer to it.
+//
+// Deliberately carries NOTHING about the record. The mail said "confirm this subscription", and
+// serving the record card here would hand whoever holds the link the person's name, employer,
+// address, phone and provenance trail — wider than the mail described and wider than this
+// link's own write side allows.
+type SubscriptionConfirmationPage struct {
+	Kind SubscriptionConfirmationPageKind `json:"kind"`
+
+	// PurposeKey The subscription this link is about.
+	PurposeKey string `json:"purpose_key"`
+
+	// PurposeLabel Its published name, for the page to show.
+	PurposeLabel string `json:"purpose_label"`
+
+	// State Their answer today, so somebody who already said yes is not asked as though they had not.
+	State SubscriptionConfirmationPageState `json:"state"`
+}
+
+// SubscriptionConfirmationPageKind defines model for SubscriptionConfirmationPage.Kind.
+type SubscriptionConfirmationPageKind string
+
+// SubscriptionConfirmationPageState Their answer today, so somebody who already said yes is not asked as though they had not.
+type SubscriptionConfirmationPageState string
 
 // Tag A tag. Mirrors the `tag` table.
 type Tag struct {
@@ -38368,22 +38468,6 @@ type ConnectorOAuthCallbackParams struct {
 	Error *string `form:"error,omitempty" json:"error,omitempty"`
 }
 
-// ListConsentPurposesParams defines parameters for ListConsentPurposes.
-type ListConsentPurposesParams struct {
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
 // CreateContractParams defines parameters for CreateContract.
 type CreateContractParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -40768,7 +40852,10 @@ type IssueDoubleOptInJSONBody struct {
 
 // SuppressPersonJSONBody defines parameters for SuppressPerson.
 type SuppressPersonJSONBody struct {
-	// Kind Which stop this is. Only the subject's own request is recordable by hand.
+	// Kind Which stop this is. `subject_request` is "stop contacting me" and reaches every
+	// category but the three the controller owes anyway. `marketing_objection` is
+	// Art. 21(2), reaches marketing only, and is recorded at the subject's own
+	// authority so no seat can lift it.
 	Kind SuppressPersonJSONBodyKind `json:"kind"`
 
 	// Reason What the person was told, in their words. Stored because a suppression somebody
@@ -42069,22 +42156,6 @@ type RejectVoiceDraftParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// ListVoiceCorpusSourcesParams defines parameters for ListVoiceCorpusSources.
-type ListVoiceCorpusSourcesParams struct {
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // IngestVoiceCorpusSourceParams defines parameters for IngestVoiceCorpusSource.
@@ -46576,6 +46647,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "linkedin_url")
 	}
 
+	if raw, found := object["merged_into_id"]; found {
+		err = json.Unmarshal(raw, &a.MergedIntoId)
+		if err != nil {
+			return fmt.Errorf("error reading 'merged_into_id': %w", err)
+		}
+		delete(object, "merged_into_id")
+	}
+
 	if raw, found := object["next_task_due_at"]; found {
 		err = json.Unmarshal(raw, &a.NextTaskDueAt)
 		if err != nil {
@@ -46900,6 +46979,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
+		}
+	}
+
+	if a.MergedIntoId != nil {
+		object["merged_into_id"], err = json.Marshal(a.MergedIntoId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'merged_into_id': %w", err)
 		}
 	}
 
@@ -51027,6 +51113,95 @@ func (t *ColdStartRequest) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// AsRecordConfirmationPage returns the union data inside the ConfirmPage as a RecordConfirmationPage
+func (t ConfirmPage) AsRecordConfirmationPage() (RecordConfirmationPage, error) {
+	var body RecordConfirmationPage
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRecordConfirmationPage overwrites any union data inside the ConfirmPage as the provided RecordConfirmationPage
+func (t *ConfirmPage) FromRecordConfirmationPage(v RecordConfirmationPage) error {
+	v.Kind = "record_confirmation"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRecordConfirmationPage performs a merge with any union data inside the ConfirmPage, using the provided RecordConfirmationPage
+func (t *ConfirmPage) MergeRecordConfirmationPage(v RecordConfirmationPage) error {
+	v.Kind = "record_confirmation"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSubscriptionConfirmationPage returns the union data inside the ConfirmPage as a SubscriptionConfirmationPage
+func (t ConfirmPage) AsSubscriptionConfirmationPage() (SubscriptionConfirmationPage, error) {
+	var body SubscriptionConfirmationPage
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSubscriptionConfirmationPage overwrites any union data inside the ConfirmPage as the provided SubscriptionConfirmationPage
+func (t *ConfirmPage) FromSubscriptionConfirmationPage(v SubscriptionConfirmationPage) error {
+	v.Kind = "subscription_confirmation"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSubscriptionConfirmationPage performs a merge with any union data inside the ConfirmPage, using the provided SubscriptionConfirmationPage
+func (t *ConfirmPage) MergeSubscriptionConfirmationPage(v SubscriptionConfirmationPage) error {
+	v.Kind = "subscription_confirmation"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ConfirmPage) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"kind"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t ConfirmPage) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "record_confirmation":
+		return t.AsRecordConfirmationPage()
+	case "subscription_confirmation":
+		return t.AsSubscriptionConfirmationPage()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t ConfirmPage) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ConfirmPage) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// List activities (the timeline; cursor-paginated, filterable by type/entity).
@@ -51514,7 +51689,7 @@ type ServerInterface interface {
 	SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 	// (GET /consent-purposes)
-	ListConsentPurposes(w http.ResponseWriter, r *http.Request, params ListConsentPurposesParams)
+	ListConsentPurposes(w http.ResponseWriter, r *http.Request)
 	// Define a consent purpose. 🟢 admin write.
 	// (POST /consent-purposes)
 	CreateConsentPurpose(w http.ResponseWriter, r *http.Request)
@@ -52780,7 +52955,7 @@ type ServerInterface interface {
 	GetVoiceLearningSummary(w http.ResponseWriter, r *http.Request, id Id)
 	// List the owner's corpus manifest and live meter; source text is never returned.
 	// (GET /voice-profiles/{id}/sources)
-	ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id Id, params ListVoiceCorpusSourcesParams)
+	ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id Id)
 	// Ingest or replace one manual own-authored text source.
 	// (POST /voice-profiles/{id}/sources)
 	IngestVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id, params IngestVoiceCorpusSourceParams)
@@ -53863,7 +54038,7 @@ func (_ Unimplemented) SetConnectorSignatureEnrichment(w http.ResponseWriter, r 
 
 // List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 // (GET /consent-purposes)
-func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Request, params ListConsentPurposesParams) {
+func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -56395,7 +56570,7 @@ func (_ Unimplemented) GetVoiceLearningSummary(w http.ResponseWriter, r *http.Re
 
 // List the owner's corpus manifest and live meter; source text is never returned.
 // (GET /voice-profiles/{id}/sources)
-func (_ Unimplemented) ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id Id, params ListVoiceCorpusSourcesParams) {
+func (_ Unimplemented) ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -62359,9 +62534,6 @@ func (siw *ServerInterfaceWrapper) SetConnectorSignatureEnrichment(w http.Respon
 // ListConsentPurposes operation middleware
 func (siw *ServerInterfaceWrapper) ListConsentPurposes(w http.ResponseWriter, r *http.Request) {
 
-	var err error
-	_ = err
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -62370,37 +62542,8 @@ func (siw *ServerInterfaceWrapper) ListConsentPurposes(w http.ResponseWriter, r 
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListConsentPurposesParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListConsentPurposes(w, r, params)
+		siw.Handler.ListConsentPurposes(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -81465,37 +81608,8 @@ func (siw *ServerInterfaceWrapper) ListVoiceCorpusSources(w http.ResponseWriter,
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListVoiceCorpusSourcesParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListVoiceCorpusSources(w, r, id, params)
+		siw.Handler.ListVoiceCorpusSources(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

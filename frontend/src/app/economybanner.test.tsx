@@ -48,6 +48,19 @@ function mount(allow: GrantSpec, readBand: string | (() => string)) {
 // The one grant this surface needs, named once.
 const AI_RUNTIME_READER: GrantSpec = { ai_diagnostics: ["read"] };
 
+// Every sentence the banner can say. Silence is proved against all three: the
+// notice is standing rather than announced, so it carries no ARIA role, and an
+// assertion on one would pass whether or not a banner was on screen.
+const BANNER_LINES = [
+  "AI running in economy mode",
+  "AI budget reached — background AI is queued",
+  "AI budget status is not recognized",
+];
+
+function bannerLinesOnScreen(): string[] {
+  return BANNER_LINES.filter((line) => screen.queryByText(line) !== null);
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -59,33 +72,33 @@ it("does not probe usage for a non-admin", async () => {
   expect(
     fetchMock.mock.calls.some(([input]) => String(input).includes("/ai/usage")),
   ).toBe(false);
-  expect(screen.queryByText("AI running in economy mode.")).toBeNull();
+  expect(screen.queryByText("AI running in economy mode")).toBeNull();
 });
 
 it("shows and dismisses economy mode for an admin", async () => {
   mount(AI_RUNTIME_READER, "degraded");
-  expect(await screen.findByText("AI running in economy mode.")).toBeTruthy();
+  expect(await screen.findByText("AI running in economy mode")).toBeTruthy();
   await userEvent.click(screen.getByLabelText("Dismiss"));
-  expect(screen.queryByText("AI running in economy mode.")).toBeNull();
+  expect(screen.queryByText("AI running in economy mode")).toBeNull();
 });
 
 it("shows queued while normal stays silent", async () => {
   mount(AI_RUNTIME_READER, "queued");
   expect(
-    await screen.findByText("AI budget reached — background AI is queued."),
+    await screen.findByText("AI budget reached — background AI is queued"),
   ).toBeTruthy();
   cleanup();
   const { fetchMock } = mount(AI_RUNTIME_READER, "normal");
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-  expect(screen.queryByRole("status")).toBeNull();
+  expect(bannerLinesOnScreen()).toEqual([]);
 });
 
 it("shows a recurring band as a new occurrence", async () => {
   let band = "degraded";
   const { client } = mount(AI_RUNTIME_READER, () => band);
-  expect(await screen.findByText("AI running in economy mode.")).toBeTruthy();
+  expect(await screen.findByText("AI running in economy mode")).toBeTruthy();
   await userEvent.click(screen.getByLabelText("Dismiss"));
-  expect(screen.queryByRole("status")).toBeNull();
+  expect(bannerLinesOnScreen()).toEqual([]);
 
   band = "normal";
   await client.refetchQueries({ queryKey: ["ai-usage-band"] });
@@ -97,12 +110,12 @@ it("shows a recurring band as a new occurrence", async () => {
   );
   band = "degraded";
   await client.refetchQueries({ queryKey: ["ai-usage-band"] });
-  expect(await screen.findByText("AI running in economy mode.")).toBeTruthy();
+  expect(await screen.findByText("AI running in economy mode")).toBeTruthy();
 });
 
 it("surfaces an unknown budget band", async () => {
   mount(AI_RUNTIME_READER, "future-band");
   expect(
-    await screen.findByText("AI budget status is not recognized."),
+    await screen.findByText("AI budget status is not recognized"),
   ).toBeTruthy();
 });

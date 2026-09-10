@@ -369,6 +369,18 @@
      screen. */
   --control-h-lg: 40px;
 
+  /* The height of a panel's header band, and it is a token for the same reason
+     --control-h is one: every panel on every screen draws the SAME band, so the
+     number belongs to the house rather than to whichever rule reaches for it
+     first. Left to each caller it drifted — a head carrying a description stood
+     taller than a head carrying a button, and two screens re-spaced the band
+     themselves — so the same card was a different object on two pages. Fixed
+     rather than a floor: what does not fit on one band is not header content
+     and goes in the body. One value at every viewport, the touch arm below
+     included, because the band holds no target of its own — the controls inside
+     it take the pointer rungs. */
+  --panel-head-h: 56px;
+
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
    * reaching for ad-hoc (inconsistently spelled 10/12/14/16 before this).
    * Layout rhythm, not part of the §2 Ledger-Green colour identity; a
@@ -464,6 +476,18 @@
   --fs-sm: 13px; /* dense UI: chips, table cells, helper text */
   --fs-body: 13.5px; /* the default reading size */
   --fs-lead: 15px; /* the one paragraph under a heading; inputs */
+  /* A ROLE among the rungs, and the one entry here that is not a rung: it
+     answers "how big is a PANEL TITLE" rather than "how big", which is a
+     question the house settles once for every panel on every screen. It sits
+     in the ramp in its place by size, because a size out of order reads as a
+     scale that was edited rather than designed (type.test.ts holds both).
+
+     16 and not the card rung above it because a title in the 56px band beside
+     a badge crowded that band at 17 — which the tone panels had already
+     answered by dropping their own titles to body size and the glance by
+     taking its panes UP to the section rung, so one title stood at four sizes
+     across the product. Retune it here and every panel head moves together. */
+  --fs-panel-title: 16px;
   --fs-h3: 17px; /* card title */
   --fs-h2: 20px; /* section title */
   --fs-h1: 24px; /* the title of a step */
@@ -691,11 +715,11 @@
      than fix contrast. */
   --textOnAccentControl: #04240f;
   /* --success and --danger lighten in dark mode exactly like --accent does
-     (#15803d/#b91c1c to #4ade80/#f87171), so white — safe on both in light
-     theme, 5.02:1 and 6.47:1 — fails on both here: 1.74:1 on --success,
+     (#15803d/#b91c1c to #34d399/#f87171), so white — safe on both in light
+     theme, 5.02:1 and 6.47:1 — fails on both here: 1.92:1 on --success,
      2.77:1 on --danger, under even the 3:1 non-text floor. This ink (the
      same value as --textOnAccentControl; the two fills happen to share one
-     working ink, not one meaning) gives 9.54:1 on --success and 6.00:1 on
+     working ink, not one meaning) gives 8.64:1 on --success and 6.00:1 on
      --danger — kept as its own token because status and accent are
      different fills that could retune independently later. */
   --textOnStatusControl: #04240f;
@@ -745,12 +769,16 @@
   --textMeta: #8fa099;
   --textChip: #95a69f;
 
-  --success: #4ade80;
-  /* Dark inverts the problem: the lifted --success IS the readable ink on the
+  /* Not #4ade80: that value is --accentText here, and a confirmation painted
+   * in the accent's own tone reads as a lead rather than as a result. One step
+   * up the same emerald ramp keeps the two claims apart at 8.53:1 on --bgCard.
+   *
+   * Dark inverts the problem: the lifted --success IS the readable ink on the
    * tint over a dark card, so the two coincide here. Named anyway, because the
    * call sites read the role and must not have to know which theme collapses
    * it — the same reason --textOnAccentControl exists. */
-  --successText: #4ade80;
+  --success: #34d399;
+  --successText: #34d399;
   --warn: #fbbf24;
   --danger: #f87171;
   --dangerBg: rgba(248, 113, 113, 0.16);
@@ -861,8 +889,8 @@
     --textMeta: #8fa099;
     --textChip: #95a69f;
 
-    --success: #4ade80;
-    --successText: #4ade80;
+    --success: #34d399;
+    --successText: #34d399;
     --warn: #fbbf24;
     --danger: #f87171;
     --dangerBg: rgba(248, 113, 113, 0.16);

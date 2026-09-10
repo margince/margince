@@ -164,12 +164,9 @@ func clientInputValidation(err error) (error, bool) {
 // echoing surface does its own bounding, and the MCP renderer borrows this
 // number for the per-field remedy it writes.
 //
-// It is NOT the only figure on that surface any more, and pretending otherwise
-// hid a defect: a refusal naming a closed vocabulary needs more room than an
-// echo of a caller's argument names, and measuring the first against a budget
-// sized for the second silently truncated the vocabulary. agents.MaxFaultDetail
-// is that larger figure, and agents.faultExplanation records which position
-// gets which.
+// It is one of three figures the tool surface applies, each answering a
+// different question about whose words are being echoed.
+// agents.faultExplanation is where that table lives.
 const MaxFaultText = 300
 
 // boundFaultText caps one caller-facing value from a module-declared fault.

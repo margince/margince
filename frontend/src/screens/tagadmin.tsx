@@ -75,7 +75,13 @@ export function TagVocabularyCard() {
         <p className="settings-panel-sub">{t("tagAdmin.sub")}</p>
         {!canRead && <p className="tagadmin-note">{t("tagAdmin.withheld")}</p>}
         {failure?.error != null && (
-          <Callout tone="danger">{problemMessageOf(failure.error, t)}</Callout>
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("tagAdmin.changeFailed")}
+          >
+            {problemMessageOf(failure.error, t)}
+          </Callout>
         )}
         {canRead && (
           <SettingList>
@@ -97,7 +103,11 @@ export function TagVocabularyCard() {
                           shown a cut list would coin a duplicate of a word past
                           the cap, and merge could not name it as a target. */}
                         {answer.page.has_more && (
-                          <Callout tone="warn">
+                          <Callout
+                            tone="warn"
+                            kind="standing"
+                            title={t("tagAdmin.truncatedTitle")}
+                          >
                             {t("tagAdmin.truncated")}
                           </Callout>
                         )}
@@ -372,7 +382,11 @@ function TagDialog({
         )}
       </Field>
       {near.length > 0 && (
-        <Callout tone="warn">
+        <Callout
+          tone="warn"
+          kind="standing"
+          title={t("tagAdmin.nearMatchTitle")}
+        >
           {t("tagAdmin.nearMatch", {
             // Capped: a warning naming forty words is one an admin scrolls
             // past, which costs the near-duplicate it exists to catch.
@@ -462,7 +476,13 @@ function MergeDialog({
           />
         )}
       </Field>
-      <Callout tone="warn">
+      {/* `danger` and not `warn`: the act is irreversible, which is what the
+          dialog's own confirm button says with its tone. */}
+      <Callout
+        tone="danger"
+        kind="standing"
+        title={t("tagAdmin.mergeWarningTitle")}
+      >
         {t("tagAdmin.mergeWarning", { name: source.name })}
       </Callout>
     </ConfirmModal>

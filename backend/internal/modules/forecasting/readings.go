@@ -6,6 +6,7 @@ package forecasting
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -60,10 +61,12 @@ type Readings struct {
 	OpenMinor     int64
 	WeightedMinor int64
 
-	// What the money does not cover. EligibleCount minus PricedCount is the
-	// gap a reader is owed: an unpriced deal is real pipeline contributing
-	// zero, and presenting the total without that gap invites the reading
-	// where every eligible deal was counted.
+	// What the money does not cover, in TWO gaps rather than one. An unpriced
+	// deal has no amount to contribute; a priced deal no rate could reach has
+	// one and still contributes nothing, so it sits inside PricedCount and
+	// outside every total. What the money covers is PricedCount minus
+	// FxMissingCount, and presenting a total without that figure invites the
+	// reading where every eligible deal was counted. CoverageNote says it.
 	EligibleCount      int
 	PricedCount        int
 	ConfirmedDateCount int
@@ -297,4 +300,61 @@ func EffectiveCategory(asOfDay time.Time, deal Deal) string {
 		return CategorySlipped
 	}
 	return deal.Category
+}
+
+// CoverageNote states, in one line, what the money readings do not cover —
+// empty when they cover everything.
+//
+// Written from the counts and adding no fact a caller could not compute, the
+// way PersonMoment.headline is the reason in one line written from the
+// evidence. What it buys is that the comparison is MADE: the counts arrive as
+// bare integers among nine, and a total quoted flat is arithmetically correct
+// while telling somebody something false about how much pipeline it covers.
+//
+// COVERED is priced minus unconvertible. A deal with an amount no rate could
+// reach carries a price and contributes nothing, so leading with the priced
+// count would understate the gap — the one direction this sentence exists to
+// prevent.
+//
+// FOR THE MODEL-FACING DOOR, and deliberately not the contract. The web app
+// states the same fact from the same counts in the reader's own language
+// (`forecast.partial`), and an English sentence on the wire would be a second
+// spelling that no localised client renders. A model has no i18n layer, which
+// is what makes prose the right shape there and the wrong shape here.
+func (r Readings) CoverageNote() string {
+	covered := r.PricedCount - r.FxMissingCount
+	var parts []string
+	if covered < r.EligibleCount {
+		parts = append(parts, fmt.Sprintf(
+			"the money readings cover %d of %d eligible deals", covered, r.EligibleCount))
+	}
+	if unpriced := r.EligibleCount - r.PricedCount; unpriced > 0 {
+		parts = append(parts, fmt.Sprintf("%s %s no amount and %s zero",
+			deals(unpriced), plural(unpriced, "carries", "carry"),
+			plural(unpriced, "contributes", "contribute")))
+	}
+	if r.FxMissingCount > 0 {
+		parts = append(parts, fmt.Sprintf(
+			"%s %s priced in a currency no rate could convert, so %s absent from the totals "+
+				"rather than counted as zero",
+			deals(r.FxMissingCount), plural(r.FxMissingCount, "was", "were"),
+			plural(r.FxMissingCount, "it is", "they are")))
+	}
+	return strings.Join(parts, "; ")
+}
+
+// deals renders the count and its noun, so a sentence names its own subject.
+func deals(n int) string {
+	if n == 1 {
+		return "1 deal"
+	}
+	return fmt.Sprintf("%d deals", n)
+}
+
+// plural picks the form the count agrees with.
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
 }

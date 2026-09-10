@@ -18,10 +18,16 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
-import { calendarDay, dueInstant, middayInstant } from "../format/calendarday";
+import { calendarDay } from "../format/calendarday";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  type ActivityDraft,
+  activityRequestBody,
+  KINDS_WITH_A_PERSON,
+} from "./activitybody";
 import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
+import { TaskAssigneeField } from "./assigneepicker";
 import { problemMessageOf, throwProblem, useMe, useSorMode } from "./common";
 
 // Log a note or task from a 360 (person/company/deal/lead): the contract's
@@ -31,28 +37,13 @@ import { problemMessageOf, throwProblem, useMe, useSorMode } from "./common";
 // without a reload. Server-side validation is the truth — a 422 renders its
 // RFC 7807 detail verbatim.
 
-type ActivityDraft = {
-  kind: "note" | "task" | "meeting" | "call";
-  subject: string;
-  body: string;
-  // yyyy-mm-dd from the date input. Its meaning follows the kind: a task's
-  // due date, otherwise the day the note or meeting happened.
-  day: string;
-  // A meeting's body is ordinary notes UNLESS this is explicitly checked —
-  // otherwise "discussed pricing, follow up Tuesday" typed while logging a
-  // meeting would silently carry source_system: transcript, which the
-  // backend documents as meaning pasted/uploaded transcript TEXT and which
-  // the activity/transcript retention scope sweeps on a different schedule
-  // than an ordinary meeting note. Meaningless outside kind: meeting.
-  asTranscript: boolean;
-};
-
 const EMPTY_DRAFT: ActivityDraft = {
   kind: "note",
   subject: "",
   body: "",
   day: "",
   asTranscript: false,
+  assigneeId: "",
 };
 
 // Only a plain-text paste round-trips through normalizeTranscript's line
@@ -99,33 +90,6 @@ function freshDraft(
   return { ...EMPTY_DRAFT, kind, day: todayDay(kind, recordZone) };
 }
 
-// The instant a logged activity carries. The picked day left on today — or, for
-// a note, pushed into the future, which nothing can have occurred in — means the
-// actual moment of logging, so entries logged in sequence keep their timeline
-// order. A backdated day becomes that day's noon in the record zone. Either way the
-// entry files under the day the writer picked, because both branches and the
-// timeline's day headings read the same clock. A task's picked day is its DUE
-// date instead — the task itself occurred now.
-function occurredInstant(input: ActivityDraft, recordZone: string): string {
-  const now = new Date();
-  const today = calendarDay(now, recordZone);
-  if (input.kind === "task" || input.day === "" || input.day >= today) {
-    return now.toISOString();
-  }
-  return middayInstant(input.day, recordZone);
-}
-
-// A meeting and a call are WITH A PERSON, and the server refuses either one
-// filed against a company — per link, so naming the company alongside the
-// person is refused too, and the company is reached through the attendee's
-// employer instead (activities/activitylinks.go, migration
-// "a meeting is with a person again").
-//
-// So a form opened on a company has to ask WHO was in the room before it can
-// send one of these kinds at all. It offered no way to say, and the reader met
-// a 422 with no field to correct.
-const KINDS_WITH_A_PERSON = new Set(["meeting", "call"]);
-
 // The company's own contacts, narrowed by what the reader typed.
 //
 // Scoped to the company rather than searching every person in the installation:
@@ -147,66 +111,6 @@ async function searchCompanyContacts(
     // belongs to a USER; a person has neither the field nor a fallback for it.
     name: person.full_name,
   }));
-}
-
-// The wire body one drafted entry becomes.
-function activityRequestBody(
-  input: ActivityDraft,
-  entityType: EntityKind,
-  entityId: string,
-  recordZone: string,
-  // Who was in the room, when the form is open on a company and the kind is one
-  // that needs a person. Null everywhere else.
-  attendee: RecordPickerCandidate | null,
-) {
-  // source_system: transcript is what routes the body through the
-  // server's ADR-0058 normalizer and what the activity/transcript
-  // retention scope keys its sweep on (see backend logActivity's
-  // `transcript` example) — only when the writer has explicitly marked
-  // this text as one (asTranscript), never inferred from kind: meeting
-  // alone, or ordinary meeting notes would carry a marker meaning
-  // something else and sweep on a different retention schedule.
-  const isTranscript = input.kind === "meeting" && input.asTranscript;
-  // A transcript is sent RAW, not trimmed: the server's normalizer
-  // (transcriptnorm.go) is the one place line-1-indexing gets decided,
-  // and it only trims trailing whitespace per line — a leading blank
-  // line or leading indentation the client stripped first would make a
-  // transcript pasted here normalize to different stored text (and
-  // different line numbers) than the identical paste sent by an agent
-  // or another client straight to the API.
-  const outgoingBody = isTranscript ? input.body : input.body.trim();
-  return {
-    kind: input.kind,
-    subject: input.subject.trim(),
-    body: outgoingBody || null,
-    occurred_at: occurredInstant(input, recordZone),
-    // A due date becomes the instant that day ENDS on the RECORD's clock
-    // (format/calendarday), which is the same zone the worklist buckets
-    // overdue in and the same one the task detail renders. Minting it in the
-    // writer's own zone instead is what let an approved 9 September come back
-    // as a task due the 10th for a colleague sitting further east.
-    ...(input.kind === "task" && input.day
-      ? { due_at: dueInstant(input.day, recordZone) }
-      : {}),
-    // Held: a hand-logged meeting already took place (the date caps at
-    // today), and held is what the lead ladder reads as engagement.
-    ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
-    ...(isTranscript ? { source_system: "transcript" } : {}),
-    // The attendee REPLACES the company link rather than joining it. The
-    // server refuses an organization link on a meeting or a call whichever
-    // else are present, and the company still reaches the activity: the
-    // employer walk carries it there through the person who was named.
-    //
-    // Only for the kinds that ask for one. The picker stops rendering when the
-    // reader switches to a note or a task, but the person they had already
-    // chosen stays in state — and filing a company note against that person
-    // takes it off the company screen it was written on.
-    links:
-      attendee && KINDS_WITH_A_PERSON.has(input.kind)
-        ? [{ entity_type: "person" as const, entity_id: attendee.id }]
-        : [{ entity_type: entityType, entity_id: entityId }],
-    source: "manual",
-  };
 }
 
 /**
@@ -374,6 +278,14 @@ export function LogActivityForm({
           )}
         </Field>
       </div>
+      {/* WHO owes this task, asked beside when it is due. Only a task is held
+          by a colleague; the field renders nothing for a note or meeting, and
+          defers its roster walk to that same condition. */}
+      <TaskAssigneeField
+        active={draft.kind === "task"}
+        value={draft.assigneeId}
+        onChange={(value) => setField({ assigneeId: value })}
+      />
       {/* WHO was in the room, asked before what was said. A meeting or a call
           is with a person and the server refuses one filed against a company,
           so on a company this is the field that decides whether the entry can

@@ -2,14 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertTriangle,
-  ArrowUpRight,
-  Info,
-  KeyRound,
-  Route,
-  Timer,
-} from "lucide-react";
+import { ArrowUpRight, Info, KeyRound, Route, Timer } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -414,18 +407,18 @@ function UnitCard({
         <div className="ext-unit-actions">
           <Badge>{t("extAccess.version", { version: unit.version })}</Badge>
           {page ? (
-            // The unit's name is IN the link text, not only in the heading
-            // beside it: several of these sit on one page, and "Open" repeated
-            // five times names nothing to anyone reading the links out of
-            // context. The hash is built through routeHash and the exported
-            // screen token rather than spelled here, so this link and the
-            // router cannot drift apart.
+            // The unit's name is IN the link text: several units share the
+            // page, and "Open" five times names nothing out of context. The
+            // hash comes from routeHash and the exported screen token, so
+            // link and router cannot drift apart.
             <a
               className="t-caption ext-unit-link"
               href={routeHash({ screen: EXTENSION_SCREEN, id: page.name })}
             >
               <ArrowUpRight aria-hidden size={15} />
-              {t("extAccess.openUnit", { name: page.name })}
+              <span className="ext-unit-link-text">
+                {t("extAccess.openUnit", { name: page.name })}
+              </span>
             </a>
           ) : null}
         </div>
@@ -462,9 +455,12 @@ function UnitCard({
               toggle: every switch below also carries it as its `reason`, which
               is what puts it in the accessibility tree beside the control. */}
           {!canManage && unit.rbac_objects.length > 0 ? (
-            <Callout tone="info" className="ext-readonly">
-              {t("extAccess.readOnly")}
-            </Callout>
+            // The wrapper carries the air: a notice owns no layout of its own.
+            <div className="ext-readonly">
+              <Callout kind="standing" title={t("extAccess.readOnlyTitle")}>
+                {t("extAccess.readOnly")}
+              </Callout>
+            </div>
           ) : null}
           {unit.rbac_objects.length === 0 ? (
             <p className="t-caption ext-note">{t("extAccess.noObjects")}</p>
@@ -732,21 +728,25 @@ function ObjectMatrix({
       {nobodyReads ? (
         // `warn` is exactly the claim: nothing is broken, and something will go
         // wrong if nobody acts — every screen this unit ships renders "you do
-        // not hold access" until a read grant exists. live="status" because the
-        // sentence appears and disappears as the last read grant is toggled,
-        // and a change nobody is told about is the silence this screen exists
-        // to break.
+        // not hold access" until a read grant exists. Standing, and yet spoken
+        // deliberately: the sentence appears and disappears as the last read
+        // grant is toggled, and a change nobody is told about is the silence
+        // this screen exists to break.
         <Callout
           tone="warn"
+          kind="standing"
           live="status"
-          icon={AlertTriangle}
-          className="ext-matrix-note"
+          title={t("extAccess.nobodyReadsTitle")}
         >
           {t("extAccess.nobodyReads", { object })}
         </Callout>
       ) : null}
       {setGrant.isError ? (
-        <Callout tone="danger" live="alert" className="ext-matrix-note">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("extAccess.grantFailed")}
+        >
           {/* A version skew is not a failure to phrase generically: the
               operator's flip did not apply, someone else's did, and the matrix
               above has just been repainted with theirs. Saying "couldn't save"
