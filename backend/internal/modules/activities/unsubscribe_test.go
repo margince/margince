@@ -17,7 +17,7 @@ import (
 // The header keeps the machine endpoint. A mailbox provider POSTs it
 // without a browser, and moving it would break RFC 8058 one-click.
 func TestTheHeaderKeepsTheOneClickAPIURL(t *testing.T) {
-	links := unsubscribeLinksFor("https://crm.example.com", "tok", "marketing_email", textlang.English)
+	links := unsubscribeLinksFor("https://crm.example.com", unsubscribeTokens{stop: "tok", manage: "tok"}, "marketing_email", textlang.English)
 	want := "https://crm.example.com/v1/public/preferences/tok/unsubscribe?purpose=marketing_email"
 	if links.oneClick != want {
 		t.Errorf("oneClick = %q, want %q", links.oneClick, want)
@@ -31,7 +31,7 @@ func TestTheHeaderKeepsTheOneClickAPIURL(t *testing.T) {
 // about: a person clicking the footer used to reach a POST-only endpoint
 // (405) and a JSON document.
 func TestTheVisibleLinksArePagesNotTheAPI(t *testing.T) {
-	links := unsubscribeLinksFor("https://crm.example.com", "tok", "business_correspondence", textlang.German)
+	links := unsubscribeLinksFor("https://crm.example.com", unsubscribeTokens{stop: "tok", manage: "tok"}, "business_correspondence", textlang.German)
 	for name, got := range map[string]string{"unsubscribe": links.unsubscribe, "manage": links.manage} {
 		if strings.Contains(got, "/v1/") {
 			t.Errorf("%s = %q — a visible link must not point at the API", name, got)
@@ -55,7 +55,7 @@ func TestTheVisibleLinksArePagesNotTheAPI(t *testing.T) {
 // the same capability. A recipient's ability to unsubscribe must not
 // depend on which alternative their mail client chose to show.
 func TestBothFootersCarryOneTokenPurposeAndLanguage(t *testing.T) {
-	links := unsubscribeLinksFor("https://crm.example.com", "tok", "newsletter", textlang.German)
+	links := unsubscribeLinksFor("https://crm.example.com", unsubscribeTokens{stop: "tok", manage: "tok"}, "newsletter", textlang.German)
 	words := mailcopy.For("de")
 	plain := appendUnsubscribeFooter("Guten Tag", links, words)
 	markup := sendDeliverability{links: links, words: words}.htmlFooter()
@@ -78,7 +78,7 @@ func TestBothFootersCarryOneTokenPurposeAndLanguage(t *testing.T) {
 // working link and which purpose it pointed at, and cannot use it.
 func TestTheRecordedFooterCarriesOnlyTheRedactedToken(t *testing.T) {
 	const live = "pref_secret_value"
-	redacted := unsubscribeLinksFor("https://crm.example.com", redactedToken, "newsletter", textlang.English)
+	redacted := unsubscribeLinksFor("https://crm.example.com", unsubscribeTokens{stop: redactedToken, manage: redactedToken}, "newsletter", textlang.English)
 	recorded := appendUnsubscribeFooter("Body", redacted, mailcopy.For("en"))
 
 	if strings.Contains(recorded, live) {
@@ -95,7 +95,7 @@ func TestTheRecordedFooterCarriesOnlyTheRedactedToken(t *testing.T) {
 // A purpose or token carrying a separator must not be able to reshape the
 // URL it lands in.
 func TestTokenAndPurposeAreEscaped(t *testing.T) {
-	links := unsubscribeLinksFor("https://crm.example.com", "tok/../evil", "news letter/x", textlang.English)
+	links := unsubscribeLinksFor("https://crm.example.com", unsubscribeTokens{stop: "tok/../evil", manage: "tok/../evil"}, "news letter/x", textlang.English)
 	for name, got := range map[string]string{"unsubscribe": links.unsubscribe, "oneClick": links.oneClick} {
 		if strings.Contains(got, "/../") {
 			t.Errorf("%s = %q — a token reshaped the path", name, got)
@@ -173,4 +173,48 @@ func asPublicOriginFault(err error, target **PublicOriginUnusableError) bool {
 		*target = fault
 	}
 	return ok
+}
+
+// THE MANAGE LINK CARRIES ITS OWN CREDENTIAL. Stopping mail and reading a
+// record are different rights, and since the withdrawal credential landed they
+// are different kinds of token: the stop credential outlives the message it was
+// sent in and resolves nothing, and the preference centre can only resolve a
+// preference token.
+//
+// Passing one token for both is what broke the manage page. Every link carried
+// the withdrawal credential, the preference centre resolved nothing, and a
+// recipient clicking "Manage preferences" got a page that could not read them.
+func TestTheManageLinkCarriesThePreferenceToken(t *testing.T) {
+	links := unsubscribeLinksFor("https://crm.example.com",
+		unsubscribeTokens{stop: "wd_stop", manage: "pref_manage"},
+		"marketing_email", textlang.English)
+
+	if !strings.Contains(links.manage, "pref_manage") {
+		t.Errorf("the manage link carries %q, want the preference token — the preference centre "+
+			"cannot resolve a withdrawal credential, so the page reads nothing", links.manage)
+	}
+	if strings.Contains(links.manage, "wd_stop") {
+		t.Errorf("the manage link carries the stop credential: %q", links.manage)
+	}
+	// And the stop links keep theirs. A manage token in the header would expire
+	// under the recipient, which is the whole reason the credential exists.
+	for name, link := range map[string]string{"one-click": links.oneClick, "unsubscribe": links.unsubscribe} {
+		if !strings.Contains(link, "wd_stop") {
+			t.Errorf("the %s link carries %q, want the stop credential", name, link)
+		}
+	}
+}
+
+// A RECIPIENT WITH NOTHING TO MANAGE still gets a working stop link. A
+// lead-only address holds no person record, so no preference token can be
+// minted for it — and the manage link then falls back to the stop credential,
+// which draws the withdraw-only page rather than a dead link.
+func TestAManagelessRecipientFallsBackToTheStopCredential(t *testing.T) {
+	links := unsubscribeLinksFor("https://crm.example.com",
+		unsubscribeTokens{stop: "wd_stop"}, "marketing_email", textlang.English)
+
+	if !strings.Contains(links.manage, "wd_stop") {
+		t.Errorf("the manage link is %q — a recipient with no preference token must still be "+
+			"offered a page that can stop their mail", links.manage)
+	}
 }

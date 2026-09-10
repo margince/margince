@@ -40,3 +40,20 @@ func (a preferenceLinkAdapter) UnsubscribeToken(ctx context.Context, recipientEm
 	// that gives THIS message a header of its own.
 	return a.store.PreferenceTokenForEmail(ctx, recipientEmail)
 }
+
+// ManageToken answers the preference token the preference centre resolves.
+//
+// ALWAYS A PREFERENCE TOKEN, never the withdrawal credential the stop links
+// carry. The two are different capabilities: a withdrawal credential stops mail
+// and reads nothing, which is what lets it outlive the message it was sent in.
+// Handing it to the manage link left every "Manage preferences" link resolving
+// nothing — the page could not read the subject their own purposes, because the
+// credential it was given was never meant to.
+//
+// A recipient this mint cannot resolve — a lead-only address holds no person
+// record — gets no manage token and the link falls back to the stop credential,
+// which draws the withdraw-only page. That page is honest about what it can do;
+// a dead preference link is not.
+func (a preferenceLinkAdapter) ManageToken(ctx context.Context, recipientEmail string) (string, bool, error) {
+	return a.store.PreferenceTokenForEmail(ctx, recipientEmail)
+}
