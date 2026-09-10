@@ -56,8 +56,14 @@ func (s *Service) WithVault(v keyvault.Vault) *Service {
 // the enrolment routes as unavailable rather than storing a secret in the clear.
 // Named distinctly from the capture handlers' own WithVault, so neither shadows
 // the other on the embedding server.
+//
+// A nil service is a no-op: a Server assembled without the auth handlers (the
+// capture-wiring tests build one) still runs the vault option, and it has no
+// identity service to seal into.
 func (h Handlers) WithMFAVault(v keyvault.Vault) Handlers {
-	h.svc.WithVault(v)
+	if h.svc != nil {
+		h.svc.WithVault(v)
+	}
 	return h
 }
 
