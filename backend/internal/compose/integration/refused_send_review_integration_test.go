@@ -195,3 +195,85 @@ func TestErasingASubjectClearsThemFromARefusedSendReview(t *testing.T) {
 		t.Errorf("the review still names the erased subject's address: %s", after[0].refusals)
 	}
 }
+
+// A REFERENCE NOBODY CAN RESOLVE IS BARELY BETTER THAN AN ERROR CODE. The
+// refusal answers a review id and, until this endpoint existed, nothing could
+// open it: the row was written, the rep was handed the id, and there was no
+// door.
+func TestTheRepCanOpenTheReviewTheirRefusalNamed(t *testing.T) {
+	c := setupConsent(t)
+
+	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send with no grant → %d, want 409", status)
+	}
+	reviews := openReviews(t, c.AppEnv)
+	if len(reviews) != 1 {
+		t.Fatalf("%d review(s), want 1", len(reviews))
+	}
+
+	var opened struct {
+		ID         string `json:"id"`
+		State      string `json:"state"`
+		ReasonCode string `json:"reason_code"`
+		Refusals   []struct {
+			Address    string `json:"address"`
+			ReasonCode string `json:"reason_code"`
+		} `json:"refusals"`
+	}
+	if status := c.Call(t, "GET", "/v1/communication-reviews/"+reviews[0].id,
+		nil, nil, &opened); status != http.StatusOK {
+		t.Fatalf("opening the review the refusal named → %d, want 200", status)
+	}
+	if opened.ID != reviews[0].id {
+		t.Errorf("opened review %q, want %q", opened.ID, reviews[0].id)
+	}
+	if len(opened.Refusals) != 1 {
+		t.Fatalf("%d refusal(s) in the answer, want 1 — the rep is told a send was refused "+
+			"and not who for", len(opened.Refusals))
+	}
+	if opened.Refusals[0].Address != "subject@consent.test" {
+		t.Errorf("the answer names %q, want the recipient the send was refused for",
+			opened.Refusals[0].Address)
+	}
+	if opened.ReasonCode == "" || opened.State == "" {
+		t.Errorf("the answer carries state=%q reason=%q, want both",
+			opened.State, opened.ReasonCode)
+	}
+}
+
+// A REVIEW BELONGING TO SOMEBODY ELSE IS NOT FOUND, not forbidden. The row
+// names the recipients of another person's message and why each was refused,
+// which is a fact about those people — and "forbidden" would confirm the id
+// exists, which is itself a disclosure about a message the caller may not see.
+func TestAnotherSeatsReviewIsNotFound(t *testing.T) {
+	c := setupConsent(t)
+
+	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send with no grant → %d, want 409", status)
+	}
+	reviews := openReviews(t, c.AppEnv)
+	if len(reviews) != 1 {
+		t.Fatalf("%d review(s), want 1", len(reviews))
+	}
+
+	// Reassigned to a seat this caller is not: the same shape as another rep's
+	// refusal, without needing a second logged-in session to produce one.
+	var other string
+	if err := c.Owner.QueryRow(context.Background(), `
+		INSERT INTO app_user (email, display_name)
+		VALUES ('other-' || gen_random_uuid() || '@consent.test', 'Other Seat')
+		RETURNING id::text`).Scan(&other); err != nil {
+		t.Fatalf("seeding another seat: %v", err)
+	}
+	if _, err := c.Owner.Exec(context.Background(),
+		`UPDATE communication_review SET initiated_by = $1 WHERE id = $2`,
+		other, reviews[0].id); err != nil {
+		t.Fatalf("reassigning the review: %v", err)
+	}
+
+	if status := c.Call(t, "GET", "/v1/communication-reviews/"+reviews[0].id,
+		nil, nil, nil); status != http.StatusNotFound {
+		t.Errorf("another seat's review → %d, want 404 — a 403 would confirm the id exists, "+
+			"which is a disclosure about a message this caller may not see", status)
+	}
+}
