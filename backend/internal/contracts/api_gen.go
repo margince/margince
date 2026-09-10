@@ -11026,6 +11026,24 @@ func (e RetentionScope) Valid() bool {
 	}
 }
 
+// Defines values for RightsCaseReceiptKind.
+const (
+	Erasure RightsCaseReceiptKind = "erasure"
+	Rectify RightsCaseReceiptKind = "rectify"
+)
+
+// Valid indicates whether the value is a known member of the RightsCaseReceiptKind enum.
+func (e RightsCaseReceiptKind) Valid() bool {
+	switch e {
+	case Erasure:
+		return true
+	case Rectify:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RowTagColor.
 const (
 	RowTagColorAmber  RowTagColor = "amber"
@@ -21308,6 +21326,13 @@ type ConfirmRequestIssued struct {
 	// Sendable Whether this installation has an outbound relay and a link origin configured. False
 	// means nothing was attempted — the link exists and must be passed on by hand.
 	Sendable bool `json:"sendable"`
+}
+
+// ConfirmSubmissionReceipt The answer to a confirm-link submission. `cases` names every rights request it opened — one per
+// corrected field under Art. 16, one for an erasure request under Art. 17. Empty when the submission
+// proposed nothing: a marketing answer alone opens no case.
+type ConfirmSubmissionReceipt struct {
+	Cases []RightsCaseReceipt `json:"cases"`
 }
 
 // ConnectChannelRequest defines model for ConnectChannelRequest.
@@ -32453,6 +32478,25 @@ type RetentionSettings struct {
 	// keep-everything obligation opts in.
 	RetainOnly bool `json:"retain_only"`
 }
+
+// RightsCaseReceipt What a data subject is told to quote when asking after a request they sent through their confirm
+// link. Carries the reference and the right it was opened under, never the case id — the queue that
+// holds the case is admin-gated, and a row id in a receipt invites being typed back in somewhere
+// that trusts it.
+type RightsCaseReceipt struct {
+	// Field The record field a correction proposes. Absent for an erasure. A subject who corrected two
+	// fields receives two receipts, and without this cannot tell which answer is about which.
+	Field *string `json:"field,omitempty"`
+
+	// Kind Art. 16 correction or Art. 17 erasure.
+	Kind RightsCaseReceiptKind `json:"kind"`
+
+	// Reference The quotable reference, unique across the installation.
+	Reference string `json:"reference"`
+}
+
+// RightsCaseReceiptKind Art. 16 correction or Art. 17 erasure.
+type RightsCaseReceiptKind string
 
 // Role One role as `role.permissions` stores it. This is a ROLE's document, not a principal's — unlike `Authorization.objects` nothing here is merged, because the thing being edited is the single role.
 type Role struct {

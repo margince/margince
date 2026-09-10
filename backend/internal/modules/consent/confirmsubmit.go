@@ -17,6 +17,7 @@ package consent
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -76,11 +77,15 @@ type ConfirmSubmission struct {
 // replayed submit finds the token already consumed and refuses before writing
 // anything, and the MailboxProof the consent write relies on cannot be
 // fabricated by a caller because it is only reachable here.
-func (s *Store) SubmitConfirmation(ctx context.Context, token string, in ConfirmSubmission) error {
+func (s *Store) SubmitConfirmation(ctx context.Context, token string, in ConfirmSubmission) ([]RightsCaseReceipt, error) {
 	if err := validateConfirmSubmission(in); err != nil {
-		return err
+		return nil, err
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+	// Collected inside the transaction and answered only after it commits: a
+	// receipt naming a case that rolled back is a reference the subject can
+	// quote and nobody can find.
+	var receipts []RightsCaseReceipt
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The SUBJECT first, before the token row, and the order is the whole
 		// point. Art. 17 erasure takes the person and then deletes this
 		// subject's confirm_token rows; a transaction taking the token first
@@ -122,21 +127,25 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 			}
 			return s.recordLinkedPurposeTx(ctx, tx, ref, in)
 		}
-		for field, value := range in.Corrections {
-			if err := stageSubmission(ctx, tx, ref, submissionCorrection, &field, &value); err != nil {
-				return err
-			}
+		// The clock runs from ARRIVAL, and one timestamp serves every case
+		// this submit opens: a subject who corrects two fields and asks for
+		// erasure made one request, and three deadlines a few microseconds
+		// apart would be three answers to give rather than one.
+		receivedAt := time.Now()
+		staged, err := stageProposals(ctx, tx, ref, in, receivedAt)
+		if err != nil {
+			return err
 		}
-		if in.RequestErasure {
-			if err := stageSubmission(ctx, tx, ref, submissionErasure, nil, nil); err != nil {
-				return err
-			}
-		}
+		receipts = staged
 		if in.MarketingChoice == "" {
 			return nil
 		}
 		return s.recordMarketingAnswerTx(ctx, tx, ref, in)
 	})
+	if err != nil {
+		return nil, err
+	}
+	return receipts, nil
 }
 
 // recordMarketingAnswerTx writes the subject's marketing answer through the
@@ -172,14 +181,14 @@ func (s *Store) recordMarketingAnswerTx(ctx context.Context, tx pgx.Tx, ref Conf
 // touches the person record: the subject holds a bearer token and sits outside
 // every row-scope probe, so what they send is evidence of what they asked for
 // and never a write to the CRM.
-func stageSubmission(ctx context.Context, tx pgx.Tx, ref ConfirmRef, kind string, field, value *string) error {
+func stageSubmission(ctx context.Context, tx pgx.Tx, ref ConfirmRef, kind string, field, value *string) (ids.UUID, error) {
 	var submissionID ids.UUID
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO person_confirm_submission (person_id, token_id, kind, field, proposed_value)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id`,
 		ref.PersonID, ref.TokenID, kind, field, value).Scan(&submissionID); err != nil {
-		return err
+		return ids.UUID{}, err
 	}
 	// Audited against the PERSON, because that is the record a later reader
 	// asks about — "what did this contact send us, and when". The proposed
@@ -190,11 +199,13 @@ func stageSubmission(ctx context.Context, tx pgx.Tx, ref ConfirmRef, kind string
 	// field that moved. Nothing about the person changed — the field a
 	// correction proposes still holds its old value, deliberately — so there is
 	// no prior state for a before-image to name.
-	_, err := storekit.AuditEvent(ctx, tx, "update", "person", ref.PersonID.UUID, map[string]any{
+	if _, err := storekit.AuditEvent(ctx, tx, "update", "person", ref.PersonID.UUID, map[string]any{
 		"confirm_submission": kind,
 		"submission_id":      submissionID,
-	})
-	return err
+	}); err != nil {
+		return ids.UUID{}, err
+	}
+	return submissionID, nil
 }
 
 // validateConfirmSubmission refuses what the store cannot stand behind, before
@@ -294,4 +305,53 @@ func refuseWiderThanTheMail(kind string, in ConfirmSubmission) error {
 		}
 	}
 	return nil
+}
+
+// stageProposals files every proposal one submit carried and opens the rights
+// case each one owes an answer to.
+//
+// Separate from SubmitConfirmation because the two halves answer different
+// questions: that function decides what a spent link is allowed to do, and this
+// one records what was asked for. Keeping them together put both decisions in
+// one body dense enough that the complexity gate refused it.
+func stageProposals(ctx context.Context, tx pgx.Tx, ref ConfirmRef,
+	in ConfirmSubmission, receivedAt time.Time,
+) ([]RightsCaseReceipt, error) {
+	var receipts []RightsCaseReceipt
+	for field, value := range in.Corrections {
+		receipt, err := stageOneProposal(ctx, tx, ref, submissionCorrection, &field, &value, receivedAt)
+		if err != nil {
+			return nil, err
+		}
+		receipt.Field = field
+		receipts = append(receipts, receipt)
+	}
+	if in.RequestErasure {
+		receipt, err := stageOneProposal(ctx, tx, ref, submissionErasure, nil, nil, receivedAt)
+		if err != nil {
+			return nil, err
+		}
+		receipts = append(receipts, receipt)
+	}
+	return receipts, nil
+}
+
+// stageOneProposal files one proposal and opens its case, so the two writes
+// cannot drift apart: a proposal with no case is work nobody owns, and that is
+// the defect the case writer exists to close.
+//
+// Held by: TestOneWriterFilesAConfirmSubmission (backend/gates/rightscasewriters_test.go)
+func stageOneProposal(ctx context.Context, tx pgx.Tx, ref ConfirmRef, kind string,
+	field, value *string, receivedAt time.Time,
+) (RightsCaseReceipt, error) {
+	submissionID, err := stageSubmission(ctx, tx, ref, kind, field, value)
+	if err != nil {
+		return RightsCaseReceipt{}, err
+	}
+	reference, err := openRightsCaseTx(ctx, tx, ref.PersonID, submissionID, kind, receivedAt)
+	if err != nil {
+		return RightsCaseReceipt{}, err
+	}
+	caseKind, _ := caseKindFor(kind)
+	return RightsCaseReceipt{Kind: caseKind, Reference: reference}, nil
 }
