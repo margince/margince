@@ -111,7 +111,7 @@
 1184 frontend/src/screens/personpage.tsx
 1208 frontend/src/screens/personprovider.test.tsx
 941 frontend/src/screens/personprovider.tsx
-1575 frontend/src/screens/personrail.tsx
+1430 frontend/src/screens/personrail.tsx
 1200 frontend/src/screens/privacy.test.tsx
 1245 frontend/src/screens/privacy.tsx
 573 frontend/src/screens/project360.tsx
