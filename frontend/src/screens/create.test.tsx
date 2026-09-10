@@ -150,6 +150,77 @@ describe("contact create flow", () => {
     });
   });
 
+  // A WORK primary and a PERSONAL primary are independent, matching what the
+  // server itself enforces (personformfields.ts's personEditFields: only a
+  // SAME-type primary swap is refused). Regression for margince#5272, where
+  // markPrimary and the radio group's own `name` were both scoped to the
+  // whole field rather than to the row's own email_type/phone_type, so
+  // marking a PERSONAL email primary silently un-primaried an untouched WORK
+  // email.
+  it("keeps a WORK primary and a PERSONAL primary independent", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "POST /people": (body) =>
+          jsonResponse(
+            {
+              id: "p-new",
+              full_name: (body as { full_name: string }).full_name,
+              captured_by: "human:u1",
+              source: "manual",
+              version: 1,
+            },
+            201,
+          ),
+      },
+      captured,
+    );
+    const user = userEvent.setup();
+    render(<ContactsScreen />);
+    await user.click(screen.getByText(en["create.contact"]));
+    await user.type(screen.getByLabelText("Full name *"), "Peter Neu");
+
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    const emailInputs = screen.getAllByLabelText("Email *");
+    await user.type(emailInputs[0], "peter.work@neu.example");
+    await user.type(emailInputs[1], "peter.personal@neu.example");
+
+    const types = screen.getAllByRole("combobox", { name: "Type" });
+    await pickOption(user, types[0], "Work");
+    await pickOption(user, types[1], "Personal");
+
+    const primaries = screen.getAllByRole("radio", {
+      name: "Primary",
+    }) as HTMLInputElement[];
+    await user.click(primaries[0]);
+    await user.click(primaries[1]);
+
+    // Marking the PERSONAL row primary must not have cleared the WORK row's
+    // own primary — the DOM's own radio-group exclusivity, and the state
+    // update, are both scoped by type.
+    expect(primaries[0].checked).toBe(true);
+    expect(primaries[1].checked).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/contacts/p-new"));
+    const post = captured.find((entry) => entry.key === "POST /people");
+    expect(post?.body).toMatchObject({
+      emails: [
+        {
+          email: "peter.work@neu.example",
+          email_type: "work",
+          is_primary: true,
+        },
+        {
+          email: "peter.personal@neu.example",
+          email_type: "personal",
+          is_primary: true,
+        },
+      ],
+    });
+  });
+
   it("renders the server's 422 detail verbatim and stays open", async () => {
     stubApi({
       "POST /people": () =>

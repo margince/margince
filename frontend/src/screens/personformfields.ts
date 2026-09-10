@@ -147,6 +147,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
         },
       ],
       primaryKey: "is_primary",
+      typeKey: "email_type",
     },
     {
       key: "phones",
@@ -168,6 +169,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
         },
       ],
       primaryKey: "is_primary",
+      typeKey: "phone_type",
     },
   ];
 }

@@ -22,6 +22,7 @@ import {
   problemMessageOf,
   useSorMode,
 } from "./common";
+import { withPrimaryMarked } from "./createrows";
 
 // The record screens whose entities are served from the incumbent mirror in
 // overlay mode. Creating one there answers unsupported_by_sor, so CreateAction
@@ -93,10 +94,12 @@ export type CreateField = {
    */
   validate?: (value: string) => string | undefined;
   // repeatable-only: the subfields each row renders, the "add row" button's
-  // label, and (if set) which subfield key holds the row's primary flag.
+  // label, which subfield key holds the row's primary flag, and (if set)
+  // which one holds its kind — scoping primaryKey to same-kind rows.
   rowFields?: SubField[];
   addLabel?: MessageKey;
   primaryKey?: string;
+  typeKey?: string;
   // A non-input group divider (renders its labelText as a heading, holds no
   // value) — used to set custom fields apart from core fields.
   divider?: boolean;
@@ -572,6 +575,7 @@ function RepeatableRowsField({
   const t = useT();
   const rowFields = field.rowFields ?? [];
   const primaryKey = field.primaryKey;
+  const typeKey = field.typeKey;
 
   function updateRow(index: number, key: string, value: string) {
     setRows(
@@ -585,12 +589,7 @@ function RepeatableRowsField({
     if (!primaryKey) {
       return;
     }
-    setRows(
-      rows.map((row, rowIndex) => ({
-        ...row,
-        [primaryKey]: rowIndex === index ? "true" : "",
-      })),
-    );
+    setRows(withPrimaryMarked(rows, index, primaryKey, typeKey));
   }
 
   function removeRow(index: number) {
@@ -638,7 +637,8 @@ function RepeatableRowsField({
           {primaryKey && (
             <Radio
               className="t-label"
-              name={`${formId}-${field.key}-primary`}
+              // Scoped by kind so the native radio group itself cannot enforce exclusivity across kinds.
+              name={`${formId}-${field.key}-${typeKey ? (row[typeKey] ?? "") : ""}-primary`}
               checked={row[primaryKey] === "true"}
               onChange={() => markPrimary(index)}
               label={t("field.primary")}
