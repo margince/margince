@@ -150,44 +150,61 @@ type followUpCandidate struct {
 	subject           *string
 }
 
+// reconcileCandidatesSQL finds the discrepancy this pass exists for: an open
+// deal whose most recent real interaction landed inside the window, and which
+// has NO next step planned.
+//
+// Two bounds on the evidence, and the upper one is the fix. $1 opens the window
+// and $3 closes it at the sweep's clock: without $3 a meeting booked for
+// TOMORROW satisfied "landed inside the window", and because the LATERAL takes
+// the newest row it also outranked the real call or mail the follow-up should
+// have been about. The rep was then told a meeting "left no next step planned"
+// days before it happened.
+//
+// A meeting is evidence only once it is over — the same reading the waiting
+// queue uses, so a meeting running right now is not yet a touch to reconcile.
+//
+// Extracted from reconcileWorkspace so the statement, its two bounds and the
+// reason for them sit together rather than being read past on the way to the
+// scan loop.
+func reconcileCandidatesSQL() string {
+	return fmt.Sprintf(`
+		SELECT d.id, d.name, ev.activity_id, ev.kind, ev.direction, ev.occurred_at, ev.subject
+		FROM deal d
+		JOIN LATERAL (
+			SELECT a.id AS activity_id, a.kind, coalesce(a.direction, '') AS direction, a.occurred_at, a.subject
+			FROM activity a
+			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
+			WHERE a.kind IN ('call','email','meeting')
+			  AND a.archived_at IS NULL
+			  -- The subject lands in an approval every decider of the
+			  -- deal reads, so only a message the whole workspace may
+			  -- read is evidence here; a limited one is its audience's.
+			  -- Spelled inline rather than through auth.AudienceWorkspaceOnly
+			  -- because this statement is a plain string with no format
+			  -- verbs; the predicate is the helper's, and a change to one
+			  -- is a change to both.
+			  AND a.audience = 'workspace'
+			  AND a.occurred_at >= $1
+			  AND a.occurred_at <= $3
+			  AND (a.kind <> 'meeting' OR %[1]s)
+			ORDER BY a.occurred_at DESC, a.id DESC
+			LIMIT 1
+		) ev ON true
+		WHERE d.status = 'open' AND d.archived_at IS NULL
+		  AND NOT %[2]s
+		ORDER BY d.id
+		LIMIT $2`,
+		MeetingIsOverSQL("a", "$3"),
+		OpenNextStepSQL("d.id", "$3"))
+}
+
 func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {
 	now := r.now().UTC()
 	var candidates []followUpCandidate
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The discrepancy: an open deal whose most recent real interaction
-		// (call/mail/meeting) landed inside the window, and which has NO
-		// open task on its timeline — a touch with no next step planned.
-		// A note or a done task is not a next step; an undone task is (so
-		// the sweep does not nag a rep who already has one queued).
-		rows, err := tx.Query(ctx, `
-			SELECT d.id, d.name, ev.activity_id, ev.kind, ev.direction, ev.occurred_at, ev.subject
-			FROM deal d
-			JOIN LATERAL (
-				SELECT a.id AS activity_id, a.kind, coalesce(a.direction, '') AS direction, a.occurred_at, a.subject
-				FROM activity a
-				JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
-				WHERE a.kind IN ('call','email','meeting')
-				  AND a.archived_at IS NULL
-				  -- The subject lands in an approval every decider of the
-				  -- deal reads, so only a message the whole workspace may
-				  -- read is evidence here; a limited one is its audience's.
-				  -- Spelled inline rather than through auth.AudienceWorkspaceOnly
-				  -- because this statement is a plain string with no format
-				  -- verbs; the predicate is the helper's, and a change to one
-				  -- is a change to both.
-				  AND a.audience = 'workspace'
-				  AND a.occurred_at >= $1
-				ORDER BY a.occurred_at DESC, a.id DESC
-				LIMIT 1
-			) ev ON true
-			WHERE d.status = 'open' AND d.archived_at IS NULL
-			  AND NOT EXISTS (
-				SELECT 1 FROM activity t
-				JOIN activity_link tl ON tl.activity_id = t.id AND tl.deal_id = d.id
-				WHERE t.kind = 'task' AND t.is_done = false AND t.archived_at IS NULL
-			  )
-			ORDER BY d.id
-			LIMIT $2`, now.Add(-reconcileLookback), reconcileBatch)
+		rows, err := tx.Query(ctx, reconcileCandidatesSQL(),
+			now.Add(-reconcileLookback), reconcileBatch, now)
 		if err != nil {
 			return err
 		}
