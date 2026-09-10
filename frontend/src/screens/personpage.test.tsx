@@ -1022,4 +1022,35 @@ describe("the consent rail names the purpose behind each answer", () => {
     const rows = screen.getAllByText(/Allowed|Unknown/);
     expect(rows.length).toBeGreaterThan(1);
   });
+
+  // A REFUSAL A REP CANNOT EXPLAIN IS NOT USABLE. The rail showed the reason
+  // for correspondence alone, so a subject who asked us to stop marketing got a
+  // blocked row with nothing under it saying why — the one fact a rep needs
+  // before they pick up the phone about it.
+  it("says why a marketing purpose is blocked, not only a correspondence one", async () => {
+    const objected: PersonConsentGuardEntry = {
+      purpose_key: "newsletter",
+      purpose_label: "Newsletter",
+      purpose_class: "marketing",
+      channel: "email",
+      verdict: "blocked",
+      reason: "they asked us to stop on 12 July",
+    };
+    mount("overview", view, [objected, correspondence]);
+
+    expect(
+      await screen.findByText("they asked us to stop on 12 July"),
+    ).not.toBeNull();
+  });
+
+  // And the correspondence reason still shows. Without this the fix above
+  // could be "show the last reason", which would take the row a reply rides
+  // out with it.
+  it("still says why correspondence is allowed", async () => {
+    mount("overview", view, [newsletter, correspondence]);
+
+    expect(
+      await screen.findByText("she wrote to you on 1 June"),
+    ).not.toBeNull();
+  });
 });
