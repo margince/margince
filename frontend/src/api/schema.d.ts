@@ -15312,6 +15312,12 @@ export interface components {
              */
             require_sso?: boolean;
             /**
+             * @description Make a second factor mandatory: a member without a confirmed authenticator is
+             *     confined to the MFA enrolment routes until they set one up. Omit to leave the policy
+             *     unchanged.
+             */
+            require_mfa?: boolean;
+            /**
              * @description Which remaining-pipeline reading a projected landing is built from. Never frozen:
              *     it is applied on READ and stores nothing, so changing it re-computes every landing
              *     at once and re-means no stored row.
@@ -15749,6 +15755,13 @@ export interface components {
              *     use it, not whether it exists.
              */
             require_sso: boolean;
+            /**
+             * @description When true, a second factor is mandatory: a member with no confirmed authenticator
+             *     is admitted only to the MFA enrolment routes until they set one up, the same
+             *     confinement a forced password change uses. A member who already holds a factor is
+             *     unaffected — they are challenged for it at sign-in either way.
+             */
+            require_mfa: boolean;
         };
         /** @description One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen. */
         SignInProvider: {

@@ -10,7 +10,41 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
+
+// The mounted addresses of the routes a member confined by require-MFA may still
+// reach: read their state and enrol a factor — never disable one, so a required
+// factor cannot be removed from inside the confinement.
+const (
+	mfaStatusPath      = httpserver.BaseURL + "/me/mfa"
+	mfaTotpPath        = httpserver.BaseURL + "/me/mfa/totp"
+	mfaTotpConfirmPath = httpserver.BaseURL + "/me/mfa/totp/confirm"
+)
+
+// isMFAEnrolRequest reports the routes an un-enrolled member may reach while the
+// installation requires a factor. The read-seat ceiling admits the enrolment
+// POSTs through it too — enrolling a mandated factor is self-management, not a
+// business write.
+func isMFAEnrolRequest(r *http.Request) bool {
+	switch r.URL.Path {
+	case mfaStatusPath:
+		return r.Method == http.MethodGet
+	case mfaTotpPath, mfaTotpConfirmPath:
+		return r.Method == http.MethodPost
+	}
+	return false
+}
+
+// mfaEnrolmentRequiredRefusal is the answer every admission door gives a member
+// the installation requires a factor from until they enrol one. One spelling,
+// like forcedRotationRefusal, so a client branches on a single code.
+func mfaEnrolmentRequiredRefusal() *httperr.DetailedError {
+	return &httperr.DetailedError{
+		Status: http.StatusForbidden, Code: "mfa_enrolment_required",
+		Detail: "this installation requires multi-factor authentication; enrol an authenticator to continue",
+	}
+}
 
 // GetMyMfa implements GET /me/mfa — the caller's own second-factor state.
 func (h Handlers) GetMyMfa(w http.ResponseWriter, r *http.Request) {

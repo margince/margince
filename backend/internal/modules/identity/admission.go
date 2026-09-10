@@ -85,6 +85,14 @@ func (h Handlers) serveAsHuman(ctx context.Context, w http.ResponseWriter, r *ht
 		return
 	}
 
+	// A member the installation requires a second factor from, who holds none,
+	// reaches only the MFA enrolment routes until they set one up — the same
+	// confinement the forced password change above uses.
+	if id.MustEnrolMFA && !isMFAEnrolRequest(r) {
+		httperr.Write(w, r, mfaEnrolmentRequiredRefusal())
+		return
+	}
+
 	next.ServeHTTP(w, r.WithContext(withHumanPrincipal(ctx, id)))
 }
 
@@ -154,7 +162,7 @@ func (h Handlers) serveAsOptionalHuman(ctx context.Context, w http.ResponseWrite
 // Kept separate from the must-change-password gate's isOwnCredentialRequest,
 // which stays confined to the one route that replaces the credential.
 func readSeatMayMutate(r *http.Request) bool {
-	return isOwnCredentialRequest(r) || isOwnSessionRevoke(r)
+	return isOwnCredentialRequest(r) || isOwnSessionRevoke(r) || isMFAEnrolRequest(r)
 }
 
 // isMutating is the transport-level write test the agent and read-seat

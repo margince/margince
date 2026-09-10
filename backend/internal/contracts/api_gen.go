@@ -19352,6 +19352,12 @@ type AuthCapabilities struct {
 // and currency are NOT here — every role reads those, and repeating them in a document
 // governed by a narrower grant would make the same fact answer to two authorities.
 type AuthenticationPolicy struct {
+	// RequireMfa When true, a second factor is mandatory: a member with no confirmed authenticator
+	// is admitted only to the MFA enrolment routes until they set one up, the same
+	// confinement a forced password change uses. A member who already holds a factor is
+	// unaffected — they are challenged for it at sign-in either way.
+	RequireMfa bool `json:"require_mfa"`
+
 	// RequireSso When true, this installation has closed the password path: an ordinary member
 	// may sign in only through a configured provider. Admins keep the password form
 	// regardless — the break-glass that stops a broken IdP from locking out the people
@@ -34995,6 +35001,11 @@ type UpdateInstallationSettingsRequest struct {
 
 	// Name Rename the organization.
 	Name *string `json:"name,omitempty"`
+
+	// RequireMfa Make a second factor mandatory: a member without a confirmed authenticator is
+	// confined to the MFA enrolment routes until they set one up. Omit to leave the policy
+	// unchanged.
+	RequireMfa *bool `json:"require_mfa,omitempty"`
 
 	// RequireSso Close the password path: when true, an ordinary member may sign in only through a
 	// configured provider, while an admin keeps the password form as break-glass. Omit to

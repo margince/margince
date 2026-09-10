@@ -65,6 +65,9 @@ type InstallationPatch struct {
 	// RequireSSO switches the password path off for ordinary members (admins
 	// keep it as break-glass). A nil pointer leaves the policy unchanged.
 	RequireSSO *bool
+	// RequireMFA makes a second factor mandatory. A nil pointer leaves it
+	// unchanged.
+	RequireMFA *bool
 }
 
 // pendingWrite is one field of a sparse patch, already reduced to the two
@@ -160,61 +163,6 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	}, nil
 }
 
-// signInPolicyReadActor names the entry read this projection performs after it
-// has already admitted the caller. A SYSTEM actor for the same reason the login
-// screen's read uses one: the question is what this INSTALLATION offers, not
-// what this reader may see, and the reader's own authority was settled one line
-// above.
-const signInPolicyReadActor = "system:sign_in_policy_read"
-
-// SignInPolicy answers which sign-in providers the installation offers, gated on
-// `authentication_policy` rather than on the settings aggregate around it.
-//
-// THE GATE HERE IS THE WHOLE SECURITY OF THIS READ. The entry itself is defined
-// on installation_settings — moving it would make every read of the aggregate
-// demand this grant and take the name, timezone and currency with it, which
-// every role is meant to read — so this checks the caller first and then reads
-// the entry as the installation. A system principal bypasses object RBAC
-// entirely, so removing or weakening the Require below does not merely widen
-// this endpoint, it removes its only gate.
-func (s *InstallationSettingsStore) SignInPolicy(ctx context.Context) ([]string, bool, error) {
-	if err := auth.Require(ctx, authenticationPolicyObject, principal.ActionRead); err != nil {
-		return nil, false, err
-	}
-	// Only after the caller is admitted. The workspace and correlation id ride
-	// from the request so the read stays attributable to the trace that asked.
-	readCtx := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   signInPolicyReadActor,
-	})
-	chosen, err := settings.Get(readCtx, s.settings, EnabledOidcProviders)
-	if err != nil {
-		return nil, false, fmt.Errorf("identity: reading the sign-in policy: %w", err)
-	}
-	requireSSO, err := settings.Get(readCtx, s.settings, RequireSSO)
-	if err != nil {
-		return nil, false, fmt.Errorf("identity: reading the sign-in policy: %w", err)
-	}
-	return chosen, requireSSO, nil
-}
-
-// SSOEnforced reports whether the installation has closed the password path, for
-// the LOGIN gate rather than a user-facing read: it carries no auth.Require,
-// because it runs on an anonymous pre-auth request and decides whether that
-// request may proceed at all. Read as the installation, the same system actor
-// SignInPolicy uses once its own gate has passed.
-func (s *InstallationSettingsStore) SSOEnforced(ctx context.Context) (bool, error) {
-	readCtx := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   signInPolicyReadActor,
-	})
-	enforced, err := settings.Get(readCtx, s.settings, RequireSSO)
-	if err != nil {
-		return false, fmt.Errorf("identity: reading the enforced-SSO policy: %w", err)
-	}
-	return enforced, nil
-}
-
 // baseCurrencyLock asks the entry's own probe, so the answer the read reports
 // and the answer the write enforces come from one place. A read with the probe
 // unwired reports "changeable", which is what the write would then do — the
@@ -282,7 +230,11 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []pendingWrite{name, zone, currency, language, fiscal, measure, providers, requireSSO}, nil
+	requireMFA, err := encodePatchField(RequireMFA, in.RequireMFA)
+	if err != nil {
+		return nil, err
+	}
+	return []pendingWrite{name, zone, currency, language, fiscal, measure, providers, requireSSO, requireMFA}, nil
 }
 
 // UpdateInstallation applies a sparse patch. Named for the same reason as

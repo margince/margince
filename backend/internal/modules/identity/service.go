@@ -62,6 +62,10 @@ type Service struct {
 	// composed the reader behaves exactly as one whose policy is off, so the
 	// password path stays open. See ssoenforcement.go.
 	requireSSO func(ctx context.Context) (bool, error)
+	// requireMFA answers whether this installation makes a second factor
+	// mandatory. Nil when unwired — no enforcement, and Authenticate then reads
+	// nothing extra per request. See mfachallenge.go.
+	requireMFA func(ctx context.Context) (bool, error)
 	// vault seals a member's TOTP secret at rest: the secret must be recoverable
 	// to verify a code (unlike a password, which is only ever compared), so it is
 	// sealed rather than hashed. Nil when unwired, which is what the MFA methods
@@ -110,9 +114,14 @@ type Identity struct {
 	// somebody else chose — a configured bootstrap's operator-supplied
 	// credential. Every authenticated route is refused until it is replaced.
 	MustChangePassword bool
-	Roles              []string
-	Teams              []ids.TeamID
-	Permissions        principal.Permissions
+	// MustEnrolMFA is true while require-MFA is on and this account has no
+	// confirmed second factor: every route but MFA enrolment is refused until
+	// one is set up, the same confinement MustChangePassword uses. Derived per
+	// request from the policy and the enrolment, not a stored column.
+	MustEnrolMFA bool
+	Roles        []string
+	Teams        []ids.TeamID
+	Permissions  principal.Permissions
 }
 
 // systemRoles is the seeded default role set (data-model §2.4, ADR-0110);
@@ -367,6 +376,12 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 	if err != nil {
 		return Identity{}, err
 	}
+	// Read before the tx (like the login gates), so the per-request enrolment
+	// check below runs only when the installation actually requires a factor.
+	requireMFA, err := s.mfaMandatory(ctx)
+	if err != nil {
+		return Identity{}, err
+	}
 	id := Identity{WorkspaceID: wsID}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// note: a session is keyed by its opaque token, not exposed as a
@@ -421,7 +436,20 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		}
 		var loadErr error
 		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, userID)
-		return loadErr
+		if loadErr != nil {
+			return loadErr
+		}
+		// Confine a member with no confirmed factor while the installation
+		// requires one — the enrolment check runs only when the policy is on, so
+		// an installation that never required MFA pays nothing for it.
+		if requireMFA {
+			confirmed, err := hasConfirmedMFA(ctx, tx, userID)
+			if err != nil {
+				return err
+			}
+			id.MustEnrolMFA = !confirmed
+		}
+		return nil
 	})
 	if err != nil {
 		return Identity{}, err

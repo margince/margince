@@ -40,6 +40,23 @@ type MFAChallengeSigner interface {
 	Verify(token string) (userID string, err error)
 }
 
+// WithRequireMFA injects the require-MFA policy reader, read at admission so an
+// admin turning it on takes effect without a restart. Unset leaves MFA optional.
+func (s *Service) WithRequireMFA(fn func(ctx context.Context) (bool, error)) *Service {
+	s.requireMFA = fn
+	return s
+}
+
+// mfaMandatory reports whether the installation requires a second factor. An
+// unwired reader is "not required"; a read that fails propagates, so a policy
+// outage confines rather than silently admits.
+func (s *Service) mfaMandatory(ctx context.Context) (bool, error) {
+	if s.requireMFA == nil {
+		return false, nil
+	}
+	return s.requireMFA(ctx)
+}
+
 // CompleteMFAChallenge verifies a second factor for a member the password step
 // already identified — via the signed challenge the handler checked — and mints
 // the session that password-plus-factor earns. Pre-auth by construction: the
