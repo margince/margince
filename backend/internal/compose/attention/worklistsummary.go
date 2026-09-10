@@ -145,14 +145,22 @@ func bucketOf(row ranked, level int, buckets *crmcontracts.WorklistBuckets) {
 // not yet overdue, so it fell into `planned`, and the sentence told a rep
 // nothing was due today while a deadline sat in their afternoon.
 //
-// A non-zero deadline is enough, and that is a fact about the assembly rather
-// than a shortcut. Every due-dated lane is read to `endOfDay` — one instant,
-// resolved once per assembly in the installation's own timezone — so a row that
-// reached this queue carrying a deadline has a deadline inside today. Asking
-// the boundary again here would need a context and a second resolution, and two
-// resolutions of one fact are how one lane gets yesterday's midnight and the
-// next gets today's inside a single response.
+// A non-zero deadline USED to be enough, on the ground that every due-dated
+// lane was read to `endOfDay` and so a row carrying one had it inside today.
+// The task lane now also carries what is coming — tomorrow, this week, later —
+// and under the old reading every one of those counted as due today, which is
+// the same sentence being wrong in the other direction.
+//
+// So the row's own group decides it where there is one. It is resolved once per
+// assembly against the same boundary the lanes were read to, which is what
+// keeps the count and the headings agreeing. A dated row from a lane that
+// carries no group is unchanged: those are all read to endOfDay, so their
+// deadline is still inside today by construction.
 func dueToday(row ranked) bool {
+	if group := row.item.DueGroup; group != nil {
+		return *group == crmcontracts.WorklistDueGroupToday ||
+			*group == crmcontracts.WorklistDueGroupOverdue
+	}
 	if !row.deadlineAt.IsZero() {
 		return true
 	}

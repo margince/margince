@@ -42534,6 +42534,17 @@ components:
             and the row nobody owns — the whole point of that scope — cannot say so.
         due_at: { type: string, format: date-time, description: "When this is due (tasks), or when it lapses (approvals)." }
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
+        due_group:
+          type: string
+          enum: [overdue, today, tomorrow, this_week, later]
+          description: >-
+            Which run of the page this dated row belongs to, so a client can head
+            "Due tomorrow" without deciding the boundary itself.
+
+            Resolved server-side for the reason every other boundary here is: the day's
+            end depends on the installation's zone, and a browser computing it from its
+            own clock would group a task differently from the counts above it. Present
+            only on rows carrying `due_at`.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |
@@ -43661,6 +43672,18 @@ components:
             attendees are all withheld both produce, and both mean the same thing here.
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
+        due_group:
+          type: string
+          enum: [overdue, today, tomorrow, this_week, later]
+          x-enum-varnames: [WorklistDueGroupOverdue, WorklistDueGroupToday, WorklistDueGroupTomorrow, WorklistDueGroupThisWeek, WorklistDueGroupLater]
+          description: >-
+            Which run of the page this dated row belongs to, so a client can head
+            "Due tomorrow" without deciding the boundary itself.
+
+            Resolved server-side for the reason every other boundary here is: the day's
+            end depends on the installation's zone, and a browser computing it from its
+            own clock would group a task differently from the counts above it. Present
+            only on rows carrying `due_at`.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |

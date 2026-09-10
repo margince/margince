@@ -110,13 +110,29 @@ func base(
 		// carrying the payload keeps the verb and the records it acts on
 		// travelling together: a row offering merge with no pair beneath it
 		// would be a button over records the client cannot name.
-		Pair:       item.Pair,
-		DueAt:      item.DueAt,
-		Overdue:    item.Overdue,
+		Pair:    item.Pair,
+		DueAt:   item.DueAt,
+		Overdue: item.Overdue,
+		// Carried rather than recomputed, for the reason the deadline itself
+		// is: the group was resolved against the assembly's own boundary and
+		// zone, and a second derivation here would need both again.
+		DueGroup:   carriedDueGroup(item.DueGroup),
 		OccurredAt: item.OccurredAt,
 		Actions:    carriedActions(item.Actions),
 		Because:    []crmcontracts.WorklistReason{},
 	}
+}
+
+// carriedDueGroup moves the lane's grouping onto the queue row. The two schemas
+// declare the same five words as their own enums, so the crossing is a cast —
+// but the contract drift gate is what keeps them the same five, and a value the
+// queue's enum does not know would be a heading no client has copy for.
+func carriedDueGroup(group *crmcontracts.AttentionItemDueGroup) *crmcontracts.WorklistItemDueGroup {
+	if group == nil {
+		return nil
+	}
+	carried := crmcontracts.WorklistItemDueGroup(*group)
+	return &carried
 }
 
 // carriedActions passes the lane feed's verbs through unchanged. The queue adds
@@ -429,7 +445,10 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	stampDeadline(&row, item.DueAt, asOf)
 	if overdueAt(item.DueAt, asOf) {
 		row.Because = append(row.Because, reason("overdue", nil))
-	} else if item.DueAt != nil {
+	} else if item.DueAt != nil && !isUpcoming(item.DueGroup) {
+		// Only work that IS due today says so. The lane now also carries what
+		// is coming, and a task due next week telling the reader it is due
+		// today contradicts the group on the same row.
 		row.Because = append(row.Because, reason("due_today", nil))
 	}
 	// Nobody has taken it. The same fact the lead lane states, and this lane

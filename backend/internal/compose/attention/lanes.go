@@ -151,6 +151,14 @@ type Tasks interface {
 	// showing the cap tells a reader with thirteen that they have twelve, and
 	// there is no second page to reach the thirteenth by.
 	CountOpenForViewer(ctx context.Context, until time.Time, scope TaskScope, owner ids.UUID) (int, error)
+	// UpcomingForViewer answers the work due AFTER the day's end, up to a
+	// horizon, under the same narrowing.
+	//
+	// A second read rather than a wider one, because the two allocations must
+	// not compete: a full day's backlog would fill a shared limit before a
+	// single upcoming row was reached, and the reader who most needs next
+	// week's deadline is exactly the one who would never see it.
+	UpcomingForViewer(ctx context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
 }
 
 // Task is one piece of agreed work.
