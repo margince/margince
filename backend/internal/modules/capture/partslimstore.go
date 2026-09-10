@@ -321,9 +321,7 @@ func (s *PartSlimStore) readObject(ctx context.Context, part CandidatePart) ([]b
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the object behind part:%d: %w", part.Ordinal, err)
 	}
-	// The close error is discarded deliberately, and this is the read side: the
-	// bytes are already in hand and about to be proved against the row's digest,
-	// so a failure to close the reader cannot change whether they were right.
+	//craft:ignore swallowed-errors best-effort close of an object read to completion — the digest check below decides whether these were the right bytes
 	defer func() { _ = reader.Close() }()
 	if object.Size != part.ByteSize {
 		return nil, fmt.Errorf("capture: part:%d is %d bytes in the store, %d in its row",

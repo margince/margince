@@ -333,6 +333,7 @@ func TestASlimmedOriginalRestoresToWhatTheProviderSent(t *testing.T) {
 			if err != nil {
 				return nil, err
 			}
+			//craft:ignore swallowed-errors best-effort close in a fixture — the restored bytes are the assertion
 			defer func() { _ = body.Close() }()
 			return io.ReadAll(io.LimitReader(body, ref.Bytes+1))
 		})

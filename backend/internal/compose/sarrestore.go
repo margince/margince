@@ -77,9 +77,7 @@ func readStoredPart(ctx context.Context, blob blobstore.Store, ref partslim.Part
 	if err != nil {
 		return nil, err
 	}
-	// Discarded on the read side for the reason partslimstore.go's readObject
-	// gives: the octets are proved against the stanza's digest, so a close
-	// failure cannot change whether they were the right ones.
+	//craft:ignore swallowed-errors best-effort close of an object read to completion — the stanza's digest decides whether these were the right bytes
 	defer func() { _ = body.Close() }()
 	return io.ReadAll(io.LimitReader(body, ref.Bytes+1))
 }
