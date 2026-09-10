@@ -24,7 +24,7 @@ func sarSections(pkg *SARPackage, personID ids.PersonID, emails []string, leads,
 	sections = append(sections, sarMessagingSections(pkg, personID, emails, leads)...)
 	sections = append(sections, sarConsentSections(pkg)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
-	sections = append(sections, sarCommunicationSections(pkg, personID, leads, identities)...)
+	sections = append(sections, sarCommunicationSections(pkg, leads, identities)...)
 	return append(sections, sarProvenanceSections(pkg)...)
 }
 
@@ -257,15 +257,21 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 // subject's own history. A person-keyed section would silently withhold the
 // earliest part of their record, which is the half they are least likely to
 // know about and most likely to be asking after.
-func sarCommunicationSections(pkg *SARPackage, personID ids.PersonID, leads, identities []ids.UUID) []sarSection {
-	subjects := append([]any{}, personID)
+func sarCommunicationSections(pkg *SARPackage, leads, identities []ids.UUID) []sarSection {
 	return []sarSection{
+		// EVERY IDENTITY here too, for the reason the bases and suppressions
+		// below take it: a decision taken about a record that was later merged
+		// into this subject is a decision about this subject, and reading the
+		// survivor alone leaves the export contradicting itself — it would
+		// carry a predecessor's suppression while withholding the decisions
+		// that suppression produced.
 		{
 			&pkg.CommunicationDecisions, `SELECT phase, requested_category, resolved_category, verdict,
 		          reason_code, basis, suppression, mode, decided_at
 		   FROM communication_decision
-		   WHERE subject_id = $1 OR (subject_kind = 'lead' AND subject_id = ANY($2))`,
-			append(subjects, leads),
+		   WHERE (subject_kind IS DISTINCT FROM 'lead' AND subject_id = ANY($1))
+		      OR (subject_kind = 'lead' AND subject_id = ANY($2))`,
+			[]any{identities, leads},
 		},
 		// EVERY IDENTITY, not the surviving row alone. A merge keeps the
 		// retiring subject's own basis and suppression rows where they are —

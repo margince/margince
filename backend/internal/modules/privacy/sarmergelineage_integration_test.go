@@ -68,6 +68,12 @@ func TestTheExportFollowsAPredecessorIdentity(t *testing.T) {
 		t.Fatalf("seeding the predecessor's basis: %v", err)
 	}
 
+	// And the decision that objection produced. Reading the survivor alone left
+	// the export contradicting itself: it would carry the predecessor's stop
+	// while withholding every refusal that stop caused, so the subject sees the
+	// rule and never the times it was applied to them.
+	seedRefusalAgainst(e.ctx, t, e, predecessor)
+
 	pkg, err := AssembleSAR(e.ctx, e.db, e.person)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
@@ -81,6 +87,10 @@ func TestTheExportFollowsAPredecessorIdentity(t *testing.T) {
 	if len(pkg.CommunicationBases) == 0 {
 		t.Error("the export carries no communication basis, though the merged-away record holds " +
 			"one — the subject is shown neither the mail nor the ground it stood on")
+	}
+	if len(pkg.CommunicationDecisions) == 0 {
+		t.Error("the export carries no communication decision, though the merged-away record holds " +
+			"one — the package names the stop and withholds every refusal that stop produced")
 	}
 }
 
@@ -154,5 +164,43 @@ func TestTheExportDoesNotReachTheRecordThisSubjectWasMergedInto(t *testing.T) {
 		t.Errorf("the export carries %d stop(s) belonging to the record this subject was merged "+
 			"INTO — that is somebody else's data in this subject's package",
 			len(pkg.CommunicationSuppression))
+	}
+}
+
+// seedRefusalAgainst records one transmit refusal about the named subject. A
+// decision row hangs off a real delivery, so the mail it refused is seeded with
+// it: the foreign key is what keeps a decision from outliving the message it
+// was taken about.
+func seedRefusalAgainst(ctx context.Context, t *testing.T, e *sarIdentifierEnv, subject ids.PersonID) {
+	t.Helper()
+	var user ids.UUID
+	if err := e.owner.QueryRow(ctx, `SELECT id FROM app_user LIMIT 1`).Scan(&user); err != nil {
+		t.Fatalf("reading the fixture's user: %v", err)
+	}
+	activity, delivery := ids.NewV7(), ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, occurred_at, source, captured_by)
+		VALUES ($1, 'email', now(), 'manual', 'user:'||$2::text)`, activity, user); err != nil {
+		t.Fatalf("seeding the activity the refused mail hangs off: %v", err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO comms_outbound (id, activity_id, user_id, provider, message_id,
+		                            recipients, cc, subject, body, references_chain,
+		                            consent_purpose, status)
+		VALUES ($1, $2, $3, 'gmail', $4,
+		        jsonb_build_array('merged@sar.test'::text), '[]'::jsonb,
+		        'A marketing note', 'the message that was refused', '[]'::jsonb,
+		        'marketing', 'parked')`,
+		delivery, activity, user, delivery.String()+"@margince.test"); err != nil {
+		t.Fatalf("seeding the refused delivery: %v", err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO communication_decision
+		  (delivery_id, decision_set_id, recipient_address, subject_kind, subject_id,
+		   phase, requested_category, resolved_category, verdict, reason_code, mode, actor)
+		VALUES ($1, $2, 'merged@sar.test', 'person', $3,
+		        'transmit', 'marketing', 'marketing', 'deny', 'subject_request', 'enforce', 'user:'||$4::text)`,
+		delivery, ids.NewV7(), subject, user); err != nil {
+		t.Fatalf("seeding the refusal about the merged-away record: %v", err)
 	}
 }
