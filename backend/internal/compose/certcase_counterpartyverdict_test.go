@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -181,15 +182,34 @@ func TestVerdictFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	if err := json.Unmarshal(verdictFixture(t), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
-	given := map[string]bool{"display_name": true, "email": true, "subject": true, "body": true}
+	// The set is DERIVED from the fixture struct rather than typed here. A
+	// hand-kept list is a second copy of the shape it guards: the day the
+	// ledger started handing the engine a message's direction, the list said
+	// the field was not production's — the opposite of the truth, and the gate
+	// was the only thing that had not moved.
+	given := map[string]bool{}
+	fixtureType := reflect.TypeFor[counterpartyVerdictFixture]()
+	for i := range fixtureType.NumField() {
+		tag, _, _ := strings.Cut(fixtureType.Field(i).Tag.Get("json"), ",")
+		if tag != "" && tag != "-" {
+			given[tag] = true
+		}
+	}
+	if len(given) == 0 {
+		t.Fatal("no json-tagged fields found on the fixture — this census read nothing " +
+			"and would report PASS over any fixture at all")
+	}
 	for name := range fields {
 		if !given[name] {
 			t.Errorf("the fixture carries %q, which the ledger row does not hand the engine", name)
 		}
 	}
-	for name := range given {
-		if _, present := fields[name]; !present {
-			t.Errorf("the fixture drops %q, which production always supplies", name)
+	// Only the fields a scenario must always state. Direction and wrote_back are
+	// deliberately absent: a row written before they were recorded carries
+	// neither, and a scenario describing one is a real ledger row.
+	for _, always := range []string{"display_name", "email", "subject", "body"} {
+		if _, present := fields[always]; !present {
+			t.Errorf("the fixture drops %q, which production always supplies", always)
 		}
 	}
 }

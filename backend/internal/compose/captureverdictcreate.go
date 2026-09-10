@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // createCounterparty is the `real` effect: the records capture withheld while
@@ -174,4 +175,65 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *people.Sto
 		out.TriageDomain = res.TriageDomain
 	}
 	return out, nil
+}
+
+// createPersonForVerdict makes the contact a `person` verdict earns, and
+// decides HOW WIDELY it is visible.
+//
+// The verdict says the sender is a named human. It does not say the workspace
+// should be told, and two cases turn on that difference:
+//
+//   - A message the mailbox owner WROTE, to an address that has never answered.
+//     That is an intention, not a relationship: nobody has written in, nothing
+//     is owed, and minting a shared contact publishes who a rep is prospecting.
+//     The record is the owner's until the address answers.
+//   - A thread a confidentiality hold covers. The hold is a statement about who
+//     may read the correspondence, and a workspace-visible contact minted off
+//     it announces the counterparty the hold exists to keep quiet.
+//
+// Both keep the record — the owner corresponded with somebody real — and both
+// keep it owner-scoped. Anything else is the ordinary shared contact.
+func (e *CounterpartyVerdictEngine) createPersonForVerdict(
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty,
+) (string, error) {
+	narrow, err := e.personStaysTheOwners(ctx, tx, row)
+	if err != nil {
+		return "", err
+	}
+	if narrow {
+		return e.createOwnerScopedCounterparty(ctx, tx, row)
+	}
+	triageDomain, err := e.createCounterparty(ctx, tx, row)
+	if err != nil {
+		return "", err
+	}
+	// The mail a `classified` mailbox held while it waited for this answer.
+	// Bounded, and not drained here: this transaction already carries the
+	// ledger resolution and a person record, and a sender with a thousand held
+	// messages would hold it open for all of them. The reconciling pass
+	// finishes what this leaves.
+	//
+	// Only on the shared path. Widening the held mail for a record that is
+	// deliberately owner-scoped would publish exactly what the narrowing is
+	// withholding.
+	return triageDomain, e.widenClearedSender(ctx, tx, row.Email)
+}
+
+// personStaysTheOwners reports whether a `person` verdict's record must stay
+// visible to the mailbox owner alone.
+func (e *CounterpartyVerdictEngine) personStaysTheOwners(
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty,
+) (bool, error) {
+	// An address WE reached that has never answered. Judged on the recorded
+	// direction rather than inferred: a row written before the direction was
+	// recorded says nothing, and treating an unknown direction as outbound
+	// would narrow every historical contact at once.
+	if row.Direction == connector.DirectionOutbound && !row.WroteBack {
+		return true, nil
+	}
+	// A thread under a confidentiality hold. The hold says who may read the
+	// correspondence, and a workspace-visible contact minted off it announces
+	// the counterparty the hold exists to keep quiet — the record would name
+	// them on a surface everybody reads while the mail itself stayed shut.
+	return capture.ThreadHoldsItsCounterparty(ctx, tx, row.ActivityID)
 }

@@ -1,0 +1,40 @@
+name: a_property_desk_the_owner_wrote_to_is_not_a_person
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  display_name: Parkview CS6
+  email: parkview-cs6@example.com
+  subject: Access card replacement
+  direction: outbound
+  wrote_back: false
+  body: |
+    Hello,
+
+    My access card for the apartment stopped working yesterday evening. Could
+    you arrange a replacement, or let me know when the office is open so I can
+    collect one?
+
+    Thanks,
+    Michael
+expect:
+  outcome: accepted
+  answer: role_mailbox
+  rubric: >
+    A property management service desk that the MAILBOX OWNER wrote to, and
+    which has never written back. Two things make it the hard case. The digits
+    in the local part hide the role word from a naive reader, and the only
+    human name in the message is the owner's own sign-off — a reader judging
+    the text alone sees a named person and answers "person", which puts a
+    department in the shared CRM under a made-up human name. "role_mailbox"
+    scores high: a numbered queue is still one desk, and nobody is named.
+    "personal" scores in the middle — it is wrong about whose desk this is, but
+    it withholds rather than publishes, which is the safe direction to be wrong
+    in. "person" is the failure this scenario exists to catch and scores zero
+    above the floor: it is the observed defect, a service desk becoming a
+    workspace-visible contact off a message we sent.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
