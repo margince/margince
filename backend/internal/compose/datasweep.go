@@ -96,6 +96,26 @@ var preservedResetTables = map[string]bool{
 	// It is still cleared by a reset — `activity` is swept, and the cascade takes
 	// the evidence with it. Preserved here means "not a target", never "kept".
 	"activity_retention_evidence": true,
+	// A directed-send decision (migration 1789048392): the record of who
+	// overrode a refusal, when, and under what reason. Its own trigger refuses
+	// EVERY delete unconditionally ("a communication instruction is the record
+	// of a decision and is never deleted") — unlike activity_retention_evidence
+	// above, there is no row-conditional carve-out for a cascade to pass
+	// through, so this is the audit_log/system_log shape, not that one.
+	//
+	// Not yet reachable in practice: nothing seeds a communication_instruction
+	// row today, so the sweep has never actually met one. The obligation this
+	// leaves standing: communication_review references this table with ON
+	// DELETE CASCADE, and that cascade would hit the same unconditional
+	// refusal the direct DELETE above does — sweeping communication_review
+	// will abort on the first row once an instruction is ever attached to
+	// one. Filed as margince#5287 (needs a product decision: whether a
+	// directed-send decision should outlive a reset the way this table's own
+	// preservation already says, in which case communication_review needs the
+	// same preservation, or whether the reset is entitled to clear it, in
+	// which case the trigger needs the row-conditional shape
+	// activity_retention_evidence's own guard has).
+	"communication_instruction": true,
 }
 
 // resetTargetTables lists every public base table a reset sweeps: all of them,

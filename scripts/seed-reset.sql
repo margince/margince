@@ -43,6 +43,7 @@ DECLARE
     'audit_log',
     'auth_token',
     'channel_provider',
+    'communication_instruction',
     'currency_minor_digits',
     'embed_store_binding',
     'consent_text_version',
