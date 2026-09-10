@@ -118,6 +118,10 @@ func QuietEdgesForUser(
 			excluded = got
 		}
 	}
+	// How much exchange makes a relationship. Two is the smallest number that
+	// is not a single touch, and the bar is deliberately low: this filter is
+	// about excluding the one-off, and the ranking below decides what matters.
+	exchangedPos := arg(2)
 	limitPos := arg(limit)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT e.user_id, e.person_id, e.last_at, e.last_inbound_at, e.last_outbound_at,
@@ -125,12 +129,18 @@ func QuietEdgesForUser(
 		  FROM graph_interaction_edge e
 		  %s
 		  JOIN person p ON p.id = e.person_id AND p.archived_at IS NULL
-		 WHERE e.user_id = $%d AND e.last_at <= $%d AND e.count_total > 0
-		   -- BOTH directions, ever. count_total > 0 admits an address the rep
-		   -- only ever wrote to and one that only ever wrote to them, and
-		   -- neither is a relationship there is anything to revive: a lapse is
-		   -- a conversation that stopped, and a conversation needs two people.
-		   AND e.last_inbound_at IS NOT NULL AND e.last_outbound_at IS NOT NULL
+		 WHERE e.user_id = $%d AND e.last_at <= $%d
+		   -- A relationship, not a single contact. A bare count of one admits an
+		   -- address exchanged with once — the cold mail nobody answered, the
+		   -- newsletter reply — and there is nothing there to revive.
+		   --
+		   -- Counted rather than tested for BOTH DIRECTIONS, which is what this
+		   -- asked first and would have been wrong: the directional aggregates
+		   -- filter on activity.direction, and a meeting carries none. A
+		   -- customer with an open deal and a year of meetings has NULL on both
+		   -- sides, so the strict reading dropped exactly the relationships this
+		   -- lane exists for.
+		   AND e.count_total >= $%d
 		   AND NOT EXISTS (SELECT 1 FROM graph_interaction_edge later
 		                     %s
 		                    WHERE later.person_id = e.person_id AND later.last_at >= $%d)
@@ -146,7 +156,7 @@ func QuietEdgesForUser(
 		 -- ago sits.
 		 ORDER BY e.count_total DESC, e.last_at ASC, e.person_id
 		 LIMIT $%d`, liveMemberJoin, userPos, beforePos,
-		laterMemberJoin, beforePos, scope, excluded, limitPos), args...)
+		exchangedPos, laterMemberJoin, beforePos, scope, excluded, limitPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading a rep's own quiet relationships: %w", err)
 	}

@@ -45,7 +45,12 @@ import (
 // filters after it scans needs.
 const (
 	quietDealBound = 50
-	decayBound     = 40
+	// The reconnect lane hands over five, ranked out of a wider candidate set.
+	// Bounded at what the LANE returns rather than at what it scanned: read
+	// against the scan depth, a page holding every row it was given still
+	// reported itself complete, and the sixth relationship was gone with no
+	// count saying so.
+	decayBound = 5
 )
 
 func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSource]bool {

@@ -18,6 +18,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sort"
 	"time"
 
@@ -194,7 +195,15 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 				// clinic and a service desk sat under a heading promising new
 				// revenue. Composed here because each module renders the rule
 				// over the table it owns.
-				return dismissed + " AND " + capture.PrivateSenderClause("e"), nil
+				// The reader's own id, bound as a placeholder like every other
+				// value here: the ledger is per mailbox owner, and one rep's
+				// private verdict must not decide another rep's pipeline.
+				actor, ok := principal.Actor(ctx)
+				if !ok || actor.UserID.IsZero() {
+					return "", apperrors.ErrPermissionDenied
+				}
+				reader := fmt.Sprintf("$%d", arg(actor.UserID))
+				return dismissed + " AND " + capture.PrivateSenderClause("e", reader), nil
 			},
 		)
 		if err != nil {
