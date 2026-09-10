@@ -3466,6 +3466,7 @@ export const vi = {
     "Nếu bạn biết lý do — họ đã đề nghị, bạn đã gặp họ, họ là khách hàng — hãy nêu ra và điều đó được ghi lại dưới tên bạn.",
   "sendPermission.unprovenRefuses":
     "Việc gửi sẽ bị từ chối cho đến khi Margince có ghi nhận.",
+  "sendPermission.checking": "Đang kiểm tra xem có thể gửi tin nhắn này không…",
   "sendPermission.unanswered":
     "Margince không kiểm tra được tin nhắn này có được phép gửi hay không. Khi gửi sẽ kiểm tra lại.",
   "sendPermission.reason.objected":

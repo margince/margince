@@ -359,6 +359,7 @@ function SendRow({
       {actionable && (
         <SendPermission
           preview={permission.preview}
+          asking={permission.asking}
           unanswered={permission.unanswered}
         />
       )}

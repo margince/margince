@@ -3509,6 +3509,7 @@ export const de = {
     "Wenn Sie den Grund kennen — man hat Sie darum gebeten, Sie hatten ein Treffen, es ist ein Kunde —, halten Sie ihn fest. Er wird unter Ihrem Namen gespeichert.",
   "sendPermission.unprovenRefuses":
     "Der Versand wird abgelehnt, bis Margince einen Nachweis hat.",
+  "sendPermission.checking": "Prüfe, ob diese Nachricht gesendet werden darf …",
   "sendPermission.unanswered":
     "Margince konnte nicht prüfen, ob diese Nachricht gesendet werden darf. Beim Senden wird erneut geprüft.",
   "sendPermission.reason.objected":
