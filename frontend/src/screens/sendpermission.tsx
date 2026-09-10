@@ -2,6 +2,7 @@ import { ShieldAlert, ShieldQuestion } from "lucide-react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CommunicationStatus } from "../design-system/communicationstatus";
 import { useT } from "../i18n";
 
 // What the engine decided about this message, said where the rep is writing it.
@@ -230,4 +231,52 @@ function reasonKey(recipient: Recipient | undefined) {
     default:
       return "sendPermission.reason.other" as const;
   }
+}
+
+/**
+ * SendMark is the quiet half of the answer: a mark that says the engine has
+ * looked and found nothing wrong.
+ *
+ * SendPermission draws a Callout for the states a rep has to act on and
+ * NOTHING for the state they do not. That silence was deliberate — the
+ * overwhelming majority of sends are allowed and none should cost attention —
+ * but it is also what the composer showed while it was still asking, and before
+ * anybody had asked at all. Three situations, one blank space, and no way to
+ * tell "checked and fine" from "not asked yet".
+ *
+ * So the allowed state gets a mark and the other two keep their Callout: this
+ * renders beside the Send button, where the decision is made, and the Callout
+ * stays in the body where an explanation belongs. A rep who never looks at the
+ * mark loses nothing, which is the test a quiet signal has to pass.
+ *
+ * It draws NOTHING when there is no question yet. A mark over an empty form
+ * would claim an answer about a message nobody has addressed.
+ */
+export function SendMark({
+  preview,
+  asking = false,
+  unanswered = false,
+}: Readonly<{
+  preview: Preview | undefined;
+  asking?: boolean;
+  unanswered?: boolean;
+}>) {
+  const t = useT();
+  const { state } = decidingRecipient(preview, asking);
+  // The refused and unproven states are the Callout's, not the mark's: a
+  // sentence a rep has to read does not belong in a glyph beside a button.
+  if (unanswered || (state === "allowed" && !preview)) return null;
+  if (state !== "allowed" && state !== "checking") return null;
+  const label =
+    state === "checking"
+      ? t("sendPermission.checking")
+      : t("sendPermission.ready");
+  return (
+    <CommunicationStatus
+      state={state === "checking" ? "checking" : "ready"}
+      scope="current_message"
+      label={label}
+      name={`${t("sendPermission.markName")}: ${label}`}
+    />
+  );
 }

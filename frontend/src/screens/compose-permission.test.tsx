@@ -249,4 +249,43 @@ describe("the composer asks before anybody presses Send", () => {
       expect(addressed).toContain("quiet@example.test");
     });
   });
+
+  // A PERMITTED SEND SAYS SO, QUIETLY.
+  //
+  // SendPermission draws nothing when the engine allows the message, which was
+  // deliberate — the overwhelming majority of sends are allowed and none of them
+  // should cost attention. But silence is also what the composer showed while it
+  // was still asking, and what it showed before anybody had asked at all. Three
+  // different situations, one blank space, and a rep had no way to tell "checked
+  // and fine" from "not asked yet".
+  //
+  // The mark is the smallest thing that separates them: present and quiet on an
+  // allowed send, absent only when there is genuinely nothing to say.
+  it("shows a quiet mark once the engine has allowed the message", async () => {
+    stubEngine(allowedPreview);
+    await openReplyAndAddress("anna@example.test");
+
+    expect(
+      await screen.findByRole("button", { name: /ready to send/i }),
+    ).toBeInTheDocument();
+  });
+
+  // And nothing at all before a recipient exists. A mark drawn over an empty
+  // form would claim an answer about a message nobody has addressed.
+  it("draws no mark before there is anybody to ask about", async () => {
+    stubEngine(allowedPreview);
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    await screen.findByText(
+      "This continues their own message, so it needs no reason from you.",
+    );
+    expect(screen.queryByRole("button", { name: /ready to send/i })).toBeNull();
+  });
 });
