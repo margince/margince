@@ -3,18 +3,21 @@
 
 package compose
 
-// Turning a mailed card's near-match verdict into a proposal, and telling the
-// importer when that fails — split out of vcardingest.go, which this shares a
-// worker with, once the failure-notice half grew past a comment's worth.
+// Turning a mailed card's near-match verdict into a proposal a human can
+// decide, and telling the importer when that fails.
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -59,7 +62,7 @@ func (w *vcardIngestWorker) stageReviews(ctx context.Context, activity ids.UUID,
 // a second copy handed down beside it is a second place for the two to drift,
 // and reading it here rather than trusting a caller-supplied recipient is
 // what keeps this self-only by construction rather than by a caller's promise.
-func (w *vcardIngestWorker) recordStagingFailure(ctx context.Context, activity ids.UUID, card int) error {
+func (w *vcardIngestWorker) recordStagingFailure(ctx context.Context, activity ids.UUID, entry people.VCardEntry) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
 		return errNoMailboxGrantorBound
@@ -68,26 +71,47 @@ func (w *vcardIngestWorker) recordStagingFailure(ctx context.Context, activity i
 		Recipient: ids.From[ids.UserKind](actor.UserID),
 		Kind:      noticeKindVCardStagingFailed,
 		Subject:   "A card attached to your mail could not be reviewed",
+		// Never "reopen the message" or another phrase implying this notice
+		// links to it: an activity subject deliberately resolves to no href
+		// (worklist.copy.ts's subjectHref, "an activity resolves to nothing on
+		// purpose") so there is nothing here to click through to. And never a
+		// flat "this failed" either — the fault may have been transient and a
+		// later retry may already have staged the same card, with nothing that
+		// withdraws this notice to say so; "if you don't see it" is the phrasing
+		// that reads true under both outcomes.
 		Body: "A card resembling an existing contact was attached to a message in your mailbox, " +
-			"and proposing it for your review failed. Reopen the message and re-import the card " +
-			"through Import cards on the contact list to retry.",
-		// Keyed on the CARD, not just the message: two cards in one batch can
-		// each fail, and each is its own open question — a key naming only the
-		// activity would let the second failure's notice silently answer the
-		// first's dedupe check and never land. River retries the whole message
-		// up to vcardIngestMaxAttempts times, and every attempt reaches here
-		// again for a card that keeps failing; the key is what keeps that one
-		// line, not one line per attempt.
-		DedupeKey: fmt.Sprintf("%s:%s:%d", noticeKindVCardStagingFailed, activity, card),
+			"and proposing it for your review may have failed. If you don't see this contact in " +
+			"your pending reviews, re-send the card and import it through Import cards on the " +
+			"contact list to retry.",
+		// Keyed on the CARD's own content, not its position in the batch: the
+		// entries a retry re-reads are ordered by the attachment rows'
+		// created_at (liveCardKeys), which a concurrent archive or a new
+		// attachment can shift between one attempt and the next. A key keyed
+		// on position would then dedupe the WRONG card's earlier notice, or
+		// miss the same card's, on nothing more than an unrelated attachment
+		// changing underneath it. vcardStagingFailureKey uses the identity
+		// vcardCreateStager's own proposal already keys on instead.
+		DedupeKey: fmt.Sprintf("%s:%s:%s", noticeKindVCardStagingFailed, activity, vcardStagingFailureKey(entry)),
 		Target:    notices.Target{Type: string(recordTypeActivity), ID: activity},
 	})
 	return err
 }
 
+// vcardStagingFailureKey is a card's stable identity across retries — the
+// same full_name/emails/organization triple vcardCreateStager's own proposal
+// identity keys on (vcardcreateproposal.go), so two cards that would collide
+// as one proposal also collide as one notice, and a card that merely moved
+// position in a re-read batch does not raise a second line for itself.
+func vcardStagingFailureKey(entry people.VCardEntry) string {
+	sum := sha256.Sum256([]byte(people.NormalizePersonName(entry.FullName) + "\x00" +
+		loweredCardEmails(entry) + "\x00" + strings.TrimSpace(entry.Organization)))
+	return hex.EncodeToString(sum[:8])
+}
+
 // stageReviewsWith is stageReviews against an injected stager and failure
 // notice, so a test can make one card's stage fail without needing a real
 // staging conflict — what is under test is the aggregation below, not
-// vcardCreateStager's own SQL or RecordVCardStagingFailure's own write.
+// vcardCreateStager's own SQL or recordStagingFailure's own write.
 //
 // Every eligible card gets its own attempt: one card's staging fault must not
 // cost its siblings in the same message their own review, the way ImportVCards
@@ -106,14 +130,22 @@ func (w *vcardIngestWorker) recordStagingFailure(ctx context.Context, activity i
 // retry might still deliver, and neither is this — a person checking now
 // deserves the same answer a person checking after the fifth attempt gets.
 // Its own DedupeKey is what keeps a retried attempt from raising the same
-// notice again. Its own failure is logged and does not join the aggregate: a
-// notice that could not be written is a reason to keep retrying the notice,
-// not a reason to tell River the CARD's staging failed differently than it
-// did.
+// notice again.
+//
+// A card that refused with ErrPermissionDenied/ErrNotFound AND whose notice
+// ALSO failed to write has that staging error demoted to %v rather than %w —
+// deliberately losing errors.Is visibility into the one sentinel Work reads
+// to mean "not a fault, do not retry" (vcardingest.go). Left as %w, the match
+// would stand on THIS card's own contribution and end the retry ladder with
+// its notice never raised — the exact silent failure this file exists to
+// close, recreated one layer down. Demoting only those two sentinels, and
+// only when the notice itself failed, forces the default branch so River
+// tries again purely to give the notice another chance; every other staging
+// error already retries regardless, with nothing to demote.
 func stageReviewsWith(
 	ctx context.Context, log *slog.Logger, activity ids.UUID,
 	stage func(ctx context.Context, entry people.VCardEntry, candidate *ids.PersonID) error,
-	recordFailure func(ctx context.Context, activity ids.UUID, card int) error,
+	recordFailure func(ctx context.Context, activity ids.UUID, entry people.VCardEntry) error,
 	entries []people.VCardEntry, results []people.VCardResult,
 ) error {
 	var eligible int
@@ -126,15 +158,26 @@ func stageReviewsWith(
 			continue
 		}
 		eligible++
-		if err := stage(ctx, entries[r.Index], r.PersonID); err != nil {
-			log.ErrorContext(ctx, "a card attached to captured mail could not be staged for review",
-				"activity", activity, "card", r.Index+1, "err", err)
-			failures = append(failures, err)
-			if noteErr := recordFailure(ctx, activity, r.Index+1); noteErr != nil {
-				log.ErrorContext(ctx, "a mailed card's staging failure could not raise a notice for its importer",
-					"activity", activity, "card", r.Index+1, "err", noteErr)
-			}
+		entry := entries[r.Index]
+		err := stage(ctx, entry, r.PersonID)
+		if err == nil {
+			continue
 		}
+		log.ErrorContext(ctx, "a card attached to captured mail could not be staged for review",
+			"activity", activity, "card", r.Index+1, "err", err)
+		if noteErr := recordFailure(ctx, activity, entry); noteErr != nil {
+			log.ErrorContext(ctx, "a mailed card's staging failure could not raise a notice for its importer",
+				"activity", activity, "card", r.Index+1, "err", noteErr)
+			if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+				failures = append(failures, fmt.Errorf("staging card %d: %v (its failure notice also could not be raised: %w)",
+					r.Index+1, err, noteErr))
+				continue
+			}
+			failures = append(failures, fmt.Errorf("staging card %d: %w (its failure notice also could not be raised: %v)",
+				r.Index+1, err, noteErr))
+			continue
+		}
+		failures = append(failures, err)
 	}
 	if len(failures) > 0 {
 		return fmt.Errorf("compose: staging %d of %d mailed cards for review: %w",

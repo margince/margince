@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -252,14 +253,15 @@ var errNoActorBound = errors.New("the import context carries no actor")
 // TestAStagingFailureRaisesAWorklistNoticeForTheImporter drives
 // recordStagingFailure's real write, against a real database, under a real
 // bound actor — the wiring the unit lane's injected recordFailure never
-// touches. This is the surface margince#3410 asks for: a real notice row a
-// person's Worklist would actually show, not an audit row nothing renders.
+// touches: a real notice row a person's Worklist would actually show, not an
+// audit row nothing renders.
 func TestAStagingFailureRaisesAWorklistNoticeForTheImporter(t *testing.T) {
 	e := integration.Setup(t)
 	worker := newVCardIngestWorker(e.Pool, blobstore.NewMemory(), quietIngestLog())
 	activity := ids.NewV7()
+	entry := people.VCardEntry{FullName: "A Broken Card"}
 
-	if err := worker.recordStagingFailure(e.Admin(), activity, 1); err != nil {
+	if err := worker.recordStagingFailure(e.Admin(), activity, entry); err != nil {
 		t.Fatalf("recording a staging failure: %v", err)
 	}
 
@@ -274,10 +276,11 @@ func TestAStagingFailureRaisesAWorklistNoticeForTheImporter(t *testing.T) {
 			"the importer's own Worklist, the one screen a person unattended can still check", err)
 	}
 	if targetType != "activity" || targetID != activity {
-		t.Errorf("notice target = (%s, %s), want (activity, %s) — a reader opening it must land on the "+
-			"message the card actually came from", targetType, targetID, activity)
+		t.Errorf("notice target = (%s, %s), want (activity, %s) — an activity subject renders no "+
+			"link (worklist.copy.ts's subjectHref), but the row is still LABELLED with the message "+
+			"this card came from, which is what the target names", targetType, targetID, activity)
 	}
-	wantDedupe := noticeKindVCardStagingFailed + ":" + activity.String() + ":1"
+	wantDedupe := noticeKindVCardStagingFailed + ":" + activity.String() + ":" + vcardStagingFailureKey(entry)
 	if dedupe != wantDedupe {
 		t.Errorf("dedupe_key = %q, want %q — without it, every retry of the same card raises a second line", dedupe, wantDedupe)
 	}
@@ -292,9 +295,10 @@ func TestARetriedStagingFailureRaisesOnlyOneNotice(t *testing.T) {
 	e := integration.Setup(t)
 	worker := newVCardIngestWorker(e.Pool, blobstore.NewMemory(), quietIngestLog())
 	activity := ids.NewV7()
+	entry := people.VCardEntry{FullName: "A Broken Card"}
 
 	for i := 0; i < 3; i++ {
-		if err := worker.recordStagingFailure(e.Admin(), activity, 1); err != nil {
+		if err := worker.recordStagingFailure(e.Admin(), activity, entry); err != nil {
 			t.Fatalf("attempt %d: recording a staging failure: %v", i+1, err)
 		}
 	}
