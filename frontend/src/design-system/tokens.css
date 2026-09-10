@@ -316,34 +316,27 @@
    * Their own family rather than --success / --warn / --danger, which are UI
    * CHROME: a destructive button, an error notice, a status chip. A reading is
    * neither an action nor an alert, and it is set at 17-20px on a translucent
-   * pane rather than at 12px inside a tint — the chrome inks are tuned dark for
-   * that tint and read as a warning notice when a whole row of figures wears
-   * them.
+   * pane rather than at 12px inside a tint.
    *
-   * ONE value per tone in BOTH themes, declared here and nowhere else: a
-   * reading that went badly went badly at any hour, and the two themes lifting
-   * their status inks in opposite directions is how the same verdict came out
-   * two hues.
+   * ONE HUE PER TONE, and the INK SHARE is the theme's. The hue is stated once
+   * — --hueGood / --hueWarn / --hueDanger, unthemed — so a verdict is the same
+   * verdict at any hour; how much of the page's own ink is folded into it is a
+   * per-theme decision, because the figure has to read at AA on the pane it is
+   * drawn on and the two panes are near-white and near-black. Measured against
+   * the composited pane, the shares here clear 4.5:1 in each theme. A single
+   * share cannot do both: light needs a relative luminance at or under 0.177
+   * and dark at or over 0.23. So this family lifts in dark exactly the way
+   * --success and --danger already do, rather than inventing a second answer.
    *
-   * Each is 8% --textPrimary. A saturated hue at full chroma is a colour before
-   * it is a word — it vibrates against the pane and sits apart from the ink
-   * around it; a little of the page's own ink settles it into the type without
-   * moving which tone it is. */
-  --statGood: color-mix(
-    in oklab,
-    lab(71.4376% -59.4106 38.0321) 92%,
-    var(--textPrimary) 8%
-  );
-  --statWarn: color-mix(
-    in oklab,
-    lab(74.4448% 23.7172 71.6451) 92%,
-    var(--textPrimary) 8%
-  );
-  --statDanger: color-mix(
-    in oklab,
-    lab(57.4234% 73.5589 48.0136) 92%,
-    var(--textPrimary) 8%
-  );
+   * A mix rather than the bare hue in either theme: a saturated hue at full
+   * chroma is a colour before it is a word, and a little of the page's ink
+   * settles it into the type without moving which tone it is. */
+  --hueGood: lab(71.4376% -59.4106 38.0321);
+  --hueWarn: lab(74.4448% 23.7172 71.6451);
+  --hueDanger: lab(57.4234% 73.5589 48.0136);
+  --statGood: color-mix(in oklab, var(--hueGood), var(--textPrimary) 37%);
+  --statWarn: color-mix(in oklab, var(--hueWarn), var(--textPrimary) 40%);
+  --statDanger: color-mix(in oklab, var(--hueDanger), var(--textPrimary) 17%);
 
   /* ===== Tag tones =====
    * The eight hues an admin picks from when naming a tag, and the ONLY colours
@@ -826,6 +819,14 @@
    * white ink, and lightening that would cost the fill its own contrast. */
   --dangerText: #fb9a9a;
 
+  /* The reading tones keep their hue and take LESS of the page's ink: on a
+   * near-black pane the saturated hue is already the readable one, and the
+   * light theme's share would darken the figure toward the ground it sits on.
+   * The hues themselves are unthemed — one hue per tone, both themes. */
+  --statGood: color-mix(in oklab, var(--hueGood), var(--textPrimary) 8%);
+  --statWarn: color-mix(in oklab, var(--hueWarn), var(--textPrimary) 8%);
+  --statDanger: color-mix(in oklab, var(--hueDanger), var(--textPrimary) 8%);
+
   /* The tag tones lift on a dark ground. Each keeps its hue and its distance
    * from its neighbours — a tag that reads teal in light must not read sky in
    * dark, because the colour is the only thing telling two tags apart. */
@@ -933,6 +934,10 @@
     --danger: #f87171;
     --dangerBg: rgba(248, 113, 113, 0.16);
     --dangerText: #fb9a9a;
+
+    --statGood: color-mix(in oklab, var(--hueGood), var(--textPrimary) 8%);
+    --statWarn: color-mix(in oklab, var(--hueWarn), var(--textPrimary) 8%);
+    --statDanger: color-mix(in oklab, var(--hueDanger), var(--textPrimary) 8%);
 
     --tagTeal: #2dd4bf;
     --tagAmber: #fbbf24;

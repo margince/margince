@@ -21,6 +21,7 @@ import {
   usePlural,
   useT,
 } from "../i18n";
+import { openAnalyticsSection } from "./analytics.address";
 import { useAnalyticsContext } from "./analytics.context";
 import { useForecastReadings } from "./forecast.queries";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
@@ -408,6 +409,11 @@ function PipelineOutlook() {
       // in the viewer's clock west of UTC they print the day before — a quarter
       // labelled 30 Jun – 29 Sept. The period is a property of the
       // installation's calendar, the same for every colleague reading it.
+      // The forecast section, which is where this figure is read from: the
+      // same query key, under the same scope the server named for this reader.
+      // Not the deals list — the reading is a period's weighted outlook, and a
+      // list of open deals is a different question that happens to share a sum.
+      onOpen={() => openAnalyticsSection("forecast")}
       detail={t("brief.readings.pipelineBasis", {
         period: `${formatDateAbbrev(
           middayInstant(data.period_start, recordZone),

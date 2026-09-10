@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
 import { userEvent, within } from "storybook/test";
 import { useLocale } from "../i18n";
+import { openAnalyticsSection } from "./analytics.address";
 import {
   firstWeek,
   narratedWeek,
@@ -112,6 +113,7 @@ function OutlookFrame({
       locale={locale}
       horizon={horizon}
       onHorizon={setHorizon}
+      onOpenForecast={() => openAnalyticsSection("forecast")}
     />
   );
 }

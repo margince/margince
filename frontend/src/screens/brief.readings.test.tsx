@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RecordZoneProvider } from "../app/recordzone";
 import { formatDateTime } from "../format/format";
@@ -513,10 +514,11 @@ describe("the pipeline period", () => {
     drawInZone("Asia/Tokyo");
     expect(await screen.findByText(/1 Jul 2026 – 30 Sept 2026/)).toBeTruthy();
   });
-  // FOUR DOORS, FOUR READINGS. Every door on this strip is named "Open" and
-  // nothing more. Sighted, the card above each one says open WHAT — a screen
-  // reader tabbing the strip hears the same word four times and cannot tell the
-  // lanes apart, unless each door's DESCRIPTION carries its own reading's label.
+  // ONE WORD, ONE DOOR PER READING. Every door on this strip is named "Open"
+  // and nothing more. Sighted, the card above each one says open WHAT — a
+  // screen reader tabbing the strip hears the same word over and over and
+  // cannot tell the lanes apart, unless each door's DESCRIPTION carries its own
+  // reading's label.
   //
   // Asserted as a SET rather than card by card: the defect is duplication, and a
   // per-card check passes on four doors described identically.
@@ -532,11 +534,69 @@ describe("the pipeline period", () => {
         .join(" "),
     );
 
-    // The strip draws four readings and each one has a door, so the role query
-    // must find exactly four. Asserting only distinctness would pass on a strip
-    // where two doors gained a longer name and fell out of the set entirely.
+    // Four of the five lanes come from the worklist answer and each has a door,
+    // so the role query must find exactly four here — the pipeline slot's read
+    // has not landed under this stub, and an unread figure is offered no way
+    // out. Asserting only distinctness would pass on a strip where two doors
+    // gained a longer name and fell out of the set entirely.
     expect(doors).toHaveLength(4);
     expect(descriptions.every((text) => text.length > 0)).toBe(true);
     expect(new Set(descriptions).size).toBe(4);
+  });
+
+  // The fifth reading's door, and the two states it must tell apart. The
+  // pipeline figure is the one slot read separately, so it is the one slot that
+  // can be pending or unread — and a door onto a figure nobody could read sends
+  // a reader to a section to check a number this page never had.
+  it("opens the forecast from the pipeline reading once it has landed", async () => {
+    stubPipeline(
+      () =>
+        new Response(
+          JSON.stringify({
+            period_start: "2026-07-01",
+            period_end: "2026-09-30",
+            scope_kind: "owner",
+            open_minor: 42_000_000,
+            weighted_minor: 16_800_000,
+            best_case_minor: 0,
+            evidence_minor: 0,
+            eligible_count: 12,
+            priced_count: 12,
+            confirmed_date_count: 8,
+            fx_missing_count: 0,
+            as_of: "2026-09-03T06:42:00Z",
+            base_currency: "EUR",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    );
+    draw();
+    await screen.findByText(/420k|420,000/i);
+
+    const door = screen.getByRole("button", {
+      name: "Open",
+      description: en["brief.readings.pipeline"],
+    });
+    try {
+      await userEvent.setup().click(door);
+      expect(window.location.hash).toBe("#/analytics/forecast");
+    } finally {
+      window.location.hash = "";
+    }
+  });
+
+  // The same slot with nothing behind it. A read that did not land is not a
+  // pipeline of nothing, and it is not a door either.
+  it("offers no door while the pipeline read has not landed", async () => {
+    stubPipeline(() => new Response("", { status: 500 }));
+    draw();
+
+    await screen.findByText(en["brief.readings.pipelineNoRead"]);
+    expect(
+      screen.queryByRole("button", {
+        name: "Open",
+        description: en["brief.readings.pipeline"],
+      }),
+    ).toBeNull();
   });
 });

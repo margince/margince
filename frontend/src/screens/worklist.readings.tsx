@@ -115,12 +115,14 @@ function RevenueStat({
   const currency = readings.revenue_currency;
   if (minor == null || !currency) {
     return (
-      // No door on this arm: nothing here could be priced, so the lane behind
-      // it is not what the reader is missing — the prices are.
+      // The SAME door as the priced arm. The lane holds the drifting deals
+      // whether or not anybody priced them, and pricing them is this reader's
+      // work, so the door is drawn on both arms.
       <StatCard
         label={t("worklist.readings.revenue")}
         value={t("worklist.readings.revenue.noFigure")}
         detail={t("worklist.readings.revenue.unpriced")}
+        onOpen={onOpen}
       />
     );
   }

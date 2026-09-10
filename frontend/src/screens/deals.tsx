@@ -104,7 +104,7 @@ import {
 import { DealCommitteeMap } from "./deal360/dealcommittee";
 import { DealPulse } from "./deal360/dealpulse";
 import { DealSeats } from "./deal360/dealseats";
-import { DealStrip } from "./deal360/dealstrip";
+import { DEAL_OFFERS_ANCHOR, DealStrip } from "./deal360/dealstrip";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import { useDealRecipientAddress } from "./deal360/usedealrecipient";
 import { DealBulkBar } from "./dealbulk";
@@ -3895,14 +3895,18 @@ function DealOverviewPane({
         />
         <DealApprovals approvals={dealApprovals} decide={onDecide} />
         <RecordReadingPair>
-          <OffersPanel
-            offers={offers}
-            creating={creatingOffer}
-            locale={locale}
-            dealCurrency={deal.currency ?? null}
-            refusedReasonId={refusedReasonId}
-            onCreate={onCreateOffer}
-          />
+          {/* The money reading's door scrolls here; the id is the strip's own
+              constant, so a rename cannot leave the door pointing at nothing. */}
+          <div id={DEAL_OFFERS_ANCHOR}>
+            <OffersPanel
+              offers={offers}
+              creating={creatingOffer}
+              locale={locale}
+              dealCurrency={deal.currency ?? null}
+              refusedReasonId={refusedReasonId}
+              onCreate={onCreateOffer}
+            />
+          </div>
           <DealCommitteeMap
             coverage={coverage.coverage}
             withheld={coverage.withheld}

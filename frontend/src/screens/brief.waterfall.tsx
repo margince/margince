@@ -19,11 +19,17 @@ export function OutlookPanel({
   locale,
   horizon,
   onHorizon,
+  onOpenForecast,
 }: Readonly<{
   outlook: readonly Outlook[];
   locale: Locale;
   horizon: string;
   onHorizon: (next: string) => void;
+  // Where each figure's door goes: Analytics' forecast section, which is the
+  // measure all five were read under. The panel does not build the address
+  // itself — both surfaces that draw it own their own navigation, and a leaf
+  // reaching for the router is a leaf two screens cannot place differently.
+  onOpenForecast: () => void;
 }>) {
   const t = useT();
 
@@ -60,29 +66,40 @@ export function OutlookPanel({
         }}
       />
 
+      {/* Every slot opens the forecast. These five are what the forward measure
+          produces, and Analytics · Forecast is the surface that measure is read
+          on, so that is where a reader goes to see how a landing is reached.
+          The door says "this is the forecast" and not "these are the deals":
+          the figures here were FROZEN when the week closed, and no list in the
+          product can be narrowed back to the population one of them counted. */}
       <StatStrip>
         <StatCard
           label={t("brief.weekly.outlook.won")}
           value={money(shown.won_minor)}
+          onOpen={onOpenForecast}
         />
         <StatCard
           label={t("brief.weekly.outlook.commit")}
           value={money(shown.commit_minor)}
+          onOpen={onOpenForecast}
         />
         {/* The label says "incl. commit" because the figure includes it, and a
             reader adding best case to commit would double-count the overlap. */}
         <StatCard
           label={t("brief.weekly.outlook.bestCase")}
           value={money(shown.best_case_minor)}
+          onOpen={onOpenForecast}
         />
         <StatCard
           label={t("brief.weekly.outlook.weighted")}
           value={money(shown.weighted_minor)}
+          onOpen={onOpenForecast}
         />
         {shown.closing_landing_minor !== undefined && (
           <StatCard
             label={t("brief.weekly.outlook.landing")}
             value={money(shown.closing_landing_minor)}
+            onOpen={onOpenForecast}
             // Which measure produced it, because the same pipeline reads
             // differently under each and a landing with no basis is a number a
             // reader cannot argue with.

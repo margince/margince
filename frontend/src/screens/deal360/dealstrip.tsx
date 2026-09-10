@@ -19,6 +19,7 @@
 
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
+import { reveal } from "../../app/reveal";
 import { StatCard } from "../../design-system/atoms";
 import { FactList } from "../../design-system/factlist";
 import { ReadingsGrid } from "../../design-system/readingsgrid";
@@ -35,6 +36,13 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { dealRoleLabel } from "../record360";
 import { SeatPerson } from "./seatperson";
+
+// Where the money reading's door leads. The deal's overview draws the offers
+// card under these readings — the same tab, one screen down — so the door is a
+// scroll to it rather than a route. Named here and given to the element by
+// `deals.tsx`, which owns the layout, so the two cannot drift apart into an id
+// nothing carries.
+export const DEAL_OFFERS_ANCHOR = "deal-offers";
 
 type Deal = components["schemas"]["Deal"];
 type Offer = components["schemas"]["Offer"];
@@ -158,6 +166,11 @@ function MoneyStat({
       value={amount === MONEY_ABSENT ? t("deal.strip.money.unpriced") : amount}
       detail={detail}
       basis={basis}
+      // The paper the amount was written on. Drawn on the unpriced arm too:
+      // this is the same card either way, and a deal nobody has priced is
+      // exactly the one whose reader wants the offers card, where the price
+      // gets written.
+      onOpen={reveal(DEAL_OFFERS_ANCHOR)}
     />
   );
 }

@@ -1857,12 +1857,12 @@
   display: block;
 }
 
-/* The label NAMES the reading; it does not announce it. Uppercase micro-type
-   was saying the second thing: five eyebrows over five figures read as five
-   section headings, and the figure — the one thing on the card compared across
-   a row — had to win a fight with the word above it. So it is sentence-case
-   meta text, one weight up from the detail line under the figure, which is the
-   whole of the distinction it needs.
+/* The label NAMES the reading; it does not announce it. It is sentence-case
+   text at the meta size in the body's own ink and weight — the rule sets
+   neither, because the figure below it is what carries weight and colour, and
+   it is the figure a reader compares across a row. Five names over five
+   figures that each carried a weight or a tint of their own would read as five
+   headings the figures had to win a fight with.
    The rule owns the ROW: what QUALIFIES the reading — where it came from, what
    it rests on — sits at its far end, beside the name of the reading rather than
    under the figure, so neither competes with the number. */
@@ -1872,8 +1872,6 @@
   justify-content: space-between;
   gap: var(--space-2);
   font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  color: var(--textMeta);
   line-height: 1.25;
 }
 /* The name itself clamps to ONE line, and the chips beside it do not: a row of

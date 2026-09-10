@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import { ENTITY } from "../app/entity";
-import { navigate, routeHash, useRoute } from "../app/router";
+import { routeHash, useRoute } from "../app/router";
 import {
   Button,
   Card,
@@ -26,6 +26,12 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  openAnalyticsSection,
+  SECTIONS,
+  type Section,
+  sectionFromAddress,
+} from "./analytics.address";
 import {
   type AnalyticsSelection,
   useAnalyticsContext,
@@ -88,19 +94,6 @@ type ReportKey =
   | "project-commitments"
   | "projects-gone-quiet";
 
-// A SECTION is what the address names and what the tabs choose between; a
-// REPORT is one result inside it. They were the same thing while every section
-// held exactly one report, and keeping them the same would have meant the
-// address changing the day a section grew a second result — breaking every
-// link anyone had saved to it.
-type Section =
-  | "forecast"
-  | "pipeline"
-  | "performance"
-  | "outcomes"
-  | "coverage"
-  | "delivery";
-
 // Which results each section holds, in the order they are drawn. The tab strip
 // and the bodies both read this, so a section cannot come to list a report it
 // does not draw.
@@ -124,41 +117,6 @@ const SECTION_REPORTS = {
   // What was sold becoming what is delivered: the three project reports.
   delivery: ["projects-by-phase", "project-commitments", "projects-gone-quiet"],
 } as const satisfies Record<Section, readonly ReportKey[]>;
-
-const SECTIONS = Object.keys(SECTION_REPORTS) as readonly Section[];
-
-/** isSection narrows a URL segment, which is any string a reader can type. */
-function isSection(value: string | undefined): value is Section {
-  return SECTIONS.some((section) => section === value);
-}
-
-// The old address named a report. Those links are in bookmarks and in sent
-// mail, so each one still answers, with the section that now holds it.
-// Keyed by string rather than by ReportKey, because a RETIRED name is still an
-// address somebody saved. `deals-by-stage` names no report this screen draws
-// any more — the stage view reads pipeline-current — and the link in a
-// bookmark or a sent mail must still land on the section that answers it.
-const SECTION_OF_REPORT: Readonly<Record<string, Section>> = {
-  forecast: "pipeline",
-  "pipeline-current": "pipeline",
-  "deals-by-stage": "pipeline",
-  "open-deals-per-company": "pipeline",
-  "win-loss": "performance",
-  "stage-age": "performance",
-  "projects-by-phase": "delivery",
-  "project-commitments": "delivery",
-  "projects-gone-quiet": "delivery",
-};
-
-export function sectionFromAddress(segment: string | undefined): Section {
-  if (isSection(segment)) {
-    return segment;
-  }
-  if (segment && segment in SECTION_OF_REPORT) {
-    return SECTION_OF_REPORT[segment as ReportKey];
-  }
-  return "forecast";
-}
 
 type ReportRow = components["schemas"]["ReportResult"]["rows"][number];
 type Derivation = components["schemas"]["ReportDerivation"];
@@ -1372,8 +1330,19 @@ function MyOutcomesView({
     <>
       <Card title={t("analytics.myPipeline")}>
         <StatStrip>
-          <StatCard label={t("analytics.count")} value={pipelineCount} />
-          <StatCard label={valueLabel} value={pipelineValue} />
+          {/* Both readings are one row of the pipeline report, and the
+              pipeline section is what draws that report — so the door is that
+              section rather than a deal list this view never queried. */}
+          <StatCard
+            label={t("analytics.count")}
+            value={pipelineCount}
+            onOpen={() => openAnalyticsSection("pipeline")}
+          />
+          <StatCard
+            label={valueLabel}
+            value={pipelineValue}
+            onOpen={() => openAnalyticsSection("pipeline")}
+          />
         </StatStrip>
       </Card>
       <Card title={t("analytics.myMeetings")}>
@@ -1803,8 +1772,6 @@ export function AnalyticsScreen() {
   const section = sectionFromAddress(
     route.screen === "analytics" ? route.id : undefined,
   );
-  const setSection = (next: Section) =>
-    navigate({ screen: "analytics", id: next });
   // Deal reports aggregate over the pipeline/stage structure the overlay mirror
   // does not hold (the report endpoints answer 422 unsupported_by_sor in
   // overlay), so the sections show the honest unavailable state.
@@ -1849,7 +1816,7 @@ export function AnalyticsScreen() {
           return true;
         })}
         value={section}
-        onChange={setSection}
+        onChange={openAnalyticsSection}
         labels={{
           forecast: t("analytics.sectionForecast"),
           pipeline: t("analytics.sectionPipeline"),

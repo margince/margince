@@ -1,8 +1,10 @@
 /** @vitest-environment jsdom */
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import type { WorklistFilter } from "./worklist.queries";
 import { WorklistReadings } from "./worklist.readings";
 
 // What the strip above the queue claims, and what it refuses to claim.
@@ -35,10 +37,13 @@ function day(readings: Partial<WorklistReadingsData> = {}): Worklist {
   };
 }
 
-function draw(readings: Partial<WorklistReadingsData> = {}) {
+function draw(
+  readings: Partial<WorklistReadingsData> = {},
+  onLane: (filter: WorklistFilter) => void = () => {},
+) {
   return render(
     <LocaleProvider initial="en">
-      <WorklistReadings day={day(readings)} onLane={() => {}} />
+      <WorklistReadings day={day(readings)} onLane={onLane} />
     </LocaleProvider>,
   );
 }
@@ -83,6 +88,37 @@ describe("the worklist readings strip", () => {
     draw({ revenue_at_risk_minor: 0, revenue_currency: "EUR" });
     expect(screen.queryByText("No deal at risk could be priced")).toBeNull();
     expect(screen.getByText("€0")).toBeTruthy();
+  });
+
+  // The unpriced arm used to be the one reading on this strip with no way out,
+  // and it is the one a reader most needs: the lane holds the drifting deals
+  // whether or not anybody priced them, and pricing them is the work.
+  it("opens the deals-at-risk lane whether or not the money could be priced", async () => {
+    const user = userEvent.setup();
+    const priced = vi.fn();
+    const unpriced = vi.fn();
+
+    const shown = draw(
+      { revenue_at_risk_minor: 384_500_00, revenue_currency: "EUR" },
+      priced,
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "Open",
+        description: "Revenue at risk",
+      }),
+    );
+    expect(priced).toHaveBeenCalledWith("deals_at_risk");
+    shown.unmount();
+
+    draw({ revenue_at_risk_minor: null }, unpriced);
+    await user.click(
+      screen.getByRole("button", {
+        name: "Open",
+        description: "Revenue at risk",
+      }),
+    );
+    expect(unpriced).toHaveBeenCalledWith("deals_at_risk");
   });
 
   // A source read to its bound makes every figure a floor. The caveat is under

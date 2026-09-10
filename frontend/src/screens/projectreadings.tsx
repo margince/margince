@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
+import { reveal } from "../app/reveal";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -26,17 +27,9 @@ import { type Project360, stateOf } from "./projectsections";
 // owns the layout, so the two cannot drift apart into an id nothing carries.
 export const PROJECT_DEALS_ANCHOR = "project-deals";
 export const PROJECT_COMMITMENTS_ANCHOR = "project-commitments";
-
-// A reading with a card behind it opens that card. `scrollIntoView` and not a
-// fragment href: this app routes on the hash, so `#project-deals` would be read
-// as an address and take the reader off the record.
-function reveal(anchor: string): () => void {
-  return () => {
-    document
-      .getElementById(anchor)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-}
+// The record's own story, which `RecordView` draws under the work column: the
+// activity readings are counted FROM it, so their door is a scroll to it.
+export const PROJECT_ACTIVITY_ANCHOR = "project-activity";
 
 // A money rollup as a READING: the figure where the deals carry one, and what
 // their absence means where they do not. `formatMoneyOrAbsent` owns whether the
@@ -115,10 +108,12 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
             ? formatDateAbbrev(rollups.last_activity_at, locale, recordZone)
             : t("project.rollups.never")
         }
+        onOpen={reveal(PROJECT_ACTIVITY_ANCHOR)}
       />
       <StatCard
         label={t("project.rollups.activityCount")}
         value={formatNumber(rollups.activity_count, locale)}
+        onOpen={reveal(PROJECT_ACTIVITY_ANCHOR)}
       />
     </StatStrip>
   );
