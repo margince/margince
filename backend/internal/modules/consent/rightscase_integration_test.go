@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -267,7 +268,14 @@ func TestAReplayedProposalOpensNoSecondCase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("opening a transaction: %v", err)
 	}
-	defer func() { _ = tx.Rollback(context.Background()) }()
+	// Nothing here commits, so this rollback IS the cleanup and a failure is
+	// this test's own connection in trouble rather than a designed no-op.
+	// ErrTxClosed is the one exception, which is what a clean run leaves.
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back the replay transaction: %v", err)
+		}
+	})
 
 	replayed, err := openRightsCaseTx(context.Background(), tx, e.person, submissionID,
 		submissionErasure, time.Now())

@@ -155,7 +155,12 @@ func openRightsCaseTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 		if err == nil {
 			return finishRightsCase(ctx, tx, caseID, stored, created, kind, submissionID)
 		}
-		if !isReceiptCollision(err) || attempt == receiptAttempts-1 {
+		// The poisoned arm is tested FIRST and not folded into the collision
+		// test, because it cannot be: errors.As reaches through errors.Join, so
+		// a poisoned transaction still answers isReceiptCollision — the
+		// collision that provoked the rollback is genuinely in there.
+		if errors.Is(err, errSavepointPoisoned) || !isReceiptCollision(err) ||
+			attempt == receiptAttempts-1 {
 			return "", err
 		}
 	}
@@ -163,6 +168,11 @@ func openRightsCaseTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 	// returns the last error. Go cannot see that, so this states it.
 	return "", fmt.Errorf("consent: opening the rights case this request owes an answer to: no attempt ran")
 }
+
+// errSavepointPoisoned marks a savepoint whose rollback did not take. The
+// redraw above refuses to run against one: the transaction it would retry in is
+// already finished, so the attempt reports the abort instead of the collision.
+var errSavepointPoisoned = errors.New("consent: the rights-case savepoint could not be rolled back")
 
 // receiptAttempts bounds the redraw. Three, because a second collision after a
 // fresh draw is not bad luck any more — it is the alphabet or the generator
@@ -199,7 +209,16 @@ func attemptRightsCase(ctx context.Context, tx pgx.Tx, kind string, personID ids
 		oneCalendarMonthAfter(receivedAt), submissionID, receipt,
 	).Scan(&caseID, &stored, &created)
 	if err != nil {
-		_ = nested.Rollback(ctx)
+		// A savepoint whose rollback did not take is the ONE failure the redraw
+		// cannot survive, and the loop's own comment says why: the outer
+		// transaction is finished, so every remaining attempt fails on that
+		// rather than on the receipt — three identical mystery failures carrying
+		// the first attempt's words and the wrong cause. So it travels WITH the
+		// fault it was undoing, the shape capture/sinkensure.go already uses,
+		// and errSavepointPoisoned is what stops the retry reaching for it.
+		if rbErr := nested.Rollback(ctx); rbErr != nil {
+			return ids.UUID{}, "", false, errors.Join(errSavepointPoisoned, err, rbErr)
+		}
 		return ids.UUID{}, "", false, fmt.Errorf(
 			"consent: opening the rights case this request owes an answer to: %w", err)
 	}
