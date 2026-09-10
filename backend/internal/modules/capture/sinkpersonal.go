@@ -108,9 +108,41 @@ type PrivateThreadContact struct {
 // whose every conversation here is personal has no business reason to be in the
 // CRM.
 //
+// What counts as a business conversation is EVIDENCE, not the absence of an
+// answer. A thread with no verdict row was read as business for a year, and it
+// is the single reason a founder's clinic kept its contact: the clinic's second
+// thread had never been judged at all, because it arrived before alias
+// discovery knew the address it was sent to. There are three states, and only
+// one of them protects the record:
+//
+//   - JUDGED, and not personal-held — cleared, shared, or held for a business
+//     reason like legal or personnel. Evidence. The contact stays. A row the
+//     OWNER held carries no kind at all, and NULL is not `personal`: they held
+//     a conversation without saying it was their private life, which is a
+//     business hold like any other. `IS NOT DISTINCT FROM` is what makes that
+//     read true rather than NULL.
+//   - OPEN TO THE WORKSPACE already, whatever the ledger says. A cleared
+//     sender's mail is born workspace-visible and opens no question at all, so
+//     requiring a verdict row would retract exactly the contacts the workspace
+//     has already agreed are its own.
+//   - Anything else — never judged, or still pending. NOT evidence. A pending
+//     row is a question in flight and resolving it personal runs this again;
+//     an unjudged thread is silence, and silence is not a business
+//     relationship.
+//
+// The thread that triggered the verdict is excluded explicitly, because the
+// engine recomputes its rows' audience AFTER this runs — reading their stored
+// audience here would read the answer from before the verdict.
+//
 // It reads addresses rather than person ids from the thread, because that is
 // what the activity carries; the caller resolves each to the record capture
 // made for it.
+//
+// One bound to know: it matches on counterparty_email, so business
+// correspondence reaching the same human at a DIFFERENT address does not
+// protect them. Widening to person identity would also widen the retraction
+// across seats, which the owner bound deliberately narrows; the address is the
+// unit the thread ledger and the activity rows both key on.
 func ContactsOrphanedByPrivacyTx(
 	ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID,
 ) ([]PrivateThreadContact, error) {
@@ -125,9 +157,10 @@ func ContactsOrphanedByPrivacyTx(
 		 WHERE a.thread_key = $1
 		   AND a.counterparty_email <> ''
 		   AND p.owner_id = $2
-		   -- Every thread this seat shares with them is personal. One ordinary
+		   -- No thread this seat shares with them is business. One ordinary
 		   -- conversation makes them a business contact who also has a private
-		   -- one, and retracting that loses a real counterparty.
+		   -- one, and retracting that loses a real counterparty — but silence
+		   -- about a thread is not that conversation.
 		   AND NOT EXISTS (
 		         SELECT 1
 		           FROM activity other
@@ -135,9 +168,14 @@ func ContactsOrphanedByPrivacyTx(
 		             ON tv.thread_key = other.thread_key AND tv.user_id = $2
 		          WHERE other.counterparty_email = a.counterparty_email
 		            AND other.thread_key <> ''
-		            AND (tv.kind IS DISTINCT FROM $3
-		                 OR tv.status NOT IN ($4, $5)))`,
-		threadKey, user, ThreadKindPersonal, VerdictHeld, VerdictHeldByOwner)
+		            AND other.thread_key <> $1
+		            AND other.archived_at IS NULL
+		            AND other.restricted_at IS NULL
+		            AND ((tv.id IS NOT NULL
+		                  AND NOT (tv.kind IS NOT DISTINCT FROM $3
+		                           AND tv.status IN ($4, $5)))
+		                 OR other.audience = $6))`,
+		threadKey, user, ThreadKindPersonal, VerdictHeld, VerdictHeldByOwner, audienceWorkspace)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the contacts a private verdict orphaned: %w", err)
 	}

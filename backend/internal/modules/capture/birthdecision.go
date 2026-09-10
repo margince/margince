@@ -296,11 +296,30 @@ func mailboxPostureTx(ctx context.Context, tx pgx.Tx) (string, error) {
 		// posture from.
 		return PostureHeld, nil
 	}
+	return mailboxPostureForTx(ctx, tx, actor.UserID, provider)
+}
+
+// mailboxPostureForTx reads one named mailbox's posture.
+//
+// Split out from the ambient reader above because a caller that is not the
+// capture principal — an alias claim under the seat's own principal, or a
+// reconcile sweep under the system's — cannot derive the seat and provider from
+// the actor, and would silently get `held` for every mailbox instead. That is
+// the failure worth naming: `held` is a real posture, so the wrong answer looks
+// exactly like a correct one.
+//
+// A mailbox with no live connection is `held`. It is the safe answer and the
+// honest one: mail whose connection is gone has nobody asking for it to be
+// opened.
+func mailboxPostureForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, provider string) (string, error) {
+	if user == ids.Nil || provider == "" {
+		return PostureHeld, nil
+	}
 	var posture string
 	err := tx.QueryRow(ctx, `
 		SELECT mail_posture FROM capture_connection
 		 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL`,
-		actor.UserID, provider).Scan(&posture)
+		user, provider).Scan(&posture)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return PostureHeld, nil
