@@ -24,6 +24,44 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// phonePlacement pairs a submitted row with the id of the held row it updates,
+// so the placement writes WHERE id = $1 rather than WHERE phone = $2 — the value
+// match rewrote every live row of a number at once, collapsing two types onto
+// the last (there is no dedupe index on a number, so two live rows of one are a
+// valid record).
+type phonePlacement struct {
+	id  ids.UUID
+	row PersonPhoneInput
+}
+
+// reconcilePhonePlacements splits a whole-list phone replace into row-level work:
+// each submitted row consumes ONE held row of its number in FIFO order (an
+// update to that row's id); a submitted row with no held row left is fresh; a
+// held row nothing consumed is archived. Two rows of one number keep their own
+// identities because they consume two distinct held ids.
+func reconcilePhonePlacements(
+	held map[string][]ids.UUID,
+	submitted []PersonPhoneInput,
+) (updates []phonePlacement, fresh []PersonPhoneInput, archive []ids.UUID) {
+	remaining := make(map[string][]ids.UUID, len(held))
+	for number, rowIDs := range held {
+		remaining[number] = append([]ids.UUID(nil), rowIDs...)
+	}
+	for _, row := range submitted {
+		rowIDs := remaining[row.Phone]
+		if len(rowIDs) > 0 {
+			updates = append(updates, phonePlacement{id: rowIDs[0], row: row})
+			remaining[row.Phone] = rowIDs[1:]
+		} else {
+			fresh = append(fresh, row)
+		}
+	}
+	for _, rowIDs := range remaining {
+		archive = append(archive, rowIDs...)
+	}
+	return updates, fresh, archive
+}
+
 // replacePersonPhones makes the person's LIVE numbers mirror the given set, the
 // way replacePersonEmails does for addresses.
 //
