@@ -732,6 +732,47 @@ func TestEverySelfOnlyShapeIsWithheldFromEverySeatButTheOneItWasStagedFor(t *tes
 	}
 }
 
+// A rep's own morning work is decided by the rep, and the nil case is the
+// opposite of the self-only one above: a proposal recording nobody stays SHARED
+// rather than being withheld from everybody.
+//
+// Table-driven over the map so a kind enrolled tomorrow is covered without an
+// edit here — the enrolment is the decision, and a test that had to be updated
+// alongside it would be a second list to forget.
+func TestAProposalStagedForARepIsDecidedByThatRepAlone(t *testing.T) {
+	mine, theirs := ids.NewV7(), ids.NewV7()
+	subject := ids.From[ids.UserKind](mine)
+	rep := principal.Principal{UserID: mine, Permissions: principal.Permissions{RowScope: principal.RowScopeAll}}
+	manager := principal.Principal{UserID: theirs, Permissions: principal.Permissions{RowScope: principal.RowScopeAll}}
+
+	if len(decidedByTheSeatStagedFor) == 0 {
+		t.Fatal("no kind is enrolled at all — this walk covers nothing")
+	}
+	for kind := range decidedByTheSeatStagedFor {
+		t.Run(kind, func(t *testing.T) {
+			if selfOnlyKinds[kind] {
+				t.Fatal("this kind is ALSO self-only, so the arm under test never runs " +
+					"and the nil case below asserts the opposite rule")
+			}
+			forTheRep := row{Kind: kind, OnBehalfOf: &subject}
+			if !withheldFromOtherSeats(manager, forTheRep) {
+				t.Error("a colleague may decide a proposal staged for somebody else — " +
+					"answering it takes the question away from the rep who was going to act on it")
+			}
+			if withheldFromOtherSeats(rep, forTheRep) {
+				t.Error("the rep it was staged for cannot see their own proposal")
+			}
+			// An unowned deal records nobody. Nothing here is one person's
+			// private business, so it stays everybody's rather than nobody's.
+			unowned := row{Kind: kind}
+			if withheldFromOtherSeats(manager, unowned) {
+				t.Error("a proposal on a deal nobody owns was withheld from everyone, " +
+					"so nobody can act on it at all")
+			}
+		})
+	}
+}
+
 // DecisionGrantObjects is what the composition layer's satisfiability gate reads,
 // and it is load-bearing only if it names the SAME objects requireDecisionGrants
 // enforces. A gate certifying an object the decision does not demand — or blind to

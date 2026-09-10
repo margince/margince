@@ -471,6 +471,67 @@ func TestAFutureMeetingAlreadyMarkedHeldIsNotAPlan(t *testing.T) {
 	}
 }
 
+// The task proposal records the deal's owner, driven through the REAL
+// reconciler rather than a hand-populated field: the writer is the half that
+// was missing, and a test that set on_behalf_of itself would have passed
+// against the bug it exists to catch.
+func TestATaskProposalRecordsTheDealOwnerItIsFor(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Owned by a rep", e.pipeline, e.open, &e.Rep1)
+	// A CALL, so the sweep takes the task-proposal path rather than drafting a
+	// reply — the drafted branch already recorded the owner.
+	e.seedInteraction(t, deal, "call", "Discovery call", 3)
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	var onBehalfOf *ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT on_behalf_of FROM approval
+		  WHERE kind = 'deal_follow_up' AND target_entity_id = $1 AND status = 'pending'`,
+		deal).Scan(&onBehalfOf); err != nil {
+		t.Fatalf("reading the staged proposal: %v", err)
+	}
+	if onBehalfOf == nil {
+		t.Fatal("the proposal names nobody, so it sits on every colleague's queue " +
+			"and the rep whose deal it is has no claim on it")
+	}
+	if *onBehalfOf != e.Rep1 {
+		t.Errorf("the proposal is filed for %s, want the deal owner %s", *onBehalfOf, e.Rep1)
+	}
+}
+
+// A deal nobody owns records nobody, and that is the honest answer rather than a
+// gap: with no seat to name, withholding it would leave a proposal nobody at all
+// could act on.
+func TestAProposalOnAnUnownedDealRecordsNobody(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Nobody owns this", e.pipeline, e.open, nil)
+	// CreateDeal falls back to the ACTING principal when handed no owner
+	// (storekit.OwnerOrActor), so a nil here seeds a deal owned by the admin.
+	// Clearing the column is the only way to reach the state this test is about
+	// — the one ON DELETE SET NULL leaves behind when a member is removed.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE deal SET owner_id = NULL WHERE id = $1`, deal); err != nil {
+		t.Fatalf("clearing the deal owner: %v", err)
+	}
+	e.seedInteraction(t, deal, "call", "Discovery call", 3)
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	var onBehalfOf *ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT on_behalf_of FROM approval
+		  WHERE kind = 'deal_follow_up' AND target_entity_id = $1 AND status = 'pending'`,
+		deal).Scan(&onBehalfOf); err != nil {
+		t.Fatalf("reading the staged proposal: %v", err)
+	}
+	if onBehalfOf != nil {
+		t.Errorf("an unowned deal's proposal was filed for %s", *onBehalfOf)
+	}
+}
+
 // The slipping lane reads the SAME "has a next step" question through
 // dealsWithNoOpenNextStep, and it is a different reader with its own statement.
 // Both were task-only before, so a fix to one alone would have left the two
