@@ -191,6 +191,46 @@ func TestTwoPrimaryPhonesOfOneTypeIsRefusedByType(t *testing.T) {
 	}
 }
 
+// #4675: a person legitimately holds one number twice under two types. A PATCH
+// that re-sends both rows unchanged — an ordinary rename that replaces the
+// phone set every save — must not collapse them onto the last type.
+func TestReplacingLeavesTwoTypesOfOneNumberIntact(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	person, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Dup Phone",
+		Phones: []PersonPhoneInput{
+			{Phone: "+491119999999", PhoneType: "work", IsPrimary: false, Position: 0},
+			{Phone: "+491119999999", PhoneType: "home", IsPrimary: false, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("create person: %v", err)
+	}
+
+	updated, err := e.store.UpdatePerson(ctx, ids.From[ids.PersonKind](ids.UUID(person.Id)), UpdatePersonInput{
+		Phones: []PersonPhoneInput{
+			{Phone: "+491119999999", PhoneType: "work", IsPrimary: false, Position: 0},
+			{Phone: "+491119999999", PhoneType: "home", IsPrimary: false, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("re-sending both rows: %v", err)
+	}
+
+	rows := livePhoneRows(updated)
+	types := map[string]bool{}
+	for _, r := range rows {
+		types[string(r.PhoneType)] = true
+	}
+	if len(rows) != 2 || !types["work"] || !types["home"] {
+		t.Fatalf("phones = %+v, want one work and one home", rows)
+	}
+}
+
 func livePhoneRows(p crmcontracts.Person) []crmcontracts.PersonPhone {
 	if p.Phones == nil {
 		return nil

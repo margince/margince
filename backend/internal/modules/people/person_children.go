@@ -109,6 +109,9 @@ func replacePersonEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, p
 	// Demoting first empties the slot every later write — this loop's promotions
 	// and the archive-then-insert below alike — is about to claim.
 	place := func(e PersonEmailInput) error {
+		// Safe to match on value here, unlike phones: uq_person_email_dedupe makes
+		// one address name at most one live row per person, so this can never hit
+		// two rows the way replacePersonPhones could (#4675).
 		if _, err := tx.Exec(ctx,
 			`UPDATE person_email SET email_type = $3, is_primary = $4, position = $5
 			  WHERE person_id = $1 AND email = lower($2) AND archived_at IS NULL`,

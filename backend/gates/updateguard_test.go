@@ -120,6 +120,7 @@ func versionedTables(t *testing.T) map[string]bool {
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/people:touchRevertedPerson": "the aggregate bump after a revert removed a child row. RevertProviderFills holds this person FOR UPDATE from the top of its transaction — LockRow with IncludeArchived, because the contact may be archived — so the guard is the caller's lock rather than a second one here; re-taking it would be the liveness refusal this function exists to avoid",
+	"internal/modules/people:replacePersonPhones": "the archive half of a whole-list phone replace, each statement keyed on a held row's own id (#4675 — a value match would archive every live row of one number, not the one the reconciler chose). archived_at IS NULL makes it an absolute idempotent transition: a row a concurrent write already archived converges on the same archived_at, so losing that race is agreement, not a conflict to guard against",
 	// Both hold the row FOR UPDATE before this UPDATE runs, through
 	// lockActivityForWrite (retentionhold.go) rather than a direct
 	// storekit.LockRow call this witness's AST walk can see: a row a plain
