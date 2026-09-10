@@ -8241,8 +8241,6 @@ export const en = {
   // Why the lead verb is refused, in two sentences that are never merged: no
   // way to reach them, and consent that says not to.
   "person.action.noTransport": "No address, and no conversation to reply to.",
-  "person.action.consentRefused":
-    "No purpose currently permits writing to them.",
   "person.action.call": "Call",
   "person.action.meetings": "See meetings",
   "person.action.addTask": "Add task",

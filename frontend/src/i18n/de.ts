@@ -8144,8 +8144,6 @@ export const de = {
   "person.action.messageOn": "Über {transport} schreiben",
   "person.action.noTransport":
     "Keine Adresse und keine Unterhaltung, auf die sich antworten ließe.",
-  "person.action.consentRefused":
-    "Derzeit erlaubt kein Zweck, ihnen zu schreiben.",
   "person.action.call": "Anrufen",
   "person.action.meetings": "Termine ansehen",
   "person.action.addTask": "Aufgabe",
