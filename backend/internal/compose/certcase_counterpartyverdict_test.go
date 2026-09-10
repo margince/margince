@@ -182,25 +182,29 @@ func TestVerdictFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	if err := json.Unmarshal(verdictFixture(t), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
-	// The set is DERIVED from the fixture struct rather than typed here. A
-	// hand-kept list is a second copy of the shape it guards: the day the
-	// ledger started handing the engine a message's direction, the list said
-	// the field was not production's — the opposite of the truth, and the gate
-	// was the only thing that had not moved.
+	// The set is derived from the LEDGER ROW — the thing production actually
+	// hands the engine — not from the fixture struct.
+	//
+	// Deriving it from the fixture would be self-validating: the JSON under
+	// test is marshalled from that same struct, so any field added there would
+	// permit itself and the gate would agree with whatever it was shown. The
+	// ledger row is the independent subject, and a fixture field with no
+	// counterpart on it is exactly the invention this test exists to catch.
+	//
+	// Matched case-insensitively on the Go field name: the fixture's json tags
+	// are snake_case and the row's fields are not tagged at all, so the names
+	// are the only thing the two share.
 	given := map[string]bool{}
-	fixtureType := reflect.TypeFor[counterpartyVerdictFixture]()
-	for i := range fixtureType.NumField() {
-		tag, _, _ := strings.Cut(fixtureType.Field(i).Tag.Get("json"), ",")
-		if tag != "" && tag != "-" {
-			given[tag] = true
-		}
+	rowType := reflect.TypeFor[capture.PendingCounterparty]()
+	for i := range rowType.NumField() {
+		given[strings.ToLower(strings.ReplaceAll(rowType.Field(i).Name, "_", ""))] = true
 	}
 	if len(given) == 0 {
-		t.Fatal("no json-tagged fields found on the fixture — this census read nothing " +
-			"and would report PASS over any fixture at all")
+		t.Fatal("no fields found on the ledger row — this census read nothing and would " +
+			"report PASS over any fixture at all")
 	}
 	for name := range fields {
-		if !given[name] {
+		if !given[strings.ReplaceAll(name, "_", "")] {
 			t.Errorf("the fixture carries %q, which the ledger row does not hand the engine", name)
 		}
 	}

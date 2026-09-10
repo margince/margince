@@ -468,7 +468,7 @@ Scenarios (19):
 | `a_fluent_machine_written_pitch_is_still_spam` | `accepted` | [spam_bot_written_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml) |
 | `a_numbered_support_queue_is_one_desk` | `accepted` | [role_mailbox_numbered_queue_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_numbered_queue_01.yaml) |
 | `a_private_correspondent_is_not_a_business_contact` | `accepted` | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_01.yaml) |
-| `a_property_desk_the_owner_wrote_to_is_not_a_person` | `accepted` | [role_mailbox_property_desk_outbound_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_property_desk_outbound_01.yaml) |
+| `a_private_property_desk_the_owner_wrote_to_is_not_a_person` | `accepted` | [role_mailbox_property_desk_outbound_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_property_desk_outbound_01.yaml) |
 | `a_shared_mailbox_is_real_correspondence_with_nobody_to_name` | `accepted` | [role_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_01.yaml) |
 | `a_trade_offices_city_mailbox_names_a_place_not_a_person` | `accepted` | [organization_city_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/organization_city_mailbox_01.yaml) |
 | `a_two_sided_thread_is_a_conversation` | `accepted` | [false_spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_02.yaml) |

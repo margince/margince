@@ -5,7 +5,7 @@ source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 fixture:
   display_name: Praxis Dr. Lindqvist
-  email: rezeption@example.com
+  email: praxis.lindqvist@example.com
   subject: Terminbestaetigung 14. Oktober
   direction: inbound
   wrote_back: false
@@ -23,14 +23,18 @@ expect:
   outcome: accepted
   answer: personal
   rubric: >
-    A medical practice confirming the mailbox owner's own appointment. It is a
-    reception desk, so "role_mailbox" is the tempting answer and the reason
-    this case sits beside the two above: the address shape is identical to a
-    business service desk. What differs is whose matter it is. This is the
-    owner's health, not the company's business, and it belongs to them alone.
-    "personal" scores high. "role_mailbox" is the near miss and scores in the
-    middle: it creates no contact, so nothing is disclosed, but it files a
-    private matter as company correspondence. "person" scores zero above the
+    A medical practice confirming the mailbox owner's own appointment, from an
+    address that names the practice rather than a desk. The address is
+    deliberately not one the deterministic role-mailbox list settles: a case
+    whose address that list already answers would certify a path production
+    never reaches, because the pre-check runs before the model is asked.
+    So the whole judgment rests on the message. It is signed by a named human
+    at a reception desk, which is what makes "person" tempting and wrong. What
+    decides it is whose matter this is: the owner's health, not the company's
+    business. "personal" scores high — no record at all, which is right for a
+    private appointment. "role_mailbox" is the near miss and scores in the
+    middle: it creates no contact either, so nothing is disclosed, but it files
+    a private matter as company correspondence. "person" scores zero above the
     floor — it would put a receptionist called Anja in the shared CRM and, with
     her, the fact that the owner is seeing a doctor.
   bands:

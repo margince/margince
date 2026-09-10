@@ -231,3 +231,212 @@ func TestARestrictedMessageDoesNotAnnounceItsCounterparty(t *testing.T) {
 		t.Error("a restricted message's counterparty was announced to the workspace")
 	}
 }
+
+// A message held by anything OTHER than a thread verdict still withholds its
+// counterparty.
+//
+// A [Confidential] subject marker, a counterparty hold, and a mailbox that
+// holds everything each hold a message without writing a thread-verdict row —
+// the birth decision records them on the message's own audience instead. Asking
+// only the thread ledger answered "not held" for all three, and published the
+// counterparty of a confidential conversation while the mail itself stayed
+// shut.
+func TestAMessageHeldWithoutAThreadVerdictStillWithholdsItsCounterparty(t *testing.T) {
+	e := integration.Setup(t)
+	const email = "counsel@marked.example"
+	activity := seedThreadedMail(t, e, email, "[Confidential] The matter", "inbound", "thr-marked")
+	// The audience AND the reason the birth decision writes for a message held
+	// by its subject marker. Both, because the reason is what separates a hold
+	// from a message merely waiting for its own verdict — and no thread verdict
+	// row is seeded, which is the whole point: this is the state the previous
+	// reader could not see.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET audience = 'participants',
+			                     audience_reason = 'explicitly_confidential'
+			  WHERE id = $1`, activity)
+		return err
+	}); err != nil {
+		t.Fatalf("holding the message: %v", err)
+	}
+	id := seedPendingDisposition(t, e, email, "marked.example", activity)
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+
+	if n := countIn(t, e, `
+		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		WHERE pe.email = $1 AND p.visibility = 'workspace'`, email); n != 0 {
+		t.Error("a held message's counterparty was announced to the workspace")
+	}
+}
+
+// A withheld contact stays withheld: the ledger says so, and the readers that
+// treat a person verdict as permission to publish honour it.
+//
+// This is the half that was missing. The decision was recorded on the person
+// row, and two readers ask the LEDGER instead — the sweep that reopens held
+// mail, and the birth decision that shares a future message from a sender
+// already judged a person. Both matched a contact deliberately kept private, so
+// the next pass republished what this one withheld.
+func TestAWithheldContactIsMarkedOnTheLedgerTheOtherReadersConsult(t *testing.T) {
+	e := integration.Setup(t)
+	const email = "desk@withheld.example"
+	activity := seedThreadedMail(t, e, email, "Access card", "outbound", "thr-withheld")
+	id := seedPendingDisposition(t, e, email, "withheld.example", activity)
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+
+	// The verdict IS person — the positive control. Without it this test would
+	// pass over a row that was never judged a person at all, which is a
+	// different reason for the readers to skip it.
+	if n := countIn(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty
+		 WHERE id = $1 AND status = 'real' AND kind = 'person'`, id); n != 1 {
+		t.Fatalf("the ledger does not record a person verdict, so this proves nothing about withholding")
+	}
+	if n := countIn(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty
+		 WHERE id = $1 AND withheld_from_workspace`, id); n != 1 {
+		t.Error("the contact was withheld and the ledger does not say so — the widening " +
+			"sweep and the birth decision will both read it as permission to publish")
+	}
+}
+
+// The ordinary published contact does NOT carry the mark, so the flag means
+// something rather than being set on everything.
+func TestAPublishedContactIsNotMarkedWithheld(t *testing.T) {
+	e := integration.Setup(t)
+	const email = "buyer@published.example"
+	activity := seedThreadedMail(t, e, email, "Your proposal", "inbound", "thr-published")
+	id := seedPendingDisposition(t, e, email, "published.example", activity)
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+
+	if n := countIn(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty
+		 WHERE id = $1 AND withheld_from_workspace`, id); n != 0 {
+		t.Error("an ordinary published contact is marked withheld")
+	}
+}
+
+// An UNATTESTED outbound row makes no claim about who wrote.
+//
+// mailmap decides "outbound" by comparing the From header to the mailbox
+// owner, and a sender writes their own From. So a forged From would otherwise
+// have the prompt assert that the mailbox owner wrote a message they never
+// sent — and the narrowing treat a stranger's mail as our own unanswered
+// outreach. The provider's attestation is the difference, and without it the
+// direction is reported as unknown rather than guessed.
+func TestAnUnattestedOutboundRowMakesNoClaimAboutWhoWrote(t *testing.T) {
+	e := integration.Setup(t)
+	const email = "stranger@forged.example"
+	// Outbound by the header, with no provider attestation behind it.
+	activity := seedThreadedMail(t, e, email, "Re: your enquiry", "outbound", "thr-forged")
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET counterparty_outbound_attested = false WHERE id = $1`, activity)
+		return err
+	}); err != nil {
+		t.Fatalf("removing the attestation: %v", err)
+	}
+	store := capture.NewPendingStore(InstallationDB(e.Pool))
+	seedPendingDisposition(t, e, email, "forged.example", activity)
+
+	claimed, err := store.ClaimDue(e.Admin(), 10)
+	if err != nil {
+		t.Fatalf("claiming the due sender: %v", err)
+	}
+
+	var found bool
+	for _, row := range claimed {
+		if row.Email != email {
+			continue
+		}
+		found = true
+		if row.Direction != "" {
+			t.Errorf("direction = %q for an unattested outbound row, want it unclaimed — "+
+				"the From header is written by the sender", row.Direction)
+		}
+	}
+	if !found {
+		t.Fatal("the seeded sender was not claimed, so this asserts nothing")
+	}
+}
+
+// The same row WITH the attestation does report outbound, so the check above
+// is not passing because the direction never travels at all.
+func TestAnAttestedOutboundRowReportsItsDirection(t *testing.T) {
+	e := integration.Setup(t)
+	const email = "prospect@attested.example"
+	activity := seedThreadedMail(t, e, email, "Our proposal", "outbound", "thr-attested")
+	store := capture.NewPendingStore(InstallationDB(e.Pool))
+	seedPendingDisposition(t, e, email, "attested.example", activity)
+
+	claimed, err := store.ClaimDue(e.Admin(), 10)
+	if err != nil {
+		t.Fatalf("claiming the due sender: %v", err)
+	}
+
+	var found bool
+	for _, row := range claimed {
+		if row.Email != email {
+			continue
+		}
+		found = true
+		if row.Direction != "outbound" {
+			t.Errorf("direction = %q for an attested outbound row, want %q", row.Direction, "outbound")
+		}
+	}
+	if !found {
+		t.Fatal("the seeded sender was not claimed, so this asserts nothing")
+	}
+}
+
+// A message narrow only because its OWN verdict has not come back is not a
+// hold, and its counterparty is published like any other.
+//
+// This is the distinction that matters most here. Mail sits at `participants`
+// while the sender is being judged — that is the question this very pass
+// answers — and reading it as a confidentiality hold would narrow every
+// ordinary contact the verdict was about to publish. The audience alone cannot
+// tell the two apart; the reason can.
+func TestAMessageWaitingForItsOwnVerdictIsNotAHold(t *testing.T) {
+	e := integration.Setup(t)
+	const email = "buyer@waiting.example"
+	activity := seedThreadedMail(t, e, email, "Your proposal", "inbound", "thr-waiting")
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET audience = 'participants',
+			                     audience_reason = 'pending_verdict'
+			  WHERE id = $1`, activity)
+		return err
+	}); err != nil {
+		t.Fatalf("holding the message pending its verdict: %v", err)
+	}
+	id := seedPendingDisposition(t, e, email, "waiting.example", activity)
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+
+	if n := countIn(t, e, `
+		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		WHERE pe.email = $1 AND p.visibility = 'workspace'`, email); n != 1 {
+		t.Errorf("%d workspace-visible persons for a sender whose mail was merely awaiting "+
+			"this verdict, want 1 — waiting for an answer is not a hold", n)
+	}
+}

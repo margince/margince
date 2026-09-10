@@ -30,6 +30,25 @@ import (
 // disagree the first time a status was added, and the disagreement would be
 // silent in the direction that discloses.
 //
+// The MESSAGE'S OWN AUDIENCE is the arm that catches every hold, and it is why
+// the thread verdict alone was not enough. A message can be held by a
+// [Confidential] subject marker, by a counterparty hold, or by a mailbox that
+// holds everything, and none of those writes a thread-verdict row — the birth
+// decision records them on the message instead. Asking only the thread ledger
+// therefore answered "not held" for a confidential message and published its
+// counterparty while the correspondence itself stayed shut.
+//
+// Only the reasons that are a HOLD, and this is the distinction the first
+// version missed. A message can also be narrow because its own sender verdict
+// has not come back yet ('pending_verdict') or because the mailbox holds
+// everything until judged ('posture') — both are "waiting for this answer", not
+// "this must stay private", and treating them as holds narrowed every ordinary
+// contact the verdict was about to publish.
+//
+// The four named here are the real ones: a mailbox whose floor is narrower than
+// the workspace, a counterparty somebody put a hold on, a [Confidential] marker,
+// and a thread a classifier already judged confidential.
+//
 // A RESTRICTED activity is a hold in its own right, and the arm is a LEFT JOIN
 // so it stands whether or not the thread carries a verdict. This is the one
 // place a held row makes the answer MORE careful rather than less: the
@@ -51,6 +70,9 @@ func ThreadHoldsItsCounterparty(ctx context.Context, tx pgx.Tx, activityID ids.U
 		                                      AND a.thread_key <> ''
 		   WHERE a.id = $1
 		     AND (a.restricted_at IS NOT NULL
+		          OR (a.audience <> 'workspace' AND a.audience_reason IN (
+		                'workspace_floor', 'counterparty',
+		                'explicitly_confidential', 'inherited_verdict'))
 		          OR v.status IN ('held', 'unsure', 'held_by_owner', 'pending')))`,
 		activityID).Scan(&held)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {

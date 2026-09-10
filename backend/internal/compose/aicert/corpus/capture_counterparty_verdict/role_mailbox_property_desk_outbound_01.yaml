@@ -1,11 +1,11 @@
-name: a_property_desk_the_owner_wrote_to_is_not_a_person
+name: a_private_property_desk_the_owner_wrote_to_is_not_a_person
 task: capture_counterparty_verdict
 site: verdict
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 fixture:
   display_name: Parkview CS6
-  email: parkview-cs6@example.com
+  email: parkview.team@example.com
   subject: Access card replacement
   direction: outbound
   wrote_back: false
@@ -20,20 +20,25 @@ fixture:
     Michael
 expect:
   outcome: accepted
-  answer: role_mailbox
+  answer: personal
   rubric: >
-    A property management service desk that the MAILBOX OWNER wrote to, and
-    which has never written back. Two things make it the hard case. The digits
-    in the local part hide the role word from a naive reader, and the only
-    human name in the message is the owner's own sign-off — a reader judging
-    the text alone sees a named person and answers "person", which puts a
-    department in the shared CRM under a made-up human name. "role_mailbox"
-    scores high: a numbered queue is still one desk, and nobody is named.
-    "personal" scores in the middle — it is wrong about whose desk this is, but
-    it withholds rather than publishes, which is the safe direction to be wrong
-    in. "person" is the failure this scenario exists to catch and scores zero
-    above the floor: it is the observed defect, a service desk becoming a
-    workspace-visible contact off a message we sent.
+    A property management desk the MAILBOX OWNER wrote to, about HIS OWN
+    APARTMENT, which has never written back. The address is one the
+    deterministic role list does NOT answer, deliberately: the numbered form of
+    this case is settled without a model call, and a scenario at that address
+    would certify a judgment production never makes. What is measured here is
+    the judgment itself.
+    Two things make it hard. The only human name in the message is the owner's
+    own sign-off, so a reader judging the text alone sees a named person. And
+    the matter is the owner's private tenancy rather than any business of the
+    company's — which is what decides between the two withholding answers.
+    "personal" scores high: the desk is a service desk, but this is the owner's
+    home, and a private matter is not the company's correspondence.
+    "role_mailbox" scores in the middle — wrong about whose matter it is, but
+    it creates no contact either, so nothing is disclosed. "person" is the
+    failure this scenario exists to catch and scores zero above the floor: it
+    is what actually happened, a property desk becoming a workspace-visible
+    contact off a message the founder sent about his own flat.
   bands:
     certified_min: 70
     degraded_min: 50

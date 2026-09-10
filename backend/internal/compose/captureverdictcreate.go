@@ -201,6 +201,17 @@ func (e *CounterpartyVerdictEngine) createPersonForVerdict(
 		return "", err
 	}
 	if narrow {
+		// The ledger says so too, in this transaction.
+		//
+		// Two other readers ask this ledger whether the sender is a judged
+		// person and treat the answer as permission to publish: the widening
+		// sweep that reopens held mail, and the birth decision that shares a
+		// future message. Recording the withholding only on the person row left
+		// both of them matching a contact that had deliberately been kept
+		// private, so the next pass republished what this one withheld.
+		if err := capture.MarkWithheldFromWorkspaceTx(ctx, tx, row.ID); err != nil {
+			return "", err
+		}
 		return e.createOwnerScopedCounterparty(ctx, tx, row)
 	}
 	triageDomain, err := e.createCounterparty(ctx, tx, row)

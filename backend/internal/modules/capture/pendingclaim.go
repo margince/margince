@@ -5,6 +5,15 @@ package capture
 
 // Leasing a due sender out to one worker.
 //
+// The direction is read with the PROVIDER'S ATTESTATION, not off the header.
+// mailmap decides "outbound" by comparing the From header to the mailbox owner,
+// and a sender writes their own From — so a forged one would have the prompt
+// assert that the mailbox owner wrote a message they never sent. The
+// attestation is the connector's own statement that this account sent it, and
+// it is what wroteBackTx already requires for the same reason. An outbound
+// message without it reports no direction at all, which the prompt renders as
+// the neutral form rather than a claim.
+//
 // Its own file because the claim is where the row becomes a QUESTION rather
 // than a record: everything the judgment needs travels out of here — the
 // message's text, and the direction it went. A field missing from this read is
@@ -56,7 +65,12 @@ func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounte
 			          p.activity_id, p.owner_id,
 			          coalesce(left((SELECT a.subject FROM activity a WHERE a.id = p.activity_id AND a.restricted_at IS NULL), $6), ''),
 			          coalesce(left((SELECT a.body FROM activity a WHERE a.id = p.activity_id AND a.restricted_at IS NULL), $7), ''),
-			          coalesce((SELECT a.direction FROM activity a WHERE a.id = p.activity_id), '')`,
+			          coalesce((SELECT CASE
+			                      WHEN a.direction = 'outbound' AND a.counterparty_outbound_attested
+			                           THEN 'outbound'
+			                      WHEN a.direction = 'inbound' THEN 'inbound'
+			                      ELSE '' END
+			                      FROM activity a WHERE a.id = p.activity_id), '')`,
 			limit, pendingLease.Seconds(), PendingMaxAttempts, claim,
 			MaxCapturedNameChars, MaxCapturedSubjectChars, MaxCapturedBodyChars)
 		if err != nil {
