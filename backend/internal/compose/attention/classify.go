@@ -277,6 +277,24 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	if unproven {
 		level = levelRoutine
 	}
+	// Written to somebody else.
+	//
+	// A reader sees mail addressed to a colleague — copied in, or on a record
+	// they own — and the queue called all of it a customer waiting on THEM. The
+	// header is the evidence: capture stamps this mailbox's owner as a
+	// recipient on every message it stores, so the participant row proves only
+	// that the mail arrived.
+	//
+	// NO MONEY OVERRIDE, which is what separates this from every demotion
+	// around it. Those ask whether a wait MATTERS, and an open deal is a
+	// stronger claim than a header. This asks WHOSE it is, and a deal on the
+	// thread does not make a colleague's mail into this reader's reply to
+	// write — the colleague has the same row on their own queue, where it is
+	// addressed to them and ranks accordingly.
+	elsewhere := waiting.AddressedElsewhere
+	if elsewhere {
+		level = levelRoutine
+	}
 	// A message that asks us nothing. A report, a receipt, a statement: the
 	// sender wrote and nobody replied, both true, and neither makes it work.
 	//
@@ -297,6 +315,9 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	}
 	if stale {
 		because = append(because, reason("stale", nil))
+	}
+	if elsewhere {
+		because = append(because, reason("addressed_elsewhere", nil))
 	}
 	if unproven {
 		because = append(because, reason("no_reply_history", nil))

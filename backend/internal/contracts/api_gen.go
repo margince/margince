@@ -14931,6 +14931,7 @@ func (e WorklistReachSource) Valid() bool {
 
 // Defines values for WorklistReasonKind.
 const (
+	WorklistReasonKindAddressedElsewhere WorklistReasonKind = "addressed_elsewhere"
 	WorklistReasonKindApprovedAndFailed  WorklistReasonKind = "approved_and_failed"
 	WorklistReasonKindAsksNothing        WorklistReasonKind = "asks_nothing"
 	WorklistReasonKindBelowMaterial      WorklistReasonKind = "below_material"
@@ -14962,6 +14963,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistReasonKind enum.
 func (e WorklistReasonKind) Valid() bool {
 	switch e {
+	case WorklistReasonKindAddressedElsewhere:
+		return true
 	case WorklistReasonKindApprovedAndFailed:
 		return true
 	case WorklistReasonKindAsksNothing:

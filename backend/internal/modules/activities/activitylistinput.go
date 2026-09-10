@@ -144,6 +144,10 @@ type ListActivitiesInput struct {
 	// in, never by a caller: it is one read's snapshot, not a request parameter,
 	// and a caller supplying it could widen or narrow who counts as a colleague.
 	ownDomains []string
+	// readerAddresses is the reader's own address snapshot, measured beside
+	// ownDomains and in the same transaction, for the same reason: the
+	// addressing test must judge every row of one scan against one answer.
+	readerAddresses []string
 	// horizonDays is how far back a wait reaches and still counts, derived from
 	// this installation's own response spread (waitinghorizon.go). Unexported
 	// and set beside the transaction it was measured in, for ownDomains' exact

@@ -9060,6 +9060,7 @@ export const de = {
   "worklist.because.stale": "wartet schon lange",
   "worklist.because.no_reply_history": "kein Schriftwechsel bisher",
   "worklist.because.asks_nothing": "verlangt nichts von uns",
+  "worklist.because.addressed_elsewhere": "an eine Kollegin geschrieben",
   "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",
   "worklist.above.level": "Über dem Nächsten, weil es dringlichere Arbeit ist.",
   "worklist.above.deadline": "Über dem Nächsten wegen des Datums.",

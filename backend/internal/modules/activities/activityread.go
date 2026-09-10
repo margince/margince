@@ -80,6 +80,9 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 		// for a caller that already holds a transaction, so it has no seam to
 		// ask — and a composite record read that carries none simply excludes
 		// no sender, which is the same open default WithOwnDomains documents.
+		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
+			return err
+		}
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}
@@ -339,6 +342,9 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 			return err
 		}
 		var err error
+		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
+			return err
+		}
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}
