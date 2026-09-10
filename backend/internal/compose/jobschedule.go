@@ -159,14 +159,18 @@ func operatorInterval(cfg JobRunnerConfig, kind, path string) time.Duration {
 func configDependencies(cfg JobRunnerConfig) map[string]bool {
 	return map[string]bool{
 		"AgentScheduler.Service": cfg.AgentScheduler.Service != nil,
-		"ChannelVault":           cfg.ChannelVault != nil,
-		"ClassifyBrain":          cfg.ClassifyBrain != nil,
-		"OwedBrain":              cfg.OwedBrain != nil,
-		"DeepReadBrain":          cfg.DeepReadBrain != nil,
-		"AccountScanBrain":       cfg.AccountScanBrain != nil,
-		"Embedder":               cfg.Embedder != nil,
-		"EnrichBrain":            cfg.EnrichBrain != nil,
-		"GmailRegistry":          cfg.GmailRegistry != nil,
+		// The part sweep proves an attachment's bytes are durable before it
+		// removes them from the provider original, so a role with no object
+		// store has nothing to prove with and no business reading the table.
+		"Blobstore":        cfg.Blobstore != nil,
+		"ChannelVault":     cfg.ChannelVault != nil,
+		"ClassifyBrain":    cfg.ClassifyBrain != nil,
+		"OwedBrain":        cfg.OwedBrain != nil,
+		"DeepReadBrain":    cfg.DeepReadBrain != nil,
+		"AccountScanBrain": cfg.AccountScanBrain != nil,
+		"Embedder":         cfg.Embedder != nil,
+		"EnrichBrain":      cfg.EnrichBrain != nil,
+		"GmailRegistry":    cfg.GmailRegistry != nil,
 		// The registry OFFERING graph, not merely existing. The Gmail registry
 		// is the same object for both vendors, so "a registry is present" is
 		// true on a worker that has Gmail credentials and no Microsoft ones —
