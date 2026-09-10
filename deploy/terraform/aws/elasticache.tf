@@ -22,7 +22,17 @@ resource "aws_elasticache_replication_group" "this" {
   at_rest_encryption_enabled = true
   kms_key_id                 = aws_kms_key.data.arn
   transit_encryption_enabled = true
-  auth_token                 = random_password.redis_auth.result
+  # "preferred", not the default "required": the product's own Redis client
+  # (backend/internal/platform/events/relay.go, ClientOptions) never sets
+  # TLSConfig on the go-redis client, at all — grepped fresh in this session,
+  # not assumed. "required" would refuse every connection the api and worker
+  # actually make, since neither ever attempts TLS. "preferred" keeps
+  # encryption available to any client that DOES negotiate it while still
+  # admitting the plaintext connections this app's client is the only kind
+  # it can open. The real fix is in the Go client, not here — this is the
+  # honest floor until that lands, not a claim that the wire is protected.
+  transit_encryption_mode = "preferred"
+  auth_token              = random_password.redis_auth.result
 
   auto_minor_version_upgrade = true
   apply_immediately          = false

@@ -96,6 +96,18 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # aws_lb_listener.http_redirect (alb.tf) answers on :80 with nothing but a
+  # 301 to :443 — never forwards to a target — but it still needs an inbound
+  # rule of its own, or the redirect itself is unreachable and every plain
+  # http:// request just times out instead of being sent to https://.
+  ingress {
+    description = "HTTP from the internet, for the redirect to HTTPS only"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   # The ALB only ever originates traffic to the api/web target groups inside
   # this VPC — 0.0.0.0/0 egress bought it nothing but a wider blast radius.
   egress {
@@ -121,10 +133,53 @@ resource "aws_security_group" "ecs_tasks" {
     security_groups = [aws_security_group.alb.id]
   }
 
+  # Was 0.0.0.0/0 on all ports/protocols — a compromised task could open a
+  # connection to anywhere, on any port, which is a bigger blast radius than
+  # anything this app actually needs. Two rules instead:
+  #
+  # 1. Everything IN this VPC, every port: RDS (5432), ElastiCache (6379),
+  #    EFS (2049), the VPC endpoints below (443), and the VPC's own DNS
+  #    resolver — all genuinely used, none of them worth naming one port
+  #    at a time when they already share one trust boundary.
   egress {
+    description = "To everything in this VPC"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
+    cidr_blocks = [var.vpc_cidr]
+  }
+  # 2. Specific ports the app genuinely calls out to the internet for, and
+  #    nothing else: HTTPS (AI provider APIs, Nominatim, VIES, crt.sh, OAuth
+  #    token endpoints, license validation — see docs/reference/configuration.md)
+  #    and outbound mail (SMTP submission/implicit-TLS/plain, since an
+  #    operator's relay's port depends on what they configured under
+  #    email.smtp). This is real feature surface, not a gap left open by
+  #    oversight — narrowing it further would break documented capabilities
+  #    this stack does not get to disable on an operator's behalf.
+  egress {
+    description = "HTTPS to third-party APIs this app calls (see comment)"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    description = "Outbound mail relay (SMTP submission/implicit-TLS/plain)"
+    from_port   = 25
+    to_port     = 25
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 465
+    to_port     = 465
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 587
+    to_port     = 587
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 

@@ -20,12 +20,19 @@ resource "random_id" "connector_state_key" {
 locals {
   db_host = aws_db_instance.this.address
   db_port = aws_db_instance.this.port
-  # sslmode=require: the server-side backstop is aws_db_parameter_group.this's
-  # rds.force_ssl (rds.tf) — this is the client-side half, so a working
-  # deployment never even attempts the plaintext connection force_ssl would
-  # otherwise have to refuse.
-  owner_dsn  = "postgres://margince_owner:${urlencode(random_password.margince_owner.result)}@${local.db_host}:${local.db_port}/margince?sslmode=require"
-  app_dsn    = "postgres://margince_app:${urlencode(random_password.margince_app.result)}@${local.db_host}:${local.db_port}/margince?sslmode=require"
+  # verify-full, not require: pgx v5 treats sslmode=require as "encrypt the
+  # bytes" only — it does not check the server's certificate or hostname, so
+  # a network-path attacker could still present themselves as the RDS
+  # endpoint and pgx would accept it. verify-full is the mode that actually
+  # authenticates the server, and it needs a CA bundle to check the
+  # certificate against — sslrootcert points at the RDS global bundle an
+  # operator places on the same EFS config mount margince.yaml already lives
+  # on (this stack's README has the exact command). The server-side backstop
+  # is still aws_db_parameter_group.this's rds.force_ssl (rds.tf); this is
+  # the client-side half that makes "encrypted" also mean "to the right
+  # server".
+  owner_dsn  = "postgres://margince_owner:${urlencode(random_password.margince_owner.result)}@${local.db_host}:${local.db_port}/margince?sslmode=verify-full&sslrootcert=/app/config/rds-ca-bundle.pem"
+  app_dsn    = "postgres://margince_app:${urlencode(random_password.margince_app.result)}@${local.db_host}:${local.db_port}/margince?sslmode=verify-full&sslrootcert=/app/config/rds-ca-bundle.pem"
   redis_host = aws_elasticache_replication_group.this.primary_endpoint_address
 }
 

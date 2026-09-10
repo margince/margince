@@ -13,15 +13,25 @@ cd deploy/terraform/aws
 cp terraform.tfvars.example terraform.tfvars   # fill in acm_certificate_arn, public_base_url, admin_bootstrap_password, image_tag
 terraform init
 terraform plan
-terraform apply
+
+# Everything EXCEPT the 3 ECS services first — they reference image_tag,
+# and nothing has pushed it yet. A plain `terraform apply` here creates the
+# services anyway, pointed at a tag ECR does not have, and they sit
+# unhealthy until you catch up with steps 2-4 below and re-apply. Targeting
+# past them avoids that round trip entirely; it is not required, just
+# cheaper than watching ECS retry a pull that cannot succeed yet.
+terraform apply \
+  -target=aws_ecr_repository.api -target=aws_ecr_repository.worker -target=aws_ecr_repository.web \
+  -target=aws_db_instance.this -target=aws_elasticache_replication_group.this \
+  -target=aws_s3_bucket.blobstore -target=aws_efs_file_system.config
 ```
 
 This creates the VPC, KMS key, RDS instance, ElastiCache replication group,
-S3 bucket, EFS filesystem, Secrets Manager secrets, the 3 ECR repos, and an
-ECS cluster — but the ECS **services** will not reach a healthy state yet:
-there is no image at `image_tag` in the repos, and the database has no
-`margince_owner`/`margince_app` roles yet. Do steps 2–4 next, then re-apply
-if you changed `image_tag`.
+S3 bucket, EFS filesystem, Secrets Manager secrets, and the 3 ECR repos. Do
+steps 2–4 next — bootstrap the database, push the images, mount
+`margince.yaml` — then run a final untargeted `terraform apply` to create
+the ALB and the 3 ECS services, which by then have an image to pull and a
+database to migrate against.
 
 ## 2. Bootstrap the database (once)
 
@@ -31,11 +41,13 @@ private endpoint (a bastion, a Cloud9/SSM-connected instance, or a one-off ECS
 task in the same VPC — the instance has no public IP):
 
 ```bash
+curl -o /tmp/rds-ca-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+
 OWNER_PW="$(aws secretsmanager get-secret-value --secret-id "$(terraform output -json secret_arns | jq -r .owner_dsn)" --query SecretString --output text | sed -E 's#.*:([^:@]+)@.*#\1#')"
 APP_PW="$(aws secretsmanager get-secret-value --secret-id "$(terraform output -json secret_arns | jq -r .app_dsn)" --query SecretString --output text | sed -E 's#.*:([^:@]+)@.*#\1#')"
 MASTER_PW="$(terraform state show random_password.rds_master | grep 'result ' | awk '{print $3}' | tr -d '"')"
 
-psql "postgres://dbadmin:${MASTER_PW}@$(terraform output -raw rds_endpoint):5432/margince?sslmode=require" \
+psql "postgres://dbadmin:${MASTER_PW}@$(terraform output -raw rds_endpoint):5432/margince?sslmode=verify-full&sslrootcert=/tmp/rds-ca-bundle.pem" \
   -v owner_pw="$OWNER_PW" -v app_pw="$APP_PW" \
   -f ../../../scripts/deploy/db-bootstrap.sql
 ```
@@ -75,6 +87,12 @@ sudo mount -t efs -o tls,accesspoint="$(terraform output -raw efs_config_access_
 sudo cp config/margince.example.yaml /mnt/margince-config/margince.yaml
 # edit /mnt/margince-config/margince.yaml — set password_file to
 # secrets/admin-password (the api's working dir is /app) per docs/deployment.md
+
+# The api and worker DSNs (secrets.tf) name this file at
+# /app/config/rds-ca-bundle.pem — the same mount, so it goes on beside
+# margince.yaml rather than needing a mount of its own.
+sudo cp /tmp/rds-ca-bundle.pem /mnt/margince-config/rds-ca-bundle.pem
+
 sudo umount /mnt/margince-config
 ```
 
@@ -112,10 +130,10 @@ boundary here rather than six to separately grant.
 
 | Hop | Enforcement |
 |---|---|
-| Client → ALB | TLS 1.3 only (`ELBSecurityPolicy-TLS13-1-2-2021-06`), HTTP redirects to HTTPS |
+| Client → ALB | TLS 1.2 and TLS 1.3 (`ELBSecurityPolicy-TLS13-1-2-2021-06` — the name is the policy's, not a claim that 1.2 is refused), HTTP redirects to HTTPS |
 | ALB → api/web tasks | Plaintext HTTP inside the VPC's private subnets — matches the product's own architecture: `cmd/api` serves plain HTTP and terminates TLS ahead of itself (`docs/reference/configuration.md`) |
-| Task → RDS | `rds.force_ssl=1` (server refuses plaintext) + `sslmode=require` on both DSNs (client never attempts it) |
-| Task → ElastiCache | `transit_encryption_enabled = true` + auth token |
+| Task → RDS | `rds.force_ssl=1` (server refuses plaintext) + `sslmode=verify-full` on both DSNs — encrypted AND authenticated against the RDS CA bundle (step 4), not merely encrypted; `sslmode=require` alone lets pgx accept any certificate, including an attacker's |
+| Task → ElastiCache | `transit_encryption_enabled = true`, `transit_encryption_mode = "preferred"` (not `"required"`) + auth token. `"preferred"` rather than the stricter default because the product's Redis client (`backend/internal/platform/events/relay.go`) sets no `TLSConfig` at all — `"required"` would refuse every connection this app actually makes. The real fix is in the Go client; this is the honest floor until it lands, not a claim the wire is protected end to end |
 | Task → EFS | `transit_encryption = "ENABLED"` on the mount |
 | Task → S3 | Bucket policy denies any request where `aws:SecureTransport = false`, independent of the client's own `MARGINCE_BLOBSTORE_USE_SSL` setting |
 
@@ -123,9 +141,17 @@ boundary here rather than six to separately grant.
 IMMUTABLE` (a pushed tag can't be silently overwritten) with a lifecycle
 policy expiring untagged images after 14 days; the `db`/`redis`/`efs`
 security groups carry no egress rule at all (they never originate outbound
-traffic, so allow-all egress bought nothing); the `web` ECS task uses its
-own execution role with no Secrets Manager access, since it reads no
-secrets — only `api` and `worker`'s shared execution role can; the S3
+traffic, so allow-all egress bought nothing); `ecs_tasks`' own egress is
+scoped to in-VPC traffic plus the specific external ports the product
+genuinely calls out on (443 HTTPS, 25/465/587 SMTP) rather than every
+port/protocol to anywhere; VPC endpoints (S3 Gateway + Interface endpoints
+for ECR/Secrets Manager/KMS/CloudWatch Logs, `vpc-endpoints.tf`) keep that
+AWS-internal traffic off the NAT/public path entirely; the `web` ECS task
+uses its own execution role with no Secrets Manager access, since it reads
+no secrets — only `api` and `worker`'s shared execution role can, and
+neither execution role carries the `AmazonECSTaskExecutionRolePolicy`
+managed policy (its `Resource: "*"` ECR/logs grants would have overridden
+the scoped statements sitting next to it, not narrowed them); the S3
 bucket has `object_ownership = BucketOwnerEnforced` (ACLs disabled outright,
 so access runs through IAM/bucket policy alone); the api and worker task
 definitions set `stopTimeout = 60` so an in-flight request or job finishes
@@ -134,9 +160,15 @@ definition declares `runtime_platform` explicitly (`var.cpu_architecture`,
 default `X86_64` — `ARM64` is genuinely supported, not theoretical, see the
 variable's own description).
 
+**Considered and deliberately not applied**: an S3 bucket-policy deny on
+any `PutObject` that does not explicitly carry `aws:kms` server-side
+encryption headers naming this stack's key. `s3.tf` explains why —
+`backend/internal/platform/blobstore/s3.go`'s `PutObject` call sets no SSE
+headers at all, relying entirely on the bucket's default encryption, so
+that deny would refuse every upload this app makes without a paired Go-side
+change this PR does not include.
+
 **Left out, deliberately** (see the [shared README](../README.md)): S3
-object versioning / MFA delete, VPC endpoints for ECR/S3/Secrets Manager
-(all egress currently transits the NAT gateway), a WAF in front of the ALB.
-Each is a real option, not a gap this stack missed — they cost something
-(storage, a VPC endpoint's own security-group surface, WAF rule tuning)
-that belongs to a deployment decision rather than a default.
+object versioning / MFA delete, a WAF in front of the ALB. Each is a real
+option, not a gap this stack missed — they cost something (storage, WAF
+rule tuning) that belongs to a deployment decision rather than a default.

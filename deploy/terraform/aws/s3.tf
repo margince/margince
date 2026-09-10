@@ -45,6 +45,24 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "blobstore" {
   }
 }
 
+# The MinIO client multiparts objects over 16 MiB. An upload that stops
+# after initiation (a killed task, a network drop mid-attachment) leaves
+# those parts in the bucket, billed and unlisted, until something aborts
+# them — nothing else in this stack ever would.
+resource "aws_s3_bucket_lifecycle_configuration" "blobstore" {
+  bucket = aws_s3_bucket.blobstore.id
+
+  rule {
+    id     = "abort-incomplete-multipart-uploads"
+    status = "Enabled"
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
 resource "aws_s3_bucket_versioning" "blobstore" {
   bucket = aws_s3_bucket.blobstore.id
   versioning_configuration {
@@ -78,6 +96,22 @@ resource "aws_s3_bucket_policy" "blobstore_tls_only" {
     ]
   })
 }
+
+# What this policy deliberately does NOT add: a deny on any PutObject that
+# does not explicitly carry x-amz-server-side-encryption: aws:kms plus this
+# stack's key id. That would be the server-side backstop for object writes,
+# matching what DenyInsecureTransport is for transport — but
+# backend/internal/platform/blobstore/s3.go's PutObject call
+# (minio.PutObjectOptions{ContentType: contentType}) sets NO SSE headers at
+# all, checked fresh in this session, not assumed. It relies entirely on the
+# bucket's default encryption (apply_server_side_encryption_by_default,
+# above) to apply KMS server-side. Adding that deny here, alone, would
+# refuse every upload this app makes — the policy and the client are one
+# invariant with two writers (AGENTS.md's own rule for exactly this shape of
+# bug), and only the Terraform half is in this PR. The Go side needs
+# `minio.PutObjectOptions{ServerSideEncryption: encrypt.NewSSEKMS(keyID, nil)}`
+# (or equivalent) before this deny can land without breaking the feature it
+# would otherwise protect.
 
 resource "aws_iam_user" "blobstore" {
   name = "${var.name_prefix}-blobstore"

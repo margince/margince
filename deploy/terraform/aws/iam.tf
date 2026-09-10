@@ -32,11 +32,14 @@ resource "aws_iam_role" "execution" {
   assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
 }
 
-resource "aws_iam_role_policy_attachment" "execution_managed" {
-  role       = aws_iam_role.execution.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
+# No AmazonECSTaskExecutionRolePolicy attachment. That managed policy grants
+# ecr:BatchGetImage/GetDownloadUrlForLayer/BatchCheckLayerAvailability and
+# logs:CreateLogStream/PutLogEvents with Resource="*" — attaching it
+# alongside the scoped statements below would not narrow anything, since IAM
+# is additive-allow: the broadest grant for an action wins regardless of how
+# tightly a sibling statement names its resources. Every action the managed
+# policy would have granted is granted here instead, scoped to exactly this
+# stack's own repos and log groups.
 data "aws_iam_policy_document" "execution_extra" {
   statement {
     sid     = "ReadOwnSecrets"
@@ -64,10 +67,25 @@ data "aws_iam_policy_document" "execution_extra" {
     ]
   }
 
+  # ecr:GetAuthorizationToken cannot be scoped to a repository ARN — ECR
+  # requires Resource="*" for this one action, unlike every pull action
+  # above it (aws-iam skill, ecr.md: "it cannot be scoped to a repository").
   statement {
     sid       = "EcrAuth"
     actions   = ["ecr:GetAuthorizationToken"]
     resources = ["*"]
+  }
+
+  # Scoped to exactly the two log groups this role's task definitions write
+  # to, per the aws-iam skill's own guidance: CloudWatch Logs actions belong
+  # on the specific log group ARN, never Resource="*".
+  statement {
+    sid     = "WriteOwnLogs"
+    actions = ["logs:CreateLogStream", "logs:PutLogEvents"]
+    resources = [
+      "${aws_cloudwatch_log_group.api.arn}:*",
+      "${aws_cloudwatch_log_group.worker.arn}:*",
+    ]
   }
 
   # Every secret this role reads and every image it pulls is sealed under

@@ -20,6 +20,14 @@ variable "az_count" {
   description = "Number of availability zones to spread public/private subnets across."
   type        = number
   default     = 2
+  validation {
+    # RDS and ElastiCache subnet groups both require subnets in at least two
+    # AZs — az_count = 1 produces a db_subnet_group covering one, which RDS
+    # refuses at CreateDBSubnetGroup, not at plan time, so this catches it
+    # before the apply gets that far.
+    condition     = var.az_count >= 2
+    error_message = "az_count must be at least 2 — RDS and ElastiCache subnet groups both require two Availability Zones."
+  }
 }
 
 variable "cpu_architecture" {
@@ -57,6 +65,17 @@ variable "image_tag" {
     floating tag is an operator decision this stack should not make silently.
   EOT
   type        = string
+  validation {
+    # An empty or whitespace image_tag builds "repo:" — no tag at all — which
+    # ECS rejects rather than defaulting to anything, so this fails fast at
+    # plan time with a message that names the actual problem. "latest" is
+    # deliberately still admitted: it is valid for exactly one push to an
+    # IMMUTABLE repo (see the description above), which is a release-policy
+    # violation this stack warns about elsewhere, not a value that breaks
+    # the deployment outright.
+    condition     = length(trimspace(var.image_tag)) > 0
+    error_message = "image_tag must not be empty or whitespace — ECS needs repository:tag, not repository:."
+  }
 }
 
 # ---- Compute sizing -------------------------------------------------------

@@ -22,6 +22,18 @@ resource "random_password" "margince_app" {
   special = false
 }
 
+# A fixed final_snapshot_identifier collides on a second deletion: RDS keeps
+# the snapshot the first delete created, and DBSnapshotAlreadyExists refuses
+# the next one that reuses the name. This suffix is created once and stays
+# in state for the life of the instance, so it does not solve every case —
+# an instance destroyed and recreated in the SAME state carries the SAME
+# suffix, and a snapshot surviving from its first deletion still collides.
+# It does solve the ordinary case (a fresh working directory / a fresh
+# state), which a bare name solves none of.
+resource "random_id" "final_snapshot" {
+  byte_length = 4
+}
+
 # storage_encrypted below protects the disk; it says nothing about the wire.
 # Without this, a client can open a plaintext TCP connection to Postgres and
 # RDS will serve it — pgx/libpq default to sslmode=prefer, which attempts TLS
@@ -74,7 +86,7 @@ resource "aws_db_instance" "this" {
 
   deletion_protection       = true
   skip_final_snapshot       = false
-  final_snapshot_identifier = "${var.name_prefix}-db-final"
+  final_snapshot_identifier = "${var.name_prefix}-db-final-${random_id.final_snapshot.hex}"
 
   # scripts/deploy/db-bootstrap.sql runs once, by hand, against this instance
   # as "dbadmin" (see deploy/terraform/aws/README.md) — it creates

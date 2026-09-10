@@ -58,6 +58,13 @@ terraform plan
 terraform apply
 ```
 
+**Local state is the default, and it is not the recommended posture beyond a
+one-off `terraform plan`.** Every stack's `versions.tf` carries a commented
+`backend "s3"` block — uncomment and fill it in with your own state bucket
+before an `apply` you intend to keep, or `terraform apply` writes RDS,
+Redis, and every generated credential from `secrets.tf` into a plaintext
+file on whatever machine ran it.
+
 Then follow [`aws/README.md`](aws/README.md) for the one-time steps Terraform
 does not do: bootstrapping the database roles
 (`scripts/deploy/db-bootstrap.sql`), mounting `margince.yaml`, and
