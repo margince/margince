@@ -199,9 +199,18 @@ func attemptRightsCase(ctx context.Context, tx pgx.Tx, kind string, personID ids
 		oneCalendarMonthAfter(receivedAt), submissionID, receipt,
 	).Scan(&caseID, &stored, &created)
 	if err != nil {
-		_ = nested.Rollback(ctx)
-		return ids.UUID{}, "", false, fmt.Errorf(
-			"consent: opening the rights case this request owes an answer to: %w", err)
+		opening := fmt.Errorf("consent: opening the rights case this request owes an answer to: %w", err)
+		// The rollback's own failure travels with the fault it was undoing.
+		// This savepoint exists so a collision can be retried against a
+		// transaction Postgres has not given up on — so a rollback that did NOT
+		// take is the one condition under which the retry above cannot work,
+		// and every remaining attempt fails identically with the first
+		// attempt's message. Discarding it turns that into three mystery
+		// failures with the right words and the wrong cause.
+		if rbErr := nested.Rollback(ctx); rbErr != nil {
+			return ids.UUID{}, "", false, errors.Join(opening, rbErr)
+		}
+		return ids.UUID{}, "", false, opening
 	}
 	if err := nested.Commit(ctx); err != nil {
 		return ids.UUID{}, "", false, fmt.Errorf("consent: opening the rights case: %w", err)
