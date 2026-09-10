@@ -118,8 +118,17 @@ func (s *Store) UnjudgedInbound(ctx context.Context, asOf time.Time, limit, body
 		// addresses: the verdict says what a message asks, which is a fact
 		// about the message rather than about who is reading it. The waiting
 		// queue applies the addressing test when it ranks.
+		//
+		// The AUDIENCE clause stays, and it is not about who may see the row —
+		// it is about what leaves the building. This backlog hands subject and
+		// body to a model, and the pass runs as a system principal, which
+		// auth.ActivityContentClause lets read every audience. A thread the
+		// confidentiality engine narrowed to its participants is exactly the
+		// mail that must not be shipped to a cloud tier, and dropping this
+		// clause would have done that silently — the statutory-hold check
+		// beside it does not cover a confidentiality narrowing.
 		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own, nil, horizon,
-			`a.owed_verdict IS NULL AND a.restricted_at IS NULL`)
+			`a.owed_verdict IS NULL AND a.audience = 'workspace' AND a.restricted_at IS NULL`)
 		if err != nil {
 			return err
 		}
@@ -184,7 +193,7 @@ func (s *Store) SetOwedVerdict(ctx context.Context, id ids.UUID, verdict string)
 			UPDATE activity SET owed_verdict = $2, owed_verdict_at = now()
 			WHERE id = $1 AND owed_verdict IS NULL
 			  AND archived_at IS NULL
-			  AND restricted_at IS NULL`, id, verdict)
+			  AND audience = 'workspace' AND restricted_at IS NULL`, id, verdict)
 		if err != nil {
 			return fmt.Errorf("activities: setting the owed verdict: %w", err)
 		}

@@ -125,34 +125,34 @@ const waitingRepliesSQL = `
 	       -- message. Absence is never evidence: an unjudged row ranks exactly
 	       -- as it did before the column existed.
 	       coalesce(a.owed_verdict, ''),
-	       -- Whether the message was addressed to THIS reader, read off the
-	       -- header rather than off the participant row.
+	       -- Whether every header recipient names somebody OTHER than the
+	       -- reader — a thread they can see because it reached their mailbox,
+	       -- addressed to a colleague.
 	       --
-	       -- Capture stamps the mailbox owner as a recipient on every inbound
-	       -- message it stores (stampCaptureParticipants), so a recipient row proves
-	       -- only that the mail reached this mailbox — which is true of a
-	       -- thread addressed entirely to a colleague. The two are told apart by
-	       -- what they carry: the synthetic row has a user_id and NO address,
-	       -- and a real recipient has an address and no user_id. So this reads
-	       -- addresses only, and the user_id arm is deliberately absent.
+	       -- Read against the reader's OWN addresses, and it has to be, because
+	       -- neither participant row answers it alone. Capture stamps the
+	       -- mailbox owner with a user_id and no address, which says the mail
+	       -- arrived here rather than who it was written to; and mailmap's
+	       -- otherParties deliberately DROPS the owner's own address from the
+	       -- header list, so their name is never among the address-bearing
+	       -- rows even when the sender wrote to them directly.
 	       --
-	       -- A message with no address-bearing recipient row at all counts as
-	       -- addressed: some connectors record no header recipients, and
-	       -- answering "not yours" there would drop live mail on a technicality.
+	       -- So the question is asked the other way round: is there an
+	       -- address-bearing recipient, and is NONE of them this reader? That
+	       -- is true exactly when the mail was written to somebody else.
 	       --
-	       -- An EMPTY address list admits everyone, the same failure direction
-	       -- the colleague-domain rule takes: a reader whose own addresses
-	       -- cannot be resolved must not have every waiting customer quietly
-	       -- demoted underneath them.
+	       -- An EMPTY address list answers false, like the colleague-domain
+	       -- rule and for the same reason: a reader whose own addresses cannot
+	       -- be resolved must not have every waiting customer quietly demoted.
 	       --
-	       -- REPORTED, never used to exclude, like the engagement column above.
-	       -- The caller demotes what it cannot prove.
-	       (coalesce(array_length(%[17]s::text[], 1), 0) = 0
-	        OR NOT EXISTS (
+	       -- REPORTED, never used to exclude. The caller demotes what it
+	       -- cannot prove.
+	       (coalesce(array_length(%[17]s::text[], 1), 0) > 0
+	        AND EXISTS (
 	          SELECT 1 FROM activity_participant anyTo
 	           WHERE anyTo.activity_id = a.id AND anyTo.role = 'to'
 	             AND coalesce(anyTo.address, '') <> '')
-	        OR EXISTS (
+	        AND NOT EXISTS (
 	          SELECT 1 FROM activity_participant addressed
 	           WHERE addressed.activity_id = a.id AND addressed.role = 'to'
 	             AND lower(addressed.address) = ANY(%[17]s::text[]))),

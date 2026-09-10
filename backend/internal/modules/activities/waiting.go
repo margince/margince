@@ -79,13 +79,15 @@ type WaitingReply struct {
 	// which is the one failure this queue must not have. A caller demotes an
 	// unengaged wait instead, so being wrong costs a scroll.
 	Engaged bool
-	// AddressedToReader reports that a header recipient names one of this
-	// reader's own addresses, or that the message names none at all.
+	// AddressedElsewhere reports that the message names header recipients and
+	// none of them is this reader — mail written to a colleague that reached
+	// this mailbox.
 	//
-	// REPORTED, never used to exclude, for Engaged's reason: a connector that
-	// records no header recipients would otherwise hard-drop live mail. The
+	// Phrased as the exception so FALSE is the answer whenever there is no
+	// evidence: no header recipients recorded, or the reader's own addresses
+	// unresolved. REPORTED, never used to exclude, for Engaged's reason — the
 	// caller demotes what it cannot prove.
-	AddressedToReader bool
+	AddressedElsewhere bool
 	// OwnerID is who owes this reply, resolved from the record the thread is
 	// filed under. Zero when no record on it names an owner.
 	//
@@ -297,7 +299,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			var row WaitingReply
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.PersonID, &row.OrganizationID, &row.DealID,
-				&row.HasOpenDeal, &row.OwedVerdict, &row.AddressedToReader,
+				&row.HasOpenDeal, &row.OwedVerdict, &row.AddressedElsewhere,
 				&row.Engaged, &row.OwnerID); err != nil {
 				return err
 			}

@@ -112,7 +112,7 @@ func (w attentionWaiting) Unanswered(
 			DealID:             row.DealID,
 			HasOpenDeal:        row.HasOpenDeal,
 			Engaged:            row.Engaged,
-			AddressedElsewhere: !row.AddressedToReader,
+			AddressedElsewhere: row.AddressedElsewhere,
 			// Translated here, at the one boundary that already crosses from
 			// the module's vocabulary to the queue's. Only "informs us" changes
 			// a ranking; unjudged and "asks us" both leave it alone, so the

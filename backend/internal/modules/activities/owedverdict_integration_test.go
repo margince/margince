@@ -176,37 +176,30 @@ func TestASecondVerdictDoesNotOverwriteTheFirst(t *testing.T) {
 	}
 }
 
-// A NARROWED message is still judged, and that is the change rather than an
-// oversight.
+// A narrowed message cannot be judged, and the clause is re-tested at the WRITE.
 //
-// The audience clause used to stand here and in the backlog read, on the
-// reading that a message the worklist may not open is not worth a model call.
-// It was wrong in the direction that hurts: a founder's mailbox holds whole
-// threads at participants-audience — a recruiting conversation, a contract
-// negotiation — that the founder can see perfectly well and nobody had judged.
-// An unjudged message ranks as though it asks something, so those threads sat
-// at the top of the day forever.
+// The classifier reads a batch, spends a model call per message and writes the
+// answers back. A human or a privacy verdict can narrow a row inside that
+// window, and a write landing after the narrowing would stamp a judgement on a
+// message the queue's readers may no longer open.
 //
-// Who may READ the row is a separate question, already answered by the queue's
-// own content gate. What this write decides is only what the message ASKS.
-//
-// The statutory hold stayed in the clause and is not tested here: a restricted
-// row needs a reason, an expiry, a retention class and its evidence to exist at
-// all, and the archived case below already proves the write re-tests its
-// conditions rather than trusting the read.
-func TestANarrowedMessageIsStillJudged(t *testing.T) {
+// The audience clause is also what keeps confidential mail out of a model
+// prompt: this pass runs as a system principal, which reads every audience, so
+// a thread narrowed to its participants would otherwise have its subject and
+// body handed to a cloud tier.
+func TestAMessageNarrowedDuringTheModelCallIsNotJudged(t *testing.T) {
 	e := setupLoad(t)
 	person := e.buyer(t)
 	activity := e.waitingFrom(t, "Private matter", "buyer@customer.test", person)
+	// The narrowing lands AFTER the candidate was read, before the write.
 	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, activity)
 
 	applied, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs)
 	if err != nil {
 		t.Fatalf("setting the verdict: %v", err)
 	}
-	if !applied {
-		t.Error("a limited-audience message went unjudged, so it ranks as though " +
-			"it asks something and never leaves the top of the day")
+	if applied {
+		t.Error("a verdict landed on a message narrowed since it was read")
 	}
 }
 
