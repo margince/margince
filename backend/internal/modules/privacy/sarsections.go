@@ -18,13 +18,13 @@ import (
 // query set is compliance-critical — adding or dropping a source changes what
 // the export owes the data subject. It is assembled chapter by chapter, and the
 // order the chapters concatenate in is the order the export runs them in.
-func sarSections(pkg *SARPackage, personID ids.PersonID, emails []string, leads []ids.UUID) []sarSection {
+func sarSections(pkg *SARPackage, personID ids.PersonID, emails []string, leads, identities []ids.UUID) []sarSection {
 	sections := sarIdentitySections(pkg)
 	sections = append(sections, sarRecordSections(pkg)...)
 	sections = append(sections, sarMessagingSections(pkg, personID, emails, leads)...)
 	sections = append(sections, sarConsentSections(pkg)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
-	sections = append(sections, sarCommunicationSections(pkg, personID, leads)...)
+	sections = append(sections, sarCommunicationSections(pkg, personID, leads, identities)...)
 	return append(sections, sarProvenanceSections(pkg)...)
 }
 
@@ -257,7 +257,7 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 // subject's own history. A person-keyed section would silently withhold the
 // earliest part of their record, which is the half they are least likely to
 // know about and most likely to be asking after.
-func sarCommunicationSections(pkg *SARPackage, personID ids.PersonID, leads []ids.UUID) []sarSection {
+func sarCommunicationSections(pkg *SARPackage, personID ids.PersonID, leads, identities []ids.UUID) []sarSection {
 	subjects := append([]any{}, personID)
 	return []sarSection{
 		{
@@ -267,14 +267,30 @@ func sarCommunicationSections(pkg *SARPackage, personID ids.PersonID, leads []id
 		   WHERE subject_id = $1 OR (subject_kind = 'lead' AND subject_id = ANY($2))`,
 			append(subjects, leads),
 		},
-		{&pkg.CommunicationBases, `SELECT kind, thread_key, valid_from, valid_until, note,
+		// EVERY IDENTITY, not the surviving row alone. A merge keeps the
+		// retiring subject's own basis and suppression rows where they are —
+		// the predecessor's objection is evidence that THAT record's subject
+		// refused — so an export reading only the survivor shows the copy the
+		// merge carried and never the act behind it.
+		//
+		// identities ALREADY CONTAINS the survivor, so these two take it in
+		// place of the bare person id rather than beside it: a parameter a
+		// statement never references is one Postgres cannot infer a type for,
+		// and it refuses to prepare the statement at all.
+		{
+			&pkg.CommunicationBases, `SELECT kind, thread_key, valid_from, valid_until, note,
 		          captured_at, revoked_at
 		   FROM communication_basis
-		   WHERE person_id = $1 OR lead_id = ANY($2)`, append(subjects, leads)},
-		{&pkg.CommunicationSuppression, `SELECT kind, source, address, recorded_at, revoked_at,
+		   WHERE person_id = ANY($1) OR lead_id = ANY($2)`,
+			[]any{identities, leads},
+		},
+		{
+			&pkg.CommunicationSuppression, `SELECT kind, source, address, recorded_at, revoked_at,
 		          decided_by_level
 		   FROM communication_suppression
-		   WHERE person_id = $1 OR lead_id = ANY($2)`, append(subjects, leads)},
+		   WHERE person_id = ANY($1) OR lead_id = ANY($2)`,
+			[]any{identities, leads},
+		},
 	}
 }
 
