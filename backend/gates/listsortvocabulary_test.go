@@ -3,6 +3,11 @@
 
 //gate:kind parity H3
 
+// The AST helpers this shares with the sibling reference census are declared
+// under the same tag, so it carries it too rather than reaching for them from a
+// build they are not in.
+//go:build !integration
+
 package gates
 
 // A sort the list OFFERS is a sort the server ACCEPTS.
