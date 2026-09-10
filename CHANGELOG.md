@@ -3,11 +3,16 @@
 All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-This is a pre-release proof of concept: nothing has been versioned or
-released yet, so everything that exists lives under Unreleased. Version
-numbers appear here when releases start.
+Releases are cut by pushing a `v*` tag, which publishes a GitHub release with
+the desktop bundles attached — see
+[docs/how-to/cut-a-release.md](docs/how-to/cut-a-release.md). The constellation
+dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
-## [Unreleased]
+There is deliberately no empty `Unreleased` section: `scripts/check-changelog-
+sections.sh` refuses a release heading with nothing under it, so one appears
+when it has content.
+
+## [0.0.1] - 2026-09-10
 
 ### Removed
 
