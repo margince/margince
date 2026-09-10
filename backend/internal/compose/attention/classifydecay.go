@@ -49,6 +49,17 @@ func classifyDecay(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	if facts := item.Relationship; facts != nil && facts.HasOpenDeal != nil && *facts.HasOpenDeal {
 		row.Because = append(row.Because, reason("expected_revenue", nil))
 	}
+	// Something to DO with it. Until this the row offered Open and Dismiss —
+	// the only affirmative button made the work go away — so a reader with a
+	// list of lapsed relationships had no way to act on one from the page.
+	//
+	// `draft_email` with no activity id is the contract's "start a thread",
+	// which is what a reconnect is: nobody is waiting on a reply, and naming a
+	// record here would make the queue draw it as answering a message that does
+	// not exist (worklistMoveOf states the rule).
+	row.Move = &crmcontracts.WorklistMove{
+		Action: crmcontracts.WorklistMoveActionDraftEmail,
+	}
 	return ranked{
 		item: row,
 		// A relationship going quiet, raised for the reader whose contacts they

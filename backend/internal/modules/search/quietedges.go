@@ -126,13 +126,25 @@ func QuietEdgesForUser(
 		  %s
 		  JOIN person p ON p.id = e.person_id AND p.archived_at IS NULL
 		 WHERE e.user_id = $%d AND e.last_at <= $%d AND e.count_total > 0
+		   -- BOTH directions, ever. count_total > 0 admits an address the rep
+		   -- only ever wrote to and one that only ever wrote to them, and
+		   -- neither is a relationship there is anything to revive: a lapse is
+		   -- a conversation that stopped, and a conversation needs two people.
+		   AND e.last_inbound_at IS NOT NULL AND e.last_outbound_at IS NOT NULL
 		   AND NOT EXISTS (SELECT 1 FROM graph_interaction_edge later
 		                     %s
 		                    WHERE later.person_id = e.person_id AND later.last_at >= $%d)
 		   AND (%s)
 		   -- Before the cap, like every rule above it.
 		   AND (%s)
-		 ORDER BY e.last_at ASC, e.person_id
+		 -- Most exchanged first, oldest silence to break the tie.
+		 --
+		 -- Ordered BEFORE the cap because the cap is what the caller sees: taking
+		 -- the forty oldest silences and ranking those by value could not reach a
+		 -- relationship worth reviving that happened to be the forty-first, and
+		 -- the oldest silences are exactly where a one-off exchange from years
+		 -- ago sits.
+		 ORDER BY e.count_total DESC, e.last_at ASC, e.person_id
 		 LIMIT $%d`, liveMemberJoin, userPos, beforePos,
 		laterMemberJoin, beforePos, scope, excluded, limitPos), args...)
 	if err != nil {

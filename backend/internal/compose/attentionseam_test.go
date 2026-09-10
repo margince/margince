@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -230,5 +231,51 @@ func TestTheDecayLaneReportsNothingItCannotDerive(t *testing.T) {
 	)
 	if len(quiet) != 0 {
 		t.Errorf("the lane invented %d relationships from an empty derivation", len(quiet))
+	}
+}
+
+// Money leads, then strength, then how long it has been quiet — and the lane
+// hands the reader five, not forty.
+//
+// A list of forty names under a heading promising new revenue is one a reader
+// learns to skip, and the ordering is what decides which five survive the cut.
+func TestTheReconnectLaneKeepsTheFiveWorthWriting(t *testing.T) {
+	spoke := time.Date(2026, 5, 12, 9, 0, 0, 0, time.UTC)
+	var edges []search.InteractionEdge
+	var changed []people.PersonChanges
+	// Seven lapses, all alike except for the two facts that rank them.
+	for i := 0; i < 7; i++ {
+		id := ids.NewV7()
+		edges = append(edges, search.InteractionEdge{PersonID: id, LastAt: spoke})
+		// DESCENDING quiet days, so the funded one below is the NEWEST
+		// silence and every other ordering puts it last. Ascending, it would
+		// have led on age alone and the money arm could be deleted with the
+		// test still green.
+		changed = append(changed, people.PersonChanges{
+			PersonID:    ids.From[ids.PersonKind](id),
+			DisplayName: fmt.Sprintf("Contact %d", i),
+			Changes: []relstrength.Change{
+				{Kind: relstrength.ChangeWentQuiet, Days: 60 - i, At: spoke},
+			},
+		})
+	}
+	// The LAST one carries money, so a lane ordered by anything else would
+	// leave it out of the five.
+	funded := map[ids.UUID]bool{edges[6].PersonID: true}
+
+	lane := quietRelationships(edges, changed, funded, spoke.AddDate(0, 0, 60))
+
+	if len(lane) != decayLaneCap {
+		t.Fatalf("the lane hands over %d rows, want %d", len(lane), decayLaneCap)
+	}
+	if !lane[0].HasOpenDeal {
+		t.Errorf("the funded relationship is not first; a lane that ranks money " +
+			"below age drops it off a page of five entirely")
+	}
+	// The premise guard: without the funded one the cut is still five, so the
+	// assertion above is about ORDER rather than about the cap.
+	unfunded := quietRelationships(edges, changed, nil, spoke.AddDate(0, 0, 60))
+	if len(unfunded) != decayLaneCap {
+		t.Errorf("an unfunded set hands over %d rows, want %d", len(unfunded), decayLaneCap)
 	}
 }

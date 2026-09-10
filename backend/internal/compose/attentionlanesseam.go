@@ -18,6 +18,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -27,6 +28,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -140,6 +142,11 @@ func idleDaysOf(deal agents.SlippingDeal, now time.Time) int {
 // engine warns against, and the oldest silences are the ones worth the passes.
 const decayCandidateCap = 40
 
+// decayLaneCap is how many reconnects reach the reader. Five is what a rep can
+// write in a morning; the candidate set above it is wider so the ranking has
+// something to choose from.
+const decayLaneCap = 5
+
 // attentionDecay reads the acting rep's own lapsed relationships.
 //
 // TWO steps, and the order is the design. The projection narrows to the
@@ -177,7 +184,17 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 			// people module owns the rows and renders the predicate; search
 			// never imports a sibling, so the projection takes it as a hole.
 			func(arg func(any) int) (string, error) {
-				return people.NotDismissedClause(ctx, "e", now, arg)
+				dismissed, err := people.NotDismissedClause(ctx, "e", now, arg)
+				if err != nil {
+					return "", err
+				}
+				// AND the sender verdict's own answer. A contact capture judged
+				// personal, an advisor or noise is not a lapsed business
+				// relationship, and this lane is where that showed: a founder's
+				// clinic and a service desk sat under a heading promising new
+				// revenue. Composed here because each module renders the rule
+				// over the table it owns.
+				return dismissed + " AND " + capture.PrivateSenderClause("e"), nil
 			},
 		)
 		if err != nil {
@@ -270,6 +287,35 @@ func quietRelationships(
 			})
 			break
 		}
+	}
+	return rankReconnects(lapsed)
+}
+
+// rankReconnects puts the relationships worth reviving first and cuts to what a
+// rep can actually act on in a morning.
+//
+// Money leads, then how strong the relationship was, then how long it has been
+// quiet. The projection hands these over most-exchanged first, which is the
+// right CANDIDATE order — it is what stops a one-off exchange from years ago
+// crowding out a real lapse — but it says nothing about which of the survivors
+// matters most to this rep today.
+//
+// The cap is the product rule: five reconnects a rep can write. The rest are
+// not lost, they return tomorrow as the edges age, and a lane of forty names
+// under a heading promising new revenue is one a reader learns to skip.
+func rankReconnects(lapsed []attention.QuietRelationship) []attention.QuietRelationship {
+	sort.SliceStable(lapsed, func(i, j int) bool {
+		a, b := lapsed[i], lapsed[j]
+		if a.HasOpenDeal != b.HasOpenDeal {
+			return a.HasOpenDeal
+		}
+		if a.Strength.Strength != b.Strength.Strength {
+			return a.Strength.Strength > b.Strength.Strength
+		}
+		return a.QuietDays > b.QuietDays
+	})
+	if len(lapsed) > decayLaneCap {
+		return lapsed[:decayLaneCap]
 	}
 	return lapsed
 }
