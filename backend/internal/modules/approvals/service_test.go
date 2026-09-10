@@ -773,6 +773,52 @@ func TestAProposalStagedForARepIsDecidedByThatRepAlone(t *testing.T) {
 	}
 }
 
+// The write side and the read side must narrow the SAME kinds.
+//
+// They run on opposite sides of one row — subjectScopedShape when it is staged,
+// withheldFromOtherSeats when it is read — and a kind narrowed on the read side
+// alone still matches across members on the write side. One seat's pending
+// proposal is then joined and handed to another, or superseded by it, or
+// suppressed by its rejection; each time the surviving row names a seat the
+// reader is not, so it is withheld from the person it was staged for.
+//
+// Derived from the maps rather than listed, so enrolling a kind in either one
+// carries the obligation with it.
+func TestEveryKindNarrowedOnReadIsAlsoNarrowedOnStaging(t *testing.T) {
+	seatNarrowed := map[string]bool{}
+	for kind := range selfOnlyKinds {
+		seatNarrowed[kind] = true
+	}
+	for kind := range decidedByTheSeatStagedFor {
+		seatNarrowed[kind] = true
+	}
+	if len(seatNarrowed) == 0 {
+		t.Fatal("no seat-narrowed kind found at all — this walk covers nothing")
+	}
+	for kind := range seatNarrowed {
+		t.Run(kind, func(t *testing.T) {
+			if !subjectScopedShape(StageInput{Kind: kind}) {
+				t.Error("this kind is decided by one seat but staged as if shared, so " +
+					"staging matches across members: a colleague's proposal is joined, " +
+					"superseded or suppressed by it, and the survivor names a seat the " +
+					"reader is not")
+			}
+		})
+	}
+
+	// The positive control. Without it this passes just as well if
+	// subjectScopedShape started answering true to everything, which would
+	// split every shared team proposal into one row per person.
+	shared := "merge_records"
+	if seatNarrowed[shared] {
+		t.Fatalf("the control kind %q is itself seat-narrowed, so it proves nothing", shared)
+	}
+	if subjectScopedShape(StageInput{Kind: shared}) {
+		t.Errorf("a SHARED kind was staged per-seat, which splits one team's proposal " +
+			"into a row for each member")
+	}
+}
+
 // DecisionGrantObjects is what the composition layer's satisfiability gate reads,
 // and it is load-bearing only if it names the SAME objects requireDecisionGrants
 // enforces. A gate certifying an object the decision does not demand — or blind to
