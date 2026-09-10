@@ -8,7 +8,7 @@
 // commit and widen the version-skew window for nothing.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -18,104 +18,28 @@ import { Select, type SelectOption } from "../design-system/select";
 import { Row, Stack } from "../design-system/stack";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
+import {
+  blankEmail,
+  blankPhone,
+  emailTypeOptions,
+  isEmailType,
+  isPhoneType,
+  moveRow,
+  phoneTypeOptions,
+  removeRow,
+  replaceRow,
+  type StagedEmail,
+  type StagedPhone,
+  seedEmails,
+  seedPhones,
+  selectPrimary,
+  toEmailInputs,
+  toPhoneInputs,
+} from "./personcontactedit.helpers";
 
 type Person = components["schemas"]["Person"];
 type PersonEmailInput = components["schemas"]["PersonEmailInput"];
 type PersonPhoneInput = components["schemas"]["PersonPhoneInput"];
-type EmailType = PersonEmailInput["email_type"];
-type PhoneType = PersonPhoneInput["phone_type"];
-
-// A staged row carries a stable client-side KEY for React's list identity —
-// never the value, which changes on every keystroke, and never the array
-// index, which shifts under a row the moment an earlier one is removed. An
-// existing row's server id is already stable and unique, so it doubles as the
-// key; a freshly appended row has no id yet and takes a fresh one of its own.
-type StagedEmail = PersonEmailInput & Readonly<{ key: string }>;
-type StagedPhone = PersonPhoneInput & Readonly<{ key: string }>;
-
-function seedEmails(person: Person): StagedEmail[] {
-  return (person.emails ?? []).map((row) => ({
-    key: row.id,
-    email: row.email,
-    email_type: row.email_type,
-    is_primary: row.is_primary,
-    position: row.position,
-  }));
-}
-
-function seedPhones(person: Person): StagedPhone[] {
-  return (person.phones ?? []).map((row) => ({
-    key: row.id,
-    phone: row.phone,
-    phone_type: row.phone_type,
-    is_primary: row.is_primary,
-    position: row.position,
-  }));
-}
-
-// The three small edits every row list makes, shared between emails and
-// phones so the two do not grow two answers to one question.
-function replaceRow<TRow extends Readonly<{ key: string }>>(
-  rows: readonly TRow[],
-  key: string,
-  patch: Partial<TRow>,
-): TRow[] {
-  return rows.map((row) => (row.key === key ? { ...row, ...patch } : row));
-}
-
-function removeRow<TRow extends Readonly<{ key: string }>>(
-  rows: readonly TRow[],
-  key: string,
-): TRow[] {
-  return rows.filter((row) => row.key !== key);
-}
-
-// Marks one row primary and clears every SIBLING OF THE SAME TYPE — the
-// server enforces at most one primary per type (DB-enforced), so a picker
-// that let two "work" rows both claim primary would stage a state the save
-// could never actually produce.
-function selectPrimary<
-  TRow extends Readonly<{ key: string; is_primary: boolean }>,
->(rows: readonly TRow[], key: string, kindOf: (row: TRow) => string): TRow[] {
-  const target = rows.find((row) => row.key === key);
-  if (!target) {
-    return [...rows];
-  }
-  const kind = kindOf(target);
-  return rows.map((row) =>
-    kindOf(row) === kind ? { ...row, is_primary: row.key === key } : row,
-  );
-}
-
-function isEmailType(value: string): value is EmailType {
-  return value === "work" || value === "personal" || value === "other";
-}
-
-function isPhoneType(value: string): value is PhoneType {
-  return (
-    value === "work" ||
-    value === "mobile" ||
-    value === "home" ||
-    value === "other"
-  );
-}
-
-function emailTypeOptions(t: ReturnType<typeof useT>): SelectOption[] {
-  return [
-    { value: "work", label: t("person.contactType.work") },
-    { value: "personal", label: t("person.contactType.personal") },
-    { value: "other", label: t("person.contactType.other") },
-  ];
-}
-
-function phoneTypeOptions(t: ReturnType<typeof useT>): SelectOption[] {
-  return [
-    { value: "work", label: t("person.contactType.work") },
-    { value: "mobile", label: t("person.contactType.mobile") },
-    { value: "home", label: t("person.contactType.home") },
-    { value: "other", label: t("person.contactType.other") },
-  ];
-}
 
 // --- the write ---------------------------------------------------------
 
@@ -161,55 +85,13 @@ function useContactMethodsSave() {
   });
 }
 
-function toEmailInputs(rows: readonly StagedEmail[]): PersonEmailInput[] {
-  return rows
-    .filter((row) => row.email.trim() !== "")
-    .map((row, index) => ({
-      email: row.email.trim(),
-      email_type: row.email_type,
-      is_primary: row.is_primary,
-      position: index,
-    }));
-}
-
-function toPhoneInputs(rows: readonly StagedPhone[]): PersonPhoneInput[] {
-  return rows
-    .filter((row) => row.phone.trim() !== "")
-    .map((row, index) => ({
-      phone: row.phone.trim(),
-      phone_type: row.phone_type,
-      is_primary: row.is_primary,
-      position: index,
-    }));
-}
-
-function blankEmail(position: number): StagedEmail {
-  return {
-    key: crypto.randomUUID(),
-    email: "",
-    email_type: "work",
-    is_primary: false,
-    position,
-  };
-}
-
-function blankPhone(position: number): StagedPhone {
-  return {
-    key: crypto.randomUUID(),
-    phone: "",
-    phone_type: "work",
-    is_primary: false,
-    position,
-  };
-}
-
 // --- one row ----------------------------------------------------------
 
 // The one row shape emails and phones both are: a type, a value, a primary
-// radio scoped to that type, and a remove verb. Two copies of this — one
-// keyed to `email`/`email_type`, one to `phone`/`phone_type` — differed in
-// nothing but which field they read, so the caller now supplies that
-// binding instead of the row shape being duplicated.
+// radio, reorder verbs and a remove verb. Two copies of this — one keyed to
+// `email`/`email_type`, one to `phone`/`phone_type` — differed in nothing but
+// which field they read, so the caller now supplies that binding instead of
+// the row shape being duplicated.
 type ContactRowProps = Readonly<{
   disabled: boolean;
   typeOptions: readonly SelectOption[];
@@ -221,6 +103,12 @@ type ContactRowProps = Readonly<{
   isPrimary: boolean;
   primaryGroup: string;
   onPrimary: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  moveUpLabel: string;
+  moveDownLabel: string;
   removeLabel: string;
   onRemove: () => void;
 }>;
@@ -236,6 +124,12 @@ function ContactRowEditor({
   isPrimary,
   primaryGroup,
   onPrimary,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
+  moveUpLabel,
+  moveDownLabel,
   removeLabel,
   onRemove,
 }: ContactRowProps) {
@@ -264,6 +158,24 @@ function ContactRowEditor({
           disabled={disabled}
           onChange={onPrimary}
         />
+        <Button
+          small
+          variant="ghost"
+          disabled={disabled || !canMoveUp}
+          aria-label={moveUpLabel}
+          onClick={onMoveUp}
+        >
+          <ChevronUp aria-hidden size={16} />
+        </Button>
+        <Button
+          small
+          variant="ghost"
+          disabled={disabled || !canMoveDown}
+          aria-label={moveDownLabel}
+          onClick={onMoveDown}
+        >
+          <ChevronDown aria-hidden size={16} />
+        </Button>
         <Button
           small
           variant="ghost"
@@ -343,7 +255,7 @@ export function EditContactMethodsModal({
       </h2>
       <Stack gap="4">
         <Stack gap="2">
-          {emails.map((row) => (
+          {emails.map((row, index) => (
             <ContactRowEditor
               key={row.key}
               disabled={save.isPending}
@@ -368,6 +280,14 @@ export function EditContactMethodsModal({
                   selectPrimary(rows, row.key, (r) => r.email_type),
                 )
               }
+              canMoveUp={index > 0}
+              canMoveDown={index < emails.length - 1}
+              onMoveUp={() => setEmails((rows) => moveRow(rows, row.key, "up"))}
+              onMoveDown={() =>
+                setEmails((rows) => moveRow(rows, row.key, "down"))
+              }
+              moveUpLabel={`${t("person.rail.contactMoveUp")} ${row.email || t("person.rail.contactValueEmail")}`}
+              moveDownLabel={`${t("person.rail.contactMoveDown")} ${row.email || t("person.rail.contactValueEmail")}`}
               removeLabel={`${t("person.rail.contactRemove")} ${row.email || t("person.rail.contactValueEmail")}`}
               onRemove={() => setEmails((rows) => removeRow(rows, row.key))}
             />
@@ -384,7 +304,7 @@ export function EditContactMethodsModal({
           </Button>
         </Stack>
         <Stack gap="2">
-          {phones.map((row) => (
+          {phones.map((row, index) => (
             <ContactRowEditor
               key={row.key}
               disabled={save.isPending}
@@ -409,6 +329,14 @@ export function EditContactMethodsModal({
                   selectPrimary(rows, row.key, (r) => r.phone_type),
                 )
               }
+              canMoveUp={index > 0}
+              canMoveDown={index < phones.length - 1}
+              onMoveUp={() => setPhones((rows) => moveRow(rows, row.key, "up"))}
+              onMoveDown={() =>
+                setPhones((rows) => moveRow(rows, row.key, "down"))
+              }
+              moveUpLabel={`${t("person.rail.contactMoveUp")} ${row.phone || t("person.rail.contactValuePhone")}`}
+              moveDownLabel={`${t("person.rail.contactMoveDown")} ${row.phone || t("person.rail.contactValuePhone")}`}
               removeLabel={`${t("person.rail.contactRemove")} ${row.phone || t("person.rail.contactValuePhone")}`}
               onRemove={() => setPhones((rows) => removeRow(rows, row.key))}
             />

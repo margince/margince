@@ -8164,6 +8164,8 @@ export const vi = {
   "person.rail.contactType": "Loại",
   "person.rail.contactPrimary": "Chính",
   "person.rail.contactRemove": "Xóa",
+  "person.rail.contactMoveUp": "Di chuyển lên",
+  "person.rail.contactMoveDown": "Di chuyển xuống",
   "person.contactType.work": "Công việc",
   "person.contactType.personal": "Cá nhân",
   "person.contactType.home": "Nhà riêng",

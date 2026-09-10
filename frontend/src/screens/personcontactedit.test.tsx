@@ -274,4 +274,50 @@ describe("editing a person's contact methods", () => {
     expect(phoneRecord.is_primary).toBe(true);
     expect(phoneRecord.position).toBe(0);
   });
+
+  it("reorders emails and saves the new position", async () => {
+    const user = userEvent.setup();
+    mountFetchRecorder();
+    const dana = person({
+      emails: [
+        {
+          id: "e-1",
+          email: "a@acme.com",
+          email_type: "work",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "human:u-1",
+        },
+        {
+          id: "e-2",
+          email: "b@acme.com",
+          email_type: "personal",
+          is_primary: false,
+          position: 1,
+          source: "manual",
+          captured_by: "human:u-1",
+        },
+      ],
+      phones: [],
+    });
+    renderModal({ open: true, person: dana });
+
+    // Move the FIRST row (a@acme.com) down, so the saved order becomes b, a.
+    await user.click(
+      screen.getByRole("button", { name: /move down.*a@acme\.com/i }),
+    );
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    const patch = await findPatch();
+    const body = asRecord(patch.body, "the contact-methods patch");
+    const emails = asArray(body.emails, "the patched emails");
+    expect(emails).toHaveLength(2);
+    const first = asRecord(emails[0], "the first email");
+    const second = asRecord(emails[1], "the second email");
+    expect(first.email).toBe("b@acme.com");
+    expect(first.position).toBe(0);
+    expect(second.email).toBe("a@acme.com");
+    expect(second.position).toBe(1);
+  });
 });

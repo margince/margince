@@ -8381,6 +8381,8 @@ export const en = {
   "person.rail.contactType": "Type",
   "person.rail.contactPrimary": "Primary",
   "person.rail.contactRemove": "Remove",
+  "person.rail.contactMoveUp": "Move up",
+  "person.rail.contactMoveDown": "Move down",
   "person.contactType.work": "Work",
   "person.contactType.personal": "Personal",
   "person.contactType.home": "Home",
