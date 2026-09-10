@@ -218,7 +218,7 @@ var contextTargetKinds = map[string]string{
 		"writes bump — and the same enrichment run that discovers the leads writes " +
 		"the company's profile fields, so the pin went stale before any human saw " +
 		"the lead and every accept failed for the row's lifetime.",
-	"deal_follow_up": "A reconciled follow-up is filed under the deal it is about, but the " +
+	kindDealFollowUp: "A reconciled follow-up is filed under the deal it is about, but the " +
 		"effect CREATES an activity and reads none of the deal's own fields. Its stager " +
 		"has always said it carries no pin, and stopped being right when the pin moved " +
 		"server-side: an overnight proposal waits until someone works their morning " +
@@ -231,7 +231,7 @@ var contextTargetKinds = map[string]string{
 		"disposition; it never writes the activity. Pinning bound the answer to a row " +
 		"that relinking, a participant correction or a subject fix bumps — every one of " +
 		"which is ordinary inbox work on the very message the question is about.",
-	"transcript_proposal": "A next step read out of a transcript is filed under the " +
+	kindTranscriptProposal: "A next step read out of a transcript is filed under the " +
 		"ACTIVITY carrying that transcript, because those lines are the evidence a human " +
 		"judges it on. The effect CREATES a task activity and never writes the transcript. " +
 		"Pinning would bind the answer to a row that relinking the meeting to a deal, or " +
