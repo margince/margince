@@ -295,7 +295,7 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, token, err := h.svc.Login(r.Context(), string(req.Email), req.Password)
+	id, token, err := h.svc.Login(withUserAgent(r.Context(), r.UserAgent()), string(req.Email), req.Password)
 	if err != nil {
 		if errors.Is(err, ErrBadCredentials) {
 			h.loginFailures.Record(accountKey)

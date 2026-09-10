@@ -1295,6 +1295,14 @@ func (stubs) SaveMyLocale(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyLocale")
 }
 
+func (stubs) ListMySessions(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListMySessions")
+}
+
+func (stubs) RevokeMySession(w nethttp.ResponseWriter, r *nethttp.Request, sessionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RevokeMySession")
+}
+
 func (stubs) GetMyWorkingHours(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetMyWorkingHours")
 }

@@ -19587,6 +19587,52 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /me/sessions:
+    get:
+      tags: [Identity]
+      operationId: listMySessions
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: The sessions open under your account.
+      description: |
+        Always the CALLER's own. Each entry names the device the session was
+        opened from and when, and marks the one making this request, so a person
+        can recognise a session they do not know and end it. The opaque token is
+        never returned — a session is named here by its own id, which is the
+        handle `DELETE` takes. The address a session was opened from is
+        deliberately withheld: the device is enough to recognise it by, and the
+        IP is a sharper disclosure than the list needs.
+      responses:
+        '200':
+          description: The caller's live sessions, newest activity first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MySessionList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/sessions/{sessionId}:
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      tags: [Identity]
+      operationId: revokeMySession
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: End one of your sessions.
+      description: |
+        Ends the caller's own session named by its id — including the session
+        making the request, which is how a person signs THIS device out by
+        choosing it from the list. A session id that is not the caller's is
+        answered 404, never 403: whose revoke succeeds must not disclose whether
+        a session exists. Ending an already-ended session is a no-op, not an
+        error.
+      responses:
+        '204': { description: 'The session is revoked, or was already.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /me/working-hours:
     get:
       tags: [Identity]
@@ -22643,6 +22689,46 @@ components:
             answers sends them to debug a mismatch that was never the cause.
           items:
             $ref: '#/components/schemas/ConnectorAppRedirectUri'
+    MySession:
+      type: object
+      additionalProperties: false
+      required: [id, signed_in_at, last_active_at, current]
+      description: >-
+        One session open under the caller's account, as its owner sees it. The
+        opaque token never appears; `id` is the session's own handle, which
+        `DELETE /me/sessions/{sessionId}` takes. No IP address — the device is
+        the coarser view this list deliberately offers in its place.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The session's handle, for revoking it.
+        user_agent:
+          type: string
+          nullable: true
+          description: >-
+            The User-Agent the session was opened from, verbatim, or null when
+            the client sent none. Shown as given; the client formats it.
+        signed_in_at:
+          type: string
+          format: date-time
+          description: When the session was opened.
+        last_active_at:
+          type: string
+          format: date-time
+          description: When a request was last admitted on it.
+        current:
+          type: boolean
+          description: Whether this is the session making the request.
+    MySessionList:
+      type: object
+      additionalProperties: false
+      required: [sessions]
+      description: The caller's live sessions, newest activity first.
+      properties:
+        sessions:
+          type: array
+          items: { $ref: '#/components/schemas/MySession' }
     AuthenticationPolicy:
       type: object
       description: |
