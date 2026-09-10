@@ -29,22 +29,19 @@ import (
 // its confirm effect is injected at the composition root.
 const CloseDateCorrectionKind = "close_date_correction"
 
-// CorrectionStager is the approvals seam the composition root fills
-// (a module never imports a sibling): stage a 🟡 confirm-the-real-date
-// proposal, and ask whether one is already pending so a nightly sweep —
-// whose proposed date moves with "today" — cannot stack duplicates.
-type CorrectionStager interface {
-	HasPendingCorrection(ctx context.Context, dealID ids.UUID) (bool, error)
-	StageCorrection(ctx context.Context, dealID ids.UUID, targetVersion int64, summary string, proposal CloseDateCorrection) error
-	// RefusedCloseDate reports whether a human has already turned down the
-	// correction this probe describes. It is the WHOLE of the rejection memory:
-	// the staging engine's own declined check cannot express this rule, so the
-	// composition root declares no identity for it to enforce.
-	//
-	// The probe carries the question rather than a bare date, because what makes
-	// two corrections the same question belongs to this module and the adapter
-	// only walks the payloads.
-	RefusedCloseDate(ctx context.Context, dealID ids.UUID, proposed RefusalProbe) (bool, error)
+// CorrectionPolicy answers whether one deal's owner has left close-date
+// hygiene to the sweep, or asked to be left alone.
+//
+// The seam the composition root fills, because a module never imports a
+// sibling: the answer lives in the approvals module's autonomy table, and this
+// module only needs the verdict.
+//
+// The default is that the sweep corrects. It is a change a rep can put back
+// from their own morning, and the alternative — a card asking them to confirm
+// a date the machine had already computed — expired into silence when nobody
+// answered it, leaving the deal on a guess with nothing saying so.
+type CorrectionPolicy interface {
+	CorrectsWithoutAsking(ctx context.Context, owner ids.UUID) (bool, error)
 }
 
 // QuietReviewReader reads one deal's correspondence UNDER ITS OWNER'S OWN
@@ -150,74 +147,6 @@ func standingDate(current *time.Time) string {
 		return standingNoDate
 	}
 	return current.Format(time.DateOnly)
-}
-
-// SameQuestionAs reports whether an earlier refused correction already answered
-// this one.
-//
-// Neither date can carry this. The proposed date is today plus a stage-velocity
-// offset, so it moves every calendar day; the standing date moves with it,
-// because the sweep writes its guess onto the deal before staging. A memory
-// keyed on either recognises a refusal for exactly one night, which is
-// indistinguishable from no memory at all on every night after the first.
-//
-// What holds still is the JUDGMENT the rep turned down: this deal has N stages
-// left, so push it out by a stage-worth of the usual pace for each. Refusing
-// that is refusing the reasoning, and the reasoning is the same tomorrow. It
-// stops being the same when the deal advances a stage — then N drops, the guess
-// is drawn from a genuinely different situation, and the rep is asked again.
-//
-// The second term is what keeps a rep's own date askable. A refusal is
-// remembered with no expiry, so without it one "no" would end close-date
-// hygiene on that deal for good: the rep refuses a guess, puts their own date
-// on the deal, that one slips in turn, and nobody ever tells them.
-//
-// It asks whether the deal is still sitting where that refusal left it, and a
-// refusal leaves it in one of exactly two places. Most arms write the proposed
-// date onto the deal before staging, so the deal ends the night on
-// ExpectedCloseDate. The gone-quiet arm does not re-date a deal whose date is
-// still in the future — it only notches the forecast down — so that deal ends
-// the night on PreviousCloseDate, exactly where it started. Either is "nobody
-// has touched it since"; anywhere else is a date a person chose, and what they
-// chose has not been asked about yet.
-//
-// And it is the same QUESTION or it is not. "Is this date right" and "is this
-// deal still alive" reach a rep as one approval kind and can meet at the same
-// deal, stage count and date, so a rep who says the date is fine must still be
-// asked whether the deal is real when it later goes quiet.
-//
-// Note which values the standing-date term compares: TONIGHT's standing date
-// against the dates the EARLIER payload names. Comparing two standing dates, or two proposed ones, is
-// the trap this went round twice — both move with the calendar, so the memory
-// would hold for exactly one night.
-func (p RefusalProbe) SameQuestionAs(earlier CloseDateCorrection) bool {
-	if p.RemainingOpenStages == "" || earlier.RemainingOpenStages == "" {
-		// A payload staged before this key existed carries no stage count, and
-		// two unknowns are not a match: reading them as one would let the oldest
-		// refusal in the queue silence every deal that ever reaches it.
-		return false
-	}
-	if p.Asking == "" || earlier.Asking == "" {
-		// Same reasoning as the stage count: a payload from before this key
-		// existed says nothing about which question it put, and guessing would
-		// let a refusal of one bury the other.
-		return false
-	}
-	if p.RemainingOpenStages != earlier.RemainingOpenStages || p.Asking != earlier.Asking {
-		return false
-	}
-	return p.StandingCloseDate == earlier.ExpectedCloseDate ||
-		p.StandingCloseDate == standingDateOf(earlier.PreviousCloseDate)
-}
-
-// standingDateOf renders the date a payload says the deal held, in the spelling
-// a probe's standing date carries. A payload naming no previous date describes a
-// deal that held none, which is the sentinel rather than a match-anything blank.
-func standingDateOf(previous *string) string {
-	if previous == nil {
-		return standingNoDate
-	}
-	return *previous
 }
 
 // UnmarshalCloseDateCorrection decodes a staged (possibly human-edited)

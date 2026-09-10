@@ -6,9 +6,9 @@
 package compose
 
 // The behaviour-preserving proof for the River swap: the
-// close-date sweep reached through a River periodic job stages the IDENTICAL
-// provisional correction the direct Sweep test asserts
-// (TestCloseDateSweepStagesProvisionalForForecastBearingDeal). The domain
+// close-date sweep reached through a River periodic job applies the IDENTICAL
+// correction the direct Sweep test asserts
+// (TestCloseDateSweepRedatesAndExcludesAForecastBearingDeal). The domain
 // seam (deals.Sweep) is unchanged; this proves the scheduler swap does not
 // change the outcome. Completion is observed on River's subscription
 // channel, bounded by a deadline — never a sleep.
@@ -33,7 +33,7 @@ import (
 // TestNewJobRunnerWiresTheOverlayPollerWhenAVaultIsConfigured proves
 // NewJobRunner's overlayVault-present branch actually registers the
 // overlay reconcile worker/periodic job rather than silently staying off
-// — the counterpart to TestRiverCloseDateSweepStagesSameProvisionalAsDirectSweep's
+// — the counterpart to TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep's
 // overlayVault=nil call below, which never exercises this branch.
 func TestNewJobRunnerWiresTheOverlayPollerWhenAVaultIsConfigured(t *testing.T) {
 	e := integration.Setup(t)
@@ -193,7 +193,7 @@ func TestAWaitDoesNotDiscardAKindAnotherWaitIsOwed(t *testing.T) {
 	}
 }
 
-func TestRiverCloseDateSweepStagesSameProvisionalAsDirectSweep(t *testing.T) {
+func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T) {
 	e := setupCloseDate(t)
 	integration.ApplyRiverSchema(t)
 	// The exact fixture the direct-Sweep test uses: an overdue, active,
@@ -239,12 +239,13 @@ func TestRiverCloseDateSweepStagesSameProvisionalAsDirectSweep(t *testing.T) {
 		t.Fatalf("provisional date = %v — INV-CLOSE-PAST must hold immediately", swept.expectedClose)
 	}
 	if !swept.provisional {
-		t.Error("🟡 replacement must be provisional until a human confirms")
+		t.Error("the replacement is the sweep's own estimate and must say so")
 	}
 	if swept.forecastCat == nil || *swept.forecastCat != "commit" {
 		t.Errorf("forecast_category = %v, want the untouched commit override", swept.forecastCat)
 	}
-	if got := e.pendingCorrections(t, id); got != 1 {
-		t.Fatalf("pending close_date_correction approvals = %d, want 1 — the River-driven pass must stage exactly what the direct Sweep does", got)
+	if got := e.pendingCorrections(t, id); got != 0 {
+		t.Errorf("the job-driven pass raised %d cards, want none — it must do exactly "+
+			"what the direct sweep does, which is apply and report", got)
 	}
 }

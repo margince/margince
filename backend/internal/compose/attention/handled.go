@@ -93,5 +93,16 @@ func handledReceipt(receipt Receipt) crmcontracts.Receipt {
 	if subject := subjectOf(receipt.TargetType, receipt.TargetID); subject != nil {
 		out.Subject = subject
 	}
+	// The way back, only where the act carries one. An approval the system
+	// decided is revisitable through the record it named; a correction nobody
+	// was asked about has this row as its only telling, so the undo travels on
+	// it or it is not offered at all.
+	if undo := receipt.Undo; undo != nil {
+		out.Undo = &crmcontracts.AppliedUndo{
+			AuditLogId: openapi_types.UUID(undo.AuditLogID),
+			Version:    undo.Version,
+			Reversed:   undo.Reversed,
+		}
+	}
 	return out
 }

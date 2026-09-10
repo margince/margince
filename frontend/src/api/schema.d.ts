@@ -32062,6 +32062,11 @@ export interface components {
              */
             occurred_at?: string;
             /**
+             * @description The way back from work that was APPLIED rather than approved.
+             *     A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
+             */
+            undo?: components["schemas"]["AppliedUndo"];
+            /**
              * @description What this item offers. `decide` and `merge` mean the verb is irreversible and a
              *     person must choose; `complete` and `snooze` are a task's own verbs; `open` is
              *     the read-only fallback for a receipt.
@@ -32073,7 +32078,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -32438,6 +32443,11 @@ export interface components {
              */
             occurred_at: string;
             subject?: components["schemas"]["AttentionSubject"];
+            /**
+             * @description The way back, on a receipt for work that was APPLIED rather than approved.
+             *     A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
+             */
+            undo?: components["schemas"]["AppliedUndo"];
         };
         /**
          * @description What is going wrong on this lead's team, finite and caller-scoped.
@@ -33149,8 +33159,13 @@ export interface components {
              * @description When the thing being reported happened.
              */
             occurred_at?: string;
+            /**
+             * @description The way back from work that was APPLIED rather than approved.
+             *     A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
+             */
+            undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -33374,6 +33389,21 @@ export interface components {
              * @description The seat whose authority the action was taken under, where it bound one.
              */
             on_behalf_of?: string;
+        };
+        /** @description What a receipt needs to offer a way back from a change nobody was asked about. */
+        AppliedUndo: {
+            /**
+             * Format: uuid
+             * @description The change to put back, through the record-history restore route.
+             */
+            audit_log_id: string;
+            /**
+             * Format: int64
+             * @description The record's version as this receipt was read, for the `If-Match` the restore route requires. Carried on the receipt rather than re-read by the client: a second read would race the sweep, and a stale version is what makes the restore refuse rather than overwrite somebody else's later edit.
+             */
+            version: number;
+            /** @description Somebody already put this back. The row stays and says so rather than vanishing, which would leave a reader unsure their Undo landed. */
+            reversed: boolean;
         };
         /**
          * @description Whether this change can be taken back, and why not when it cannot.

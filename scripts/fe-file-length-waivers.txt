@@ -74,7 +74,6 @@
 670 frontend/src/screens/entityref.tsx
 762 frontend/src/screens/extension-access.tsx
 844 frontend/src/screens/filterbuilder.tsx
-510 frontend/src/screens/historyentries.tsx
 818 frontend/src/screens/import.tsx
 527 frontend/src/screens/importflow.ts
 735 frontend/src/screens/installation-settings.tsx

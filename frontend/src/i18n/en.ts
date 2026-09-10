@@ -9045,6 +9045,8 @@ export const en = {
   "worklist.handled.about": "About",
   "worklist.handled.when": "When",
   "worklist.handled.noRecord": "No record named",
+  "worklist.handled.wayBack": "Way back",
+  "worklist.handled.putBackDone": "Already put back",
   "worklist.handled.truncated":
     "More than this. The list stops at what one sitting can hold.",
   "worklist.exceptions.empty": "Nothing on the team needs you right now.",
