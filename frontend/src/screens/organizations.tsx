@@ -577,7 +577,7 @@ function SiteReadPanel({
   }
   if (reportQuery.isError) {
     return (
-      <p className="t-caption" style={{ color: "var(--danger)" }}>
+      <p className="t-caption" style={{ color: "var(--dangerText)" }}>
         {problemMessageOf(reportQuery.error, t)}
       </p>
     );
@@ -737,7 +737,7 @@ function DeepReadCard({ orgId }: Readonly<{ orgId: string }>) {
       style={{ marginBottom: "var(--space-4)" }}
     >
       {start.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(start.error, t)}
         </p>
       )}

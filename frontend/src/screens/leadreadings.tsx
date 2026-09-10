@@ -190,7 +190,6 @@ function FirstResponseCard({
         at: formatDateTime(clock.deadline, locale, zone),
       })}
       tone={breached ? "danger" : atRisk ? "warn" : undefined}
-      dot={breached || atRisk}
     />
   );
 }

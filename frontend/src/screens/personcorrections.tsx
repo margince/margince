@@ -310,7 +310,7 @@ function EnrichedField({
       {record.isError && (
         <p
           role="alert"
-          style={{ margin: "var(--space-2) 0 0", color: "var(--danger)" }}
+          style={{ margin: "var(--space-2) 0 0", color: "var(--dangerText)" }}
         >
           {problemMessageOf(record.error, t)}
         </p>

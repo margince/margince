@@ -512,7 +512,7 @@ a:not([class]):focus-visible {
    worn over a size class — `t-caption t-danger`, `t-sub t-danger` — and a
    second font-size here would fight whichever one that is. */
 .t-danger {
-  color: var(--danger);
+  color: var(--dangerText);
   font-weight: var(--fw-medium);
 }
 

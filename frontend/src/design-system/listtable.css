@@ -334,7 +334,7 @@
   color: var(--textMeta);
 }
 .lt-fvalue-status.error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* ---- popover menus ---- */

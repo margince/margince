@@ -2716,7 +2716,7 @@ export function DealsScreen({
       {advance.isError && (
         <p
           className="t-caption"
-          style={{ color: "var(--danger)", marginTop: "var(--space-2)" }}
+          style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
         >
           {problemMessageOf(advance.error, t)}
         </p>
@@ -3159,7 +3159,7 @@ function ReopenAction({
           ))}
         </div>
         {reopen.isError && (
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
+          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(reopen.error, t)}
           </p>
         )}
@@ -4328,7 +4328,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 <p
                   className="t-caption"
                   style={{
-                    color: "var(--danger)",
+                    color: "var(--dangerText)",
                     marginTop: "var(--space-2)",
                   }}
                 >

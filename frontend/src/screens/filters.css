@@ -89,7 +89,7 @@
  * results card, the only row wide enough for both. */
 .filters-count-failed {
   font-weight: 400;
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The export sits under the builder, because it takes the filter as its
@@ -111,6 +111,6 @@
  * comes from the server and can be a full sentence, and a truncated reason is
  * one a reader cannot act on. */
 .filters-export-error {
-  color: var(--danger);
+  color: var(--dangerText);
   font-weight: var(--fw-medium);
 }

@@ -71,7 +71,7 @@ export const InANarrowColumn: Story = {
   render: () => (
     <div style={{ maxWidth: 480 }}>
       <ReadingsGrid label="Where this contact stands">
-        <StatCard label="Whose move" value="Yours" tone="warn" dot />
+        <StatCard label="Whose move" value="Yours" tone="warn" />
         <StatCard label="Open promises" value="1" detail="19 days late" />
         <StatCard label="Deals they decide" value="€227k" />
         <StatCard label="Next meeting" value="None" />

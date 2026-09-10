@@ -150,7 +150,7 @@
   flex: none;
   inline-size: var(--space-4);
   block-size: var(--space-4);
-  color: var(--success);
+  color: var(--successText);
 }
 
 .ob-conv-question {
@@ -244,7 +244,7 @@
 }
 
 .ob-conv-outcome[data-tone="deferred"] svg {
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 .ob-conv-outcome[data-tone="failure"] {
@@ -252,7 +252,7 @@
 }
 
 .ob-conv-outcome[data-tone="failure"] svg {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 .ob-conv-confirm {
@@ -626,7 +626,7 @@
  */
 .ob-conv-notice {
   margin: 0;
-  color: var(--danger);
+  color: var(--dangerText);
   font-size: var(--fs-meta);
 }
 
@@ -1132,7 +1132,7 @@
   width: 16px;
   height: 16px;
   flex: none;
-  color: var(--success);
+  color: var(--successText);
 }
 
 /* The scene's own footer: what the floor is, and the one action. */
@@ -1589,7 +1589,7 @@
   width: 14px;
   height: 14px;
   margin-top: 3px;
-  color: var(--success);
+  color: var(--successText);
 }
 
 /* A section head that names the group and whether it is optional. */
@@ -2456,7 +2456,7 @@
 .ob-triage-nav-settled {
   display: inline-flex;
   align-items: center;
-  color: var(--success);
+  color: var(--successText);
 }
 
 .ob-triage-nav-settled svg {
@@ -2532,7 +2532,7 @@
 /* The blocking shape only: required AND empty is the one case red is for,
    reserved here rather than spent on every outstanding row. */
 .ob-triage-nav-item[data-blocking="true"] {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* Past the named limit, a plain count rather than a taller list — the nav
@@ -2681,7 +2681,7 @@
 }
 
 .ob-triage-row-outstanding[data-state="required"] {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The settled-but-ungraded mark: a quiet pill in the same family as the
@@ -2846,7 +2846,7 @@
   > li[data-state="required"].ob-conv-confirm-missing-row
   label
   em {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The people section: a plain statement when the read found no one, or a
@@ -3138,7 +3138,7 @@
   flex: none;
   inline-size: var(--space-4);
   block-size: var(--space-4);
-  color: var(--success);
+  color: var(--successText);
 }
 
 .ob-conv-manifest li span {
@@ -3215,7 +3215,7 @@
 }
 
 .ob-conv-stages li[data-state="done"] svg {
-  color: var(--success);
+  color: var(--successText);
 }
 
 .ob-conv-stages li[data-state="current"] {

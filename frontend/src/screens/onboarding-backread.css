@@ -102,7 +102,7 @@
 .ob-backread-problem {
   font-size: var(--fs-meta);
   line-height: var(--lh-relaxed);
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* ---- the running read -------------------------------------------------- */

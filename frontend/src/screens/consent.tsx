@@ -183,7 +183,7 @@ function MutationError({ error }: Readonly<{ error: unknown }>) {
     return null;
   }
   return (
-    <p className="t-caption" style={{ color: "var(--danger)" }}>
+    <p className="t-caption" style={{ color: "var(--dangerText)" }}>
       {problemMessageOf(error, t)}
     </p>
   );

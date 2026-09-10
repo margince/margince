@@ -164,7 +164,6 @@ function MoveCard({
           when: relativeDays(inbound, t, locale, asOf),
         })}
         tone="warn"
-        dot
         {...basisProps}
       />
     );
@@ -191,7 +190,6 @@ function MoveCard({
           : t("person.readings.neverReplied")
       }
       tone={quiet ? "warn" : undefined}
-      dot={quiet}
       {...basisProps}
     />
   );
@@ -295,7 +293,6 @@ function PromisesCard({
           : t("person.readings.onTime")
       }
       tone={overdue ? "danger" : undefined}
-      dot={overdue}
       basis={
         <FactList
           facts={ours.map((owed) => ({

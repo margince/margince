@@ -53,7 +53,7 @@
 .visibility-withheld {
   background: linear-gradient(var(--warnBg), var(--warnBg)), var(--bgElevated);
   border-color: transparent;
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 .visibility-withheld > svg {

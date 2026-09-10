@@ -72,5 +72,5 @@
 }
 
 .confirm-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }

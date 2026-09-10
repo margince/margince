@@ -542,7 +542,7 @@ function AddRelationshipAction({
             }}
           />
           {searchFailure ? (
-            <p className="t-caption" style={{ color: "var(--danger)" }}>
+            <p className="t-caption" style={{ color: "var(--dangerText)" }}>
               {problemMessageOf(searchFailure, t)}
             </p>
           ) : null}
@@ -568,7 +568,7 @@ function AddRelationshipAction({
             </p>
           )}
           {mutation.isError && (
-            <p className="t-caption" style={{ color: "var(--danger)" }}>
+            <p className="t-caption" style={{ color: "var(--dangerText)" }}>
               {problemMessageOf(mutation.error, t)}
             </p>
           )}
@@ -804,7 +804,7 @@ export function RelationshipsTab({
         </h2>
         <p style={{ marginBottom: 16 }}>{t("rel.removeConfirm")}</p>
         {remove.isError && (
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
+          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(remove.error, t)}
           </p>
         )}

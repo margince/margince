@@ -330,7 +330,6 @@ function MomentumStat({
       value={relativeDays(deal.last_activity_at, t, locale)}
       detail={parts.join(" · ")}
       tone={deal.stalled ? "danger" : undefined}
-      dot={deal.stalled}
       onOpen={onOpen}
       basis={
         deal.last_activity_at ? (

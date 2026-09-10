@@ -311,14 +311,14 @@ export function DecideOutcome({
       {generic && (
         <p
           className="t-caption"
-          style={{ color: "var(--danger)", marginTop: "var(--space-2)" }}
+          style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
         >
           {problemMessageOf(decide.error, t)}
         </p>
       )}
       {skew && (
         <div style={{ marginTop: "var(--space-2)" }}>
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
+          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
             {t("decision.versionSkew")}
           </p>
           <Button small onClick={onReRead}>

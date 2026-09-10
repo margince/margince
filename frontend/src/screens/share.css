@@ -110,7 +110,7 @@
 .share-expiry-badge {
   font-size: var(--fs-eyebrow);
   font-family: var(--f-mono);
-  color: var(--warn);
+  color: var(--warnText);
   background: var(--warnBg);
   border-radius: var(--r-full);
   corner-shape: round;
@@ -151,7 +151,7 @@
 }
 
 .share-error {
-  color: var(--danger);
+  color: var(--dangerText);
   margin-top: 8px;
 }
 

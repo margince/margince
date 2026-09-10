@@ -112,7 +112,7 @@ export function ConfirmModal({
         <p
           className="t-caption"
           role="alert"
-          style={{ color: "var(--danger)" }}
+          style={{ color: "var(--dangerText)" }}
         >
           {error}
         </p>

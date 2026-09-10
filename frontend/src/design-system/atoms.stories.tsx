@@ -678,9 +678,9 @@ export const ReadingsAtOneSize: Story = {
       }}
     >
       <StatCard label="Owner" value="Carol Wagner" />
-      <StatCard label="Consent" value="Allowed" tone="good" dot />
-      <StatCard label="Health" value="Watch" tone="warn" dot />
-      <StatCard label="Payment" value="At risk" tone="danger" dot />
+      <StatCard label="Consent" value="Allowed" tone="good" />
+      <StatCard label="Health" value="Watch" tone="warn" />
+      <StatCard label="Payment" value="At risk" tone="danger" />
       {/* Three lines of detail in a two-line box: the third is cut, and the
           card keeps the height of the four beside it. */}
       <StatCard
@@ -716,7 +716,6 @@ export const ReadingsAtOneSize: Story = {
         label="Overdue"
         value="€48k"
         tone="danger"
-        dot
         alert
         detail="oldest invoice 18 days past due"
       />

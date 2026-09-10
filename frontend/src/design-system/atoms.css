@@ -39,20 +39,18 @@
 .badge-success {
   background:
     linear-gradient(var(--successBg), var(--successBg)), var(--bgElevated);
-  /* --successText for the reason FieldDiff's new value takes it: --success on
-     --successBg is 4.48:1 at this size. The warn and danger tones keep their
-     own ink, which clears AA on their own tints. */
+  /* The Text token, not the base: the base status hue is a fill, a bar, a
+     border and a 17px figure, and on its own tint at 12px it is nowhere near
+     4.5:1. Every one of the three tones takes its Text sibling here. */
   color: var(--successText);
 }
 .badge-warn {
   background: linear-gradient(var(--warnBg), var(--warnBg)), var(--bgElevated);
-  color: var(--warn);
+  color: var(--warnText);
 }
 .badge-danger {
   background:
     linear-gradient(var(--dangerBg), var(--dangerBg)), var(--bgElevated);
-  /* --dangerText, the ink role, not --danger, which is also a fill: over this
-     tint the dark theme's --danger is 3.88:1 on the darker card grounds. */
   color: var(--dangerText);
 }
 .badge-ai {
@@ -1089,7 +1087,7 @@
 }
 
 .form-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* A CARD'S TRAILING ACTION ROW: the verbs under a card's body, with the air
@@ -1313,7 +1311,7 @@
    size, under the control it belongs to and above the rule that still applies. */
 .field-error {
   font-size: var(--fs-sm);
-  color: var(--danger);
+  color: var(--dangerText);
   font-weight: var(--fw-medium);
 }
 /* No `select.input` rule: there is no native dropdown in this product. The
@@ -1757,7 +1755,7 @@
    which is the opposite of what folding archive away was for; the ink still
    says what the verb costs. */
 .overflow-menu-items .btn-danger {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 .overflow-menu-items .btn-danger:hover:not(:disabled) {
   background: var(--dangerBg);
@@ -2108,49 +2106,30 @@
    identical grey tracks made the reader compare lengths to find the one that is
    wrong, when the colour already knows. */
 .stat-card-warn ~ .stat-card-meter .stat-card-meter-fill {
-  background: var(--statWarn);
+  background: var(--warn);
 }
 .stat-card-danger ~ .stat-card-meter .stat-card-meter-fill {
-  background: var(--statDanger);
+  background: var(--danger);
 }
 .stat-card-good ~ .stat-card-meter .stat-card-meter-fill {
-  background: var(--statGood);
+  background: var(--success);
 }
 
 /* The three tones a reading's figure can carry, and the ONE place each is
-   spelled: the value, its verdict dot and its bar all read the same token, so
-   the three parts of one claim cannot come out three colours. */
+   spelled: the figure and its bar read the same token, so the two parts of one
+   claim cannot come out two colours. The BASE status token and not its Text
+   sibling: this is a 17-20px display figure and a 4px bar, which is the role
+   the base hue is for — the Text tokens are the ink for anything smaller. */
 .stat-card-good {
-  color: var(--statGood);
+  color: var(--success);
 }
 
 .stat-card-warn {
-  color: var(--statWarn);
+  color: var(--warn);
 }
 
 .stat-card-danger {
-  color: var(--statDanger);
-}
-
-/* The verdict dot beside a StatCard value — see `dot` on StatCard above.
- * Colour follows the same tone class as the value it sits beside, never a
- * literal, so the two can never disagree about what the verdict is. */
-.stat-card-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin-right: 0.35rem;
-  border-radius: 50%;
-  corner-shape: round;
-}
-.stat-card-dot-good {
-  background: var(--statGood);
-}
-.stat-card-dot-warn {
-  background: var(--statWarn);
-}
-.stat-card-dot-danger {
-  background: var(--statDanger);
+  color: var(--danger);
 }
 
 /* The whole-tile variant: the slot itself is bad news, not just its figure —

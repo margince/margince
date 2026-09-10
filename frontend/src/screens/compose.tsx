@@ -1276,7 +1276,7 @@ function DraftOffer({
         <p
           className="t-caption"
           role="alert"
-          style={{ color: "var(--danger)" }}
+          style={{ color: "var(--dangerText)" }}
         >
           {draft.error}
         </p>
@@ -1329,7 +1329,7 @@ export function SendRefusal({
         <p className="t-body">
           <strong>{t("compose.consentBlockedTitle")}</strong>
         </p>
-        <p className="t-body" style={{ color: "var(--danger)" }}>
+        <p className="t-body" style={{ color: "var(--dangerText)" }}>
           {t("compose.consentBlocked")}
         </p>
         {personId && (
@@ -1826,7 +1826,7 @@ function MailSendNotices({
   return (
     <>
       {sharedUnsubscribeAhead(to, cc, context) && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
           {t("compose.multiRecipientWarning")}
         </p>
       )}
@@ -3517,7 +3517,7 @@ export function ComposeModal({
               <p
                 className="t-caption"
                 role="alert"
-                style={{ color: "var(--danger)" }}
+                style={{ color: "var(--dangerText)" }}
               >
                 {discardControl.error}
               </p>

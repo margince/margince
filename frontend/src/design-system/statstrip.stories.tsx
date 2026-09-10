@@ -34,7 +34,7 @@ export const SixSlots: Story = {
       <StatCard label="Reciprocity" value="1 in · 0 out" />
       <StatCard label="Open deal" value="None" />
       <StatCard label="Next meeting" value="None" />
-      <StatCard label="Consent" value="Allowed" tone="good" dot />
+      <StatCard label="Consent" value="Allowed" tone="good" />
     </StatStrip>
   ),
 };
@@ -51,13 +51,7 @@ export const FewerSlots: Story = {
         detail="offline_demo"
       />
       <StatCard label="Payment behaviour" value="typically 4 days early" />
-      <StatCard
-        label="Health"
-        value="Watch"
-        tone="warn"
-        dot
-        onOpen={() => {}}
-      />
+      <StatCard label="Health" value="Watch" tone="warn" onOpen={() => {}} />
     </StatStrip>
   ),
 };
@@ -73,7 +67,7 @@ export const SourcedAndAlerting: Story = {
         value="€1.2m"
         source={<Badge>offline_demo</Badge>}
       />
-      <StatCard label="Overdue" value="€48k" tone="danger" dot alert />
+      <StatCard label="Overdue" value="€48k" tone="danger" alert />
       <StatCard label="Coverage" value="1 colleague" />
     </StatStrip>
   ),
@@ -94,19 +88,14 @@ export const FoldsWithoutAnOrphan: Story = {
         <StatCard label="The ask" value="€95k" />
         <StatCard label="The date" value="14 Mar" />
         <StatCard label="The room" value="3 of 5 roles" />
-        <StatCard
-          label="The momentum"
-          value="Stalled 11 days"
-          tone="warn"
-          dot
-        />
+        <StatCard label="The momentum" value="Stalled 11 days" tone="warn" />
       </StatStrip>
       <StatStrip>
         <StatCard label="Budget" value="€240k" />
         <StatCard label="Spent" value="€181k" />
         <StatCard label="Remaining" value="€59k" />
         <StatCard label="Burn" value="€12k / wk" />
-        <StatCard label="Runway" value="5 weeks" tone="warn" dot />
+        <StatCard label="Runway" value="5 weeks" tone="warn" />
       </StatStrip>
     </div>
   ),

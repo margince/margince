@@ -76,13 +76,27 @@ const canonical: Record<string, string> = {
   "--aiLight": "rgba(91,97,214,.08)",
   "--aiMed": "rgba(91,97,214,.30)",
   "--aiText": "#3F45B0",
-  "--success": "#15803d",
-  "--successBg": "rgba(34,197,94,.12)",
-  "--warn": "#92400e",
-  "--warnBg": "rgba(251,191,36,.16)",
-  "--warnBorder": "rgba(251,191,36,.45)",
-  "--danger": "#b91c1c",
-  "--dangerBg": "rgba(239,68,68,.1)",
+  // The status family, one hue per tone. The base token is the hue itself; the
+  // Text token is the same hue at the ink share its pane needs; the tints
+  // derive from the base. The hue is what is pinned here — a share moving is a
+  // contrast decision the sweeps below judge, but the HUE moving is a new
+  // colour in the palette.
+  "--success":
+    "color-mix(in oklab, lab(71.4376% -59.4106 38.0321), var(--textPrimary) 8%)",
+  "--successText":
+    "color-mix(in oklab, lab(71.4376% -59.4106 38.0321), var(--textPrimary) 49%)",
+  "--successBg": "color-mix(in srgb, var(--success) 12%, transparent)",
+  "--warn":
+    "color-mix(in oklab, lab(74.4448% 23.7172 71.6451), var(--textPrimary) 8%)",
+  "--warnText":
+    "color-mix(in oklab, lab(74.4448% 23.7172 71.6451), var(--textPrimary) 52%)",
+  "--warnBg": "color-mix(in srgb, var(--warn) 16%, transparent)",
+  "--warnBorder": "color-mix(in srgb, var(--warn) 45%, transparent)",
+  "--danger":
+    "color-mix(in oklab, lab(57.4234% 73.5589 48.0136), var(--textPrimary) 8%)",
+  "--dangerText":
+    "color-mix(in oklab, lab(57.4234% 73.5589 48.0136), var(--textPrimary) 34%)",
+  "--dangerBg": "color-mix(in srgb, var(--danger) 10%, transparent)",
   "--r-xs": "4px",
   "--r-sm": "8px",
   "--r-control": "12px",
@@ -283,13 +297,198 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     }
 
     function luminanceOf(value: string): number {
+      const [lr, lg, lb] = linearOf(value);
+      return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
+    }
+
+    // Every value the sweeps below measure, as a hex or an rgba(). Most of the
+    // palette already is one; the status family is not — --success is a
+    // color-mix() of a lab() hue and the theme's own ink, and --successBg is a
+    // mix of that. A sweep that cannot read those forms stops measuring the
+    // family it was written for and still reports PASS, which is the one way a
+    // gate must not break. So the declared value is resolved here, following
+    // exactly the forms tokens.css writes and THROWING on anything else.
+    function topLevelArgs(inside: string): string[] {
+      const args: string[] = [];
+      let depth = 0;
+      let start = 0;
+      for (let i = 0; i < inside.length; i += 1) {
+        if (inside[i] === "(") depth += 1;
+        if (inside[i] === ")") depth -= 1;
+        if (inside[i] === "," && depth === 0) {
+          args.push(inside.slice(start, i).trim());
+          start = i + 1;
+        }
+      }
+      args.push(inside.slice(start).trim());
+      return args;
+    }
+
+    // CSS lab() is CIELAB on the D50 white point (CSS Color 4 §7), so sRGB is
+    // three conversions away and none is optional: Lab to XYZ under D50, the
+    // Bradford adaptation to D65, then D65 XYZ to linear sRGB. Skipping the
+    // adaptation moves every hue here by more than the headroom being
+    // measured.
+    function labToLinear(L: number, a: number, b: number): number[] {
+      const fy = (L + 16) / 116;
+      const fx = fy + a / 500;
+      const fz = fy - b / 200;
+      const epsilon = 216 / 24389;
+      const kappa = 24389 / 27;
+      const x = fx ** 3 > epsilon ? fx ** 3 : (116 * fx - 16) / kappa;
+      const y = L > kappa * epsilon ? fy ** 3 : L / kappa;
+      const z = fz ** 3 > epsilon ? fz ** 3 : (116 * fz - 16) / kappa;
+      const d50 = [0.9642956764295677, 1, 0.8251046025104602];
+      const [xd, yd, zd] = [x * d50[0], y * d50[1], z * d50[2]];
+      const toD65 = [
+        [0.955473452704218, -0.02309853687426142, 0.0632593086610217],
+        [-0.02836970696320814, 1.0099954580058226, 0.021041398966943],
+        [0.0123140016883199, -0.02050769643347791, 1.3303659366080753],
+      ];
+      const toLinear = [
+        [3.2409699419045226, -1.537383177570094, -0.4986107602930034],
+        [-0.9692436362808796, 1.8759675015077202, 0.04155505740717559],
+        [0.05563007969699366, -0.20397695888897652, 1.0569715142428786],
+      ];
+      const xyz = toD65.map((row) => row[0] * xd + row[1] * yd + row[2] * zd);
+      return toLinear.map((row) =>
+        row.reduce((sum, coef, i) => sum + coef * xyz[i], 0),
+      );
+    }
+
+    // Oklab, the space tokens.css interpolates the status family in (CSS Color
+    // 4 §10). A mix there is a straight interpolation of these three
+    // coordinates, which is why the tokens are written in it: one ink share
+    // means the same thing to the eye at every hue in the family.
+    function linearToOklab(rgb: number[]): number[] {
+      const l =
+        0.4122214708 * rgb[0] + 0.5363325363 * rgb[1] + 0.0514459929 * rgb[2];
+      const m =
+        0.2119034982 * rgb[0] + 0.6806995451 * rgb[1] + 0.1073969566 * rgb[2];
+      const s =
+        0.0883024619 * rgb[0] + 0.2817188376 * rgb[1] + 0.6299787005 * rgb[2];
+      const [l_, m_, s_] = [l, m, s].map((v) => Math.cbrt(v));
+      return [
+        0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_,
+        1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_,
+        0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_,
+      ];
+    }
+
+    function oklabToLinear(lab: number[]): number[] {
+      const l_ = lab[0] + 0.3963377774 * lab[1] + 0.2158037573 * lab[2];
+      const m_ = lab[0] - 0.1055613458 * lab[1] - 0.0638541728 * lab[2];
+      const s_ = lab[0] - 0.0894841775 * lab[1] - 1.291485548 * lab[2];
+      const [l, m, s] = [l_ ** 3, m_ ** 3, s_ ** 3];
+      return [
+        4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+        -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+        -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+      ];
+    }
+
+    // Linear-light channels to the hex a browser would paint, gamut-clipped per
+    // channel the way a browser clips an out-of-gamut lab().
+    function hexOf(linear: number[]): string {
+      const bytes = linear.map((channel) => {
+        const clipped = Math.min(Math.max(channel, 0), 1);
+        const encoded =
+          clipped <= 0.0031308
+            ? clipped * 12.92
+            : 1.055 * clipped ** (1 / 2.4) - 0.055;
+        return Math.round(encoded * 255)
+          .toString(16)
+          .padStart(2, "0");
+      });
+      return `#${bytes.join("")}`;
+    }
+
+    function linearOf(value: string): number[] {
       const [r, g, b] = channels(value);
-      const [lr, lg, lb] = [r, g, b].map((n) => {
+      return [r, g, b].map((n) => {
         const c = n / 255;
         return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
       });
-      return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
     }
+
+    // A colour and the share of the mix it takes, split off one argument. It
+    // throws rather than defaulting: a spelling it cannot read would otherwise
+    // be measured as the literal text it failed to parse.
+    function shareOf(arg: string, whole: string): [string, number] {
+      const share = arg.match(/^(.*)\s(\d+(?:\.\d+)?)%$/);
+      if (!share) {
+        throw new Error(`${whole}: "${arg}" states no percentage`);
+      }
+      return [share[1], Number.parseFloat(share[2]) / 100];
+    }
+
+    function resolve(
+      value: string,
+      pal: Record<string, string>,
+      seen: ReadonlySet<string>,
+    ): string {
+      const v = value.trim();
+      const named = v.match(/^var\((--[\w-]+)\)$/);
+      if (named) {
+        if (seen.has(named[1])) {
+          throw new Error(`${named[1]} resolves to itself`);
+        }
+        if (!pal[named[1]]) {
+          throw new Error(`${value} names undeclared ${named[1]}`);
+        }
+        return resolve(pal[named[1]], pal, new Set([...seen, named[1]]));
+      }
+      const lab = v.match(/^lab\(\s*([\d.]+)%\s+(-?[\d.]+)\s+(-?[\d.]+)\s*\)$/);
+      if (lab) {
+        const [L, a, b] = lab.slice(1, 4).map(Number.parseFloat);
+        return hexOf(labToLinear(L, a, b));
+      }
+      const mix = v.match(/^color-mix\(\s*in (oklab|srgb)\s*,([\s\S]*)\)$/);
+      if (!mix) return v;
+      const args = topLevelArgs(mix[2]);
+      if (args.length !== 2) {
+        throw new Error(`${value} is not a two-colour mix`);
+      }
+      // color-mix(in srgb, C P%, transparent) is how a tint derives from its
+      // base. sRGB interpolation is premultiplied and transparent contributes
+      // nothing, so the result is C at alpha P/100 — the same colour the rgba()
+      // literals used to spell, now unable to drift from the hue it tints.
+      if (mix[1] === "srgb") {
+        if (args[1] !== "transparent") {
+          throw new Error(`${value} mixes something other than transparent`);
+        }
+        const [colour, alpha] = shareOf(args[0], value);
+        const [r, g, b] = channels(resolve(colour, pal, seen));
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+      const [inkName, part] = shareOf(args[1], value);
+      const hue = linearToOklab(linearOf(resolve(args[0], pal, seen)));
+      const ink = linearToOklab(linearOf(resolve(inkName, pal, seen)));
+      return hexOf(
+        oklabToLinear(hue.map((n, i) => n * (1 - part) + ink[i] * part)),
+      );
+    }
+
+    // One theme's palette with every colour resolved. Non-colour tokens — the
+    // space scale, the fonts, a shadow — fall through untouched: they are not
+    // one of the forms above and nothing here measures them.
+    function resolved(pal: Record<string, string>): Record<string, string> {
+      return Object.fromEntries(
+        Object.entries(pal).map(([name, value]) => [
+          name,
+          resolve(value, pal, new Set([name])),
+        ]),
+      );
+    }
+
+    // The two palettes every contrast assertion below reads.
+    const themes = {
+      light: resolved(light),
+      dark: resolved({
+        ...light,
+        ...parseBlock(tokenDecls, '[data-theme="dark"]'),
+      }),
+    } as const;
 
     // Darkest first, as measured. The two themes are deliberately DIFFERENT
     // sequences: light recesses the rail's hover below its ground while dark
@@ -352,16 +551,20 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // that never carries prose, and holding it to 4.5:1 would make it
     // --textMeta.
     it("every text role clears AA on every ground it sits on, both themes", () => {
-      const dark = {
-        ...light,
-        ...parseBlock(tokenDecls, '[data-theme="dark"]'),
-      };
+      // The status Text tokens are in this list and their bases are not, which
+      // is the split the family is built on: --successText and its siblings ARE
+      // prose roles — a form error, a stale-value caveat, a badge's ink — while
+      // --success is a fill, a bar and a 17px figure, measured at the figure's
+      // own size and not at the prose floor.
       const prose = [
         "--textPrimary",
         "--textContent",
         "--textMeta",
         "--accentText",
         "--tealText",
+        "--successText",
+        "--warnText",
+        "--dangerText",
       ];
       // Per ground, the roles that can actually be read on it — not a cross
       // product. The two rungs that carry less than everything are the reason
@@ -379,10 +582,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--bgSidebarHover": ["--textPrimary", "--textContent", "--accentText"],
       };
       const failures: string[] = [];
-      for (const [theme, pal] of [
-        ["light", light],
-        ["dark", dark],
-      ] as const) {
+      for (const [theme, pal] of Object.entries(themes)) {
         for (const [ground, roles] of Object.entries(carries)) {
           for (const role of roles) {
             const ratio = contrastOf(pal[role], pal[ground]);
@@ -407,24 +607,19 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // an accent tint on the rail are a 26px figure and a glyph, which is where
     // 1.4.3's large-text allowance and 1.4.11's non-text floor apply.
     it("tinted chips clear AA over every ground they composite on", () => {
-      const dark = {
-        ...light,
-        ...parseBlock(tokenDecls, '[data-theme="dark"]'),
-      };
-      // The three families with a Text token, plus the three STATUS families,
-      // which were absent from this list for the reason that is worth stating:
-      // the list was the families that HAD a *Text token, so the ones whose ink
-      // is the family colour itself were never measured. That is a corpus short
-      // of its subject — --success on --successBg is 4.48:1 and shipped, in two
-      // writers, until axe caught one of them on one route. Warn and danger
-      // clear AA on their own tints today and are here so a retune cannot
-      // quietly take that away.
+      // Every family with a Text token, which is now every family that tints:
+      // --warn used to be measured here as its own ink, because the list was
+      // the families that HAD a *Text token and the ones whose ink was the
+      // family colour itself went unmeasured — a corpus short of its subject,
+      // which is how --success on --successBg shipped at 4.48:1 in two writers
+      // until axe caught one of them on one route. Each tone now has the ink
+      // its tint needs, and each is paired with the tint it lands on.
       const pairs = [
         ["--accentText", "--accentLight"],
         ["--tealText", "--tealLight"],
         ["--aiText", "--aiLight"],
         ["--successText", "--successBg"],
-        ["--warn", "--warnBg"],
+        ["--warnText", "--warnBg"],
         ["--dangerText", "--dangerBg"],
         // --bgChip is the NEUTRAL member of that list, and the only one whose
         // ink its own family does not fix: it is the fill under a badge, a
@@ -437,10 +632,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       ] as const;
       const grounds = ["--bgPage", "--bgElevated", "--bgCard", "--bgHover"];
       const failures: string[] = [];
-      for (const [theme, pal] of [
-        ["light", light],
-        ["dark", dark],
-      ] as const) {
+      for (const [theme, pal] of Object.entries(themes)) {
         for (const [role, tint] of pairs) {
           for (const ground of grounds) {
             const behind = composite(pal[tint], pal[ground]);
@@ -463,6 +655,39 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         }
       }
       expect(failures.join("\n")).toBe("");
+    });
+
+    // The one place the status family repeats itself: a base token and its Text
+    // sibling each name the lab() hue, because the SHARE is what the pair is
+    // for and a share needs a colour to take it from. Two writers of one hue,
+    // so a gate holds them equal rather than a comment asking the next author
+    // to remember.
+    it("declares each status Text token on the same hue as its base", () => {
+      const hueOf = (value: string) => value.match(/lab\([^)]*\)/)?.[0];
+      for (const tone of ["success", "warn", "danger"]) {
+        const base = hueOf(light[`--${tone}`]);
+        expect(base, `--${tone} names no lab() hue`).toBeDefined();
+        expect(hueOf(light[`--${tone}Text`]), `--${tone}Text`).toBe(base);
+      }
+    });
+
+    // The other half of that claim: the base is stated ONCE. A verdict is the
+    // same verdict at any hour, and the ink folded into it follows the theme on
+    // its own because --textPrimary does. A dark block that redefined one would
+    // be a second answer to a question this family answers by not asking it.
+    it("states each status hue once — no dark block redefines a base", () => {
+      for (const selector of [
+        '[data-theme="dark"]',
+        ':root:not([data-theme="light"])',
+      ]) {
+        const block = parseBlock(tokenDecls, selector);
+        for (const tone of ["success", "warn", "danger"]) {
+          expect(
+            block[`--${tone}`],
+            `${selector} redefines --${tone}`,
+          ).toBeUndefined();
+        }
+      }
     });
 
     // The rail's hover and its active plate are the pair a reader actually

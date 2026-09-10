@@ -140,7 +140,7 @@
 }
 
 .callout-warn {
-  --callout-ink: var(--warn);
+  --callout-ink: var(--warnText);
 }
 
 .callout-danger {
@@ -148,5 +148,5 @@
 }
 
 .callout-success {
-  --callout-ink: var(--success);
+  --callout-ink: var(--successText);
 }

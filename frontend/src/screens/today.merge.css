@@ -106,18 +106,6 @@
   overflow-wrap: anywhere;
 }
 
-.merge-evidence-signal {
-  text-align: center;
-  color: var(--textMeta);
-}
-
-/* A collision is the row that decides the decision — two records that disagree
- * on a field are the reason a person is being asked at all — so it is the one
- * row allowed to carry a colour. */
-.merge-evidence-signal[data-signal="collide"] {
-  color: var(--warn);
-}
-
 .merge-verbs {
   display: flex;
   gap: var(--space-2);
