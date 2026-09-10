@@ -3,14 +3,15 @@
 
 //gate:kind parity H3
 
-// The AST helpers this shares with the sibling reference census are declared
-// under the same tag, so it carries it too rather than reaching for them from a
-// build they are not in.
 //go:build !integration
 
 package gates
 
 // A sort the list OFFERS is a sort the server ACCEPTS.
+//
+// Tagged `!integration` with the sibling reference census, whose AST helpers it
+// shares: reaching for them from a build they are not in is a typecheck failure
+// the merge gate finds and the default `go test` does not.
 //
 // A column header carries the field name it will ask for. The server keeps a
 // per-resource vocabulary and refuses anything outside it, so the two are one
