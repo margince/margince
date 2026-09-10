@@ -47,7 +47,7 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 // recently filed; capping THIS order keeps the tasks nearest their deadline,
 // which is what a page capped at a dozen can actually afford to drop.
 func orderClause(in ListActivitiesInput) string {
-	if in.OpenAndDueBy != nil {
+	if in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil {
 		return " ORDER BY a.due_at ASC, a.id ASC"
 	}
 	return " ORDER BY a.occurred_at DESC, a.id DESC"
@@ -142,7 +142,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	var page storekit.Page
 	if len(activities) > limit {
 		activities = activities[:limit]
-		if in.OpenAndDueBy == nil {
+		if in.OpenAndDueBy == nil && in.OpenAndDueAfter == nil {
 			last := activities[len(activities)-1]
 			next, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
 			if err != nil {

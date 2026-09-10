@@ -142,6 +142,13 @@ type stubTasks struct {
 	// afterwards. owner records WHICH person, where the scope names one.
 	scope TaskScope
 	owner ids.UUID
+	// The upcoming read's own window, limit and rows, kept apart from the
+	// day's so a test can assert the two do not compete.
+	upcoming      []Task
+	upcomingErr   error
+	upcomingFrom  *time.Time
+	upcomingUntil *time.Time
+	upcomingLimit int
 }
 
 func (s *stubTasks) CountOpenForViewer(
@@ -163,6 +170,18 @@ func (s *stubTasks) OpenForViewer(
 	s.scope = scope
 	s.owner = owner
 	return s.rows, s.err
+}
+
+// UpcomingForViewer answers the work due after today. Recorded separately from
+// OpenForViewer's window so a test can prove the two reads are bounded
+// independently rather than sharing one allocation.
+func (s *stubTasks) UpcomingForViewer(
+	_ context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID,
+) ([]Task, error) {
+	s.upcomingFrom, s.upcomingUntil, s.upcomingLimit = &from, &until, limit
+	s.scope = scope
+	s.owner = owner
+	return s.upcoming, s.upcomingErr
 }
 
 // mineOnly is what most callers actually ask of the recorded scope.
@@ -869,5 +888,63 @@ func TestAnUnblockedPairStillOffersTheVerb(t *testing.T) {
 	if !offered {
 		t.Error("a writable pair the merge would accept offers no verb — the lane has " +
 			"stopped offering merge at all, which the withholding cases above cannot see")
+	}
+}
+
+// Today's backlog must never consume the upcoming allocation.
+//
+// The two are separate bounded reads for exactly this: sharing one limit let a
+// full day of work fill it before a single upcoming row was reached, so the
+// reader who most needs next week's deadline was the one who never saw it.
+func TestUpcomingWorkSurvivesAFullDayOfTasks(t *testing.T) {
+	full := make([]Task, 0, plannedCap+6)
+	for i := 0; i < plannedCap+6; i++ {
+		due := rankInstant.Add(time.Duration(i) * time.Minute)
+		full = append(full, Task{ID: ids.NewV7(), Subject: "Due today", DueAt: &due})
+	}
+	nextWeek := rankInstant.Add(72 * time.Hour)
+	tasks := &stubTasks{
+		rows:     full,
+		upcoming: []Task{{ID: ids.NewV7(), Subject: "Due later", DueAt: &nextWeek}},
+	}
+
+	svc := NewService(stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sawUpcoming bool
+	for _, item := range out.Planned {
+		if item.Title != nil && *item.Title == "Due later" {
+			sawUpcoming = true
+		}
+	}
+	if !sawUpcoming {
+		t.Errorf("a day full of tasks buried the upcoming work: %d planned rows and "+
+			"none of them the one due later", len(out.Planned))
+	}
+}
+
+// The two reads ask for windows that MEET rather than overlap: a task due at
+// exactly the day's end belongs to tomorrow, and no task may fall between them
+// or be counted by both.
+func TestTheTwoTaskReadsCoverOneUnbrokenWindow(t *testing.T) {
+	tasks := &stubTasks{}
+	svc := NewService(stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	if _, err := svc.Assemble(pageReader()); err != nil {
+		t.Fatal(err)
+	}
+	if tasks.until == nil || tasks.upcomingFrom == nil {
+		t.Fatal("one of the two reads never ran, so the window cannot be checked")
+	}
+	if !tasks.upcomingFrom.Equal(*tasks.until) {
+		t.Errorf("today ends at %s and the upcoming read starts at %s — a task due "+
+			"between them belongs to neither lane", *tasks.until, *tasks.upcomingFrom)
+	}
+	if tasks.upcomingLimit != upcomingCap {
+		t.Errorf("the upcoming read is bounded at %d, want its own cap of %d",
+			tasks.upcomingLimit, upcomingCap)
 	}
 }

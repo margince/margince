@@ -122,3 +122,64 @@ export function unbandedRows(
 ): readonly WorklistItem[] {
   return queue.filter((item) => !item.band);
 }
+
+/**
+ * The groups that earn a heading, which is a narrower set than the wire's.
+ *
+ * `overdue` and `today` are deliberately absent: they draw under the band's own
+ * heading, so there is no copy key for them and the type says so rather than
+ * leaving a caller to discover it from a missing translation.
+ */
+export type HeadedDueGroup = "tomorrow" | "this_week" | "later";
+
+/** One run of rows inside a band that share a due group. */
+export type DueRun = {
+  /** Absent on rows carrying no deadline, which draw under no sub-heading. */
+  group?: HeadedDueGroup;
+  items: WorklistItem[];
+};
+
+/** The copy key for a run's heading, so the caller never builds one by hand. */
+export function dueRunHeading(group: HeadedDueGroup) {
+  return `worklist.dueGroup.${group}` as const;
+}
+
+/**
+ * A band's rows split into consecutive runs by the day their work is due.
+ *
+ * Consecutive, never regrouped: the server ranks the queue and the page draws
+ * the order it is given, so this only ever names a boundary the ranking already
+ * put there. Sorting here would let the page disagree with the counts above it.
+ *
+ * Overdue and today's work carry no sub-heading — the band's own heading
+ * already says that is what it is — so only the runs a reader would otherwise
+ * mistake for today get one.
+ */
+export function dueRuns(items: readonly WorklistItem[]): DueRun[] {
+  const runs: DueRun[] = [];
+  for (const item of items) {
+    const group = headedDueGroup(item.due_group);
+    const open = runs.at(-1);
+    if (open && open.group === group) {
+      open.items.push(item);
+      continue;
+    }
+    runs.push({ group, items: [item] });
+  }
+  return runs;
+}
+
+/**
+ * Which groups earn a heading of their own.
+ *
+ * A row with no group, an overdue one and today's all draw under the band
+ * heading, so they share one unlabelled run rather than three.
+ */
+function headedDueGroup(
+  group: WorklistItem["due_group"],
+): HeadedDueGroup | undefined {
+  if (!group || group === "overdue" || group === "today") {
+    return undefined;
+  }
+  return group;
+}

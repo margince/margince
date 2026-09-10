@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useUrlParams } from "../app/urlstate";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Eyebrow } from "../design-system/eyebrow";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
@@ -48,6 +47,7 @@ import {
   type WorklistWalk,
   worklistKey,
 } from "./worklist.queries";
+import { QueueBand } from "./worklist.queuebands";
 import { WorklistReadings } from "./worklist.readings";
 import { WorklistRow } from "./worklist.row";
 import { WalkNotice } from "./worklist.walknotice";
@@ -435,29 +435,15 @@ function WorklistBody({
                   band holding nothing can say so. Ranks are still counted over
                   the whole queue, so a row's number is its place on the page
                   and not its place within its heading. */}
-              {bandSections(day, today).map((section) =>
-                section.items.length === 0 ? (
-                  canReportEmptyBands(hasMore) && (
-                    <div key={section.band} className="worklist-queue-band">
-                      <Eyebrow as="h3" className="worklist-band">
-                        {t(`worklist.band.${section.band}` as const)}
-                      </Eyebrow>
-                      {/* Said, not left blank. A heading with nothing under it
-                          reads as a page that failed to draw. */}
-                      <p className="t-body worklist-band-clear">
-                        {t(`worklist.bandClear.${section.band}` as const)}
-                      </p>
-                    </div>
-                  )
-                ) : (
-                  <div key={section.band} className="worklist-queue-band">
-                    <Eyebrow as="h3" className="worklist-band">
-                      {t(`worklist.band.${section.band}` as const)}
-                    </Eyebrow>
-                    <QueueRows items={section.items} {...rowProps} />
-                  </div>
-                ),
-              )}
+              {bandSections(day, today).map((section) => (
+                <QueueBand
+                  key={section.band}
+                  section={section}
+                  canReportEmpty={canReportEmptyBands(hasMore)}
+                  rows={QueueRows}
+                  rowProps={rowProps}
+                />
+              ))}
               {/* Rows an older server sent with no band. Real work, drawn under
                   no heading rather than dropped to keep the sections tidy. */}
               {unbandedRows(today).length > 0 && (

@@ -1564,6 +1564,33 @@ func (e AttentionItemActions) Valid() bool {
 	}
 }
 
+// Defines values for AttentionItemDueGroup.
+const (
+	AttentionItemDueGroupLater    AttentionItemDueGroup = "later"
+	AttentionItemDueGroupOverdue  AttentionItemDueGroup = "overdue"
+	AttentionItemDueGroupThisWeek AttentionItemDueGroup = "this_week"
+	AttentionItemDueGroupToday    AttentionItemDueGroup = "today"
+	AttentionItemDueGroupTomorrow AttentionItemDueGroup = "tomorrow"
+)
+
+// Valid indicates whether the value is a known member of the AttentionItemDueGroup enum.
+func (e AttentionItemDueGroup) Valid() bool {
+	switch e {
+	case AttentionItemDueGroupLater:
+		return true
+	case AttentionItemDueGroupOverdue:
+		return true
+	case AttentionItemDueGroupThisWeek:
+		return true
+	case AttentionItemDueGroupToday:
+		return true
+	case AttentionItemDueGroupTomorrow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttentionItemSource.
 const (
 	AttentionItemSourceAiWorkHealth        AttentionItemSource = "ai_work_health"
@@ -14605,6 +14632,33 @@ func (e WorklistItemDispositions) Valid() bool {
 	}
 }
 
+// Defines values for WorklistItemDueGroup.
+const (
+	WorklistDueGroupLater    WorklistItemDueGroup = "later"
+	WorklistDueGroupOverdue  WorklistItemDueGroup = "overdue"
+	WorklistDueGroupThisWeek WorklistItemDueGroup = "this_week"
+	WorklistDueGroupToday    WorklistItemDueGroup = "today"
+	WorklistDueGroupTomorrow WorklistItemDueGroup = "tomorrow"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemDueGroup enum.
+func (e WorklistItemDueGroup) Valid() bool {
+	switch e {
+	case WorklistDueGroupLater:
+		return true
+	case WorklistDueGroupOverdue:
+		return true
+	case WorklistDueGroupThisWeek:
+		return true
+	case WorklistDueGroupToday:
+		return true
+	case WorklistDueGroupTomorrow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistItemPrimaryAction.
 const (
 	WorklistItemPrimaryActionAcknowledge WorklistItemPrimaryAction = "acknowledge"
@@ -16254,22 +16308,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	Current    ListOrganizationDocumentsParamsDocState = "current"
-	Draft      ListOrganizationDocumentsParamsDocState = "draft"
-	Final      ListOrganizationDocumentsParamsDocState = "final"
-	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
+	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
+	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
+	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
+	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case Current:
+	case ListOrganizationDocumentsParamsDocStateCurrent:
 		return true
-	case Draft:
+	case ListOrganizationDocumentsParamsDocStateDraft:
 		return true
-	case Final:
+	case ListOrganizationDocumentsParamsDocStateFinal:
 		return true
-	case Superseded:
+	case ListOrganizationDocumentsParamsDocStateSuperseded:
 		return true
 	default:
 		return false
@@ -18933,6 +18987,10 @@ type AttentionItem struct {
 	// DueAt When this is due (tasks), or when it lapses (approvals).
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+	DueGroup *AttentionItemDueGroup `json:"due_group,omitempty"`
+
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
 	// `source: meeting_outcome`.
 	//
@@ -19044,6 +19102,10 @@ type AttentionItem struct {
 
 // AttentionItemActions defines model for AttentionItem.Actions.
 type AttentionItemActions string
+
+// AttentionItemDueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+type AttentionItemDueGroup string
 
 // AttentionItemSource Which producer raised it, and therefore which endpoint its verbs go to.
 type AttentionItemSource string
@@ -36956,6 +37018,10 @@ type WorklistItem struct {
 	// DueAt When this is due, or when the meeting starts.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+	DueGroup *WorklistItemDueGroup `json:"due_group,omitempty"`
+
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
@@ -37149,6 +37215,10 @@ type WorklistItemDestination string
 
 // WorklistItemDispositions defines model for WorklistItem.Dispositions.
 type WorklistItemDispositions string
+
+// WorklistItemDueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+type WorklistItemDueGroup string
 
 // WorklistItemPrimaryAction The one verb this row is FOR, out of `actions`. The queue is ranked, so the
 // reader arriving at a row should not have to weigh three equally-drawn

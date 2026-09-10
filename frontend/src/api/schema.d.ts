@@ -32011,6 +32011,12 @@ export interface components {
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
+             * @description Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+             * @enum {string}
+             */
+            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later";
+            /**
              * @description The version of the row this item's own verbs write to, present where it names one — a
              *     task today. Carried for the reason `email_summary` carries one: a lane that offers
              *     `complete` and `snooze` has to name the row those presses condition on, or two people
@@ -33092,6 +33098,12 @@ export interface components {
             due_at?: string;
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
+            /**
+             * @description Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+             * @enum {string}
+             */
+            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later";
             /**
              * @description The version of the row this item's own verbs write to, present where it names one — a
              *     task today. Carried for the reason `email_summary` carries one: a lane that offers

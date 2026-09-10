@@ -187,6 +187,100 @@ export const AFullDay: Story = {
   },
 };
 
+// What is coming, under its own headings.
+//
+// The lane carries more than today: a run due tomorrow and one due later in the
+// week each head themselves, so a reader can tell what they owe now from what
+// is merely landing. Overdue and today's work stay under the band heading,
+// which already says what they are.
+export const WorkDueLater: Story = {
+  render: () => {
+    stubDay({
+      as_of: "2026-08-31T09:00:00Z",
+      scope: "mine",
+      scope_options: ["mine"],
+      summary: { urgent: 0, due: 2, lower_priority: 2, total: 4 },
+      sources_unavailable: [],
+      reach: [],
+      readings: {
+        revenue_at_risk_minor: 0,
+        revenue_currency: "EUR",
+        buyer_replies: 0,
+        prospecting: 0,
+        review: 0,
+        more_available: false,
+      },
+      counts: [
+        { category: "tasks", considered: 4, shown: 4, more_available: false },
+      ],
+      bands: [{ band: "now", shown: 4 }],
+      queue: [
+        {
+          id: "overdue-1",
+          band: "now",
+          source: "task",
+          category: "tasks",
+          level: 4,
+          consequence: "task_slips",
+          title: "Send the retrofit quote",
+          due_at: "2026-08-30T16:00:00Z",
+          overdue: true,
+          due_group: "overdue",
+          because: [],
+          actions: ["complete"],
+        },
+        {
+          id: "today-1",
+          band: "now",
+          source: "task",
+          category: "tasks",
+          level: 4,
+          consequence: "task_slips",
+          title: "Answer the Weber thread",
+          due_at: "2026-08-31T16:00:00Z",
+          overdue: false,
+          due_group: "today",
+          because: [],
+          actions: ["complete"],
+        },
+        {
+          id: "tomorrow-1",
+          band: "now",
+          source: "task",
+          category: "tasks",
+          level: 4,
+          consequence: "task_slips",
+          title: "Call the architect",
+          due_at: "2026-09-01T10:00:00Z",
+          overdue: false,
+          due_group: "tomorrow",
+          because: [],
+          actions: ["complete"],
+        },
+        {
+          id: "week-1",
+          band: "now",
+          source: "task",
+          category: "tasks",
+          level: 4,
+          consequence: "task_slips",
+          title: "Prepare the phase-two figures",
+          due_at: "2026-09-04T10:00:00Z",
+          overdue: false,
+          due_group: "this_week",
+          because: [],
+          actions: ["complete"],
+        },
+      ],
+    });
+    return (
+      <StoryProviders>
+        <WorklistScreen />
+      </StoryProviders>
+    );
+  },
+};
+
 // The state the whole surface is built to reach. One line, and no card drawn
 // to report a zero.
 export const NothingWaiting: Story = {

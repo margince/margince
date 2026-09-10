@@ -291,7 +291,7 @@ func stagedFacts(
 // — the one place that decides whether a due moment is behind now.
 // Held by: TestOnlyOnePlaceDecidesWhetherSomethingIsLate
 // (backend/gates/overdueboundary_test.go).
-func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
+func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts.AttentionItem {
 	subject := task.Subject
 	item := crmcontracts.AttentionItem{
 		Id:      task.ID.String(),
@@ -305,6 +305,11 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 		item.DueAt = &due
 		past := deadline.Passed(task.DueAt, asOf)
 		item.Overdue = &past
+		// Which run of the page it heads. Only dated rows carry one, which is
+		// what the contract says and what lets a client group without having to
+		// decide the day's end for itself.
+		group := crmcontracts.AttentionItemDueGroup(dueGroup(due, asOf, until, loc))
+		item.DueGroup = &group
 	}
 	// Who holds it. Absent means nobody has taken it, which the unassigned
 	// scope exists to surface and which the row could not say before.
