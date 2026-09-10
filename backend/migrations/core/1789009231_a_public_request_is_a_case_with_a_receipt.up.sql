@@ -43,8 +43,24 @@ ALTER TABLE data_subject_request
 -- submit twice, a mail client that prefetches, a retry after a timeout. Two
 -- cases for one request would put the same work in the queue twice and give
 -- the subject two references for one answer.
+--
+-- NO FOREIGN KEY, and that is the point rather than an oversight.
+--
+-- An erasure DELETES the submission this names, and FulfilErasure holds THIS
+-- row under FOR UPDATE for the whole erase while the erase runs in its own
+-- transaction. A reference of any kind would make that delete touch the locked
+-- row: ON DELETE SET NULL writes it, ON DELETE CASCADE removes it, and RESTRICT
+-- refuses. The first two wait on a lock the fulfilment is holding itself, which
+-- is a wait nothing can end, and the third fails the erasure outright. Every
+-- shape breaks the one path this column exists to serve — a subject who asked
+-- to be removed through their own link.
+--
+-- The dangling reference that leaves behind is the correct record anyway. The
+-- case must OUTLIVE the submission: it is the evidence that somebody asked and
+-- that the workspace answered, and an erasure that took its own paper trail
+-- with it would leave nothing to show the erasure was performed.
 ALTER TABLE data_subject_request
-    ADD COLUMN source_submission_id uuid REFERENCES person_confirm_submission(id) ON DELETE SET NULL;
+    ADD COLUMN source_submission_id uuid;
 
 CREATE UNIQUE INDEX data_subject_request_one_case_per_submission
     ON data_subject_request (source_submission_id)

@@ -23,10 +23,13 @@ package consent
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -78,13 +81,27 @@ func caseKindFor(submissionKind string) (string, bool) {
 // exactly this.
 func oneCalendarMonthAfter(received time.Time) time.Time {
 	candidate := received.AddDate(0, 1, 0)
-	// A month that overshot is one Go rolled forward: the day of month came
-	// back smaller than it went in, because the target month was too short to
-	// hold it. Stepping back to the last day of that month is the clamp.
-	if candidate.Day() != received.Day() {
-		return candidate.AddDate(0, 0, -candidate.Day())
+	// OVERSHOT IS MEASURED BY THE MONTH, never by the day number.
+	//
+	// Comparing days looks equivalent and is not: AddDate normalizes across a
+	// DST boundary too, and a clock that goes back an hour moves the result
+	// into the previous day without any month having overflowed. A request
+	// received 00:30 on 6 August in Santiago lands at 23:30 on 5 September,
+	// and a day-number test read that as overflow and clamped the deadline to
+	// 31 August — five days off the month the subject is owed.
+	//
+	// The month is the fact the clamp is about. Only a target month too short
+	// to hold the day rolls the result into the month AFTER the one asked for.
+	wanted := received.Month() + 1
+	if wanted > time.December {
+		wanted -= 12
 	}
-	return candidate
+	if candidate.Month() == wanted {
+		return candidate
+	}
+	// Rolled past it: step back to the last day of the month that was wanted,
+	// keeping the clock time the request arrived at.
+	return candidate.AddDate(0, 0, -candidate.Day())
 }
 
 // mintReceiptReference draws a reference the subject can quote.
@@ -121,21 +138,56 @@ func openRightsCaseTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 	if !ok {
 		return "", nil
 	}
+	// RETRIED ON A COLLIDING RECEIPT, because losing that draw must not cost
+	// the subject their request. Two references cannot both be quotable, so the
+	// unique index refuses the second — and inside the submit transaction that
+	// refusal rolls back the proposal, the case AND the spent token, answering
+	// a legitimate erasure request with a server error and no link left to
+	// retry it on. At roughly 49 bits a collision is vanishingly unlikely; what
+	// makes the retry worth its lines is what one costs, not how often it comes.
+	//
+	// SAVEPOINT per attempt, because a failed statement aborts the surrounding
+	// transaction: without one the retry runs against a transaction Postgres has
+	// already given up on, and every attempt after the first fails identically.
+	for attempt := range receiptAttempts {
+		caseID, stored, created, err := attemptRightsCase(ctx, tx, kind, personID,
+			submissionID, receivedAt)
+		if err == nil {
+			return finishRightsCase(ctx, tx, caseID, stored, created, kind, submissionID)
+		}
+		if !isReceiptCollision(err) || attempt == receiptAttempts-1 {
+			return "", err
+		}
+	}
+	// Unreachable: the loop above either returns or exhausts its attempts and
+	// returns the last error. Go cannot see that, so this states it.
+	return "", fmt.Errorf("consent: opening the rights case this request owes an answer to: no attempt ran")
+}
+
+// receiptAttempts bounds the redraw. Three, because a second collision after a
+// fresh draw is not bad luck any more — it is the alphabet or the generator
+// being wrong, and looping on that would hold the transaction open rather than
+// report it.
+const receiptAttempts = 3
+
+// attemptRightsCase makes one attempt at the insert, inside its own savepoint.
+func attemptRightsCase(ctx context.Context, tx pgx.Tx, kind string, personID ids.PersonID,
+	submissionID ids.UUID, receivedAt time.Time,
+) (caseID ids.UUID, stored string, created bool, err error) {
 	receipt, err := mintReceiptReference()
 	if err != nil {
-		return "", err
+		return ids.UUID{}, "", false, err
 	}
-	var (
-		caseID  ids.UUID
-		stored  string
-		created bool
-	)
+	nested, err := tx.Begin(ctx)
+	if err != nil {
+		return ids.UUID{}, "", false, fmt.Errorf("consent: opening the rights case: %w", err)
+	}
 	// RETURNING with xmax = 0 says whether THIS statement inserted the row:
 	// ON CONFLICT DO UPDATE returns the row either way, and without the test a
 	// replay would write a second audit entry saying a case was opened that
 	// already existed. The update is a no-op assignment for that reason — it
 	// exists to make the row returnable, not to change it.
-	err = tx.QueryRow(ctx, `
+	err = nested.QueryRow(ctx, `
 		INSERT INTO data_subject_request
 		  (kind, subject_ref, person_id, received_at, channel, due_at,
 		   source_submission_id, receipt_reference)
@@ -147,8 +199,33 @@ func openRightsCaseTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 		oneCalendarMonthAfter(receivedAt), submissionID, receipt,
 	).Scan(&caseID, &stored, &created)
 	if err != nil {
-		return "", fmt.Errorf("consent: opening the rights case this request owes an answer to: %w", err)
+		_ = nested.Rollback(ctx)
+		return ids.UUID{}, "", false, fmt.Errorf(
+			"consent: opening the rights case this request owes an answer to: %w", err)
 	}
+	if err := nested.Commit(ctx); err != nil {
+		return ids.UUID{}, "", false, fmt.Errorf("consent: opening the rights case: %w", err)
+	}
+	return caseID, stored, created, nil
+}
+
+// isReceiptCollision reports the one failure worth redrawing for: two cases
+// drew the same quotable reference. Every other refusal is a real fault and
+// must reach the caller rather than being retried into a different message.
+func isReceiptCollision(err error) bool {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+	return pgErr.Code == pgerrcode.UniqueViolation &&
+		pgErr.ConstraintName == "data_subject_request_receipt_reference"
+}
+
+// finishRightsCase audits a case this statement actually opened and answers the
+// reference either way.
+func finishRightsCase(ctx context.Context, tx pgx.Tx, caseID ids.UUID, stored string,
+	created bool, kind string, submissionID ids.UUID,
+) (string, error) {
 	if !created {
 		return stored, nil
 	}

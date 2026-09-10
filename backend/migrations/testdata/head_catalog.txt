@@ -2027,7 +2027,6 @@ public.data_subject_request.data_subject_request_channel CHECK (((channel IS NUL
 public.data_subject_request.data_subject_request_kind_check CHECK ((kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text])))
 public.data_subject_request.data_subject_request_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE SET NULL
 public.data_subject_request.data_subject_request_pkey PRIMARY KEY (id)
-public.data_subject_request.data_subject_request_source_submission_id_fkey FOREIGN KEY (source_submission_id) REFERENCES person_confirm_submission(id) ON DELETE SET NULL
 public.data_subject_request.data_subject_request_status_check CHECK ((status = ANY (ARRAY['open'::text, 'in_progress'::text, 'fulfilled'::text, 'rejected'::text])))
 public.data_subject_request.dsr_assignee_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
 public.data_subject_request.dsr_resolution_shape CHECK (((status <> ALL (ARRAY['fulfilled'::text, 'rejected'::text])) OR (resolution IS NOT NULL)))

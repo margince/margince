@@ -16,8 +16,12 @@ package consent
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -205,6 +209,24 @@ func TestOneCalendarMonthFollowsTheShortMonths(t *testing.T) {
 			received: time.Date(2026, time.December, 15, 8, 0, 0, 0, time.UTC),
 			want:     time.Date(2027, time.January, 15, 8, 0, 0, 0, time.UTC),
 		},
+		{
+			// A CLOCK CHANGE IS NOT A MONTH OVERFLOW. Santiago moves its clock
+			// back between these two dates, so AddDate lands at 23:30 on the
+			// 5th rather than 00:30 on the 6th. A clamp reading the DAY NUMBER
+			// called that an overflow and cut the deadline back to 31 August,
+			// taking five days off the month the subject is owed.
+			name:     "across a daylight-saving change",
+			received: time.Date(2026, time.August, 6, 0, 30, 0, 0, santiago(t)),
+			want:     time.Date(2026, time.September, 5, 23, 30, 0, 0, santiago(t)),
+		},
+		{
+			// The same zone with no clock change between the two dates, so the
+			// wall time is preserved. Beside the row above it, this is what
+			// says the difference is the DST shift and not the zone.
+			name:     "in the same zone with no clock change",
+			received: time.Date(2026, time.September, 5, 0, 30, 0, 0, santiago(t)),
+			want:     time.Date(2026, time.October, 5, 0, 30, 0, 0, santiago(t)),
+		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			if got := oneCalendarMonthAfter(c.received); !got.Equal(c.want) {
@@ -289,5 +311,86 @@ func TestAMarketingAnswerAloneOpensNoCase(t *testing.T) {
 	if cases := casesFor(t, e); len(cases) != 0 {
 		t.Errorf("%d rights case(s) opened by a marketing answer, want none — the DPO's queue "+
 			"would fill with work nobody asked for", len(cases))
+	}
+}
+
+// santiago is a zone that moves its clock inside the window these deadlines
+// span. Chile rather than a European zone because its transition falls in early
+// September, which puts it between a receipt and its one-month deadline for a
+// whole range of ordinary August dates.
+func santiago(t *testing.T) *time.Location {
+	t.Helper()
+	loc, err := time.LoadLocation("America/Santiago")
+	if err != nil {
+		t.Fatalf("loading the zone: %v", err)
+	}
+	return loc
+}
+
+// A COLLIDING RECEIPT IS RECOGNISED AS ONE. Two cases cannot both hold a
+// quotable reference, so the unique index refuses the second — and inside the
+// submit transaction that refusal would roll back the proposal, the case AND
+// the spent token, answering a real erasure request with a server error and no
+// link left to retry on. The writer redraws instead, and this is the test of
+// what it redraws FOR: every other refusal must reach the caller unretried,
+// because retrying a real fault turns one honest error into three and a slower
+// answer.
+//
+// A unit test rather than an integration one. Making a receipt collide on the
+// first draw and not the second needs state that survives a savepoint rollback
+// and is not visible to the transaction — which the retry undoes by design, and
+// which is exactly the property under test. What can be tested honestly is the
+// judgement: which refusals count as a collision.
+func TestOnlyAReceiptCollisionIsWorthRedrawing(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "the receipt index refusing a duplicate reference",
+			err: &pgconn.PgError{
+				Code: "23505", ConstraintName: "data_subject_request_receipt_reference",
+			},
+			want: true,
+		},
+		{
+			// The OTHER unique index on this table, and the one the writer
+			// answers by reading the standing case back rather than redrawing.
+			// Redrawing here would spin three times and then report a failure
+			// on what is the ordinary replay.
+			name: "the submission index refusing a replayed submit",
+			err: &pgconn.PgError{
+				Code: "23505", ConstraintName: "data_subject_request_one_case_per_submission",
+			},
+			want: false,
+		},
+		{
+			name: "a check constraint refusing an unknown channel",
+			err:  &pgconn.PgError{Code: "23514", ConstraintName: "data_subject_request_channel"},
+			want: false,
+		},
+		{
+			name: "a connection that went away",
+			err:  errors.New("write tcp: broken pipe"),
+			want: false,
+		},
+		{
+			// Wrapped, because that is how it arrives: the insert wraps its
+			// failure before the retry ever sees it, and a matcher testing the
+			// concrete type rather than errors.As would call every collision a
+			// permanent fault.
+			name: "a collision wrapped by the writer",
+			err: fmt.Errorf("consent: opening the rights case: %w", &pgconn.PgError{
+				Code: "23505", ConstraintName: "data_subject_request_receipt_reference",
+			}),
+			want: true,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if got := isReceiptCollision(c.err); got != c.want {
+				t.Errorf("isReceiptCollision(%v) = %v, want %v", c.err, got, c.want)
+			}
+		})
 	}
 }
