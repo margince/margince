@@ -182,7 +182,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The stub answers a report with the frame a real result carries, and the frame's whole point is that the zone comes from the SERVER rather than the reader. A zone read off the runner would draw a different as-of caption on every machine the catalog builds on.",
   },
   {
-    file: "screens/analytics.test.tsx",
+    file: "screens/analytics.testkit.tsx",
     why: "Same: the stubbed report result carries the installation zone the server sends, and the caption assertion is about that zone reaching the screen unchanged. Reading the runner's zone would make the assertion about the machine.",
   },
   {
