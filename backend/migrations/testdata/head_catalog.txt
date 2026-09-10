@@ -1731,6 +1731,60 @@ public.communication_decision_by_subject CREATE INDEX communication_decision_by_
 public.communication_decision_disagreements CREATE INDEX communication_decision_disagreements ON public.communication_decision USING btree (decided_at) WHERE ((legacy_verdict IS NOT NULL) AND (legacy_verdict <> verdict))
 public.communication_decision_one_per_decision CREATE UNIQUE INDEX communication_decision_one_per_decision ON public.communication_decision USING btree (decision_set_id, recipient_address, phase)
 public.communication_decision_pkey CREATE UNIQUE INDEX communication_decision_pkey ON public.communication_decision USING btree (id)
+public.communication_instruction acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_instruction.acknowledged_at timestamp with time zone NOT NULL gen=- def=-
+public.communication_instruction.communication_instruction_consumption_shape CHECK (((status = 'consumed'::text) = (consumed_at IS NOT NULL)))
+public.communication_instruction.communication_instruction_directed_by_fkey FOREIGN KEY (directed_by) REFERENCES app_user(id) ON DELETE RESTRICT
+public.communication_instruction.communication_instruction_explained CHECK ((length(btrim(explanation)) > 0))
+public.communication_instruction.communication_instruction_pkey PRIMARY KEY (id)
+public.communication_instruction.communication_instruction_reason CHECK ((reason_code = ANY (ARRAY['customer_requested_outside_crm'::text, 'contractual_necessity'::text, 'legal_obligation'::text, 'other'::text])))
+public.communication_instruction.communication_instruction_refuse_rewrite CREATE TRIGGER communication_instruction_refuse_rewrite BEFORE DELETE OR UPDATE ON public.communication_instruction FOR EACH ROW EXECUTE FUNCTION communication_instruction_refuse_rewrite()
+public.communication_instruction.communication_instruction_review_id_fkey FOREIGN KEY (review_id) REFERENCES communication_review(id) ON DELETE CASCADE
+public.communication_instruction.communication_instruction_review_id_key UNIQUE (review_id)
+public.communication_instruction.communication_instruction_revocation_shape CHECK (((status = 'revoked'::text) = ((revoked_at IS NOT NULL) AND (revoked_by IS NOT NULL) AND (revoked_reason IS NOT NULL))))
+public.communication_instruction.communication_instruction_revoked_by_fkey FOREIGN KEY (revoked_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.communication_instruction.communication_instruction_status CHECK ((status = ANY (ARRAY['directed'::text, 'consumed'::text, 'revoked'::text, 'expired'::text])))
+public.communication_instruction.communication_instruction_window CHECK ((valid_until > facts_as_of))
+public.communication_instruction.consumed_at timestamp with time zone gen=- def=-
+public.communication_instruction.directed_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_instruction.directed_by uuid NOT NULL gen=- def=-
+public.communication_instruction.explanation text NOT NULL gen=- def=-
+public.communication_instruction.facts_as_of timestamp with time zone NOT NULL gen=- def=-
+public.communication_instruction.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_instruction.reason_code text NOT NULL gen=- def=-
+public.communication_instruction.review_id uuid NOT NULL gen=- def=-
+public.communication_instruction.revoked_at timestamp with time zone gen=- def=-
+public.communication_instruction.revoked_by uuid gen=- def=-
+public.communication_instruction.revoked_reason text gen=- def=-
+public.communication_instruction.status text NOT NULL gen=- def='directed'::text
+public.communication_instruction.valid_until timestamp with time zone NOT NULL gen=- def=-
+public.communication_instruction.warning_version text NOT NULL gen=- def=-
+public.communication_instruction_by_director CREATE INDEX communication_instruction_by_director ON public.communication_instruction USING btree (directed_by, directed_at DESC)
+public.communication_instruction_live CREATE INDEX communication_instruction_live ON public.communication_instruction USING btree (valid_until) WHERE (status = 'directed'::text)
+public.communication_instruction_pkey CREATE UNIQUE INDEX communication_instruction_pkey ON public.communication_instruction USING btree (id)
+public.communication_instruction_refuse_rewrite() secdef=false cfg=- acl=- 
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'a communication instruction is the record of a decision and is never deleted'
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'communication_instruction_immutable';
+  END IF;
+  IF NEW.review_id IS DISTINCT FROM OLD.review_id
+     OR NEW.directed_by IS DISTINCT FROM OLD.directed_by
+     OR NEW.reason_code IS DISTINCT FROM OLD.reason_code
+     OR NEW.explanation IS DISTINCT FROM OLD.explanation
+     OR NEW.warning_version IS DISTINCT FROM OLD.warning_version
+     OR NEW.acknowledged_at IS DISTINCT FROM OLD.acknowledged_at
+     OR NEW.facts_as_of IS DISTINCT FROM OLD.facts_as_of
+     OR NEW.valid_until IS DISTINCT FROM OLD.valid_until
+     OR NEW.directed_at IS DISTINCT FROM OLD.directed_at THEN
+    RAISE EXCEPTION 'a communication instruction records what was decided and cannot be rewritten; only its status, consumption and revocation move'
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'communication_instruction_immutable';
+  END IF;
+  RETURN NEW;
+END 
+public.communication_instruction_review_id_key CREATE UNIQUE INDEX communication_instruction_review_id_key ON public.communication_instruction USING btree (review_id)
 public.communication_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_review.communication_review_delivery_intent_id_fkey FOREIGN KEY (delivery_intent_id) REFERENCES scheduled_send(id) ON DELETE CASCADE
 public.communication_review.communication_review_initiated_by_fkey FOREIGN KEY (initiated_by) REFERENCES app_user(id) ON DELETE SET NULL
