@@ -117,8 +117,94 @@ func newWithdrawalToken() (string, error) {
 	return withdrawalTokenPrefix + base64.RawURLEncoding.EncodeToString(buf[:]), nil
 }
 
-// EnsureWithdrawalCredentialTx mints the credential a message's unsubscribe
-// link carries, for this address and scope.
+// EnsureWithdrawalCredentialTx mints a credential for a subject the CALLER
+// NAMES, and takes write authority over that subject for doing so.
+//
+// person:update and the WRITABLE probe, because naming somebody's id and asking
+// for a bearer token over their mail IS a claim of authority over that record.
+// `person` is shareable, so a manual `read` grant widens who can SEE a contact
+// without widening who may act on them, and a read-share holder must not mint
+// one. The send door below is the one that asks a different question.
+func (s *Store) EnsureWithdrawalCredentialTx(
+	ctx context.Context, tx pgx.Tx, in WithdrawalMintInput,
+) (token string, err error) {
+	if err := auth.Require(ctx, entityPerson, principal.ActionUpdate); err != nil {
+		return "", err
+	}
+	if err := validWithdrawalMint(in); err != nil {
+		return "", err
+	}
+	if !in.PersonID.IsZero() {
+		if err := auth.EnsureWritableLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+			return "", err
+		}
+		if err := auth.LockSubjectLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+			return "", err
+		}
+	}
+	return insertWithdrawalCredential(ctx, tx, in)
+}
+
+// ensureWithdrawalCredentialForSendTx mints the credential a MESSAGE carries,
+// for a subject resolved from the address that message is going to.
+//
+// person:READ and the VISIBLE probe, and the difference from the door above is
+// the question rather than the row. This caller names nobody: bindWithdrawalSubject
+// resolves the subject from the address, the send is already authorized against
+// that recipient by the consent gate and by the activity it creates, and the
+// mail is going there whether or not this succeeds. So the strict probe protects
+// nobody — it refused every sender without person:update, an agent holding
+// `activity:create` + `person:read` among them, and the message then shipped
+// with no working List-Unsubscribe URL, which is the failure this table exists
+// to end.
+//
+// The authority is also strictly less than the SIBLING mint on the same path
+// needs: PreferenceTokenForEmail takes person:read plus this same visible probe
+// and yields a credential that reads a consent state, withdraws AND grants,
+// where this one can only stop mail.
+//
+// Unexported, so the weaker probe cannot be reached by naming a subject: the
+// only way in is the send path in this package.
+func (s *Store) ensureWithdrawalCredentialForSendTx(
+	ctx context.Context, tx pgx.Tx, in WithdrawalMintInput,
+) (token string, err error) {
+	if err := auth.Require(ctx, entityPerson, principal.ActionRead); err != nil {
+		return "", err
+	}
+	if err := validWithdrawalMint(in); err != nil {
+		return "", err
+	}
+	if !in.PersonID.IsZero() {
+		if err := auth.EnsureVisibleLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+			return "", err
+		}
+		if err := auth.LockSubjectLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+			return "", err
+		}
+	}
+	return insertWithdrawalCredential(ctx, tx, in)
+}
+
+// validWithdrawalMint refuses what no link can be written for, before either
+// door's probe spends a query on it.
+func validWithdrawalMint(in WithdrawalMintInput) error {
+	if normalizeAddress(in.Address) == "" {
+		return &ValidationError{
+			Field:  "address",
+			Reason: "a withdrawal link is written to an address, and this one is empty",
+		}
+	}
+	if in.Scope != WithdrawalScopeNamedPurpose && in.Scope != WithdrawalScopeAllMarketing {
+		return &ValidationError{
+			Field:  "scope",
+			Reason: "a withdrawal link stops one named subscription or all marketing; there is no third scope",
+		}
+	}
+	return nil
+}
+
+// insertWithdrawalCredential writes the row both doors mint, after whichever
+// probe that door took.
 //
 // ONE PER SEND, and it always returns the token it minted. The table holds a
 // hash, so an existing credential cannot produce its token again — which is the
@@ -127,87 +213,22 @@ func newWithdrawalToken() (string, error) {
 // is therefore the correct shape: each is a bearer token for stopping that
 // recipient's mail and nothing else, exactly like the messages carrying them,
 // and revocation is by SUBJECT so no row is left working behind.
-func (s *Store) EnsureWithdrawalCredentialTx(
-	ctx context.Context, tx pgx.Tx, in WithdrawalMintInput,
-) (token string, err error) {
-	// GATED, unlike the resolve below — and gated the way the sibling mint
-	// PreferenceTokenForEmail is, because the one door that reaches this is the
-	// same door: a marketing send, already authorized against this recipient by
-	// the consent gate and by the activity it creates.
-	//
-	// person:READ, not update. Asking for update refused every sender that does
-	// not hold it — an agent granted `activity:create` + `person:read`, a rep
-	// working from a read share — and refusing the mint does not stop the
-	// message. It strips the recipient's opt-out from a message going out
-	// anyway, which is the exact failure this table exists to end.
-	//
-	// The authority is also strictly LESS than the sibling's needs. A preference
-	// token reads a consent state, withdraws AND grants; this credential can
-	// stop mail and do nothing else. Demanding more for the weaker of the two
-	// had it backwards.
-	if err := auth.Require(ctx, entityPerson, principal.ActionRead); err != nil {
-		return "", err
-	}
-	address := normalizeAddress(in.Address)
-	if address == "" {
-		return "", &ValidationError{
-			Field:  "address",
-			Reason: "a withdrawal link is written to an address, and this one is empty",
-		}
-	}
-	if in.Scope != WithdrawalScopeNamedPurpose && in.Scope != WithdrawalScopeAllMarketing {
-		return "", &ValidationError{
-			Field:  "scope",
-			Reason: "a withdrawal link stops one named subscription or all marketing; there is no third scope",
-		}
-	}
-	// THE SUBJECT MUST STILL BE LIVE AT THIS POINT IN THIS TRANSACTION.
-	//
-	// Statements in a read-committed transaction each take a fresh snapshot,
-	// so an erasure committing between the caller's address lookup and this
-	// insert would leave the mint writing a NEW capability — carrying the
-	// plaintext address — for the subject whose credentials that erasure just
-	// deleted. The person row survives an anonymize-in-place, so the foreign
-	// key does not catch it and the fresh token resolves happily.
-	//
-	// The VISIBLE twin, the one PreferenceTokenForEmail uses, for the reason
-	// the object grant above gives: a caller who may send this person marketing
-	// mail owes them a link that stops it. LIVE rather than plain, which is the
-	// half that matters here — a plain probe answers "still there" for an
-	// anonymized tombstone, precisely the row the erasure race leaves behind,
-	// and this path would then mint a fresh capability carrying the plaintext
-	// address for a subject the installation has certified erased.
-	if !in.PersonID.IsZero() {
-		if err := auth.EnsureVisibleLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
-			return "", err
-		}
-		// AND HELD until this transaction commits. EnsureWritableLive reads a
-		// snapshot; the insert below is a later statement, so an erasure
-		// committing between the two would find no credential to delete and
-		// this would then write one — restoring both a working capability and
-		// the plaintext address for a subject the installation just certified
-		// erased. Holding the row makes the erasure queue behind this mint,
-		// and its delete then sees the row this wrote.
-		if err := auth.LockSubjectLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
-			return "", err
-		}
-	}
+//
+// The subject is HELD by the caller's LockSubjectLive until this commits: the
+// probe above it reads a snapshot, and this insert is a later statement, so an
+// erasure committing between the two would find no credential to delete and
+// this would then write one — restoring a working capability and the plaintext
+// address for a subject the installation just certified erased.
+func insertWithdrawalCredential(ctx context.Context, tx pgx.Tx, in WithdrawalMintInput) (string, error) {
 	minted, err := newWithdrawalToken()
 	if err != nil {
 		return "", err
 	}
-	// EVERY SEND MINTS ITS OWN, so every message a recipient holds carries a
-	// link that works. The first spelling had a unique index over the live rows
-	// and tried to reuse — which the hash makes impossible, since the token is
-	// unrecoverable — so it returned nothing and the send shipped no header.
-	// The second revoked the old credential and minted fresh, which killed the
-	// link in the mail the recipient already had. Both traded away the thing
-	// this table exists to provide. See the migration for the full argument.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO withdrawal_credential
 		    (token_hash, address, person_id, lead_id, scope, purpose_id, expires_at)
 		VALUES ($1, $2, $3, $4, $5, $6, now() + $7::interval)`,
-		hashPublicToken(minted), address,
+		hashPublicToken(minted), normalizeAddress(in.Address),
 		zeroAsNull(in.PersonID.UUID), zeroAsNull(in.LeadID.UUID),
 		in.Scope, zeroAsNull(in.PurposeID),
 		withdrawalCredentialLife.String()); err != nil {
