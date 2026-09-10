@@ -2377,11 +2377,12 @@ export function ComposeModal({
     ? { ...account.grounding, projectId: projectFiling.projectId }
     : null;
   // The engine's answer about the message as it stands, asked where the rep is
-  // writing it rather than learned from the Send button's error. Mail only: a
-  // channel reply names no addressee for anybody to ask about, and the preview
-  // doors are the two mail doors.
+  // writing it rather than at the Send button. Mail only: a channel reply names
+  // no addressee. BCC IS IN THE QUESTION — consent is owed to everyone who
+  // receives the message and the server authorizes the merged list, so asking
+  // about two thirds of it let a rep blind-copy an objecting recipient.
   const permission = useSendPermission({
-    recipients: [...to, ...cc],
+    recipients: [...to, ...cc, ...bcc],
     anchorActivityId: answering,
     links: composedLinks(
       { entityType, entityId },
