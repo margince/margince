@@ -399,8 +399,8 @@ func (c *consentEnv) grantMarketingByConfirmLink(t *testing.T) string {
 	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
 		"marketing_choice":  "granted",
 		"marketing_wording": "Yes, send me occasional product news.",
-	}, nil, nil); s != http.StatusNoContent {
-		t.Fatalf("the subject spends their own link → %d, want 204", s)
+	}, nil, nil); s != http.StatusOK {
+		t.Fatalf("the subject spends their own link → %d, want 200", s)
 	}
 	// Returned so a caller can assert what a SPENT link does next.
 	return token

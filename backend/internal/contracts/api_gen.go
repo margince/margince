@@ -16495,6 +16495,42 @@ func (e ListProjectsParamsPhase) Valid() bool {
 	}
 }
 
+// Defines values for BookPublicMeeting201JSONResponseBodyBooking.
+const (
+	Confirmed BookPublicMeeting201JSONResponseBodyBooking = "confirmed"
+)
+
+// Valid indicates whether the value is a known member of the BookPublicMeeting201JSONResponseBodyBooking enum.
+func (e BookPublicMeeting201JSONResponseBodyBooking) Valid() bool {
+	switch e {
+	case Confirmed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BookPublicMeeting201JSONResponseBodyMarketing.
+const (
+	NotAsked            BookPublicMeeting201JSONResponseBodyMarketing = "not_asked"
+	NotRequested        BookPublicMeeting201JSONResponseBodyMarketing = "not_requested"
+	PendingConfirmation BookPublicMeeting201JSONResponseBodyMarketing = "pending_confirmation"
+)
+
+// Valid indicates whether the value is a known member of the BookPublicMeeting201JSONResponseBodyMarketing enum.
+func (e BookPublicMeeting201JSONResponseBodyMarketing) Valid() bool {
+	switch e {
+	case NotAsked:
+		return true
+	case NotRequested:
+		return true
+	case PendingConfirmation:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SubmitConfirmDetailsJSONBodyCorrectionsField.
 const (
 	SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
@@ -41486,6 +41522,12 @@ type BookPublicMeetingParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
+
+// BookPublicMeeting201JSONResponseBodyBooking defines parameters for BookPublicMeeting.
+type BookPublicMeeting201JSONResponseBodyBooking string
+
+// BookPublicMeeting201JSONResponseBodyMarketing defines parameters for BookPublicMeeting.
+type BookPublicMeeting201JSONResponseBodyMarketing string
 
 // GetPublicAvailabilityParams defines parameters for GetPublicAvailability.
 type GetPublicAvailabilityParams struct {

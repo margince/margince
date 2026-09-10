@@ -215,8 +215,22 @@ func bookHappyPathSlot(t *testing.T, e *apptest.AppEnv, base string, monday time
 	if status := publicCall(t, e, "POST", base, booking, nil, &confirmation); status != http.StatusCreated {
 		t.Fatalf("booking → %d %v", status, confirmation)
 	}
-	if len(confirmation) != 2 || confirmation["start"] == nil || confirmation["end"] == nil {
-		t.Fatalf("confirmation discloses more than the slot: %v", confirmation)
+	// NAMED, not counted. The rule is that this anonymous answer discloses
+	// nothing ABOUT THE RECORD — no person id, no existing contact, no history
+	// — and a field count enforced that only by accident: it also refused
+	// facts about the caller's own request, which disclose nothing at all. The
+	// booking and marketing outcomes are two such facts, and the booker needs
+	// the second, because a ticked box whose question could not be asked leaves
+	// them waiting for a mail that is not coming.
+	allowed := map[string]bool{"start": true, "end": true, "booking": true, "marketing": true}
+	for key := range confirmation {
+		if !allowed[key] {
+			t.Fatalf("confirmation discloses %q, which is not the slot or the outcome of this "+
+				"request: %v", key, confirmation)
+		}
+	}
+	if confirmation["start"] == nil || confirmation["end"] == nil {
+		t.Fatalf("confirmation does not name the slot it booked: %v", confirmation)
 	}
 
 	// The booker exists once; a second booking re-uses the person.
