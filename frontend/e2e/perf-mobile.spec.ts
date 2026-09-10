@@ -93,7 +93,9 @@ const reads: { path: string; at: number }[] = [];
  * one. A warm-up that took a shortcut would leave whatever it skipped to be
  * paid by sample 1, which is the defect it exists to remove.
  */
-async function openOneRecord(page: Page): Promise<number> {
+async function openOneRecord(
+  page: Page,
+): Promise<{ startedAt: number; ms: number }> {
   await page.goto("/#/contacts");
   // Anchor on a settled screen before measuring, for the reason ac.spec.ts
   // records: a click during hydration lands on a row whose handler is not
@@ -118,7 +120,12 @@ async function openOneRecord(page: Page): Promise<number> {
   await expect(
     page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
   ).toBeVisible();
-  return Date.now() - start;
+  // The START is returned rather than left to be derived. A caller computing it
+  // as `end - ms` from its own clock reads LATER than this one did, because the
+  // await returns before that line runs — and the reads it would drop are the
+  // ones issued in the first milliseconds by the click, which are precisely the
+  // ones the window is being measured to catch.
+  return { startedAt: start, ms: Date.now() - start };
 }
 
 test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 390px", async ({
@@ -158,10 +165,13 @@ test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 39
   const windows: { path: string; at: number }[][] = [];
   for (let i = 0; i < SAMPLES; i++) {
     const before = reads.length;
-    const ms = await openOneRecord(page);
-    const end = Date.now();
+    const { startedAt, ms } = await openOneRecord(page);
     samples.push(ms);
-    windows.push(reads.slice(before).filter((r) => r.at >= end - ms));
+    windows.push(
+      reads
+        .slice(before)
+        .filter((r) => r.at >= startedAt && r.at <= startedAt + ms),
+    );
   }
 
   const measured = nearestRank(samples, 0.95);
