@@ -85,7 +85,25 @@ func (s *Store) RecentCorrectionsOwnedBy(
 		}
 		query := storekit.SQLf(`
 			SELECT c.deal_id, d.name, c.audit_log_id, c.fields,
-			       coalesce(a.evidence->>'basis', ''), c.applied_at,
+			       -- The reason, only for the seat whose grants composed it.
+			       --
+			       -- The sentence can name a contact and a correspondence date,
+			       -- read under the owner's permissions on the night it was
+			       -- written, and it is stored text by the time anybody reads it
+			       -- back. A deal that has changed hands since shows the change
+			       -- with no reason rather than disclosing a name this reader was
+			       -- never entitled to. Compared in SQL so no row leaves the
+			       -- database carrying a sentence its reader may not have.
+			       --
+			       -- IS NOT DISTINCT FROM, never a bare equality. An unowned deal
+			       -- records the empty string and owner_id is NULL, and equality
+			       -- against NULL is NULL — so that test would withhold the reason on
+			       -- every unowned deal, whose sentence names nobody and was
+			       -- composed under no seat's grants at all.
+			       CASE WHEN nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
+			            THEN coalesce(a.evidence->>'basis', '')
+			            ELSE '' END,
+			       c.applied_at,
 			       c.reversed_at IS NOT NULL, d.version
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id

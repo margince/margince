@@ -31,8 +31,11 @@ func (e *closeDateEnv) appliedCorrection(t *testing.T, dealID ids.UUID) deals.Cl
 	t.Helper()
 	var basis string
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT coalesce(a.evidence->>'basis', '')
+		`SELECT CASE WHEN nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
+		             THEN coalesce(a.evidence->>'basis', '')
+		             ELSE '' END
 		   FROM deal_correction c
+		   JOIN deal d ON d.id = c.deal_id
 		   JOIN audit_log a ON a.id = c.audit_log_id
 		  WHERE c.deal_id = $1
 		  ORDER BY c.applied_at DESC LIMIT 1`, dealID).Scan(&basis); err != nil {
@@ -397,5 +400,40 @@ func TestAQuietRedateIsMarkedProvisional(t *testing.T) {
 
 	if swept := e.readSwept(t, id); !swept.provisional {
 		t.Error("the deal is not marked provisional — an unconfirmed machine date must say it is one")
+	}
+}
+
+// A deal that changes hands shows the new owner WHAT moved, never WHY.
+//
+// The basis sentence can name the contact who wrote last and the day they did
+// it, and it was composed under the previous owner's own grants — their
+// person:read and activity:read, on the night the sweep ran. It is stored text
+// by the time anybody reads it back, so nothing re-checks those grants. A rep
+// who inherits the deal would otherwise be handed a name they were never
+// entitled to see, by a panel that exists to be trusted.
+func TestAReceiptOnAnInheritedDealWithholdsTheReasonItWasComposedFor(t *testing.T) {
+	e := setupCloseDate(t)
+	e.grantOwnerRealPermissions(t, e.Rep1)
+	id := e.seedSweepDeal(t, "Handed over", e.late, stringp("commit"), intp(30), 90)
+	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	// The reason names the contact while the deal is still Rep1's, which is the
+	// positive control: without it this test would pass over a basis that was
+	// empty all along.
+	if basis := e.appliedCorrection(t, id).Basis; !strings.Contains(basis, "Anna Weber") {
+		t.Fatalf("basis = %q, want it to name Anna Weber before the hand-over", basis)
+	}
+
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE deal SET owner_id = $1 WHERE id = $2`, e.Rep2, id); err != nil {
+		t.Fatalf("handing the deal to another rep: %v", err)
+	}
+
+	if basis := e.appliedCorrection(t, id).Basis; basis != "" {
+		t.Errorf("basis = %q for a rep who inherited the deal — the sentence was composed "+
+			"under the previous owner's grants and must not follow the record", basis)
 	}
 }

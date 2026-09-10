@@ -241,7 +241,7 @@ func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode,
 			rep.UserID, kind).Scan(&mode)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return defaultAutonomy(kind), nil
+		return ModeManual, nil
 	}
 	if err != nil {
 		return ModeManual, fmt.Errorf("crmapprovals: reading the autonomy mode: %w", err)
@@ -249,20 +249,62 @@ func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode,
 	return AutonomyMode(mode), nil
 }
 
-// defaultAutonomy is what a kind does for a rep who has never touched the
-// setting.
+// AutonomyChoice is one rep's standing on one kind, and whether they actually
+// made it.
 //
-// Manual for almost everything, and that stays the rule: a machine acting on
-// somebody's records unasked has to be something they chose.
+// Chosen is the field AutoApplyMode cannot express. That reader answers
+// ModeManual both for a rep who asked to be asked and for a rep who has never
+// seen the setting, which is right for a queue of staged cards: an unanswered
+// card must wait either way. It is wrong for a caller whose default is not
+// manual, because it cannot tell consent from silence.
+type AutonomyChoice struct {
+	Mode AutonomyMode
+	// Chosen reports that a policy row exists — the rep has decided this kind,
+	// whichever way. False means no row: they have never been asked.
+	Chosen bool
+}
+
+// AutonomyChoiceFor reads the rep's standing on a kind AND whether they set it.
 //
-// Close-date corrections are the exception, and the reason is what the
-// alternative actually did. The sweep computed a date, wrote it, and raised a
-// card asking the rep to confirm the date it had already written — a question
-// whose answer changed nothing, which expired unanswered in 72 hours and left
-// the deal on a machine's guess with nothing on the page saying so. Applying it
-// and showing the rep what changed, with a way back, is the honest version of
-// the same act.
-func defaultAutonomy(kind string) AutonomyMode {
+// Same query and same refusals as AutoApplyMode; the difference is that a
+// missing row is reported as missing rather than folded into 'manual'. A caller
+// whose kind defaults to something other than manual has to be able to tell the
+// two apart, and no caller may infer consent from a mode this returns without
+// looking at Chosen.
+func (s *Service) AutonomyChoiceFor(ctx context.Context, kind string) (AutonomyChoice, error) {
+	if !AutoApplyKinds[kind] {
+		return AutonomyChoice{Mode: ModeManual}, nil
+	}
+	rep, ok := principal.Actor(ctx)
+	if !ok || rep.UserID.IsZero() {
+		return AutonomyChoice{Mode: ModeManual}, fmt.Errorf(
+			"a policy belongs to a person, and this call names none: %w", apperrors.ErrPermissionDenied)
+	}
+	var mode string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT mode FROM approval_autonomy_policy WHERE user_id = $1 AND kind = $2`,
+			rep.UserID, kind).Scan(&mode)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return AutonomyChoice{Mode: ModeManual}, nil
+	}
+	if err != nil {
+		return AutonomyChoice{Mode: ModeManual},
+			fmt.Errorf("crmapprovals: reading the autonomy choice: %w", err)
+	}
+	return AutonomyChoice{Mode: AutonomyMode(mode), Chosen: true}, nil
+}
+
+// unsetAutonomy is what a kind means for a rep with no policy row, for the
+// surfaces that must show a default rather than wait for one.
+//
+// Deliberately NOT consulted by AutoApplyMode. That reader serves the staged-card
+// applier, where absence must stay 'manual': a card nobody has answered waits,
+// and a kind defaulting to auto there would confirm leftover cards on upgrade
+// for reps who never opted in. The sweep asks AutonomyChoiceFor and applies this
+// default itself, so the two callers cannot be conflated.
+func unsetAutonomy(kind string) AutonomyMode {
 	if kind == closeDateCorrectionKind {
 		return ModeAuto
 	}
@@ -346,7 +388,16 @@ func autonomySettingsInTx(ctx context.Context, tx pgx.Tx, repID ids.UUID) ([]Kin
 	for _, kind := range kinds {
 		row, held := stored[kind]
 		if !held {
-			row = KindAutonomy{Kind: kind, Mode: ModeManual}
+			// The kind's OWN default for a rep who has never touched it.
+			//
+			// Manual for almost every kind, and that is the rule: a machine
+			// acting on somebody's records unasked has to be something they
+			// chose. Close-date corrections are the exception, and this screen
+			// has to say so — a switch drawn off unconditionally would read
+			// "off" while the nightly sweep corrected that rep's deals, and a
+			// rep who left that apparently-disabled switch alone would never
+			// record the opt-out they thought they already had.
+			row = KindAutonomy{Kind: kind, Mode: unsetAutonomy(kind)}
 		}
 		// The stored mode is reported as it stands. The table's CHECK admits a
 		// third rung, 'veto', that nothing writes yet — and rewriting it to

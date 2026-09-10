@@ -68,11 +68,26 @@ func (p closeDatePolicy) CorrectsWithoutAsking(ctx context.Context, owner ids.UU
 		}
 		return false, err
 	}
-	mode, err := p.svc.AutoApplyMode(ownerCtx, deals.CloseDateCorrectionKind)
+	// The CHOICE, not the mode alone. AutoApplyMode reports 'manual' both for a
+	// rep who asked to be asked and for one who has never seen the setting, and
+	// this is the one caller whose default is not manual — so folding the two
+	// together would read silence as a refusal and leave every deal in the
+	// pipeline on a date nobody maintains.
+	choice, err := p.svc.AutonomyChoiceFor(ownerCtx, deals.CloseDateCorrectionKind)
 	if err != nil {
 		return false, err
 	}
-	return mode == approvals.ModeAuto, nil
+	if !choice.Chosen {
+		// Nobody has decided. The sweep corrects and reports itself on the
+		// morning receipt with a way back, which is the honest version of the
+		// card it replaced: that card wrote the date FIRST and then asked a
+		// question whose answer changed nothing.
+		return true, nil
+	}
+	// Compared against auto explicitly rather than as "not manual": a third
+	// stored rung, veto, exists, and reading it as consent would write
+	// unattended for the one rep who asked hardest not to be written for.
+	return choice.Mode == approvals.ModeAuto, nil
 }
 
 // quietReviewReader adapts the deals module's QuietReviewReader seam: read one

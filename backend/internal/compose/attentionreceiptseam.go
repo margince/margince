@@ -12,6 +12,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -20,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -61,8 +63,15 @@ func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit in
 	// only approvals would report a quiet night on a morning when every date in
 	// the pipeline had moved. This is the sole telling, which is also why each
 	// row carries the way back.
+	// A reader with no deal grant loses the CORRECTIONS, not the panel.
+	//
+	// The two sources answer one question between them, and this one is
+	// optional: a seat that may not read deals has no close-date corrections to
+	// be told about, while it may well have approvals the system decided for it.
+	// Propagating the refusal took the whole receipt surface away over a grant
+	// that has nothing to do with the rows it was hiding.
 	corrections, err := r.deals.RecentCorrectionsOwnedBy(ctx, since, limit)
-	if err != nil {
+	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 		return nil, err
 	}
 	for _, correction := range corrections {

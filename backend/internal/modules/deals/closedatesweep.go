@@ -3,18 +3,26 @@
 
 package deals
 
-// The nightly close-date corrector (formulas-and-rules §11, DECISIONS
-// A6, B-E09.20): the enforcement half of INV-CLOSE-PAST. Every open
-// deal the §11 assessment flags is corrected the same night on the A6
-// risk tier — 🟢 a low-stakes clear-overdue date is rolled forward
-// finally (reversible: the audit row carries before/after), 🟡 a
-// forecast-bearing / missing / unrealistic date is replaced with a
-// PROVISIONAL guess (the invariant holds instantly, the deal stays out
-// of Commit) and a close_date_correction approval asks a human for the
-// real date, 🔻 a deal that has gone quiet is downgraded one forecast
-// notch instead of being optimistically re-dated. Follows the retention
-// evaluator's shape: one pass over every live workspace, one audited
-// transaction per corrected deal.
+// The nightly close-date corrector: the enforcement half of
+// INV-CLOSE-PAST. Every open deal the assessment flags is corrected the
+// same night on its risk tier — 🟢 a low-stakes clear-overdue date is
+// rolled forward, 🟡 a forecast-bearing / missing / unrealistic date is
+// replaced with a machine estimate that keeps the deal out of Commit,
+// 🔻 a deal that has gone quiet is downgraded one forecast notch AND
+// re-dated, because notching the number while leaving a date nobody
+// believes corrected half the lie.
+//
+// EVERY TIER WRITES, and none of them asks first. The 🟡 tier used to
+// write the date and then stage an approval asking a human to confirm
+// the date it had already written — a question whose answer changed
+// nothing, which expired unanswered in 72 hours. What replaces it is
+// the morning receipt: the deal's owner is shown what moved and why,
+// with a Put back that restores the audit row's before-image. A rep who
+// does not want this sets their close-date autonomy to manual or veto
+// and the sweep leaves their deals alone.
+//
+// Follows the retention evaluator's shape: one pass over every live
+// workspace, one audited transaction per corrected deal.
 
 import (
 	"context"
@@ -299,11 +307,20 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 			return err
 		}
 		var status string
-		if err := tx.QueryRow(ctx, `SELECT status FROM deal WHERE id = $1`, cand.id).Scan(&status); err != nil {
+		var owner *ids.UUID
+		if err := tx.QueryRow(ctx,
+			`SELECT status, owner_id FROM deal WHERE id = $1`, cand.id).Scan(&status, &owner); err != nil {
 			return err
 		}
 		if DealStatus(status) != DealOpen {
 			return nil
+		}
+		stillMine, err := c.ownerStillConsents(ctx, cand.ownerID, owner)
+		if err != nil {
+			return err
+		}
+		if !stillMine {
+			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version)
 		}
 		// The kill switch, read here rather than once per pass: an operator who
 		// switches maintenance off mid-sweep stops the next deal's write, not
@@ -383,4 +400,37 @@ func dateString(t *time.Time) *string {
 	}
 	s := t.Format(time.DateOnly)
 	return &s
+}
+
+// ownerStillConsents re-asks the policy when a deal has changed hands since the
+// member page read it.
+//
+// The page and the write are separate transactions, and the row lock is taken
+// between them — the same window the status re-check beside it exists for. A
+// deal handed over inside that window belongs to a rep whose answer was never
+// sought, and if they had switched corrections off, or sat on veto, the sweep
+// would be writing for the one person who declined.
+//
+// Asked only when the owner actually moved, so the ordinary deal costs no
+// second query and no second authority resolution.
+func (c *CloseDateCorrector) ownerStillConsents(ctx context.Context, before, now *ids.UUID) (bool, error) {
+	if sameOwner(before, now) {
+		return true, nil
+	}
+	var owner ids.UUID
+	if now != nil {
+		owner = *now
+	}
+	return c.policy.CorrectsWithoutAsking(ctx, owner)
+}
+
+// sameOwner reports whether a deal is still held by the person the candidate
+// page named. Both sides are nullable — owner_id is ON DELETE SET NULL — and
+// two unowned deals are the same owner, which is what lets the re-ask below
+// stay off the ordinary path.
+func sameOwner(before, now *ids.UUID) bool {
+	if before == nil || now == nil {
+		return before == nil && now == nil
+	}
+	return *before == *now
 }

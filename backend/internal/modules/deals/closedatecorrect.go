@@ -33,6 +33,28 @@ import (
 // deal.updated payload — one spelling for all three tiers.
 const correctionFlagsKey = "flags"
 
+// basisOwnerKey names the seat whose permissions composed a correction's basis
+// sentence, inside the same evidence map.
+//
+// Stored because the sentence cannot be re-derived: it may carry a contact's
+// name and a correspondence date read under that seat's grants, and it is text
+// by the time anybody reads it back. The receipt compares this against the
+// deal's owner at read time — a deal that changed hands shows the change and
+// withholds the reason, rather than disclosing a name the new owner was never
+// entitled to see.
+const basisOwnerKey = "basis_owner"
+
+// ownerString renders a deal's owner for the evidence map. An unowned deal
+// records the empty string, which no user id equals, so a receipt on a deal
+// that has since gained an owner withholds the basis rather than matching by
+// accident.
+func ownerString(owner *ids.UUID) string {
+	if owner == nil {
+		return ""
+	}
+	return owner.String()
+}
+
 const (
 	forecastCommit   = "commit"
 	forecastBestCase = "best_case"
@@ -191,7 +213,15 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 			if !cand.provisional {
 				p.Set("close_date_provisional", false, true)
 			}
-		}, map[string]any{correctionFlagsKey: hygiene.Flags, "basis": proposal.Basis})
+		}, map[string]any{
+			correctionFlagsKey: hygiene.Flags,
+			"basis":            proposal.Basis,
+			// Stamped on this tier too, though pacedBasis names nobody: the
+			// receipt applies ONE rule to every correction rather than knowing
+			// which tier wrote which sentence, and a tier that omitted the key
+			// would have its reason withheld for the wrong reason.
+			basisOwnerKey: ownerString(cand.ownerID),
+		})
 		if err != nil {
 			return "", err
 		}
@@ -255,6 +285,16 @@ func (c *CloseDateCorrector) downgradeAndReview(
 		// whichever tier corrected the deal, so a tier that omits it renders a
 		// change with no stated reason.
 		"basis": review.Basis,
+		// WHOSE grants composed that sentence.
+		//
+		// The basis can name a contact and a correspondence date, resolved
+		// under the owner's own permissions on the night it was written. A deal
+		// handed to somebody else later would otherwise show that sentence to a
+		// rep who may hold neither person:read nor activity:read — permissions
+		// nothing re-checks, because the text is already stored. The receipt
+		// reader compares this against the deal's owner NOW and withholds the
+		// sentence when they differ.
+		basisOwnerKey: ownerString(cand.ownerID),
 	})
 	if err != nil {
 		return "", err
@@ -283,32 +323,26 @@ func (c *CloseDateCorrector) answeredByAReversal(
 	return c.reversedSameQuestion(ctx, cand.id, asking)
 }
 
-// closeDateEffect is what one member's turn actually produced — the two things
-// a tier can do to a deal, each independently true or not.
+// closeDateEffect is what one member's turn actually produced.
+//
+// One field, since the sweep stopped staging cards: a tier either moved the
+// deal's own row or it did not. The ledger used to carry a third outcome for a
+// question newly put to a human, and nothing puts one any more.
 type closeDateEffect struct {
 	// wrote is a committed domain change: the deal's own row moved.
 	wrote bool
-	// staged is a question newly put to a human. An already-open card is not
-	// one, because nobody was asked anything they had not been asked already.
-	staged bool
 }
 
 // outcome names the member ledger's entry for this turn.
 //
-// A change outranks a card because it is the stronger claim: a deal whose date
-// moved AND whose confirm is open reads as changed, and the card is visible on
-// its own surface anyway. What this must never do is report either when neither
-// happened — the tier decided to act, the write found nothing to do or the
-// switch was off, and the ledger says checked.
+// What this must never do is report a change when none happened — the tier
+// decided to act, and then the write found nothing to do or the maintenance
+// switch was off. That turn is checked, not changed.
 func (e closeDateEffect) outcome() string {
-	switch {
-	case e.wrote:
+	if e.wrote {
 		return closeDateMemberChanged
-	case e.staged:
-		return closeDateMemberStaged
-	default:
-		return closeDateMemberChecked
 	}
+	return closeDateMemberChecked
 }
 
 // quietBasis is the reason the quiet review shows: which way the silence runs,

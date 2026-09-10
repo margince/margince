@@ -49,6 +49,10 @@ const (
 const (
 	closeDateMemberChecked = "checked"
 	closeDateMemberChanged = "changed"
+	// Written by no tier any more: the sweep applies its corrections instead of
+	// staging a card to confirm them. Kept because runs recorded before that
+	// change still hold it, and a reader of an old run must be able to name
+	// what it found rather than treating a stored value as unknown.
 	closeDateMemberStaged  = "staged"
 	closeDateMemberSkipped = "skipped"
 	closeDateMemberFailed  = "failed"

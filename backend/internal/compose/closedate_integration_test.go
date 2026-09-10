@@ -28,6 +28,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -889,4 +890,81 @@ func (e *closeDateEnv) stageLegacyCard(t *testing.T, dealID ids.UUID, proposed t
 		t.Fatalf("staging the leftover card: %v", err)
 	}
 	return id
+}
+
+// A rep who has asked to be asked keeps their deals, whoever the pass first
+// saw holding them.
+//
+// The member page joins the live deal table, so an ordinary hand-over is
+// already picked up on the next page. What it cannot see is a hand-over that
+// lands AFTER that page is read and before the row lock is taken — the same
+// window the status re-check beside it exists for. The policy is re-asked there
+// when the owner has moved, so the sweep never writes for the rep who declined.
+func TestADealOwnedByAnOptedOutRepIsLeftAlone(t *testing.T) {
+	e := setupCloseDate(t)
+	id := e.seedSweepDeal(t, "Not to be touched", e.late, stringp("commit"), intp(30), 90)
+	originalDate := today().AddDate(0, 0, 30)
+	e.optOutOfCorrections(t, e.Rep1)
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	swept := e.readSwept(t, id)
+	if swept.expectedClose == nil || !swept.expectedClose.Equal(originalDate) {
+		t.Errorf("date = %v, want the original %s — this rep asked to be asked",
+			swept.expectedClose, originalDate.Format(time.DateOnly))
+	}
+	if swept.provisional {
+		t.Error("the deal is marked provisional, so the sweep wrote to a rep who opted out")
+	}
+}
+
+// optOutOfCorrections records a rep's real "ask me every time" for close-date
+// corrections, through the policy table the sweep actually reads.
+func (e *closeDateEnv) optOutOfCorrections(t *testing.T, userID ids.UUID) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO approval_autonomy_policy (user_id, kind, mode)
+		 VALUES ($1, 'close_date_correction', 'manual')
+		 ON CONFLICT (user_id, kind) DO UPDATE SET mode = excluded.mode`,
+		userID); err != nil {
+		t.Fatalf("recording the rep's opt-out: %v", err)
+	}
+}
+
+// A reader with no deal grant loses the corrections, not the whole panel.
+//
+// The receipt lane has two sources and they answer one question between them:
+// approvals the system decided, and corrections the sweep applied. A seat that
+// may not read deals has no corrections to be told about — but it may well have
+// approvals, and propagating the refusal took the entire receipt surface away
+// over a grant that has nothing to do with the rows it was hiding.
+func TestAReaderWithNoDealGrantStillSeesTheirOtherReceipts(t *testing.T) {
+	e := setupCloseDate(t)
+	seam := attentionReceipts{svc: e.svc, deals: deals.NewStore(e.DB(), DealsInstallation())}
+	// Everything a rep normally holds EXCEPT the deal object.
+	noDeals := principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"person": {Read: true},
+		},
+		RowScope: principal.RowScopeTeam,
+	}
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, noDeals)
+
+	received, err := seam.Recent(ctx, time.Now().Add(-24*time.Hour), 10)
+	if err != nil {
+		t.Fatalf("the receipt lane refused a reader with no deal grant: %v", err)
+	}
+	if received == nil {
+		// nil and empty read the same to the caller; the assertion that matters
+		// is the absent error above. Stated so the test says what it accepts.
+		received = []attention.Receipt{}
+	}
+	for _, receipt := range received {
+		if receipt.Kind == deals.CloseDateCorrectionKind {
+			t.Errorf("a reader with no deal grant was handed a close-date correction: %+v", receipt)
+		}
+	}
 }

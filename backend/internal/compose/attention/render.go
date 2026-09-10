@@ -411,52 +411,6 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 	return item
 }
 
-// receiptItem renders one thing the system did on its own.
-//
-// It offers no decision: a receipt reports a finished act, and asking the reader
-// to answer a question already answered is not a verb this lane has.
-//
-// It offers `open` only when the decision named a record. Not every approval is
-// about one, and a card that advertised the verb regardless would send a client
-// that trusts it to a destination the card never carried.
-func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
-	kind := receipt.Kind
-	occurred := receipt.OccurredAt
-	summary := receipt.Summary
-	subject := subjectOf(receipt.TargetType, receipt.TargetID)
-	actions := []crmcontracts.AttentionItemActions{}
-	if openableSubject(subject) {
-		actions = append(actions, actionOpen)
-	}
-	item := crmcontracts.AttentionItem{
-		Id:         receipt.ID.String(),
-		Source:     crmcontracts.AttentionItemSource("approval"),
-		Kind:       &kind,
-		Title:      &summary,
-		Subject:    subject,
-		OccurredAt: &occurred,
-		Actions:    actions,
-	}
-	// A change made with nobody asked carries the way back.
-	//
-	// Offered only while it is still there to take: a correction somebody has
-	// already reversed keeps the payload — the row says so rather than
-	// vanishing — but the verb goes, because a button that would put back what
-	// is already back is one press that reports success and does nothing.
-	if undo := receipt.Undo; undo != nil {
-		version := undo.Version
-		item.Version = &version
-		item.Undo = &crmcontracts.AppliedUndo{
-			AuditLogId: openapi_types.UUID(undo.AuditLogID),
-			Reversed:   undo.Reversed,
-		}
-		if !undo.Reversed {
-			item.Actions = append(item.Actions, actionUndo)
-		}
-	}
-	return item
-}
-
 // subjectOf names the record an item concerns, when the producer named one.
 //
 // The label is deliberately absent here: resolving a display name is a read of
