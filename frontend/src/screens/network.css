@@ -5,12 +5,6 @@
    plain rows rather than a table: there are at most ten of them, and a table
    header would cost more vertical space than the rows it labels. */
 
-/* The card stacks among the other 360 panels, so it carries the same gap those
-   panels leave — as a token, not a raw pixel count. */
-.net-card {
-  margin-bottom: var(--space-4);
-}
-
 .net-colleagues,
 .net-seats {
   display: flex;

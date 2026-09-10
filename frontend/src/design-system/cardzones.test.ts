@@ -11,14 +11,16 @@ import {
   sourceFileAt,
 } from "../../scripts/lib/source-tree";
 
-// A titled zone on a record page is a `Panel`. A `Card` wearing a `title` is
-// the same claim drawn by the other primitive, and the two do not agree: the
-// panel's head is one fixed band at one height with the title at one size,
-// which is what lets a reader scan a column of zones by their titles alone. A
-// card's header grows with its description and sits on the card's own padding,
-// so a page mixing the two draws the same zone at three heights and reads as
-// two products stitched together — the split this tree already made once
-// between settings and the record page.
+// A titled boxed surface standing in a page's column is a `Panel`, whatever
+// the page. A `Card` wearing a `title` is the same claim drawn by the other
+// primitive, and the two do not agree: the panel's head is one fixed band at
+// one height with the title at one size, which is what lets a reader scan a
+// column of zones by their titles alone. A card's header grows with its
+// description and sits on the card's own padding, so a page mixing the two
+// draws the same zone at three heights and reads as two products stitched
+// together — the split this tree already made once between settings and the
+// record page. It was read as a rule about RECORD pages once, which left the
+// dashboards and the builder screens drawing the other card.
 //
 // Two shapes of the offence, because the tree grew both. The prop form,
 // `<Card title=…>`, renders the card's own `SectionHeader`. The hand-rolled
@@ -38,45 +40,30 @@ const sourceRoot = join(frontendRoot, "src");
 const screensRoot = join(sourceRoot, "screens");
 
 /**
- * The screens whose titled `Card` is NOT a record zone, each with the reason it
- * is not — the product owner's call per file, written where the gate reads it
- * rather than in a document the next author will not open.
+ * The screens whose titled `Card` stands somewhere other than a page column,
+ * each with the reason — the product owner's call per file, written where the
+ * gate reads it rather than in a document the next author will not open.
+ *
+ * Every one of them is a card INSIDE something: a row of a list, a slot of a
+ * drawing, a row of a timeline. A zone claims a page's column; these claim a
+ * place in a surface that already has a head of its own.
  *
  * A file, not a line: a line number moves whenever anything above it is edited,
  * and a baseline that churns on unrelated changes is one people regenerate
  * without reading.
  */
 const notARecordZone = new Map<string, string>([
-  ["screens/ai.tsx", "settings-shaped tool screen, not a record's zone stack"],
-  ["screens/analytics.tsx", "report widgets on a dashboard, not a record page"],
-  [
-    "screens/analytics.forecast.tsx",
-    "an expand-in-place editor on a dashboard, not a record page",
-  ],
   [
     "screens/brief.weekly.learnings.tsx",
-    "a repeated list card, titled per item",
-  ],
-  ["screens/filters.tsx", "a single-purpose builder screen"],
-  [
-    "screens/share.tsx",
-    "a dialog-shaped flow reached from a record, not a zone among panels",
+    "one learning of a list, titled by kind, inside the learnings panel's body",
   ],
   [
     "screens/personnetwork/edgedetail.tsx",
-    "the selected node's detail inside the network map, level 3 under the map's own heading",
-  ],
-  [
-    "screens/network.tsx",
-    "built but mounted on no live page; a component nobody renders is not a zone yet",
-  ],
-  [
-    "screens/strength.tsx",
-    "built but mounted on no live page; a component nobody renders is not a zone yet",
+    "the selected node's detail in the relationship map's own panel slot, level 3 under the map's heading",
   ],
   [
     "screens/transcriptread.tsx",
-    "built but mounted on no live page; a component nobody renders is not a zone yet",
+    "an inset inside one activity-timeline row, which is where the timeline mounts it",
   ],
 ]);
 
@@ -229,12 +216,12 @@ describe("a titled zone is a Panel", () => {
     );
   });
 
-  it("finds no titled Card on a record page", () => {
+  it("finds no titled Card standing in a page column", () => {
     const findings = found
       .filter((card) => !notARecordZone.has(card.where))
       .map(
         (card) =>
-          `${card.where}:${card.line} <Card title=…> is a titled zone — use Panel (design-system/panel.tsx); if this card is not a record zone, allowlist the file here with the reason`,
+          `${card.where}:${card.line} <Card title=…> is a titled zone — use Panel (design-system/panel.tsx); if this card stands inside another surface rather than in a page column, allowlist the file here with the reason`,
       );
     expect(findings, findings.join("\n")).toEqual([]);
   });

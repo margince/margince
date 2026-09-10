@@ -337,6 +337,17 @@ function tokenPixels(name: string): number {
 // The gap the title stack takes, read off the rule rather than restated here:
 // a literal expectation would still pass the day somebody gives the stack a
 // rung back and pushes the two lines past the band.
+// The leading one head line is SET at, read off the sheet like the gap above:
+// the band's arithmetic has to be done on the number the sheet declares, and a
+// line left to inherit the body scale is a different number in the same place.
+function headLeading(selector: string): number {
+  const rule = cssRules(panelCss()).find(
+    (candidate) => candidate.selector === selector,
+  );
+  const declared = declaredValue(rule?.block ?? "", "line-height");
+  return Number.parseFloat(declared ?? tokenValue("--lh-normal"));
+}
+
 function titleStackGap(): number {
   const stack = cssRules(panelCss()).find(
     (rule) => rule.selector === ".panel-head-text",
@@ -375,10 +386,10 @@ describe("the panel head is one band, fixed at the height every panel shares", (
     // title over a description still fit — is arithmetic on the type scale.
     // This fails if the meta rung grows, if the leading is retuned, or if the
     // stack takes a gap back, which are the three ways the pair stops fitting.
-    const leading = Number.parseFloat(tokenValue("--lh-normal"));
     const stack =
-      tokenPixels("--fs-panel-title") * leading +
-      tokenPixels("--fs-meta") * leading +
+      tokenPixels("--fs-panel-title") *
+        headLeading(".panel-head .panel-title") +
+      tokenPixels("--fs-meta") * headLeading(".panel-head-sub") +
       titleStackGap();
     expect(stack).toBeLessThanOrEqual(tokenPixels("--panel-head-h"));
   });

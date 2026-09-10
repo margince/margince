@@ -12,12 +12,8 @@
 
 import { useState } from "react";
 import { navigate } from "../app/router";
-import {
-  Badge,
-  Card,
-  SectionHeader,
-  SegmentedControl,
-} from "../design-system/atoms";
+import { Badge, SegmentedControl } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -139,50 +135,49 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
         />
       </div>
 
-      <Card>
-        <SectionHeader
-          level={2}
-          title={t("filters.builderTitle")}
-          actions={
-            <span className="filters-count-row">
-              <MatchCount
-                tab={tab}
-                count={preview.data?.match_count}
-                stale={preview.isFetching}
-                failed={preview.isError}
-              />
-              {/* AC-1's live badge: what this filter IS, not what it is doing.
-                  A dynamic list recomputes on every event, and that is the
-                  property a reader needs before trusting a count at all. */}
-              <Badge tone="accent">{t("filters.dynamic")}</Badge>
-              <LoadFilterViewMenu resource={VIEW_OF[tab]} onLoad={setTree} />
-              <SaveFilterViewAction resource={VIEW_OF[tab]} tree={tree} />
-            </span>
-          }
-        />
-        <SurfaceState
-          state={vocabularyState(vocabulary.isPending, vocabulary.isError)}
-          emptyLabel={t("filters.noFields")}
-          loadingLabel={t("filters.loadingVocabulary")}
-          // The builder that lands here is a condition row plus its verbs.
-          loadingLines={4}
-        >
-          <FilterBuilder
-            tree={tree}
-            onChange={setTree}
-            fields={vocabulary.data?.fields ?? []}
+      <Panel
+        title={t("filters.builderTitle")}
+        // Below the builder, not beside the count: the export takes the filter
+        // as its argument, so it belongs after the thing it reads — and a
+        // refusal is a sentence, which no header row has width for. It also
+        // takes the FILTER vocabulary's word for the object rather than the
+        // view rail's, because `/exports` enumerates `person`, the same as the
+        // preview it has to agree with.
+        actions={<ExportFilterMenu resource={resource} tree={tree} />}
+      >
+        {/* A toolbar row under the head, not inside it: the band is one line
+            that never wraps, and this cluster — a count, a badge and two view
+            menus — measured 614px at a 390px viewport. */}
+        <PanelBody className="filters-count-row">
+          <MatchCount
+            tab={tab}
+            count={preview.data?.match_count}
+            stale={preview.isFetching}
+            failed={preview.isError}
           />
-        </SurfaceState>
-        {/* Below the builder, not in the header beside the count: the export
-            takes the filter as its argument, so it belongs after the thing it
-            reads — and a refusal is a sentence, which the header row has no
-            width for. It also takes the FILTER vocabulary's word for the object
-            rather than the view rail's, because `/exports` enumerates `person`,
-            the same as the preview it has to agree with. */}
-        <div className="filters-export-row">
-          <ExportFilterMenu resource={resource} tree={tree} />
-        </div>
-      </Card>
+          {/* AC-1's live badge: what this filter IS, not what it is doing. A
+              dynamic list recomputes on every event, and that is the property
+              a reader needs before trusting a count at all. */}
+          <Badge tone="accent">{t("filters.dynamic")}</Badge>
+          <LoadFilterViewMenu resource={VIEW_OF[tab]} onLoad={setTree} />
+          <SaveFilterViewAction resource={VIEW_OF[tab]} tree={tree} />
+        </PanelBody>
+        <PanelBody>
+          <SurfaceState
+            state={vocabularyState(vocabulary.isPending, vocabulary.isError)}
+            emptyLabel={t("filters.noFields")}
+            loadingLabel={t("filters.loadingVocabulary")}
+            // The builder that lands here is a condition row plus its verbs.
+            loadingLines={4}
+          >
+            <FilterBuilder
+              tree={tree}
+              onChange={setTree}
+              fields={vocabulary.data?.fields ?? []}
+            />
+          </SurfaceState>
+        </PanelBody>
+      </Panel>
 
       <PreviewSection
         preview={preview}
@@ -221,33 +216,35 @@ function PreviewSection({
   const t = useT();
   if (preview.isError) {
     return (
-      <Card>
-        <SectionHeader level={2} title={t("filters.resultsTitle")} />
+      <Panel title={t("filters.resultsTitle")}>
         {/* The house spelling of a failed read: the headline and the server's
             own cause in one live region, with the retry beside it. */}
-        <QueryStates query={preview} pendingLabel={t("filters.resultsTitle")}>
-          {null}
-        </QueryStates>
-      </Card>
+        <PanelBody>
+          <QueryStates query={preview} pendingLabel={t("filters.resultsTitle")}>
+            {null}
+          </QueryStates>
+        </PanelBody>
+      </Panel>
     );
   }
   if (preview.data === undefined) {
     return null;
   }
   return (
-    <Card>
-      <SectionHeader level={2} title={t("filters.resultsTitle")} />
-      <FilterResults
-        preview={preview.data}
-        fields={fields}
-        named={named}
-        unit={t(UNIT_LABEL[tab])}
-        // Per object, so switching tabs does not hand a deal's table the
-        // widths a reader dragged for a contact's columns.
-        widthsKey={`filter-preview-${tab}`}
-        pending={preview.isFetching}
-      />
-    </Card>
+    <Panel title={t("filters.resultsTitle")}>
+      <PanelBody>
+        <FilterResults
+          preview={preview.data}
+          fields={fields}
+          named={named}
+          unit={t(UNIT_LABEL[tab])}
+          // Per object, so switching tabs does not hand a deal's table the
+          // widths a reader dragged for a contact's columns.
+          widthsKey={`filter-preview-${tab}`}
+          pending={preview.isFetching}
+        />
+      </PanelBody>
+    </Panel>
   );
 }
 
