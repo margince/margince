@@ -42,9 +42,12 @@ import (
 //
 // Each row costs one object read per part plus an encode of those octets, so a
 // batch is bounded outbound work and belongs on a queue of its own. Fifty
-// rather than a larger number because the objects are megabytes: a batch holds
-// one row's payload and one part's octets at a time, and the ceiling that
-// matters is how long the pass runs, not how much it holds.
+// rather than a larger number because the pass is bounded by how long it runs
+// against the object store, not by how much it holds: the payloads are read ONE
+// AT A TIME inside slimRow, never all fifty up front. A provider original runs
+// to tens of megabytes — 45 MB is the largest in one measured corpus — so a
+// batch that loaded every payload before touching the first would hold a
+// gigabyte or two to do fifty rows' work.
 const PartSlimBatch = 50
 
 // partSlimObjectTimeout bounds one object read. Generous against a healthy
@@ -142,11 +145,11 @@ func (s *PartSlimStore) SlimBatch(ctx context.Context, limit int) (PartSlimResul
 	return out, nil
 }
 
-// candidateRow is one raw_capture row and the attachment rows joined to it.
+// candidateRow is one raw_capture row's id and the attachment rows joined to
+// it. The payload is deliberately absent: slimRow reads it when its turn comes.
 type candidateRow struct {
-	id      ids.UUID
-	payload []byte
-	parts   []CandidatePart
+	id    ids.UUID
+	parts []CandidatePart
 }
 
 // candidates reads the next unconsidered rows with their attachment rows.
@@ -159,7 +162,7 @@ func (s *PartSlimStore) candidates(ctx context.Context, limit int) ([]candidateR
 	var out []candidateRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT rc.id, rc.payload,
+			SELECT rc.id,
 			       coalesce(jsonb_agg(jsonb_build_object(
 			           'ordinal', split_part(at.external_part_id, ':', 2)::int,
 			           'key',     at.storage_key,
@@ -174,7 +177,7 @@ func (s *PartSlimStore) candidates(ctx context.Context, limit int) ([]candidateR
 			   AND at.external_part_id LIKE 'part:%'
 			   AND at.storage_key <> ''
 			 WHERE rc.parts_slimmed_at IS NULL
-			 GROUP BY rc.id, rc.payload
+			 GROUP BY rc.id, rc.received_at
 			 ORDER BY rc.received_at
 			 LIMIT $1`, limit)
 		if err != nil {
@@ -183,7 +186,7 @@ func (s *PartSlimStore) candidates(ctx context.Context, limit int) ([]candidateR
 		defer rows.Close()
 		for rows.Next() {
 			var row candidateRow
-			if err := rows.Scan(&row.id, &row.payload, &row.parts); err != nil {
+			if err := rows.Scan(&row.id, &row.parts); err != nil {
 				return fmt.Errorf("capture: reading an original to slim: %w", err)
 			}
 			out = append(out, row)
@@ -194,18 +197,32 @@ func (s *PartSlimStore) candidates(ctx context.Context, limit int) ([]candidateR
 }
 
 // slimRow removes one row's provable parts and stamps it.
+//
+// The payload is read HERE rather than by candidates, so one row's tens of
+// megabytes are held for one row's work. Reading it after the object store has
+// vouched for the parts also narrows the window the compare-and-swap has to
+// cover.
 func (s *PartSlimStore) slimRow(ctx context.Context, row candidateRow, out *PartSlimResult) error {
 	proved, unproved := s.proveParts(ctx, row.parts)
 	out.Unproved += unproved
 	if len(proved) == 0 {
 		return s.stamp(ctx, row.id)
 	}
+	payload, err := s.payloadOf(ctx, row.id)
+	if err != nil {
+		return err
+	}
+	if len(payload) == 0 {
+		// The row went out from under the pass — an erasure, or a retention
+		// sweep. Nothing to stamp that still exists.
+		return nil
+	}
 	// The column is jsonb, so what came out of it is the SPELLING of the
 	// original rather than the original: an RFC822 message arrives as a JSON
 	// string, with its CRLFs escaped. Stripping that would look for a base64
 	// run wrapped in real newlines inside text that has none, find nothing, and
 	// report a clean no-op forever.
-	original, err := DecodeStoredOriginal(row.payload)
+	original, err := DecodeStoredOriginal(payload)
 	if err != nil {
 		return s.stamp(ctx, row.id)
 	}
@@ -225,15 +242,15 @@ func (s *PartSlimStore) slimRow(ctx context.Context, row candidateRow, out *Part
 	}
 	// Written back in the same spelling the sink would have used, so the next
 	// reader decodes what the column actually holds.
-	payload, err := EncodeStoredOriginal(stripped)
+	rewritten, err := EncodeStoredOriginal(stripped)
 	if err != nil {
 		return s.stamp(ctx, row.id)
 	}
-	saved := int64(len(row.payload) - len(payload))
+	saved := int64(len(payload) - len(rewritten))
 	if saved <= 0 {
 		return s.stamp(ctx, row.id)
 	}
-	err = s.write(ctx, row, payload)
+	err = s.write(ctx, row.id, payload, rewritten)
 	if errors.Is(err, errPartSlimRaced) {
 		return nil
 	}
@@ -245,8 +262,24 @@ func (s *PartSlimStore) slimRow(ctx context.Context, row candidateRow, out *Part
 	return nil
 }
 
+// payloadOf reads one row's stored original.
+func (s *PartSlimStore) payloadOf(ctx context.Context, id ids.UUID) ([]byte, error) {
+	var payload []byte
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT payload FROM raw_capture WHERE id = $1`, id).Scan(&payload)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading an original to slim: %w", err)
+	}
+	return payload, nil
+}
+
 // write replaces one payload, refusing to land stale bytes.
-func (s *PartSlimStore) write(ctx context.Context, row candidateRow, stripped []byte) error {
+func (s *PartSlimStore) write(ctx context.Context, id ids.UUID, was, now []byte) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The payload guard is the concurrency story: InsertRawCaptureTx's
 		// ON CONFLICT DO UPDATE can refresh this payload from a redelivery while
@@ -257,7 +290,7 @@ func (s *PartSlimStore) write(ctx context.Context, row candidateRow, stripped []
 			UPDATE raw_capture
 			   SET payload = $2::jsonb, parts_slimmed_at = now()
 			 WHERE id = $1 AND parts_slimmed_at IS NULL AND payload = $3::jsonb`,
-			row.id, stripped, row.payload)
+			id, now, was)
 		if err != nil {
 			return fmt.Errorf("capture: slimming an original: %w", err)
 		}

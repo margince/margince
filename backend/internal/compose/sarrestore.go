@@ -41,7 +41,7 @@ import (
 // is a disclosure decision rather than an error, and an error here would invite
 // a future caller to fail the whole package on it.
 func restoreSAROriginals(ctx context.Context, blob blobstore.Store, pkg *privacy.SARPackage) {
-	if blob == nil || pkg == nil {
+	if pkg == nil {
 		return
 	}
 	for i, row := range pkg.RawCapture {
@@ -51,6 +51,14 @@ func restoreSAROriginals(ctx context.Context, blob blobstore.Store, pkg *privacy
 		// stored as a JSON object — and carries no stanza to restore.
 		payload, isText := row["payload"].(string)
 		if !isText || !partslim.IsSlimmed([]byte(payload)) {
+			continue
+		}
+		if blob == nil {
+			// A slimmed original with no store to read from is exactly the
+			// unrestorable case below, and it is withheld the same way: an api
+			// running without the store the sweep wrote to must not answer
+			// Art. 15 with an address the subject cannot resolve.
+			pkg.RawCapture[i]["payload"] = nil
 			continue
 		}
 		restored, err := partslim.RestoreStoredParts([]byte(payload),

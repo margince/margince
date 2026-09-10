@@ -51,7 +51,39 @@ const (
 	PartEncodedSha256Header = "X-Margince-Part-Encoded-Sha256"
 	PartEncodedBytesHeader  = "X-Margince-Part-Encoded-Bytes"
 	PartWrapHeader          = "X-Margince-Part-Wrap"
+	// PartWrapEOLHeader names the line terminator the original encoded body
+	// used. Recorded because locateEncoded matches EITHER terminator, so a
+	// stanza carrying only the width leaves a restore to guess — and a bare-LF
+	// body rebuilt with CRLF is one byte longer per line, which fails its own
+	// digest check and makes that message unreproducible for good.
+	PartWrapEOLHeader = "X-Margince-Part-Wrap-EOL"
 )
+
+// The terminator spellings the stanza uses. A header value cannot carry a
+// literal CR or LF, so the two are named rather than written.
+const (
+	wrapEOLCRLF = "crlf"
+	wrapEOLLF   = "lf"
+)
+
+// eolBytes turns a stanza's terminator name back into the bytes it stands for.
+// An unnamed terminator is CRLF: it is what RFC 2045 requires and what every
+// message in this corpus uses, so it is the honest default for a stanza written
+// before this field existed.
+func eolBytes(name string) []byte {
+	if name == wrapEOLLF {
+		return []byte("\n")
+	}
+	return []byte("\r\n")
+}
+
+// eolName is eolBytes' inverse, for the strip.
+func eolName(eol []byte) string {
+	if string(eol) == "\n" {
+		return wrapEOLLF
+	}
+	return wrapEOLCRLF
+}
 
 // partFieldPrefix is what every field the stanza adds begins with, and is how a
 // restore finds exactly the run to remove.
@@ -157,7 +189,7 @@ func spliceFor(raw []byte, part StoredPart) (splice, error) {
 		return splice{}, fmt.Errorf("partslim: part:%d hashes to %s, its row says %s",
 			part.Ordinal, got, part.Sha256)
 	}
-	encoded, width, err := locateEncoded(raw, part.Body)
+	encoded, width, eol, err := locateEncoded(raw, part.Body)
 	if err != nil {
 		return splice{}, err
 	}
@@ -166,36 +198,48 @@ func spliceFor(raw []byte, part StoredPart) (splice, error) {
 	if err != nil {
 		return splice{}, err
 	}
-	stanza := stanzaFields(part, encoded, width)
+	stanza := stanzaFields(part, encoded, width, eol, header.eol)
 	return splice{
 		start: header.fieldsEnd,
 		end:   at + len(encoded),
 		// The header block's terminating blank line is re-emitted after the
 		// appended fields, so what replaces the region is: new fields, the blank
 		// line that ended the block, then the substitute body.
-		with: concat(stanza, []byte("\r\n"), wrapBase64([]byte(partStoredNotice), base64WrapWidth)),
+		// The blank line takes the header block's own terminator, and the
+		// substitute body the one the removed body used.
+		with: concat(stanza, header.eol,
+			wrapBase64WithEOL([]byte(base64.StdEncoding.EncodeToString([]byte(partStoredNotice))),
+				base64WrapWidth, eol)),
 	}, nil
 }
 
 // locateEncoded finds the one encoding of body that appears in raw exactly
-// once, returning it and the width it was wrapped at.
-func locateEncoded(raw, body []byte) ([]byte, int, error) {
+// once, returning it, the width it was wrapped at, and the terminator it used.
+//
+// The terminator is returned rather than assumed because both are tried: a
+// restore that rebuilt an LF-wrapped body with CRLF would produce different
+// bytes and fail the digest this same call recorded.
+func locateEncoded(raw, body []byte) ([]byte, int, []byte, error) {
 	b64 := base64.StdEncoding.EncodeToString(body)
 	for _, width := range candidateWraps {
 		for _, eol := range [][]byte{[]byte("\r\n"), []byte("\n")} {
 			candidate := wrapBase64WithEOL([]byte(b64), width, eol)
 			if bytes.Count(raw, candidate) == 1 {
-				return candidate, width, nil
+				return candidate, width, eol, nil
 			}
 		}
 	}
-	return nil, 0, ErrPartNotLocated
+	return nil, 0, nil, ErrPartNotLocated
 }
 
 // headerSpan says where a part's header fields end, just before the blank line
 // that terminates them.
 type headerSpan struct {
 	fieldsEnd int
+	// eol is the terminator the header block's own lines use. The stanza's
+	// fields and the blank line after them are written with it, so a bare-LF
+	// message does not come back one byte longer per line than it went in.
+	eol []byte
 }
 
 // headerBlockBefore locates the header block whose body begins at bodyAt.
@@ -206,10 +250,10 @@ type headerSpan struct {
 // the part is refused rather than spliced at a guess.
 func headerBlockBefore(raw []byte, bodyAt int) (headerSpan, error) {
 	if bodyAt >= 4 && bytes.Equal(raw[bodyAt-4:bodyAt], []byte("\r\n\r\n")) {
-		return headerSpan{fieldsEnd: bodyAt - 2}, nil
+		return headerSpan{fieldsEnd: bodyAt - 2, eol: []byte("\r\n")}, nil
 	}
 	if bodyAt >= 2 && bytes.Equal(raw[bodyAt-2:bodyAt], []byte("\n\n")) {
-		return headerSpan{fieldsEnd: bodyAt - 1}, nil
+		return headerSpan{fieldsEnd: bodyAt - 1, eol: []byte("\n")}, nil
 	}
 	return headerSpan{}, fmt.Errorf(
 		"partslim: the located body at %d does not follow a header's blank line", bodyAt)
@@ -217,13 +261,13 @@ func headerBlockBefore(raw []byte, bodyAt int) (headerSpan, error) {
 
 // stanzaFields renders the fields appended to the part's header block. Each
 // ends in CRLF, so the run splices in directly before the blank line.
-func stanzaFields(part StoredPart, encoded []byte, width int) []byte {
+func stanzaFields(part StoredPart, encoded []byte, width int, eol, fieldEOL []byte) []byte {
 	var out bytes.Buffer
 	field := func(name, value string) {
 		out.WriteString(name)
 		out.WriteString(": ")
 		out.WriteString(value)
-		out.WriteString("\r\n")
+		out.Write(fieldEOL)
 	}
 	field(PartStoredHeader, PartIdentity(part.Ordinal))
 	field(PartSha256Header, part.Sha256)
@@ -232,6 +276,7 @@ func stanzaFields(part StoredPart, encoded []byte, width int) []byte {
 	field(PartEncodedSha256Header, sha256Hex(encoded))
 	field(PartEncodedBytesHeader, strconv.Itoa(len(encoded)))
 	field(PartWrapHeader, strconv.Itoa(width))
+	field(PartWrapEOLHeader, eolName(eol))
 	return out.Bytes()
 }
 

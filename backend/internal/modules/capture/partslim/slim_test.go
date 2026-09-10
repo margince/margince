@@ -326,3 +326,96 @@ func TestStripStoredPartsNamesTheOrdinalItWasGiven(t *testing.T) {
 			len(restored), len(raw))
 	}
 }
+
+// wrapWithEOL folds base64 at width using the given terminator, so a fixture
+// can be a bare-LF message — which real mail is, whatever RFC 5322 requires.
+func wrapWithEOL(body []byte, width int, eol string) string {
+	b64 := base64.StdEncoding.EncodeToString(body)
+	var out strings.Builder
+	for at := 0; at < len(b64); at += width {
+		if at > 0 {
+			out.WriteString(eol)
+		}
+		end := at + width
+		if end > len(b64) {
+			end = len(b64)
+		}
+		out.WriteString(b64[at:end])
+	}
+	return out.String()
+}
+
+// messageWithEOL builds the same message with LF line endings throughout.
+func messageWithEOL(pdf []byte, eol string) []byte {
+	return []byte("MIME-Version: 1.0" + eol +
+		"Subject: Quarterly figures" + eol +
+		"Content-Type: multipart/mixed; boundary=\"b1\"" + eol +
+		eol +
+		"--b1" + eol +
+		"Content-Type: text/plain; charset=utf-8" + eol +
+		eol +
+		"the visible body" + eol +
+		"--b1" + eol +
+		"Content-Type: application/pdf" + eol +
+		"Content-Disposition: attachment; filename=\"figures.pdf\"" + eol +
+		"Content-Transfer-Encoding: base64" + eol +
+		eol +
+		wrapWithEOL(pdf, 76, eol) + eol +
+		"--b1--" + eol)
+}
+
+// A bare-LF message restores byte-exactly too.
+//
+// locateEncoded tries both terminators, so the strip HAPPILY matches an
+// LF-wrapped body — and if the stanza records only the width, the restore
+// rebuilds it with CRLF, mismatches the digest it recorded, and fails for that
+// message forever. The bytes survive in the object store, but the provider's
+// original becomes unreproducible, which is the one thing this table promises.
+func TestRestoreStoredPartsIsByteExactForABareLFMessage(t *testing.T) {
+	pdf := attachmentBody(13)
+	raw := messageWithEOL(pdf, "\n")
+	stripped, n, err := partslim.StripStoredParts(raw, []partslim.StoredPart{storedPart(1, pdf)})
+	if err != nil || n != 1 {
+		t.Fatalf("stripping a bare-LF message: n=%d err=%v", n, err)
+	}
+	restored, err := partslim.RestoreStoredParts(stripped, func(partslim.PartRef) ([]byte, error) {
+		return pdf, nil
+	})
+	if err != nil {
+		t.Fatalf("restoring a bare-LF message: %v", err)
+	}
+	if !bytes.Equal(restored, raw) {
+		t.Errorf("restore of a bare-LF message was not byte-exact: %d bytes vs %d",
+			len(restored), len(raw))
+	}
+}
+
+// A message that merely MENTIONS the stanza's field name is not slimmed.
+//
+// The marker is ordinary text in a body or a quoted reply — a colleague
+// discussing this very feature would produce one — and treating it as a stanza
+// makes RestoreStoredParts fail on an intact original. The Art. 15 export then
+// withholds a payload nothing was ever wrong with, which is the opposite of
+// what a subject is owed.
+func TestAMessageQuotingTheStanzaFieldNameIsNotSlimmed(t *testing.T) {
+	raw := []byte("MIME-Version: 1.0\r\n" +
+		"Subject: about the part sweep\r\n" +
+		"Content-Type: text/plain; charset=utf-8\r\n" +
+		"\r\n" +
+		"The sweep writes X-Margince-Part-Stored: part:1 into the header, which\r\n" +
+		"is how a reader tells a slimmed original from an untouched one.\r\n")
+
+	if partslim.IsSlimmed(raw) {
+		t.Errorf("a message quoting the field name reads as slimmed")
+	}
+	restored, err := partslim.RestoreStoredParts(raw, func(partslim.PartRef) ([]byte, error) {
+		t.Error("restore tried to fetch an object for a message with no stanza")
+		return nil, nil
+	})
+	if err != nil {
+		t.Fatalf("restoring an unslimmed message errored: %v", err)
+	}
+	if !bytes.Equal(restored, raw) {
+		t.Errorf("an unslimmed message was rewritten")
+	}
+}

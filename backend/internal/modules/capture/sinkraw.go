@@ -151,9 +151,7 @@ func DecodeStoredOriginal(payload []byte) ([]byte, error) {
 	if len(payload) == 0 {
 		return nil, errors.New("capture: the stored original is empty")
 	}
-	var envelope rawCaptureEnvelope
-	if err := json.Unmarshal(payload, &envelope); err == nil &&
-		envelope.Encoding == RawCaptureBase64Encoding {
+	if envelope, isEnvelope := readBase64Envelope(payload); isEnvelope {
 		raw, err := base64.StdEncoding.DecodeString(envelope.Data)
 		if err != nil {
 			return nil, fmt.Errorf("capture: decoding the stored original: %w", err)
@@ -168,6 +166,43 @@ func DecodeStoredOriginal(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("capture: unwrapping the stored original: %w", err)
 	}
 	return []byte(text), nil
+}
+
+// readBase64Envelope reports whether payload is one of THIS file's envelopes
+// rather than a provider object that merely looks like one.
+//
+// The shape is checked, not just the declared encoding. rawCapturePayload
+// stores a valid JSON object unchanged, so a provider resource carrying its own
+// top-level "encoding": "base64" would otherwise be read as an envelope: the
+// decoder would ignore its other fields and hand back the contents of a "data"
+// key that means something else, or nothing at all when there is no such key.
+// Participant replay would then re-read the wrong bytes, or record a readable
+// message as unreadable.
+//
+// Exactly two keys, both present, and the encoding this file writes. Anything
+// else is a provider payload and is returned as itself.
+func readBase64Envelope(payload []byte) (rawCaptureEnvelope, bool) {
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &keys); err != nil {
+		return rawCaptureEnvelope{}, false
+	}
+	if len(keys) != 2 {
+		return rawCaptureEnvelope{}, false
+	}
+	if _, named := keys["encoding"]; !named {
+		return rawCaptureEnvelope{}, false
+	}
+	if _, named := keys["data"]; !named {
+		return rawCaptureEnvelope{}, false
+	}
+	var envelope rawCaptureEnvelope
+	if err := json.Unmarshal(payload, &envelope); err != nil {
+		return rawCaptureEnvelope{}, false
+	}
+	if envelope.Encoding != RawCaptureBase64Encoding {
+		return rawCaptureEnvelope{}, false
+	}
+	return envelope, true
 }
 
 // EncodeStoredOriginal is rawCapturePayload under a name another package can

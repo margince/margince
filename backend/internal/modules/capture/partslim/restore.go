@@ -20,6 +20,7 @@ package partslim
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -35,6 +36,9 @@ type storedStanza struct {
 	encodedSha256      string
 	encodedBytes       int
 	wrap               int
+	// eol is the terminator the original encoded body used, from the stanza
+	// rather than assumed — see PartWrapEOLHeader.
+	eol []byte
 }
 
 // PartRef is what a restore needs to fetch one part's octets.
@@ -45,11 +49,23 @@ type PartRef struct {
 	StorageKey string
 }
 
-// IsSlimmed reports whether a payload carries any reference stanza. Cheap
-// enough to call before the work of a restore, and it is the test a caller uses
-// to leave an unslimmed original entirely untouched.
+// errNotAStanza marks a marker occurrence whose shape does not hold: the
+// required fields, the blank line and the substitute body are not all there.
+//
+// It is NOT an error the caller sees. The field name is ordinary text the
+// moment a body or a quoted reply mentions it — a colleague describing this
+// feature writes one — so an occurrence that does not parse is text, and text
+// is left exactly as it was. Only a fetch or a digest mismatch withholds a
+// payload, because only those mean a real stanza named bytes we cannot produce.
+var errNotAStanza = errors.New("partslim: not a reference stanza")
+
+// IsSlimmed reports whether a payload carries a complete reference stanza.
+//
+// It parses rather than searching for the field name: matching the name alone
+// would call an intact original slimmed on the strength of its own prose.
 func IsSlimmed(raw []byte) bool {
-	return bytes.Contains(raw, []byte(PartStoredHeader+":"))
+	stanzas, err := findStanzas(raw)
+	return err == nil && len(stanzas) > 0
 }
 
 // RestoreStoredParts rebuilds the provider's original from a slimmed one.
@@ -98,7 +114,7 @@ func reencode(stanza storedStanza, body []byte) ([]byte, error) {
 			name, got, stanza.ref.Sha256)
 	}
 	encoded := wrapBase64WithEOL(
-		[]byte(base64.StdEncoding.EncodeToString(body)), stanza.wrap, []byte("\r\n"))
+		[]byte(base64.StdEncoding.EncodeToString(body)), stanza.wrap, stanza.eol)
 	if len(encoded) != stanza.encodedBytes {
 		return nil, fmt.Errorf("partslim: %s re-encodes to %d bytes, the stanza says %d",
 			name, len(encoded), stanza.encodedBytes)
@@ -121,6 +137,12 @@ func findStanzas(raw []byte) ([]storedStanza, error) {
 		}
 		found += at
 		stanza, err := readStanza(raw, found)
+		if errors.Is(err, errNotAStanza) {
+			// Text that happens to name the field. Step past this occurrence
+			// and keep looking for a real one.
+			at = found + len(marker)
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +165,7 @@ func readStanza(raw []byte, markerAt int) (storedStanza, error) {
 		}
 		name, value, ok := splitField(string(line))
 		if !ok {
-			return storedStanza{}, fmt.Errorf("partslim: unreadable stanza field %q", line)
+			return storedStanza{}, errNotAStanza
 		}
 		fields[name] = value
 		fieldsEnd = next
@@ -158,20 +180,17 @@ func readStanza(raw []byte, markerAt int) (storedStanza, error) {
 	}
 	stanza.fieldsStart, stanza.fieldsEnd = fieldsStart, fieldsEnd
 	stanza.bodyStart = bodyStart
-	stanza.bodyEnd = bodyStart + stanza.substituteLen()
-	if stanza.bodyEnd > len(raw) {
-		return storedStanza{}, fmt.Errorf("partslim: the substitute body of %s runs past the message",
-			PartIdentity(stanza.ref.Ordinal))
+	substitute := wrapBase64WithEOL(
+		[]byte(base64.StdEncoding.EncodeToString([]byte(partStoredNotice))),
+		base64WrapWidth, stanza.eol)
+	stanza.bodyEnd = bodyStart + len(substitute)
+	// Checked by its BYTES, not its length: the substitute is a constant this
+	// package wrote, so anything else at that offset means the occurrence was
+	// never a stanza however well its fields parsed.
+	if stanza.bodyEnd > len(raw) || !bytes.Equal(raw[bodyStart:stanza.bodyEnd], substitute) {
+		return storedStanza{}, errNotAStanza
 	}
 	return stanza, nil
-}
-
-// substituteLen is how many bytes the strip's substitute body occupies.
-//
-// Derived from the constant the strip wrote rather than restated as a number,
-// so editing the notice moves both halves of it in one place.
-func (s storedStanza) substituteLen() int {
-	return len(wrapBase64([]byte(partStoredNotice), base64WrapWidth))
 }
 
 // stanzaFromFields turns the parsed fields into a stanza, refusing one that is
@@ -180,20 +199,20 @@ func stanzaFromFields(fields map[string]string) (storedStanza, error) {
 	var s storedStanza
 	ordinal, err := strconv.Atoi(strings.TrimPrefix(fields[PartStoredHeader], "part:"))
 	if err != nil {
-		return s, fmt.Errorf("partslim: the stanza's ordinal %q is unreadable: %w",
-			fields[PartStoredHeader], err)
+		return s, errNotAStanza
 	}
 	size, err := strconv.ParseInt(fields[PartBytesHeader], 10, 64)
 	if err != nil {
-		return s, fmt.Errorf("partslim: the stanza's byte count is unreadable: %w", err)
+		return s, errNotAStanza
 	}
 	if s.encodedBytes, err = strconv.Atoi(fields[PartEncodedBytesHeader]); err != nil {
-		return s, fmt.Errorf("partslim: the stanza's encoded byte count is unreadable: %w", err)
+		return s, errNotAStanza
 	}
 	if s.wrap, err = strconv.Atoi(fields[PartWrapHeader]); err != nil {
-		return s, fmt.Errorf("partslim: the stanza's wrap width is unreadable: %w", err)
+		return s, errNotAStanza
 	}
 	s.encodedSha256 = fields[PartEncodedSha256Header]
+	s.eol = eolBytes(fields[PartWrapEOLHeader])
 	s.ref = PartRef{
 		Ordinal:    ordinal,
 		Sha256:     fields[PartSha256Header],
@@ -201,7 +220,7 @@ func stanzaFromFields(fields map[string]string) (storedStanza, error) {
 		StorageKey: fields[PartStorageKeyHeader],
 	}
 	if s.ref.Sha256 == "" || s.ref.StorageKey == "" || s.encodedSha256 == "" {
-		return s, fmt.Errorf("partslim: the stanza for part:%d is missing a field it needs", ordinal)
+		return s, errNotAStanza
 	}
 	return s, nil
 }
@@ -238,7 +257,7 @@ func blankLineEnd(raw []byte, at int) (int, error) {
 	if bytes.HasPrefix(raw[at:], []byte("\n")) {
 		return at + 1, nil
 	}
-	return 0, fmt.Errorf("partslim: a stanza is not followed by the header's blank line")
+	return 0, errNotAStanza
 }
 
 // splitField splits "Name: value" without trimming the value's own spacing

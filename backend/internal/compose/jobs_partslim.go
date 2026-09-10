@@ -51,6 +51,16 @@ const capturePartSlimMaxWorkers = 1
 func addCapturePartSlimJobs(
 	reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger,
 ) []*river.PeriodicJob {
+	// The WORKER, not only the schedule. periodicFor already suppresses the
+	// schedule without a store, but a registered worker still subscribes to the
+	// queue — so on a fleet where one runner has the store and another does not,
+	// the storeless runner can claim the job, do nothing, and complete it. The
+	// rows are not lost (nothing is stamped without proof) but the pass makes no
+	// progress whenever that runner wins the claim. api/jobs.yaml declares
+	// `absent: registers_nothing`, and this is what makes that true.
+	if cfg.Blobstore == nil {
+		return nil
+	}
 	slim := func(db *database.DB) *capture.PartSlimStore {
 		return capture.NewPartSlimStore(db, cfg.Blobstore)
 	}

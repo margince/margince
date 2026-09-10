@@ -92,3 +92,39 @@ func TestCandidatePartReadsTheAggregateShape(t *testing.T) {
 		t.Errorf("read %+v from the aggregate", part)
 	}
 }
+
+// A provider object carrying its own "encoding" key is not one of this file's
+// envelopes.
+//
+// rawCapturePayload stores a valid JSON object unchanged, so such a payload
+// reaches DecodeStoredOriginal intact. Read as an envelope it would hand back
+// the contents of a "data" key that means something else — or nothing at all
+// when there is no such key — and participant replay would re-read the wrong
+// bytes or call a readable message unreadable.
+func TestDecodeStoredOriginalDoesNotMistakeAProviderObjectForAnEnvelope(t *testing.T) {
+	for _, payload := range []string{
+		`{"encoding":"base64","kind":"calendar#event","summary":"Quarterly figures"}`,
+		`{"encoding":"base64"}`,
+		`{"encoding":"base64","data":"JVBERg==","summary":"one key too many"}`,
+	} {
+		got, err := DecodeStoredOriginal([]byte(payload))
+		if err != nil {
+			t.Errorf("DecodeStoredOriginal(%s) errored: %v", payload, err)
+			continue
+		}
+		if string(got) != payload {
+			t.Errorf("DecodeStoredOriginal(%s) = %q, want the payload unchanged", payload, got)
+		}
+	}
+}
+
+// The real envelope still decodes.
+func TestDecodeStoredOriginalUnwrapsItsOwnEnvelope(t *testing.T) {
+	got, err := DecodeStoredOriginal([]byte(`{"encoding":"base64","data":"JVBERi0xLjQK"}`))
+	if err != nil {
+		t.Fatalf("decoding this file's own envelope: %v", err)
+	}
+	if string(got) != "%PDF-1.4\n" {
+		t.Errorf("decoded %q, want the original bytes", got)
+	}
+}
