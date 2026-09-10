@@ -436,14 +436,38 @@ func TestACancelledFutureMeetingIsNotANextStep(t *testing.T) {
 func TestAMeetingStillRunningIsNotYetEvidence(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Meeting under way", e.pipeline, e.open, &e.Rep1)
-	// Started half an hour ago and scheduled for two hours.
+	e.seedInteraction(t, deal, "call", "Earlier call", 3)
+	// Started an hour ago and scheduled for two hours, so it is neither over
+	// nor still in the future. A running meeting has to count as the PLANNED
+	// next step for this to hold: otherwise the earlier call is evidence, the
+	// meeting is not yet a plan, and the sweep tells a rep they have no next
+	// step while they are sitting in one.
 	e.seedMeeting(t, deal, "Long workshop", 1, 2*3600, "")
 
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.pendingFollowUps(t, deal); got != 0 {
-		t.Errorf("a meeting still running staged %d proposals, want 0", got)
+		t.Errorf("a meeting still running staged %d proposals, want 0 — a rep in "+
+			"the meeting is not a rep who forgot to plan one", got)
+	}
+}
+
+// A future row already marked `held` is not a plan. Everywhere else in the tree
+// that status means the meeting happened, so a deal whose only forward-dated
+// meeting carries it still owes a next step.
+func TestAFutureMeetingAlreadyMarkedHeldIsNotAPlan(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Settled ahead of time", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "call", "Discovery call", 3)
+	e.seedMeeting(t, deal, "Already recorded as done", -24, 3600, "held")
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 1 {
+		t.Errorf("a future meeting marked held suppressed the proposal (%d staged, "+
+			"want 1) — `held` says the meeting happened, so it is not a plan", got)
 	}
 }
 

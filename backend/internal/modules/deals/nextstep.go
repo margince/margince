@@ -18,7 +18,15 @@ import "fmt"
 // true when either is on its timeline:
 //
 //   - an open task, or
-//   - a meeting that is booked and has not happened yet.
+//   - a meeting that is still standing and has not ENDED yet — which covers the
+//     one in progress as well as the one on Thursday. A rep sitting in a
+//     meeting has a next step; telling them they do not is the same defect as
+//     telling them tomorrow's meeting already happened.
+//
+// The end test is written as a direct comparison rather than as `NOT
+// MeetingIsOverSQL(...)`. Negating that expression looks equivalent and is not:
+// it contains an `IN` over a nullable column, so an unmarked meeting made it
+// NULL, `NOT NULL` is NULL, and every such row silently failed the filter.
 //
 // A meeting on the calendar IS a next step, which is the half that was missing.
 // A deal whose only forward commitment is Thursday's review reads as planned to
@@ -42,6 +50,7 @@ func OpenNextStepSQL(dealExpr, asOf string) string {
 			WHERE m.kind = 'meeting' AND m.archived_at IS NULL
 			  AND %[3]s
 			  AND %[2]s < m.occurred_at
+			         + make_interval(secs => coalesce(m.duration_seconds, 0))
 		)
 	)`, dealExpr, asOf, meetingStillStandingSQL("m"))
 }
@@ -64,17 +73,23 @@ func MeetingIsOverSQL(alias, asOf string) string {
 		alias, asOf)
 }
 
-// meetingStillStandingSQL is the half of MeetingIsOverSQL that asks about
-// CANCELLATION alone, for a meeting whose time has not come yet.
+// meetingStillStandingSQL asks whether a meeting is still expected to happen:
+// nobody has called it off, and nobody has already recorded it as done.
+//
+// `held` is excluded alongside the two cancellations, because everywhere else
+// in this tree it is a statement about the PAST — the meeting brief's history
+// and the weekly scorecard both read it as "this one happened". A future row
+// carrying it is a meeting somebody has already settled, not a plan the deal
+// can be told it has.
 //
 // NULL is admitted deliberately, and it is the whole reason this is not written
 // as `meeting_status NOT IN (...)`. The column is nullable (the schema's own
 // CHECK allows it) and the overwhelming majority of captured meetings carry no
 // status at all — a calendar entry nobody has marked. `NOT IN` is NULL-false,
-// so that spelling would call every unmarked meeting cancelled and quietly
+// so that spelling would call every unmarked meeting settled and quietly
 // exclude nearly every meeting there is.
 func meetingStillStandingSQL(alias string) string {
 	return fmt.Sprintf(
-		`(%[1]s.meeting_status IS NULL OR %[1]s.meeting_status NOT IN ('canceled', 'no_show'))`,
+		`(%[1]s.meeting_status IS NULL OR %[1]s.meeting_status NOT IN ('canceled', 'no_show', 'held'))`,
 		alias)
 }

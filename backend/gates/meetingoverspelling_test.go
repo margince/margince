@@ -53,22 +53,44 @@ func meetingOverShape(clause string) string {
 }
 
 // meetingOverClause reads the distinctive run of predicates out of an owner,
-// starting at the archived-or-cancelled test and ending at the duration add.
+// starting at the archived-or-cancelled test and ending at the clause's closing
+// parenthesis.
+//
+// The end is found by BALANCING parentheses from the opening one, not by
+// stopping at a marker inside the text. An earlier version cut the needle at
+// the duration add, which left the comparison OPERATOR outside what was
+// compared: flipping the deals copy's `<=` to `>` — inverting the rule — kept
+// the gate green. A census that can fail short has already failed, and this one
+// did.
 func meetingOverClause(t *testing.T, name, body string) string {
 	t.Helper()
 	const opens = "archived_at IS NOT NULL"
-	const closes = "duration_seconds, 0))"
 	at := strings.Index(body, opens)
 	if at < 0 {
 		t.Fatalf("%s no longer contains %q, so this gate would compare nothing and "+
 			"report a pass. Re-derive the marker from the clause's current text.",
 			name, opens)
 	}
-	end := strings.Index(body[at:], closes)
-	if end < 0 {
-		t.Fatalf("%s opens the meeting-over clause and never reaches %q", name, closes)
+	// Walk back to the parenthesis this predicate opens under, then forward to
+	// its match: everything between is the clause, operators included.
+	start := strings.LastIndex(body[:at], "(")
+	if start < 0 {
+		t.Fatalf("%s opens the meeting-over clause with no enclosing parenthesis", name)
 	}
-	return body[at : at+end+len(closes)]
+	depth := 0
+	for i := start; i < len(body); i++ {
+		switch body[i] {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				return body[start : i+1]
+			}
+		}
+	}
+	t.Fatalf("%s opens the meeting-over clause and never closes it", name)
+	return ""
 }
 
 func TestTheMeetingIsOverRuleIsSpelledTheSameOnBothSides(t *testing.T) {
