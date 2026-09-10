@@ -1,0 +1,114 @@
+/* The mark that says whether a message can go.
+ *
+ * Unboxed by default: it sits in the line it belongs to — beside a verb, in a
+ * table cell — and a plate around it would make a row of contacts look like a
+ * row of badges. What it gets instead is a hover surface, so a reader can see
+ * it is pressable without it announcing itself when nobody is asking. */
+
+.commstatus.popover-trigger {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--textMeta);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  padding: 0;
+
+  /* 44px in both axes, which is the smallest thing a finger reliably hits.
+   * Grown with min-inline-size rather than with padding so the glyph stays 18
+   * and the mark keeps its place in the line. */
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  justify-content: center;
+}
+
+.commstatus.popover-trigger:hover,
+.commstatus.popover-trigger:focus-visible {
+  /* --bgHover, not --bgChip: the chip fill is measured against a closed list of
+   * inks and --textMeta is not one of them, so painting it here would be a
+   * contrast pair nobody has checked. This is a pointer resting on a control,
+   * which is exactly what --bgHover is for. */
+  background: var(--bgHover);
+}
+
+/* The dense form, for a row in a list. The TARGET stays 44 — negative block
+ * margins let it overflow a short row rather than making the row taller, which
+ * is what happens when a table of forty contacts each grows to fit a finger. */
+.commstatus-dense.popover-trigger {
+  min-block-size: 44px;
+  margin-block: -13px;
+}
+
+.commstatus-face {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+}
+
+/* The composed cue — the Info corner on context_only, the arrow on external —
+ * over the envelope's lower-right, where it reads as a note about the mark
+ * rather than as a second mark. */
+.commstatus-cue {
+  position: absolute;
+  inset-block-end: -2px;
+  inset-inline-start: 10px;
+  background: var(--bgCard);
+  border-radius: 50%;
+  /* The squircle the token layer gives every corner draws a circle as a
+   * lozenge. A cue this small has to read as a dot. */
+  corner-shape: round;
+}
+
+.commstatus-label {
+  white-space: nowrap;
+}
+
+/* Ink per state. The GLYPH already differs — this is the second signal, not the
+ * only one, so a reader who takes in no colour has already been told. */
+.commstatus-ready {
+  color: var(--success);
+}
+
+.commstatus-attention {
+  color: var(--warn);
+}
+
+.commstatus-restricted {
+  color: var(--danger);
+}
+
+/* checking, context_only and external stay --textMeta: none of them is news. */
+
+.commstatus-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-inline-size: 34ch;
+}
+
+.commstatus-panel-head {
+  margin: 0;
+}
+
+/* The exception adjunct, in the panel and never on the mark. A message sent
+ * under a recorded exception was refused and sent anyway, and colouring the
+ * mark for it would say the refusal was resolved. */
+.commstatus-exception {
+  margin: 0;
+  color: var(--textMeta);
+}
+
+.commstatus-freshness {
+  margin: 0;
+  color: var(--textMeta);
+}
+
+/* The mark and the verbs it stands beside, in one row. The mark comes first
+ * because it is what the reader checks before pressing anything. */
+.commstatus-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
