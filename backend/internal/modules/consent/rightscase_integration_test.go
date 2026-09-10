@@ -421,8 +421,15 @@ func TestAFailureThatIsNotAReceiptCollisionIsNotRedrawn(t *testing.T) {
 	// A subject with no person row, so the insert fails on the foreign key.
 	stranger := ids.From[ids.PersonKind](ids.NewV7())
 
+	// The ATTEMPT COUNT is what this asserts, and it has to be: the error alone
+	// cannot tell the two behaviours apart. A rollback that takes leaves the
+	// outer transaction usable, so a redraw would hit the same foreign key twice
+	// more and answer the same violation — the assertion would pass against
+	// exactly the loop it is meant to refuse.
+	var counted *savepointCounter
 	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-		_, caseErr := openRightsCaseTx(context.Background(), tx, stranger, ids.NewV7(),
+		counted = &savepointCounter{Tx: tx}
+		_, caseErr := openRightsCaseTx(context.Background(), counted, stranger, ids.NewV7(),
 			submissionErasure, time.Now())
 		return caseErr
 	})
@@ -431,7 +438,28 @@ func TestAFailureThatIsNotAReceiptCollisionIsNotRedrawn(t *testing.T) {
 			"no longer reaches the failure arm it is about")
 	}
 	if !storekit.IsForeignKeyViolation(err) {
-		t.Errorf("error = %v, want the foreign-key fault the FIRST attempt hit; anything else "+
-			"means the redraw ran and reported what the aborted transaction said instead", err)
+		t.Errorf("error = %v, want the foreign-key fault that failed the insert", err)
 	}
+	if counted.savepoints != 1 {
+		t.Errorf("the redraw opened %d savepoints for a fault that is not a receipt collision, "+
+			"want 1 — three attempts hold the transaction open and report one fault as three",
+			counted.savepoints)
+	}
+}
+
+// savepointCounter counts the savepoints the redraw opens, and delegates
+// everything else to the real transaction.
+//
+// Embedded rather than faked: the statements below still run against the real
+// database, so nothing about the insert, the constraint or the rollback is
+// simulated — the count is the only thing this observes, and it is the only
+// thing the error cannot show.
+type savepointCounter struct {
+	pgx.Tx
+	savepoints int
+}
+
+func (c *savepointCounter) Begin(ctx context.Context) (pgx.Tx, error) {
+	c.savepoints++
+	return c.Tx.Begin(ctx)
 }
