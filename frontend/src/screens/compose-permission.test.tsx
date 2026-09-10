@@ -213,4 +213,40 @@ describe("the composer asks before anybody presses Send", () => {
 
     expect(await screen.findByText(/could not check/i)).toBeInTheDocument();
   });
+
+  // A BLIND COPY IS BLIND TO THE RECIPIENTS, NEVER TO THE CONSENT GATE.
+  //
+  // The server holds that line — SendEmailInput.Recipients is the merged list of
+  // every To, Cc AND Bcc address, and the send is authorized against all of them.
+  // The composer's preview asked about To and Cc only, so a rep who blind-copied
+  // somebody with a standing objection saw a clean composer and met the refusal
+  // at the Send button, which is the exact silence this surface exists to end.
+  it("asks about a blind copy too", async () => {
+    const asks = stubEngine(allowedPreview);
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    await screen.findByText(
+      "This continues their own message, so it needs no reason from you.",
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("To"), "anna@example.test");
+    await user.tab();
+    await user.click(screen.getByRole("button", { name: "Bcc" }));
+    await user.type(screen.getByLabelText("Bcc"), "quiet@example.test");
+    await user.tab();
+
+    await waitFor(() => {
+      const addressed = asks
+        .map((ask) => previewedAddresses(ask.body))
+        .find((addresses) => addresses.includes("quiet@example.test"));
+      expect(addressed).toContain("quiet@example.test");
+    });
+  });
 });
