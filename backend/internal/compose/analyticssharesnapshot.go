@@ -90,7 +90,17 @@ func ReadSharedSnapshot(
 		  COALESCE(sum(c.base_minor)     FILTER (WHERE c.in_open AND %[1]s), 0),
 		  COALESCE(sum(c.weighted_minor) FILTER (WHERE c.in_open AND %[1]s), 0),
 		  count(*) FILTER (WHERE %[1]s),
-		  count(*) FILTER (WHERE c.base_minor IS NOT NULL AND %[1]s),
+		  -- PRICED is amount_minor. CONVERTED is base_minor, and the deal priced
+		  -- in a currency no rate reached is the one population they differ on —
+		  -- the population fx_missing_count names two lines below. Counting
+		  -- conversion here reports that single gap twice.
+		  --
+		  -- SECOND WRITER, and it cannot be one helper: forecasting.Compute
+		  -- decides this in Go over rows it already holds, while this is an
+		  -- aggregate under a per-recipient FILTER that never loads them. The two
+		  -- are held equal by TestASharedSnapshotCountsPricingRatherThanConversion,
+		  -- which asserts this recompute against the row Compute stored.
+		  count(*) FILTER (WHERE c.amount_minor IS NOT NULL AND %[1]s),
 		  count(*) FILTER (WHERE NOT c.close_provisional AND %[1]s),
 		  count(*) FILTER (WHERE c.exclusion_reason = 'fx_missing' AND %[1]s),
 		  -- Whether anything was kept back, asked of THIS snapshot rather than
