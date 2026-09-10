@@ -416,6 +416,7 @@ var piiTables = map[string]piiHandling{
 var sarAssemblyFiles = []string{
 	"internal/modules/privacy/sar.go",
 	"internal/modules/privacy/sarsections.go",
+	"internal/modules/privacy/sarcommunication.go",
 	"internal/modules/privacy/sarconsentlinks.go",
 	"internal/modules/privacy/sarmessages.go",
 }

@@ -112,6 +112,9 @@ func deleteConsentCapabilities(ctx context.Context, tx pgx.Tx, personID ids.Pers
 	if err := clearRefusedSendReviews(ctx, tx, personID.UUID, emails); err != nil {
 		return err
 	}
+	if err := tombstoneExceptionExplanations(ctx, tx, personID.UUID, emails); err != nil {
+		return err
+	}
 
 	// A basis and a suppression are the opposite case: both exist only to say
 	// something about THIS person, so neither has a life after them. Deleted,
@@ -166,6 +169,37 @@ func clearRefusedSendReviews(ctx context.Context, tx pgx.Tx, personID ids.UUID, 
 		             OR lower(refusal->>'address') = ANY($2))`,
 		personID.String(), lowerAll(addresses)); err != nil {
 		return fmt.Errorf("privacy: clearing the subject from refused-send reviews: %w", err)
+	}
+	return nil
+}
+
+// tombstoneExceptionExplanations scrubs what a director WROTE about a subject
+// while keeping the fact that they decided.
+//
+// The explanation is a rep's own sentence about a named person — "she asked for
+// this on the call" — so it is personal data an erasure destroys. What must
+// survive is the accountable half: that somebody overrode a refusal, who they
+// were, when, and under which reason code. None of that names the subject.
+//
+// TOMBSTONED, NOT DELETED, and the row's own trigger enforces the difference:
+// it admits this exact string and refuses every other edit, so an erasure can
+// remove the words and nobody can improve the account of the decision.
+//
+// Reached through the REVIEW, because an instruction names no subject directly
+// — it answers a review, and the review is what named the recipients.
+func tombstoneExceptionExplanations(ctx context.Context, tx pgx.Tx, personID ids.UUID, addresses []string) error {
+	if _, err := tx.Exec(ctx, `
+		UPDATE communication_instruction
+		   SET explanation = '[erased]'
+		 WHERE explanation <> '[erased]'
+		   AND review_id IN (
+		         SELECT r.id FROM communication_review r
+		          WHERE EXISTS (
+		                  SELECT 1 FROM jsonb_array_elements(r.refusals) AS refusal
+		                   WHERE refusal->>'subject_id' = $1
+		                      OR lower(refusal->>'address') = ANY($2)))`,
+		personID.String(), lowerAll(addresses)); err != nil {
+		return fmt.Errorf("privacy: scrubbing what a director wrote about the subject: %w", err)
 	}
 	return nil
 }

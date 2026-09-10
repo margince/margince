@@ -52,6 +52,25 @@ func exceptionCtx(ws, user ids.UUID, grant principal.ObjectGrant) context.Contex
 	})
 }
 
+// connectorCtx is an integration running under a director's own grants and
+// UserID. auth.RequireHuman ADMITS it — it refuses buyers and agents only — so
+// without an explicit type check an integration would mint a row saying that
+// person decided to send a refused message.
+func connectorCtx(ws, user ids.UUID) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalConnector, ID: "connector:mailsync",
+		UserID: user, OnBehalfOf: user,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"admin"},
+			Objects: map[string]principal.ObjectGrant{
+				"communication_exception": {Create: true, Read: true, Update: true, Delete: true},
+			},
+		},
+	})
+}
+
 // agentCtx is an agent acting under a director's own grants. It must not be
 // able to mint the record that says a HUMAN decided.
 func agentCtx(ws, user ids.UUID) context.Context {
@@ -110,6 +129,14 @@ func TestOnlyAHumanHoldingTheGrantDirectsASend(t *testing.T) {
 	// false while looking entirely correct.
 	if _, err := e.store.DirectSend(agentCtx(ws, user), review, valid); err == nil {
 		t.Error("an agent minted the record that says a human decided")
+	}
+
+	// A CONNECTOR MAY NOT EITHER, and this is the arm auth.RequireHuman does
+	// not cover: it runs with the granting human's UserID and permissions, so
+	// the row it wrote would name a person who was not there. The whole content
+	// of this record is the claim that somebody took responsibility.
+	if _, err := e.store.DirectSend(connectorCtx(ws, user), review, valid); err == nil {
+		t.Error("a connector minted a decision attributed to the human who configured it")
 	}
 
 	// AN UNACKNOWLEDGED DECISION IS NOT ONE. The tick is the act; everything
@@ -245,5 +272,56 @@ func TestARevocationNamesItselfAndSpareAConsumedInstruction(t *testing.T) {
 	// A second revocation finds nothing to revoke.
 	if err := e.store.RevokeInstruction(directorCtx(ws, user), out.ID, "again"); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("re-revoking answered %v, want not-found", err)
+	}
+}
+
+// THE FREEZE HAS EXACTLY ONE DOOR, and it is Art. 17. The explanation is a rep's
+// own sentence about a named person, so it is personal data an erasure destroys
+// — and a record that could not be scrubbed would put immutability above the
+// right it exists inside.
+//
+// What the door admits is the TOMBSTONE and nothing else, so the account of the
+// decision still cannot be improved. What survives is the accountable half:
+// somebody decided, who, when, under which reason. None of it names the subject.
+func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
+	e := setupChannelConsent(t)
+	ws, user := e.ws, e.user
+	review := seedOpenReview(context.Background(), t, e)
+
+	out, err := e.store.DirectSend(directorCtx(ws, user), review, DirectInput{
+		ReasonCode:     ReasonOtherException,
+		Explanation:    "Anna asked for this on the call this morning.",
+		WarningVersion: "warn-2026-09",
+		Acknowledged:   true,
+	})
+	if err != nil {
+		t.Fatalf("directing the send: %v", err)
+	}
+
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE communication_instruction SET explanation = '[erased]' WHERE id = $1`,
+		out.ID); err != nil {
+		t.Fatalf("an erasure could not scrub the words: %v — a record that cannot be scrubbed "+
+			"puts immutability above the right it exists inside", err)
+	}
+
+	// And no other value gets through the same door.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE communication_instruction SET explanation = 'a better account' WHERE id = $1`,
+		out.ID); err == nil {
+		t.Error("the explanation was rewritten through the erasure door — the tombstone is the " +
+			"whole of what the freeze admits")
+	}
+
+	// The accountable half survives.
+	var reason, director string
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT reason_code, directed_by::text FROM communication_instruction WHERE id = $1`,
+		out.ID).Scan(&reason, &director); err != nil {
+		t.Fatalf("reading the instruction: %v", err)
+	}
+	if reason != ReasonOtherException || director == "" {
+		t.Errorf("after the scrub the row reads reason=%q director=%q — who decided and under "+
+			"what reason is the half that must survive", reason, director)
 	}
 }

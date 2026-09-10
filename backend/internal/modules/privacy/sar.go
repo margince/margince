@@ -78,8 +78,18 @@ type SARPackage struct {
 	CommunicationDecisions   []map[string]any `json:"communication_decisions"`
 	CommunicationBases       []map[string]any `json:"communication_bases"`
 	CommunicationSuppression []map[string]any `json:"communication_suppression"`
-	RawCapture               []map[string]any `json:"raw_capture"`
-	FieldOrigins             []map[string]any `json:"field_origins"`
+	// The times a named person decided a message to this subject went out
+	// DESPITE a refusal. Art. 15 owes what is held, and a subject asking why
+	// they received something the installation had refused is owed the override
+	// as much as the refusal — an export showing only the second describes a
+	// message that never went.
+	//
+	// It carries the decision, never the director's own sentence about them:
+	// the explanation is erased with the subject, so the export reads it back
+	// as the tombstone it becomes.
+	CommunicationExceptions []map[string]any `json:"communication_exceptions"`
+	RawCapture              []map[string]any `json:"raw_capture"`
+	FieldOrigins            []map[string]any `json:"field_origins"`
 	// EnrichedFields is what the system read about the subject from a public
 	// page or a mail signature, each with the verbatim text it came from.
 	// Art. 15(1)(g) makes the source itself disclosable, and the snippet IS

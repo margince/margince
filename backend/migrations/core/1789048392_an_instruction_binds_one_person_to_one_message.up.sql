@@ -52,7 +52,12 @@ CREATE TABLE communication_instruction (
     status text NOT NULL DEFAULT 'directed',
     consumed_at timestamptz,
     revoked_at timestamptz,
-    revoked_by uuid REFERENCES app_user(id) ON DELETE SET NULL,
+    -- RESTRICT, not SET NULL. The CHECK below requires a revoked row to name
+    -- who revoked it, so nulling this when that account is deleted would leave
+    -- the row violating its own constraint — refused at the delete, which reads
+    -- as a mysterious failure to remove a user. Refusing plainly is the honest
+    -- answer: the person who reversed a decision is part of the record of it.
+    revoked_by uuid REFERENCES app_user(id) ON DELETE RESTRICT,
     revoked_reason text,
 
     CONSTRAINT communication_instruction_reason CHECK (reason_code = ANY (ARRAY[
@@ -65,9 +70,16 @@ CREATE TABLE communication_instruction (
         (status = 'consumed'::text) = (consumed_at IS NOT NULL)),
     -- A revocation names who took it back and why. "Revoked" with nobody behind
     -- it is a decision reversed by nobody, which is not a thing that happened.
+    -- ALL THREE OR NONE, and only on a revoked row. Written as two halves
+    -- rather than one equality: the equality alone admitted a `directed` row
+    -- carrying a revoked_at with no revoker and no reason, which says the
+    -- decision was reversed at a moment by nobody for no reason while still
+    -- reading as live.
     CONSTRAINT communication_instruction_revocation_shape CHECK (
         (status = 'revoked'::text) =
         (revoked_at IS NOT NULL AND revoked_by IS NOT NULL AND revoked_reason IS NOT NULL)),
+    CONSTRAINT communication_instruction_revocation_whole CHECK (
+        num_nonnulls(revoked_at, revoked_by, revoked_reason) IN (0, 3)),
     -- An explanation is required and must say something. A blank one is an
     -- acknowledgement nobody can be held to.
     CONSTRAINT communication_instruction_explained CHECK (
@@ -100,7 +112,30 @@ BEGIN
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'communication_instruction_immutable';
   END IF;
-  IF NEW.review_id IS DISTINCT FROM OLD.review_id
+  -- The ID FIRST, because everything else that points at this row points at
+  -- it: the audit entries naming the decision, and any later reference to the
+  -- instruction a send went out under. Moving it would disconnect the record
+  -- from its own history while leaving every frozen field untouched.
+  -- ONE WAY THROUGH THE FREEZE, and only one: an Art. 17 erasure tombstoning
+  -- the words. The explanation is written by a rep about a named subject, so it
+  -- is personal data the installation may be told to destroy — and a record
+  -- that could not be scrubbed would put immutability above the right it
+  -- exists inside.
+  --
+  -- The TOMBSTONE is the whole of what is allowed: the explanation may become
+  -- exactly this string and nothing else, so the freeze still refuses an
+  -- improved account of the decision. What survives is the fact that somebody
+  -- decided, who they were, when, and under which reason code — the accountable
+  -- half, which names no subject.
+  IF NEW.explanation = '[erased]'
+     AND NEW.id IS NOT DISTINCT FROM OLD.id
+     AND NEW.review_id IS NOT DISTINCT FROM OLD.review_id
+     AND NEW.directed_by IS NOT DISTINCT FROM OLD.directed_by
+     AND NEW.reason_code IS NOT DISTINCT FROM OLD.reason_code THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.id IS DISTINCT FROM OLD.id
+     OR NEW.review_id IS DISTINCT FROM OLD.review_id
      OR NEW.directed_by IS DISTINCT FROM OLD.directed_by
      OR NEW.reason_code IS DISTINCT FROM OLD.reason_code
      OR NEW.explanation IS DISTINCT FROM OLD.explanation

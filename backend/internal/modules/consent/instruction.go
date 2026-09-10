@@ -128,7 +128,7 @@ type Instruction struct {
 // already resolved, superseded or answered is a decision about a message that
 // is no longer waiting on one.
 func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInput) (Instruction, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
 		return Instruction{}, err
 	}
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
@@ -177,6 +177,12 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 				"review_id":       reviewID,
 				fieldReasonCode:   in.ReasonCode,
 				"warning_version": in.WarningVersion,
+				// WHICH GRANT ADMITTED THIS, named on the payload because the
+				// audit's own rule string is derived from the ENTITY and would
+				// read `communication_instruction.create` — a permission
+				// nothing checks. The entity stays the table, which is how a
+				// reader finds the row; the authority is recorded here.
+				"authorized_by": entityCommunicationException,
 			}); err != nil {
 			return err
 		}
@@ -196,7 +202,7 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 // decision back would leave a sent message with no recorded authority behind
 // it, which is worse than the decision standing.
 func (s *Store) RevokeInstruction(ctx context.Context, id ids.UUID, reason string) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionDelete); err != nil {
@@ -230,7 +236,10 @@ func (s *Store) RevokeInstruction(ctx context.Context, id ids.UUID, reason strin
 		}
 		_, err = storekit.Audit(ctx, tx, "update", "communication_instruction", id,
 			map[string]any{"status": InstructionDirected},
-			map[string]any{"status": InstructionRevoked})
+			map[string]any{
+				"status":        InstructionRevoked,
+				"authorized_by": entityCommunicationException,
+			})
 		return err
 	})
 }
@@ -303,4 +312,29 @@ func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (dir
 		return directableReview{}, fmt.Errorf("consent: reading the review this decision answers: %w", err)
 	}
 	return out, nil
+}
+
+// requireAPersonAtTheKeyboard admits a HUMAN and nothing else.
+//
+// auth.RequireHuman is not enough here, and the gap is exact: it refuses buyers
+// and agents, and ADMITS a connector. A connector runs with the granting
+// human's UserID and their whole permission set (capture/registry.go), so an
+// integration would mint a row saying that person decided to send a refused
+// message — attributing an override to somebody who was not there.
+//
+// Every other human-only surface can live with that, because a connector
+// acting under somebody's authority is doing what they configured it to do.
+// This one cannot: the row's entire content is the claim that a named person
+// took responsibility, and a claim like that must be true of the moment it
+// records.
+func requireAPersonAtTheKeyboard(ctx context.Context) error {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman {
+		return fmt.Errorf("directing a send is a person's own decision: %w",
+			apperrors.ErrPermissionDenied)
+	}
+	return nil
 }

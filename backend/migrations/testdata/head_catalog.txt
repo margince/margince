@@ -1742,7 +1742,8 @@ public.communication_instruction.communication_instruction_refuse_rewrite CREATE
 public.communication_instruction.communication_instruction_review_id_fkey FOREIGN KEY (review_id) REFERENCES communication_review(id) ON DELETE CASCADE
 public.communication_instruction.communication_instruction_review_id_key UNIQUE (review_id)
 public.communication_instruction.communication_instruction_revocation_shape CHECK (((status = 'revoked'::text) = ((revoked_at IS NOT NULL) AND (revoked_by IS NOT NULL) AND (revoked_reason IS NOT NULL))))
-public.communication_instruction.communication_instruction_revoked_by_fkey FOREIGN KEY (revoked_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.communication_instruction.communication_instruction_revocation_whole CHECK ((num_nonnulls(revoked_at, revoked_by, revoked_reason) = ANY (ARRAY[0, 3])))
+public.communication_instruction.communication_instruction_revoked_by_fkey FOREIGN KEY (revoked_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.communication_instruction.communication_instruction_status CHECK ((status = ANY (ARRAY['directed'::text, 'consumed'::text, 'revoked'::text, 'expired'::text])))
 public.communication_instruction.communication_instruction_window CHECK ((valid_until > facts_as_of))
 public.communication_instruction.consumed_at timestamp with time zone gen=- def=-
@@ -1769,7 +1770,30 @@ BEGIN
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'communication_instruction_immutable';
   END IF;
-  IF NEW.review_id IS DISTINCT FROM OLD.review_id
+  -- The ID FIRST, because everything else that points at this row points at
+  -- it: the audit entries naming the decision, and any later reference to the
+  -- instruction a send went out under. Moving it would disconnect the record
+  -- from its own history while leaving every frozen field untouched.
+  -- ONE WAY THROUGH THE FREEZE, and only one: an Art. 17 erasure tombstoning
+  -- the words. The explanation is written by a rep about a named subject, so it
+  -- is personal data the installation may be told to destroy — and a record
+  -- that could not be scrubbed would put immutability above the right it
+  -- exists inside.
+  --
+  -- The TOMBSTONE is the whole of what is allowed: the explanation may become
+  -- exactly this string and nothing else, so the freeze still refuses an
+  -- improved account of the decision. What survives is the fact that somebody
+  -- decided, who they were, when, and under which reason code — the accountable
+  -- half, which names no subject.
+  IF NEW.explanation = '[erased]'
+     AND NEW.id IS NOT DISTINCT FROM OLD.id
+     AND NEW.review_id IS NOT DISTINCT FROM OLD.review_id
+     AND NEW.directed_by IS NOT DISTINCT FROM OLD.directed_by
+     AND NEW.reason_code IS NOT DISTINCT FROM OLD.reason_code THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.id IS DISTINCT FROM OLD.id
+     OR NEW.review_id IS DISTINCT FROM OLD.review_id
      OR NEW.directed_by IS DISTINCT FROM OLD.directed_by
      OR NEW.reason_code IS DISTINCT FROM OLD.reason_code
      OR NEW.explanation IS DISTINCT FROM OLD.explanation
