@@ -4,10 +4,11 @@
 #
 # Both halves are load-bearing. A reader that accepted anything would publish a
 # release named `v0.1`, which orders against nothing and cannot be pinned; a
-# reader that reported every suffixed tag as a full release would send
-# `v0.0.1-rc.1` to the D13 production promotion, which selects on exactly that
-# answer. So every case below states the tag and the reason its verdict must be
-# what it is.
+# reader that reported every suffixed tag as a full release would make
+# `v0.0.1-rc.1` the download the release page offers by default, and would hand
+# the same wrong answer to the D13 production promotion that is to select on it.
+# So every case below states the tag and the reason its verdict must be what it
+# is.
 #
 # Usage: bash scripts/release-tag-version.test.sh
 
@@ -53,8 +54,10 @@ accepts v1.2.3-beta.2 true 'any suffix means a pre-release, not only -rc'
 
 refuses v0.1      'it names no patch level, so it cannot be ordered against v0.1.1'
 refuses v0.1.2.3  'it has a fourth component this scheme cannot read'
+refuses v01.2.3   'a leading zero gives a version two spellings'
 refuses 0.0.1     'the v prefix is what distinguishes a release tag from every other tag'
 refuses v0.0.1-   'an empty suffix names no shelf'
+refuses v1.2.3-rc..1 'an empty suffix component names nothing'
 refuses vX.Y.Z    'the components must be numbers'
 refuses ''        'an absent tag is a caller bug, and reporting a version for it would hide one'
 

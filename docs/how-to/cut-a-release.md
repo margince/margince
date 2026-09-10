@@ -1,6 +1,12 @@
 # Cut a release
 
-Tag a commit that is on `main`:
+First, set the date on `CHANGELOG.md`'s top release heading to the day you are
+cutting, and land that: the heading is written when the section fills up, not
+when the tag is pushed, so its date is a guess until you correct it — and it
+sits in the commit the release describes, which is why it goes in before the
+tag rather than after.
+
+Then tag a commit that is on `main`:
 
 ```sh
 git tag -a v0.0.1 -m "Zalo OA inbound, desktop build info"
@@ -13,8 +19,9 @@ creates the release with both attached.
 
 A plain `v0.0.1` ships. A suffixed `v0.0.1-rc.1` publishes as a **pre-release**,
 so a build meant for testing does not become the download the release page
-offers by default — and the D13 deployment promotes non-suffixed tags only, so
-tagging a candidate deploys nothing.
+offers by default. Tagging a candidate deploys nothing in any case — a tag moves
+no branch — and the D13 deployment's production promotion is meant to select
+non-suffixed tags on that same answer once it is built.
 
 A run that fails before the release job leaves nothing behind. A run killed
 during it can leave a release holding only some of its assets — the lane
@@ -27,7 +34,11 @@ git push --delete origin v0.0.1 && git tag -d v0.0.1
 ```
 
 Re-running a failed run after the release was created is safe: the publish step
-replaces the assets on the existing release rather than failing.
+replaces the assets and the notes on the existing release rather than failing.
+Re-run **all** jobs, not only the failed ones. A re-run of the failed jobs alone
+leaves the job that read the tag un-executed, and GitHub drops the outputs of a
+job that did not run, so the publish has no version to name anything after — it
+refuses, and says so.
 
 ## This is not the constellation release
 

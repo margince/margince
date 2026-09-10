@@ -6,9 +6,10 @@
 #
 # The tag says which shelf it lands on. A plain v0.0.1 ships; a suffixed
 # v0.0.1-rc.1 publishes as a pre-release, so a build meant for testing does not
-# become the download the release page offers by default — and the D13
-# deployment's production promotion selects non-suffixed tags only, so an rc
-# reaches no environment by being tagged.
+# become the download the release page offers by default. The D13 deployment's
+# production promotion is meant to select on that same answer and does not yet;
+# nothing here depends on it, because a tag moves no branch, so tagging a
+# candidate deploys nothing today either way.
 #
 # WHY THIS IS NOT release.yml. That lane drafts a constellation release into the
 # dist service at test.margince.com, versioned YYYY.edition.bugfix, and its
@@ -106,11 +107,41 @@ jobs:
           # absent verdict — merging past `ci` is a standing decision here — so
           # a missing check-run passes. This is a release selector, not a
           # correctness gate, and must not be described as one.
-          verdict="$(gh api "repos/$GH_REPO/commits/$SHA/check-runs" \
-            --jq '[.check_runs[] | select(.name == "verdict") | .conclusion] | join(",")')"
+          #
+          # THREE states, because merge-attest waits for the `ci` fan-in and so
+          # posts minutes after the merge, not at push time:
+          #   absent     — passes, for the reason above.
+          #   unsettled  — REFUSES. A queued or running check-run carries
+          #                conclusion null, which is indistinguishable from an
+          #                absent one once the conclusions are joined, so a tag
+          #                pushed straight after the merge skipped this step
+          #                without saying it had.
+          #   completed  — judged on the conclusion.
+          #
+          # per_page=100 rather than the endpoint's default of 30: it truncates
+          # instead of erroring, so the verdict would fall off the tail as the
+          # number of checks on a commit grows and this step would degrade to
+          # "nothing to refuse". The remaining ceiling — 100 check-runs on one
+          # commit — is named rather than paginated for. `filter=latest`, the
+          # default, is deliberate and is the opposite of merge-attest's choice:
+          # that judge reads the oldest attempt because it asks what the verdict
+          # was AT the merge, and this one asks what it is now.
+          runs="$(gh api "repos/$GH_REPO/commits/$SHA/check-runs?per_page=100" \
+            --jq '[.check_runs[] | select(.name == "verdict")]')"
+          if [ "$(jq 'length' <<<"$runs")" -eq 0 ]; then
+            echo "release-tag: no verdict check-run on $SHA — nothing to refuse."
+            exit 0
+          fi
+          if [ "$(jq '[.[] | select(.status != "completed")] | length' <<<"$runs")" -gt 0 ]; then
+            echo "release-tag: the verdict on $SHA has not settled yet." >&2
+            echo "  merge-attest waits for the ci fan-in, so it reports minutes" >&2
+            echo "  after the merge. Let it finish, then re-run ALL jobs of this" >&2
+            echo "  run — a verdict that has not concluded is not a verdict this" >&2
+            echo "  lane may read as absent." >&2
+            exit 1
+          fi
+          verdict="$(jq -r '[.[] | .conclusion] | join(",")' <<<"$runs")"
           case "$verdict" in
-            '' )
-              echo "release-tag: no verdict check-run on $SHA — nothing to refuse." ;;
             *failure*|*cancelled*|*timed_out*|*action_required* )
               echo "release-tag: $SHA carries an adverse verdict ($verdict)." >&2
               echo "  merge-attest reports either an adverse ci verdict or a commit" >&2
@@ -153,6 +184,22 @@ jobs:
       # one thing: the release. Every other job is read-only.
       contents: write
     steps:
+      # A re-run of ONLY the failed jobs does not re-execute `version`, and
+      # GitHub drops the outputs of a job that did not run. Every use of
+      # `version` below then expands to the empty string: the two downloads ask
+      # for an artifact called `margince-macos-`, and the run dies on a name
+      # that traces back to nothing the releaser did. Named here, once, rather
+      # than three times as a missing artifact.
+      - name: Require the release version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          if [ -z "$VERSION" ]; then
+            echo "The version job reported no version. That happens when only the" >&2
+            echo "failed jobs were re-run: version did not re-execute and GitHub" >&2
+            echo "dropped its outputs. Re-run ALL jobs so the tag is read again." >&2
+            exit 1
+          fi
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: margince-macos-${{ needs.version.outputs.version }}
@@ -238,6 +285,11 @@ jobs:
           if gh release view "$VERSION" >/dev/null 2>&1; then
             echo "release-tag: $VERSION already exists — replacing its assets"
             gh release upload "$VERSION" assets/* --clobber
+            # The notes are rebuilt above on every run, so a re-run is also the
+            # only way to correct them. Without this the body keeps whatever the
+            # first run wrote, and a wrong first-launch instruction on the page
+            # people download from would be unfixable by the lane that wrote it.
+            gh release edit "$VERSION" --notes-file notes.md
           else
             args=(--target "$REVISION" --title "Margince $VERSION" --notes-file notes.md --verify-tag)
             if [ "$PRERELEASE" = true ]; then

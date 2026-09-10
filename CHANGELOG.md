@@ -954,4 +954,4 @@ when it has content.
   without touching a committed file; the annotated template stays the
   parse-guarded source of truth.
 
-[Unreleased]: https://github.com/margince/margince
+[0.0.1]: https://github.com/margince/margince/releases/tag/v0.0.1
