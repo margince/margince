@@ -1,0 +1,14 @@
+# Local Terraform state and provider plugins — never shared, may hold secrets
+# in plain text (state) or be large binaries (provider plugin cache).
+**/.terraform/
+**/.terraform.tfstate.lock.info
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# A filled-in tfvars file holds real credentials/config; only the *.example
+# template is checked in.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
