@@ -26,11 +26,17 @@ import (
 // It is deliberately narrow, and each condition is a way the retraction could
 // otherwise destroy something somebody meant to keep:
 //
-//   - CAPTURE created it, and no human. A record a person typed is theirs, and
-//     a classifier's opinion about one thread does not overrule it.
-//   - It is still OWNER-SCOPED. A record promoted to the workspace has been
-//     judged a business contact by the sender verdict, which is a decision about
-//     the PERSON rather than about one conversation.
+//   - A MACHINE created it. Capture (`connector:`) and the sender verdict
+//     (`agent:`) both mint contacts nobody asked for; a record a person typed
+//     is theirs, and a classifier's opinion does not overrule it. Both prefixes
+//     count, because the verdict engine's own records were the ones a
+//     connector-only test left standing.
+//   - No human has PUBLISHED or edited it. Visibility is deliberately NOT a
+//     guard here. The sender verdict promotes a contact to the workspace with
+//     nobody behind it, so treating `workspace` as protection let one machine's
+//     guess outrank another machine's verdict — and the guess was the earlier
+//     of the two. A human's publish audits as a human and still protects the
+//     record; a machine's does not.
 //   - Nobody has EDITED it since. An edit is a human saying this record is
 //     wanted, whatever it was born from.
 //   - It has no other correspondence. A person who also writes about business is
@@ -62,8 +68,7 @@ func (s *Store) RetractCaptureOnlyPersonTx(
 		   WHERE p.id = $1
 		     AND p.archived_at IS NULL
 		     AND p.owner_id = $2
-		     AND p.visibility = 'owner'
-		     AND p.captured_by LIKE 'connector:%'
+		     AND (p.captured_by LIKE 'connector:%' OR p.captured_by LIKE 'agent:%')
 		     AND NOT EXISTS (
 		           SELECT 1 FROM audit_log a
 		            WHERE a.entity_type = 'person' AND a.entity_id = p.id
@@ -77,6 +82,15 @@ func (s *Store) RetractCaptureOnlyPersonTx(
 	}
 	if !eligible {
 		return false, nil
+	}
+	// NARROW BEFORE ARCHIVING, and it is not cosmetic. The people list honours
+	// `include_archived` under a row scope that admits any workspace-visible
+	// record, so an archived contact still on `workspace` stays listable by
+	// every colleague — the private correspondent would be hidden from nobody.
+	// Narrowing first puts the row behind the owner scope even when somebody
+	// asks to see archived records.
+	if err := shiftVisibilityTx(ctx, tx, id, visibilityWorkspace, visibilityOwner); err != nil {
+		return false, err
 	}
 	// The one spelling of archiving a person inside a transaction: it lands the
 	// write shape — the audit row and the satellites — so a retraction is
@@ -95,8 +109,13 @@ type CaptureOnlyHolder struct {
 }
 
 // CaptureOnlyHoldersOfAddressTx lists the records a sender verdict may be
-// entitled to retract: capture-created, still owner-scoped people holding the
-// address.
+// entitled to retract: machine-created people holding the address, whatever
+// their visibility.
+//
+// Both machine prefixes, and no visibility filter, for the reason
+// RetractCaptureOnlyPersonTx gives: the sender verdict mints contacts under
+// `agent:` and promotes them to the workspace itself, so a scan restricted to
+// owner-scoped connector records could not see the records that engine made.
 //
 // It is a candidate scan, not the eligibility ruling. The full predicate — the
 // human-audit check included — has exactly one spelling, inside
@@ -110,9 +129,8 @@ func (s *Store) CaptureOnlyHoldersOfAddressTx(ctx context.Context, tx pgx.Tx, em
 		 WHERE pe.email = lower(btrim($1))
 		   AND p.archived_at IS NULL
 		   AND p.merged_into_id IS NULL
-		   AND p.visibility = 'owner'
 		   AND p.owner_id IS NOT NULL
-		   AND p.captured_by LIKE 'connector:%'`, email)
+		   AND (p.captured_by LIKE 'connector:%' OR p.captured_by LIKE 'agent:%')`, email)
 	if err != nil {
 		return nil, fmt.Errorf("people: listing the captured holders of an address: %w", err)
 	}

@@ -48,7 +48,7 @@ const aliasSightingsBeforeClaiming = 2
 // here" and the message captures exactly as it did before. The feature adds an
 // address to a seat's self-set; it must never be able to subtract a message
 // from the timeline.
-func noteAliasSightingTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, deliveredTo, source string) error {
+func (s *Sink) noteAliasSightingTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, deliveredTo, source string) error {
 	if seat == ids.Nil || deliveredTo == "" || source == "" {
 		return nil
 	}
@@ -79,7 +79,7 @@ func noteAliasSightingTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, delivere
 	if sightings < aliasSightingsBeforeClaiming {
 		return nil
 	}
-	return claimDiscoveredAliasTx(ctx, tx, seat, value)
+	return s.claimDiscoveredAliasTx(ctx, tx, seat, value)
 }
 
 // seatAlreadyKnowsTx reports whether this address is already covered by one of
@@ -136,7 +136,7 @@ func foldIdentityRows(rows pgx.Rows) (addresses, domains []string, err error) {
 // seat's own claim does: without that, the gate would only bind mail arriving
 // from now on, and an address deferred moments earlier would still become a
 // contact through the very door this claim closes.
-func claimDiscoveredAliasTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, value string) error {
+func (s *Sink) claimDiscoveredAliasTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, value string) error {
 	var identity OwnerIdentity
 	err := tx.QueryRow(ctx, `
 		INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
@@ -152,7 +152,11 @@ func claimDiscoveredAliasTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, value
 	if err := retirePendingForIdentityTx(ctx, tx, seat, identity); err != nil {
 		return err
 	}
-	return nil
+	// The mail that arrived here before anybody knew it was theirs. Same
+	// transaction as the claim: an address recorded as the seat's own while
+	// their mail stays unimported is the state adoption exists to end, and
+	// committing the two separately can leave exactly that.
+	return s.adoptMailForNewIdentityTx(ctx, tx, seat, value)
 }
 
 // storableAddress folds a delivery header into the spelling this module stores,

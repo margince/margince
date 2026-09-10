@@ -155,6 +155,12 @@ type NoiseJudgedContact struct {
 	PersonID ids.PersonID
 	OwnerID  ids.UUID
 	Email    string
+	// Kind is the answer that disowned the address, or "" when what disowns it
+	// is the owner's own keep_out rather than a machine verdict. The sweep
+	// reads it to decide whether correspondence still protects the record:
+	// `personal` says the address is not the workspace's business at all, and
+	// the owner having written to their doctor is not evidence against that.
+	Kind string
 }
 
 // NoiseJudgedContacts lists the connector-made, owner-private people an
@@ -178,6 +184,13 @@ type NoiseJudgedContact struct {
 //     human actor. The retraction re-checks; excluding here keeps a page from
 //     filling with rows the retraction will refuse every tick.
 //
+// It does NOT filter on visibility, and both machine prefixes count. The
+// sender verdict mints contacts as `agent:` and promotes them to the workspace
+// itself, so an owner-scoped connector-only scan was blind to exactly the
+// records that engine made — the retraction's own predicate had already
+// stopped treating a machine promotion as protection, and this scan silently
+// kept them out of its reach.
+//
 // The page is drawn at random, like StrandedContacts and for the same reason:
 // a contact the retraction refuses (a corresponded sender, checked at retract
 // time) stays in the selection, and under a stable order a page of refusals
@@ -186,14 +199,13 @@ func (s *PendingStore) NoiseJudgedContacts(ctx context.Context, limit int) ([]No
 	var out []NoiseJudgedContact
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT p.id, p.owner_id, pe.email
+			SELECT p.id, p.owner_id, pe.email, `+noiseJudgedKindSQL("pe.email", "p.owner_id")+`
 			  FROM person p
 			  JOIN person_email pe ON pe.person_id = p.id AND pe.archived_at IS NULL
-			 WHERE p.visibility = 'owner'
-			   AND p.archived_at IS NULL
+			 WHERE p.archived_at IS NULL
 			   AND p.merged_into_id IS NULL
 			   AND p.owner_id IS NOT NULL
-			   AND p.captured_by LIKE 'connector:%'
+			   AND (p.captured_by LIKE 'connector:%' OR p.captured_by LIKE 'agent:%')
 			   AND `+noiseJudgedStandsSQL("pe.email", "p.owner_id")+`
 			   AND NOT EXISTS (SELECT 1 FROM audit_log al
 			                    WHERE al.entity_type = 'person' AND al.entity_id = p.id
@@ -206,7 +218,7 @@ func (s *PendingStore) NoiseJudgedContacts(ctx context.Context, limit int) ([]No
 		defer rows.Close()
 		for rows.Next() {
 			var c NoiseJudgedContact
-			if err := rows.Scan(&c.PersonID, &c.OwnerID, &c.Email); err != nil {
+			if err := rows.Scan(&c.PersonID, &c.OwnerID, &c.Email, &c.Kind); err != nil {
 				return err
 			}
 			out = append(out, c)
@@ -232,7 +244,7 @@ func noiseJudgedStandsSQL(emailExpr, ownerExpr string) string {
 	return `((EXISTS (SELECT 1 FROM capture_pending_counterparty q
 	                   WHERE q.email = ` + emailExpr + `
 	                     AND q.status = 'noise'
-	                     AND q.kind IN ('newsletter', 'transactional', 'spam')
+	                     AND q.kind IN ('newsletter', 'transactional', 'spam', 'personal')
 	                     AND (NOT q.resolved_by_owner OR q.owner_id = ` + ownerExpr + `))
 	          AND NOT EXISTS (SELECT 1 FROM capture_pending_counterparty q2
 	                           WHERE q2.email = ` + emailExpr + `
@@ -243,17 +255,51 @@ func noiseJudgedStandsSQL(emailExpr, ownerExpr string) string {
 	                       AND o.user_id = ` + ownerExpr + `))`
 }
 
+// noiseJudgedKindSQL is the kind the standing answer carries, `personal`
+// outranking a sibling row so the strictest reading wins: an address settled
+// personal by one message and transactional by another is somebody's private
+// correspondent either way, and the correspondence bound must not be applied to
+// it. Empty when nothing but an owner's keep_out disowns the address.
+//
+// It deliberately avoids the `q.kind IN (` shape, which belongs to
+// noiseJudgedStandsSQL alone — the single-spelling gate matches on that text,
+// and a second occurrence would be a second copy of the predicate rather than
+// a different question about the same row.
+func noiseJudgedKindSQL(emailExpr, ownerExpr string) string {
+	return `COALESCE((SELECT q.kind FROM capture_pending_counterparty q
+	                   WHERE q.email = ` + emailExpr + `
+	                     AND q.status = 'noise'
+	                     AND (NOT q.resolved_by_owner OR q.owner_id = ` + ownerExpr + `)
+	                   ORDER BY (q.kind = 'personal') DESC, q.resolved_at DESC NULLS LAST
+	                   LIMIT 1), '')`
+}
+
+// NoiseJudgedStanding is what the recheck answers: whether the answer that
+// selected a contact still stands, and which kind it is.
+type NoiseJudgedStanding struct {
+	Stands bool
+	Kind   string
+}
+
 // NoiseJudgedStandsTx re-reads, on the retraction's own transaction, whether
 // the answer that selected a contact still stands. The scan and the archive
 // are separate transactions, so a keep_out withdrawn — or a verdict corrected
 // — between them would otherwise still cost the contact.
-func (s *PendingStore) NoiseJudgedStandsTx(ctx context.Context, tx pgx.Tx, email string, ownerID ids.UUID) (bool, error) {
-	var stands bool
-	if err := tx.QueryRow(ctx, `SELECT `+noiseJudgedStandsSQL("$1", "$2"),
-		email, ownerID).Scan(&stands); err != nil {
-		return false, fmt.Errorf("capture: re-reading whether a noise answer still stands: %w", err)
+//
+// It returns the kind alongside, from the same read, because the caller's next
+// decision depends on it: correspondence spares a newsletter's contact and does
+// not spare a personal one. Reading the kind separately would open a window in
+// which the two answers disagree.
+func (s *PendingStore) NoiseJudgedStandsTx(
+	ctx context.Context, tx pgx.Tx, email string, ownerID ids.UUID,
+) (NoiseJudgedStanding, error) {
+	var standing NoiseJudgedStanding
+	if err := tx.QueryRow(ctx,
+		`SELECT `+noiseJudgedStandsSQL("$1", "$2")+`, `+noiseJudgedKindSQL("$1", "$2"),
+		email, ownerID).Scan(&standing.Stands, &standing.Kind); err != nil {
+		return NoiseJudgedStanding{}, fmt.Errorf("capture: re-reading whether a noise answer still stands: %w", err)
 	}
-	return stands, nil
+	return standing, nil
 }
 
 // AskWhoseRecord opens the question the capture could not.

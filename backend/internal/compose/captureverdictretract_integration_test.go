@@ -81,6 +81,40 @@ func TestANoiseVerdictLeavesACorrespondedSendersContact(t *testing.T) {
 	}
 }
 
+// A PERSONAL verdict withdraws the contact even though the owner wrote to them.
+//
+// This is the founder's clinic. The correspondence bound above protects a
+// business counterparty from one misclassified message; here the owner writing
+// back is what a private correspondence looks like, so reading it as evidence of
+// business kept the record every time. A private clinic and its blood-test
+// results sat in a shared CRM because the founder had replied to his own doctor.
+func TestAPersonalVerdictRetractsTheContactEvenWhenTheOwnerWroteToThem(t *testing.T) {
+	e := integration.Setup(t)
+	const clinic = "maximum.clinic@health.example"
+	personID := seedCaptureOnlyContact(t, e, clinic, e.Rep1)
+	seedOutboundMail(t, e, clinic, "thank you, see you on Tuesday")
+	mail := seedCapturedMail(t, e, clinic, "Blood test results of May")
+	dispositionID := seedPendingDisposition(t, e, clinic, "health.example", mail)
+
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPersonal}}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+
+	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NOT NULL`, personID); n != 1 {
+		t.Fatal("a private correspondent kept their contact because the owner had written back — " +
+			"replying to your own doctor is not evidence that they are a business counterparty")
+	}
+	// The mail itself is untouched: the purge that destroys it is its own
+	// change with an undo window, and hideNoise is deliberately not called on
+	// this arm.
+	if n := countIn(t, e, `
+		SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NULL`, mail); n != 1 {
+		t.Fatal("the personal verdict archived the message — this arm withdraws the record and leaves the mail alone")
+	}
+}
+
 // A `keep out` is a statement about the decider's own mailbox. It may retract
 // the record minted for THEM; a colleague who captured the same address keeps
 // theirs, exactly as their mail keeps arriving.
@@ -135,6 +169,19 @@ func TestTheReconcileSweepRetractsContactsANoiseVerdictAlreadyCovered(t *testing
 	seedSettledNoiseRow(t, e, "vertrieb.partner@haendler.example", capture.KindSpam)
 	seedSenderOverride(t, e, e.Rep1, "vertrieb.partner@haendler.example", "business")
 
+	// Judged PERSONAL, and written to since — the pair that spares `answered`
+	// above and must not spare this one. Correspondence is the bound that can
+	// change after a noise answer; a personal answer is about whose life the
+	// mail belongs to, and a later reply is what that looks like.
+	privatelyJudged := seedCaptureOnlyContact(t, e, "hausarzt.praxis@gesund.example", e.Rep1)
+	seedSettledNoiseRow(t, e, "hausarzt.praxis@gesund.example", capture.KindPersonal)
+	seedOutboundMail(t, e, "hausarzt.praxis@gesund.example", "danke, bis Dienstag")
+
+	// The sender classifier's own record, promoted by it to the workspace.
+	// Nothing human ever touched it, so a later verdict may still withdraw it.
+	promoted := seedMachineMadeContact(t, e, "labor.befunde@gesund.example", e.Rep1)
+	seedSettledNoiseRow(t, e, "labor.befunde@gesund.example", capture.KindPersonal)
+
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, people.NewStore(InstallationDB(e.Pool)))
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
@@ -155,6 +202,39 @@ func TestTheReconcileSweepRetractsContactsANoiseVerdictAlreadyCovered(t *testing
 	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NULL`, readmitted); n != 1 {
 		t.Fatal("the sweep retracted a contact whose owner had marked the sender business — a standing human decision lost to a machine verdict")
 	}
+	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NOT NULL`, privatelyJudged); n != 1 {
+		t.Fatal("correspondence spared a contact judged PERSONAL — the owner writing to their doctor is " +
+			"what a private correspondence looks like, not evidence that it is business")
+	}
+	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NOT NULL`, promoted); n != 1 {
+		t.Fatal("the sweep could not see a contact the sender classifier had made and published — " +
+			"its selector only ever looked at owner-scoped connector records")
+	}
+}
+
+// seedMachineMadeContact inserts the person the SENDER verdict engine makes:
+// minted under the agent principal and published by that engine to the
+// workspace, with nobody human behind either act.
+func seedMachineMadeContact(t *testing.T, e *integration.Env, email string, owner ids.UUID) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO person (id, owner_id, full_name, source, captured_by, visibility)
+			VALUES ($1, $2, $3, 'capture_counterparty_verdict',
+			        'agent:capture_counterparty_verdict', 'workspace')`, id, owner, email); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+			VALUES ($1, $2, true, 'capture_counterparty_verdict',
+			        'agent:capture_counterparty_verdict')`, id, email)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("seeding the machine-made contact: %v", err)
+	}
+	return id
 }
 
 // seedCaptureOnlyContact inserts a person exactly as capture minted one before
