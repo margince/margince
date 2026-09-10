@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -248,3 +249,67 @@ func grantorOf(ctx context.Context, e *integration.Env, activity ids.UUID) (ids.
 // errNoActorBound names the one impossible case, so the helper never returns a
 // zero id that reads as a real answer.
 var errNoActorBound = errors.New("the import context carries no actor")
+
+// TestAStagingFailureRaisesAWorklistNoticeForTheImporter drives
+// recordStagingFailure's real write, against a real database, under a real
+// bound actor — the wiring the unit lane's injected recordFailure never
+// touches: a real notice row a person's Worklist would actually show, not an
+// audit row nothing renders.
+func TestAStagingFailureRaisesAWorklistNoticeForTheImporter(t *testing.T) {
+	e := integration.Setup(t)
+	worker := newVCardIngestWorker(e.Pool, blobstore.NewMemory(), quietIngestLog())
+	activity := ids.NewV7()
+	entry := people.VCardEntry{FullName: "A Broken Card"}
+
+	if err := worker.recordStagingFailure(e.Admin(), activity, entry); err != nil {
+		t.Fatalf("recording a staging failure: %v", err)
+	}
+
+	var kind, targetType string
+	var targetID ids.UUID
+	var dedupe string
+	if err := e.Pool.QueryRow(e.Admin(), `
+		SELECT kind, target_type, target_id, dedupe_key FROM notice
+		 WHERE recipient_user_id = $1 AND kind = $2`,
+		e.AdminUser, noticeKindVCardStagingFailed).Scan(&kind, &targetType, &targetID, &dedupe); err != nil {
+		t.Fatalf("reading the raised notice: %v — a mailed card's staging failure must reach "+
+			"the importer's own Worklist, the one screen a person unattended can still check", err)
+	}
+	if targetType != "activity" || targetID != activity {
+		t.Errorf("notice target = (%s, %s), want (activity, %s) — an activity subject renders no "+
+			"link (worklist.copy.ts's subjectHref), but the row is still LABELLED with the message "+
+			"this card came from, which is what the target names", targetType, targetID, activity)
+	}
+	wantDedupe := noticeKindVCardStagingFailed + ":" + activity.String() + ":" + vcardStagingFailureKey(entry)
+	if dedupe != wantDedupe {
+		t.Errorf("dedupe_key = %q, want %q — without it, every retry of the same card raises a second line", dedupe, wantDedupe)
+	}
+}
+
+// TestARetriedStagingFailureRaisesOnlyOneNotice — River retries the whole
+// message up to vcardIngestMaxAttempts times, and every attempt reaches
+// recordStagingFailure again for a card that keeps failing. Without the
+// dedupe key this floods the importer's Worklist with one identical line per
+// attempt.
+func TestARetriedStagingFailureRaisesOnlyOneNotice(t *testing.T) {
+	e := integration.Setup(t)
+	worker := newVCardIngestWorker(e.Pool, blobstore.NewMemory(), quietIngestLog())
+	activity := ids.NewV7()
+	entry := people.VCardEntry{FullName: "A Broken Card"}
+
+	for i := 0; i < 3; i++ {
+		if err := worker.recordStagingFailure(e.Admin(), activity, entry); err != nil {
+			t.Fatalf("attempt %d: recording a staging failure: %v", i+1, err)
+		}
+	}
+
+	var count int
+	if err := e.Pool.QueryRow(e.Admin(), `
+		SELECT count(*) FROM notice WHERE recipient_user_id = $1 AND kind = $2`,
+		e.AdminUser, noticeKindVCardStagingFailed).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Errorf("notice rows after 3 retried attempts = %d, want 1 — the dedupe key must collapse them", count)
+	}
+}
