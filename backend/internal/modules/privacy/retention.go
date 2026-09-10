@@ -38,7 +38,16 @@ import (
 // per site). policyID/reason are each nil where that site's
 // action carries no such value — the union this schema's optional
 // policy/reason fields exist for.
-func retentionAppliedPayload(action string, policyID *ids.UUID, reason *string) crmcontracts.PublicEventRetentionApplied {
+//
+// The action is the contract's own type rather than a string, so a fourth one
+// cannot reach a subscriber by being spelled at an emit site: the set is closed
+// in the schema, and the compiler is what holds the sites to it. A subscriber
+// switching on the three exhaustively is the whole reason the set is closed, and
+// a value it does not know is dropped in silence that reads exactly like no
+// event.
+func retentionAppliedPayload(
+	action crmcontracts.PublicEventRetentionAppliedAction, policyID *ids.UUID, reason *string,
+) crmcontracts.PublicEventRetentionApplied {
 	payload := crmcontracts.PublicEventRetentionApplied{Action: action}
 	if policyID != nil {
 		policy := openapi_types.UUID(*policyID)

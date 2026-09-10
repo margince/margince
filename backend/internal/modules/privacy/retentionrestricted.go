@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -110,7 +111,7 @@ func (s *RetentionService) expireRestriction(ctx context.Context, id ids.UUID) e
 			return err
 		}
 		reason := restrictionExpiredCause
-		return storekit.EmitEventForEntity(ctx, tx, auditID, "activity", id, retentionAppliedPayload(actionErase, nil, &reason))
+		return storekit.EmitEventForEntity(ctx, tx, auditID, "activity", id, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason))
 	})
 }
 

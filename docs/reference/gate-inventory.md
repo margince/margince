@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (106)
+## Parity (105)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -85,7 +85,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `issuelabels_test.go` | H3 | The label taxonomy is written down once and read from there. |
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
 | `linkceilingparity_test.go` | H2 | The per-activity link ceiling is one number, wherever it is spelled. |
-| `lockspelling_test.go` | H2 | One lock, two modules, and no import between them. |
 | `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it (frontend/src/screens/brief.view.ts) and outbound mail links to it (internal/platform/mailcopy/link.go), because a message has to name a view before the app it opens is running. |
 | `mailcopy_test.go` | H2 | The weekly message's labels are the weekly PANEL's labels. |
 | `meetinghorizonparity_test.go` | H2 | How far into the diary a meeting still says a relationship is live, spelled twice in two modules that may not import each other, and held equal here. |
@@ -244,7 +243,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `reportasof_test.go` | H2 | A report's answer is labelled with the instant it was COMPUTED at. |
 | `requiredbodyids_test.go` | H3 | Every contract request body that declares a required id must be accounted for. |
 | `restrictedreaders_test.go` | H2 | A record held under a statutory retention obligation is unavailable in EVERY ordinary read path (A165/ADR-0114 §2): lists, timelines, search, exports, embeddings, agent grounding. |
-| `rightscasewriters_test.go` | H2 | EVERY PROPOSAL A DATA SUBJECT SENDS OPENS A CASE SOMEBODY OWES AN ANSWER TO. |
+| `retentionactionset_test.go` | H2 | One set of retention actions, spelled in three places. |
 | `rlsclaimsprose_test.go` | H2 | The prose says what bounds a read, and it is not row-level security. |
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook — at the root, and in any directory that needs one of its own. |
 | `safetydefects_test.go` | H2 | Every declared stage-automation safety defect can actually stop a rule. |
@@ -384,7 +383,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `waiveronoffender_test.go` | H2 | A waiver must be asked about an offender, never about a candidate. |
 | `workflowhandler_test.go` | H2 | The workflow.Handler read/write contract as a fitness function (ports/workflow.Handler): Match is a pure predicate and Plan computes the typed Effect WITHOUT applying it — "this is what makes dry-run and diff preview possible". |
 
-## Claim (11)
+## Claim (10)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -393,7 +392,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `elapsedonespelling_test.go` | H1 | "How many days of silence" is spelled once. |
 | `employmentcurrency_test.go` | H1 | employment.IsCurrentSQL calls itself "the ONE spelling of 'this job is still theirs', and the only definition of a current employment in this product". |
 | `livemember_test.go` | H1 | "Someone who still works here" is `status = 'active' AND archived\_at IS NULL` on app\_user, and TWO functions in two different packages each called themselves the ONE spelling of it while the tree held about twenty copies. |
-| `meetingoverspelling_test.go` | H2 | "This meeting is over" is spelled twice, and the two must say the same thing. |
 | `noisejudgedspelling_test.go` | H2 | "An already-settled answer disowns this contact" is spelled once. |
 | `onedraftwriter_test.go` | H1 | One writer produces every grounded draft, or the surfaces drift. |
 | `renovatelockfileage_test.go` | H3 | The lockfile refresh is not held back by the repo-wide release-age floor. |

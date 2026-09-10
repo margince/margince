@@ -47,7 +47,7 @@ import (
 // TestRetentionAppliedPayload_ActionOnly proves the embed-call sweep's
 // subset (retention.go's eraseEmbedCall): action only, no policy or reason.
 func TestRetentionAppliedPayload_ActionOnly(t *testing.T) {
-	payload := retentionAppliedPayload(actionErase, nil, nil)
+	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil)
 
 	if !reflect.DeepEqual(payload.EventType(), "retention.applied") {
 		t.Errorf("got %v, want %v", payload.EventType(), "retention.applied")
@@ -55,8 +55,8 @@ func TestRetentionAppliedPayload_ActionOnly(t *testing.T) {
 	if !reflect.DeepEqual(payload.EntityType(), "dynamic") {
 		t.Errorf("retention.applied is a dynamic-entity type — its static EntityType() is unused; the real subject comes from EmitEventForEntity's caller-supplied entityType: got %v, want %v", payload.EntityType(), "dynamic")
 	}
-	if !reflect.DeepEqual(payload.Action, actionErase) {
-		t.Errorf("got %v, want %v", payload.Action, actionErase)
+	if !reflect.DeepEqual(payload.Action, crmcontracts.RetentionAppliedErase) {
+		t.Errorf("got %v, want %v", payload.Action, crmcontracts.RetentionAppliedErase)
 	}
 	if payload.Policy != nil {
 		t.Errorf("expected nil, got %v", payload.Policy)
@@ -89,10 +89,10 @@ func TestRetentionAppliedPayload_ActionOnly(t *testing.T) {
 func TestRetentionAppliedPayload_WithPolicy(t *testing.T) {
 	policyID := ids.NewV7()
 
-	payload := retentionAppliedPayload("archive", &policyID, nil)
+	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedArchive, &policyID, nil)
 
-	if !reflect.DeepEqual(payload.Action, "archive") {
-		t.Errorf("got %v, want %v", payload.Action, "archive")
+	if !reflect.DeepEqual(payload.Action, crmcontracts.RetentionAppliedArchive) {
+		t.Errorf("got %v, want %v", payload.Action, crmcontracts.RetentionAppliedArchive)
 	}
 	if payload.Policy == nil {
 		t.Fatalf("expected non-nil value")
@@ -110,10 +110,10 @@ func TestRetentionAppliedPayload_WithPolicy(t *testing.T) {
 func TestRetentionAppliedPayload_WithReason(t *testing.T) {
 	reason := "dsr_request"
 
-	payload := retentionAppliedPayload(actionErase, nil, &reason)
+	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason)
 
-	if !reflect.DeepEqual(payload.Action, actionErase) {
-		t.Errorf("got %v, want %v", payload.Action, actionErase)
+	if !reflect.DeepEqual(payload.Action, crmcontracts.RetentionAppliedErase) {
+		t.Errorf("got %v, want %v", payload.Action, crmcontracts.RetentionAppliedErase)
 	}
 	if payload.Policy != nil {
 		t.Errorf("expected nil, got %v", payload.Policy)
@@ -208,7 +208,7 @@ func decodedOutboxEntityType(t *testing.T, tx *fakeTx) string {
 // wire entity_type tracks the caller-supplied subject, not the payload's
 // static type.
 func TestRetentionAppliedEmitUsesRuntimeEntityType(t *testing.T) {
-	payload := retentionAppliedPayload(actionErase, nil, nil)
+	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil)
 
 	for _, entityType := range []string{"ai_call", "activity", "deal", "person"} {
 		t.Run(entityType, func(t *testing.T) {

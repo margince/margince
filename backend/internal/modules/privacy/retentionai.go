@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -75,7 +76,7 @@ func (s *RetentionService) eraseVoiceSignalContent(ctx context.Context, id ids.U
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEventForEntity(ctx, tx, auditID, "voice_learning_signal", id, retentionAppliedPayload(actionErase, nil, nil))
+		return storekit.EmitEventForEntity(ctx, tx, auditID, "voice_learning_signal", id, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil))
 	})
 }
 
@@ -147,6 +148,6 @@ func (s *RetentionService) eraseEmbedCall(ctx context.Context, id ids.UUID) erro
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEventForEntity(ctx, tx, auditID, "ai_call", id, retentionAppliedPayload(actionErase, nil, nil))
+		return storekit.EmitEventForEntity(ctx, tx, auditID, "ai_call", id, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil))
 	})
 }

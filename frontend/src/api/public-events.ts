@@ -1212,8 +1212,11 @@ export interface components {
         };
         /** @description Payload for retention.applied — a retention/erasure action ran against one record. Four emit sites, four different runtime subjects: the embed-call sweep (ai_call), the voice-learning-signal content sweep (voice_learning_signal), a workspace's configured retention policy's object type (activity | deal | lead | person | ai_call_payload), and Art. 17 erasure (person) — none fixed enough for this schema to name, so this is dynamic-entity (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. policy/reason are a union across the sites — both telemetry sweeps set neither, the policy-driven sweep sets policy only, Art. 17 erasure sets reason only. */
         PublicEventRetentionApplied: {
-            /** @description The action that ran (archive | anonymize | erase). */
-            action: string;
+            /**
+             * @description The action that ran. A CLOSED set, so a subscriber can switch on it exhaustively — which is the whole reason for closing it: an open field leaves a consumer to either branch on values nobody has defined or drop what it does not recognise, and a silent drop looks exactly like no event. `retention_policy.action` carries the same three under a CHECK, and a gate holds the two spellings together. Restriction is NOT a fourth action here: it emits retention.restricted, whose own action is a different closed set.
+             * @enum {string}
+             */
+            action: "archive" | "anonymize" | "erase";
             /**
              * Format: uuid
              * @description The retention policy that drove this action (absent for the fixed embed-call sweep and for Art. 17 erasure, neither of which is policy-configured).
@@ -1738,6 +1741,7 @@ export const publicEventIntroRequestCompletedOutcomeValues: ReadonlyArray<Flatte
 export const publicEventIntroRequestClosedReasonValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventIntroRequestClosed"]["reason"]> = ["cancelled", "expired"];
 export const publicEventCommsDeliveryBouncedKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventCommsDeliveryBounced"]["kind"]> = ["hard", "soft"];
 export const publicEventRetentionRestrictedActionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventRetentionRestricted"]["action"]> = ["restrict", "release", "pin"];
+export const publicEventRetentionAppliedActionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventRetentionApplied"]["action"]> = ["archive", "anonymize", "erase"];
 export const userReactivatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["UserReactivatedStatus"]> = ["invited", "active"];
 export const publicEventTeamChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventTeamChanged"]["change"]> = ["created", "renamed", "archived", "restored", "member_added", "member_removed"];
 export const publicEventApprovalDecidedVerdictValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventApprovalDecided"]["verdict"]> = ["approved", "rejected", "expired"];
