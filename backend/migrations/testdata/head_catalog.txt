@@ -2961,6 +2961,7 @@ public.idx_linkedin_connection_match CREATE INDEX idx_linkedin_connection_match 
 public.idx_linkedin_connection_org CREATE INDEX idx_linkedin_connection_org ON public.linkedin_connection USING btree (matched_org_id) WHERE ((matched_org_id IS NOT NULL) AND (tombstoned_at IS NULL))
 public.idx_list_member_entity CREATE INDEX idx_list_member_entity ON public.list_member USING btree (entity_type, entity_id)
 public.idx_list_member_list CREATE INDEX idx_list_member_list ON public.list_member USING btree (list_id)
+public.idx_mfa_recovery_code_user CREATE INDEX idx_mfa_recovery_code_user ON public.mfa_recovery_code USING btree (user_id)
 public.idx_mirror_user_map CREATE INDEX idx_mirror_user_map ON public.mirror_user_map USING btree (incumbent, incumbent_user_id)
 public.idx_mirror_visibility_record CREATE INDEX idx_mirror_visibility_record ON public.mirror_visibility USING btree (object_class, external_id)
 public.idx_offer_deal CREATE INDEX idx_offer_deal ON public.offer USING btree (deal_id, revision DESC) WHERE (archived_at IS NULL)
@@ -3494,6 +3495,17 @@ public.list_member.list_member_unique UNIQUE (list_id, entity_type, entity_id)
 public.list_member_pkey CREATE UNIQUE INDEX list_member_pkey ON public.list_member USING btree (id)
 public.list_member_unique CREATE UNIQUE INDEX list_member_unique ON public.list_member USING btree (list_id, entity_type, entity_id)
 public.list_pkey CREATE UNIQUE INDEX list_pkey ON public.list USING btree (id)
+public.mfa_recovery_code acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.mfa_recovery_code.code_hash text NOT NULL gen=- def=-
+public.mfa_recovery_code.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.mfa_recovery_code.id uuid NOT NULL gen=- def=uuidv7()
+public.mfa_recovery_code.mfa_recovery_code_hash_key UNIQUE (code_hash)
+public.mfa_recovery_code.mfa_recovery_code_pkey PRIMARY KEY (id)
+public.mfa_recovery_code.mfa_recovery_code_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.mfa_recovery_code.used_at timestamp with time zone gen=- def=-
+public.mfa_recovery_code.user_id uuid NOT NULL gen=- def=-
+public.mfa_recovery_code_hash_key CREATE UNIQUE INDEX mfa_recovery_code_hash_key ON public.mfa_recovery_code USING btree (code_hash)
+public.mfa_recovery_code_pkey CREATE UNIQUE INDEX mfa_recovery_code_pkey ON public.mfa_recovery_code USING btree (id)
 public.mirror_user_automap_block acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mirror_user_automap_block.app_user_id uuid NOT NULL gen=- def=-
 public.mirror_user_automap_block.blocked_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5789,6 +5801,14 @@ public.uq_weekly_review_learning_slot CREATE UNIQUE INDEX uq_weekly_review_learn
 public.uq_weekly_review_movement_bar CREATE UNIQUE INDEX uq_weekly_review_movement_bar ON public.weekly_review_movement USING btree (weekly_review_id, period_kind, bar)
 public.uq_weekly_review_outlook_period CREATE UNIQUE INDEX uq_weekly_review_outlook_period ON public.weekly_review_outlook USING btree (weekly_review_id, period_kind)
 public.uq_weekly_review_user_week CREATE UNIQUE INDEX uq_weekly_review_user_week ON public.weekly_review USING btree (user_id, local_week_start)
+public.user_mfa acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.user_mfa.confirmed_at timestamp with time zone gen=- def=-
+public.user_mfa.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.user_mfa.secret_ref text NOT NULL gen=- def=-
+public.user_mfa.user_id uuid NOT NULL gen=- def=-
+public.user_mfa.user_mfa_pkey PRIMARY KEY (user_id)
+public.user_mfa.user_mfa_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.user_mfa_pkey CREATE UNIQUE INDEX user_mfa_pkey ON public.user_mfa USING btree (user_id)
 public.user_record_view acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.user_record_view.entity_id uuid NOT NULL gen=- def=-
 public.user_record_view.entity_type text NOT NULL gen=- def=-

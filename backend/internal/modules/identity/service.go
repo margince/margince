@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity/internal/password"
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -61,6 +62,11 @@ type Service struct {
 	// composed the reader behaves exactly as one whose policy is off, so the
 	// password path stays open. See ssoenforcement.go.
 	requireSSO func(ctx context.Context) (bool, error)
+	// vault seals a member's TOTP secret at rest: the secret must be recoverable
+	// to verify a code (unlike a password, which is only ever compared), so it is
+	// sealed rather than hashed. Nil when unwired, which is what the MFA methods
+	// check before they touch it. See mfa.go.
+	vault keyvault.Vault
 }
 
 func NewService(pool *pgxpool.Pool) *Service {

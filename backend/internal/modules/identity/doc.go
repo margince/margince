@@ -5,8 +5,9 @@
 // sessions (ADR-0043), RBAC roles, and the Agent Seat Passport. Auth is
 // in-app — there is no separate identity service (P7 on-prem).
 //
-// Tables owned: app_user, federated_identity, passport, role,
-// role_assignment, session, setup_token, team, team_membership, workspace.
+// Tables owned: app_user, federated_identity, mfa_recovery_code, passport,
+// role, role_assignment, session, setup_token, team, team_membership,
+// user_mfa, workspace.
 // Role policy documents live ONLY in
 // internal/policy. Imports shared + platform + the
 // generated contract only; never a sibling module — the workspace
