@@ -219,4 +219,59 @@ describe("editing a person's contact methods", () => {
       "second@acme.com",
     );
   });
+
+  it("drops blank rows when saving contact methods", async () => {
+    const user = userEvent.setup();
+    mountFetchRecorder();
+    const dana = person({
+      emails: [
+        {
+          id: "e-1",
+          email: "existing@acme.com",
+          email_type: "work",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "human:u-1",
+        },
+      ],
+      phones: [
+        {
+          id: "ph-1",
+          phone: "+49301234",
+          phone_type: "work",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "human:u-1",
+        },
+      ],
+    });
+    renderModal({ open: true, person: dana });
+
+    // Append a blank email row and leave it empty
+    await user.click(screen.getByRole("button", { name: /add email/i }));
+    // Append a blank phone row and leave it empty
+    await user.click(screen.getByRole("button", { name: /add phone/i }));
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    const patch = await findPatch();
+    const body = asRecord(patch.body, "the contact-methods patch");
+    const emails = asArray(body.emails, "the patched emails");
+    const phones = asArray(body.phones, "the patched phones");
+
+    // Blank rows must be dropped, so only the existing email should remain
+    expect(emails).toHaveLength(1);
+    const emailRecord = asRecord(emails[0], "the first email");
+    expect(emailRecord.email).toBe("existing@acme.com");
+    expect(emailRecord.is_primary).toBe(true);
+    expect(emailRecord.position).toBe(0);
+
+    // Same for phones: only the existing phone should remain
+    expect(phones).toHaveLength(1);
+    const phoneRecord = asRecord(phones[0], "the first phone");
+    expect(phoneRecord.phone).toBe("+49301234");
+    expect(phoneRecord.is_primary).toBe(true);
+    expect(phoneRecord.position).toBe(0);
+  });
 });

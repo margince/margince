@@ -162,21 +162,25 @@ function useContactMethodsSave() {
 }
 
 function toEmailInputs(rows: readonly StagedEmail[]): PersonEmailInput[] {
-  return rows.map((row, index) => ({
-    email: row.email,
-    email_type: row.email_type,
-    is_primary: row.is_primary,
-    position: index,
-  }));
+  return rows
+    .filter((row) => row.email.trim() !== "")
+    .map((row, index) => ({
+      email: row.email.trim(),
+      email_type: row.email_type,
+      is_primary: row.is_primary,
+      position: index,
+    }));
 }
 
 function toPhoneInputs(rows: readonly StagedPhone[]): PersonPhoneInput[] {
-  return rows.map((row, index) => ({
-    phone: row.phone,
-    phone_type: row.phone_type,
-    is_primary: row.is_primary,
-    position: index,
-  }));
+  return rows
+    .filter((row) => row.phone.trim() !== "")
+    .map((row, index) => ({
+      phone: row.phone.trim(),
+      phone_type: row.phone_type,
+      is_primary: row.is_primary,
+      position: index,
+    }));
 }
 
 function blankEmail(position: number): StagedEmail {
