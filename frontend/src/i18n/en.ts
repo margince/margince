@@ -3592,6 +3592,8 @@ export const en = {
     "If you know why — they asked you to, you met, they are a customer — say so and it is recorded against your name.",
   "sendPermission.unprovenRefuses":
     "Sending it will be refused until Margince has a record.",
+  "sendPermission.ready": "Ready to send",
+  "sendPermission.markName": "Communication status for this message",
   "sendPermission.checking": "Checking whether this message may be sent…",
   "sendPermission.unanswered":
     "Margince could not check whether this message may be sent. Sending it asks again.",
