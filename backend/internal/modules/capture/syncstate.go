@@ -91,14 +91,18 @@ func (r *Registry) recordSyncSuccess(ctx context.Context, connectionID ids.UUID)
 		// stay on its clock, which is the one that observed it.
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO capture_sync_state (connection_id, next_sync_at,
-			                                consecutive_failures, last_synced_at, last_success_at, last_error_class)
-			VALUES ($1, now() + make_interval(secs => $2), 0, $3, $3, NULL)
+			                                consecutive_failures, last_synced_at, last_success_at,
+			                                last_error_class, failing_since)
+			VALUES ($1, now() + make_interval(secs => $2), 0, $3, $3, NULL, NULL)
 			ON CONFLICT (connection_id) DO UPDATE SET
 			  next_sync_at = now() + make_interval(secs => $2),
 			  consecutive_failures = 0,
 			  last_synced_at = EXCLUDED.last_synced_at,
 			  last_success_at = EXCLUDED.last_success_at,
-			  last_error_class = NULL`,
+			  last_error_class = NULL,
+			  -- One success ends the streak, so the next failure starts a new
+			  -- one from its own instant rather than continuing this one.
+			  failing_since = NULL`,
 			connectionID, r.syncInterval.Seconds(), now); err != nil {
 			return err
 		}
@@ -220,12 +224,19 @@ func (r *Registry) recordSyncFailure(ctx context.Context, connectionID ids.UUID,
 		var failures int
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO capture_sync_state (connection_id, next_sync_at,
-			                                consecutive_failures, last_synced_at, last_error_class)
-			VALUES ($1, now() + make_interval(secs => $2), 1, $3, $4)
+			                                consecutive_failures, last_synced_at,
+			                                last_error_class, failing_since)
+			VALUES ($1, now() + make_interval(secs => $2), 1, $3, $4, $3)
 			ON CONFLICT (connection_id) DO UPDATE SET
 			  consecutive_failures = capture_sync_state.consecutive_failures + 1,
 			  last_synced_at = EXCLUDED.last_synced_at,
-			  last_error_class = EXCLUDED.last_error_class
+			  last_error_class = EXCLUDED.last_error_class,
+			  -- SET ONCE PER STREAK, and this COALESCE is the whole point of the
+			  -- column. last_synced_at beside it moves on every tick, so it dates
+			  -- the newest attempt; a duration read off it would say "failing for
+			  -- two minutes" through an outage of any length. The streak's own
+			  -- start does not move until a success clears it.
+			  failing_since = COALESCE(capture_sync_state.failing_since, EXCLUDED.failing_since)
 			RETURNING consecutive_failures`,
 			connectionID, backoffDelay(0).Seconds(), now, string(class)).Scan(&failures); err != nil {
 			return err

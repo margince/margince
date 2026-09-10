@@ -172,6 +172,16 @@ type ConnectionView struct {
 	LastErrorClass *string
 	NextSyncDueAt  *time.Time
 
+	// FailingSince is when the CURRENT failure streak began, nil while the
+	// connection is healthy. It answers the question the class cannot: a
+	// provider that has been unreachable for an hour and one that missed its
+	// last tick carry the same class, and a sync that postpones itself is never
+	// late by any age reading, so without this the two read identically on a
+	// fleet screen. Set on the first failure after a success and left alone
+	// until one clears it, so the duration a reader takes off it is the
+	// outage's rather than the newest attempt's.
+	FailingSince *time.Time
+
 	// Backfill is the newest CAP-DDL-4 run, nil when never started —
 	// the list surface's per-connection summary (contract state "none").
 	Backfill *BackfillRun
@@ -197,7 +207,7 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 			SELECT c.id, c.provider, c.status, c.sync_cursor, c.watch_expires_at, c.provider_scopes,
 			       c.account_label, c.signature_enrich_enabled, c.mail_posture,
 			       t.id, t.name, t.archived_at IS NOT NULL,
-			       s.last_synced_at, s.last_error_class, s.next_sync_at
+			       s.last_synced_at, s.last_error_class, s.next_sync_at, s.failing_since
 			FROM capture_connection c
 			LEFT JOIN capture_sync_state s ON s.connection_id = c.id
 			-- The word's own row, so the connection reports the name the
@@ -220,7 +230,7 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 			if err := rows.Scan(&v.ID, &v.Provider, &v.Status, &v.Cursor, &v.WatchExpiresAt, &v.ProviderScopes,
 				&v.AccountLabel, &v.SignatureEnrichEnabled, &v.MailPosture,
 				&tagID, &tagName, &tagArchived,
-				&v.LastSyncedAt, &v.LastErrorClass, &v.NextSyncDueAt); err != nil {
+				&v.LastSyncedAt, &v.LastErrorClass, &v.NextSyncDueAt, &v.FailingSince); err != nil {
 				return err
 			}
 			v.ContextTag = contextTagOf(tagID, tagName, tagArchived)
