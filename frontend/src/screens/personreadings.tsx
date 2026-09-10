@@ -260,7 +260,6 @@ function PromisesCard({
       <StatCard
         label={label}
         value={formatNumber(0, locale)}
-        numeric
         detail={t("person.readings.nothingOwed")}
       />
     );
@@ -286,7 +285,6 @@ function PromisesCard({
             })
           : formatNumber(ours.length, locale)
       }
-      numeric
       detail={
         overdue
           ? worst > 0
@@ -332,11 +330,14 @@ function DealCard({
   if (withheld) {
     return withheldCard(label, t);
   }
-  const door = { openLabel: t("person.readings.openDeals"), onOpen };
   const deal = view.commercial?.deal;
   if (!deal) {
     return (
-      <StatCard {...door} label={label} value={t("person.strip.noOpenDeal")} />
+      <StatCard
+        onOpen={onOpen}
+        label={label}
+        value={t("person.strip.noOpenDeal")}
+      />
     );
   }
   const priced =
@@ -353,7 +354,7 @@ function DealCard({
   ].filter((part): part is string => Boolean(part));
   return (
     <StatCard
-      {...door}
+      onOpen={onOpen}
       label={label}
       // The figure leads where there is one; the deal's name is the reading
       // when nobody has priced it, because "—" over a real deal reads as a
@@ -363,7 +364,6 @@ function DealCard({
           ? formatMoneyCompact(priced.amountMinor, priced.currency, locale)
           : deal.title
       }
-      numeric={priced !== undefined}
       detail={priced ? [deal.title, ...parts].join(" · ") : parts.join(" · ")}
       basis={
         view.commercial?.role ? (
@@ -405,16 +405,19 @@ function MeetingCard({
   if (withheld) {
     return withheldCard(label, t);
   }
-  const door = { openLabel: t("person.readings.openMeetings"), onOpen };
   const meeting = view.next_meeting;
   if (!meeting) {
     return (
-      <StatCard {...door} label={label} value={t("person.strip.noMeeting")} />
+      <StatCard
+        onOpen={onOpen}
+        label={label}
+        value={t("person.strip.noMeeting")}
+      />
     );
   }
   return (
     <StatCard
-      {...door}
+      onOpen={onOpen}
       label={label}
       value={formatDayMonth(meeting.starts_at, locale, zone)}
       detail={meeting.subject ?? undefined}

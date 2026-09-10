@@ -1797,11 +1797,15 @@
 
 /* One reading at the top of a record. The tile stays neutral and only the
    VALUE takes a tone: a row of coloured boxes reads as a dashboard, and the
-   reader is meant to see three facts rather than a traffic light. */
+   reader is meant to see three facts rather than a traffic light.
+   The interval between a reading's three lines — what it is, the figure, what
+   the figure rests on — is the CARD's, not the row's. ReadingsGrid used to open
+   it up to --space-2 for its own cards while a strip's kept --space-1, which is
+   one reading drawn two ways on two pages of the same record. */
 .stat-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
   padding: var(--space-4);
   /* The pane, not the card: a reading sits on translucent ground with a
      hairline, the same surface every zone of a record uses, so a row of them
@@ -1831,51 +1835,84 @@
    the general rule: a row of readings is `StatStrip` (statstrip.css), and the
    rules between its slots are the plate's, not the tile's. */
 
-/* --textMeta, not --textMuted: this is 11-13px meta/caption text, and
- * --textMeta is the token tuned to hold AA contrast at that size. */
+/* The line under the figure. Its TYPE comes from `.t-caption` on the element
+   (atoms.tsx) — quiet grey at the meta size is that utility's own spelling, and
+   a copy of it here is one that stops moving when the utility does.
+   What the rule owns is the SHAPE: two lines at most, so a reading whose basis
+   runs long cannot push its own card taller than the four beside it. A clamp
+   rather than a scrollbar or an ellipsis on one line: two lines hold the basis
+   a reader needs, and the receipt chip is where the rest of it lives. */
 .stat-card-detail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.25;
   text-wrap: pretty;
 }
+/* A detail of two facts — how much is failing, and why — is two nodes, and the
+   clamp's box lays inline children out on one line. Each fact keeps its own. */
+.stat-card-detail > * {
+  display: block;
+}
 
-/* The label is the reading's eyebrow (`.t-eyebrow` sets its type) and owns
- * the row; what QUALIFIES the reading — where it came from, what it rests on —
- * sits at its far end, beside the name of the reading rather than under the
- * figure, so neither competes with the number. */
+/* The label NAMES the reading; it does not announce it. Uppercase micro-type
+   was saying the second thing: five eyebrows over five figures read as five
+   section headings, and the figure — the one thing on the card compared across
+   a row — had to win a fight with the word above it. So it is sentence-case
+   meta text, one weight up from the detail line under the figure, which is the
+   whole of the distinction it needs.
+   The rule owns the ROW: what QUALIFIES the reading — where it came from, what
+   it rests on — sits at its far end, beside the name of the reading rather than
+   under the figure, so neither competes with the number. */
 .stat-card-label {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
-  text-wrap: pretty;
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  color: var(--textMeta);
+  line-height: 1.25;
+}
+/* The name itself clamps to ONE line, and the chips beside it do not: a row of
+   readings whose labels wrap to two lines puts every figure in the row at a
+   different height. `min-width: 0` because a flex item's floor is its content,
+   and without it a long label pushes the badge off the card instead of
+   clipping. */
+.stat-card-label-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+  min-width: 0;
 }
 .stat-card-source {
   flex-shrink: 0;
 }
 
-/* The figure: it is the one thing on the card a reader compares across the
-   row, and comparing means finding it in the same place at the same weight
-   every time. A word (a verdict) takes the display face; a figure takes the
-   mono face through `numeric`, where digits share one width. Both sit at the
-   same size so a row of mixed readings keeps one line. */
+/* The figure: the one thing on the card a reader compares across the row, and
+   comparing means finding it in the same place, at the same size, in the same
+   face every time. ONE face for every reading — the display face — and no
+   variant: a figure in the mono face beside a verdict in the display face made
+   two readings of one record look like two products, and which face a reading
+   drew in was a flag a caller could forget. Digits still line up, through
+   `tabular-nums` rather than through a second family.
+   ONE size too, everywhere the card is drawn: 17px in a narrow slot up to 20px
+   on a wide page, which is the range where a money figure with its cents still
+   holds one line. A screen that re-sizes this is the second author of a scale
+   this tier owns. */
 .stat-card-value {
   font-family: var(--f-display);
-  /* 26px on a wide page, down to 20px where five readings share a narrow row:
-     a money figure with its cents is the widest reading, and a figure that
-     wraps mid-number is worse than one set a little smaller. */
-  font-size: clamp(var(--fs-h2), 1.8vw, var(--fs-h1));
+  font-size: clamp(var(--fs-h3), 1.5vw, var(--fs-h2));
   font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
   letter-spacing: var(--tracking-display);
-  line-height: 1.15;
+  line-height: 1.1;
+  color: var(--textPrimary);
   overflow-wrap: anywhere;
-}
-.stat-card-value.t-mono {
-  font-family: var(--f-mono);
-  letter-spacing: var(--tracking-display);
 }
 
 /* The receipt under a reading. Not a fourth line of it — it is what the
@@ -1900,17 +1937,45 @@
      platform cursor beats a value the card set. The tile read as a plain arrow
      over every part of it the door actually answered for. */
   cursor: pointer;
-  /* 24px tall, which is the AA target floor (WCAG 2.5.8) — the same rung the
-     worklist's rank button takes. A text-only control on a 13px line boxes to
-     about 21px, and axe found this one at 20.9px on the project rollups: under
-     the floor, and with the receipt trigger close enough beside it that the
-     spacing exception does not rescue it either.
-     Centred in an inline-flex rather than padded, so the words stay on the
-     baseline the label opposite them sits on — padding would push the text off
-     that line to buy the same height. */
+  /* The door says its word at the meta size and in the bold weight: it is the
+     smallest text on the card and the only thing on it to press, so weight is
+     what carries it rather than size.
+     24px tall, which is the AA target floor (WCAG 2.5.8, and axe runs it in the
+     wcag22aa sweep) — the same rung the worklist's rank button takes. The words
+     box to 15px at this size, and axe measures the BUTTON's own rectangle: the
+     overlay that stretches the door over the tile is a pseudo-element, which
+     never enters it. Centred in an inline-flex rather than padded, so the words
+     stay on the baseline the label opposite them sits on — padding would push
+     the text off that line to buy the same height. */
   display: inline-flex;
   align-items: center;
   min-height: var(--space-6);
+  /* The air between the word and the arrow, spelled as an interval rather than
+     as a space in the markup: this is a flex line, and a whitespace-only text
+     node between two items is not a flex item — the space simply vanished. */
+  gap: var(--space-1);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-bold);
+}
+/* The arrow LEANS toward the door on the way in: the one movement on the tile,
+   3px, at the state duration — a card that answers the pointer reads as one a
+   reader can open, which through this button it is. On focus as well as hover,
+   so a keyboard reader gets the same answer. */
+.stat-card-arrow {
+  display: inline-block;
+  transition: transform var(--dur-state) var(--ease-out);
+}
+.stat-card:has(.stat-card-open):hover .stat-card-arrow,
+.stat-card-open:focus-visible .stat-card-arrow {
+  transform: translateX(3px);
+}
+/* The lean is the tween, and a reader who asked for less motion keeps the
+   door — only the movement goes. */
+@media (prefers-reduced-motion: reduce) {
+  .stat-card-arrow {
+    transition: none;
+    transform: none;
+  }
 }
 
 /* THE DOOR'S TARGET IS THE CARD, not the two words that name it. A reading that
@@ -1932,11 +1997,6 @@
    cursor never covers. */
 .stat-card:has(.stat-card-open) {
   cursor: pointer;
-}
-/* Underline and nothing else. `alert` tints the whole tile, and a hover ground
-   would take that judgement off the one card under the pointer. */
-.stat-card:has(.stat-card-open):hover .stat-card-open {
-  text-decoration: underline;
 }
 /* The ring goes round the CARD, because the card is what the press lands on.
    Around the words alone it drew a keyboard reader a target an inch from the
@@ -2042,32 +2102,36 @@
   border-radius: inherit;
   background: var(--accent);
 }
-/* A reading whose figure carries a tone carries it into the bar too: the bar
-   is the same claim at a glance, and a green one under a red figure would be
-   the card disagreeing with itself. A reading with no tone is not a neutral
-   reading, it is one that is fine, so the untoned bar is the accent above —
-   a row of identical grey tracks made the reader compare lengths to find the
-   one that is wrong, when the colour already knows. */
+/* A reading whose figure carries a tone carries it into the bar too, in the
+   SAME token: the bar is the same claim at a glance, and a bar a shade off the
+   figure above it is the card disagreeing with itself about how it went. A
+   reading with no tone is not a neutral reading, it is one that is fine, so the
+   untoned bar stays the accent (`.stat-card-meter-fill` above) — a row of
+   identical grey tracks made the reader compare lengths to find the one that is
+   wrong, when the colour already knows. */
 .stat-card-warn ~ .stat-card-meter .stat-card-meter-fill {
-  background: var(--warn);
+  background: var(--statWarn);
 }
 .stat-card-danger ~ .stat-card-meter .stat-card-meter-fill {
-  background: var(--danger);
+  background: var(--statDanger);
 }
 .stat-card-good ~ .stat-card-meter .stat-card-meter-fill {
-  background: var(--accent);
+  background: var(--statGood);
 }
 
+/* The three tones a reading's figure can carry, and the ONE place each is
+   spelled: the value, its verdict dot and its bar all read the same token, so
+   the three parts of one claim cannot come out three colours. */
 .stat-card-good {
-  color: var(--success);
+  color: var(--statGood);
 }
 
 .stat-card-warn {
-  color: var(--warn);
+  color: var(--statWarn);
 }
 
 .stat-card-danger {
-  color: var(--danger);
+  color: var(--statDanger);
 }
 
 /* The verdict dot beside a StatCard value — see `dot` on StatCard above.
@@ -2082,13 +2146,13 @@
   corner-shape: round;
 }
 .stat-card-dot-good {
-  background: var(--success);
+  background: var(--statGood);
 }
 .stat-card-dot-warn {
-  background: var(--warn);
+  background: var(--statWarn);
 }
 .stat-card-dot-danger {
-  background: var(--danger);
+  background: var(--statDanger);
 }
 
 /* The whole-tile variant: the slot itself is bad news, not just its figure —

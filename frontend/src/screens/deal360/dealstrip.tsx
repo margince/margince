@@ -28,6 +28,7 @@ import {
   formatDayMonth,
   formatMoneyOrAbsent,
   formatNumber,
+  MONEY_ABSENT,
   relativeDays,
 } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
@@ -146,12 +147,16 @@ function MoneyStat({
         }))}
       />
     ) : undefined;
+  const amount = formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale);
   return (
     <StatCard
       label={t("deal.strip.money")}
-      value={formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale)}
+      // A deal nobody has priced says so. `formatMoneyOrAbsent` owns whether
+      // the pair can be said as money and its sentinel is that answer; the word
+      // is the slot's, because "not priced yet" is work somebody can do and a
+      // dash is a reading that failed to load.
+      value={amount === MONEY_ABSENT ? t("deal.strip.money.unpriced") : amount}
       detail={detail}
-      numeric
       basis={basis}
     />
   );
@@ -269,7 +274,6 @@ function PeopleStat({
       })}
       detail={detail}
       tone={engaged <= 1 || !champion ? "warn" : undefined}
-      numeric
       // Counted segments, because a committee is a thing a reader counts.
       meter={{ filled: engaged, total: seats.length }}
       basis={
@@ -314,7 +318,6 @@ function MomentumStat({
       detail={parts.join(" · ")}
       tone={deal.stalled ? "danger" : undefined}
       dot={deal.stalled}
-      openLabel={t("deal.strip.openHistory")}
       onOpen={onOpen}
       basis={
         deal.last_activity_at ? (

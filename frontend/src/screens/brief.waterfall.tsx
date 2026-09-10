@@ -64,24 +64,20 @@ export function OutlookPanel({
         <StatCard
           label={t("brief.weekly.outlook.won")}
           value={money(shown.won_minor)}
-          numeric
         />
         <StatCard
           label={t("brief.weekly.outlook.commit")}
           value={money(shown.commit_minor)}
-          numeric
         />
         {/* The label says "incl. commit" because the figure includes it, and a
             reader adding best case to commit would double-count the overlap. */}
         <StatCard
           label={t("brief.weekly.outlook.bestCase")}
           value={money(shown.best_case_minor)}
-          numeric
         />
         <StatCard
           label={t("brief.weekly.outlook.weighted")}
           value={money(shown.weighted_minor)}
-          numeric
         />
         {shown.closing_landing_minor !== undefined && (
           <StatCard
@@ -95,7 +91,6 @@ export function OutlookPanel({
                 ? t(`brief.weekly.outlook.measure.${shown.forward_measure}`)
                 : undefined
             }
-            numeric
           />
         )}
       </StatStrip>

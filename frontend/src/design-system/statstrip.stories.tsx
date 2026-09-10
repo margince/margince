@@ -7,8 +7,14 @@ import { StatStrip } from "./statstrip";
 
 // The readings row in the states a record page actually puts it in: a full row,
 // a short one, and a row carrying verdicts rather than figures. What each story
-// is really checking is that the row reads ACROSS — one plate, one type scale,
-// rules and no gaps.
+// is really checking is that the row reads ACROSS — equal slots, one type scale
+// and air between them.
+//
+// The scale is the TILE's (atoms.css), not this component's: a slot here draws
+// exactly like a free-standing card, which is why none of these stories passes
+// a size or a variant. The strip used to carry a figure size of its own and a
+// `hero` flag carried a third for the Brief; one reading in three spellings is
+// the defect, and the row's own job is only how many slots and where it folds.
 const meta: Meta<typeof StatStrip> = {
   title: "Design System/StatStrip",
   component: StatStrip,
@@ -45,7 +51,13 @@ export const FewerSlots: Story = {
         detail="offline_demo"
       />
       <StatCard label="Payment behaviour" value="typically 4 days early" />
-      <StatCard label="Health" value="Watch" tone="warn" dot />
+      <StatCard
+        label="Health"
+        value="Watch"
+        tone="warn"
+        dot
+        onOpen={() => {}}
+      />
     </StatStrip>
   ),
 };

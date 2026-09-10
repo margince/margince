@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
@@ -9,8 +10,10 @@ import {
   formatDateAbbrev,
   formatMoneyOrAbsent,
   formatNumber,
+  MONEY_ABSENT,
 } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { type Project360, stateOf } from "./projectsections";
 
 // The project page's band under its header: the readings plate and the one
@@ -33,6 +36,25 @@ function reveal(anchor: string): () => void {
       .getElementById(anchor)
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+}
+
+// A money rollup as a READING: the figure where the deals carry one, and what
+// their absence means where they do not. `formatMoneyOrAbsent` owns whether the
+// pair can be said as money at all and its sentinel is that answer; the word
+// for the absence belongs to the slot, because "no deal open" and "none won
+// yet" are different facts about a project and a dash states neither.
+function dealValue(
+  value: components["schemas"]["Money"],
+  absent: MessageKey,
+  t: Translator,
+  locale: Locale,
+): string {
+  const figure = formatMoneyOrAbsent(
+    value.amount_minor,
+    value.currency,
+    locale,
+  );
+  return figure === MONEY_ABSENT ? t(absent) : figure;
 }
 
 /**
@@ -63,31 +85,27 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
     <StatStrip testId="project-rollups">
       <StatCard
         label={t("project.rollups.openValue")}
-        value={formatMoneyOrAbsent(
-          rollups.open_deal_value.amount_minor,
-          rollups.open_deal_value.currency,
+        value={dealValue(
+          rollups.open_deal_value,
+          "project.rollups.noneOpen",
+          t,
           locale,
         )}
-        numeric
-        openLabel={t("project.rollups.openDeals")}
         onOpen={reveal(PROJECT_DEALS_ANCHOR)}
       />
       <StatCard
         label={t("project.rollups.wonValue")}
-        value={formatMoneyOrAbsent(
-          rollups.won_deal_value.amount_minor,
-          rollups.won_deal_value.currency,
+        value={dealValue(
+          rollups.won_deal_value,
+          "project.rollups.noneWon",
+          t,
           locale,
         )}
-        numeric
-        openLabel={t("project.rollups.openDeals")}
         onOpen={reveal(PROJECT_DEALS_ANCHOR)}
       />
       <StatCard
         label={t("project.rollups.openCommitments")}
         value={formatNumber(rollups.open_commitments, locale)}
-        numeric
-        openLabel={t("project.rollups.openCommitmentsList")}
         onOpen={reveal(PROJECT_COMMITMENTS_ANCHOR)}
       />
       <StatCard
@@ -101,7 +119,6 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
       <StatCard
         label={t("project.rollups.activityCount")}
         value={formatNumber(rollups.activity_count, locale)}
-        numeric
       />
     </StatStrip>
   );

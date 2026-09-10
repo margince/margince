@@ -808,6 +808,10 @@ export function Field({
  * StatCard is one reading at the top of a record: a label, the reading itself,
  * and one line of detail saying what it is drawn from.
  *
+ * Every reading has a label and a value, and the value is never EMPTY: an
+ * empty reading spells its emptiness — "0", "None yet" — because a blank where
+ * a figure belongs reads as a page that failed. So there is no fallback here.
+ *
  * The detail line is not decoration. A reading with no basis stated is a number
  * a reader has to trust, and this surface exists because a number nobody could
  * scale — "Relationship 2/100" — was doing exactly that.
@@ -849,11 +853,10 @@ export function Field({
 // The bar under a reading: segments a reader would count, or one track they
 // would not.
 //
-// Six is the line, and it is about counting rather than about width: "one of
-// three signals" is a set a reader checks off, and "two of ten people" is a
-// share they read as a length. Drawn the other way round, three segments of a
-// hundred are invisible and a tenth of one track says nothing about which
-// signal is out.
+// Six is the line, and it is about counting rather than width: "one of three
+// signals" is a set a reader checks off, and "two of ten people" is a share
+// they read as a length. Drawn the other way round, three segments of a hundred
+// are invisible and a tenth of one track says nothing about which signal is out.
 const COUNTABLE = 6;
 
 // The segments' own names. A position in a bar has no identity of its own —
@@ -903,28 +906,25 @@ export function StatCard({
   source,
   alert,
   dot,
-  numeric,
-  openLabel,
   onOpen,
   meter,
 }: Readonly<{
   label: string;
   value: string;
   // The line under the figure: what it rests on, in the reader's words. A node
-  // rather than a string, because a reading whose detail is two facts — how
-  // much is failing, and why — says them on two lines rather than in one
-  // sentence a reader has to parse.
+  // rather than a string, because a reading whose detail is two facts — how much
+  // is failing, and why — says them on two lines, not in one parsed sentence.
   detail?: ReactNode;
-  // The way OUT of the reading: the tab that holds what it was read from.
-  // Both or neither, like `basis` — a labelled door with nothing behind it is
-  // worse than no door.
+  // The way OUT of the reading: the tab that holds what it was read from. A
+  // handler and nothing else — the door's WORD is this component's ("Open"),
+  // the way the receipt's is, because six doors each naming their own
+  // destination were six spellings of one control, and a caller with a string
+  // to fill in is a caller who can invent a seventh.
   //
-  // The whole CARD is this button's target: the words at the foot say where the
-  // door goes, and the tile answers the pointer aimed anywhere on it (atoms.css
-  // stretches the button over the card). ONE control and not two — the basis
-  // chip is layered above that target and keeps its own press, so asking what a
-  // figure rests on never also leaves the page.
-  openLabel?: string;
+  // The whole CARD is this button's target: the tile answers the pointer aimed
+  // anywhere on it (atoms.css stretches the button over the card). ONE control
+  // and not two — the basis chip is layered above that target and keeps its own
+  // press, so asking what a figure rests on never also leaves the page.
   onOpen?: () => void;
   // How far along this reading is, as the two numbers it is made of. Drawn as
   // separate segments when there are few enough to count (a verdict made of
@@ -934,18 +934,15 @@ export function StatCard({
   // Only for a reading that HAS a denominator. A figure with nothing to be out
   // of gets no bar rather than a bar with an invented one.
   meter?: { filled: number; total: number };
-  // What the reading rests on, and the words that name it. Both or neither —
-  // an unlabelled disclosure asks a reader to open it to find out whether they
-  // wanted it. The copy belongs to the caller, because no copy lives in a
-  // primitive.
+  // What the reading rests on, and the words that name it. The copy belongs to
+  // the caller, because no copy lives in a primitive.
   basis?: ReactNode;
   // `good` is not "no tone": a slot whose reading is a VERDICT says so in both
   // directions, and a verdict that is fine reads as fine rather than as one
   // nobody has judged yet.
   tone?: "good" | "warn" | "danger";
   // Where the figure came from, named on the card that shows it. A money
-  // reading a reader cannot trace is one they have to go and verify
-  // elsewhere, which is the trip the badge saves them.
+  // reading a reader cannot trace is one they must verify elsewhere.
   source?: ReactNode;
   // Tints the whole tile. See the docblock above — this is not `tone` at
   // stronger volume, it is a different judgement (the slot itself is bad
@@ -957,33 +954,24 @@ export function StatCard({
   // own: the colour and the decision to show it at all come from the same
   // judgement, so a fine verdict can never carry a leftover dot.
   dot?: boolean;
-  // The reading is a FIGURE — money, a count, a duration — so it draws in the
-  // mono face, where digits share one width and a column of readings lines up
-  // instead of shifting slot to slot with every comma.
-  //
-  // A flag rather than a `ReactNode` value: the value stays a string this
-  // component owns the type of. Widened to a node, the face would be the
-  // caller's to spell, and a screen that spells type is the second author of a
-  // scale this tier owns — which is also markup arriving at a slot the copy and
-  // colour gates read as a string.
-  numeric?: boolean;
 }>) {
   const t = useT();
+  const labelId = useId();
   // No `t-h3`: the card owns the figure's face and size (atoms.css), because
   // a reading is compared across a row and the row is the thing that has to
   // agree. Sharing the page's heading class made the figure change size with a
   // scale that answers a different question.
-  const valueClass = [
-    "stat-card-value",
-    numeric ? "t-mono" : "",
-    tone ? `stat-card-${tone}` : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const valueClass = tone
+    ? `stat-card-value stat-card-${tone}`
+    : "stat-card-value";
   return (
     <section className={alert ? "stat-card stat-card-alert" : "stat-card"}>
-      <span className="stat-card-label t-eyebrow">
-        {label}
+      <span className="stat-card-label">
+        {/* The name in its own box: the row also holds the source badge and the
+            receipt chip, and a clamp on the row would take those with it. */}
+        <span className="stat-card-label-text" id={labelId}>
+          {label}
+        </span>
         {source && <span className="stat-card-source">{source}</span>}
         {basis && (
           // The panel is READ, never operated: it holds the working and
@@ -1029,11 +1017,23 @@ export function StatCard({
       {/* THE CARD'S FOOT: the way out, at the end of the card a reader
           finishes on rather than up beside the reading's name, where it
           competed with the label for the first glance. */}
-      {onOpen && openLabel && (
+      {onOpen && (
         <span className="stat-card-foot">
-          <button type="button" className="stat-card-open" onClick={onOpen}>
-            {openLabel}
-            <span aria-hidden="true">{" \u2192"}</span>
+          {/* Five readings on a page are five doors saying "Open", so the
+              reading's name has to reach a screen reader too — as the button's
+              DESCRIPTION, pointing at the name already on the card. Folded into
+              the accessible name instead it read "Open Open pipeline", and every
+              label beginning with the word doubled it. */}
+          <button
+            type="button"
+            className="stat-card-open"
+            onClick={onOpen}
+            aria-describedby={labelId}
+          >
+            {t("stat.open")}
+            <span className="stat-card-arrow" aria-hidden="true">
+              {"\u2192"}
+            </span>
           </button>
         </span>
       )}

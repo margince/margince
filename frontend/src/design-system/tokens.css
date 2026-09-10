@@ -307,6 +307,44 @@
    * collapses it, exactly as --successText and --textOnAccentControl do. */
   --dangerText: #b91c1c;
 
+  /* ===== Reading tones =====
+   * How a READING went — good, watch, bad — on the face of a stat card: the
+   * figure, the verdict dot beside it and the bar under it, which are three
+   * parts of one claim and read one token each so they cannot come out three
+   * colours.
+   *
+   * Their own family rather than --success / --warn / --danger, which are UI
+   * CHROME: a destructive button, an error notice, a status chip. A reading is
+   * neither an action nor an alert, and it is set at 17-20px on a translucent
+   * pane rather than at 12px inside a tint — the chrome inks are tuned dark for
+   * that tint and read as a warning notice when a whole row of figures wears
+   * them.
+   *
+   * ONE value per tone in BOTH themes, declared here and nowhere else: a
+   * reading that went badly went badly at any hour, and the two themes lifting
+   * their status inks in opposite directions is how the same verdict came out
+   * two hues.
+   *
+   * Each is 8% --textPrimary. A saturated hue at full chroma is a colour before
+   * it is a word — it vibrates against the pane and sits apart from the ink
+   * around it; a little of the page's own ink settles it into the type without
+   * moving which tone it is. */
+  --statGood: color-mix(
+    in oklab,
+    lab(71.4376% -59.4106 38.0321) 92%,
+    var(--textPrimary) 8%
+  );
+  --statWarn: color-mix(
+    in oklab,
+    lab(74.4448% 23.7172 71.6451) 92%,
+    var(--textPrimary) 8%
+  );
+  --statDanger: color-mix(
+    in oklab,
+    lab(57.4234% 73.5589 48.0136) 92%,
+    var(--textPrimary) 8%
+  );
+
   /* ===== Tag tones =====
    * The eight hues an admin picks from when naming a tag, and the ONLY colours
    * in the product that carry no meaning: a tag's colour says "not that other

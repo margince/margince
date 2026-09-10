@@ -387,11 +387,13 @@ export function ForecastTile({
   locale: Locale;
 }>) {
   const t = useT();
+  const amount = formatMoneyOrAbsent(amountMinor, currency, locale);
   return (
     <StatCard
       label={label}
-      numeric
-      value={formatMoneyOrAbsent(amountMinor, currency, locale)}
+      // A word, never a glyph: "nothing measured" is a reading a manager acts
+      // on, where a dash reads as a slot that failed to draw.
+      value={amount === MONEY_ABSENT ? t("analytics.forecastNoFigure") : amount}
       detail={forecastTileDetail(
         { weightedMinor, dealCount, pricedDeals, currency, locale },
         t,
@@ -1341,6 +1343,24 @@ function MyOutcomesView({
   }
 
   const pipelineRow = pipelineQuery.data?.rows[0];
+  const baseCurrency = pipelineQuery.data?.base_currency ?? null;
+  // "…" said a read was in flight on a lens that had come back empty instead.
+  const noRow = t("analytics.myPipelineNoRow");
+  const pipelineCount = pipelineRow
+    ? formatNumber(rowCount(pipelineRow, "deal_count"), locale)
+    : noRow;
+  const pipelineValue = pipelineRow
+    ? formatMoneyOrAbsent(
+        rowMoney(pipelineRow, "raw_minor"),
+        baseCurrency,
+        locale,
+      )
+    : noRow;
+  // The currency names what the figure is IN, so a read with none to name
+  // drops the parenthetical rather than drawing an empty one.
+  const valueLabel = baseCurrency
+    ? t("analytics.baseValue", { currency: baseCurrency })
+    : t("analytics.baseValueUnnamed");
   const meetingRows = meetingsQuery.data?.rows ?? [];
   const meetingsByStatus = new Map(
     meetingRows
@@ -1352,28 +1372,8 @@ function MyOutcomesView({
     <>
       <Card title={t("analytics.myPipeline")}>
         <StatStrip>
-          <StatCard
-            label={t("analytics.count")}
-            value={
-              pipelineRow
-                ? formatNumber(rowCount(pipelineRow, "deal_count"), locale)
-                : "…"
-            }
-          />
-          <StatCard
-            label={t("analytics.baseValue", {
-              currency: pipelineQuery.data?.base_currency ?? "",
-            })}
-            value={
-              pipelineRow
-                ? formatMoneyOrAbsent(
-                    rowMoney(pipelineRow, "raw_minor"),
-                    pipelineQuery.data?.base_currency ?? null,
-                    locale,
-                  )
-                : "…"
-            }
-          />
+          <StatCard label={t("analytics.count")} value={pipelineCount} />
+          <StatCard label={valueLabel} value={pipelineValue} />
         </StatStrip>
       </Card>
       <Card title={t("analytics.myMeetings")}>

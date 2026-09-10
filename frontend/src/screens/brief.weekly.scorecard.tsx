@@ -53,13 +53,11 @@ function LeadBlockStrip({
       <StatCard
         label={t("brief.weekly.scorecard.advanced")}
         value={n(block.advanced)}
-        numeric
         detail={t("brief.weekly.scorecard.advancedBasis")}
       />
       <StatCard
         label={t("brief.weekly.scorecard.answeredInTarget")}
         value={n(block.answered_in_target)}
-        numeric
         detail={t("brief.weekly.scorecard.breachedDetail", {
           count: n(block.breached),
         })}
@@ -67,7 +65,6 @@ function LeadBlockStrip({
       <StatCard
         label={t("brief.weekly.scorecard.meetingsHeld")}
         value={n(block.meetings_held)}
-        numeric
         detail={t("brief.weekly.scorecard.meetingsBasis", {
           booked: n(block.meetings_booked),
           noShow: n(block.meetings_no_show),
@@ -80,7 +77,6 @@ function LeadBlockStrip({
         <StatCard
           label={t("brief.weekly.scorecard.partialHistory")}
           value={n(block.meetings_partial_history)}
-          numeric
           detail={t("brief.weekly.scorecard.partialHistoryBasis")}
         />
       )}
@@ -102,7 +98,6 @@ function DealBlockStrip({
       <StatCard
         label={t("brief.weekly.scorecard.advances")}
         value={n(block.advances)}
-        numeric
         detail={t("brief.weekly.scorecard.regressionsDetail", {
           count: n(block.regressions),
         })}
@@ -113,21 +108,18 @@ function DealBlockStrip({
         <StatCard
           label={t("brief.weekly.scorecard.medianDaysInStage")}
           value={n(block.median_days_in_stage)}
-          numeric
           detail={t("brief.weekly.scorecard.medianBasis")}
         />
       )}
       <StatCard
         label={t("brief.weekly.scorecard.withNextStep")}
         value={n(block.with_next_step)}
-        numeric
         meter={{ filled: block.with_next_step, total: block.open }}
         detail={t("brief.weekly.scorecard.ofOpen", { total: n(block.open) })}
       />
       <StatCard
         label={t("brief.weekly.scorecard.multiThreaded")}
         value={n(block.multi_threaded)}
-        numeric
         meter={{ filled: block.multi_threaded, total: block.open }}
         detail={t("brief.weekly.scorecard.multiThreadedBasis", {
           total: n(block.open),
@@ -136,14 +128,12 @@ function DealBlockStrip({
       <StatCard
         label={t("brief.weekly.scorecard.closeDateSound")}
         value={n(block.close_date_sound)}
-        numeric
         meter={{ filled: block.close_date_sound, total: block.open }}
         detail={t("brief.weekly.scorecard.ofOpen", { total: n(block.open) })}
       />
       <StatCard
         label={t("brief.weekly.scorecard.forecastMoves")}
         value={n(block.forecast_up)}
-        numeric
         detail={t("brief.weekly.scorecard.forecastMovesBasis", {
           down: n(block.forecast_down),
         })}
@@ -157,7 +147,6 @@ function DealBlockStrip({
         <StatCard
           label={t("brief.weekly.scorecard.unreconstructible")}
           value={n(block.unreconstructible)}
-          numeric
           detail={t("brief.weekly.scorecard.unreconstructibleBasis")}
         />
       )}

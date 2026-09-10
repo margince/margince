@@ -157,18 +157,22 @@ function ForecastAnswer({
       <StatStrip>
         <StatCard
           label={t("forecast.currentCall")}
-          value={money(readings.current_call?.amount_minor)}
-          numeric
+          // No call is a reading, not a missing figure: the sentence above
+          // already says the book is running on evidence alone, and a slot in a
+          // row compared across must not answer that with a glyph.
+          value={
+            readings.current_call
+              ? money(readings.current_call.amount_minor)
+              : t("forecast.currentCallNone")
+          }
         />
         <StatCard
           label={t("forecast.evidence")}
           value={money(readings.evidence_minor)}
-          numeric
         />
         <StatCard
           label={t("forecast.alreadyWon")}
           value={money(readings.won_minor)}
-          numeric
         />
         {/* Both are absent for a managed-teams reading, which covers several
             populations at once: a landing summed across books that are called

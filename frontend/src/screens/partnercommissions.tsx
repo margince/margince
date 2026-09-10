@@ -168,7 +168,6 @@ function OutstandingStrip({
         {outstanding.map(({ currency, amountMinor }) => (
           <StatCard
             key={currency}
-            numeric
             label={t("commission.outstanding")}
             value={formatMoney(amountMinor, currency, locale)}
             detail={t("commission.decide.settledElsewhere")}

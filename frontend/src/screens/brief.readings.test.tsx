@@ -243,10 +243,14 @@ describe("the brief readings strip", () => {
     expect(
       await screen.findByText(en["brief.readings.pipelineUnread"]),
     ).toBeTruthy();
-    // ONE em dash, not two. The other belonged to a retired placeholder, and a
-    // count that still expected it would pass over a plate that had quietly
-    // grown a second unanswered slot.
-    expect(screen.getAllByText("—")).toHaveLength(1);
+    // The slot says it in WORDS. Every figure on this plate is read across as
+    // one statement, and an em dash in one of them reads as a card that failed
+    // to draw rather than as a reading nobody could take — so no slot on this
+    // strip may fall back to the glyph.
+    expect(
+      await screen.findByText(en["brief.readings.pipelineNoRead"]),
+    ).toBeTruthy();
+    expect(screen.queryAllByText("—")).toHaveLength(0);
   });
 
   // BOTH figures, and neither of them a target. `open` is the face value of
@@ -509,30 +513,30 @@ describe("the pipeline period", () => {
     drawInZone("Asia/Tokyo");
     expect(await screen.findByText(/1 Jul 2026 – 30 Sept 2026/)).toBeTruthy();
   });
-  // FOUR DOORS, FOUR NAMES.
-  //
-  // Every open button on this strip used to be called "Open these". Sighted, the
-  // card above each one says which "these" — a screen reader tabbing the strip
-  // hears the same four words four times and cannot tell the lanes apart, so the
-  // one control on each reading is the one thing that does not identify it.
+  // FOUR DOORS, FOUR READINGS. Every door on this strip is named "Open" and
+  // nothing more. Sighted, the card above each one says open WHAT — a screen
+  // reader tabbing the strip hears the same word four times and cannot tell the
+  // lanes apart, unless each door's DESCRIPTION carries its own reading's label.
   //
   // Asserted as a SET rather than card by card: the defect is duplication, and a
-  // per-card check passes on four buttons that share a name as happily as on
-  // four that do not.
-  it("gives every reading's door its own accessible name", async () => {
+  // per-card check passes on four doors described identically.
+  it("describes every reading's door by its own reading", async () => {
     drawInZone("Europe/Berlin");
 
     await screen.findByText(en["brief.readings.urgent"]);
-    const names = screen
-      .getAllByRole("button")
-      .map((button) => button.getAttribute("aria-label") ?? button.textContent)
-      .filter((name): name is string => Boolean(name?.startsWith("Open ")));
+    const doors = screen.getAllByRole("button", { name: "Open" });
+    const descriptions = doors.map((door) =>
+      (door.getAttribute("aria-describedby") ?? "")
+        .split(/\s+/)
+        .map((id) => document.getElementById(id)?.textContent?.trim() ?? "")
+        .join(" "),
+    );
 
-    // The strip draws four readings and each one has a door, so the filter must
-    // find exactly four. Asserting only that the matches are distinct would
-    // pass on a strip where two doors lost the prefix and fell out of the set
-    // entirely — the filter would then be hiding the very buttons at issue.
-    expect(names).toHaveLength(4);
-    expect(new Set(names).size).toBe(names.length);
+    // The strip draws four readings and each one has a door, so the role query
+    // must find exactly four. Asserting only distinctness would pass on a strip
+    // where two doors gained a longer name and fell out of the set entirely.
+    expect(doors).toHaveLength(4);
+    expect(descriptions.every((text) => text.length > 0)).toBe(true);
+    expect(new Set(descriptions).size).toBe(4);
   });
 });
