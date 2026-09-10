@@ -15,7 +15,9 @@
 // outlives it: it can stop mail and can neither read a consent state nor
 // grant, which is what makes a two-year life safe), confirm_token, person_confirm_submission,
 // data_subject_request, communication_decision, communication_basis,
-// communication_suppression. Consumers (activities' send path) declare a
+// communication_suppression, communication_review (what a refused send leaves
+// behind, so the work is visible and the message can resume instead of being
+// retyped). Consumers (activities' send path) declare a
 // one-method authority interface; the composition root injects this module's
 // Gate and unsubscribe linker — consent never becomes an import edge between
 // siblings.

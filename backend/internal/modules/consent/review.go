@@ -1,0 +1,341 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package consent
+
+// What a refused send leaves behind.
+//
+// A refusal used to roll its whole transaction back and answer 409
+// consent_not_granted. Nothing durable survived: not what was refused, not
+// which recipient it was refused for, not what would change the answer. A rep
+// pressed send, read a code, and had nowhere to go.
+//
+// The row this file writes is the difference between an error and a piece of
+// work. It records the engine's answer at the moment it was given — a snapshot,
+// deliberately, because a reader asking "why was this refused on Tuesday" needs
+// Tuesday's answer and not what the consent rows say now.
+//
+// WHAT IT DOES NOT DO YET. It does not decide anything, route anything, or let
+// anybody act. Opening the review and handing back its reference is what makes
+// every later step possible: resuming the held message, recording the context
+// that would change the answer, directing a send under a recorded exception.
+// Each of those is its own slice, and each attaches here.
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+)
+
+// The states a review can hold. Named for what is NEEDED rather than for who is
+// blocked: "needs context" is a fact about the message and stays true whoever
+// is looking at it, where "waiting for Anna" stops being true when Anna leaves.
+const (
+	// ReviewNeedsContext is a refusal that more evidence could answer — the
+	// engine found no ground for this message to stand on.
+	ReviewNeedsContext = "needs_context"
+	// ReviewNeedsRepair is a refusal no evidence can answer, because something
+	// about the message or the address is wrong.
+	ReviewNeedsRepair = "needs_repair"
+	// ReviewResolved is work somebody finished.
+	ReviewResolved = "resolved"
+	// ReviewSuperseded is a review replaced by a fresher attempt at the same
+	// message.
+	ReviewSuperseded = "superseded"
+	// ReviewCancelled is a review whose message nobody intends to send.
+	ReviewCancelled = "cancelled"
+)
+
+// reviewKindSingle is the only kind this slice writes: one review, one send
+// attempt. The column is constrained to it so a batch review — a campaign, a
+// manifest — arrives as a deliberate widening rather than as a value somebody
+// wrote by accident.
+const reviewKindSingle = "single"
+
+// RefusedRecipient is one recipient's half of a refusal, as the engine gave it.
+//
+// The ADDRESS is stored, which is why the privacy engine clears this column
+// with the subject. A reason code without an address says a message was refused
+// and not who for, which is exactly the question the rep is asking.
+type RefusedRecipient struct {
+	Address     string `json:"address"`
+	SubjectKind string `json:"subject_kind,omitempty"`
+	SubjectID   string `json:"subject_id,omitempty"`
+	ReasonCode  string `json:"reason_code"`
+	Category    string `json:"category,omitempty"`
+}
+
+// Review is a refused send somebody can look at.
+type Review struct {
+	ID          ids.UUID
+	State       string
+	Kind        string
+	IntentID    ids.UUID
+	InitiatedBy ids.UUID
+	Refusals    []RefusedRecipient
+	ReasonCode  string
+}
+
+// OpenReviewTx records one refusal, inside the transaction that refused.
+//
+// INSIDE, because a review committed separately from the refusal can disagree
+// with it: a review written after a rollback describes a send that never
+// stopped, and a refusal that rolled back its own review leaves the rep with
+// the error message this exists to replace.
+//
+// NOT GATED, and that is the point rather than an omission. This runs on the
+// send path the caller has already been admitted to — they held whatever grant
+// the send door required, and the engine then refused them on consent grounds.
+// A second permission check here could only refuse a caller who is already
+// inside, and refusing would destroy the record of what happened to them.
+// Reading a review IS gated; see ReviewForInitiator.
+func OpenReviewTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, intentID ids.UUID) (Review, error) {
+	refusals := refusedRecipientsOf(set)
+	if len(refusals) == 0 {
+		// Nothing was refused, so there is no work to record. A caller that
+		// asks anyway is not wrong — the set is what it is — and answering an
+		// empty review is truer than inventing one.
+		return Review{}, nil
+	}
+	payload, err := json.Marshal(refusals)
+	if err != nil {
+		return Review{}, fmt.Errorf("consent: recording what this send was refused for: %w", err)
+	}
+	// The seat is read from the principal rather than taken as an argument, for
+	// the reason captured_by is everywhere else: an initiator a caller could
+	// name is an initiator a caller could get wrong.
+	initiator := initiatingSeat(ctx)
+	out := Review{
+		State:      stateFor(refusals),
+		Kind:       reviewKindSingle,
+		IntentID:   intentID,
+		Refusals:   refusals,
+		ReasonCode: refusals[0].ReasonCode,
+	}
+	// ON CONFLICT on the live-intent index: a second attempt at the same held
+	// message updates the standing review rather than opening a rival. Two live
+	// reviews for one message would put the same work in front of somebody
+	// twice, and resolving one would leave the other pointing at a message that
+	// has already gone.
+	err = tx.QueryRow(ctx, `
+		INSERT INTO communication_review
+		  (state, kind, delivery_intent_id, initiated_by, refusals, reason_code)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (delivery_intent_id)
+		  WHERE delivery_intent_id IS NOT NULL AND resolved_at IS NULL
+		  DO UPDATE SET refusals = EXCLUDED.refusals,
+		                reason_code = EXCLUDED.reason_code,
+		                state = EXCLUDED.state,
+		                opened_at = now()
+		RETURNING id`,
+		out.State, out.Kind, zeroUUIDAsNull(intentID), zeroUUIDAsNull(initiator),
+		payload, out.ReasonCode).Scan(&out.ID)
+	if err != nil {
+		return Review{}, fmt.Errorf("consent: opening the review this refusal owes: %w", err)
+	}
+	out.InitiatedBy = initiator
+	// AuditEvent rather than Audit: a send being refused is an occurrence with
+	// no prior state, and an update audit would demand a before-image that does
+	// not exist. The addresses stay OFF the audit payload — they are already on
+	// the row, and a second copy would outlive the erasure that clears the
+	// first.
+	if _, err := storekit.AuditEvent(ctx, tx, "create", "communication_review", out.ID, map[string]any{
+		"reason_code": out.ReasonCode,
+		"recipients":  len(refusals),
+		"state":       out.State,
+	}); err != nil {
+		return Review{}, err
+	}
+	return out, nil
+}
+
+// ReviewForInitiator reads one review back for the person who pressed send.
+//
+// GATED ON THE SEAT, not on a grant. A review names the recipients of somebody
+// else's message and the reason each was refused, which is a fact about those
+// people — so this slice serves the initiator alone. The reviewer worklist and
+// the exception-holder's view are their own slices, and each has its own
+// question to answer about who may see whose refusals.
+//
+// A review belonging to somebody else answers NOT FOUND rather than forbidden,
+// for the reason every scoped read here does: "forbidden" tells a caller the id
+// exists, which is itself a disclosure about a message they may not see.
+func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, error) {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return Review{}, err
+	}
+	seat := initiatingSeat(ctx)
+	if seat.IsZero() {
+		return Review{}, apperrors.ErrNotFound
+	}
+	var out Review
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var payload []byte
+		err := tx.QueryRow(ctx, `
+			SELECT id, state, kind, coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
+			       refusals, reason_code
+			  FROM communication_review
+			 WHERE id = $1 AND initiated_by = $2`, id, seat).
+			Scan(&out.ID, &out.State, &out.Kind, &out.IntentID, &payload, &out.ReasonCode)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("consent: reading the review: %w", err)
+		}
+		out.InitiatedBy = seat
+		return json.Unmarshal(payload, &out.Refusals)
+	})
+	return out, err
+}
+
+// refusedRecipientsOf lifts the denied half of a decision set into what the row
+// stores. Order follows the set, so the first refusal is the one the summary
+// names.
+func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
+	denied := set.Denied()
+	if len(denied) == 0 {
+		return nil
+	}
+	out := make([]RefusedRecipient, 0, len(denied))
+	for _, d := range denied {
+		refusal := RefusedRecipient{
+			Address:     d.Recipient.Email,
+			SubjectKind: d.SubjectKind,
+			ReasonCode:  d.ReasonCode,
+			Category:    string(d.Resolved),
+		}
+		if !d.SubjectID.IsZero() {
+			refusal.SubjectID = d.SubjectID.String()
+		}
+		out = append(out, refusal)
+	}
+	return out
+}
+
+// stateFor decides which kind of work this refusal is.
+//
+// The question is whether MORE EVIDENCE could change the answer. A message
+// refused for want of a ground can be answered by somebody saying what the
+// ground is; a message refused because the subject asked us to stop, or because
+// the address is dead, cannot — no context repairs those, and offering a
+// context form for them would invite a rep to argue with a withdrawal.
+func stateFor(refusals []RefusedRecipient) string {
+	for _, r := range refusals {
+		if !answerableByContext(r.ReasonCode) {
+			return ReviewNeedsRepair
+		}
+	}
+	return ReviewNeedsContext
+}
+
+// answerableByContext reports whether evidence could still make this send
+// lawful.
+//
+// LISTED POSITIVELY rather than by exclusion. A reason code added later is not
+// answerable until somebody decides it is, which fails toward the state that
+// offers no argument — the safe direction, because the alternative is a form
+// inviting a rep to argue with a withdrawal.
+//
+// The two here are the refusals about what the INSTALLATION knows: no evidence
+// that this message has a ground to stand on, and a purpose key nothing
+// defines. Somebody who was on the call can answer both.
+//
+// Everything else is about the SUBJECT or the ADDRESS and no context repairs
+// it. An objection, a restriction, a withdrawal and a subject request are the
+// subject's own instruction; a hard bounce is a dead mailbox; a frequency cap
+// is a fact about volume that time answers rather than evidence.
+func answerableByContext(reasonCode string) bool {
+	switch reasonCode {
+	case commsauthz.ReasonNoEvidence, commsauthz.ReasonUnknownPurpose,
+		commsauthz.ReasonLegacyTransactionalUnevidenced:
+		return true
+	}
+	return false
+}
+
+// initiatingSeat reads the human this send belongs to, or the zero id for a
+// principal that is not a seat.
+func initiatingSeat(ctx context.Context) ids.UUID {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return ids.UUID{}
+	}
+	return actor.UserID
+}
+
+// zeroUUIDAsNull sends a zero id as SQL NULL, so an absent intent or an absent
+// seat is stored as absent rather than as an id that looks real.
+func zeroUUIDAsNull(id ids.UUID) *ids.UUID {
+	if id.IsZero() {
+		return nil
+	}
+	return &id
+}
+
+// RecordRefusal opens a review for a refusal that is about to roll back its own
+// transaction.
+//
+// ITS OWN TRANSACTION, and that is forced rather than chosen. A staging refusal
+// answers an error, and the caller returns it — which rolls back everything
+// that transaction wrote, a review included. The record of what happened has to
+// survive the rollback of the thing it is recording.
+//
+// The cost is honest and worth naming: this commits even though the send did
+// not, so a crash between the two leaves a review for a message that never
+// staged. That is the safe direction. A review with no message is visible work
+// somebody can cancel; a message refused with no review is the silence this
+// whole slice exists to end.
+func (g *Gate) RecordRefusal(ctx context.Context, set commsauthz.DecisionSet, intentID ids.UUID) (Review, error) {
+	var out Review
+	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = OpenReviewTx(ctx, tx, set, intentID)
+		return err
+	})
+	return out, err
+}
+
+// SendRefusedError is a refusal that left a review behind.
+//
+// It WRAPS the original refusal rather than replacing it, so every reader that
+// already knows what apperrors.ErrConsentNotGranted means keeps working — the
+// 409 mapping, the job-fault table, the tests. What it adds is the one thing
+// the rep was missing: a reference to the record of what happened, which is how
+// they get from "this was refused" to "here is what was refused and for whom".
+type SendRefusedError struct {
+	ReviewID ids.UUID
+	Cause    error
+}
+
+func (e *SendRefusedError) Error() string {
+	return e.Cause.Error() + " (review " + e.ReviewID.String() + ")"
+}
+
+// Unwrap keeps the refusal's own identity reachable, which is what lets the
+// existing 409 mapping and every errors.Is on it go on working.
+func (e *SendRefusedError) Unwrap() error { return e.Cause }
+
+// NO FieldFault, deliberately, though every other typed refusal in this module
+// carries one.
+//
+// A field fault answers 422 and names an input the caller should change. This
+// refusal is neither: the caller's input was fine, the engine refused the send
+// on consent grounds, and that answer is a 409 with the code every client and
+// every test already recognises. Implementing FieldFault here changed the
+// status from 409 to 422 across the send surface — the transport prefers a
+// module's declared fault over a wrapped sentinel — which would have broken
+// clients to deliver a reference.
+//
+// The reference travels in the message instead, which is where a human reads
+// it and where the MCP surface renders it too.

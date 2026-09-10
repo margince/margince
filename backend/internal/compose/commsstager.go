@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -119,11 +120,33 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 		return err
 	}
 	if err := refuseAtStaging(set); err != nil {
-		return err
+		return s.reviewFor(ctx, set, err)
 	}
 	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
 		Workspace: ws, DeliveryID: id.String(),
 	}, sendInsertOpts())
+}
+
+// reviewFor records what this refusal was about and hands the caller an error
+// naming it, so the rep gets a reference instead of a code.
+//
+// The review is written OUTSIDE the caller's transaction, because returning
+// this error rolls that transaction back and would take the review with it.
+// consent.Gate.RecordRefusal owns that decision and explains what it costs.
+//
+// A FAILURE TO RECORD DOES NOT REPLACE THE REFUSAL. The send is refused either
+// way, and answering a storage fault instead would tell the rep their message
+// was fine and the database was not. The original refusal is what they need to
+// see; the missing review is an operator's problem, not theirs.
+func (s commsStager) reviewFor(ctx context.Context, set commsauthz.DecisionSet, refusal error) error {
+	if s.authority == nil {
+		return refusal
+	}
+	review, err := s.authority.RecordRefusal(ctx, set, ids.UUID{})
+	if err != nil || review.ID.IsZero() {
+		return refusal
+	}
+	return &consent.SendRefusedError{ReviewID: review.ID, Cause: refusal}
 }
 
 // StageChannelTx is the same staging for a channel reply: the channel-shaped row
