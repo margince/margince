@@ -24,7 +24,22 @@ fi
 # can order; a `v01.2.3` names an orderable version by a second spelling, so two
 # tags could claim one release and a reader could not tell which. A release page
 # carrying either is worse than a push that refused in seconds.
-if [[ ! "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
+# Built from two named pieces, because the whole pattern on one line is a wall
+# nobody re-derives. `num` is a version component and `id` one pre-release
+# identifier, both per SemVer 2.0.0 rule 9: a PURELY numeric identifier carries
+# no leading zero, so `v1.2.3-01` is refused for the same reason `v01.2.3` is —
+# it names the same release as `-1`, and a version has exactly one spelling. An
+# identifier that contains a letter may still begin with a digit (`0rc`), which
+# is what the third alternative allows.
+#
+# This accepts a SUBSET of semver and no more: hyphens inside an identifier and
+# `+build` metadata are both legal semver and both refused here, because neither
+# names a release this project cuts. Everything accepted is valid semver.
+num='(0|[1-9][0-9]*)'
+id='(0|[1-9][0-9]*|[0-9A-Za-z]*[A-Za-z][0-9A-Za-z]*)'
+version_re="^v${num}\.${num}\.${num}(-${id}(\.${id})*)?$"
+
+if [[ ! "$tag" =~ $version_re ]]; then
 	echo "release-tag-version: $tag is not a release version." >&2
 	echo "  Expected vMAJOR.MINOR.PATCH with no leading zeros, optionally" >&2
 	echo "  -rc.1 / -beta.2." >&2

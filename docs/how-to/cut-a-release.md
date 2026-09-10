@@ -31,6 +31,7 @@ tree, delete the tag, and tag again:
 
 ```sh
 git push --delete origin v0.0.1 && git tag -d v0.0.1
+git tag -a v0.0.1 -m "..." && git push origin v0.0.1
 ```
 
 Re-running a failed run after the release was created is safe: the publish step
