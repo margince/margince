@@ -66,8 +66,12 @@ export function QueueBand<RowProps>({
           tomorrow's deadline from today's without reading every date. Overdue
           and today's draw under the band heading, which already says what they
           are. */}
-      {dueRuns(section.items).map((run, index) => (
-        <div key={run.group ?? `now-${index}`}>
+      {dueRuns(section.items).map((run) => (
+        // Keyed by the run's FIRST ROW rather than its group: dueRuns keeps
+        // consecutive runs in the order the server ranked them, so one group
+        // can open a run more than once and a key naming only the group would
+        // collide. A run always holds at least one row.
+        <div key={run.items[0].id}>
           {run.group && (
             <Eyebrow as="h4" className="worklist-due-run">
               {t(dueRunHeading(run.group))}

@@ -445,7 +445,10 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	stampDeadline(&row, item.DueAt, asOf)
 	if overdueAt(item.DueAt, asOf) {
 		row.Because = append(row.Because, reason("overdue", nil))
-	} else if item.DueAt != nil {
+	} else if item.DueAt != nil && !isUpcoming(item.DueGroup) {
+		// Only work that IS due today says so. The lane now also carries what
+		// is coming, and a task due next week telling the reader it is due
+		// today contradicts the group on the same row.
 		row.Because = append(row.Because, reason("due_today", nil))
 	}
 	// Nobody has taken it. The same fact the lead lane states, and this lane

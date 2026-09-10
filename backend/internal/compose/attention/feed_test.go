@@ -948,3 +948,51 @@ func TestTheTwoTaskReadsCoverOneUnbrokenWindow(t *testing.T) {
 			tasks.upcomingLimit, upcomingCap)
 	}
 }
+
+// A cut upcoming list must say it was cut.
+//
+// The lane is two reads sharing one slice, so a single length test answers
+// neither: six upcoming rows beside an empty day sat under the combined bound
+// and the page called itself complete, while a seventh had been dropped and no
+// paging path existed to find it.
+func TestATruncatedUpcomingListReportsItselfTruncated(t *testing.T) {
+	upcoming := make([]Task, 0, upcomingCap)
+	for i := 0; i < upcomingCap; i++ {
+		due := rankInstant.Add(time.Duration(48+i) * time.Hour)
+		upcoming = append(upcoming, Task{ID: ids.NewV7(), Subject: "Due later", DueAt: &due})
+	}
+	// No work due today at all, which is what hid the defect: the combined
+	// length never approaches the day's own cap.
+	tasks := &stubTasks{upcoming: upcoming}
+
+	svc := NewService(stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Asked through boundedSources, which is what the page actually reads —
+	// calling the helper directly would pass against the very reading that
+	// hid this defect.
+	if !boundedSources(out)["task"] {
+		t.Errorf("a full upcoming read (%d rows, cap %d) reports the lane complete, "+
+			"so the page shows an exact count and offers no way to the rest",
+			len(out.Planned), upcomingCap)
+	}
+
+	// The premise guard: a lane under BOTH caps is not truncated, or the
+	// assertion above passes for a reading that calls everything cut.
+	oneEach := &stubTasks{
+		rows:     []Task{{ID: ids.NewV7(), Subject: "Due today", DueAt: &rankInstant}},
+		upcoming: upcoming[:1],
+	}
+	svc = NewService(stubApprovals{}, stubDuplicates{}, oneEach, stubReceipts{}, stubBriefing{},
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	small, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if boundedSources(small)["task"] {
+		t.Error("a lane well under both caps reported itself truncated")
+	}
+}

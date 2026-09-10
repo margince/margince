@@ -70,7 +70,13 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	atCap("bounce", day.Bounces, doneCap)
 	atCap("introduction_request", day.Introductions, doneCap)
 	// Each of these carries its own, declared where the lane is read.
-	atCap("task", &day.Planned, plannedCap)
+	//
+	// The planned lane is TWO reads sharing one slice, so it is counted by
+	// window rather than by length. Counted whole, six upcoming tasks beside an
+	// empty day sat under the combined bound of twelve and the page called
+	// itself complete — while a seventh had been dropped and no paging path
+	// existed to find it. Either window at its own cap truncates the lane.
+	bounded["task"] = plannedWindowAtCap(day.Planned)
 	// The meetings that owe an answer share the planned bound, because the lane
 	// reads at it. Without this a day holding twelve unsettled meetings reports
 	// itself complete while the twelfth pushed a thirteenth off the page — the
@@ -131,3 +137,39 @@ const (
 	laneDSR        = crmcontracts.AttentionLanesOmitted("dsr")
 	laneNoticeCase = crmcontracts.AttentionLanesOmitted("notice_case")
 )
+
+// plannedWindowAtCap reports whether either half of the planned lane was cut.
+//
+// The lane is read twice — today's work to plannedCap, what is coming to
+// upcomingCap — and appended into one slice. A single length test over the
+// result answers neither question: it under-reports whenever one window is
+// full and the other is not, which on a quiet day is the common case rather
+// than the edge one.
+func plannedWindowAtCap(lane []crmcontracts.AttentionItem) bool {
+	var today, upcoming int
+	for _, item := range lane {
+		if isUpcoming(item.DueGroup) {
+			upcoming++
+			continue
+		}
+		today++
+	}
+	return today >= plannedCap || upcoming >= upcomingCap
+}
+
+// isUpcoming reports whether a row came from the second read. Absent means the
+// first: a row with no group is one the day's own read returned, which is every
+// row on a lane an older assembly built.
+func isUpcoming(group *crmcontracts.AttentionItemDueGroup) bool {
+	if group == nil {
+		return false
+	}
+	switch *group {
+	case crmcontracts.AttentionItemDueGroupTomorrow,
+		crmcontracts.AttentionItemDueGroupThisWeek,
+		crmcontracts.AttentionItemDueGroupLater:
+		return true
+	default:
+		return false
+	}
+}
