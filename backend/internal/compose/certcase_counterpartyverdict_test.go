@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -181,15 +182,38 @@ func TestVerdictFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	if err := json.Unmarshal(verdictFixture(t), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
-	given := map[string]bool{"display_name": true, "email": true, "subject": true, "body": true}
+	// The set is derived from the LEDGER ROW — the thing production actually
+	// hands the engine — not from the fixture struct.
+	//
+	// Deriving it from the fixture would be self-validating: the JSON under
+	// test is marshalled from that same struct, so any field added there would
+	// permit itself and the gate would agree with whatever it was shown. The
+	// ledger row is the independent subject, and a fixture field with no
+	// counterpart on it is exactly the invention this test exists to catch.
+	//
+	// Matched case-insensitively on the Go field name: the fixture's json tags
+	// are snake_case and the row's fields are not tagged at all, so the names
+	// are the only thing the two share.
+	given := map[string]bool{}
+	rowType := reflect.TypeFor[capture.PendingCounterparty]()
+	for i := range rowType.NumField() {
+		given[strings.ToLower(strings.ReplaceAll(rowType.Field(i).Name, "_", ""))] = true
+	}
+	if len(given) == 0 {
+		t.Fatal("no fields found on the ledger row — this census read nothing and would " +
+			"report PASS over any fixture at all")
+	}
 	for name := range fields {
-		if !given[name] {
+		if !given[strings.ReplaceAll(name, "_", "")] {
 			t.Errorf("the fixture carries %q, which the ledger row does not hand the engine", name)
 		}
 	}
-	for name := range given {
-		if _, present := fields[name]; !present {
-			t.Errorf("the fixture drops %q, which production always supplies", name)
+	// Only the fields a scenario must always state. Direction and wrote_back are
+	// deliberately absent: a row written before they were recorded carries
+	// neither, and a scenario describing one is a real ledger row.
+	for _, always := range []string{"display_name", "email", "subject", "body"} {
+		if _, present := fields[always]; !present {
+			t.Errorf("the fixture drops %q, which production always supplies", always)
 		}
 	}
 }
