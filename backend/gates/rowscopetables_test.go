@@ -388,5 +388,17 @@ const (
 	// unscoped here because the correction row is looked up first, under FOR
 	// UPDATE, so a repeated Undo serializes before either caller can act; the
 	// visibility answer follows it and refuses everything a row scope would.
-	modulesTierUnscopedCeiling = 99
+	//
+	// THE FOURTH RISE, +1, and it is bounded the same way the Undo path above
+	// is. consent.survivingSubject reads person.merged_into_id to answer "which
+	// record survives this one", so a stop recorded moments after a merge lands
+	// on the survivor instead of on a record no send evaluates. It is reached
+	// from exactly one caller, suppressAdmittedTx, which has already run
+	// auth.EnsureWritable on the id being resolved, in the same transaction,
+	// one statement earlier — so the caller has been shown to reach that row
+	// before this read follows its pointer, and a caller who cannot see the
+	// person never gets here. The read hands back no row: it returns one uuid,
+	// which is either the id the caller already named or the survivor that id
+	// now resolves to.
+	modulesTierUnscopedCeiling = 100
 )

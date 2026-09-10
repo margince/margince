@@ -136,6 +136,14 @@ func (h Handlers) WithDealOpener(opener LeadDealOpener) Handlers {
 	return h
 }
 
+// WithStopCarrier wires the consent-side seam that carries a retiring
+// subject's recorded stops onto the record surviving them. Unwired, a merge
+// refuses rather than dropping the stop — see stopcarry.go.
+func (h Handlers) WithStopCarrier(carrier StopCarrier) Handlers {
+	h.store = h.store.WithStopCarrier(carrier)
+	return h
+}
+
 // duplicateID renders a duplicate error's existing-row pointer for the
 // wire. The dedupe pre-checks leave ExistingID zero when the row is not
 // visible to the caller (or a race hid it); the response then omits
