@@ -23,6 +23,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -153,9 +154,18 @@ func TestADetectedDuplicateReachesTheDecisionLane(t *testing.T) {
 	}
 }
 
-// An overdue task is today's agreed work. Both halves of the filter are pinned:
-// what is due is carried, and what is done or still ahead is not.
-func TestAnOverdueTaskReachesThePlannedLane(t *testing.T) {
+// The planned lane carries today's agreed work AND what is coming, each said to
+// be what it is.
+//
+// It used to carry only what was owed, and this case pinned that: a task still
+// ahead was a task the lane refused. That was the defect rather than the rule —
+// a comparison sheet due tomorrow was invisible today, so work accepted from a
+// transcript looked like it had gone nowhere. The lane makes two bounded reads
+// now and names each row's run in `due_group`.
+//
+// What has NOT changed is the other half this case was always about: a task
+// that is done is carried by neither read.
+func TestThePlannedLaneCarriesWhatIsOwedAndWhatIsComing(t *testing.T) {
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 	logTask(t, e, "Ring the buyer back", now.Add(-2*time.Hour), false)
@@ -164,8 +174,32 @@ func TestAnOverdueTaskReachesThePlannedLane(t *testing.T) {
 
 	day := assembleFeed(e.Admin(), t, e, now)
 	got := titlesOn(day.Planned)
-	if len(got) != 1 || got[0] != "Ring the buyer back" {
-		t.Fatalf("the planned lane = %v, want only the task actually due", got)
+	if len(got) != 2 {
+		t.Fatalf("the planned lane = %v, want the overdue task and the one still ahead", got)
+	}
+	if !slices.Contains(got, "Ring the buyer back") || !slices.Contains(got, "Next week's prep") {
+		t.Fatalf("the planned lane = %v, want both reads represented", got)
+	}
+	// The done one is the assertion that did not move: neither read carries it.
+	if slices.Contains(got, "Already handled") {
+		t.Errorf("a task already done reached the lane: %v", got)
+	}
+	// Each row says which run it belongs to, so a reader is never shown a
+	// deadline still ahead as though it were owed now.
+	//
+	// Asserted as overdue-or-not rather than against a named group: which of
+	// `today`, `tomorrow`, `this_week` and `later` a task seven days out lands
+	// in depends on what day the suite runs, and a case that pinned one of them
+	// would be a case the calendar breaks. The distinction this is about is the
+	// one that cannot move.
+	for _, item := range day.Planned {
+		if item.Title == nil || item.DueGroup == nil {
+			t.Fatalf("a planned row names no run (title=%v group=%v)", item.Title, item.DueGroup)
+		}
+		owed := *item.DueGroup == crmcontracts.AttentionItemDueGroupOverdue
+		if want := *item.Title == "Ring the buyer back"; owed != want {
+			t.Errorf("%q reads as %q, want overdue=%v", *item.Title, *item.DueGroup, want)
+		}
 	}
 	if day.Planned[0].Overdue == nil || !*day.Planned[0].Overdue {
 		t.Error("the task is not marked overdue, so the reader cannot see which work slipped")
@@ -263,9 +297,40 @@ func TestATaskDueExactlyAtTheBoundaryBelongsToTomorrow(t *testing.T) {
 	logTask(t, e, "Due exactly at midnight", endOfDay, false)
 
 	day := assembleFeed(e.Admin(), t, e, now)
-	got := titlesOn(day.Planned)
-	if len(got) != 1 || got[0] != "Due a moment before midnight" {
-		t.Fatalf("the planned lane = %v, want only the task due before the day ends", got)
+	// The lane carries both now — it reads what is coming as well as what is
+	// owed — so the boundary shows in which RUN each row belongs to rather than
+	// in which of them the lane refused.
+	if got := len(day.Planned); got != 2 {
+		t.Fatalf("the planned lane holds %d rows (%v), want both sides of the boundary", got, titlesOn(day.Planned))
+	}
+	assertDueGroup(t, day.Planned, map[string]crmcontracts.AttentionItemDueGroup{
+		"Due a moment before midnight": crmcontracts.AttentionItemDueGroupToday,
+		"Due exactly at midnight":      crmcontracts.AttentionItemDueGroupTomorrow,
+	})
+}
+
+// assertDueGroup holds each named row to the run it belongs to.
+func assertDueGroup(t *testing.T, items []crmcontracts.AttentionItem, want map[string]crmcontracts.AttentionItemDueGroup) {
+	t.Helper()
+	seen := map[string]bool{}
+	for _, item := range items {
+		if item.Title == nil || item.DueGroup == nil {
+			t.Fatalf("a planned row names no run (title=%v group=%v)", item.Title, item.DueGroup)
+		}
+		expected, named := want[*item.Title]
+		if !named {
+			t.Errorf("the lane carries %q, which this case did not seed", *item.Title)
+			continue
+		}
+		seen[*item.Title] = true
+		if *item.DueGroup != expected {
+			t.Errorf("%q reads as %q, want %q", *item.Title, *item.DueGroup, expected)
+		}
+	}
+	for title := range want {
+		if !seen[title] {
+			t.Errorf("the lane carries no %q at all", title)
+		}
 	}
 }
 
@@ -344,11 +409,16 @@ func TestTheWorklistsDayEndsAtTheInstallationsMidnight(t *testing.T) {
 	logTask(t, e, "Due tomorrow morning, local", time.Date(2026, 6, 15, 18, 0, 0, 0, time.UTC), false)
 
 	day := assembleFeed(e.Admin(), t, e, now)
-	got := titlesOn(day.Planned)
-	if len(got) != 1 || got[0] != "Due late tonight, local" {
-		t.Fatalf("the planned lane = %v, want only tonight's work: 18:00 UTC is 01:00 tomorrow "+
-			"where this installation is, and UTC's midnight is not its day", got)
+	// Both are carried; the LOCAL boundary is what decides which run each is in.
+	// 18:00 UTC is 01:00 tomorrow where this installation is, and UTC's midnight
+	// is not its day — so a row grouped `today` there would be the old bug.
+	if got := len(day.Planned); got != 2 {
+		t.Fatalf("the planned lane holds %d rows (%v), want both sides of the local boundary", got, titlesOn(day.Planned))
 	}
+	assertDueGroup(t, day.Planned, map[string]crmcontracts.AttentionItemDueGroup{
+		"Due late tonight, local":     crmcontracts.AttentionItemDueGroupToday,
+		"Due tomorrow morning, local": crmcontracts.AttentionItemDueGroupTomorrow,
+	})
 }
 
 // THE PLANNED BADGE COUNTS PAST THE LANE'S CAP, through the shipped wiring.
