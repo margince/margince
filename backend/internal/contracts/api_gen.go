@@ -3088,6 +3088,48 @@ func (e CommunicationContext) Valid() bool {
 	}
 }
 
+// Defines values for CommunicationReviewKind.
+const (
+	Single CommunicationReviewKind = "single"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationReviewKind enum.
+func (e CommunicationReviewKind) Valid() bool {
+	switch e {
+	case Single:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CommunicationReviewState.
+const (
+	CommunicationReviewStateCancelled    CommunicationReviewState = "cancelled"
+	CommunicationReviewStateNeedsContext CommunicationReviewState = "needs_context"
+	CommunicationReviewStateNeedsRepair  CommunicationReviewState = "needs_repair"
+	CommunicationReviewStateResolved     CommunicationReviewState = "resolved"
+	CommunicationReviewStateSuperseded   CommunicationReviewState = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationReviewState enum.
+func (e CommunicationReviewState) Valid() bool {
+	switch e {
+	case CommunicationReviewStateCancelled:
+		return true
+	case CommunicationReviewStateNeedsContext:
+		return true
+	case CommunicationReviewStateNeedsRepair:
+		return true
+	case CommunicationReviewStateResolved:
+		return true
+	case CommunicationReviewStateSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CompanyContextSchemaVersion.
 const (
 	N1 CompanyContextSchemaVersion = 1
@@ -10759,6 +10801,24 @@ const (
 func (e RefreshAcceptedStatus) Valid() bool {
 	switch e {
 	case Enqueued:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RefusedRecipientSubjectKind.
+const (
+	RefusedRecipientSubjectKindLead   RefusedRecipientSubjectKind = "lead"
+	RefusedRecipientSubjectKindPerson RefusedRecipientSubjectKind = "person"
+)
+
+// Valid indicates whether the value is a known member of the RefusedRecipientSubjectKind enum.
+func (e RefusedRecipientSubjectKind) Valid() bool {
+	switch e {
+	case RefusedRecipientSubjectKindLead:
+		return true
+	case RefusedRecipientSubjectKindPerson:
 		return true
 	default:
 		return false
@@ -20918,6 +20978,35 @@ type CommunicationEvidence struct {
 	// InvoiceId The invoice or payment event this send is about.
 	InvoiceId *openapi_types.UUID `json:"invoice_id,omitempty"`
 }
+
+// CommunicationReview What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
+// given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
+// what the consent rows say today.
+type CommunicationReview struct {
+	Id   openapi_types.UUID      `json:"id"`
+	Kind CommunicationReviewKind `json:"kind"`
+
+	// ReasonCode The strongest reason across the recipients, so a queue can order without opening the snapshot.
+	ReasonCode string `json:"reason_code"`
+
+	// Refusals What was refused, per recipient. Empty once an erasure has cleared the subject from it.
+	Refusals []RefusedRecipient `json:"refusals"`
+
+	// State What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
+	// and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
+	// answer — an objection, a dead address — where offering a context form would invite a rep
+	// to argue with a withdrawal.
+	State CommunicationReviewState `json:"state"`
+}
+
+// CommunicationReviewKind defines model for CommunicationReview.Kind.
+type CommunicationReviewKind string
+
+// CommunicationReviewState What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
+// and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
+// answer — an objection, a dead address — where offering a context form would invite a rep
+// to argue with a withdrawal.
+type CommunicationReviewState string
 
 // CompanyContext defines model for CompanyContext.
 type CompanyContext struct {
@@ -32026,6 +32115,20 @@ type RefreshAccepted struct {
 
 // RefreshAcceptedStatus defines model for RefreshAccepted.Status.
 type RefreshAcceptedStatus string
+
+// RefusedRecipient One recipient's half of a refusal, as the engine gave it. The ADDRESS is here because a
+// reason code without one says a message was refused and not who for, which is the question
+// the rep is actually asking — and it is why an erasure clears this list.
+type RefusedRecipient struct {
+	Address     string                       `json:"address"`
+	Category    *string                      `json:"category,omitempty"`
+	ReasonCode  string                       `json:"reason_code"`
+	SubjectId   *openapi_types.UUID          `json:"subject_id,omitempty"`
+	SubjectKind *RefusedRecipientSubjectKind `json:"subject_kind,omitempty"`
+}
+
+// RefusedRecipientSubjectKind defines model for RefusedRecipient.SubjectKind.
+type RefusedRecipientSubjectKind string
 
 // RejectOfferRequest defines model for RejectOfferRequest.
 type RejectOfferRequest struct {
@@ -51807,6 +51910,9 @@ type ServerInterface interface {
 	// Approve, pay, or void one entry.
 	// (POST /commissions/{id}/decide)
 	DecideCommissionEntry(w http.ResponseWriter, r *http.Request, id Id, params DecideCommissionEntryParams)
+	// What a refused send was refused for, and for whom.
+	// (GET /communication-reviews/{id})
+	GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// The installation's own company (the anchor organization).
 	// (GET /company)
 	GetCompany(w http.ResponseWriter, r *http.Request)
@@ -54081,6 +54187,12 @@ func (_ Unimplemented) GetCommissionEntry(w http.ResponseWriter, r *http.Request
 // Approve, pay, or void one entry.
 // (POST /commissions/{id}/decide)
 func (_ Unimplemented) DecideCommissionEntry(w http.ResponseWriter, r *http.Request, id Id, params DecideCommissionEntryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What a refused send was refused for, and for whom.
+// (GET /communication-reviews/{id})
+func (_ Unimplemented) GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -61960,6 +62072,38 @@ func (siw *ServerInterfaceWrapper) DecideCommissionEntry(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DecideCommissionEntry(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCommunicationReview operation middleware
+func (siw *ServerInterfaceWrapper) GetCommunicationReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCommunicationReview(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -83865,6 +84009,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/commissions/{id}/decide", wrapper.DecideCommissionEntry)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/communication-reviews/{id}", wrapper.GetCommunicationReview)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/company", wrapper.GetCompany)

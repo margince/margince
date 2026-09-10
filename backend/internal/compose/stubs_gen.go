@@ -571,6 +571,10 @@ func (stubs) DecideCommissionEntry(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "DecideCommissionEntry")
 }
 
+func (stubs) GetCommunicationReview(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetCommunicationReview")
+}
+
 func (stubs) GetCompany(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCompany")
 }

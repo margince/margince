@@ -210,6 +210,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/commissions":                                                {Op: "listCommissionEntries", Access: "tool", Tool: "list_records", RecordType: "commission", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/commissions/summary":                                        {Op: "getCommissionSummary", Access: "tool", Tool: "run_report", RecordType: "commission", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/commissions/{id}":                                           {Op: "getCommissionEntry", Access: "tool", Tool: "read_record", RecordType: "commission", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/communication-reviews/{id}":                                 {Op: "getCommunicationReview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/company":                                                    {Op: "getCompany", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/company/context":                                            {Op: "getCompanyContext", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/company/context/capabilities":                               {Op: "getCompanyContextCapabilities", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
