@@ -30891,6 +30891,13 @@ type Pipeline struct {
 	Position  int        `json:"position"`
 	Stages    *[]Stage   `json:"stages,omitempty"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
+	// not only overlay mode.
+	Version *RowVersion `json:"version,omitempty"`
 }
 
 // PipelineListResponse defines model for PipelineListResponse.

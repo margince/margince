@@ -210,10 +210,16 @@ func readPipelineWith(
 	if archived == storekit.LiveOnly {
 		live = liveRowsClause
 	}
+	// The version travels because archivePipeline takes an If-Match, and a
+	// guard whose value no response carries is one a caller can only satisfy by
+	// omitting the header. Read here rather than at that one route: this is the
+	// single assembly every pipeline response passes through, and a version on
+	// some of them would let a caller hold a read that cannot be conditioned on.
+	var version crmcontracts.RowVersion
 	err := tx.QueryRow(ctx,
-		`SELECT id, name, is_default, position, created_at, updated_at, archived_at
+		`SELECT id, name, is_default, position, created_at, updated_at, archived_at, version
 		 FROM pipeline WHERE id = $1`+live, id).
-		Scan(&pid, &p.Name, &p.IsDefault, &p.Position, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt)
+		Scan(&pid, &p.Name, &p.IsDefault, &p.Position, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return p, apperrors.ErrNotFound
 	}
@@ -221,6 +227,7 @@ func readPipelineWith(
 		return p, err
 	}
 	p.Id = openapi_types.UUID(pid)
+	p.Version = &version
 
 	rows, err := tx.Query(ctx,
 		`SELECT id, pipeline_id, name, position, semantic, win_probability, created_at, updated_at

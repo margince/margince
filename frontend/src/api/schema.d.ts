@@ -23020,6 +23020,7 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+            version?: components["schemas"]["RowVersion"];
         };
         CreatePipelineRequest: {
             name: string;

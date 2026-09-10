@@ -31974,6 +31974,7 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        version: { $ref: '#/components/schemas/RowVersion' }
 
     CreatePipelineRequest:
       type: object
