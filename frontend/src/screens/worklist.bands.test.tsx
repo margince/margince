@@ -238,3 +238,100 @@ describe("the rank runs across the headings", () => {
     expect(ranks).toEqual(["1", "2", "3"]);
   });
 });
+
+// Work due later reads as later.
+//
+// The lane now carries what is coming as well as what is owed, and without a
+// sub-heading tomorrow's deadline sits in the same run as today's — a reader
+// scanning the Now band would count work they do not owe yet.
+describe("the day a run of work is due", () => {
+  it("heads the runs due later and leaves today's under the band", async () => {
+    stub(
+      banded({
+        bands: [
+          { band: "now", shown: 4 },
+          { band: "build_pipeline", shown: 0 },
+          { band: "keep_momentum", shown: 0 },
+          { band: "review", shown: 0 },
+        ],
+        queue: [
+          row({
+            id: "a",
+            band: "now",
+            due_group: "overdue",
+            title: "Overdue one",
+          }),
+          row({
+            id: "b",
+            band: "now",
+            due_group: "today",
+            title: "Answer the buyer",
+          }),
+          row({
+            id: "c",
+            band: "now",
+            due_group: "tomorrow",
+            title: "Call the architect",
+          }),
+          row({
+            id: "d",
+            band: "now",
+            due_group: "this_week",
+            title: "Send the revised quote",
+          }),
+        ],
+        summary: { urgent: 0, due: 4, lower_priority: 0, total: 4 },
+      }),
+    );
+    renderWorklist("en");
+    await screen.findByText("Call the architect");
+
+    const subHeadings = screen
+      .getAllByRole("heading", { level: 4 })
+      .map((node) => node.textContent);
+    expect(subHeadings).toEqual(["Due tomorrow", "Due this week"]);
+
+    // The rows themselves all still draw: a grouping that hides work would be
+    // a worse failure than one that labels it wrongly.
+    for (const title of [
+      "Overdue one",
+      "Answer the buyer",
+      "Call the architect",
+      "Send the revised quote",
+    ]) {
+      expect(screen.getByText(title)).toBeTruthy();
+    }
+  });
+
+  it("draws no sub-heading at all when everything is due today", async () => {
+    stub(
+      banded({
+        bands: [
+          { band: "now", shown: 2 },
+          { band: "build_pipeline", shown: 0 },
+          { band: "keep_momentum", shown: 0 },
+          { band: "review", shown: 0 },
+        ],
+        queue: [
+          row({
+            id: "a",
+            band: "now",
+            due_group: "overdue",
+            title: "Overdue one",
+          }),
+          row({
+            id: "b",
+            band: "now",
+            due_group: "today",
+            title: "Answer the buyer",
+          }),
+        ],
+        summary: { urgent: 0, due: 2, lower_priority: 0, total: 2 },
+      }),
+    );
+    renderWorklist("en");
+    await screen.findByText("Overdue one");
+
+    expect(screen.queryAllByRole("heading", { level: 4 })).toHaveLength(0);
+  });
+});

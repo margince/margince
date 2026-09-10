@@ -336,3 +336,55 @@ func TestAnOpenDealKeepsAnInformationalWaitInTheTopBand(t *testing.T) {
 		t.Errorf("a funded wait was demoted to level %d by a verdict", funded.item.Level)
 	}
 }
+
+// Mail written to a colleague leaves the top band, and money does NOT rescue it.
+//
+// Every other demotion here asks whether a wait matters, and an open deal
+// outranks them all. This one asks WHOSE it is: a deal on the thread does not
+// make a colleague's mail into this reader's reply to write. The colleague has
+// the same row on their own queue, addressed to them, where it ranks.
+func TestAWaitWrittenToAColleagueLeavesTheTopBandEvenWithMoneyOnIt(t *testing.T) {
+	waiting := WaitingCustomer{
+		ActivityID:         ids.MustParse("01a05500-0000-7000-8000-0000000000d1"),
+		Subject:            "Re: the retrofit",
+		Since:              rankInstant.Add(-2 * time.Hour),
+		Engaged:            true,
+		HasOpenDeal:        true,
+		AddressedElsewhere: true,
+	}
+
+	row := classifyWaiting(waiting, rankInstant)
+
+	if row.item.Level == levelWaiting {
+		t.Error("a message written to a colleague still led the day; an open deal " +
+			"answers whether a wait matters, not whose reply it is")
+	}
+	var said bool
+	for _, because := range row.item.Because {
+		if because.Kind == "addressed_elsewhere" {
+			said = true
+		}
+	}
+	if !said {
+		t.Error("the row sank with no reason saying why")
+	}
+	if row.item.Source != sourceWaiting {
+		t.Errorf("the row changed source to %q — somebody is still waiting", row.item.Source)
+	}
+}
+
+// The premise guard: the same message addressed to the reader still leads.
+func TestAFreshWaitAddressedToTheReaderStillLeadsTheDay(t *testing.T) {
+	waiting := WaitingCustomer{
+		ActivityID:  ids.MustParse("01a05500-0000-7000-8000-0000000000d2"),
+		Subject:     "Re: the retrofit",
+		Since:       rankInstant.Add(-2 * time.Hour),
+		Engaged:     true,
+		HasOpenDeal: true,
+	}
+
+	if row := classifyWaiting(waiting, rankInstant); row.item.Level != levelWaiting {
+		t.Errorf("a fresh wait addressed to the reader ranked %d, want the top band — "+
+			"the case above proves nothing if everything is demoted", row.item.Level)
+	}
+}

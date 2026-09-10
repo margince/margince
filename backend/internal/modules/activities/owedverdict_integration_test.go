@@ -182,6 +182,11 @@ func TestASecondVerdictDoesNotOverwriteTheFirst(t *testing.T) {
 // answers back. A human or a privacy verdict can narrow a row inside that
 // window, and a write landing after the narrowing would stamp a judgement on a
 // message the queue's readers may no longer open.
+//
+// The audience clause is also what keeps confidential mail out of a model
+// prompt: this pass runs as a system principal, which reads every audience, so
+// a thread narrowed to its participants would otherwise have its subject and
+// body handed to a cloud tier.
 func TestAMessageNarrowedDuringTheModelCallIsNotJudged(t *testing.T) {
 	e := setupLoad(t)
 	person := e.buyer(t)

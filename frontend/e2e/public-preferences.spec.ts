@@ -141,19 +141,43 @@ test.describe("the pages a message links to", () => {
     ).toBeVisible();
   });
 
-  test("a dead link says so once, and offers no button", async ({ page }) => {
-    await page.route("**/v1/public/preferences/**", (route) =>
-      route.fulfill({
-        status: 404,
-        json: { title: "Not Found", status: 404, code: "not_found" },
-      }),
-    );
+  // A 404 ON THE READ IS THE WITHDRAW-ONLY STATE, not a dead link. A
+  // withdrawal credential outlives the preference token it rode with and
+  // carries no authority to READ a consent state, so this page's opening fetch
+  // 404s for exactly the links that still work — the ones in old mail, which
+  // is the case one-click unsubscribe exists for. The page keeps the button and
+  // drops everything that needed the read.
+  //
+  // The mock needs no extra routing to produce that: it answers any token but
+  // TOKEN with a 404 on the read, and answers the POST regardless, which is the
+  // shape the server has for a credential that outlived its read authority.
+  test("a link that may only withdraw keeps its button, and the press still stops the purpose", async ({
+    page,
+  }) => {
+    const sent: Sent[] = [];
+    await mockPublicEdge(page, sent);
 
     await page.goto(`/#/unsubscribe/pref_gone/${PURPOSE}`);
-    await expect(page.getByText(de["prefs.invalidLink"])).toBeVisible();
+    const confirm = page.getByRole("button", {
+      name: de["prefs.unsub.confirm"],
+    });
+    await expect(confirm).toBeVisible();
+    // And no retry, which would invite the reader to hammer a read that will
+    // never succeed for this credential.
     await expect(
-      page.getByRole("button", { name: de["prefs.unsub.confirm"] }),
+      page.getByRole("button", { name: de["prefs.unsub.retry"] }),
     ).toHaveCount(0);
+
+    // The PRESS is the authority, so it has to work from this state — a button
+    // that survived the read only to refuse the withdrawal would be worse than
+    // the dead-link sentence it replaced.
+    await confirm.click();
+    await expect(
+      page.getByRole("heading", { name: de["prefs.unsub.doneTitle"] }),
+    ).toBeVisible();
+    expect(sent.find((r) => r.method === "POST")?.url).toContain(
+      `purpose=${PURPOSE}`,
+    );
   });
 
   // A locked purpose carries no control at all: one that always failed

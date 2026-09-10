@@ -61,7 +61,7 @@ func (s *Store) WithdrawalTokenForEmail(
 			}
 		}
 		var mintErr error
-		token, mintErr = s.EnsureWithdrawalCredentialTx(ctx, tx, in)
+		token, mintErr = s.ensureWithdrawalCredentialForSendTx(ctx, tx, in)
 		return mintErr
 	})
 	if err != nil {

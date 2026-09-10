@@ -1,6 +1,7 @@
 import { ASK_QUESTION_PARAM } from "../app/palette";
 import { currentParams, replaceParams, useUrlParams } from "../app/urlstate";
-import { Card, Kbd } from "../design-system/atoms";
+import { Kbd } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
 import { CorpusAskCard } from "./corpusask";
@@ -37,35 +38,41 @@ export function AskAiScreen() {
         carriedQuestion={dials.get(ASK_QUESTION_PARAM)}
         onCarriedAsked={forgetCarriedQuestion}
       />
-      <Card as="div" title={t("ai.tiers")}>
-        <ul
-          style={{
-            listStyle: "none",
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-          }}
-        >
-          <li>
-            <AutonomyDot tier="auto" />{" "}
-            <strong>{t("ai.tierAutoExecute")}</strong>{" "}
-            <span className="t-caption">{t("ai.tierAutoExecuteDetail")}</span>
-          </li>
-          <li>
-            <AutonomyDot tier="confirm" />{" "}
-            <strong>{t("ai.tierConfirmationRequired")}</strong>{" "}
-            <span className="t-caption">
-              {t("ai.tierConfirmationRequiredDetail")}
-            </span>
-          </li>
-        </ul>
-      </Card>
-      <Card as="div" inset title={t("ai.connect")}>
-        <p className="t-caption">{t("ai.connectDetail")}</p>
-        <p className="t-caption" style={{ marginTop: 8 }}>
-          {t("ai.paletteHint")} <Kbd>⌘K</Kbd>
-        </p>
-      </Card>
+      <Panel title={t("ai.tiers")}>
+        <PanelBody>
+          <ul
+            style={{
+              listStyle: "none",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-2)",
+            }}
+          >
+            <li>
+              <AutonomyDot tier="auto" />{" "}
+              <strong>{t("ai.tierAutoExecute")}</strong>{" "}
+              <span className="t-caption">{t("ai.tierAutoExecuteDetail")}</span>
+            </li>
+            <li>
+              <AutonomyDot tier="confirm" />{" "}
+              <strong>{t("ai.tierConfirmationRequired")}</strong>{" "}
+              <span className="t-caption">
+                {t("ai.tierConfirmationRequiredDetail")}
+              </span>
+            </li>
+          </ul>
+        </PanelBody>
+      </Panel>
+      <Panel title={t("ai.connect")}>
+        {/* Two sentences and a shortcut: too much for the head band, which
+            holds one line and truncates the rest of it. */}
+        <PanelBody>
+          <p className="t-sub">{t("ai.connectDetail")}</p>
+          <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
+            {t("ai.paletteHint")} <Kbd>⌘K</Kbd>
+          </p>
+        </PanelBody>
+      </Panel>
     </div>
   );
 }

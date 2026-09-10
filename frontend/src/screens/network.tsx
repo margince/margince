@@ -5,7 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Card, EmptyState, Skeleton } from "../design-system/atoms";
+import { Badge, EmptyState, Skeleton } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import "./network.css";
@@ -62,7 +63,7 @@ async function fetchPersonNetwork(
 }
 
 /** The colleagues who know this contact, warmest first. */
-export function PersonNetworkCard({ id }: Readonly<{ id: string }>) {
+export function PersonNetworkPanel({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -78,43 +79,45 @@ export function PersonNetworkCard({ id }: Readonly<{ id: string }>) {
   const colleagues = query.data?.colleagues ?? [];
 
   return (
-    <Card className="net-card" title={t("network.title")}>
-      {overlay && <OverlayUnavailable />}
-      {!overlay && query.isPending && <Skeleton width="80%" />}
-      {!overlay && query.isError && (
-        <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
-      )}
-      {!overlay && query.isSuccess && colleagues.length === 0 && (
-        <EmptyState>{t("network.empty")}</EmptyState>
-      )}
-      {!overlay && colleagues.length > 0 && (
-        <ul className="net-colleagues">
-          {colleagues.map((colleague) => (
-            <li key={colleague.user_id}>
-              <span className="net-name">{colleague.display_name}</span>
-              <Badge tone={COLLEAGUE_TONE[colleague.strength_bucket]}>
-                {t(`network.bucket.${colleague.strength_bucket}`)}
-              </Badge>
-              {/* A `none` band carries NO count, for the same reason it
-                  carries no score: never spoken and spoken-then-cold are
-                  different facts, and a zero renders them identically. */}
-              {colleague.strength_bucket !== "none" && (
+    <Panel title={t("network.title")}>
+      <PanelBody>
+        {overlay && <OverlayUnavailable />}
+        {!overlay && query.isPending && <Skeleton width="80%" />}
+        {!overlay && query.isError && (
+          <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
+        )}
+        {!overlay && query.isSuccess && colleagues.length === 0 && (
+          <EmptyState>{t("network.empty")}</EmptyState>
+        )}
+        {!overlay && colleagues.length > 0 && (
+          <ul className="net-colleagues">
+            {colleagues.map((colleague) => (
+              <li key={colleague.user_id}>
+                <span className="net-name">{colleague.display_name}</span>
+                <Badge tone={COLLEAGUE_TONE[colleague.strength_bucket]}>
+                  {t(`network.bucket.${colleague.strength_bucket}`)}
+                </Badge>
+                {/* A `none` band carries NO count, for the same reason it
+                    carries no score: never spoken and spoken-then-cold are
+                    different facts, and a zero renders them identically. */}
+                {colleague.strength_bucket !== "none" && (
+                  <span className="t-caption">
+                    {t("network.interactions", {
+                      count: formatNumber(colleague.interactions_90d, locale),
+                    })}
+                  </span>
+                )}
                 <span className="t-caption">
-                  {t("network.interactions", {
-                    count: formatNumber(colleague.interactions_90d, locale),
-                  })}
+                  {colleague.last_at
+                    ? formatDateTime(colleague.last_at, locale, recordZone)
+                    : t("network.neverSpoken")}
                 </span>
-              )}
-              <span className="t-caption">
-                {colleague.last_at
-                  ? formatDateTime(colleague.last_at, locale, recordZone)
-                  : t("network.neverSpoken")}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PanelBody>
+    </Panel>
   );
 }
 

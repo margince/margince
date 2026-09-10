@@ -11,7 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
-import { IntroAsksCard } from "./introasks";
+import { IntroAsksPanel } from "./introasks";
 
 // The asks card is where a colleague's answer becomes words on a screen, so
 // what it must never do is overstate one. A name-drop rendered as an
@@ -94,7 +94,7 @@ function renderCard() {
   });
   return render(
     <QueryClientProvider client={client}>
-      <IntroAsksCard personId="p-1" personName="Dana" />
+      <IntroAsksPanel personId="p-1" personName="Dana" />
     </QueryClientProvider>,
   );
 }

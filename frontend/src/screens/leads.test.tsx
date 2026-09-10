@@ -2075,7 +2075,7 @@ describe("LeadScreen — score explain + override (P-10)", () => {
     const submit = screen.getByRole("button", { name: "Save override" });
     expect((submit as HTMLButtonElement).disabled).toBe(true);
 
-    const scoreInput = screen.getByLabelText("Score");
+    const scoreInput = screen.getByRole("spinbutton", { name: "Score" });
     const reasonInput = screen.getByLabelText("Reason");
     await userEvent.clear(scoreInput);
     await userEvent.type(scoreInput, "90");
@@ -2112,7 +2112,7 @@ describe("LeadScreen — score explain + override (P-10)", () => {
     );
 
     const submit = screen.getByRole("button", { name: "Save override" });
-    const scoreInput = screen.getByLabelText("Score");
+    const scoreInput = screen.getByRole("spinbutton", { name: "Score" });
     const reasonInput = screen.getByLabelText("Reason");
     await userEvent.type(reasonInput, "Strong buying signal");
 

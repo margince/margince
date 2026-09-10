@@ -2,13 +2,11 @@ import {
   type InfiniteData,
   type UseInfiniteQueryResult,
   useInfiniteQuery,
-  useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch } from "../api/version";
 import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { Button, Card, EmptyState } from "../design-system/atoms";
@@ -37,6 +35,7 @@ import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "./historyundo";
 import { type HistoryValueCtx, historyValue } from "./historyvalues";
+import { useRecordRestore } from "./recordrestore";
 import "./history.css";
 
 // The per-record plain-language change list (B-EP09.x): every audit_log row
@@ -132,16 +131,6 @@ function EntryFieldDetail({
   );
 }
 
-// The variables one press carries. A mutationFn takes what it needs rather
-// than closing over render state: the click belongs to the committed render,
-// so what it passes cannot be older than the control that carried it.
-type RestorePress = Readonly<{
-  kind: EntityKind;
-  id: string;
-  auditId: string;
-  version: number;
-}>;
-
 // What a change put back needs from the record it belongs to.
 export type RecordRestore = Readonly<{
   // The last-seen version, which the restore pins with If-Match. Undefined is
@@ -208,31 +197,7 @@ function UndoButton({
   // lock, so a change that looked restorable a moment ago may not be one now.
   const [refused, setRefused] = useState<string | null>(null);
 
-  const putBack = useMutation({
-    mutationFn: async ({
-      kind: pressedKind,
-      id: pressedId,
-      auditId,
-      version,
-    }: RestorePress) => {
-      const { data, error } = await api.POST(
-        "/records/{entity_type}/{id}/history/{audit_id}/restore",
-        {
-          params: {
-            path: {
-              entity_type: pressedKind,
-              id: pressedId,
-              audit_id: auditId,
-            },
-            ...ifMatch(version),
-          },
-        },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
+  const putBack = useRecordRestore({
     onSuccess: () => {
       setRefused(null);
       setConfirming(false);

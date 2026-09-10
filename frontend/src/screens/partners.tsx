@@ -9,12 +9,12 @@ import { ifMatch, requireVersion } from "../api/version";
 import { usePageName } from "../app/pagemeta";
 import {
   Button,
-  Card,
   EmptyState,
   Field,
   SectionHeader,
   TextInput,
 } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -30,15 +30,13 @@ import {
 import { PartnerCommissions } from "./partnercommissions";
 import { PartnerDeals } from "./partnerdeals";
 
-// The Partner tab (company 360, P-6): an org IS a partner iff it has a
-// `partner` row (data-model.md §4.3) — GET /organizations/{id}/partner's 404
-// means "not a partner yet", not an error, so it renders an honest setup form
-// rather than the shared error state. Both the setup and edit paths PUT the
-// same UpsertPartnerRequest; first creation carries no If-Match (there is no
-// prior version to precondition on), an edit carries the partner's own
-// `version`. #/partners (PartnersScreen) is the flat list over every partner,
-// reached from the Companies list header — the 9-item nav rail is spec-pinned
-// and does not gain a tenth entry for it.
+// The Partner tab: an org IS a partner iff it has a `partner` row, so GET
+// /organizations/{id}/partner's 404 means "not a partner yet" rather than an
+// error and renders an honest setup form instead of the shared error state.
+// Both the setup and edit paths PUT the same UpsertPartnerRequest; first
+// creation carries no If-Match (there is no prior version to precondition
+// on), an edit carries the partner's own `version`. #/partners
+// (PartnersScreen) is the flat list, reached from the Companies list header.
 
 type Partner = components["schemas"]["Partner"];
 type UpsertPartnerRequest = components["schemas"]["UpsertPartnerRequest"];
@@ -184,8 +182,7 @@ function buildUpsertBody(values: PartnerFormValues): UpsertPartnerRequest {
 
 // The one form both "make this a partner" and "edit partner" render — they
 // differ only in the record they prefill from and whether the PUT carries
-// If-Match (absent on first creation: there is no prior version to
-// precondition on).
+// If-Match (absent on first creation: there is no prior version to pin).
 function PartnerForm({
   organizationId,
   partner,
@@ -419,9 +416,9 @@ function PartnerDetail({
   }
 
   return (
-    <Card
+    <Panel
       title={t("tab.partner")}
-      actions={
+      titleAction={
         <Button
           small
           onClick={() => setEditing(true)}
@@ -431,37 +428,39 @@ function PartnerDetail({
         </Button>
       }
     >
-      <dl className="detail-grid">
-        {partner.partner_role && (
-          <>
-            <dt>{t("partner.role")}</dt>
-            <dd>{t(ROLE_LABELS[partner.partner_role])}</dd>
-          </>
-        )}
-        <dt>{t("partner.certStatus")}</dt>
-        <dd>{t(CERT_LABELS[partner.cert_status])}</dd>
-        {partner.margin_tier && (
-          <>
-            <dt>{t("partner.marginTier")}</dt>
-            <dd>{t(MARGIN_TIER_LABELS[partner.margin_tier])}</dd>
-          </>
-        )}
-        <dt>{t("partner.stage")}</dt>
-        <dd>{t(STAGE_LABELS[partner.relationship_stage])}</dd>
-        {partner.next_step && (
-          <>
-            <dt>{t("partner.nextStep")}</dt>
-            <dd>{partner.next_step}</dd>
-          </>
-        )}
-        {partner.served_segments && partner.served_segments.length > 0 && (
-          <>
-            <dt>{t("partner.servedSegments")}</dt>
-            <dd>{partner.served_segments.join(", ")}</dd>
-          </>
-        )}
-      </dl>
-    </Card>
+      <PanelBody>
+        <dl className="detail-grid">
+          {partner.partner_role && (
+            <>
+              <dt>{t("partner.role")}</dt>
+              <dd>{t(ROLE_LABELS[partner.partner_role])}</dd>
+            </>
+          )}
+          <dt>{t("partner.certStatus")}</dt>
+          <dd>{t(CERT_LABELS[partner.cert_status])}</dd>
+          {partner.margin_tier && (
+            <>
+              <dt>{t("partner.marginTier")}</dt>
+              <dd>{t(MARGIN_TIER_LABELS[partner.margin_tier])}</dd>
+            </>
+          )}
+          <dt>{t("partner.stage")}</dt>
+          <dd>{t(STAGE_LABELS[partner.relationship_stage])}</dd>
+          {partner.next_step && (
+            <>
+              <dt>{t("partner.nextStep")}</dt>
+              <dd>{partner.next_step}</dd>
+            </>
+          )}
+          {partner.served_segments && partner.served_segments.length > 0 && (
+            <>
+              <dt>{t("partner.servedSegments")}</dt>
+              <dd>{partner.served_segments.join(", ")}</dd>
+            </>
+          )}
+        </dl>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -482,9 +481,8 @@ export function PartnerTab({
     });
     queryClient.invalidateQueries({ queryKey: ["organizations"] });
     // The deal form asks this list whether a partner programme exists at all,
-    // so making the FIRST partner has to reach it — otherwise the partner
-    // fields stay absent from the deal form until the cache goes stale on its
-    // own, and the setting appears not to have taken.
+    // so making the FIRST partner has to reach it — otherwise its fields stay
+    // absent there until the cache goes stale and the setting looks lost.
     queryClient.invalidateQueries({ queryKey: ["partners"] });
   }
 
@@ -492,10 +490,9 @@ export function PartnerTab({
     <QueryGate query={query} pendingLabel={t("nav.partners")}>
       {(partner) =>
         partner ? (
-          // The record's own stack: this tab is three cards, and the account
-          // page's work column draws its children with no interval of its own,
-          // so as bare siblings they met at the border and read as one card
-          // ruled into thirds.
+          // The record's own stack: this tab is three panes and the work
+          // column draws its children with no interval, so as bare siblings
+          // they meet at the border and read as one card ruled into thirds.
           <div className="record-stack">
             <PartnerDetail
               organizationId={organizationId}
@@ -511,17 +508,21 @@ export function PartnerTab({
             <PartnerCommissions organizationId={organizationId} />
           </div>
         ) : (
-          <Card title={t("tab.partner")}>
-            <EmptyState>{t("partner.none")}</EmptyState>
-            <div style={{ marginTop: 16 }}>
+          // Two bodies: the panel's own seam divides what there is none of
+          // from how the first one is made.
+          <Panel title={t("tab.partner")}>
+            <PanelBody>
+              <EmptyState>{t("partner.none")}</EmptyState>
+            </PanelBody>
+            <PanelBody>
               <SectionHeader title={t("partner.setup")} />
               <PartnerForm
                 organizationId={organizationId}
                 submitLabel="create.save"
                 onSaved={invalidateAfterSave}
               />
-            </div>
-          </Card>
+            </PanelBody>
+          </Panel>
         )
       }
     </QueryGate>
@@ -585,8 +586,7 @@ export function PartnersScreen() {
             key: "org",
             header: t("partner.organization"),
             // The Partner payload carries only organization_id; EntityRef
-            // hydrates the company name off the org read and backlinks to
-            // its 360.
+            // hydrates the company name off the org read.
             // Named, not linked: the row's own identity link already goes to
             // this company, and a control inside that link would be invalid
             // markup offering the same destination twice.

@@ -1823,8 +1823,6 @@ export const vi = {
   "co.evidence.previous": "Nhận định trước",
   "co.evidence.next": "Nhận định sau",
   "co.evidence.title": "Nguồn của thông tin này",
-  "co.relationships.title": "Người và công ty đã liên kết",
-  "co.tools.title": "Dữ liệu & công cụ",
   "co.prep.withheld":
     "Một số phần của tài khoản này bị ẩn với bạn, nên nhận định này chưa đầy đủ.",
   "co.read.newActivity_one": "Một mục mới kể từ lần bạn xem gần nhất.",
@@ -6066,6 +6064,11 @@ export const vi = {
   "confirm.subscription.alreadyBody":
     "Đăng ký {purpose} của bạn đã được xác nhận. Bạn có thể dừng bất cứ lúc nào từ email chúng tôi gửi.",
   "confirm.done.title": "Cảm ơn bạn",
+  "confirm.receipt.title": "Điều gì diễn ra tiếp theo",
+  "confirm.receipt.body":
+    "Hãy nêu mã tham chiếu này khi bạn hỏi về yêu cầu của mình. Chúng tôi trả lời trong vòng một tháng.",
+  "confirm.receipt.rectify": "Đã yêu cầu chỉnh sửa",
+  "confirm.receipt.erasure": "Đã yêu cầu xóa",
   "confirm.done.body":
     "Tôi đã ghi nhận câu trả lời của bạn. Những thay đổi sẽ được một người ở đây áp dụng, và liên kết này đã được dùng.",
   "confirm.invalidLink":
@@ -8710,6 +8713,9 @@ export const vi = {
   "worklist.pane.company": "Làm việc cho",
   "worklist.pane.role": "Vai trò của họ",
   "worklist.band.now": "Bây giờ",
+  "worklist.dueGroup.tomorrow": "Đến hạn ngày mai",
+  "worklist.dueGroup.this_week": "Đến hạn tuần này",
+  "worklist.dueGroup.later": "Sau đó",
   "worklist.band.build_pipeline": "Xây dựng pipeline",
   "worklist.band.keep_momentum": "Giữ đà",
   "worklist.band.review": "Rà soát",
@@ -8796,6 +8802,8 @@ export const vi = {
   "worklist.handled.about": "Về",
   "worklist.handled.when": "Khi nào",
   "worklist.handled.noRecord": "Không nêu hồ sơ nào",
+  "worklist.handled.wayBack": "Hoàn tác",
+  "worklist.handled.putBackDone": "Đã hoàn tác",
   "worklist.handled.truncated":
     "Còn nhiều hơn thế. Danh sách dừng ở mức một lần xem có thể chứa.",
   "worklist.exceptions.empty": "Hiện chưa có việc nào trong nhóm cần đến bạn.",
@@ -8929,6 +8937,7 @@ export const vi = {
   "worklist.because.stale": "đã chờ rất lâu",
   "worklist.because.no_reply_history": "chưa từng trao đổi",
   "worklist.because.asks_nothing": "không yêu cầu gì ở ta",
+  "worklist.because.addressed_elsewhere": "gửi cho đồng nghiệp",
   "worklist.above.pin": "Trên mục kế vì bạn đã ghim.",
   "worklist.above.level": "Trên mục kế vì đây là loại việc gấp hơn.",
   "worklist.above.deadline": "Trên mục kế nhờ ngày hạn.",

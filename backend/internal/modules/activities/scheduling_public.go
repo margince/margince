@@ -144,8 +144,38 @@ type BookingMarketing struct {
 type ConsentCapturer interface {
 	ValidatePurpose(ctx context.Context, purposeID ids.UUID) error
 	ValidateMarketingPurpose(ctx context.Context, purposeID ids.UUID) error
-	CaptureBookingConsent(ctx context.Context, personID ids.UUID, consent BookingConsent) error
+	// CaptureBookingConsent records the operational grant and, when the form
+	// carried a tick, asks the newsletter question.
+	//
+	// The MarketingOutcome is answered rather than folded into the error,
+	// because the two halves fail differently and only one of them may cost the
+	// subject their meeting. An operational grant that cannot be recorded is
+	// fatal: it is the lawful basis the meeting's own mail rides on. A question
+	// that cannot be asked is not — the tick was optional, the subject can be
+	// asked again, and refusing the booking for it takes away the thing they
+	// actually came for.
+	CaptureBookingConsent(ctx context.Context, personID ids.UUID, consent BookingConsent) (MarketingOutcome, error)
 }
+
+// MarketingOutcome says what became of a booking form's newsletter tick.
+//
+// It is REPORTED, not silently swallowed. A tick that could not be asked about
+// is a fact the booker should see — they ticked a box and no mail is coming —
+// and one the host needs, because a purpose archived under a live form makes
+// every booking silently drop its subscription question.
+type MarketingOutcome string
+
+const (
+	// MarketingNotRequested is a form that carried no tick, or an unticked box.
+	MarketingNotRequested MarketingOutcome = "not_requested"
+	// MarketingPendingConfirmation is the ordinary success: the question was
+	// mailed and the grant waits on the subject answering it.
+	MarketingPendingConfirmation MarketingOutcome = "pending_confirmation"
+	// MarketingNotAsked is a question this installation could not put: no live
+	// mailbox on the record, a purpose archived since the form was published,
+	// or a mail lane that refused it. The booking stands either way.
+	MarketingNotAsked MarketingOutcome = "not_asked"
+)
 
 // WithPublicBooking wires the public capture seams.
 func (h Handlers) WithPublicBooking(people PersonEnsurer, consent ConsentCapturer) Handlers {
@@ -176,6 +206,40 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"slots": slots, "truncated": truncated})
 }
 
+// bookingRequestIsWritable refuses a request before anything is written.
+//
+// Every check here precedes EnsurePersonByEmail, which COMMITS a person row, so
+// a refusal after it would leave one behind — and this door is unauthenticated,
+// which is what makes that expensive: a caller omitting a field in a loop grows
+// the person table one rejected request at a time. Consent is mandatory for the
+// same reason rather than left to the consent writer: a public capture surface
+// may not create a person it cannot attach a recordable consent to.
+//
+// Its own function because the handler crossed the length ceiling, and this is
+// the concept that came out whole — what the request must carry, asked once at
+// the door instead of at each writer behind it.
+func (h Handlers) bookingRequestIsWritable(
+	w http.ResponseWriter, r *http.Request, req crmcontracts.BookPublicMeetingJSONRequestBody,
+) bool {
+	if req.Booker.Name == "" || req.Booker.Email == "" {
+		httperr.Write(w, r, httperr.Validation("booker", "required", "booker.name and booker.email are required"))
+		return false
+	}
+	if !req.End.After(req.Start) {
+		httperr.Write(w, r, httperr.Validation("end", "invalid", "end must follow start"))
+		return false
+	}
+	if req.Consent.PolicyVersion == "" {
+		httperr.Write(w, r, httperr.Validation("consent.policy_version", "required", "the consent wording version shown to the booker is required"))
+		return false
+	}
+	if req.Consent.Wording == nil || strings.TrimSpace(*req.Consent.Wording) == "" {
+		httperr.Write(w, r, httperr.Validation("consent.wording", "required", "the consent wording shown to the booker is required"))
+		return false
+	}
+	return true
+}
+
 // BookPublicMeeting implements (POST /public/booking/{host_slug}):
 // consent-shape check → person (idempotent on email) → consent grant →
 // booking. The 201 discloses nothing beyond the slot itself.
@@ -196,28 +260,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if req.Booker.Name == "" || req.Booker.Email == "" {
-		httperr.Write(w, r, httperr.Validation("booker", "required", "booker.name and booker.email are required"))
-		return
-	}
-	if !req.End.After(req.Start) {
-		httperr.Write(w, r, httperr.Validation("end", "invalid", "end must follow start"))
-		return
-	}
-	// Consent is mandatory and validated BEFORE any write: a public
-	// capture surface may not create a person it cannot attach a
-	// recordable consent to.
-	if req.Consent.PolicyVersion == "" {
-		httperr.Write(w, r, httperr.Validation("consent.policy_version", "required", "the consent wording version shown to the booker is required"))
-		return
-	}
-	// Checked HERE, not left to the consent writer, for the reason the comment
-	// above gives: EnsurePersonByEmail below commits a person row before the
-	// grant is attempted, so a refusal down there would leave one behind — and
-	// this door is unauthenticated, so a caller omitting the field in a loop
-	// grows the person table one rejected request at a time.
-	if req.Consent.Wording == nil || strings.TrimSpace(*req.Consent.Wording) == "" {
-		httperr.Write(w, r, httperr.Validation("consent.wording", "required", "the consent wording shown to the booker is required"))
+	if !h.bookingRequestIsWritable(w, r, req) {
 		return
 	}
 	purposeID := ids.UUID(req.Consent.PurposeId)
@@ -238,12 +281,13 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		writeStoreErr(w, r, err)
 		return
 	}
-	if err := h.publicConsent.CaptureBookingConsent(r.Context(), personID, BookingConsent{
+	marketingOutcome, err := h.publicConsent.CaptureBookingConsent(r.Context(), personID, BookingConsent{
 		PurposeID:     purposeID,
 		PolicyVersion: req.Consent.PolicyVersion,
 		Wording:       req.Consent.Wording,
 		Marketing:     marketing,
-	}); err != nil {
+	})
+	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
@@ -269,8 +313,13 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		writeStoreErr(w, r, err)
 		return
 	}
+	// BOTH outcomes, named separately. The booking is confirmed or it is not,
+	// and the newsletter question was asked or it was not — a response saying
+	// only the first leaves a booker who ticked the box waiting for a mail that
+	// is not coming.
 	httperr.WriteJSON(w, http.StatusCreated, map[string]any{
 		"start": req.Start, "end": req.End,
+		"booking": "confirmed", "marketing": string(marketingOutcome),
 	})
 }
 
@@ -362,7 +411,14 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 	if !ok {
 		return false
 	}
-	if err := h.publicConsent.CaptureBookingConsent(r.Context(), personID, BookingConsent{
+	// The outcome is dropped on THIS door and not on the public one, because
+	// this response is the booked activity itself — a shape the contract
+	// declares and every authenticated client already parses. Reporting the
+	// marketing outcome here needs a field on that shape, which is a contract
+	// change of its own. What matters is the same on both doors and is settled
+	// in the adapter: a question that cannot be asked no longer costs the
+	// meeting.
+	if _, err := h.publicConsent.CaptureBookingConsent(r.Context(), personID, BookingConsent{
 		PurposeID:     purposeID,
 		PolicyVersion: c.PolicyVersion,
 		Wording:       c.Wording,

@@ -11,6 +11,7 @@ import {
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
+import { RequestReceipts, type RightsCaseReceipt } from "./confirmreceipts";
 import { SubscriptionConfirm } from "./confirmsubscription";
 import {
   explainPublicError,
@@ -95,6 +96,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   );
   const [erasure, setErasure] = useState(false);
   const [done, setDone] = useState(false);
+  const [receipts, setReceipts] = useState<RightsCaseReceipt[]>([]);
 
   const card = details.data;
 
@@ -133,10 +135,13 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
           ? { marketing_choice: marketing, marketing_wording: marketingWording }
           : {}),
       };
-      const { error, response } = await api.POST("/public/confirm/{token}", {
-        params: { path: { token } },
-        body,
-      });
+      const { data, error, response } = await api.POST(
+        "/public/confirm/{token}",
+        {
+          params: { path: { token } },
+          body,
+        },
+      );
       // GATED ON THE STATUS, NOT ON `error`.
       //
       // openapi-fetch returns `{error: undefined}` for a non-2xx whose body is
@@ -153,8 +158,15 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         }
         throwProblem(error);
       }
+      // The references the subject quotes when chasing what they asked for.
+      // Older servers answered 204 with no body at all, so an absent list is
+      // read as "no cases" rather than as a failure.
+      return data?.cases ?? [];
     },
-    onSuccess: () => setDone(true),
+    onSuccess: (cases) => {
+      setReceipts(cases);
+      setDone(true);
+    },
   });
 
   if (details.isPending) {
@@ -191,6 +203,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         <Card>
           <h1 className="t-h2">{t("confirm.done.title")}</h1>
           <p className="t-body">{t("confirm.done.body")}</p>
+          <RequestReceipts receipts={receipts} />
         </Card>
       </div>
     );

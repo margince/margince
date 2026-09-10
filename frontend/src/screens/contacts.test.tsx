@@ -1339,8 +1339,8 @@ describe("PersonScreen — consent section wiring", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    // The section's own aria-label gives it an implicit region role — an
-    // absent import would leave no such region on the page at all.
+    // The zone's title names it as a region — an absent import would leave no
+    // such region on the page at all.
     expect(await screen.findByRole("region", { name: "Consent" })).toBeTruthy();
   });
 });

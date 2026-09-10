@@ -7,12 +7,13 @@
    share.html mockup's structure with our own CSS-custom-property tokens
    (design-system/tokens.css) — no hex/rgb literals (make ds-purity). */
 
-.share-screen > .card {
+.share-screen > :is(.card, .panel) {
   margin-top: var(--gapCards);
 }
 
+/* No top margin of its own: the pane's body already pays the interval under
+   the head band, and a second one read as a loose first line. */
 .share-backlink {
-  margin-top: var(--space-2);
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -117,22 +118,12 @@
   padding: 2px 8px; /* ds:ignore the Badge atom's own box, which it stands beside */
 }
 
-.share-acl-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
+/* A grant is a `PanelRow`, so the hairline between two of them and the panel's
+   own gutters come from the pane rather than from this sheet. */
 .share-acl-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: var(--space-3) var(--space-1);
-  border-bottom: 1px solid var(--borderSubtle);
-}
-
-.share-acl-row:last-child {
-  border-bottom: 0;
 }
 
 .share-acl-who {

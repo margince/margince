@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CustomFieldsCard } from "./customfields.card";
+import { CustomFieldsPanel } from "./customfields.card";
 import {
   installFetchStub,
   jsonResponse,
@@ -77,18 +77,18 @@ function story(
     });
     return (
       <StoryProviders>
-        <CustomFieldsCard object="organization" record={record} />
+        <CustomFieldsPanel object="organization" record={record} />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof CustomFieldsCard> = {
+const meta: Meta<typeof CustomFieldsPanel> = {
   title: "Records/Company/Custom fields",
-  component: CustomFieldsCard,
+  component: CustomFieldsPanel,
 };
 export default meta;
-type Story = StoryObj<typeof CustomFieldsCard>;
+type Story = StoryObj<typeof CustomFieldsPanel>;
 
 export const EveryType: Story = { render: story(FIELDS, RECORD) };
 

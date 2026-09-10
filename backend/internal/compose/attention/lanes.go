@@ -151,6 +151,14 @@ type Tasks interface {
 	// showing the cap tells a reader with thirteen that they have twelve, and
 	// there is no second page to reach the thirteenth by.
 	CountOpenForViewer(ctx context.Context, until time.Time, scope TaskScope, owner ids.UUID) (int, error)
+	// UpcomingForViewer answers the work due AFTER the day's end, up to a
+	// horizon, under the same narrowing.
+	//
+	// A second read rather than a wider one, because the two allocations must
+	// not compete: a full day's backlog would fill a shared limit before a
+	// single upcoming row was reached, and the reader who most needs next
+	// week's deadline is exactly the one who would never see it.
+	UpcomingForViewer(ctx context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
 }
 
 // Task is one piece of agreed work.
@@ -200,6 +208,25 @@ type Receipt struct {
 	// state: not every approval is about one.
 	TargetType string
 	TargetID   ids.UUID
+	// Undo names the audit row the record-history restore route puts back, on
+	// a receipt for work that was APPLIED rather than approved.
+	//
+	// Absent means there is nothing to offer: an approval the system decided is
+	// already a decision somebody can revisit through the record, and a
+	// correction somebody has already reversed has no second undo in it.
+	Undo *ReceiptUndo
+}
+
+// ReceiptUndo is what a receipt needs to offer a way back.
+type ReceiptUndo struct {
+	AuditLogID ids.UUID
+	// Version of the record the restore route compares against, so two people
+	// undoing the same change do not overwrite each other silently.
+	Version int64
+	// Reversed says somebody already put this back. The row stays and says so
+	// rather than vanishing, which would leave a reader unsure their Undo
+	// landed.
+	Reversed bool
 }
 
 // FailedEffects reads the decisions the acting rep approved whose released

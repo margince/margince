@@ -201,6 +201,85 @@ func TestAReplacedAddressIsArchivedNotDeleted(t *testing.T) {
 	}
 }
 
+// Pressing the primary radio on the other of two same-type addresses is a swap
+// between two RETAINED rows. Both are already held, so both travel the
+// re-placement loop rather than the insert path, and promoting the incoming
+// primary while the stored one is still primary leaves two live work primaries
+// for the length of a statement — which uq_person_email_primary refuses.
+// Demoting before promoting is what keeps that window from existing.
+func TestSwappingWhichWorkAddressIsPrimary(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	person, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Ada Lovelace",
+		Emails: []PersonEmailInput{
+			{Email: "a@swap.example", EmailType: "work", IsPrimary: false, Position: 0},
+			{Email: "b@swap.example", EmailType: "work", IsPrimary: true, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("create person: %v", err)
+	}
+
+	updated, err := e.store.UpdatePerson(ctx, ids.From[ids.PersonKind](ids.UUID(person.Id)), UpdatePersonInput{
+		Emails: []PersonEmailInput{
+			{Email: "a@swap.example", EmailType: "work", IsPrimary: true, Position: 0},
+			{Email: "b@swap.example", EmailType: "work", IsPrimary: false, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("swapping which work address is primary: %v", err)
+	}
+	rows := liveEmailRows(updated)
+	if len(rows) != 2 {
+		t.Fatalf("emails = %+v, want both addresses live", rows)
+	}
+	var primary string
+	for _, row := range rows {
+		if row.IsPrimary {
+			primary = string(row.Email)
+		}
+	}
+	if primary != "a@swap.example" {
+		t.Fatalf("primary = %q, want the address the swap promoted", primary)
+	}
+}
+
+// A request that marks two addresses of one type primary is a contradiction the
+// caller can fix, so it is refused before any write with an error that names the
+// type — not the bare conflict uq_person_email_primary would answer with.
+func TestTwoPrimaryAddressesOfOneTypeIsRefusedByType(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	person, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Ada Lovelace",
+		Emails:   []PersonEmailInput{{Email: "ada@work.example", EmailType: "work", IsPrimary: true, Position: 0}},
+		Source:   "test",
+	})
+	if err != nil {
+		t.Fatalf("create person: %v", err)
+	}
+
+	_, err = e.store.UpdatePerson(ctx, ids.From[ids.PersonKind](ids.UUID(person.Id)), UpdatePersonInput{
+		Emails: []PersonEmailInput{
+			{Email: "ada@work.example", EmailType: "work", IsPrimary: true, Position: 0},
+			{Email: "ada@office.example", EmailType: "work", IsPrimary: true, Position: 1},
+		},
+		Source: "test",
+	})
+	var conflict *PrimaryConflictError
+	if !errors.As(err, &conflict) {
+		t.Fatalf("two work primaries → %v, want PrimaryConflictError", err)
+	}
+	if conflict.Type != "work" {
+		t.Fatalf("conflict names type %q, want work", conflict.Type)
+	}
+}
+
 // liveEmailRows reads the person's address rows, which the wire type carries as
 // an optional slice.
 func liveEmailRows(p crmcontracts.Person) []crmcontracts.PersonEmail {

@@ -1532,6 +1532,7 @@ const (
 	AttentionItemActionsRetry       AttentionItemActions = "retry"
 	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze      AttentionItemActions = "snooze"
+	AttentionItemActionsUndo        AttentionItemActions = "undo"
 )
 
 // Valid indicates whether the value is a known member of the AttentionItemActions enum.
@@ -1558,6 +1559,35 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsSetAside:
 		return true
 	case AttentionItemActionsSnooze:
+		return true
+	case AttentionItemActionsUndo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttentionItemDueGroup.
+const (
+	AttentionItemDueGroupLater    AttentionItemDueGroup = "later"
+	AttentionItemDueGroupOverdue  AttentionItemDueGroup = "overdue"
+	AttentionItemDueGroupThisWeek AttentionItemDueGroup = "this_week"
+	AttentionItemDueGroupToday    AttentionItemDueGroup = "today"
+	AttentionItemDueGroupTomorrow AttentionItemDueGroup = "tomorrow"
+)
+
+// Valid indicates whether the value is a known member of the AttentionItemDueGroup enum.
+func (e AttentionItemDueGroup) Valid() bool {
+	switch e {
+	case AttentionItemDueGroupLater:
+		return true
+	case AttentionItemDueGroupOverdue:
+		return true
+	case AttentionItemDueGroupThisWeek:
+		return true
+	case AttentionItemDueGroupToday:
+		return true
+	case AttentionItemDueGroupTomorrow:
 		return true
 	default:
 		return false
@@ -11026,6 +11056,24 @@ func (e RetentionScope) Valid() bool {
 	}
 }
 
+// Defines values for RightsCaseReceiptKind.
+const (
+	Erasure RightsCaseReceiptKind = "erasure"
+	Rectify RightsCaseReceiptKind = "rectify"
+)
+
+// Valid indicates whether the value is a known member of the RightsCaseReceiptKind enum.
+func (e RightsCaseReceiptKind) Valid() bool {
+	switch e {
+	case Erasure:
+		return true
+	case Rectify:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RowTagColor.
 const (
 	RowTagColorAmber  RowTagColor = "amber"
@@ -14393,6 +14441,7 @@ const (
 	WorklistItemActionsRetry       WorklistItemActions = "retry"
 	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze      WorklistItemActions = "snooze"
+	WorklistItemActionsUndo        WorklistItemActions = "undo"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemActions enum.
@@ -14419,6 +14468,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsSetAside:
 		return true
 	case WorklistItemActionsSnooze:
+		return true
+	case WorklistItemActionsUndo:
 		return true
 	default:
 		return false
@@ -14599,6 +14650,33 @@ func (e WorklistItemDispositions) Valid() bool {
 	case WorklistDispositionNotSales:
 		return true
 	case WorklistDispositionSnooze:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemDueGroup.
+const (
+	WorklistDueGroupLater    WorklistItemDueGroup = "later"
+	WorklistDueGroupOverdue  WorklistItemDueGroup = "overdue"
+	WorklistDueGroupThisWeek WorklistItemDueGroup = "this_week"
+	WorklistDueGroupToday    WorklistItemDueGroup = "today"
+	WorklistDueGroupTomorrow WorklistItemDueGroup = "tomorrow"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemDueGroup enum.
+func (e WorklistItemDueGroup) Valid() bool {
+	switch e {
+	case WorklistDueGroupLater:
+		return true
+	case WorklistDueGroupOverdue:
+		return true
+	case WorklistDueGroupThisWeek:
+		return true
+	case WorklistDueGroupToday:
+		return true
+	case WorklistDueGroupTomorrow:
 		return true
 	default:
 		return false
@@ -14859,6 +14937,7 @@ func (e WorklistReachSource) Valid() bool {
 
 // Defines values for WorklistReasonKind.
 const (
+	WorklistReasonKindAddressedElsewhere WorklistReasonKind = "addressed_elsewhere"
 	WorklistReasonKindApprovedAndFailed  WorklistReasonKind = "approved_and_failed"
 	WorklistReasonKindAsksNothing        WorklistReasonKind = "asks_nothing"
 	WorklistReasonKindBelowMaterial      WorklistReasonKind = "below_material"
@@ -14890,6 +14969,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistReasonKind enum.
 func (e WorklistReasonKind) Valid() bool {
 	switch e {
+	case WorklistReasonKindAddressedElsewhere:
+		return true
 	case WorklistReasonKindApprovedAndFailed:
 		return true
 	case WorklistReasonKindAsksNothing:
@@ -16254,22 +16335,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	Current    ListOrganizationDocumentsParamsDocState = "current"
-	Draft      ListOrganizationDocumentsParamsDocState = "draft"
-	Final      ListOrganizationDocumentsParamsDocState = "final"
-	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
+	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
+	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
+	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
+	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case Current:
+	case ListOrganizationDocumentsParamsDocStateCurrent:
 		return true
-	case Draft:
+	case ListOrganizationDocumentsParamsDocStateDraft:
 		return true
-	case Final:
+	case ListOrganizationDocumentsParamsDocStateFinal:
 		return true
-	case Superseded:
+	case ListOrganizationDocumentsParamsDocStateSuperseded:
 		return true
 	default:
 		return false
@@ -16417,6 +16498,42 @@ func (e ListProjectsParamsPhase) Valid() bool {
 	case Initiative:
 		return true
 	case Pursuing:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BookPublicMeeting201JSONResponseBodyBooking.
+const (
+	Confirmed BookPublicMeeting201JSONResponseBodyBooking = "confirmed"
+)
+
+// Valid indicates whether the value is a known member of the BookPublicMeeting201JSONResponseBodyBooking enum.
+func (e BookPublicMeeting201JSONResponseBodyBooking) Valid() bool {
+	switch e {
+	case Confirmed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BookPublicMeeting201JSONResponseBodyMarketing.
+const (
+	NotAsked            BookPublicMeeting201JSONResponseBodyMarketing = "not_asked"
+	NotRequested        BookPublicMeeting201JSONResponseBodyMarketing = "not_requested"
+	PendingConfirmation BookPublicMeeting201JSONResponseBodyMarketing = "pending_confirmation"
+)
+
+// Valid indicates whether the value is a known member of the BookPublicMeeting201JSONResponseBodyMarketing enum.
+func (e BookPublicMeeting201JSONResponseBodyMarketing) Valid() bool {
+	switch e {
+	case NotAsked:
+		return true
+	case NotRequested:
+		return true
+	case PendingConfirmation:
 		return true
 	default:
 		return false
@@ -18062,6 +18179,18 @@ type AnnotateBriefRequest struct {
 	Narrative *string `json:"narrative,omitempty"`
 }
 
+// AppliedUndo What a receipt needs to offer a way back from a change nobody was asked about.
+type AppliedUndo struct {
+	// AuditLogId The change to put back, through the record-history restore route.
+	AuditLogId openapi_types.UUID `json:"audit_log_id"`
+
+	// Reversed Somebody already put this back. The row stays and says so rather than vanishing, which would leave a reader unsure their Undo landed.
+	Reversed bool `json:"reversed"`
+
+	// Version The record's version as this receipt was read, for the `If-Match` the restore route requires. Carried on the receipt rather than re-read by the client: a second read would race the sweep, and a stale version is what makes the restore refuse rather than overwrite somebody else's later edit.
+	Version int64 `json:"version"`
+}
+
 // ApplyTagRequest defines model for ApplyTagRequest.
 type ApplyTagRequest struct {
 	EntityId   openapi_types.UUID        `json:"entity_id"`
@@ -18933,6 +19062,10 @@ type AttentionItem struct {
 	// DueAt When this is due (tasks), or when it lapses (approvals).
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+	DueGroup *AttentionItemDueGroup `json:"due_group,omitempty"`
+
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
 	// `source: meeting_outcome`.
 	//
@@ -19020,6 +19153,10 @@ type AttentionItem struct {
 	// and the client writes the line in the reader's own.
 	Title *string `json:"title,omitempty"`
 
+	// Undo The way back from work that was APPLIED rather than approved.
+	// A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
+	Undo *AppliedUndo `json:"undo,omitempty"`
+
 	// Version The version of the row this item's own verbs write to, present where it names one — a
 	// task today. Carried for the reason `email_summary` carries one: a lane that offers
 	// `complete` and `snooze` has to name the row those presses condition on, or two people
@@ -19044,6 +19181,10 @@ type AttentionItem struct {
 
 // AttentionItemActions defines model for AttentionItem.Actions.
 type AttentionItemActions string
+
+// AttentionItemDueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+type AttentionItemDueGroup string
 
 // AttentionItemSource Which producer raised it, and therefore which endpoint its verbs go to.
 type AttentionItemSource string
@@ -21311,6 +21452,13 @@ type ConfirmRequestIssued struct {
 	// Sendable Whether this installation has an outbound relay and a link origin configured. False
 	// means nothing was attempted — the link exists and must be passed on by hand.
 	Sendable bool `json:"sendable"`
+}
+
+// ConfirmSubmissionReceipt The answer to a confirm-link submission. `cases` names every rights request it opened — one per
+// corrected field under Art. 16, one for an erasure request under Art. 17. Empty when the submission
+// proposed nothing: a marketing answer alone opens no case.
+type ConfirmSubmissionReceipt struct {
+	Cases []RightsCaseReceipt `json:"cases"`
 }
 
 // ConnectChannelRequest defines model for ConnectChannelRequest.
@@ -31679,6 +31827,10 @@ type Receipt struct {
 
 	// Summary What was done, in the words the act itself recorded.
 	Summary string `json:"summary"`
+
+	// Undo The way back, on a receipt for work that was APPLIED rather than approved.
+	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
+	Undo *AppliedUndo `json:"undo,omitempty"`
 }
 
 // RecordClaim defines model for RecordClaim.
@@ -32456,6 +32608,25 @@ type RetentionSettings struct {
 	// keep-everything obligation opts in.
 	RetainOnly bool `json:"retain_only"`
 }
+
+// RightsCaseReceipt What a data subject is told to quote when asking after a request they sent through their confirm
+// link. Carries the reference and the right it was opened under, never the case id — the queue that
+// holds the case is admin-gated, and a row id in a receipt invites being typed back in somewhere
+// that trusts it.
+type RightsCaseReceipt struct {
+	// Field The record field a correction proposes. Absent for an erasure. A subject who corrected two
+	// fields receives two receipts, and without this cannot tell which answer is about which.
+	Field *string `json:"field,omitempty"`
+
+	// Kind Art. 16 correction or Art. 17 erasure.
+	Kind RightsCaseReceiptKind `json:"kind"`
+
+	// Reference The quotable reference, unique across the installation.
+	Reference string `json:"reference"`
+}
+
+// RightsCaseReceiptKind Art. 16 correction or Art. 17 erasure.
+type RightsCaseReceiptKind string
 
 // Role One role as `role.permissions` stores it. This is a ROLE's document, not a principal's — unlike `Authorization.objects` nothing here is merged, because the thing being edited is the single role.
 type Role struct {
@@ -36959,6 +37130,10 @@ type WorklistItem struct {
 	// DueAt When this is due, or when the meeting starts.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+	DueGroup *WorklistItemDueGroup `json:"due_group,omitempty"`
+
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
@@ -37060,6 +37235,10 @@ type WorklistItem struct {
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`
 
+	// Undo The way back from work that was APPLIED rather than approved.
+	// A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
+	Undo *AppliedUndo `json:"undo,omitempty"`
+
 	// Verdict How the deal behind a row is STANDING, beside the move that acts on it.
 	//
 	// The move says what to do; this says what the reader is walking into. A row
@@ -37152,6 +37331,10 @@ type WorklistItemDestination string
 
 // WorklistItemDispositions defines model for WorklistItem.Dispositions.
 type WorklistItemDispositions string
+
+// WorklistItemDueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+type WorklistItemDueGroup string
 
 // WorklistItemPrimaryAction The one verb this row is FOR, out of `actions`. The queue is ranked, so the
 // reader arriving at a row should not have to weigh three equally-drawn
@@ -41372,6 +41555,12 @@ type BookPublicMeetingParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
+
+// BookPublicMeeting201JSONResponseBodyBooking defines parameters for BookPublicMeeting.
+type BookPublicMeeting201JSONResponseBodyBooking string
+
+// BookPublicMeeting201JSONResponseBodyMarketing defines parameters for BookPublicMeeting.
+type BookPublicMeeting201JSONResponseBodyMarketing string
 
 // GetPublicAvailabilityParams defines parameters for GetPublicAvailability.
 type GetPublicAvailabilityParams struct {

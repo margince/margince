@@ -1924,8 +1924,6 @@ export const en = {
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",
   "co.evidence.title": "Where this came from",
-  "co.relationships.title": "Linked people and companies",
-  "co.tools.title": "Data & tools",
   "co.prep.withheld":
     "Parts of this account are hidden from you, so this reading is incomplete.",
   "co.read.newActivity_one": "One new item since your last visit.",
@@ -6270,6 +6268,11 @@ export const en = {
   "confirm.subscription.alreadyBody":
     "Your subscription to {purpose} is confirmed. You can stop it at any time from any email we send.",
   "confirm.done.title": "Thank you",
+  "confirm.receipt.title": "What happens next",
+  "confirm.receipt.body":
+    "Quote this reference if you ask us about your request. We answer within one month.",
+  "confirm.receipt.rectify": "Correction requested",
+  "confirm.receipt.erasure": "Removal requested",
   "confirm.done.body":
     "I have recorded your answer. Anything you changed goes to a person here to apply, and this link is now used up.",
   "confirm.invalidLink":
@@ -8954,6 +8957,9 @@ export const en = {
   "worklist.pane.company": "Works for",
   "worklist.pane.role": "Their role",
   "worklist.band.now": "Now",
+  "worklist.dueGroup.tomorrow": "Due tomorrow",
+  "worklist.dueGroup.this_week": "Due this week",
+  "worklist.dueGroup.later": "Later",
   "worklist.band.build_pipeline": "Build pipeline",
   "worklist.band.keep_momentum": "Keep momentum",
   "worklist.band.review": "Review",
@@ -9038,6 +9044,8 @@ export const en = {
   "worklist.handled.about": "About",
   "worklist.handled.when": "When",
   "worklist.handled.noRecord": "No record named",
+  "worklist.handled.wayBack": "Way back",
+  "worklist.handled.putBackDone": "Already put back",
   "worklist.handled.truncated":
     "More than this. The list stops at what one sitting can hold.",
   "worklist.exceptions.empty": "Nothing on the team needs you right now.",
@@ -9170,6 +9178,7 @@ export const en = {
   "worklist.because.stale": "waiting a long time",
   "worklist.because.no_reply_history": "no reply history",
   "worklist.because.asks_nothing": "asks nothing of us",
+  "worklist.because.addressed_elsewhere": "written to a colleague",
   "worklist.above.pin": "Above the next because you pinned it.",
   "worklist.above.level":
     "Above the next because it is a more pressing kind of work.",
