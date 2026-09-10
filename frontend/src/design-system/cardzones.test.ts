@@ -94,6 +94,11 @@ function pathOf(file: string): string {
  * dropped, and an expression wrapper is looked THROUGH: `{staged && <SectionHeader/>}`
  * and `{rows.map(() => <SectionHeader/>)}` both render the header, and a walk
  * that stopped at the `{` would read the card as untitled.
+ *
+ * What an expression yields goes back through this function rather than
+ * straight out: `{staged && <><SectionHeader/></>}` yields a FRAGMENT, which
+ * draws no tag of its own, so a caller asking each child for its tag would see
+ * one answering `undefined` and read the card as untitled.
  */
 function renderedChildren(children: readonly ts.JsxChild[]): ts.JsxChild[] {
   return children.flatMap((child) => {
@@ -104,7 +109,9 @@ function renderedChildren(children: readonly ts.JsxChild[]): ts.JsxChild[] {
       return renderedChildren(child.children);
     }
     if (ts.isJsxExpression(child)) {
-      return child.expression === undefined ? [] : jsxWithin(child.expression);
+      return child.expression === undefined
+        ? []
+        : renderedChildren(jsxWithin(child.expression));
     }
     return [child];
   });
@@ -261,6 +268,27 @@ describe("a titled zone is a Panel", () => {
     it("reads a head drawn under a condition", () => {
       expect(
         read("<Card>{visible && <SectionHeader title={title} />}</Card>"),
+      ).toHaveLength(1);
+    });
+
+    // A fragment is what a guard wraps its head in the moment the head grows a
+    // sibling, and it draws no tag — so a walk that handed one on unflattened
+    // would ask it for a tag, get nothing, and call the card untitled.
+    it("reads a head a condition wraps in a fragment", () => {
+      expect(
+        read(
+          "<Card>{visible && <><SectionHeader title={title} />{rows}</>}</Card>",
+        ),
+      ).toHaveLength(1);
+      expect(
+        read(
+          "<Card>{visible ? <><SectionHeader title={title} /></> : null}</Card>",
+        ),
+      ).toHaveLength(1);
+      expect(
+        read(
+          '<Card>\n  <div style={{ padding: "var(--padCard)" }}>\n    {visible && <><SectionHeader title={title} /></>}\n  </div>\n</Card>',
+        ),
       ).toHaveLength(1);
     });
 

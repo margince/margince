@@ -3,6 +3,7 @@
 // — a field with no stored value is absent, and a record with no custom values
 // renders nothing at all rather than an empty card.
 
+import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
 import {
@@ -47,25 +48,17 @@ export function CustomFieldsPanel({
             // entry a record belongs to is the commonest thing anybody puts in a
             // text field, and copy-and-paste was the only way to follow it. The
             // scheme check inside customFieldHref is what keeps this from turning
-            // a stored string into something executable on click.
+            // a stored string into something executable on click, and it is
+            // asked HERE rather than left to the link: a refused value in this
+            // column is one of many plain cells, so it must not wear the link
+            // affordance the primitive keeps on the text it declines to follow.
             const href = customFieldHref(value);
             return (
               <div key={field.column_name}>
                 <dt className="t-eyebrow">{field.label}</dt>
                 <dd>
                   {href ? (
-                    // `noreferrer noopener` and a new tab: the destination is a
-                    // foreign origin nobody in this workspace vouched for, so it
-                    // learns nothing about where the reader came from and gets no
-                    // handle on the window it was opened from.
-                    <a
-                      className="link-button"
-                      href={href}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                    >
-                      {value}
-                    </a>
+                    <OffsiteLink href={href}>{value}</OffsiteLink>
                   ) : (
                     value
                   )}
