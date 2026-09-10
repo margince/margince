@@ -429,7 +429,7 @@ export function LogActivity({
   }
   if (logRefused) {
     return (
-      <Panel className="card-stack" title={t("log.title")} sub={t("log.sub")}>
+      <Panel title={t("log.title")} sub={t("log.sub")}>
         <PanelBody>
           <p className="t-caption">{t("record.logActivityRefused")}</p>
         </PanelBody>
@@ -437,7 +437,7 @@ export function LogActivity({
     );
   }
   return (
-    <Panel className="card-stack" title={t("log.title")} sub={t("log.sub")}>
+    <Panel title={t("log.title")} sub={t("log.sub")}>
       <PanelBody>
         <LogActivityForm
           entityType={entityType}

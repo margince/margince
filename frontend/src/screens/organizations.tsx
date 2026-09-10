@@ -103,12 +103,12 @@ import {
   companyTabRoute,
   isCompanyTab,
 } from "./companytab";
-import { TechnicalProfileCard } from "./companytechnical";
+import { TechnicalProfilePanel } from "./companytechnical";
 import { Company360Call, NeedsList, useTodayReading } from "./companytoday";
 import { hasWorkInFlight, sinceLastVisitFooter } from "./companywork";
 import { ComposeModal } from "./compose";
 import { CreateAction } from "./create";
-import { CustomFieldsCard } from "./customfields.card";
+import { CustomFieldsPanel } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { useRoster } from "./entityref";
 import { RecordHistoryTab } from "./history";
@@ -656,7 +656,7 @@ function SiteReadPanel({
 // (or joins — idempotent per org+url) a background crawl of the company's own
 // site; findings stage as 🟡 proposals for the inbox, nothing writes to the
 // record here. 422 (no website) and 501 (crawl seam unwired) say their cause.
-function DeepReadCard({ orgId }: Readonly<{ orgId: string }>) {
+function DeepReadPanel({ orgId }: Readonly<{ orgId: string }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [readId, setReadId] = useState<string | null>(null);
@@ -775,7 +775,7 @@ async function fetchHierarchyRollup(
 // The org hierarchy roll-up, read-only. Money renders only when both
 // amount_minor and currency are present (Money's fields are individually
 // optional on the wire) — never a hand-formatted or zero-filled figure.
-function HierarchyRollupCard({ orgId }: Readonly<{ orgId: string }>) {
+function HierarchyRollupPanel({ orgId }: Readonly<{ orgId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -2120,7 +2120,7 @@ function CompanyOverviewStack({
           column on such an account, and stands down the moment there is
           anything to read: on a live account the lead is the 360 below, and
           two leads is none. */}
-      {!overlay && nothingOnFile(view) && <DeepReadCard orgId={org.id} />}
+      {!overlay && nothingOnFile(view) && <DeepReadPanel orgId={org.id} />}
       {/* The 360 as the first pane, at the full measure (DESIGN.md §7): the
           word, the sentence it rests on, the three dimensions, the spine, and
           the thread folded under it. What moved since this reader was last
@@ -2557,18 +2557,18 @@ function ReferenceDisclosures({
             scope={{ organization_id: org.id }}
             refusedReasonId={refusedReasonId}
           />
-          <CustomFieldsCard object="organization" record={org} />
-          <HierarchyRollupCard orgId={org.id} />
+          <CustomFieldsPanel object="organization" record={org} />
+          <HierarchyRollupPanel orgId={org.id} />
           {/* Only where the Brief is not already offering it: an account with
               nothing on file meets the offer at the top of its own column, and
               two offers to research the same company is none. */}
-          {!offerOnOverview && <DeepReadCard orgId={org.id} />}
+          {!offerOnOverview && <DeepReadPanel orgId={org.id} />}
           {/* What the company RUNS, beside what it SAYS — read from public
               records the company never wrote for us: DNS, certificates, the
               markup of their own homepage. It sits under the read that
               produces it rather than in a section of its own, because the
               site read above is what queues it. */}
-          <TechnicalProfileCard orgId={org.id} />
+          <TechnicalProfilePanel orgId={org.id} />
         </>
       }
     />

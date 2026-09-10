@@ -45,13 +45,15 @@ export function momentWhyNow(
 }
 
 /**
- * MomentsCard is what changed about this relationship lately.
+ * MomentsPanel is what changed about this relationship lately.
  *
  * It is the difference between a picture of a network and a live one: a map
  * says who is there, a moment says what moved. The sentences are the 360's
  * own, so one derived change does not get two sets of words.
  */
-export function MomentsCard({ view }: Readonly<{ view: RelationshipMoments }>) {
+export function MomentsPanel({
+  view,
+}: Readonly<{ view: RelationshipMoments }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();

@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { RoutesCard } from "./personroutes";
+import { RoutesPanel } from "./personroutes";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The ways in to a contact, as a zone of the network tab.
@@ -94,20 +94,20 @@ function card(payload: PersonGraph, skipLead: boolean) {
     });
     return (
       <StoryProviders>
-        <RoutesCard graph={payload} skipLead={skipLead} onAsk={() => {}} />
+        <RoutesPanel graph={payload} skipLead={skipLead} onAsk={() => {}} />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof RoutesCard> = {
+const meta: Meta<typeof RoutesPanel> = {
   title: "Records/Person network/Ways in",
-  component: RoutesCard,
+  component: RoutesPanel,
   parameters: { layout: "padded" },
 };
 export default meta;
 
-type Story = StoryObj<typeof RoutesCard>;
+type Story = StoryObj<typeof RoutesPanel>;
 
 /** "Ways in": the whole list, headed by the server's recommendation. */
 export const WaysIn: Story = { render: card(graph(routes), false) };

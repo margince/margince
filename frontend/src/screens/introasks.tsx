@@ -39,13 +39,13 @@ const WITHDRAWABLE = new Set<IntroRequest["status"]>([
 ]);
 
 /**
- * IntroAsksCard lists the open and settled asks the viewer is party to.
+ * IntroAsksPanel lists the open and settled asks the viewer is party to.
  *
  * An empty list renders nothing at all rather than an empty card: a contact
  * nobody has asked about is the ordinary case, and a card saying so on every
  * such page is noise on most of them.
  */
-export function IntroAsksCard({
+export function IntroAsksPanel({
   personId,
   personName,
 }: Readonly<{ personId: string; personName: string }>) {

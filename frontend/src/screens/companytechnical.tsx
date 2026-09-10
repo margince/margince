@@ -48,7 +48,7 @@ export function isTechnicalFact(fact: OrganizationFact): boolean {
 }
 
 /**
- * TechnicalProfileCard shows what a company publicly runs.
+ * TechnicalProfilePanel shows what a company publicly runs.
  *
  * It reads and never asks: the lookup is queued by the site read, so this card
  * has no button. A reader who wants it refreshed reads the site.
@@ -58,7 +58,7 @@ export function isTechnicalFact(fact: OrganizationFact): boolean {
  * the rest of the record uses, because "how do you know?" is the first
  * question a claim like this invites.
  */
-export function TechnicalProfileCard({
+export function TechnicalProfilePanel({
   orgId,
 }: Readonly<{ orgId: string }>): ReactNode {
   const t = useT();

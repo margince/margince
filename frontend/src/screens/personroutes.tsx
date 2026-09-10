@@ -48,13 +48,13 @@ export function useOwnRoute(): (route: RouteCandidate) => boolean {
 }
 
 /**
- * RoutesCard lists the ways in, the recommendation first.
+ * RoutesPanel lists the ways in, the recommendation first.
  *
  * One list, not a lead card plus a list: the server's recommendation IS the
  * head of this list, so drawing it twice would invite the two to disagree on
  * screen the moment one of them was rendered from stale data.
  */
-export function RoutesCard({
+export function RoutesPanel({
   graph,
   onAsk,
   skipLead,

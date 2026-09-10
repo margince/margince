@@ -10,16 +10,6 @@
   margin-top: var(--space-3);
 }
 
-/* The runs read's pending and error arms come from `QueryStates` rather than
-   from a `PanelBody`, so they land on the pane's own ground with no inset —
-   which printed the loading label against the panel's left edge. The inset is
-   the PANE's, named by its role, so it moves when that surface is retuned and
-   the skeleton stands exactly where the rows it reserves will. */
-.auto-inspector > .pending,
-.auto-inspector > .empty {
-  padding: var(--padPanel);
-}
-
 /* The outcome chips: one row of buttons side by side, wrapping on a narrow
    card rather than pushing the panel's edge out. */
 .auto-run-filters {

@@ -380,7 +380,7 @@ export function ConsentSection({
   }
 
   return (
-    <Panel className="card-stack" title={t("person.consent")}>
+    <Panel title={t("person.consent")}>
       {/* The default-deny rule is two sentences, and the head band holds one
           line: truncating the half that says a grant is per purpose would
           leave the rule saying the opposite of what it means. */}

@@ -96,7 +96,7 @@ import {
 import { RecordContextPanel } from "./context";
 import type { CreateField } from "./create";
 import { CreateAction } from "./create";
-import { CustomFieldsCard } from "./customfields.card";
+import { CustomFieldsPanel } from "./customfields.card";
 import {
   type ObjectCustomFields,
   useObjectCustomFields,
@@ -3923,7 +3923,7 @@ function DealOverviewPane({
           />
         </RecordReadingPair>
       </RecordReading>
-      <CustomFieldsCard object="deal" record={deal} />
+      <CustomFieldsPanel object="deal" record={deal} />
       <RecordContextPanel entityType="deal" id={deal.id} />
       <LogActivity entityType="deal" entityId={deal.id} />
     </div>

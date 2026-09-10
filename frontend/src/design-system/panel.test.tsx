@@ -465,26 +465,29 @@ describe("a panel tone tints the head band and never reshapes it", () => {
   });
 });
 
+// Every sheet the product ships, and the one that owns the panel. Shared by
+// both sweeps below: one walker, so a tree one of them could not reach is a
+// tree neither of them silently passed.
+const src = join(here, "..");
+const extensions = join(here, "..", "..", "..", "extensions");
+const owner = join(here, "panel.css");
+
+function stylesheetsUnder(root: string): readonly string[] {
+  if (!existsSync(root)) return [];
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) {
+      return entry.name === "node_modules" ? [] : stylesheetsUnder(path);
+    }
+    return entry.isFile() && path.endsWith(".css") ? [path] : [];
+  });
+}
+
 // The sweep. `check-ds-spacing-roles.sh` holds the VOCABULARY a screen re-spaces
 // a primitive in; this holds that the head band is not a screen's to re-space at
 // all, in any vocabulary — a role-spelled `padding-top: var(--padPanel)` passes
 // that gate and still gives one screen a taller panel than every other.
 describe("panel.css is the only sheet that shapes the head band", () => {
-  const src = join(here, "..");
-  const extensions = join(here, "..", "..", "..", "extensions");
-  const owner = join(here, "panel.css");
-
-  function stylesheetsUnder(root: string): readonly string[] {
-    if (!existsSync(root)) return [];
-    return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
-      const path = join(root, entry.name);
-      if (entry.isDirectory()) {
-        return entry.name === "node_modules" ? [] : stylesheetsUnder(path);
-      }
-      return entry.isFile() && path.endsWith(".css") ? [path] : [];
-    });
-  }
-
   // The detector, proven against the one rule that legitimately declares the
   // band: a scan that stopped recognising `.panel-head` would sweep a smaller
   // tree, report PASS, and leave nothing to notice.
@@ -571,6 +574,117 @@ describe("panel.css is the only sheet that shapes the head band", () => {
     expect(
       offences,
       "the head band is 56px and its title one size on every screen: recolour them if you must, resize them in panel.css or not at all",
+    ).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The pane's own inset for a state arm it cannot wrap.
+//
+// A read whose ready arm is full-bleed `PanelRow`s has nowhere to put a
+// `PanelBody`: a body around the read would inset the rows that are supposed
+// to reach the pane's edges, so `QueryStates` stands as a direct child of the
+// panel and its pending and error arms landed on the pane's ground with no
+// inset at all — the loading label printed against the panel's left edge.
+//
+// So the PANE pays it, once, for every panel in the product. Two screens had
+// already spelled that inset in sheets of their own, each under a class only
+// that screen knew was a panel, which is what a rule the caller has to
+// remember gets you.
+// ---------------------------------------------------------------------------
+
+// A state arm is the whole thing `PendingBody` or `EmptyState` draws.
+// `.pending-line` and `.empty-plate` are parts of one, not one.
+function isStateArm(selector: string): boolean {
+  return /^\.(?:pending|empty)$/.test(lastCompound(selector));
+}
+
+const INSET = /^padding(?:-inline(?:-start|-end)?|-left|-right)?$/;
+
+// A PANE's inset, spelled as the role rather than as a rung. The role is what
+// makes the rule this one: `var(--padPanel)` on a state arm says "the surface
+// holding this is a pane", which is a claim only the pane's own sheet gets to
+// make. A rung there is the spacing-roles gate's finding and not this one's —
+// it reads a screen re-spacing a design-system class as a second opinion
+// already, and the role vocabulary is exactly what it lets through.
+const PANE_INSET = /var\(--pad(?:Panel|Card)\)/;
+
+// An inset a CONTAINER decides for the arm standing in it, which is what a
+// combinator in the selector says. `.empty` on its own is `EmptyState` sizing
+// itself in the sheet that draws it, and the primitive's own declaration is
+// not a second opinion about it.
+function stateArmRoleInsets(css: string): readonly CssRule[] {
+  return cssRules(css).filter(
+    (rule) =>
+      isStateArm(rule.selector) &&
+      /[ >+~]/.test(rule.selector) &&
+      rule.properties.some((property) => INSET.test(property)) &&
+      PANE_INSET.test(rule.block),
+  );
+}
+
+describe("the pane insets the state arm it has no body to wrap", () => {
+  it("pays that inset at its own role, on a bare child of the panel", () => {
+    const inset = stateArmRoleInsets(panelCss());
+    expect([...inset.map((rule) => rule.selector)].sort()).toEqual([
+      ".panel > .empty",
+      ".panel > .pending",
+    ]);
+    // WHICH inset, read off the body rather than restated here: the arm stands
+    // in for the rows that will replace it, so a pane retuned to a different
+    // token while this rule kept the old one would land the skeleton at one x
+    // and the rows it reserved at another.
+    const body = /(?:^|\n)\.panel-body\s*\{([^}]*)\}/.exec(panelCss())?.[1];
+    const pane = /padding:\s*(var\(--[a-zA-Z0-9-]+\))/.exec(body ?? "")?.[1];
+    expect(pane).toBeDefined();
+    for (const rule of inset) {
+      expect(declaredValue(rule.block, "padding")).toBe(pane);
+    }
+  });
+
+  // The detector, proven on the rule a screen had spelled for itself: a scan
+  // that stopped recognising it would sweep a smaller tree, report PASS, and
+  // leave nothing to notice. The near-misses beside it are the three readings
+  // this sweep must NOT claim — a rung is the spacing-roles gate's question, a
+  // part of an arm is not the arm, and the primitive sizing itself is the
+  // owner rather than a second opinion about it.
+  it("recognises a screen spelling the pane's inset for its own panel", () => {
+    const found = stateArmRoleInsets(`
+      .auto-inspector > .pending,
+      .auto-inspector > .empty { padding: var(--padPanel); }
+      .palette-list .pending { padding: var(--space-2); }
+      .empty-plate { padding: var(--padCard); }
+      .empty { padding: var(--space-5) var(--padCard); }
+    `);
+    expect(found.map((rule) => rule.selector)).toEqual([
+      ".auto-inspector > .pending",
+      ".auto-inspector > .empty",
+    ]);
+  });
+
+  it("finds no other sheet spelling a pane's inset on a state arm", () => {
+    const swept = [...stylesheetsUnder(src), ...stylesheetsUnder(extensions)]
+      .filter((path) => path !== owner)
+      .sort();
+    // Named members, not just a count: a walker that reached a smaller tree
+    // would sweep past the screen that carried the copy and still report PASS.
+    expect(swept.length).toBeGreaterThan(0);
+    expect(
+      swept.filter(
+        (path) =>
+          path.endsWith(join("screens", "automationdetail.css")) ||
+          path.endsWith(join("design-system", "settingrow.css")),
+      ),
+    ).toHaveLength(2);
+
+    const offences = swept.flatMap((path) =>
+      stateArmRoleInsets(readFileSync(path, "utf8")).map(
+        (rule) => `${relative(src, path)}: ${rule.selector}`,
+      ),
+    );
+    expect(
+      offences,
+      "the pane insets its own un-wrappable state arm — panel.css says it once, for every panel in the product",
     ).toEqual([]);
   });
 });

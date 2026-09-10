@@ -12,7 +12,7 @@ import {
 } from "./customfields.form";
 import type { CfObject } from "./customfields.logic";
 
-export function CustomFieldsCard({
+export function CustomFieldsPanel({
   object,
   record,
 }: Readonly<{ object: CfObject; record: Record<string, unknown> }>) {
@@ -38,7 +38,7 @@ export function CustomFieldsCard({
   }
 
   return (
-    <Panel className="card-stack" title={t("cf.formSection")}>
+    <Panel title={t("cf.formSection")}>
       <PanelBody>
         <dl className="firmo">
           {rows.map(({ field, value }) => {

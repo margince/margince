@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
-import { IntroAsksCard } from "./introasks";
+import { IntroAsksPanel } from "./introasks";
 import {
   installFetchStub,
   jsonResponse,
@@ -58,20 +58,20 @@ function asks(rows: IntroRequest[]) {
     });
     return (
       <StoryProviders>
-        <IntroAsksCard personId={PERSON} personName="Dana Buyer" />
+        <IntroAsksPanel personId={PERSON} personName="Dana Buyer" />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof IntroAsksCard> = {
+const meta: Meta<typeof IntroAsksPanel> = {
   title: "Records/Person network/Introductions",
-  component: IntroAsksCard,
+  component: IntroAsksPanel,
   parameters: { layout: "padded" },
 };
 export default meta;
 
-type Story = StoryObj<typeof IntroAsksCard>;
+type Story = StoryObj<typeof IntroAsksPanel>;
 
 /** The colleague being asked: the one row still open, with the answer on it. */
 export const BeingAsked: Story = { render: asks([ask({})]) };

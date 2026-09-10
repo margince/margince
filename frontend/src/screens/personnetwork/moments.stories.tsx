@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { StoryProviders } from "../story-utils";
 import "../personnetwork.css";
-import { MomentsCard } from "./moments";
+import { MomentsPanel } from "./moments";
 
 // What moved in a relationship lately. The three states are the reason this
 // pane exists rather than a list: something moved, nothing did, and the reader
@@ -34,19 +34,19 @@ const moved: Moments = {
 function card(view: Moments) {
   return () => (
     <StoryProviders>
-      <MomentsCard view={view} />
+      <MomentsPanel view={view} />
     </StoryProviders>
   );
 }
 
-const meta: Meta<typeof MomentsCard> = {
+const meta: Meta<typeof MomentsPanel> = {
   title: "Records/Person network/What changed lately",
-  component: MomentsCard,
+  component: MomentsPanel,
   parameters: { layout: "padded" },
 };
 export default meta;
 
-type Story = StoryObj<typeof MomentsCard>;
+type Story = StoryObj<typeof MomentsPanel>;
 
 /** Something moved, and the newest change is the strip's reason to act. */
 export const Moved: Story = { render: card(moved) };

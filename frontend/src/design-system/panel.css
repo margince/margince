@@ -192,6 +192,18 @@
   background: var(--bgHover);
 }
 
+/* A state arm standing where full-bleed rows will stand pays the PANE's inset,
+ * because it has no body to pay it. `QueryStates`' ready arm is a list of
+ * `PanelRow`s, which draw to the panel's own edges — so a `PanelBody` around
+ * the read would inset the rows it must not, and the pending and error arms
+ * that share that place printed their sentence hard against the pane's edge.
+ * Named by the pane's role rather than by a rung, so a skeleton reserves the
+ * space at exactly the x the rows it stands in for will use. */
+.panel > .pending,
+.panel > .empty {
+  padding: var(--padPanel);
+}
+
 /* A section heading INSIDE a body has a body's padding above it already, so it
  * does not also pay `.section-header`'s own 24px top margin. Unreset, a rule
  * followed by a level-3 heading measured 45px from line to text on the

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { TechnicalProfileCard } from "./companytechnical";
+import { TechnicalProfilePanel } from "./companytechnical";
 import {
   installFetchStub,
   jsonResponse,
@@ -136,7 +136,7 @@ export const Read: Story = {
     });
     return (
       <StoryProviders locale="de">
-        <TechnicalProfileCard orgId={ORG} />
+        <TechnicalProfilePanel orgId={ORG} />
       </StoryProviders>
     );
   },
@@ -160,7 +160,7 @@ export const NotReadYet: Story = {
     });
     return (
       <StoryProviders locale="de">
-        <TechnicalProfileCard orgId={ORG} />
+        <TechnicalProfilePanel orgId={ORG} />
       </StoryProviders>
     );
   },
@@ -186,7 +186,7 @@ export const OneSourceDidNotAnswer: Story = {
     });
     return (
       <StoryProviders locale="de">
-        <TechnicalProfileCard orgId={ORG} />
+        <TechnicalProfilePanel orgId={ORG} />
       </StoryProviders>
     );
   },
@@ -207,7 +207,7 @@ export const TheSiteDeclined: Story = {
     });
     return (
       <StoryProviders locale="de">
-        <TechnicalProfileCard orgId={ORG} />
+        <TechnicalProfilePanel orgId={ORG} />
       </StoryProviders>
     );
   },
@@ -237,7 +237,7 @@ export const AfterAHumanCorrection: Story = {
     });
     return (
       <StoryProviders locale="de">
-        <TechnicalProfileCard orgId={ORG} />
+        <TechnicalProfilePanel orgId={ORG} />
       </StoryProviders>
     );
   },

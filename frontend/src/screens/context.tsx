@@ -87,7 +87,7 @@ export function RecordContextPanel({
 
   if (overlay) {
     return (
-      <Panel className="card-stack" title={t("context.title")}>
+      <Panel title={t("context.title")}>
         <PanelBody>
           <OverlayUnavailable />
         </PanelBody>
@@ -96,7 +96,7 @@ export function RecordContextPanel({
   }
 
   return (
-    <Panel className="card-stack" title={t("context.title")}>
+    <Panel title={t("context.title")}>
       <PanelBody>
         <QueryGate
           query={query as QueryLike<ContextResponse>}
