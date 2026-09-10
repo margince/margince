@@ -580,6 +580,17 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--bgHover": prose,
         "--bgSidebar": prose,
         "--bgSidebarHover": ["--textPrimary", "--textContent", "--accentText"],
+        // A control FILLED with a status tone is a ground too: its label is
+        // read on the fill, and that fill is the tone's TEXT token, never the
+        // base hue — the base is tuned to be SEEN at a figure's or a bar's
+        // size and nothing clears 4.5:1 on it (white 2.55:1 on --success, the
+        // best dark ink 4.11:1 on --danger, which is how a destructive button
+        // filled with --danger shipped as an axe failure). Its ink is the one
+        // in the palette that FLIPS with the theme, because the ground under
+        // it does: a Text red is deep in light and bright in dark.
+        "--successText": ["--textOnStatusControl"],
+        "--warnText": ["--textOnStatusControl"],
+        "--dangerText": ["--textOnStatusControl"],
       };
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {

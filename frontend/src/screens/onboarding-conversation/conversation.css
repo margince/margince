@@ -1729,7 +1729,11 @@
   height: 20px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--success);
+  /* The Text green, not the base hue: this disc is a filled status control
+     with a mark read ON it, and --textOnStatusControl is the ink for that
+     ground in either theme (tokens.css). The base hue is for what nothing is
+     read on — a bar, a dot, a border. */
+  background: var(--successText);
   color: var(--textOnStatusControl);
 }
 

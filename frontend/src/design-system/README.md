@@ -137,15 +137,20 @@ available to mean "authored by a model". The split is stated at the top of
 
 **The status family splits the same way this one does: one hue per tone, two
 roles.** The BASE token — `--success` / `--warn` / `--danger` — IS the hue, and
-it is themeless: a solid fill, a meter bar, a dot, a border, a stat card's
-figure, and any text at or above that figure's size. The TEXT token —
-`--successText` / `--warnText` / `--dangerText` — is the same hue at the ink
-share its pane needs, and it is what badge ink, an error or warning line and
-any caption take. Only the Text token lifts in dark, which is the whole reason
-it exists: a near-white pane needs about half the page's ink folded into the
-hue before it clears AA on the pane AND on its own tint, and a near-black pane
-needs almost none. The tints (`--successBg`, `--warnBg`, `--dangerBg`,
-`--warnBorder`) derive from the base, so a retune cannot leave one behind.
+it is themeless: a meter bar, a dot, a border, a stat card's figure, and any
+text at or above that figure's size — everything that is SEEN and has nothing
+read on it. The TEXT token — `--successText` / `--warnText` / `--dangerText` —
+is the same hue at the ink share its pane needs, and it is what badge ink, an
+error or warning line and any caption take. **It is also the fill of a FILLED
+status control** — a destructive button, a completion disc — because the base
+hue is bright enough that no ink clears AA on it, and such a control's ink is
+`--textOnStatusControl`, the one token in the palette that flips with the theme
+because the ground it sits on does. Only the Text token lifts in dark, which is
+the whole reason it exists: a near-white pane needs about half the page's ink
+folded into the hue before it clears AA on the pane AND on its own tint, and a
+near-black pane needs almost none. The tints (`--successBg`, `--warnBg`,
+`--dangerBg`, `--warnBorder`) derive from the base, so a retune cannot leave
+one behind.
 
 | Token | Value | Role |
 |---|---|---|

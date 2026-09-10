@@ -159,15 +159,18 @@
    * mode lightens --accent and not every --textOnAccent consumer's fill.
    * Unthemed here; the dark palette below is what makes it diverge. */
   --textOnAccentControl: #fff;
-  /* The ink for a control filled with --success or --danger. Dark rather than
-   * white, and unthemed, because the fills it sits on are unthemed: the status
-   * hues are bright in both themes now, and white on them measures 2.55:1 and
-   * 4.05:1. This ink gives 6.51:1 on --success and 4.10:1 on --danger — the
-   * best either fill can pay for at that lightness, and the red fill is the
-   * one pair in the palette still under 4.5:1. Kept a token of its own rather
-   * than folded into --textOnAccentControl: the accent and the status hues are
-   * different fills that retune independently. */
-  --textOnStatusControl: #04240f;
+  /* The ink for a control FILLED with a status tone — a destructive button, a
+   * completion disc. Its ground is the tone's *Text token and never the base
+   * hue: the base is tuned to be seen at a figure's size, and no ink clears
+   * 4.5:1 on it (white 2.55:1 on --success, the best dark ink 4.11:1 on
+   * --danger). This ink therefore FLIPS with the theme, because the ground it
+   * sits on does: a Text red is deep in light, where white reads on it, and
+   * bright in dark, where near-black does. White here gives 6.20:1 on
+   * --dangerText, 6.06:1 on --successText and 6.15:1 on --warnText; the dark
+   * block states the other half. Kept a token of its own rather than folded
+   * into --textOnAccentControl: the accent and the status hues are different
+   * fills that retune independently. */
+  --textOnStatusControl: #fff;
 
   --borderSubtle: #e3eae6;
   --borderStrong: #d1d8d4;
@@ -745,10 +748,10 @@
      fill that ISN'T --accent and doesn't lighten here (the rail toast on
      --bgRail, the AI FAB on --ai, the voice orb over the Core's own glass,
      the --online disc) — dark ink there is a control-boundary failure, not
-     a contrast fix, on backgrounds this palette never touches. --success
-     and --danger are NOT in that set: --textOnStatusControl, declared in
-     the light block, is their ink and is themeless because their fills
-     are. */
+     a contrast fix, on backgrounds this palette never touches. The status
+     tones are NOT in that set: --textOnStatusControl is their ink, and it
+     flips here for the same reason --textOnAccentControl does — see its
+     declaration below. */
   /* Lifted off --accent, which cannot move. #4ade80 is the tone --mono0Text
      already uses for emerald text on an emerald tint here, so the accent
      reads as the same colour those chips do rather than as a second green. */
@@ -766,6 +769,14 @@
      (--bgRail, --ai, --online), where this same dark ink would fail rather
      than fix contrast. */
   --textOnAccentControl: #04240f;
+  /* The same flip, one theme later: a filled status control's ground is the
+     tone's *Text token, and a Text red is DEEP in light and BRIGHT here — the
+     dark block barely folds any ink into a hue a near-black pane already
+     reads. So the ink that clears AA on it inverts with the theme rather than
+     staying put. Near-black gives 5.99:1 on --dangerText, 7.96:1 on
+     --successText and 8.53:1 on --warnText; white would give 2.77:1 on the
+     red. */
+  --textOnStatusControl: #04240f;
   /* Dark: the fills lift and the text tones brighten, so a monogram keeps the
    * same identity and the same contrast floor on the dark surface. */
   --mono0Fill: rgba(22, 163, 74, 0.22);
@@ -895,6 +906,7 @@
     --accentMed: rgba(22, 163, 74, 0.26);
 
     --textOnAccentControl: #04240f;
+    --textOnStatusControl: #04240f;
 
     --mono0Fill: rgba(22, 163, 74, 0.22);
     --mono0Text: #4ade80;
