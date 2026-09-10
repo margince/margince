@@ -25263,6 +25263,16 @@ type InstallationSettings struct {
 	// for one reader keeps that reader's language.
 	BaseLanguage InstallationSettingsBaseLanguage `json:"base_language"`
 
+	// DeadWorkBannerHours How far back the maintenance banner looks before it calls dead work a problem, in
+	// hours. 24 by default, bounded above by River's own seven-day retention — a window
+	// past that cannot narrow anything, since every terminal row still there is inside it.
+	//
+	// The full count of discarded and cancelled work is unaffected and stays a report
+	// figure. This bounds only the number that is styled as an alarm: River keeps a
+	// terminal row for a week, so without it an outage that ended an hour ago goes on
+	// asking for a hand until the rows retire.
+	DeadWorkBannerHours int `json:"dead_work_banner_hours"`
+
 	// FiscalYearStartMonth The month the installation's business year begins, 1..12. January (1) is the
 	// default, which is the calendar year every installation reported by before this
 	// setting existed.
@@ -25676,8 +25686,10 @@ type JobFailureState string
 
 // JobHealth defines model for JobHealth.
 type JobHealth struct {
-	GeneratedAt time.Time       `json:"generated_at"`
-	Kinds       []JobKindHealth `json:"kinds"`
+	// DeadWindowHours How far back `dead_recent` looks, from `installation.dead_work_banner_hours`. It travels with the counts so a client can NAME the span it is rendering — a number shown without one asks the reader to guess, and the guess is "since forever".
+	DeadWindowHours int             `json:"dead_window_hours"`
+	GeneratedAt     time.Time       `json:"generated_at"`
+	Kinds           []JobKindHealth `json:"kinds"`
 
 	// RecentFailures Most recent first, capped at 50. A bounded list, not a log.
 	RecentFailures []JobFailure `json:"recent_failures"`
@@ -25685,8 +25697,11 @@ type JobHealth struct {
 
 // JobKindHealth defines model for JobKindHealth.
 type JobKindHealth struct {
-	// Dead Discarded or cancelled: this work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately.
+	// Dead Discarded or cancelled: this work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE — River retains a terminal row for seven days, so this is a week's history and a report figure, not a call to action.
 	Dead int `json:"dead"`
+
+	// DeadRecent The same count inside `dead_window_hours`. This is the one to alarm on: an outage that ended an hour ago and one still running are indistinguishable in `dead`, and that is the distinction a maintenance banner exists to draw.
+	DeadRecent int `json:"dead_recent"`
 
 	// FleetWide True for a dispatcher — a job that fans work out and does no tenant work of its own. Its rows carry no workspace.
 	FleetWide bool `json:"fleet_wide"`
@@ -35167,6 +35182,16 @@ type UpdateInstallationSettingsRequest struct {
 	// BaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
 	// nothing already written, so artifacts stay in the language they were written in.
 	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
+
+	// DeadWorkBannerHours How far back the maintenance banner looks before it calls dead work a problem, in
+	// hours. 24 by default, bounded above by River's own seven-day retention — a window
+	// past that cannot narrow anything, since every terminal row still there is inside it.
+	//
+	// The full count of discarded and cancelled work is unaffected and stays a report
+	// figure. This bounds only the number that is styled as an alarm: River keeps a
+	// terminal row for a week, so without it an outage that ended an hour ago goes on
+	// asking for a hand until the rows retire.
+	DeadWorkBannerHours *int `json:"dead_work_banner_hours,omitempty"`
 
 	// EnabledOidcProviders The provider keys the login screen may offer, of those this deployment configured.
 	// Sending a key the deployment has no credentials for enables nothing: the effective

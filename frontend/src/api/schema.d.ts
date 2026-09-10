@@ -15075,6 +15075,17 @@ export interface components {
              */
             max_upload_bytes: number;
             /**
+             * @description How far back the maintenance banner looks before it calls dead work a problem, in
+             *     hours. 24 by default, bounded above by River's own seven-day retention — a window
+             *     past that cannot narrow anything, since every terminal row still there is inside it.
+             *
+             *     The full count of discarded and cancelled work is unaffected and stays a report
+             *     figure. This bounds only the number that is styled as an alarm: River keeps a
+             *     terminal row for a week, so without it an outage that ended an hour ago goes on
+             *     asking for a hand until the rows retire.
+             */
+            dead_work_banner_hours: number;
+            /**
              * @description Which remaining-pipeline reading a projected landing is built from. A setting
              *     rather than a fixed choice, because it is a question about how this installation
              *     SELLS rather than about the software: a team with a disciplined commit stage means
@@ -15128,6 +15139,17 @@ export interface components {
              *     password only.
              */
             enabled_oidc_providers?: string[];
+            /**
+             * @description How far back the maintenance banner looks before it calls dead work a problem, in
+             *     hours. 24 by default, bounded above by River's own seven-day retention — a window
+             *     past that cannot narrow anything, since every terminal row still there is inside it.
+             *
+             *     The full count of discarded and cancelled work is unaffected and stays a report
+             *     figure. This bounds only the number that is styled as an alarm: River keeps a
+             *     terminal row for a week, so without it an outage that ended an hour ago goes on
+             *     asking for a hand until the rows retire.
+             */
+            dead_work_banner_hours?: number;
             /**
              * @description Which remaining-pipeline reading a projected landing is built from. Never frozen:
              *     it is applied on READ and stores nothing, so changing it re-computes every landing
@@ -26853,6 +26875,8 @@ export interface components {
         JobHealth: {
             /** Format: date-time */
             generated_at: string;
+            /** @description How far back `dead_recent` looks, from `installation.dead_work_banner_hours`. It travels with the counts so a client can NAME the span it is rendering — a number shown without one asks the reader to guess, and the guess is "since forever". */
+            dead_window_hours: number;
             kinds: components["schemas"]["JobKindHealth"][];
             /** @description Most recent first, capped at 50. A bounded list, not a log. */
             recent_failures: components["schemas"]["JobFailure"][];
@@ -26868,8 +26892,10 @@ export interface components {
             running: number;
             /** @description Failed at least once and backing off toward another attempt. */
             retrying: number;
-            /** @description Discarded or cancelled: this work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. */
+            /** @description Discarded or cancelled: this work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE — River retains a terminal row for seven days, so this is a week's history and a report figure, not a call to action. */
             dead: number;
+            /** @description The same count inside `dead_window_hours`. This is the one to alarm on: an outage that ended an hour ago and one still running are indistinguishable in `dead`, and that is the distinction a maintenance banner exists to draw. */
+            dead_recent: number;
             /** @description How long the oldest runnable-and-unclaimed job of this kind has waited. Null when nothing of this kind is runnable now; a job scheduled for the future is not late. */
             oldest_waiting_age_seconds: number | null;
         };
