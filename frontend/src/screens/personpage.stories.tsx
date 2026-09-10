@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { ProviderCard } from "./integrations-provider";
@@ -12,6 +13,7 @@ import {
   PersonCommitmentsCard,
   PersonMattersCard,
 } from "./personcards";
+import { EditContactMethodsModal } from "./personcontactedit";
 import { PersonResearchDrawer } from "./persondrawers";
 import { PersonMemory } from "./personmemory";
 import { PersonPageV2 } from "./personpage";
@@ -104,6 +106,12 @@ const populated: View = {
     last_name: "Buyer",
     title: "Head of Fleet",
     owner_id: "u-1",
+    // The server's own per-row answer `useCanWriteRecord` reads alongside the
+    // /me grant these stories install — without it every edit affordance in
+    // the gallery stays hidden no matter how permissive the session, which is
+    // exactly the state RailUnsetFields' own comment below says this fixture
+    // is NOT in.
+    writable: true,
     social: { linkedin: "https://linkedin.com/in/danabuyer" },
     address: { city: "Munich", country: "DE" },
     emails: [
@@ -1165,11 +1173,12 @@ export const RailThin: Story = {
 };
 
 // Every profile field DetailsGrid can hold, unset at once: title, linkedin,
-// city, email and phone all blank. Email and phone are always read-only
-// (personrail.tsx's CONTACT_METHOD_IMMUTABLE), so they read `field.unset`
-// here whether or not the reader can edit; title, linkedin and city ARE
-// editable under this fixture's granted /me, so they read as the "Add …"
-// placeholder instead: the two empty-field states side by side.
+// city, email and phone all blank. Email and phone read the primary row and
+// open the "Edit contact methods" modal for the rest — there is no inline
+// editor for either — so an empty list reads `field.unset` here regardless of
+// what the reader can edit; title, linkedin and city ARE editable under this
+// fixture's granted /me, so they read as the "Add …" placeholder instead: the
+// two empty-field states side by side.
 const unsetFields: View = {
   ...populated,
   person: {
@@ -1201,6 +1210,58 @@ export const RailUnsetFields: Story = {
       </StoryProviders>
     );
   },
+};
+
+// The "Edit contact methods" verb, pressed — the `play` presses the rail's
+// OWN button rather than the story seeding an open flag, so what renders is
+// the modal the rail really opens, staged from the fixture's one email and
+// one phone.
+const openContactEditor: NonNullable<Story["play"]> = async ({
+  canvasElement,
+}) => {
+  const trigger = await within(canvasElement).findByRole("button", {
+    name: /edit contact methods/i,
+  });
+  await userEvent.setup().click(trigger);
+};
+
+export const RailEditingContactMethods: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(meFixture({ allow: { person: ["update"] } })),
+    });
+    return (
+      <StoryProviders>
+        <div style={{ maxWidth: 320 }}>
+          <PersonRail
+            view={populated}
+            guard={undefined}
+            firstName="Dana"
+            onExplain={() => {}}
+          />
+        </div>
+      </StoryProviders>
+    );
+  },
+  play: openContactEditor,
+};
+
+// The editor on its own, open — every row staged from the fixture's one email
+// and one phone. RailEditingContactMethods proves the rail's own button
+// reaches this modal; this story is what actually covers
+// personcontactedit.tsx for the render gate, which counts only a DIRECT
+// import of the component under test.
+export const ContactMethodsEditor: Story = {
+  render: () => (
+    <StoryProviders>
+      <EditContactMethodsModal
+        open
+        onClose={() => {}}
+        person={populated.person}
+      />
+    </StoryProviders>
+  ),
 };
 
 // --- Brief states: the band's populated and empty readings side by side ----

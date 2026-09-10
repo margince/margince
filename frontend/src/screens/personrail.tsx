@@ -60,6 +60,7 @@ import { CounterpartyHoldRow } from "./counterparty-hold";
 import { stillHeld, today } from "./employmentcurrency";
 import { interactionIcon } from "./interactionchrome";
 import { PersonAccess } from "./personaccess";
+import { EditContactMethodsModal } from "./personcontactedit";
 import { daysSinceInbound, isQuiet } from "./personquiet";
 import { consentWord } from "./personreadings";
 import { personTabRoute } from "./persontab";
@@ -444,13 +445,15 @@ function CityRow({ person, canEdit, readOnlyReason, patch }: DetailsRowProps) {
   );
 }
 
-// Email and phone have no update path on the wire (UpdatePersonRequest carries
-// neither), so they are not drawn as editors. They are drawn as what a reader
-// does with them: an address is written to and a number is dialled, and a
-// value a reader could only look at taught them the record was a printout.
+// Email and phone read as what a reader DOES with them — an address is written
+// to, a number is dialled — while editing lives behind the "Edit contact
+// methods" modal, because the wire replaces the whole list at once
+// (UpdatePersonRequest.emails/.phones) rather than one value in place.
 function EmailRow({ person }: Readonly<{ person: Person }>) {
   const t = useT();
-  const email = person.emails?.[0]?.email;
+  const primary =
+    person.emails?.find((row) => row.is_primary) ?? person.emails?.[0];
+  const email = primary?.email;
   return (
     <FieldRow label={t("person.rail.email")} icon={<Mail />}>
       {email ? (
@@ -468,16 +471,38 @@ function EmailRow({ person }: Readonly<{ person: Person }>) {
   );
 }
 
-function PhoneRow({ person }: Readonly<{ person: Person }>) {
+function PhoneRow({
+  person,
+  canEdit,
+  onEdit,
+}: Readonly<{
+  person: Person;
+  canEdit: boolean;
+  onEdit: () => void;
+}>) {
   const t = useT();
-  const phone = person.phones?.[0]?.phone;
+  const primary =
+    person.phones?.find((row) => row.is_primary) ?? person.phones?.[0];
+  const phone = primary?.phone;
   return (
     <FieldRow label={t("person.rail.phone")} icon={<Phone />}>
-      {phone ? (
-        <ContactLink kind="phone" value={phone} className="pe-meta-link" />
-      ) : (
-        <span className="pe-rail-value-muted">{t("field.unset")}</span>
-      )}
+      {/* The value itself, then the verb that reaches the modal — the same
+          pairing LinkedinRow draws above, and the same class: a value
+          somebody can correct beside the affordance that opens the editor,
+          wrapping as a pair rather than pushing the button onto its own
+          line. */}
+      <span className="pe-linkedin">
+        {phone ? (
+          <ContactLink kind="phone" value={phone} className="pe-meta-link" />
+        ) : (
+          <span className="pe-rail-value-muted">{t("field.unset")}</span>
+        )}
+        {canEdit ? (
+          <Button variant="link" small onClick={onEdit}>
+            {t("person.rail.editContactMethods")}
+          </Button>
+        ) : null}
+      </span>
     </FieldRow>
   );
 }
@@ -496,9 +521,11 @@ function DetailsGrid({ view }: Readonly<{ view: Person360 }>) {
   const canUpdate = useCanWriteRecord("person", person);
   const readOnlyReason = usePersonReadOnlyReason(person);
   const patch = usePersonFieldPatch(person);
+  const canEdit = canUpdate && !readOnlyReason;
+  const [editingContact, setEditingContact] = useState(false);
   const row: DetailsRowProps = {
     person,
-    canEdit: canUpdate && !readOnlyReason,
+    canEdit,
     readOnlyReason,
     patch,
   };
@@ -509,11 +536,20 @@ function DetailsGrid({ view }: Readonly<{ view: Person360 }>) {
           <NameRow {...row} />
           <TitleRow {...row} />
           <EmailRow person={person} />
-          <PhoneRow person={person} />
+          <PhoneRow
+            person={person}
+            canEdit={canEdit}
+            onEdit={() => setEditingContact(true)}
+          />
           <LinkedinRow {...row} />
           <CityRow {...row} />
         </FieldGrid>
       </PanelBody>
+      <EditContactMethodsModal
+        open={editingContact}
+        onClose={() => setEditingContact(false)}
+        person={person}
+      />
     </Panel>
   );
 }
