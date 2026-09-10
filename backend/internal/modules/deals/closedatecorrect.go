@@ -121,30 +121,30 @@ func setForecastCategory(p *storekit.Patch, stored *string, effective, notched s
 // That is the same "machine work that changed nothing" defect the no-op guard
 // exists to stop, one layer up.
 func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string, now time.Time, loc *time.Location, runID ids.UUID) (string, error) {
+	// Nothing to correct. A provisional date the sweep set and nobody has
+	// changed since is simply the date this deal has — there is no card to keep
+	// alive, because the correction was applied when it was made and the
+	// receipt said so that morning.
 	if !hygiene.Flagged {
-		if cand.provisional {
-			// The date itself is clean (the sweep set it), but the human
-			// has not confirmed it yet: keep the 🟡 surface alive if the
-			// previous staging expired undecided.
-			//
-			staged, err := c.ensureStaged(ctx, cand, 0, CloseDateCorrection{
-				DealID:              cand.id,
-				ExpectedCloseDate:   cand.expectedClose.Format(time.DateOnly),
-				PreviousCloseDate:   dateString(cand.expectedClose),
-				RemainingOpenStages: StagesRemaining(cand.remainingOpen),
-				Asking:              AskingIsThisDateRight,
-				Basis:               quietHoldingBasis,
-			})
-			if err != nil {
-				return "", err
-			}
-			if staged {
-				return closeDateMemberStaged, nil
-			}
-			// An unflagged provisional deal whose card is already open: the
-			// sweep looked and left everything as it was.
-			return closeDateMemberChecked, nil
-		}
+		return closeDateMemberChecked, nil
+	}
+
+	// Whose deal it is decides whether the sweep may write it.
+	//
+	// Asked BEFORE the reversal check and before any write, because a rep who
+	// switched this off has not asked to be told what the sweep would have
+	// done — they asked for their deals to be left alone, and a run that read
+	// their correspondence to build a reason it would never use would be doing
+	// work they declined.
+	var owner ids.UUID
+	if cand.ownerID != nil {
+		owner = *cand.ownerID
+	}
+	mayCorrect, err := c.policy.CorrectsWithoutAsking(ctx, owner)
+	if err != nil {
+		return "", err
+	}
+	if !mayCorrect {
 		return closeDateMemberChecked, nil
 	}
 
@@ -186,7 +186,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		if hygiene.Action == CloseDateActionAutoApply {
 			label = "auto_apply"
 		}
-		version, wrote, err := c.apply(ctx, cand, label, EvidenceOf(proposal, cand.expectedClose), runID, func(p *storekit.Patch) {
+		_, wrote, err := c.apply(ctx, cand, label, EvidenceOf(proposal, cand.expectedClose), runID, func(p *storekit.Patch) {
 			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
 			if !cand.provisional {
 				p.Set("close_date_provisional", false, true)
@@ -195,11 +195,12 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		if err != nil {
 			return "", err
 		}
-		staged, err := c.ensureStaged(ctx, cand, version, proposal)
-		if err != nil {
-			return "", err
-		}
-		return closeDateEffect{wrote: wrote, staged: staged}.outcome(), nil
+		// APPLIED, not asked. The correction is already on the deal and the
+		// morning's receipt carries it with an Undo — a card asking a rep to
+		// confirm a date the sweep had already written was a question whose
+		// answer changed nothing, and one that expired into silence when
+		// nobody answered it.
+		return closeDateEffect{wrote: wrote}.outcome(), nil
 
 	case CloseDateActionDowngradeAndReview:
 		return c.downgradeAndReview(ctx, cand, hygiene, category, proposal, now, loc, runID)
@@ -227,28 +228,38 @@ func (c *CloseDateCorrector) downgradeAndReview(
 	// the other.
 	review := proposal
 	review.Asking = AskingIsThisDealAlive
-	version, wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch) {
-		setForecastCategory(p, cand.forecastCat, category, notched)
-		if hygiene.Provisional {
-			// Only the invariant forces a date onto a quiet deal —
-			// never an optimistic re-date on top of the downgrade.
-			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-			if !cand.provisional {
-				p.Set("close_date_provisional", false, true)
-			}
-		}
-	}, map[string]any{correctionFlagsKey: hygiene.Flags, "at_risk": true})
-	if err != nil {
-		return "", err
-	}
-	// The reason is read after the write: a failure to READ the
-	// correspondence must not abort a downgrade that has already committed.
+	// The reason, read BEFORE the write so the receipt can carry it.
+	//
+	// It ran after the write while a card followed the correction: the card was
+	// a second transaction and a failed read could be allowed to cost the
+	// sentence rather than the downgrade. The receipt is the only telling now,
+	// and quietBasis answers a fallback rather than an error, so reading it
+	// first costs the same and lands the reason on the row that reports the
+	// change.
 	review.Basis = c.quietBasis(ctx, cand.id, now, loc)
-	staged, err := c.ensureStaged(ctx, cand, version, review)
+	_, wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch) {
+		setForecastCategory(p, cand.forecastCat, category, notched)
+		// The date moves on this tier too, which is the change: a deal nobody
+		// has touched carries a date nobody believes, and leaving it while
+		// notching the forecast corrected the number and left the calendar
+		// lying. Both are the sweep's estimate, both are marked provisional,
+		// and both are on one Undo.
+		setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
+		if !cand.provisional {
+			p.Set("close_date_provisional", false, true)
+		}
+	}, map[string]any{
+		correctionFlagsKey: hygiene.Flags,
+		"at_risk":          true,
+		// The same key the paced tiers record. The receipt reads one basis
+		// whichever tier corrected the deal, so a tier that omits it renders a
+		// change with no stated reason.
+		"basis": review.Basis,
+	})
 	if err != nil {
 		return "", err
 	}
-	return closeDateEffect{wrote: wrote, staged: staged}.outcome(), nil
+	return closeDateEffect{wrote: wrote}.outcome(), nil
 }
 
 // answeredByAReversal reports whether somebody has already taken back the

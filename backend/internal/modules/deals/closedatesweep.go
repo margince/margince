@@ -41,7 +41,7 @@ const closeDateBatch = 200
 type CloseDateCorrector struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db       *database.DB
-	stager   CorrectionStager
+	policy   CorrectionPolicy
 	reviewer QuietReviewReader
 	log      *slog.Logger
 	// now is the corrector's clock. WithClock overrides it, and a test that
@@ -54,14 +54,14 @@ type CloseDateCorrector struct {
 	installation Installation
 }
 
-// NewCloseDateCorrector assembles the sweep over the pool it reads through,
-// the stager it raises corrections into, and the seam that answers which zone
-// its dates are computed in.
-func NewCloseDateCorrector(db *database.DB, stager CorrectionStager, reviewer QuietReviewReader,
+// NewCloseDateCorrector assembles the sweep over the pool it reads through, the
+// policy that says whose deals it may correct unasked, and the seam that
+// answers which zone its dates are computed in.
+func NewCloseDateCorrector(db *database.DB, policy CorrectionPolicy, reviewer QuietReviewReader,
 	log *slog.Logger, inst Installation,
 ) *CloseDateCorrector {
 	return &CloseDateCorrector{
-		db: db, stager: stager, reviewer: reviewer, log: log,
+		db: db, policy: policy, reviewer: reviewer, log: log,
 		now: time.Now, installation: inst.orRefusing(),
 	}
 }
@@ -105,6 +105,9 @@ type closeDateCandidate struct {
 	provisional    bool
 	forecastCat    *string
 	pipelineID     ids.PipelineID
+	// ownerID is whose deal it is, for the policy that says whether the sweep
+	// may correct it unasked. Nil where nobody owns it.
+	ownerID        *ids.UUID
 	winProbability int
 	remainingOpen  int
 }
@@ -329,11 +332,20 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		if err := tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "deal", cand.id.UUID, patch.Before(), patch.After())
+		// The evidence goes on the AUDIT row, not only into the event's changed
+		// fields. The morning receipt reads its reason back out of
+		// audit_log.evidence long after the event has been consumed, so an
+		// event-only basis renders a correction with no stated reason.
+		auditEvidence := map[string]any{CloseDateCorrectionKind: correction}
+		for k, v := range extra {
+			auditEvidence[k] = v
+		}
+		auditID, err := storekit.AuditWithEvidence(
+			ctx, tx, "update", "deal", cand.id.UUID, patch.Before(), patch.After(), auditEvidence)
 		if err != nil {
 			return fmt.Errorf("audit %s: %w", correction, err)
 		}
-		changedFields := map[string]any{"close_date_correction": correction}
+		changedFields := map[string]any{CloseDateCorrectionKind: correction}
 		for field, v := range patch.After() {
 			changedFields[field] = v
 		}
@@ -363,71 +375,6 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		return nil
 	})
 	return version, wrote, err
-}
-
-// ensureStaged stages the 🟡 confirm-the-real-date proposal unless one is
-// already pending, or the rep has already refused this very date.
-//
-// TWO checks, because they answer different questions and each has a gap the
-// other fills. Pending stops the same live card multiplying. Refused stops a
-// decided one returning — and it is needed HERE, above the staging's own
-// memory, because the sweep writes its new date onto the deal before staging:
-// the standing date the identity is drawn from has already moved by the time
-// the proposal is built, so a refusal recorded last night matches nothing
-// tonight. Comparing the date being PROPOSED is what recognises it.
-//
-// Per date rather than per deal, so one "no" silences the date it was about
-// rather than ending close-date hygiene on that deal for good.
-//
-// Reports whether a card was actually RAISED. An already-pending proposal and a
-// refused one both return false, because neither put a new question in front of
-// anybody — and the run's ledger counts questions asked, not questions
-// considered.
-func (c *CloseDateCorrector) ensureStaged(ctx context.Context, cand closeDateCandidate, targetVersion int64, proposal CloseDateCorrection) (bool, error) {
-	dealID, name := cand.id, cand.name
-	pending, err := c.stager.HasPendingCorrection(ctx, dealID.UUID)
-	if err != nil {
-		return false, err
-	}
-	if pending {
-		return false, nil
-	}
-	probe := ProbeFor(proposal, cand.expectedClose)
-	refused, err := c.stager.RefusedCloseDate(ctx, dealID.UUID, probe)
-	if err != nil {
-		return false, err
-	}
-	if refused {
-		return false, nil
-	}
-	// A THIRD memory, and the one the other two could not hold. Both of them
-	// read approvals: pending stops a live card multiplying, refused stops a
-	// declined one returning. A reversal writes no approval at all — the rep
-	// undid the change on the record itself — so before this, a correction
-	// somebody took back was re-proposed the very next night and their answer
-	// lasted exactly until the next sweep.
-	reversed, err := c.reversedSameQuestion(ctx, dealID, CorrectionEvidence(probe))
-	if err != nil {
-		return false, err
-	}
-	if reversed {
-		return false, nil
-	}
-	if targetVersion == 0 {
-		// The keep-alive path wrote nothing this pass; bind the staging
-		// to the row's current version so redemption still detects skew.
-		err := c.db.Tx(ctx, func(tx pgx.Tx) error {
-			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, dealID).Scan(&targetVersion)
-		})
-		if err != nil {
-			return false, err
-		}
-	}
-	summary := fmt.Sprintf("Confirm the real close date for %q (proposed %s)", name, proposal.ExpectedCloseDate)
-	if err := c.stager.StageCorrection(ctx, dealID.UUID, targetVersion, summary, proposal); err != nil {
-		return false, err
-	}
-	return true, nil
 }
 
 func dateString(t *time.Time) *string {

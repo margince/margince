@@ -29,22 +29,19 @@ import (
 // its confirm effect is injected at the composition root.
 const CloseDateCorrectionKind = "close_date_correction"
 
-// CorrectionStager is the approvals seam the composition root fills
-// (a module never imports a sibling): stage a 🟡 confirm-the-real-date
-// proposal, and ask whether one is already pending so a nightly sweep —
-// whose proposed date moves with "today" — cannot stack duplicates.
-type CorrectionStager interface {
-	HasPendingCorrection(ctx context.Context, dealID ids.UUID) (bool, error)
-	StageCorrection(ctx context.Context, dealID ids.UUID, targetVersion int64, summary string, proposal CloseDateCorrection) error
-	// RefusedCloseDate reports whether a human has already turned down the
-	// correction this probe describes. It is the WHOLE of the rejection memory:
-	// the staging engine's own declined check cannot express this rule, so the
-	// composition root declares no identity for it to enforce.
-	//
-	// The probe carries the question rather than a bare date, because what makes
-	// two corrections the same question belongs to this module and the adapter
-	// only walks the payloads.
-	RefusedCloseDate(ctx context.Context, dealID ids.UUID, proposed RefusalProbe) (bool, error)
+// CorrectionPolicy answers whether one deal's owner has left close-date
+// hygiene to the sweep, or asked to be left alone.
+//
+// The seam the composition root fills, because a module never imports a
+// sibling: the answer lives in the approvals module's autonomy table, and this
+// module only needs the verdict.
+//
+// The default is that the sweep corrects. It is a change a rep can put back
+// from their own morning, and the alternative — a card asking them to confirm
+// a date the machine had already computed — expired into silence when nobody
+// answered it, leaving the deal on a guess with nothing saying so.
+type CorrectionPolicy interface {
+	CorrectsWithoutAsking(ctx context.Context, owner ids.UUID) (bool, error)
 }
 
 // QuietReviewReader reads one deal's correspondence UNDER ITS OWNER'S OWN

@@ -186,7 +186,7 @@ func (c *CloseDateCorrector) nextMembers(
 		SELECT m.deal_id, m.deal_created_at,
 		       d.id, d.name, d.created_at, d.last_activity_at, d.wait_until,
 		       d.expected_close_date, d.close_date_provisional, d.forecast_category,
-		       d.pipeline_id, s.win_probability,
+		       d.pipeline_id, d.owner_id, s.win_probability,
 		       (SELECT count(*) FROM stage s2
 		         WHERE s2.pipeline_id = d.pipeline_id AND s2.archived_at IS NULL
 		           AND s2.semantic = 'open' AND s2.position >= s.position)
@@ -216,7 +216,7 @@ func (c *CloseDateCorrector) nextMembers(
 		if err := rows.Scan(&m.dealID, &m.createdAt,
 			&dealID, &name, &createdAt, &cand.lastActivityAt, &cand.waitUntil,
 			&cand.expectedClose, &provisional, &cand.forecastCat,
-			&pipelineID, &winProbability, &remainingOpen); err != nil {
+			&pipelineID, &cand.ownerID, &winProbability, &remainingOpen); err != nil {
 			return nil, nil, err
 		}
 		if dealID == nil {

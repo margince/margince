@@ -28,6 +28,13 @@ import (
 // lanewiring_test.go refuses the rest.
 const actionOpen crmcontracts.AttentionItemActions = "open"
 
+// actionUndo puts back a change the system made without asking.
+//
+// Offered on a receipt alone, and only on one carrying an audit row to restore:
+// the record-history route reads the before-image from it, so a card without
+// one would be a button naming nothing to reverse.
+const actionUndo crmcontracts.AttentionItemActions = "undo"
+
 // actionDismiss puts a lapsed contact aside for a while.
 //
 // Offered ONLY where a dismissal endpoint takes the row's own id, which today
@@ -421,7 +428,7 @@ func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
 	if openableSubject(subject) {
 		actions = append(actions, actionOpen)
 	}
-	return crmcontracts.AttentionItem{
+	item := crmcontracts.AttentionItem{
 		Id:         receipt.ID.String(),
 		Source:     crmcontracts.AttentionItemSource("approval"),
 		Kind:       &kind,
@@ -430,6 +437,24 @@ func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
 		OccurredAt: &occurred,
 		Actions:    actions,
 	}
+	// A change made with nobody asked carries the way back.
+	//
+	// Offered only while it is still there to take: a correction somebody has
+	// already reversed keeps the payload — the row says so rather than
+	// vanishing — but the verb goes, because a button that would put back what
+	// is already back is one press that reports success and does nothing.
+	if undo := receipt.Undo; undo != nil {
+		version := undo.Version
+		item.Version = &version
+		item.Undo = &crmcontracts.AppliedUndo{
+			AuditLogId: openapi_types.UUID(undo.AuditLogID),
+			Reversed:   undo.Reversed,
+		}
+		if !undo.Reversed {
+			item.Actions = append(item.Actions, actionUndo)
+		}
+	}
+	return item
 }
 
 // subjectOf names the record an item concerns, when the producer named one.

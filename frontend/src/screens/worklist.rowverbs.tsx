@@ -297,6 +297,11 @@ const VERB_LABEL: Record<
   // The composer's own word, not a second one: ChannelReplyAction draws the
   // button this labels, and two spellings of one act would read as two acts.
   reply: (t) => t("compose.reply"),
+  // The record history's own word, for the same reason. `undo` is drawn by
+  // ReceiptUndo on the handled panel, which acts in place, so VERB_DESTINATION
+  // routes it nowhere and this label is never the one a reader sees — it is
+  // here because the map is total over the contract's actions.
+  undo: (t) => t("history.undo.action"),
 };
 
 // The reader's own override: this row leads their day, whatever the ranking

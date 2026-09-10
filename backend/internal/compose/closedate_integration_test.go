@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -32,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -84,8 +86,13 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	e.svc = approvals.NewService(e.DB())
 	e.svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(e.svc, deals.NewStore(e.DB(), DealsInstallation())))
-	e.corrector = deals.NewCloseDateCorrector(e.DB(), closeDateStager{svc: e.svc},
-		quietReviewReader{db: e.DB(), owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}}, quiet, installseam.Deals()).
+	// The policy production builds, not a stub that always says yes: whether a
+	// rep has left close dates to the sweep is exactly what these tests are
+	// about, and a harness answering it itself would prove nothing.
+	owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
+	e.corrector = deals.NewCloseDateCorrector(e.DB(),
+		closeDatePolicy{svc: e.svc, owner: owner},
+		quietReviewReader{db: e.DB(), owner: owner}, quiet, installseam.Deals()).
 		WithClock(func() time.Time { return e.day })
 	return e
 }
@@ -273,8 +280,9 @@ func TestCloseDateSweepRollsClearOverdueActiveDealProvisionally(t *testing.T) {
 	if !swept.provisional {
 		t.Error("the auto-rolled date is a velocity estimate — it must be provisional")
 	}
-	if got := e.pendingCorrections(t, id); got != 1 {
-		t.Errorf("🟢 tier staged %d approvals, want 1 — an estimate is confirmed, not announced", got)
+	if got := e.pendingCorrections(t, id); got != 0 {
+		t.Errorf("the tier staged %d cards; an estimate is APPLIED and announced on the "+
+			"morning receipt, where the rep can put it back", got)
 	}
 
 	// Reversibility: the audit row carries the exact before/after images.
@@ -351,7 +359,14 @@ func TestCloseDateSweepRecordsTheForecastItMoved(t *testing.T) {
 	}
 }
 
-func TestCloseDateSweepStagesProvisionalForForecastBearingDeal(t *testing.T) {
+// A commit-bearing deal is re-dated provisionally and drops out of Commit.
+//
+// It used to raise a card as well, and the card is what this change removes:
+// the sweep had already written the date, so asking a rep to confirm it was a
+// question whose answer changed nothing. The forecast exclusion is the part
+// that always mattered — a provisional date is a machine's estimate, and the
+// number must not count it.
+func TestCloseDateSweepRedatesAndExcludesAForecastBearingDeal(t *testing.T) {
 	e := setupCloseDate(t)
 	// Explicit commit + late stage: overdue, active — never auto-final.
 	id := e.seedSweepDeal(t, "Commit slipped", e.late, stringp("commit"), intp(-10), 3)
@@ -370,8 +385,9 @@ func TestCloseDateSweepStagesProvisionalForForecastBearingDeal(t *testing.T) {
 	if swept.forecastCat == nil || *swept.forecastCat != "commit" {
 		t.Errorf("forecast_category = %v, want the untouched commit override (the number moves by exclusion, not by edit)", swept.forecastCat)
 	}
-	if got := e.pendingCorrections(t, id); got != 1 {
-		t.Fatalf("pending close_date_correction approvals = %d, want 1", got)
+	if got := e.pendingCorrections(t, id); got != 0 {
+		t.Errorf("the sweep raised %d cards; the correction is applied and reported "+
+			"on the morning receipt, so there is nothing to confirm", got)
 	}
 
 	// Excluded from Commit while provisional (AC-F9): the commit filter
@@ -382,34 +398,46 @@ func TestCloseDateSweepStagesProvisionalForForecastBearingDeal(t *testing.T) {
 		t.Errorf("commit rows while provisional = %+v, want none", result.Rows)
 	}
 
-	// A second nightly run must not stack a duplicate proposal.
+	// A second nightly run leaves a corrected deal alone: its date is no longer
+	// flagged, so there is nothing to correct twice.
+	before := e.readSwept(t, id)
+	e.nextDay()
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingCorrections(t, id); got != 1 {
-		t.Errorf("after a second sweep, pending approvals = %d, want still 1", got)
+	if after := e.readSwept(t, id); !sameDay(after.expectedClose, before.expectedClose) {
+		t.Errorf("a second sweep moved the date again, from %v to %v",
+			dayOf(before.expectedClose), dayOf(after.expectedClose))
 	}
 }
 
-func TestCloseDateConfirmAppliesTheDateAndClearsProvisional(t *testing.T) {
+// A card left over from before this change can still be confirmed.
+//
+// The sweep no longer stages one, but an installation upgrading mid-week has
+// pending cards its last nightly run raised, and each names a deal standing on
+// a provisional date. The confirm effect stays registered for exactly them:
+// dropping it would leave those deals provisional forever, with the only verb
+// that could settle them gone.
+//
+// Staged directly here, because the pass that used to make one does not.
+func TestALeftoverCardStillConfirmsTheDateAndClearsProvisional(t *testing.T) {
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Confirm me", e.late, stringp("commit"), intp(-10), 3)
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	var approvalID ids.ApprovalID
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT id FROM approval WHERE kind = 'close_date_correction' AND target_entity_id = $1 AND status = 'pending'`,
-		id).Scan(&approvalID); err != nil {
-		t.Fatalf("no staged correction to decide: %v", err)
+	swept := e.readSwept(t, id)
+	if !swept.provisional || swept.expectedClose == nil {
+		t.Fatalf("the sweep left no provisional date to confirm: %+v", swept)
 	}
+	approvalID := e.stageLegacyCard(t, id, *swept.expectedClose)
 
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	if _, err := e.svc.Decide(human, approvalID, true, nil); err != nil {
 		t.Fatalf("approve + effect: %v", err)
 	}
 
-	swept := e.readSwept(t, id)
+	swept = e.readSwept(t, id)
 	if swept.provisional {
 		t.Error("confirmation must clear close_date_provisional")
 	}
@@ -424,7 +452,14 @@ func TestCloseDateConfirmAppliesTheDateAndClearsProvisional(t *testing.T) {
 	}
 }
 
-func TestCloseDateSweepDowngradesQuietDealWithoutRedatingForward(t *testing.T) {
+// A deal nobody has touched is notched down AND re-dated.
+//
+// It used to keep its date: only the invariant forced one onto a quiet deal,
+// on the reading that an optimistic re-date on top of a downgrade said too
+// much. That left the forecast corrected and the calendar lying, which is the
+// half a rep actually reads. Both move now, both are the sweep's estimate, and
+// both are on one Undo.
+func TestCloseDateSweepDowngradesAndRedatesAQuietDeal(t *testing.T) {
 	e := setupCloseDate(t)
 	// Quiet 90 days, commit override, date still future but inside the
 	// stalled window (unrealistic_stale) → 🔻: one forecast notch down,
@@ -440,14 +475,18 @@ func TestCloseDateSweepDowngradesQuietDealWithoutRedatingForward(t *testing.T) {
 	if swept.forecastCat == nil || *swept.forecastCat != "best_case" {
 		t.Errorf("forecast_category = %v, want best_case (one notch down from commit)", swept.forecastCat)
 	}
-	if swept.expectedClose == nil || !swept.expectedClose.Equal(originalDate) {
-		t.Errorf("date = %v, want the original %s — a quiet deal is never re-dated forward", swept.expectedClose, originalDate.Format(time.DateOnly))
+	if swept.expectedClose == nil || swept.expectedClose.Equal(originalDate) {
+		t.Errorf("date = %v, still the original %s — a deal nobody has touched carries "+
+			"a date nobody believes, and notching the forecast while leaving the "+
+			"calendar alone corrects the number and leaves the date lying",
+			swept.expectedClose, originalDate.Format(time.DateOnly))
 	}
-	if swept.provisional {
-		t.Error("a future-dated quiet deal needs no provisional replacement")
+	if !swept.provisional {
+		t.Error("the replacement is the sweep's own estimate and must say so")
 	}
-	if got := e.pendingCorrections(t, id); got != 1 {
-		t.Errorf("🔻 must surface the gone-quiet review: pending = %d, want 1", got)
+	if got := e.pendingCorrections(t, id); got != 0 {
+		t.Errorf("the gone-quiet tier staged %d cards; both the notch and the date "+
+			"are applied, and one receipt carries them with one way back", got)
 	}
 }
 
@@ -814,6 +853,40 @@ func (e *closeDateEnv) firstDealID(t *testing.T) ids.UUID {
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT id FROM deal ORDER BY created_at LIMIT 1`).Scan(&id); err != nil {
 		t.Fatal(err)
+	}
+	return id
+}
+
+// stageLegacyCard raises the confirm card the sweep used to raise, for the one
+// test that still needs one: an installation upgrading with cards already
+// pending.
+func (e *closeDateEnv) stageLegacyCard(t *testing.T, dealID ids.UUID, proposed time.Time) ids.ApprovalID {
+	t.Helper()
+	proposal := deals.CloseDateCorrection{
+		DealID:            ids.From[ids.DealKind](dealID),
+		ExpectedCloseDate: proposed.Format(time.DateOnly),
+		PreviousCloseDate: stringp(proposed.Format(time.DateOnly)),
+		Asking:            deals.AskingIsThisDateRight,
+	}
+	raw, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonical, hash, err := diffhash.Canonical(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetType := approvalTargetDeal
+	id, err := e.svc.Stage(e.Admin(), approvals.StageInput{
+		Kind:           deals.CloseDateCorrectionKind,
+		ProposedChange: canonical,
+		DiffHash:       hash,
+		TargetType:     targetType,
+		TargetID:       dealID,
+		Summary:        "Confirm the real close date",
+	})
+	if err != nil {
+		t.Fatalf("staging the leftover card: %v", err)
 	}
 	return id
 }

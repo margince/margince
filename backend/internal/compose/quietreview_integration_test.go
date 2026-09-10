@@ -13,7 +13,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -23,20 +22,23 @@ import (
 )
 
 // stagedCorrection is the proposal as the card will read it.
-func (e *closeDateEnv) stagedCorrection(t *testing.T, dealID ids.UUID) deals.CloseDateCorrection {
+// appliedCorrection reads the reason the sweep recorded for one deal.
+//
+// Off the AUDIT ROW rather than off a staged card: the correction is applied
+// when it is made, and the evidence the receipt renders travels on the audit
+// entry the change wrote. There is no proposal to decode any more.
+func (e *closeDateEnv) appliedCorrection(t *testing.T, dealID ids.UUID) deals.CloseDateCorrection {
 	t.Helper()
-	var raw json.RawMessage
+	var basis string
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT proposed_change FROM approval
-		  WHERE kind = 'close_date_correction' AND target_entity_id = $1 AND status = 'pending'`,
-		dealID).Scan(&raw); err != nil {
-		t.Fatalf("no staged correction on deal %s: %v", dealID, err)
+		`SELECT coalesce(a.evidence->>'basis', '')
+		   FROM deal_correction c
+		   JOIN audit_log a ON a.id = c.audit_log_id
+		  WHERE c.deal_id = $1
+		  ORDER BY c.applied_at DESC LIMIT 1`, dealID).Scan(&basis); err != nil {
+		t.Fatalf("no applied correction on deal %s: %v", dealID, err)
 	}
-	correction, err := deals.UnmarshalCloseDateCorrection(raw)
-	if err != nil {
-		t.Fatalf("staged payload does not decode: %v", err)
-	}
-	return correction
+	return deals.CloseDateCorrection{Basis: basis}
 }
 
 // grantOwnerRealPermissions gives the deal owner an ACTUAL role row.
@@ -177,7 +179,7 @@ func TestQuietReviewNamesTheContactWhoIsWaitingForAReply(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if !strings.Contains(basis, "Anna Weber") {
 		t.Errorf("basis = %q, want it to name Anna Weber — she wrote last", basis)
 	}
@@ -202,7 +204,7 @@ func TestQuietReviewSaysWeGotNoReplyWhenWeWroteLast(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if !strings.Contains(basis, "We wrote to Anna Weber") {
 		t.Errorf("basis = %q, want it to say we wrote and got nothing back", basis)
 	}
@@ -222,7 +224,7 @@ func TestQuietReviewSaysSoWhenThereIsNoCorrespondence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if !strings.Contains(basis, "no correspondence") {
 		t.Errorf("basis = %q, want it to say there is nothing to judge the deal by", basis)
 	}
@@ -246,7 +248,7 @@ func TestQuietReviewOnAnUnownedDealNamesNobody(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if strings.Contains(basis, "Anna Weber") {
 		t.Errorf("basis = %q — an unowned deal has no authority to read names under", basis)
 	}
@@ -270,7 +272,7 @@ func TestQuietReviewNamesNobodyOnGroupCorrespondence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	for _, name := range []string{"Anna Weber", "Boris Klein"} {
 		if strings.Contains(basis, name) {
 			t.Errorf("basis = %q — two senders means no single one to name", basis)
@@ -297,7 +299,7 @@ func TestQuietReviewCountsUnmatchedAddressesAsParticipants(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if strings.Contains(basis, "Anna Weber") {
 		t.Errorf("basis = %q — an unmatched address is still a second participant", basis)
 	}
@@ -324,7 +326,7 @@ func TestQuietReviewWithoutPersonReadGivesDatesButNoName(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if strings.Contains(basis, "Anna Weber") {
 		t.Errorf("basis = %q — the owner holds no person:read, so the card must not name her", basis)
 	}
@@ -348,54 +350,52 @@ func TestQuietReviewWithoutActivityReadReadsNoCorrespondence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if strings.Contains(basis, "Anna Weber") || strings.Contains(basis, "5 August") {
 		t.Errorf("basis = %q — an owner without activity:read gets no correspondence facts", basis)
 	}
 }
 
-// The card asks a human to confirm a date, so it must PROPOSE one. It used to
-// carry the deal's current date in both fields, which asked for agreement to a
-// change that was not one.
-func TestQuietReviewProposesADateThatDiffersFromTheCurrentOne(t *testing.T) {
+// The quiet tier moves the date, and it must move it somewhere a human can
+// believe: forward of today, and different from what the deal already carried.
+// Writing the same date back is a change that changes nothing, and it would
+// still mark the deal provisional and raise a receipt asking about it.
+func TestQuietReviewRedatesAwayFromTheDateTheDealCarried(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(30), 90)
-
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-
-	correction := e.stagedCorrection(t, id)
-	if correction.PreviousCloseDate == nil {
-		t.Fatal("the card must say what date the deal carries now")
-	}
-	if correction.ExpectedCloseDate == *correction.PreviousCloseDate {
-		t.Errorf("proposed %s and current %s are the same date — the card asks for nothing",
-			correction.ExpectedCloseDate, *correction.PreviousCloseDate)
-	}
-	proposed, err := time.Parse(time.DateOnly, correction.ExpectedCloseDate)
-	if err != nil {
-		t.Fatalf("proposed date does not parse: %v", err)
-	}
-	if proposed.Before(today()) {
-		t.Errorf("proposed %s is in the past — the invariant forbids it", correction.ExpectedCloseDate)
-	}
-}
-
-// Proposing a date on the card is not the same as writing one to the deal. The
-// zombie guard still holds: only a human confirming lifts it.
-func TestQuietReviewLeavesTheDealsOwnDateAlone(t *testing.T) {
-	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(30), 90)
 	originalDate := today().AddDate(0, 0, 30)
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(30), 90)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
 
 	swept := e.readSwept(t, id)
-	if swept.expectedClose == nil || !swept.expectedClose.Equal(originalDate) {
-		t.Errorf("date = %v, want the original %s — proposing is not writing",
-			swept.expectedClose, originalDate.Format(time.DateOnly))
+	if swept.expectedClose == nil {
+		t.Fatal("the quiet tier cleared the date instead of re-dating the deal")
+	}
+	if swept.expectedClose.Equal(originalDate) {
+		t.Errorf("date is still the original %s — the quiet tier did not re-date it",
+			originalDate.Format(time.DateOnly))
+	}
+	if swept.expectedClose.Before(today()) {
+		t.Errorf("date = %s is in the past — the invariant forbids it",
+			swept.expectedClose.Format(time.DateOnly))
+	}
+}
+
+// Every date the sweep writes is the machine's estimate, so the deal must say
+// so. The provisional mark is what keeps an unconfirmed date out of the
+// forecast and what tells the reader the number came from a sweep rather than
+// from them.
+func TestAQuietRedateIsMarkedProvisional(t *testing.T) {
+	e := setupCloseDate(t)
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(30), 90)
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	if swept := e.readSwept(t, id); !swept.provisional {
+		t.Error("the deal is not marked provisional — an unconfirmed machine date must say it is one")
 	}
 }

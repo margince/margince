@@ -123,8 +123,14 @@ func decisionOutcomeOf(approve bool, edited json.RawMessage) decisionOutcome {
 // about the KIND, not about one rep's history with it. A row naming a kind
 // outside this set is inert: SetAutoApply refuses to write it, so no reader has
 // to defend against one.
+// closeDateCorrectionKind is the nightly close-date sweep's own kind. Named
+// because this module makes three statements about it — the grant deciding one
+// takes, that it is auto-appliable, and that it applies by default — and a typo
+// across them would leave the kind half-governed with nothing saying so.
+const closeDateCorrectionKind = "close_date_correction"
+
 var AutoApplyKinds = map[string]bool{
-	"close_date_correction": true,
+	closeDateCorrectionKind: true,
 	"org_name_promotion":    true,
 	"lifecycle_change":      true,
 }
@@ -235,12 +241,32 @@ func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode,
 			rep.UserID, kind).Scan(&mode)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ModeManual, nil
+		return defaultAutonomy(kind), nil
 	}
 	if err != nil {
 		return ModeManual, fmt.Errorf("crmapprovals: reading the autonomy mode: %w", err)
 	}
 	return AutonomyMode(mode), nil
+}
+
+// defaultAutonomy is what a kind does for a rep who has never touched the
+// setting.
+//
+// Manual for almost everything, and that stays the rule: a machine acting on
+// somebody's records unasked has to be something they chose.
+//
+// Close-date corrections are the exception, and the reason is what the
+// alternative actually did. The sweep computed a date, wrote it, and raised a
+// card asking the rep to confirm the date it had already written — a question
+// whose answer changed nothing, which expired unanswered in 72 hours and left
+// the deal on a machine's guess with nothing on the page saying so. Applying it
+// and showing the rep what changed, with a way back, is the honest version of
+// the same act.
+func defaultAutonomy(kind string) AutonomyMode {
+	if kind == closeDateCorrectionKind {
+		return ModeAuto
+	}
+	return ModeManual
 }
 
 // KindAutonomy is one kind's standing with one rep: whether it applies without

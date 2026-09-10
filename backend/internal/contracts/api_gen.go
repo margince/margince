@@ -1532,6 +1532,7 @@ const (
 	AttentionItemActionsRetry       AttentionItemActions = "retry"
 	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze      AttentionItemActions = "snooze"
+	AttentionItemActionsUndo        AttentionItemActions = "undo"
 )
 
 // Valid indicates whether the value is a known member of the AttentionItemActions enum.
@@ -1558,6 +1559,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsSetAside:
 		return true
 	case AttentionItemActionsSnooze:
+		return true
+	case AttentionItemActionsUndo:
 		return true
 	default:
 		return false
@@ -14438,6 +14441,7 @@ const (
 	WorklistItemActionsRetry       WorklistItemActions = "retry"
 	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze      WorklistItemActions = "snooze"
+	WorklistItemActionsUndo        WorklistItemActions = "undo"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemActions enum.
@@ -14464,6 +14468,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsSetAside:
 		return true
 	case WorklistItemActionsSnooze:
+		return true
+	case WorklistItemActionsUndo:
 		return true
 	default:
 		return false
@@ -18173,6 +18179,18 @@ type AnnotateBriefRequest struct {
 	Narrative *string `json:"narrative,omitempty"`
 }
 
+// AppliedUndo What a receipt needs to offer a way back from a change nobody was asked about.
+type AppliedUndo struct {
+	// AuditLogId The change to put back, through the record-history restore route.
+	AuditLogId openapi_types.UUID `json:"audit_log_id"`
+
+	// Reversed Somebody already put this back. The row stays and says so rather than vanishing, which would leave a reader unsure their Undo landed.
+	Reversed bool `json:"reversed"`
+
+	// Version The record's version as this receipt was read, for the `If-Match` the restore route requires. Carried on the receipt rather than re-read by the client: a second read would race the sweep, and a stale version is what makes the restore refuse rather than overwrite somebody else's later edit.
+	Version int64 `json:"version"`
+}
+
 // ApplyTagRequest defines model for ApplyTagRequest.
 type ApplyTagRequest struct {
 	EntityId   openapi_types.UUID        `json:"entity_id"`
@@ -19134,6 +19152,10 @@ type AttentionItem struct {
 	// three languages, so a duplicate pair sends its `kind` and `confidence`
 	// and the client writes the line in the reader's own.
 	Title *string `json:"title,omitempty"`
+
+	// Undo The way back from work that was APPLIED rather than approved.
+	// A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
+	Undo *AppliedUndo `json:"undo,omitempty"`
 
 	// Version The version of the row this item's own verbs write to, present where it names one — a
 	// task today. Carried for the reason `email_summary` carries one: a lane that offers
@@ -31805,6 +31827,10 @@ type Receipt struct {
 
 	// Summary What was done, in the words the act itself recorded.
 	Summary string `json:"summary"`
+
+	// Undo The way back, on a receipt for work that was APPLIED rather than approved.
+	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
+	Undo *AppliedUndo `json:"undo,omitempty"`
 }
 
 // RecordClaim defines model for RecordClaim.
@@ -37208,6 +37234,10 @@ type WorklistItem struct {
 
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`
+
+	// Undo The way back from work that was APPLIED rather than approved.
+	// A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
+	Undo *AppliedUndo `json:"undo,omitempty"`
 
 	// Verdict How the deal behind a row is STANDING, beside the move that acts on it.
 	//

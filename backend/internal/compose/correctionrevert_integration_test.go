@@ -221,19 +221,21 @@ func TestConfirmingACardAfterAnUndoDoesNotReapplyIt(t *testing.T) {
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	// The card the sweep staged, and the correction it wrote.
-	var approvalID ids.UUID
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT id FROM approval WHERE kind = 'close_date_correction'
-		   AND target_entity_id = $1 AND status = 'pending'`, deal).Scan(&approvalID); err != nil {
-		t.Fatalf("the sweep staged no confirm: %v", err)
+	// A card left over from before corrections were applied unasked. The sweep
+	// raises none now, but an installation upgrading mid-week has them pending
+	// against deals it has since corrected — which is exactly when this hazard
+	// bites, because the card and the undo disagree about the same deal.
+	swept := e.readSwept(t, deal)
+	if swept.expectedClose == nil {
+		t.Fatalf("the sweep left no corrected date to confirm: %+v", swept)
 	}
+	approvalID := e.stageLegacyCard(t, deal, *swept.expectedClose)
 	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
 	// Now the card is decided — the state an auto-apply worker reaches.
-	_, err := e.svc.Decide(e.Admin(), ids.From[ids.ApprovalKind](approvalID), true, nil)
+	_, err := e.svc.Decide(e.Admin(), approvalID, true, nil)
 	if err == nil {
 		t.Error("confirming a taken-back correction succeeded — the undo was silently reversed")
 	}

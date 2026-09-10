@@ -8921,6 +8921,8 @@ export const de = {
   "worklist.handled.about": "Wozu",
   "worklist.handled.when": "Wann",
   "worklist.handled.noRecord": "Kein Datensatz genannt",
+  "worklist.handled.wayBack": "Zurücknehmen",
+  "worklist.handled.putBackDone": "Bereits zurückgenommen",
   "worklist.handled.truncated":
     "Mehr als das. Die Liste endet bei dem, was eine Sitzung fasst.",
   "worklist.exceptions.empty": "Im Team braucht Sie gerade nichts.",
