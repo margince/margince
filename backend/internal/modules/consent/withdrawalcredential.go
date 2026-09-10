@@ -117,91 +117,118 @@ func newWithdrawalToken() (string, error) {
 	return withdrawalTokenPrefix + base64.RawURLEncoding.EncodeToString(buf[:]), nil
 }
 
-// EnsureWithdrawalCredentialTx returns the live credential for this address and
-// scope, minting one if there is none.
+// EnsureWithdrawalCredentialTx mints a credential for a subject the CALLER
+// NAMES, and takes write authority over that subject for doing so.
 //
-// IDEMPOTENT ON THE LIVE ROW, which is what the unique index enforces: re-sending
-// a newsletter reuses the link the last mail carried rather than minting a second
-// credential that works just as well. Two live links for one subscription is two
-// bearer credentials to leak, and revoking one would leave the other working.
-//
-// It returns the TOKEN only when it minted one. A credential that already exists
-// cannot produce its token again — the table holds a hash — which is the point:
-// a database read must not yield working links. A send that needs a URL for an
-// existing credential is a send whose previous link still works.
+// person:update and the WRITABLE probe, because naming somebody's id and asking
+// for a bearer token over their mail IS a claim of authority over that record.
+// `person` is shareable, so a manual `read` grant widens who can SEE a contact
+// without widening who may act on them, and a read-share holder must not mint
+// one. The send door below is the one that asks a different question.
 func (s *Store) EnsureWithdrawalCredentialTx(
 	ctx context.Context, tx pgx.Tx, in WithdrawalMintInput,
 ) (token string, err error) {
-	// GATED, unlike the resolve below. This MINTS a bearer credential that can
-	// stop somebody's mail for two years, so the caller has to be entitled to
-	// act on that person — the same grant IssueConfirmToken asks for, and for
-	// the same reason: a credential minted for a person is authority over them.
-	//
-	// person:update rather than person:read, because minting one changes what
-	// can be done to the record even though it writes no consent state.
 	if err := auth.Require(ctx, entityPerson, principal.ActionUpdate); err != nil {
 		return "", err
 	}
-	address := normalizeAddress(in.Address)
-	if address == "" {
-		return "", &ValidationError{
+	if err := validWithdrawalMint(in); err != nil {
+		return "", err
+	}
+	if !in.PersonID.IsZero() {
+		if err := auth.EnsureWritableLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+			return "", err
+		}
+		if err := auth.LockSubjectLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+			return "", err
+		}
+	}
+	return insertWithdrawalCredential(ctx, tx, in)
+}
+
+// ensureWithdrawalCredentialForSendTx mints the credential a MESSAGE carries,
+// for a subject resolved from the address that message is going to.
+//
+// person:READ and the VISIBLE probe, and the difference from the door above is
+// the question rather than the row. This caller names nobody: bindWithdrawalSubject
+// resolves the subject from the address, the send is already authorized against
+// that recipient by the consent gate and by the activity it creates, and the
+// mail is going there whether or not this succeeds. So the strict probe protects
+// nobody — it refused every sender without person:update, an agent holding
+// `activity:create` + `person:read` among them, and the message then shipped
+// with no working List-Unsubscribe URL, which is the failure this table exists
+// to end.
+//
+// The authority is also strictly less than the SIBLING mint on the same path
+// needs: PreferenceTokenForEmail takes person:read plus this same visible probe
+// and yields a credential that reads a consent state, withdraws AND grants,
+// where this one can only stop mail.
+//
+// Unexported, so the weaker probe cannot be reached by naming a subject: the
+// only way in is the send path in this package.
+func (s *Store) ensureWithdrawalCredentialForSendTx(
+	ctx context.Context, tx pgx.Tx, in WithdrawalMintInput,
+) (token string, err error) {
+	if err := auth.Require(ctx, entityPerson, principal.ActionRead); err != nil {
+		return "", err
+	}
+	if err := validWithdrawalMint(in); err != nil {
+		return "", err
+	}
+	if !in.PersonID.IsZero() {
+		if err := auth.EnsureVisibleLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+			return "", err
+		}
+		if err := auth.LockSubjectLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+			return "", err
+		}
+	}
+	return insertWithdrawalCredential(ctx, tx, in)
+}
+
+// validWithdrawalMint refuses what no link can be written for, before either
+// door's probe spends a query on it.
+func validWithdrawalMint(in WithdrawalMintInput) error {
+	if normalizeAddress(in.Address) == "" {
+		return &ValidationError{
 			Field:  "address",
 			Reason: "a withdrawal link is written to an address, and this one is empty",
 		}
 	}
 	if in.Scope != WithdrawalScopeNamedPurpose && in.Scope != WithdrawalScopeAllMarketing {
-		return "", &ValidationError{
+		return &ValidationError{
 			Field:  "scope",
 			Reason: "a withdrawal link stops one named subscription or all marketing; there is no third scope",
 		}
 	}
-	// THE SUBJECT MUST STILL BE LIVE AT THIS POINT IN THIS TRANSACTION.
-	//
-	// Statements in a read-committed transaction each take a fresh snapshot,
-	// so an erasure committing between the caller's address lookup and this
-	// insert would leave the mint writing a NEW capability — carrying the
-	// plaintext address — for the subject whose credentials that erasure just
-	// deleted. The person row survives an anonymize-in-place, so the foreign
-	// key does not catch it and the fresh token resolves happily.
-	//
-	// EnsureWritableLive, not the VISIBLE twin PreferenceTokenForEmail uses.
-	// Person is a shareable table, so a manual `read` share widens visibility
-	// without widening write authority — and this path WRITES a capability
-	// over the subject's mail. A caller holding only a read share must not
-	// mint one. Live rather than plain, for the reason the preference mint
-	// gives: a plain probe answers "still there" for an anonymized tombstone,
-	// which is precisely the row the erasure race leaves behind.
-	if !in.PersonID.IsZero() {
-		if err := auth.EnsureWritableLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
-			return "", err
-		}
-		// AND HELD until this transaction commits. EnsureWritableLive reads a
-		// snapshot; the insert below is a later statement, so an erasure
-		// committing between the two would find no credential to delete and
-		// this would then write one — restoring both a working capability and
-		// the plaintext address for a subject the installation just certified
-		// erased. Holding the row makes the erasure queue behind this mint,
-		// and its delete then sees the row this wrote.
-		if err := auth.LockSubjectLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
-			return "", err
-		}
-	}
+	return nil
+}
+
+// insertWithdrawalCredential writes the row both doors mint, after whichever
+// probe that door took.
+//
+// ONE PER SEND, and it always returns the token it minted. The table holds a
+// hash, so an existing credential cannot produce its token again — which is the
+// point, since a database read must not yield working links — and that is why
+// reuse is impossible rather than merely unwanted. Several live rows per address
+// is therefore the correct shape: each is a bearer token for stopping that
+// recipient's mail and nothing else, exactly like the messages carrying them,
+// and revocation is by SUBJECT so no row is left working behind.
+//
+// The subject is HELD by the caller's LockSubjectLive until this commits: the
+// probe above it reads a snapshot, and this insert is a later statement, so an
+// erasure committing between the two would find no credential to delete and
+// this would then write one — restoring a working capability and the plaintext
+// address for a subject the installation just certified erased.
+func insertWithdrawalCredential(ctx context.Context, tx pgx.Tx, in WithdrawalMintInput) (string, error) {
 	minted, err := newWithdrawalToken()
 	if err != nil {
 		return "", err
 	}
-	// EVERY SEND MINTS ITS OWN, so every message a recipient holds carries a
-	// link that works. The first spelling had a unique index over the live rows
-	// and tried to reuse — which the hash makes impossible, since the token is
-	// unrecoverable — so it returned nothing and the send shipped no header.
-	// The second revoked the old credential and minted fresh, which killed the
-	// link in the mail the recipient already had. Both traded away the thing
-	// this table exists to provide. See the migration for the full argument.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO withdrawal_credential
 		    (token_hash, address, person_id, lead_id, scope, purpose_id, expires_at)
 		VALUES ($1, $2, $3, $4, $5, $6, now() + $7::interval)`,
-		hashPublicToken(minted), address,
+		hashPublicToken(minted), normalizeAddress(in.Address),
 		zeroAsNull(in.PersonID.UUID), zeroAsNull(in.LeadID.UUID),
 		in.Scope, zeroAsNull(in.PurposeID),
 		withdrawalCredentialLife.String()); err != nil {

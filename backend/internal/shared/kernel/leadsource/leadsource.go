@@ -16,6 +16,8 @@
 // first time a source was added.
 package leadsource
 
+import "slices"
+
 // The source_system values a captured lead carries. Named rather than spelled
 // at each test: these strings are written by the capture path and read by two
 // automations, and a typo in any of them fails open — the automation fires,
@@ -28,6 +30,14 @@ const (
 	Crawl = "crawl"
 )
 
+// passive is the set both readers below take their answer from: the payload
+// test, which one lead.created at a time asks whether to mint work, and the
+// SQL parameter beneath it, which the breach sweep asks of every open row. A
+// source added here therefore reaches the automations and the sweep together —
+// which matters because the sweep would otherwise keep escalating a source the
+// automations had just learned to decline.
+var passive = []string{SiteRead, Crawl}
+
 // IsPassiveDiscovery reports whether a lead from this source arrived without
 // anybody asking us for anything.
 //
@@ -36,5 +46,16 @@ const (
 // do. Failing open here matches the automations' own defensive reading of a
 // missing payload.
 func IsPassiveDiscovery(sourceSystem string) bool {
-	return sourceSystem == SiteRead || sourceSystem == Crawl
+	return slices.Contains(passive, sourceSystem)
+}
+
+// PassiveDiscoverySources is the same set for a caller that has to ask the
+// question of many rows at once — a SQL sweep binding it as one parameter
+// rather than reading each payload.
+//
+// Cloned, so a caller cannot rewrite the rule for everybody else by holding
+// onto the slice: this set decides whether work is minted and whether a breach
+// is escalated, and neither reader owns it.
+func PassiveDiscoverySources() []string {
+	return slices.Clone(passive)
 }

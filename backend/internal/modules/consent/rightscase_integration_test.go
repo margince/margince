@@ -21,8 +21,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -267,7 +269,14 @@ func TestAReplayedProposalOpensNoSecondCase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("opening a transaction: %v", err)
 	}
-	defer func() { _ = tx.Rollback(context.Background()) }()
+	// Nothing here commits, so this rollback IS the cleanup and a failure is
+	// this test's own connection in trouble rather than a designed no-op.
+	// ErrTxClosed is the one exception, which is what a clean run leaves.
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back the replay transaction: %v", err)
+		}
+	})
 
 	replayed, err := openRightsCaseTx(context.Background(), tx, e.person, submissionID,
 		submissionErasure, time.Now())
@@ -393,4 +402,64 @@ func TestOnlyAReceiptCollisionIsWorthRedrawing(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A FAILURE THAT IS NOT A RECEIPT COLLISION IS RETURNED AT ONCE, not redrawn.
+//
+// The redraw exists for exactly one fault — two cases minting the same
+// reference — and spending three attempts on anything else holds the
+// transaction open while reporting the same error three times. So the loop has
+// to tell them apart, and nothing held that.
+//
+// It also exercises the savepoint's rollback on the path where it matters: the
+// rollback has to TAKE, because every attempt after a rollback that did not
+// would fail on the aborted transaction rather than on what actually went
+// wrong. The proof is in the error that comes back — the foreign-key fault the
+// first attempt hit, not the abort a second one would have reported.
+func TestAFailureThatIsNotAReceiptCollisionIsNotRedrawn(t *testing.T) {
+	e := setupChannelConsent(t)
+	// A subject with no person row, so the insert fails on the foreign key.
+	stranger := ids.From[ids.PersonKind](ids.NewV7())
+
+	// The ATTEMPT COUNT is what this asserts, and it has to be: the error alone
+	// cannot tell the two behaviours apart. A rollback that takes leaves the
+	// outer transaction usable, so a redraw would hit the same foreign key twice
+	// more and answer the same violation — the assertion would pass against
+	// exactly the loop it is meant to refuse.
+	var counted *savepointCounter
+	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		counted = &savepointCounter{Tx: tx}
+		_, caseErr := openRightsCaseTx(context.Background(), counted, stranger, ids.NewV7(),
+			submissionErasure, time.Now())
+		return caseErr
+	})
+	if err == nil {
+		t.Fatal("opening a rights case for a subject with no record succeeded — this test " +
+			"no longer reaches the failure arm it is about")
+	}
+	if !storekit.IsForeignKeyViolation(err) {
+		t.Errorf("error = %v, want the foreign-key fault that failed the insert", err)
+	}
+	if counted.savepoints != 1 {
+		t.Errorf("the redraw opened %d savepoints for a fault that is not a receipt collision, "+
+			"want 1 — three attempts hold the transaction open and report one fault as three",
+			counted.savepoints)
+	}
+}
+
+// savepointCounter counts the savepoints the redraw opens, and delegates
+// everything else to the real transaction.
+//
+// Embedded rather than faked: the statements below still run against the real
+// database, so nothing about the insert, the constraint or the rollback is
+// simulated — the count is the only thing this observes, and it is the only
+// thing the error cannot show.
+type savepointCounter struct {
+	pgx.Tx
+	savepoints int
+}
+
+func (c *savepointCounter) Begin(ctx context.Context) (pgx.Tx, error) {
+	c.savepoints++
+	return c.Tx.Begin(ctx)
 }

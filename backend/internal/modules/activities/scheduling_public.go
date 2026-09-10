@@ -206,6 +206,40 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"slots": slots, "truncated": truncated})
 }
 
+// bookingRequestIsWritable refuses a request before anything is written.
+//
+// Every check here precedes EnsurePersonByEmail, which COMMITS a person row, so
+// a refusal after it would leave one behind — and this door is unauthenticated,
+// which is what makes that expensive: a caller omitting a field in a loop grows
+// the person table one rejected request at a time. Consent is mandatory for the
+// same reason rather than left to the consent writer: a public capture surface
+// may not create a person it cannot attach a recordable consent to.
+//
+// Its own function because the handler crossed the length ceiling, and this is
+// the concept that came out whole — what the request must carry, asked once at
+// the door instead of at each writer behind it.
+func (h Handlers) bookingRequestIsWritable(
+	w http.ResponseWriter, r *http.Request, req crmcontracts.BookPublicMeetingJSONRequestBody,
+) bool {
+	if req.Booker.Name == "" || req.Booker.Email == "" {
+		httperr.Write(w, r, httperr.Validation("booker", "required", "booker.name and booker.email are required"))
+		return false
+	}
+	if !req.End.After(req.Start) {
+		httperr.Write(w, r, httperr.Validation("end", "invalid", "end must follow start"))
+		return false
+	}
+	if req.Consent.PolicyVersion == "" {
+		httperr.Write(w, r, httperr.Validation("consent.policy_version", "required", "the consent wording version shown to the booker is required"))
+		return false
+	}
+	if req.Consent.Wording == nil || strings.TrimSpace(*req.Consent.Wording) == "" {
+		httperr.Write(w, r, httperr.Validation("consent.wording", "required", "the consent wording shown to the booker is required"))
+		return false
+	}
+	return true
+}
+
 // BookPublicMeeting implements (POST /public/booking/{host_slug}):
 // consent-shape check → person (idempotent on email) → consent grant →
 // booking. The 201 discloses nothing beyond the slot itself.
@@ -226,28 +260,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if req.Booker.Name == "" || req.Booker.Email == "" {
-		httperr.Write(w, r, httperr.Validation("booker", "required", "booker.name and booker.email are required"))
-		return
-	}
-	if !req.End.After(req.Start) {
-		httperr.Write(w, r, httperr.Validation("end", "invalid", "end must follow start"))
-		return
-	}
-	// Consent is mandatory and validated BEFORE any write: a public
-	// capture surface may not create a person it cannot attach a
-	// recordable consent to.
-	if req.Consent.PolicyVersion == "" {
-		httperr.Write(w, r, httperr.Validation("consent.policy_version", "required", "the consent wording version shown to the booker is required"))
-		return
-	}
-	// Checked HERE, not left to the consent writer, for the reason the comment
-	// above gives: EnsurePersonByEmail below commits a person row before the
-	// grant is attempted, so a refusal down there would leave one behind — and
-	// this door is unauthenticated, so a caller omitting the field in a loop
-	// grows the person table one rejected request at a time.
-	if req.Consent.Wording == nil || strings.TrimSpace(*req.Consent.Wording) == "" {
-		httperr.Write(w, r, httperr.Validation("consent.wording", "required", "the consent wording shown to the booker is required"))
+	if !h.bookingRequestIsWritable(w, r, req) {
 		return
 	}
 	purposeID := ids.UUID(req.Consent.PurposeId)
