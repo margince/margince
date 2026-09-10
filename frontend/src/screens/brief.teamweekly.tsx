@@ -130,7 +130,7 @@ export function TeamWeeklySection({
   const review = answer.data?.kind === "review" ? answer.data.review : null;
 
   return (
-    <section id="brief-team-weekly" aria-label={t("teamweekly.title")}>
+    <section id="brief-team-weekly">
       <Panel
         title={t("teamweekly.title")}
         sub={

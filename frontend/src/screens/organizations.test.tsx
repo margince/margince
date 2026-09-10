@@ -2254,7 +2254,9 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     await waitFor(() => expect(opensWith("Details")).toBe(true));
     expect(opensWith("What they do")).toBe(true);
     expect(opensWith("Facts about this company")).toBe(true);
-    expect(opensWith("Data & tools")).toBe(true);
+    // The roll-up is one of the panes that runs its own read, so it arrives
+    // on its own clock rather than with the ones above.
+    await waitFor(() => expect(opensWith("Roll-up")).toBe(true));
     releaseView?.();
   });
 });

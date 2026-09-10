@@ -59,7 +59,7 @@ export function BriefFeed({
   const drawn = all.slice(0, FEED);
   const rest = all.length - drawn.length;
   return (
-    <section id="brief-feed" aria-label={t("brief.feed.title")}>
+    <section id="brief-feed">
       <Panel
         title={t("brief.feed.title")}
         sub={t("brief.feed.sub")}

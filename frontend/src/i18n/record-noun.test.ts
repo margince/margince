@@ -79,7 +79,6 @@ const RETIRED_NOUN: Record<string, RegExp> = {
 const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
     // Names this rename leaves alone: Settings → People, and the tab it heads.
-    "co.relationships.title",
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "stageAutomation.noRules",
@@ -157,7 +156,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   ],
   de: [
     // Names this rename leaves alone: Settings → People, and the tab it heads.
-    "co.relationships.title",
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "stageAutomation.noRules",
@@ -243,7 +241,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   ],
   vi: [
     // Names this rename leaves alone: Settings → People, and the tab it heads.
-    "co.relationships.title",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "acctCoverage.columnCap",

@@ -6,7 +6,8 @@
 
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
-import { Badge, Card } from "../../design-system/atoms";
+import { Badge } from "../../design-system/atoms";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
@@ -44,13 +45,15 @@ export function momentWhyNow(
 }
 
 /**
- * MomentsCard is what changed about this relationship lately.
+ * MomentsPanel is what changed about this relationship lately.
  *
  * It is the difference between a picture of a network and a live one: a map
  * says who is there, a moment says what moved. The sentences are the 360's
  * own, so one derived change does not get two sets of words.
  */
-export function MomentsCard({ view }: Readonly<{ view: RelationshipMoments }>) {
+export function MomentsPanel({
+  view,
+}: Readonly<{ view: RelationshipMoments }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -66,34 +69,39 @@ export function MomentsCard({ view }: Readonly<{ view: RelationshipMoments }>) {
       ? ("empty" as const)
       : ("ready" as const);
   return (
-    <Card
-      title={t("person.network.momentsTitle")}
-      sub={t("person.network.momentsSub")}
-    >
-      <SurfaceState
-        state={state}
-        emptyLabel={t("person.network.noMoments")}
-        loadingLabel={t("person.network.title")}
-      >
-        <ol className="pn-moments">
-          {changes.map((change, index) => (
-            <li key={`${change.kind}-${change.at}`} className="pn-moment">
-              <time className="pn-moment-when t-caption" dateTime={change.at}>
-                {formatDate(change.at, locale, recordZone)}
-              </time>
-              <p>
-                {changeSentence(change, t)}
-                {/* The head is what the strip's "why now" slot was read
-                    from, and is flagged here so the two agree on which
-                    change that was. */}
-                {index === 0 ? (
-                  <Badge tone="accent">{t("person.intro.stripWhyNow")}</Badge>
-                ) : null}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </SurfaceState>
-    </Card>
+    <Panel title={t("person.network.momentsTitle")}>
+      {/* Where the movements are read FROM, which is what makes them evidence
+          rather than a summary — too long for the head's one line, and the
+          half that would truncate is the half naming the source. */}
+      <PanelBody>
+        <p className="t-sub">{t("person.network.momentsSub")}</p>
+      </PanelBody>
+      <PanelBody>
+        <SurfaceState
+          state={state}
+          emptyLabel={t("person.network.noMoments")}
+          loadingLabel={t("person.network.title")}
+        >
+          <ol className="pn-moments">
+            {changes.map((change, index) => (
+              <li key={`${change.kind}-${change.at}`} className="pn-moment">
+                <time className="pn-moment-when t-caption" dateTime={change.at}>
+                  {formatDate(change.at, locale, recordZone)}
+                </time>
+                <p>
+                  {changeSentence(change, t)}
+                  {/* The head is what the strip's "why now" slot was read
+                      from, and is flagged here so the two agree on which
+                      change that was. */}
+                  {index === 0 ? (
+                    <Badge tone="accent">{t("person.intro.stripWhyNow")}</Badge>
+                  ) : null}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </SurfaceState>
+      </PanelBody>
+    </Panel>
   );
 }

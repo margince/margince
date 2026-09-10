@@ -199,7 +199,7 @@ export function PlanSection() {
   }
 
   return (
-    <section id="brief-plan" aria-label={t("plan.title")}>
+    <section id="brief-plan">
       <Panel
         title={t("plan.title")}
         sub={t("plan.sub")}

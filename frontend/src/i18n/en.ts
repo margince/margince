@@ -1929,8 +1929,6 @@ export const en = {
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",
   "co.evidence.title": "Where this came from",
-  "co.relationships.title": "Linked people and companies",
-  "co.tools.title": "Data & tools",
   "co.prep.withheld":
     "Parts of this account are hidden from you, so this reading is incomplete.",
   "co.read.newActivity_one": "One new item since your last visit.",

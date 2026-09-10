@@ -7,7 +7,6 @@ import { ENTITY } from "../app/entity";
 import { navigate, routeHash, useRoute } from "../app/router";
 import {
   Button,
-  Card,
   DataTable,
   EmptyState,
   SectionHeader,
@@ -15,6 +14,7 @@ import {
   StatCard,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -47,17 +47,14 @@ import { EntityRef } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 import "./analytics.css";
 
-// Analytics (B-EP09.12c, D-11): a picker over three reports — deals-by-stage
-// (unweighted next to weighted), forecast (category readings, each showing
-// unweighted and weighted, plus the server-derived "slipped" bucket), and
-// open deals per company. "Explain this number" opens the executed plan +
-// the exact rows the headline reconciles to. Both weighted figures come
-// straight off the report's own weighted_amount_minor measure (AC-F1: round
-// PER DEAL, then sum) — neither screen re-derives it from the raw total.
-//
-// All three report bodies render into ONE surface: a titled Card whose trailing
-// .card-actions row carries the explain toggle. The segment picked changes what
-// the card holds, never what kind of thing the page is.
+// Analytics: a picker over three reports — deals-by-stage (unweighted beside
+// weighted), forecast (category readings plus the server-derived "slipped"
+// bucket), and open deals per company. "Explain this number" opens the executed
+// plan and the exact rows the headline reconciles to. Both weighted figures come
+// straight off the report's own weighted_amount_minor measure, rounded PER DEAL
+// and then summed, so neither screen re-derives one from the raw total. All
+// three bodies render into ONE panel whose action band carries the explain
+// toggle: the segment changes what the panel holds, not what the page is.
 
 // One row of the deals-by-stage table: a stage AND a currency, because a stage
 // holding deals in two currencies has two totals and no third one that means
@@ -700,11 +697,10 @@ function StageTable({
           header: t("analytics.count"),
           // Every row addresses its deals: converted, one stage is one row and
           // one set again, where a stage split across two currency rows had no
-          // single set to open.
-          //
-          // The link asks for OPEN deals, which is what this report counts: a
-          // won deal keeps the stage it closed in, so narrowing on the stage
-          // would hand back a shorter list than the figure above it.
+          // single set to open. The link asks for OPEN deals, which is what
+          // this report counts: a won deal keeps the stage it closed in, so
+          // narrowing on the stage would hand back a shorter list than the
+          // figure above it.
           render: (row: StageAgg) => (
             <CountLink
               count={row.count}
@@ -907,9 +903,9 @@ function DerivationRows({
   );
 }
 
-// "Explain this number": the titled Card that shows where a figure came from,
-// so a number on this screen is never presented without its derivation.
-function ExplainCard({
+// "Explain this number": the zone that shows where a figure came from, so a
+// number on this screen is never presented without its derivation.
+function ExplainPanel({
   id,
   url,
   query,
@@ -926,48 +922,57 @@ function ExplainCard({
 }>) {
   const t = useT();
   return (
-    <Card
-      id={id}
-      ariaLabel={t("explain.title")}
-      title={t("explain.title")}
-      sub={query.data?.definition ?? t("analytics.planNote")}
-    >
-      {url == null && <p className="t-caption">{t("common.empty")}</p>}
-      {url != null && query.isPending && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-2)",
-          }}
-        >
-          <Skeleton width="60%" />
-          <Skeleton width="90%" />
-        </div>
-      )}
-      {query.isError && (
-        <>
-          <p className="t-caption">{problemMessageOf(query.error, t)}</p>
-          <div className="card-actions">
-            <Button small onClick={() => query.refetch()}>
-              {t("common.retry")}
-            </Button>
-          </div>
-        </>
-      )}
-      {/* A link minted before the handle carried an instant — an old one, or one
-          a reader saved. The figures below were recomputed at a NEW moment, so
-          a rate sheet effective in between makes them disagree with the number
-          they explain. Said plainly: this is opened by someone checking a
-          figure they already doubt, and a detail that quietly reconciles to
-          something else reads as proof rather than as a discrepancy. */}
-      {query.data?.as_of_pinned === false && (
-        <p className="surfacestate-stale">{t("explain.mayHaveMoved")}</p>
-      )}
-      {query.data && (
-        <DerivationRows derivation={query.data} baseCurrency={baseCurrency} />
-      )}
-    </Card>
+    // The toggle names this panel with `aria-controls` and Panel mints its own
+    // ids, so the handle the toggle was given lives on the wrapper.
+    <div id={id}>
+      <Panel title={t("explain.title")}>
+        <PanelBody>
+          {/* What the figure MEANS, in the server's own words: a sentence,
+              and the head band holds one line of one. */}
+          <p className="t-sub">
+            {query.data?.definition ?? t("analytics.planNote")}
+          </p>
+          {url == null && <p className="t-caption">{t("common.empty")}</p>}
+          {url != null && query.isPending && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-2)",
+              }}
+            >
+              <Skeleton width="60%" />
+              <Skeleton width="90%" />
+            </div>
+          )}
+          {query.isError && (
+            <>
+              <p className="t-caption">{problemMessageOf(query.error, t)}</p>
+              <div className="card-actions">
+                <Button small onClick={() => query.refetch()}>
+                  {t("common.retry")}
+                </Button>
+              </div>
+            </>
+          )}
+          {/* A link minted before the handle carried an instant — an old one,
+              or one a reader saved. The figures below were recomputed at a NEW
+              moment, so a rate sheet effective in between makes them disagree
+              with the number they explain. This is opened by someone already
+              doubting a figure, and a detail that quietly reconciles to
+              something else reads as proof rather than as a discrepancy. */}
+          {query.data?.as_of_pinned === false && (
+            <p className="surfacestate-stale">{t("explain.mayHaveMoved")}</p>
+          )}
+          {query.data && (
+            <DerivationRows
+              derivation={query.data}
+              baseCurrency={baseCurrency}
+            />
+          )}
+        </PanelBody>
+      </Panel>
+    </div>
   );
 }
 
@@ -1184,44 +1189,46 @@ function DataCoverageView({
     <QueryGate query={coverage} pendingLabel={t("analytics.sectionCoverage")}>
       {(run) =>
         run == null ? (
-          <Card title={t("analytics.sectionCoverage")}>
+          <Panel title={t("analytics.sectionCoverage")}>
             <EmptyState>{t("analytics.coverageNeverRun")}</EmptyState>
-          </Card>
+          </Panel>
         ) : (
-          <Card title={t("analytics.sectionCoverage")}>
-            <p className="sub">{t("analytics.coverageSub")}</p>
-            <DataTable
-              label={t("analytics.sectionCoverage")}
-              columns={[
-                {
-                  key: "source",
-                  header: t("analytics.covSource"),
-                  render: (row: DataCoverageRow) => sourceName(row.source, t),
-                },
-                {
-                  key: "state",
-                  header: t("analytics.covState"),
-                  render: (row: DataCoverageRow) =>
-                    COVERAGE_STATE_KEY[row.state]
-                      ? t(COVERAGE_STATE_KEY[row.state])
-                      : row.state,
-                },
-                {
-                  key: "through",
-                  header: t("analytics.covThrough"),
-                  render: (row: DataCoverageRow) =>
-                    row.checked_through
-                      ? formatDateTime(row.checked_through, locale, timezone)
-                      : "—",
-                },
-              ]}
-              rows={run.sources}
-              rowKey={(row) => row.source}
-            />
-            {/* Record-level input problems live where they are answered: the
-              Forecast input review. One resolution surface, not two. */}
-            <p className="sub">{t("analytics.coverageInputsElsewhere")}</p>
-          </Card>
+          <Panel title={t("analytics.sectionCoverage")}>
+            <PanelBody>
+              <p className="t-sub">{t("analytics.coverageSub")}</p>
+              <DataTable
+                label={t("analytics.sectionCoverage")}
+                columns={[
+                  {
+                    key: "source",
+                    header: t("analytics.covSource"),
+                    render: (row: DataCoverageRow) => sourceName(row.source, t),
+                  },
+                  {
+                    key: "state",
+                    header: t("analytics.covState"),
+                    render: (row: DataCoverageRow) =>
+                      COVERAGE_STATE_KEY[row.state]
+                        ? t(COVERAGE_STATE_KEY[row.state])
+                        : row.state,
+                  },
+                  {
+                    key: "through",
+                    header: t("analytics.covThrough"),
+                    render: (row: DataCoverageRow) =>
+                      row.checked_through
+                        ? formatDateTime(row.checked_through, locale, timezone)
+                        : "—",
+                  },
+                ]}
+                rows={run.sources}
+                rowKey={(row) => row.source}
+              />
+              {/* Record-level input problems live where they are answered: the
+                Forecast input review. One resolution surface, not two. */}
+              <p className="t-sub">{t("analytics.coverageInputsElsewhere")}</p>
+            </PanelBody>
+          </Panel>
         )
       }
     </QueryGate>
@@ -1350,50 +1357,54 @@ function MyOutcomesView({
 
   return (
     <>
-      <Card title={t("analytics.myPipeline")}>
-        <StatStrip>
-          <StatCard
-            label={t("analytics.count")}
-            value={
-              pipelineRow
-                ? formatNumber(rowCount(pipelineRow, "deal_count"), locale)
-                : "…"
-            }
-          />
-          <StatCard
-            label={t("analytics.baseValue", {
-              currency: pipelineQuery.data?.base_currency ?? "",
-            })}
-            value={
-              pipelineRow
-                ? formatMoneyOrAbsent(
-                    rowMoney(pipelineRow, "raw_minor"),
-                    pipelineQuery.data?.base_currency ?? null,
-                    locale,
-                  )
-                : "…"
-            }
-          />
-        </StatStrip>
-      </Card>
-      <Card title={t("analytics.myMeetings")}>
-        {/* Current standing, stated as such: a held meeting was once booked
-            and the record no longer says so, so these are today's facts and
-            not a funnel. */}
-        <p className="sub">{t("analytics.meetingsAsTheyStand")}</p>
-        <StatStrip>
-          {MEETING_STATUSES.map((status) => (
+      <Panel title={t("analytics.myPipeline")}>
+        <PanelBody>
+          <StatStrip>
             <StatCard
-              key={status.key}
-              label={t(status.labelKey)}
-              value={formatNumber(
-                meetingsByStatus.get(status.key) ?? 0,
-                locale,
-              )}
+              label={t("analytics.count")}
+              value={
+                pipelineRow
+                  ? formatNumber(rowCount(pipelineRow, "deal_count"), locale)
+                  : "…"
+              }
             />
-          ))}
-        </StatStrip>
-      </Card>
+            <StatCard
+              label={t("analytics.baseValue", {
+                currency: pipelineQuery.data?.base_currency ?? "",
+              })}
+              value={
+                pipelineRow
+                  ? formatMoneyOrAbsent(
+                      rowMoney(pipelineRow, "raw_minor"),
+                      pipelineQuery.data?.base_currency ?? null,
+                      locale,
+                    )
+                  : "…"
+              }
+            />
+          </StatStrip>
+        </PanelBody>
+      </Panel>
+      <Panel title={t("analytics.myMeetings")}>
+        <PanelBody>
+          {/* Current standing, stated as such: a held meeting was once booked
+              and the record no longer says so, so these are today's facts and
+              not a funnel. */}
+          <p className="t-sub">{t("analytics.meetingsAsTheyStand")}</p>
+          <StatStrip>
+            {MEETING_STATUSES.map((status) => (
+              <StatCard
+                key={status.key}
+                label={t(status.labelKey)}
+                value={formatNumber(
+                  meetingsByStatus.get(status.key) ?? 0,
+                  locale,
+                )}
+              />
+            ))}
+          </StatStrip>
+        </PanelBody>
+      </Panel>
     </>
   );
 }
@@ -1719,55 +1730,12 @@ function ReportCard({
     <QueryGate query={reportQuery} pendingLabel={t(REPORT_LABEL_KEY[report])}>
       {(run) => (
         <>
-          <Card title={t(REPORT_LABEL_KEY[report])}>
-            {reportSub[report] && (
-              <p className="sub">
-                {t(reportSub[report], { currency: run.base_currency ?? "" })}
-              </p>
-            )}
-            <ReportBody
-              report={report}
-              run={run}
-              stages={stages}
-              locale={locale}
-            />
-            {/* The frame every figure above was cut in: the instant, and the
-                zone that instant is stated in. A total with no zone beside it
-                is a number a reader places by assumption, and the assumption
-                is usually their own.
-
-                It does NOT state a currency, and that is still the point,
-                though for a narrower reason than it once was. The stage table
-                and the forecast strip are both converted now and both name
-                their base currency themselves; open-deals-per-company is not,
-                and prints a currency COLUMN because its rows are native. So
-                the figures above are no longer all in several currencies at
-                once — but they are not all in one either, and a single line
-                over the card cannot say something true of every block beneath
-                it.
-
-                The frame used to end in `run.base_currency`, which read as the
-                denomination of numbers that were never converted into it: a
-                reader taking it at its word read ₫367,620,000,000 as a euro
-                figure. That is the failure this omission exists to prevent,
-                and it stays available for exactly as long as one block on the
-                tab is unconverted.
-
-                Drawn only when the server sent both halves: a caption naming
-                one of the two would be worse than none, and a server
-                mid-upgrade is exactly where a partial one arrives. */}
-            {run.as_of && run.timezone && (
-              <p className="sub analytics-frame">
-                {t("analytics.frame", {
-                  asOf: formatDateTime(run.as_of, locale, run.timezone),
-                  zone: run.timezone,
-                })}
-              </p>
-            )}
-            <div className="card-actions">
-              {/* A toggle, and it says so: the button reveals and hides the
-                  card below, so it announces the open state and names what
-                  it controls. */}
+          <Panel
+            title={t(REPORT_LABEL_KEY[report])}
+            // The verb that reveals the derivation under this panel: it
+            // announces its open state and names what it controls, so a
+            // reader who cannot see the panel appear is still told it did.
+            actions={
               <Button
                 small
                 aria-expanded={explain}
@@ -1776,10 +1744,41 @@ function ReportCard({
               >
                 {t("explain.open")}
               </Button>
-            </div>
-          </Card>
+            }
+          >
+            <PanelBody>
+              {reportSub[report] && (
+                <p className="t-sub">
+                  {t(reportSub[report], { currency: run.base_currency ?? "" })}
+                </p>
+              )}
+              <ReportBody
+                report={report}
+                run={run}
+                stages={stages}
+                locale={locale}
+              />
+              {/* The frame every figure above was cut in: the instant and
+                  the zone it is stated in, because a total with no zone is a
+                  number a reader places by assumption.
+
+                  It names no CURRENCY and must not: open-deals-per-company
+                  prints native rows beside converted blocks, so one line can
+                  say nothing true of them all — naming one read
+                  ₫367,620,000,000 as a euro figure. Drawn only when the
+                  server sent both halves; half a frame is worse than none. */}
+              {run.as_of && run.timezone && (
+                <p className="t-caption">
+                  {t("analytics.frame", {
+                    asOf: formatDateTime(run.as_of, locale, run.timezone),
+                    zone: run.timezone,
+                  })}
+                </p>
+              )}
+            </PanelBody>
+          </Panel>
           {explain && (
-            <ExplainCard
+            <ExplainPanel
               id={explainId}
               url={derivationUrl}
               query={derivationQuery}
