@@ -199,7 +199,15 @@ func attemptRightsCase(ctx context.Context, tx pgx.Tx, kind string, personID ids
 		oneCalendarMonthAfter(receivedAt), submissionID, receipt,
 	).Scan(&caseID, &stored, &created)
 	if err != nil {
-		_ = nested.Rollback(ctx)
+		// The insert's failure is what the caller needs, and the savepoint's
+		// rollback rides with it rather than being dropped: a rollback that
+		// fails usually means the connection is already gone, which turns a
+		// legible constraint violation into a confusing one further up. Joined
+		// rather than logged because this store carries no logger, and errors.Is
+		// still reaches the insert's own sentinel through the join.
+		if rbErr := nested.Rollback(ctx); rbErr != nil {
+			err = errors.Join(err, fmt.Errorf("rolling the savepoint back: %w", rbErr))
+		}
 		return ids.UUID{}, "", false, fmt.Errorf(
 			"consent: opening the rights case this request owes an answer to: %w", err)
 	}

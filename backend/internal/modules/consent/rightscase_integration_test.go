@@ -267,7 +267,14 @@ func TestAReplayedProposalOpensNoSecondCase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("opening a transaction: %v", err)
 	}
-	defer func() { _ = tx.Rollback(context.Background()) }()
+	// This transaction is never committed — the case it opens is the subject and
+	// is read back inside it — so the rollback IS the cleanup and a failure to
+	// roll back is a leaked connection the next case would wait on.
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil {
+			t.Errorf("rolling back the probe transaction: %v", err)
+		}
+	}()
 
 	replayed, err := openRightsCaseTx(context.Background(), tx, e.person, submissionID,
 		submissionErasure, time.Now())
