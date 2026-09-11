@@ -97,6 +97,7 @@ decision rather than an omission.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md) — run ONE production AI invocation site against input you supply (`make ai-probe`), and read every boundary between that input and the verdict as numbers.
 - [test-overlay-locally.md](how-to/test-overlay-locally.md) — validate the overlay end to end against the real HubSpot API, using an isolated developer test account and a committed fixture seed.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md) — build the self-contained folder that runs the whole stack with no Docker, on macOS (`make desktop`) or Windows (`make desktop-win`), then run, configure and update an installation.
+- [cut-a-release.md](how-to/cut-a-release.md) — push a `v*` tag and get a GitHub release with both desktop bundles attached: what the tag's shelf decides, what a failed or re-run lane leaves behind, and why this is not the constellation dist release.
 
 ### Reference — look it up
 - [modules.md](reference/modules.md) — the modules: what each owns, its tables, its HTTP surface.
@@ -107,7 +108,7 @@ decision rather than an omission.
 - [ai-certification.md](reference/ai-certification.md) — what the AI certification lane covers: every shipped invocation site, the scenarios it is scored against with a link to each case, an index naming the best model still measured for each site, and a table per (provider, model, env) binding, with `ai-certification.json` beside it carrying the same numbers for a reader who wants to analyse them. Generated from the corpus, the records and the invocation-site census, never hand-edited; a stale record says which scenario moved under it.
 - [mcp-tool-coverage.md](reference/mcp-tool-coverage.md) — which served MCP tools the USE-CASE lane actually drives: per tool, the cases that require it, what those cases scored and on which model, the scheduled agents that attach it, and what it costs. With `mcp-tool-coverage.json` beside it. Generated from the served surface, `e2e/llm/scenarios` and the verdicts that lane commits, never hand-edited. It reads that lane ALONE — single steps are `ai-certification.md`’s question — and it answers what neither page does: a tool can be paid for on every step of every run and be required by no case at all.
 - [supply-chain.md](reference/supply-chain.md) — the source-tree SBOMs, the license gate, keyless signing, and the pinned toolchain.
-- [ci-workflows.md](reference/ci-workflows.md) — the eight workflows that run beside the merge gate rather than inside it: what each triggers on, what it does and does not gate, and what a red one means.
+- [ci-workflows.md](reference/ci-workflows.md) — the nine workflows that run beside the merge gate rather than inside it: what each triggers on, what it does and does not gate, and what a red one means.
 
 Several reference pages are **generated** and say so in their own first lines —
 `mcp-info`, `agent-tool-budget`, `ai-certification`, `mcp-tool-coverage`, `rbac-matrix`,
