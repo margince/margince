@@ -1135,6 +1135,45 @@ func (e AssignLeadOutcomeKind) Valid() bool {
 	}
 }
 
+// Defines values for AssignmentRecordType.
+const (
+	AssignmentRecordTypeCompany AssignmentRecordType = "company"
+	AssignmentRecordTypeDeal    AssignmentRecordType = "deal"
+	AssignmentRecordTypeProject AssignmentRecordType = "project"
+)
+
+// Valid indicates whether the value is a known member of the AssignmentRecordType enum.
+func (e AssignmentRecordType) Valid() bool {
+	switch e {
+	case AssignmentRecordTypeCompany:
+		return true
+	case AssignmentRecordTypeDeal:
+		return true
+	case AssignmentRecordTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssignmentSubjectKind.
+const (
+	AssignmentSubjectKindTeam AssignmentSubjectKind = "team"
+	AssignmentSubjectKindUser AssignmentSubjectKind = "user"
+)
+
+// Valid indicates whether the value is a known member of the AssignmentSubjectKind enum.
+func (e AssignmentSubjectKind) Valid() bool {
+	switch e {
+	case AssignmentSubjectKindTeam:
+		return true
+	case AssignmentSubjectKindUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssistantConfiguredModelProvider.
 const (
 	AssistantConfiguredModelProviderAssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
@@ -18789,6 +18828,12 @@ type AssignLeadsResult struct {
 	Results []AssignLeadOutcome `json:"results"`
 }
 
+// AssignmentRecordType The kind of record an assignment hangs on.
+type AssignmentRecordType string
+
+// AssignmentSubjectKind Whether the responsible party is one person or a whole team.
+type AssignmentSubjectKind string
+
 // AssistantConfiguredModel defines model for AssistantConfiguredModel.
 type AssistantConfiguredModel struct {
 	Model    string                           `json:"model"`
@@ -24813,6 +24858,15 @@ type CreateProjectRequest struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// CreateRecordAssignmentRequest defines model for CreateRecordAssignmentRequest.
+type CreateRecordAssignmentRequest struct {
+	RoleId    openapi_types.UUID `json:"role_id"`
+	SubjectId openapi_types.UUID `json:"subject_id"`
+
+	// SubjectKind Whether the responsible party is one person or a whole team.
+	SubjectKind AssignmentSubjectKind `json:"subject_kind"`
+}
+
 // CreateRecordGrantRequest defines model for CreateRecordGrantRequest.
 type CreateRecordGrantRequest struct {
 	Access      CreateRecordGrantRequestAccess      `json:"access"`
@@ -24832,6 +24886,17 @@ type CreateRecordGrantRequestRecordType string
 
 // CreateRecordGrantRequestSubjectType defines model for CreateRecordGrantRequest.SubjectType.
 type CreateRecordGrantRequestSubjectType string
+
+// CreateRecordRoleRequest defines model for CreateRecordRoleRequest.
+type CreateRecordRoleRequest struct {
+	AssigneeKinds []AssignmentSubjectKind `json:"assignee_kinds"`
+
+	// Key Derived from the label when omitted.
+	Key         *string                `json:"key,omitempty"`
+	Label       string                 `json:"label"`
+	RecordTypes []AssignmentRecordType `json:"record_types"`
+	SortOrder   *int                   `json:"sort_order,omitempty"`
+}
 
 // CreateRelationshipRequest defines model for CreateRelationshipRequest.
 type CreateRelationshipRequest struct {
@@ -32458,6 +32523,44 @@ type Receipt struct {
 	Undo *AppliedUndo `json:"undo,omitempty"`
 }
 
+// RecordAssignment One responsibility held on one record. It records WHO is responsible, never who may see the record: visibility stays with ownership and record grants, and adding an assignment changes nobody's access.
+type RecordAssignment struct {
+	CreatedAt *time.Time         `json:"created_at,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+	RecordId  openapi_types.UUID `json:"record_id"`
+
+	// RecordType The kind of record an assignment hangs on.
+	RecordType AssignmentRecordType `json:"record_type"`
+
+	// RoleActive False when the role has since been retired. The assignment remains valid.
+	RoleActive *bool              `json:"role_active,omitempty"`
+	RoleId     openapi_types.UUID `json:"role_id"`
+	RoleKey    *string            `json:"role_key,omitempty"`
+	RoleLabel  *string            `json:"role_label,omitempty"`
+
+	// Source What wrote this assignment.
+	Source *string `json:"source,omitempty"`
+
+	// SubjectId The assigned user or team, per `subject_kind`.
+	SubjectId openapi_types.UUID `json:"subject_id"`
+
+	// SubjectInactive True when the assigned user is deactivated. The assignment stays and keeps its label, so history stays readable; it simply reads as needing a successor.
+	SubjectInactive *bool `json:"subject_inactive,omitempty"`
+
+	// SubjectKind Whether the responsible party is one person or a whole team.
+	SubjectKind AssignmentSubjectKind `json:"subject_kind"`
+
+	// SubjectName Resolved server-side so the row renders without a second lookup.
+	SubjectName *string    `json:"subject_name,omitempty"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+	Version     *int64     `json:"version,omitempty"`
+}
+
+// RecordAssignmentListResponse defines model for RecordAssignmentListResponse.
+type RecordAssignmentListResponse struct {
+	Data []RecordAssignment `json:"data"`
+}
+
 // RecordClaim defines model for RecordClaim.
 type RecordClaim struct {
 	// OwnerId The caller — the record's owner now.
@@ -32627,6 +32730,39 @@ type RecordQualifyingEventRequest struct {
 // records the product already holds, and a hand-written one would be a second, unbacked
 // answer to a question the data already settles.
 type RecordQualifyingEventRequestKind string
+
+// RecordRole One administered responsibility a person or team can hold on a record. The role says WHAT someone is responsible for; it grants no access of its own.
+type RecordRole struct {
+	// Active False is retired: existing assignments keep rendering their label, but the role is refused for a new assignment.
+	Active bool `json:"active"`
+
+	// AssigneeKinds Whether a user, a team, or either may hold this role.
+	AssigneeKinds []AssignmentSubjectKind `json:"assignee_kinds"`
+	CreatedAt     *time.Time              `json:"created_at,omitempty"`
+	Id            openapi_types.UUID      `json:"id"`
+
+	// Key The stable identifier. Lowercase, never changes once created — relabelling edits `label`, so a report keyed on the role survives the rename.
+	Key string `json:"key"`
+
+	// Label What readers see.
+	Label string `json:"label"`
+
+	// RecordTypes Which record kinds this role may be held on.
+	RecordTypes []AssignmentRecordType `json:"record_types"`
+
+	// SortOrder Display order in pickers and settings.
+	SortOrder int `json:"sort_order"`
+
+	// System Seeded with the installation. Fully editable; it simply cannot be removed.
+	System    *bool      `json:"system,omitempty"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	Version   *int64     `json:"version,omitempty"`
+}
+
+// RecordRoleListResponse defines model for RecordRoleListResponse.
+type RecordRoleListResponse struct {
+	Data []RecordRole `json:"data"`
+}
 
 // RecordTag One tag on one record, with the assignment that put it there.
 type RecordTag struct {
@@ -36115,6 +36251,24 @@ type UpdateProviderConnectionRequest struct {
 	Configuration ProviderConfigurationPatch `json:"configuration"`
 }
 
+// UpdateRecordAssignmentRequest Reassign in place: the record never moves, so only the responsible party and the role may change. Omitted fields are left alone.
+type UpdateRecordAssignmentRequest struct {
+	RoleId    *openapi_types.UUID `json:"role_id,omitempty"`
+	SubjectId *openapi_types.UUID `json:"subject_id,omitempty"`
+
+	// SubjectKind Whether the responsible party is one person or a whole team.
+	SubjectKind *AssignmentSubjectKind `json:"subject_kind,omitempty"`
+}
+
+// UpdateRecordRoleRequest Every field optional; an omitted one is left alone. Narrowing `record_types` or `assignee_kinds` is refused while a live assignment depends on what would be removed — retire the role and add its replacement instead.
+type UpdateRecordRoleRequest struct {
+	Active        *bool                    `json:"active,omitempty"`
+	AssigneeKinds *[]AssignmentSubjectKind `json:"assignee_kinds,omitempty"`
+	Label         *string                  `json:"label,omitempty"`
+	RecordTypes   *[]AssignmentRecordType  `json:"record_types,omitempty"`
+	SortOrder     *int                     `json:"sort_order,omitempty"`
+}
+
 // UpdateRelationshipRequest defines model for UpdateRelationshipRequest.
 type UpdateRelationshipRequest struct {
 	EndedAt          *openapi_types.Date `json:"ended_at,omitempty"`
@@ -39060,6 +39214,25 @@ type ApproveApprovalParams struct {
 // RejectApprovalJSONBody defines parameters for RejectApproval.
 type RejectApprovalJSONBody struct {
 	Reason *string `json:"reason,omitempty"`
+}
+
+// UpdateRecordAssignmentParams defines parameters for UpdateRecordAssignment.
+type UpdateRecordAssignmentParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // ListAttachmentsParams defines parameters for ListAttachments.
@@ -42478,6 +42651,44 @@ type RevokeRecordGrantParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// CreateRecordRoleParams defines parameters for CreateRecordRole.
+type CreateRecordRoleParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// UpdateRecordRoleParams defines parameters for UpdateRecordRole.
+type UpdateRecordRoleParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // GetRecordContextParams defines parameters for GetRecordContext.
 type GetRecordContextParams struct {
 	// MaxItems Max items per section (default 5, capped at 25).
@@ -42525,6 +42736,25 @@ type ClaimRecordParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// CreateRecordAssignmentParams defines parameters for CreateRecordAssignment.
+type CreateRecordAssignmentParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // ListRelationshipsParams defines parameters for ListRelationships.
@@ -43606,6 +43836,9 @@ type ApproveApprovalJSONRequestBody = ApproveRequest
 // RejectApprovalJSONRequestBody defines body for RejectApproval for application/json ContentType.
 type RejectApprovalJSONRequestBody RejectApprovalJSONBody
 
+// UpdateRecordAssignmentJSONRequestBody defines body for UpdateRecordAssignment for application/json ContentType.
+type UpdateRecordAssignmentJSONRequestBody = UpdateRecordAssignmentRequest
+
 // UploadAttachmentMultipartRequestBody defines body for UploadAttachment for multipart/form-data ContentType.
 type UploadAttachmentMultipartRequestBody UploadAttachmentMultipartBody
 
@@ -44139,6 +44372,15 @@ type ReplyBuyerRoomThreadJSONRequestBody = PostDealRoomCommentRequest
 
 // CreateRecordGrantJSONRequestBody defines body for CreateRecordGrant for application/json ContentType.
 type CreateRecordGrantJSONRequestBody = CreateRecordGrantRequest
+
+// CreateRecordRoleJSONRequestBody defines body for CreateRecordRole for application/json ContentType.
+type CreateRecordRoleJSONRequestBody = CreateRecordRoleRequest
+
+// UpdateRecordRoleJSONRequestBody defines body for UpdateRecordRole for application/json ContentType.
+type UpdateRecordRoleJSONRequestBody = UpdateRecordRoleRequest
+
+// CreateRecordAssignmentJSONRequestBody defines body for CreateRecordAssignment for application/json ContentType.
+type CreateRecordAssignmentJSONRequestBody = CreateRecordAssignmentRequest
 
 // CreateRelationshipJSONRequestBody defines body for CreateRelationship for application/json ContentType.
 type CreateRelationshipJSONRequestBody = CreateRelationshipRequest
@@ -52577,6 +52819,12 @@ type ServerInterface interface {
 	// Reject a staged action (discards it; nothing commits).
 	// (POST /approvals/{id}/reject)
 	RejectApproval(w http.ResponseWriter, r *http.Request, id Id)
+	// End a responsibility, keeping it in history.
+	// (DELETE /assignments/{id})
+	ArchiveRecordAssignment(w http.ResponseWriter, r *http.Request, id Id)
+	// Hand a responsibility to someone else, or change its role.
+	// (PATCH /assignments/{id})
+	UpdateRecordAssignment(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordAssignmentParams)
 	// Minimal public identity and configuration posture for the Margince AI presence.
 	// (GET /assistant/profile)
 	GetAssistantProfile(w http.ResponseWriter, r *http.Request)
@@ -53918,6 +54166,15 @@ type ServerInterface interface {
 	// Revoke a manual record grant (human-only).
 	// (DELETE /record-grants/{id})
 	RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams)
+	// List responsibility roles, active and retired, in display order.
+	// (GET /record-roles)
+	ListRecordRoles(w http.ResponseWriter, r *http.Request)
+	// Add a responsibility role.
+	// (POST /record-roles)
+	CreateRecordRole(w http.ResponseWriter, r *http.Request, params CreateRecordRoleParams)
+	// Relabel, reorder, re-scope or retire a responsibility role.
+	// (PATCH /record-roles/{id})
+	UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams)
 	// The tags on one record, and who put them there.
 	// (GET /records/{entity_type}/{entity_id}/tags)
 	GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
@@ -53933,6 +54190,12 @@ type ServerInterface interface {
 	// Take ownership of a customer record.
 	// (POST /records/{record_type}/{id}/claim)
 	ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams)
+	// Who is responsible for this record, by role.
+	// (GET /records/{record_type}/{record_id}/assignments)
+	ListRecordAssignments(w http.ResponseWriter, r *http.Request, recordType AssignmentRecordType, recordId openapi_types.UUID)
+	// Make a person or team responsible for this record.
+	// (POST /records/{record_type}/{record_id}/assignments)
+	CreateRecordAssignment(w http.ResponseWriter, r *http.Request, recordType AssignmentRecordType, recordId openapi_types.UUID, params CreateRecordAssignmentParams)
 	// List relationships (employment, deal_stakeholder, or partner edges).
 	// (GET /relationships)
 	ListRelationships(w http.ResponseWriter, r *http.Request, params ListRelationshipsParams)
@@ -54647,6 +54910,18 @@ func (_ Unimplemented) ApproveApproval(w http.ResponseWriter, r *http.Request, i
 // Reject a staged action (discards it; nothing commits).
 // (POST /approvals/{id}/reject)
 func (_ Unimplemented) RejectApproval(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// End a responsibility, keeping it in history.
+// (DELETE /assignments/{id})
+func (_ Unimplemented) ArchiveRecordAssignment(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Hand a responsibility to someone else, or change its role.
+// (PATCH /assignments/{id})
+func (_ Unimplemented) UpdateRecordAssignment(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordAssignmentParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -57332,6 +57607,24 @@ func (_ Unimplemented) RevokeRecordGrant(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List responsibility roles, active and retired, in display order.
+// (GET /record-roles)
+func (_ Unimplemented) ListRecordRoles(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a responsibility role.
+// (POST /record-roles)
+func (_ Unimplemented) CreateRecordRole(w http.ResponseWriter, r *http.Request, params CreateRecordRoleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Relabel, reorder, re-scope or retire a responsibility role.
+// (PATCH /record-roles/{id})
+func (_ Unimplemented) UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The tags on one record, and who put them there.
 // (GET /records/{entity_type}/{entity_id}/tags)
 func (_ Unimplemented) GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID) {
@@ -57359,6 +57652,18 @@ func (_ Unimplemented) RestoreRecordChange(w http.ResponseWriter, r *http.Reques
 // Take ownership of a customer record.
 // (POST /records/{record_type}/{id}/claim)
 func (_ Unimplemented) ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Who is responsible for this record, by role.
+// (GET /records/{record_type}/{record_id}/assignments)
+func (_ Unimplemented) ListRecordAssignments(w http.ResponseWriter, r *http.Request, recordType AssignmentRecordType, recordId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Make a person or team responsible for this record.
+// (POST /records/{record_type}/{record_id}/assignments)
+func (_ Unimplemented) CreateRecordAssignment(w http.ResponseWriter, r *http.Request, recordType AssignmentRecordType, recordId openapi_types.UUID, params CreateRecordAssignmentParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -60561,6 +60866,98 @@ func (siw *ServerInterfaceWrapper) RejectApproval(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RejectApproval(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveRecordAssignment operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveRecordAssignment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveRecordAssignment(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateRecordAssignment operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRecordAssignment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateRecordAssignmentParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateRecordAssignment(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -79239,6 +79636,131 @@ func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListRecordRoles operation middleware
+func (siw *ServerInterfaceWrapper) ListRecordRoles(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRecordRoles(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateRecordRole operation middleware
+func (siw *ServerInterfaceWrapper) CreateRecordRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateRecordRoleParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateRecordRole(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateRecordRole operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateRecordRoleParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateRecordRole(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetRecordTags operation middleware
 func (siw *ServerInterfaceWrapper) GetRecordTags(w http.ResponseWriter, r *http.Request) {
 
@@ -79556,6 +80078,116 @@ func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ClaimRecord(w, r, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListRecordAssignments operation middleware
+func (siw *ServerInterfaceWrapper) ListRecordAssignments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType AssignmentRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "record_id" -------------
+	var recordId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_id", chi.URLParam(r, "record_id"), &recordId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRecordAssignments(w, r, recordType, recordId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateRecordAssignment operation middleware
+func (siw *ServerInterfaceWrapper) CreateRecordAssignment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType AssignmentRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "record_id" -------------
+	var recordId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_id", chi.URLParam(r, "record_id"), &recordId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateRecordAssignmentParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateRecordAssignment(w, r, recordType, recordId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -85146,6 +85778,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/approvals/{id}/reject", wrapper.RejectApproval)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/assignments/{id}", wrapper.ArchiveRecordAssignment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/assignments/{id}", wrapper.UpdateRecordAssignment)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/assistant/profile", wrapper.GetAssistantProfile)
 	})
 	r.Group(func(r chi.Router) {
@@ -86487,6 +87125,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/record-grants/{id}", wrapper.RevokeRecordGrant)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/record-roles", wrapper.ListRecordRoles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/record-roles", wrapper.CreateRecordRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/record-roles/{id}", wrapper.UpdateRecordRole)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/tags", wrapper.GetRecordTags)
 	})
 	r.Group(func(r chi.Router) {
@@ -86500,6 +87147,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/records/{record_type}/{id}/claim", wrapper.ClaimRecord)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{record_type}/{record_id}/assignments", wrapper.ListRecordAssignments)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/records/{record_type}/{record_id}/assignments", wrapper.CreateRecordAssignment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/relationships", wrapper.ListRelationships)

@@ -3621,6 +3621,11 @@ public.idx_project_last_activity_keyset CREATE INDEX idx_project_last_activity_k
 public.idx_project_name_trgm CREATE INDEX idx_project_name_trgm ON public.project USING gin (f_unaccent(lower(name)) gin_trgm_ops)
 public.idx_project_owner CREATE INDEX idx_project_owner ON public.project USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_project_search CREATE INDEX idx_project_search ON public.project USING gin (search_tsv)
+public.idx_record_assignment_company CREATE INDEX idx_record_assignment_company ON public.record_assignment USING btree (company_id) WHERE ((company_id IS NOT NULL) AND (archived_at IS NULL))
+public.idx_record_assignment_deal CREATE INDEX idx_record_assignment_deal ON public.record_assignment USING btree (deal_id) WHERE ((deal_id IS NOT NULL) AND (archived_at IS NULL))
+public.idx_record_assignment_project CREATE INDEX idx_record_assignment_project ON public.record_assignment USING btree (project_id) WHERE ((project_id IS NOT NULL) AND (archived_at IS NULL))
+public.idx_record_assignment_team CREATE INDEX idx_record_assignment_team ON public.record_assignment USING btree (team_id) WHERE ((team_id IS NOT NULL) AND (archived_at IS NULL))
+public.idx_record_assignment_user CREATE INDEX idx_record_assignment_user ON public.record_assignment USING btree (user_id) WHERE ((user_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_record_grant_record CREATE INDEX idx_record_grant_record ON public.record_grant USING btree (record_type, record_id)
 public.idx_record_grant_subject CREATE INDEX idx_record_grant_subject ON public.record_grant USING btree (subject_type, subject_id)
 public.idx_rel_company_people CREATE INDEX idx_rel_company_people ON public.relationship USING btree (company_id) WHERE ((kind = 'employment'::text) AND (archived_at IS NULL))
@@ -5026,6 +5031,31 @@ public.raw_capture.source_system text NOT NULL gen=- def=-
 public.raw_capture_pkey CREATE UNIQUE INDEX raw_capture_pkey ON public.raw_capture USING btree (id)
 public.raw_capture_source_unique CREATE UNIQUE INDEX raw_capture_source_unique ON public.raw_capture USING btree (source_system, source_id)
 public.raw_capture_unslimmed_idx CREATE INDEX raw_capture_unslimmed_idx ON public.raw_capture USING btree (received_at) WHERE (parts_slimmed_at IS NULL)
+public.record_assignment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.record_assignment.archived_at timestamp with time zone gen=- def=-
+public.record_assignment.captured_by text gen=- def=-
+public.record_assignment.company_id uuid gen=- def=-
+public.record_assignment.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.record_assignment.deal_id uuid gen=- def=-
+public.record_assignment.id uuid NOT NULL gen=- def=uuidv7()
+public.record_assignment.project_id uuid gen=- def=-
+public.record_assignment.record_assignment_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.record_assignment.record_assignment_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.record_assignment.record_assignment_one_assignee CHECK ((num_nonnulls(user_id, team_id) = 1))
+public.record_assignment.record_assignment_one_parent CHECK ((num_nonnulls(company_id, deal_id, project_id) = 1))
+public.record_assignment.record_assignment_pkey PRIMARY KEY (id)
+public.record_assignment.record_assignment_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
+public.record_assignment.record_assignment_role_id_fkey FOREIGN KEY (role_id) REFERENCES record_role(id) ON DELETE RESTRICT
+public.record_assignment.record_assignment_team_id_fkey FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE RESTRICT
+public.record_assignment.record_assignment_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.record_assignment.role_id uuid NOT NULL gen=- def=-
+public.record_assignment.source text gen=- def=-
+public.record_assignment.team_id uuid gen=- def=-
+public.record_assignment.trg_record_assignment_updated CREATE TRIGGER trg_record_assignment_updated BEFORE UPDATE ON public.record_assignment FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.record_assignment.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.record_assignment.user_id uuid gen=- def=-
+public.record_assignment.version bigint NOT NULL gen=- def=1
+public.record_assignment_pkey CREATE UNIQUE INDEX record_assignment_pkey ON public.record_assignment USING btree (id)
 public.record_grant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.record_grant.access text NOT NULL gen=- def=-
 public.record_grant.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5046,6 +5076,27 @@ public.record_grant.subject_type text NOT NULL gen=- def=-
 public.record_grant.version bigint NOT NULL gen=- def=1
 public.record_grant_pkey CREATE UNIQUE INDEX record_grant_pkey ON public.record_grant USING btree (id)
 public.record_grant_unique CREATE UNIQUE INDEX record_grant_unique ON public.record_grant USING btree (record_type, record_id, subject_type, subject_id)
+public.record_role acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.record_role.active boolean NOT NULL gen=- def=true
+public.record_role.assignee_kinds text[] NOT NULL gen=- def=-
+public.record_role.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.record_role.id uuid NOT NULL gen=- def=uuidv7()
+public.record_role.key text NOT NULL gen=- def=-
+public.record_role.label text NOT NULL gen=- def=-
+public.record_role.record_role_assignee_kinds_bounded CHECK (((cardinality(assignee_kinds) > 0) AND (assignee_kinds <@ ARRAY['user'::text, 'team'::text])))
+public.record_role.record_role_key_key UNIQUE (key)
+public.record_role.record_role_key_shape CHECK (((key = lower(key)) AND (length(btrim(key)) > 0)))
+public.record_role.record_role_label_present CHECK ((length(btrim(label)) > 0))
+public.record_role.record_role_pkey PRIMARY KEY (id)
+public.record_role.record_role_record_types_bounded CHECK (((cardinality(record_types) > 0) AND (record_types <@ ARRAY['company'::text, 'deal'::text, 'project'::text])))
+public.record_role.record_types text[] NOT NULL gen=- def=-
+public.record_role.sort_order integer NOT NULL gen=- def=0
+public.record_role.system boolean NOT NULL gen=- def=false
+public.record_role.trg_record_role_updated CREATE TRIGGER trg_record_role_updated BEFORE UPDATE ON public.record_role FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.record_role.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.record_role.version bigint NOT NULL gen=- def=1
+public.record_role_key_key CREATE UNIQUE INDEX record_role_key_key ON public.record_role USING btree (key)
+public.record_role_pkey CREATE UNIQUE INDEX record_role_pkey ON public.record_role USING btree (id)
 public.refresh_last_activity_for_link(pid uuid, did uuid, cid uuid) secdef=false cfg=- acl=- 
 DECLARE
   reached uuid;
@@ -5928,6 +5979,12 @@ public.uq_product_sku CREATE UNIQUE INDEX uq_product_sku ON public.product USING
 public.uq_product_ws_id CREATE UNIQUE INDEX uq_product_ws_id ON public.product USING btree (id)
 public.uq_project_key CREATE UNIQUE INDEX uq_project_key ON public.project USING btree (lower(key)) WHERE ((key IS NOT NULL) AND (archived_at IS NULL))
 public.uq_project_ws_id CREATE UNIQUE INDEX uq_project_ws_id ON public.project USING btree (id)
+public.uq_record_assignment_company_team CREATE UNIQUE INDEX uq_record_assignment_company_team ON public.record_assignment USING btree (company_id, role_id, team_id) WHERE ((company_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL))
+public.uq_record_assignment_company_user CREATE UNIQUE INDEX uq_record_assignment_company_user ON public.record_assignment USING btree (company_id, role_id, user_id) WHERE ((company_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL))
+public.uq_record_assignment_deal_team CREATE UNIQUE INDEX uq_record_assignment_deal_team ON public.record_assignment USING btree (deal_id, role_id, team_id) WHERE ((deal_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL))
+public.uq_record_assignment_deal_user CREATE UNIQUE INDEX uq_record_assignment_deal_user ON public.record_assignment USING btree (deal_id, role_id, user_id) WHERE ((deal_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL))
+public.uq_record_assignment_project_team CREATE UNIQUE INDEX uq_record_assignment_project_team ON public.record_assignment USING btree (project_id, role_id, team_id) WHERE ((project_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL))
+public.uq_record_assignment_project_user CREATE UNIQUE INDEX uq_record_assignment_project_user ON public.record_assignment USING btree (project_id, role_id, user_id) WHERE ((project_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_rel_current_primary_employer CREATE UNIQUE INDEX uq_rel_current_primary_employer ON public.relationship USING btree (person_id) WHERE ((kind = 'employment'::text) AND is_current_primary AND (archived_at IS NULL))
 public.uq_rel_deal_person_role CREATE UNIQUE INDEX uq_rel_deal_person_role ON public.relationship USING btree (deal_id, person_id, role) WHERE ((kind = 'deal_stakeholder'::text) AND (archived_at IS NULL))
 public.uq_rel_employment CREATE UNIQUE INDEX uq_rel_employment ON public.relationship USING btree (person_id, company_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL))

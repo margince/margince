@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/assignments"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -98,6 +99,7 @@ type (
 	forecastHandlers       = forecasting.Handlers
 	assuranceHandlers      = assurance.Handlers
 	introductionHandlers   = introductions.Handlers
+	assignmentHandlers     = assignments.Handlers
 )
 
 // wirePerson360 binds the person record page — the company page's
