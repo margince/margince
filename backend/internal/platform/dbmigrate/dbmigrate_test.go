@@ -281,6 +281,15 @@ func TestSupersededContentIsAdmittedAndNothingElseIs(t *testing.T) {
 // must equal what the file hashes to today, and its applied half must differ
 // from that. A stale source half silently stops excusing anything, which is the
 // failure nobody would notice until a deployed database refused to migrate.
+//
+// The APPLIED half cannot be checked from this tree, and nothing here pretends
+// to. It names bytes that no longer exist in the working tree — that is what
+// makes it the applied half — so what it describes survives in version control
+// and in the ledgers of the databases it names. A wrong one fails safe: it
+// matches no ledger, those databases keep getting the ordinary refusal, and no
+// unchecked content is ever let through, because a typo does not find a second
+// preimage of a SHA-256. Verify an applied digest when you ADD an entry, against
+// the content as committed; this test cannot do it for you later.
 func TestEveryEquivalenceMatchesTheMigrationThatShips(t *testing.T) {
 	t.Parallel()
 	for namespace, versions := range equivalentContent {
