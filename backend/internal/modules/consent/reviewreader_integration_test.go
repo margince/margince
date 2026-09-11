@@ -15,7 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-func TestReadingAnotherPersonsReviewPreservesItsInitiator(t *testing.T) {
+func TestReadingAnotherColleaguesReviewPreservesItsInitiator(t *testing.T) {
 	e := setupChannelConsent(t)
 	var opened Review
 	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
@@ -36,7 +36,7 @@ func TestReadingAnotherPersonsReviewPreservesItsInitiator(t *testing.T) {
 	reader := directorCtx(e.ws, ids.NewV7())
 	read, err := e.store.ReviewForReader(reader, opened.ID)
 	if err != nil {
-		t.Fatalf("reading another person's review: %v", err)
+		t.Fatalf("reading another colleague's review: %v", err)
 	}
 	if read.InitiatedBy != e.user {
 		t.Errorf("initiator = %s, want sender %s", read.InitiatedBy, e.user)

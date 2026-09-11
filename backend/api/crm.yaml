@@ -13344,7 +13344,7 @@ paths:
     get:
       tags: [Communication]
       operationId: listCommunicationReviews
-      security: [ { cookieAuth: [] } ]   # human session only — the rows name other people's addresses
+      security: [ { cookieAuth: [] } ]   # human session only — the rows name other contacts' addresses
       x-agent-access: human-only
       summary: Refused sends waiting on somebody who may decide them.
       description: |
@@ -13352,7 +13352,7 @@ paths:
 
         Gated on `communication_exception` at `read`, which is the verb for SEEING refusals rather
         than acting on them: directing a send takes `create`, and an installation can grant the
-        first without the second. The rows name other people's recipient addresses and why each was
+        first without the second. The rows name other contacts' recipient addresses and why each was
         refused, so a seat without that grant is not shown them.
 
         Installation-wide, with no team or ownership narrowing. Granting the read verb means
@@ -13360,7 +13360,7 @@ paths:
 
         EVERY WAITING REVIEW, not only the ones routed to the caller. Routing names no assignee: a
         rep asks the installation rather than a colleague, and whoever holds the authority answers.
-        An assignee-scoped list would leave a card nobody could find the moment the person it named
+        An assignee-scoped list would leave a card nobody could find the moment the colleague it named
         went on leave.
 
         Bounded. A list at its limit has more behind it, and `total` says so rather than leaving the

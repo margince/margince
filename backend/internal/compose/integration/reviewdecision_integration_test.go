@@ -270,7 +270,7 @@ func TestDirectingAReviewRetractsTheCardItWasRoutedTo(t *testing.T) {
 //
 // This is the gap the routing slice left. The approve button worked and the
 // thing it was about answered 404, because reading a review was scoped to the
-// person who pressed send. A reviewer acknowledged a warning about a message
+// colleague who pressed send. A reviewer acknowledged a warning about a message
 // they had never seen, which is the one thing an acknowledgement must not be.
 func TestADeciderCanReadTheRefusalTheyAreAskedAbout(t *testing.T) {
 	c := setupConsent(t)
@@ -370,7 +370,7 @@ func TestTheDecidersQueueListsWhatIsWaiting(t *testing.T) {
 }
 
 // A SEAT THAT CANNOT DECIDE SEES NOTHING, and that is the disclosure question
-// this queue turns on: the rows name other people's refused correspondence.
+// this queue turns on: the rows name other colleagues' refused correspondence.
 func TestASeatThatCannotDecideIsNotShownTheQueue(t *testing.T) {
 	c := setupConsent(t)
 
@@ -391,7 +391,7 @@ func TestASeatThatCannotDecideIsNotShownTheQueue(t *testing.T) {
 	}
 	if status := c.Call(t, "GET", "/v1/communication-reviews", nil, nil, nil); status == http.StatusOK {
 		t.Error("a seat that cannot direct a send was handed the queue of refused messages — " +
-			"other people's correspondence, to somebody with no reason to see it")
+			"other colleagues' correspondence, to somebody with no reason to see it")
 	}
 }
 
@@ -399,14 +399,14 @@ func TestASeatThatCannotDecideIsNotShownTheQueue(t *testing.T) {
 //
 // A decider must be able to READ any refusal they are asked about — that is the
 // gap this slice closed. Routing is not the same act: a seat that could route
-// anybody's review would be raising cards about other people's correspondence,
+// anybody's review would be raising cards about other colleagues' correspondence,
 // and somebody holding the exception grant can direct the send themselves
 // rather than asking a colleague to.
 //
-// So routing stays bound to the person whose message it was. This pins that: a
+// So routing stays bound to the colleague whose message it was. This pins that: a
 // review belonging to nobody in this session cannot be routed, even by a seat
 // that may read every review in the installation.
-func TestRoutingStaysBoundToThePersonWhoseMessageItWas(t *testing.T) {
+func TestRoutingStaysBoundToTheColleagueWhoseMessageItWas(t *testing.T) {
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {

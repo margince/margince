@@ -288,24 +288,24 @@ func ReturnToAskerTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, why stri
 //
 // THE DECIDER'S OWN QUEUE, and gated on the grant that makes them one. A seat
 // that cannot direct a send has nothing to do with this list, and handing it to
-// them would be disclosing other people's refused correspondence to somebody
+// them would be disclosing other colleagues' refused correspondence to somebody
 // with no reason to see it.
 //
 // EVERY WAITING REVIEW, not only the ones routed to them personally. Routing
 // names no assignee: a rep asks the installation, not a colleague, and whoever
 // holds the authority answers. An assignee-scoped list would leave a card
-// nobody could find the moment the person it named went on leave.
+// nobody could find the moment the colleague it named went on leave.
 //
 // BOUNDED, because a queue read has to answer in time whatever the backlog is.
 // A list at its limit is a list with more behind it, and the caller is told so
 // by the count rather than by discovering it.
 func (s *Store) AwaitingDecision(ctx context.Context, limit int) ([]Review, int, error) {
-	// A PERSON, not merely a principal auth.RequireHuman admits. That check
+	// A HUMAN, not merely a principal auth.RequireHuman admits. That check
 	// refuses buyers and agents and lets CONNECTORS through, and a connector
 	// runs with the granting human's own grants — so it would hold whatever
 	// this queue is gated on and could read the installation's refused
-	// correspondence wholesale. This list is a person's work queue.
-	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
+	// correspondence wholesale. This list is a colleague's work queue.
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return nil, 0, err
 	}
 	// READ rather than create, for ReviewForReader's reason: seeing the queue
@@ -320,7 +320,7 @@ func (s *Store) AwaitingDecision(ctx context.Context, limit int) ([]Review, int,
 	var out []Review
 	var total int
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Count and page share a statement snapshot, even when another person
+		// Count and page share a statement snapshot, even when another colleague
 		// routes or resolves a review while this request is reading.
 		rows, err := tx.Query(ctx, `
 			SELECT id, state, kind,
