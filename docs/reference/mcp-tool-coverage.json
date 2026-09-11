@@ -19,50 +19,45 @@
       "cases_that_reached_their_bar": 10,
       "cases_below_their_bar": 11,
       "runs": 63,
-      "passed": 29,
-      "reliability": 0.4603174603174603,
+      "passed": 30,
+      "reliability": 0.47619047619047616,
       "cases_below_their_bar_named": [
         "case10_finish_the_import",
+        "case1_log_it",
         "case20_put_it_in_the_board_pack",
-        "case23_find_us_a_slot",
+        "case21_what_are_we_closing",
         "case31_wrong_word_on_the_record",
         "case32_two_words_for_one_thing",
-        "case33_two_cards_for_one_company",
         "case41_close_the_project",
+        "case42_can_i_answer_on_whatsapp",
         "case4_use_the_moment",
         "case5_before_the_meeting",
-        "case6_ask_the_company",
-        "case8_whats_waiting"
+        "case6_ask_the_company"
       ]
     },
     {
       "model": "claude-opus-5",
       "cases_with_a_committed_run": 21,
-      "cases_that_reached_their_bar": 17,
-      "cases_below_their_bar": 4,
+      "cases_that_reached_their_bar": 19,
+      "cases_below_their_bar": 2,
       "runs": 63,
-      "passed": 50,
-      "reliability": 0.7936507936507936,
+      "passed": 57,
+      "reliability": 0.9047619047619048,
       "cases_below_their_bar_named": [
-        "case2_business_card",
         "case3_spreadsheet",
-        "case40_sort_the_queue",
         "case6_ask_the_company"
       ]
     },
     {
       "model": "claude-sonnet-5",
       "cases_with_a_committed_run": 21,
-      "cases_that_reached_their_bar": 13,
-      "cases_below_their_bar": 8,
+      "cases_that_reached_their_bar": 16,
+      "cases_below_their_bar": 5,
       "runs": 63,
-      "passed": 40,
-      "reliability": 0.6349206349206349,
+      "passed": 45,
+      "reliability": 0.7142857142857143,
       "cases_below_their_bar_named": [
-        "case20_put_it_in_the_board_pack",
-        "case2_business_card",
-        "case32_two_words_for_one_thing",
-        "case33_two_cards_for_one_company",
+        "case10_finish_the_import",
         "case41_close_the_project",
         "case4_use_the_moment",
         "case5_before_the_meeting",
@@ -135,14 +130,14 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 2,
+          "passed": 1,
           "pass_at": 2,
-          "held": true
+          "held": false
         },
         {
           "model": "claude-opus-5",
           "runs": 3,
-          "passed": 2,
+          "passed": 3,
           "pass_at": 2,
           "held": true
         },
@@ -172,23 +167,23 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 1,
+          "passed": 0,
           "pass_at": 2,
           "held": false
         },
         {
           "model": "claude-opus-5",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true
         },
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 3,
+          "passed": 0,
           "pass_at": 2,
-          "held": true
+          "held": false
         }
       ]
     },
@@ -206,23 +201,23 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true
         },
         {
           "model": "claude-opus-5",
           "runs": 3,
-          "passed": 1,
+          "passed": 3,
           "pass_at": 2,
-          "held": false
+          "held": true
         },
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false
+          "held": true
         }
       ]
     },
@@ -249,16 +244,16 @@
         {
           "model": "claude-opus-5",
           "runs": 3,
-          "passed": 2,
+          "passed": 3,
           "pass_at": 2,
           "held": true
         },
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false
+          "held": true
         }
       ]
     },
@@ -277,9 +272,9 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 3,
+          "passed": 1,
           "pass_at": 2,
-          "held": true
+          "held": false
         },
         {
           "model": "claude-opus-5",
@@ -312,7 +307,7 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 2,
+          "passed": 3,
           "pass_at": 2,
           "held": true
         },
@@ -347,9 +342,9 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 1,
+          "passed": 2,
           "pass_at": 2,
-          "held": false
+          "held": true
         },
         {
           "model": "claude-opus-5",
@@ -501,16 +496,16 @@
         {
           "model": "claude-opus-5",
           "runs": 3,
-          "passed": 2,
+          "passed": 3,
           "pass_at": 2,
           "held": true
         },
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false
+          "held": true
         }
       ]
     },
@@ -533,9 +528,9 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false
+          "held": true
         },
         {
           "model": "claude-opus-5",
@@ -547,9 +542,9 @@
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 1,
+          "passed": 3,
           "pass_at": 2,
-          "held": false
+          "held": true
         }
       ]
     },
@@ -575,14 +570,14 @@
         {
           "model": "claude-opus-5",
           "runs": 3,
-          "passed": 2,
+          "passed": 3,
           "pass_at": 2,
           "held": true
         },
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 1,
+          "passed": 0,
           "pass_at": 2,
           "held": false
         }
@@ -606,21 +601,21 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 2,
+          "passed": 3,
           "pass_at": 2,
           "held": true
         },
         {
           "model": "claude-opus-5",
           "runs": 3,
-          "passed": 1,
+          "passed": 3,
           "pass_at": 2,
-          "held": false
+          "held": true
         },
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 2,
+          "passed": 3,
           "pass_at": 2,
           "held": true
         }
@@ -642,7 +637,7 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 0,
+          "passed": 1,
           "pass_at": 2,
           "held": false
         },
@@ -678,14 +673,14 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 2,
+          "passed": 1,
           "pass_at": 2,
-          "held": true
+          "held": false
         },
         {
           "model": "claude-opus-5",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true
         },
@@ -715,7 +710,7 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 1,
+          "passed": 0,
           "pass_at": 2,
           "held": false
         },
@@ -729,7 +724,7 @@
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 1,
+          "passed": 0,
           "pass_at": 2,
           "held": false
         }
@@ -758,7 +753,7 @@
         {
           "model": "claude-opus-5",
           "runs": 3,
-          "passed": 0,
+          "passed": 1,
           "pass_at": 2,
           "held": false
         },
@@ -827,9 +822,9 @@
         {
           "model": "claude-haiku-4-5-20251001",
           "runs": 3,
-          "passed": 1,
+          "passed": 3,
           "pass_at": 2,
-          "held": false
+          "held": true
         },
         {
           "model": "claude-opus-5",
@@ -841,7 +836,7 @@
         {
           "model": "claude-sonnet-5",
           "runs": 3,
-          "passed": 2,
+          "passed": 3,
           "pass_at": 2,
           "held": true
         }
@@ -1830,25 +1825,27 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 6,
-          "passed": 3,
-          "reliability": 0.5,
+          "passed": 2,
+          "reliability": 0.3333333333333333,
           "cases_below_their_bar": [
             "case10_finish_the_import"
           ]
         },
         "claude-opus-5": {
           "runs": 6,
-          "passed": 4,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 0.5,
           "cases_below_their_bar": [
             "case3_spreadsheet"
           ]
         },
         "claude-sonnet-5": {
           "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "cases_below_their_bar": []
+          "passed": 3,
+          "reliability": 0.5,
+          "cases_below_their_bar": [
+            "case10_finish_the_import"
+          ]
         }
       }
     },
@@ -1872,9 +1869,12 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 6,
-          "passed": 4,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
+          "passed": 2,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case1_log_it",
+            "case42_can_i_answer_on_whatsapp"
+          ]
         },
         "claude-opus-5": {
           "runs": 6,
@@ -1907,11 +1907,9 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
@@ -1921,11 +1919,9 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -1946,9 +1942,11 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case21_what_are_we_closing"
+          ]
         },
         "claude-opus-5": {
           "runs": 3,
@@ -2010,14 +2008,14 @@
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
+          "passed": 0,
+          "reliability": 0,
           "cases_below_their_bar": [
             "case4_use_the_moment"
           ]
@@ -2042,25 +2040,23 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 6,
-          "passed": 5,
-          "reliability": 0.8333333333333334,
-          "cases_below_their_bar": []
+          "passed": 3,
+          "reliability": 0.5,
+          "cases_below_their_bar": [
+            "case1_log_it"
+          ]
         },
         "claude-opus-5": {
           "runs": 6,
-          "passed": 3,
-          "reliability": 0.5,
-          "cases_below_their_bar": [
-            "case2_business_card"
-          ]
+          "passed": 6,
+          "reliability": 1,
+          "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 6,
-          "passed": 3,
-          "reliability": 0.5,
-          "cases_below_their_bar": [
-            "case2_business_card"
-          ]
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2091,17 +2087,15 @@
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case20_put_it_in_the_board_pack"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2128,17 +2122,15 @@
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case20_put_it_in_the_board_pack"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2178,8 +2170,8 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
+          "passed": 0,
+          "reliability": 0,
           "cases_below_their_bar": [
             "case5_before_the_meeting"
           ]
@@ -2192,8 +2184,8 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
+          "passed": 0,
+          "reliability": 0,
           "cases_below_their_bar": [
             "case5_before_the_meeting"
           ]
@@ -2229,8 +2221,8 @@
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
           "cases_below_their_bar": [
             "case6_ask_the_company"
           ]
@@ -2260,8 +2252,8 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
           "cases_below_their_bar": [
             "case41_close_the_project"
           ]
@@ -2297,11 +2289,9 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case23_find_us_a_slot"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
@@ -2332,22 +2322,20 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case40_sort_the_queue"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -2367,11 +2355,9 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
@@ -2381,11 +2367,9 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2404,11 +2388,9 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
@@ -2418,11 +2400,9 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2474,11 +2454,9 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case8_whats_waiting"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
@@ -2488,8 +2466,8 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -2512,11 +2490,9 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case8_whats_waiting"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
@@ -2526,8 +2502,8 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -2547,22 +2523,20 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case40_sort_the_queue"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -2617,23 +2591,25 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
+          "passed": 0,
+          "reliability": 0,
           "cases_below_their_bar": [
             "case10_finish_the_import"
           ]
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case10_finish_the_import"
+          ]
         }
       }
     },
@@ -2652,22 +2628,20 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case40_sort_the_queue"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -2728,17 +2702,15 @@
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case32_two_words_for_one_thing"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2765,17 +2737,15 @@
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case32_two_words_for_one_thing"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2796,8 +2766,8 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-opus-5": {
@@ -2833,11 +2803,9 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
@@ -2847,11 +2815,9 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case33_two_cards_for_one_company"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -2903,14 +2869,16 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case42_can_i_answer_on_whatsapp"
+          ]
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
@@ -2971,8 +2939,8 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
           "cases_below_their_bar": [
             "case41_close_the_project"
           ]
@@ -3010,11 +2978,9 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case8_whats_waiting"
-          ]
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
         },
         "claude-opus-5": {
           "runs": 3,
@@ -3024,8 +2990,8 @@
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -3094,17 +3060,15 @@
         },
         "claude-opus-5": {
           "runs": 6,
-          "passed": 5,
-          "reliability": 0.8333333333333334,
+          "passed": 6,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 6,
-          "passed": 3,
-          "reliability": 0.5,
-          "cases_below_their_bar": [
-            "case32_two_words_for_one_thing"
-          ]
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -3134,17 +3098,15 @@
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case32_two_words_for_one_thing"
-          ]
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -3165,23 +3127,25 @@
       "measured_by_model": {
         "claude-haiku-4-5-20251001": {
           "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
+          "passed": 0,
+          "reliability": 0,
           "cases_below_their_bar": [
             "case10_finish_the_import"
           ]
         },
         "claude-opus-5": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case10_finish_the_import"
+          ]
         }
       }
     }
