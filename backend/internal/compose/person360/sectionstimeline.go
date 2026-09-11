@@ -294,7 +294,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 	// is composed from the shared helper: a person page whose mail showed no
 	// paperclip while the same rows off /activities showed one is the drift
 	// this twin exists to avoid.
-	if err := activities.WithAttachmentCounts(ctx, tx, out); err != nil {
+	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
 	return out, hasMore, nil

@@ -317,8 +317,14 @@ deps:
     # JSON, so a field name the detector writes and the contract omits reaches a
     # reader as a database column — people must not gain a dependency on the
     # contract document to know its own field names are sayable.
+    # outboundfilesnapshot_test.go reads comms.OutboundFile and activities.Out-
+    # boundFile together: comms writes what a message carried into a JSON column
+    # and activities reads it back to tell the timeline, so the two spellings of
+    # that snapshot are one item. Nothing in Go connects them — the way back is
+    # an unmarshal, which reports no error for a key it does not recognise — and
+    # neither module may import the other to notice. Only gates sees both.
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, people, forecasting]
+    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, people, forecasting, comms]
     canUse: [yaml, jsonschema]
   cmd:
     mayDependOn: [compose, identity, people, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, platform, migrations, projects]

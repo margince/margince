@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Mail, Paperclip } from "lucide-react";
+import { AlertTriangle, Mail, Paperclip } from "lucide-react";
 
 import type { components } from "../api/schema";
 import { formatNumber } from "../format/format";
@@ -46,9 +46,17 @@ const MOVE_LABEL: Record<string, MessageKey> = {
 // Direction is nullable, and an unknown one is not an outbound one — saying
 // "Sent to" about a message nobody recorded a direction for is a claim the row
 // does not have, so it answers null and the caller says "A message".
+//
+// The OUTBOUND verb comes from the delivery, not from the direction. "Sent"
+// was drawn from direction alone, which made it a claim the row could not
+// support: a message parked because the channel refused its files, or one the
+// receiving system handed straight back, read exactly like one the provider
+// confirmed, and the rep was told their mail went. Direction says which way a
+// message points; only the delivery says whether it arrived.
 function directionLine(
   direction: EmailSummary["direction"],
   counterparty: string | null | undefined,
+  outbound: OutboundState,
   t: ReturnType<typeof useT>,
 ): string | null {
   // TRIMMED, and blank counts as absent: the server sends "" for a
@@ -61,9 +69,53 @@ function directionLine(
     return name ? t("email.receivedFrom", { who: name }) : t("email.received");
   }
   if (direction === "outbound") {
-    return name ? t("email.sentTo", { who: name }) : t("email.sent");
+    const [named, bare] = OUTBOUND_PHRASE[outbound];
+    return name ? t(named, { who: name }) : t(bare);
   }
   return null;
+}
+
+/**
+ * What an outbound row may say about itself: the delivery's own state, or
+ * `withheld` for a reader the message is not for.
+ *
+ * Withheld is a state here rather than a branch elsewhere because it answers
+ * the same question — which verb this row has earned. A withheld row keeps the
+ * direction and loses everything the delivery says, so it can claim neither
+ * that the message went nor that it did not.
+ */
+type OutboundState =
+  | NonNullable<EmailSummary["delivery"]>["state"]
+  | "withheld";
+
+// The outbound verb per state, named and bare.
+//
+// A message with NO delivery row falls on `sent`, and that is not a guess: it
+// was logged rather than handed to a provider — somebody recording a mail they
+// sent from their own client — and the record of it is the rep's own claim
+// that it went.
+const OUTBOUND_PHRASE: Record<
+  OutboundState,
+  readonly [MessageKey, MessageKey]
+> = {
+  pending: ["email.sendingTo", "email.sending"],
+  sent: ["email.sentTo", "email.sent"],
+  parked: ["email.notSentTo", "email.notSent"],
+  bounced: ["email.bouncedFrom", "email.bounced"],
+  withheld: ["email.outgoingTo", "email.outgoing"],
+};
+
+// Why a message did not arrive, in the words it was recorded with — the half
+// of the answer a rep can act on.
+//
+// Only for a state that HAS one. A sent message's reason would be the last
+// park it recovered from, and a pending one has not been attempted, so there
+// is nothing yet to say about why it stopped.
+function troubleReason(delivery: EmailSummary["delivery"]): string | null {
+  if (delivery?.state !== "parked" && delivery?.state !== "bounced") {
+    return null;
+  }
+  return delivery.reason?.trim() || null;
 }
 
 // What the row draws, decided in one place.
@@ -76,8 +128,22 @@ function directionLine(
 function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
   const withheld = summary.display_status === "withheld";
   const counterparty = withheld ? null : summary.counterparty;
-  const direction = directionLine(summary.direction, counterparty, t);
+  // A withheld row says nothing about delivery, for the reason it says nothing
+  // about attachments: "this message you may not read was parked because the
+  // recipient blocked us" is the content it just refused, in smaller print.
+  // The server already strips it; this is the second lock, as everywhere here.
+  const delivery = withheld ? undefined : summary.delivery;
+  const direction = directionLine(
+    summary.direction,
+    counterparty,
+    withheld ? "withheld" : (delivery?.state ?? "sent"),
+    t,
+  );
+  const staged = delivery?.files;
   return {
+    trouble: troubleReason(delivery),
+    // The names of the files, for the chip's tooltip.
+    stagedNames: staged?.map((file) => file.filename) ?? null,
     withheld,
     // A withheld row keeps its shape and loses its words. Drawing it as absent
     // would leave a reader unable to tell a limited conversation from one that
@@ -89,7 +155,13 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
     who: direction ?? t("email.aMessage"),
     preview: withheld ? null : summary.preview,
     move: withheld || summary.move === "none" ? null : MOVE_LABEL[summary.move],
-    attachments: withheld ? 0 : summary.attachment_count,
+    // What the message CARRIED, preferring the snapshot the send froze over
+    // the live attachment list. Archiving or superseding a document later
+    // changes what the library holds and must change nothing about what the
+    // timeline says went out with a message that already left. The live count
+    // still answers for an inbound message and for one that was only logged,
+    // neither of which was ever staged.
+    attachments: withheld ? 0 : (staged?.length ?? summary.attachment_count),
   };
 }
 
@@ -197,12 +269,28 @@ export function EmailEntry({
         <VisibilityBadge state={summary.display_status} />
         {row.move && <span className="emailentry__move">{t(row.move)}</span>}
         {row.attachments > 0 && (
-          <span className="emailentry__files">
+          <span
+            className="emailentry__files"
+            // The names, for a reader who wants to know WHICH files without
+            // opening the message. Only when the row has the snapshot: a live
+            // count knows how many and not what.
+            title={row.stagedNames?.join(", ") ?? undefined}
+          >
             <Paperclip aria-hidden="true" />
             {formatNumber(row.attachments, locale)}
           </span>
         )}
       </span>
+      {/* Why it did not arrive. The lead line above already says that it did
+          not; this is the part a rep can act on, and it is the message the
+          park or the bounce was recorded with rather than a phrase invented
+          here. */}
+      {row.trouble && (
+        <span className="emailentry__trouble">
+          <AlertTriangle aria-hidden="true" />
+          {row.trouble}
+        </span>
+      )}
     </>
   );
 

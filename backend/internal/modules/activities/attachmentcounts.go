@@ -90,20 +90,3 @@ func emailIDsOf(page []crmcontracts.Activity) []ids.UUID {
 	}
 	return out
 }
-
-// WithAttachmentCounts fills the attachment count on every email row of a page
-// the caller's own gate already admitted.
-//
-// One statement, and none at all when the page carries no readable email.
-func WithAttachmentCounts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
-	emailIDs := emailIDsOf(page)
-	if len(emailIDs) == 0 {
-		return nil
-	}
-	counts, err := AttachmentCountsFor(ctx, tx, emailIDs)
-	if err != nil {
-		return err
-	}
-	applyAttachmentCounts(page, counts)
-	return nil
-}

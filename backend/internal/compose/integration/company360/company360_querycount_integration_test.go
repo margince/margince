@@ -212,7 +212,12 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// the whole page rather than asked per row. Flat in the size of the
 	// account like every section above — a page of twenty emails costs the
 	// same one statement as a page of two.
-	const budget = 45
+	// 46 since an email says what HAPPENED to it (#2071): one read of the
+	// page's delivery rows, keyed by activity id over the whole page beside
+	// the attachment count above and for the same reason. Flat in the size of
+	// the account — twenty emails and two cost the one statement — which is
+	// the property this budget protects rather than the absolute number.
+	const budget = 46
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
 	}
