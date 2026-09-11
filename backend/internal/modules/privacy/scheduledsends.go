@@ -24,6 +24,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // redactScheduledSends empties every scheduled message addressed to one of the
@@ -114,7 +116,90 @@ func redactScheduledSends(ctx context.Context, tx pgx.Tx, reason string, emails 
 	if err != nil {
 		return fmt.Errorf("redacting the scheduled messages addressed to the subject: %w", err)
 	}
+	if err := closeReviewsForErasedMessages(ctx, tx, reason, scrubbed); err != nil {
+		return err
+	}
 	return tombstoneCollateralScrubs(ctx, tx, "scheduled_send", scrubbed, reason, causeContactErasure)
+}
+
+// closeReviewsForErasedMessages ends the reviews standing over the messages the
+// scrub above just cancelled, and retracts the cards those reviews were handed
+// to.
+//
+// WHY THIS IS NOT ALREADY DONE by the erasure's own review scrub. That scrub
+// (erasure_consent.go, clearRefusedSendReviews) empties the REFUSALS — the
+// addresses and subject ids a review recorded — and deliberately leaves the row
+// standing so a human's queue does not develop holes. What it does not touch is
+// the review's LIVENESS, and a live review over an erased subject's cancelled
+// message is work somebody can still act on: directing that send fires an
+// emptied message at an emptied address list, from a system that has just
+// certified the subject's data destroyed.
+//
+// WHY NOT THE STAGED-APPROVAL SWEEP EITHER. That sweep finds cards by the
+// subject they name — contact target, lead twin, or the address quoted in the
+// payload. A routed review's card names none of those: its payload is the
+// review id and the intent id, because the card asks "may this refused send go"
+// and never repeats who it was to. So the card survives every arm of that
+// match, and the only thing that knows it exists is the review row itself.
+//
+// CANCELLED, not resolved: nothing was sent. The account this writes is the one
+// consent's own closer writes for the same move, in the same words, because a
+// reader comparing two cancelled reviews should not have to work out which
+// engine ended each.
+//
+// IN SQL HERE RATHER THAN THROUGH CONSENT'S CLOSER, for the reason the approval
+// withdrawal above is in SQL: privacy is a sibling of both consent and
+// approvals and may import neither, and an erasure runs as one destructive
+// transaction that must not depend on a seam a deployment could leave unwired.
+// A review left live because a port was nil is a subject's Art. 17 request
+// half-done.
+func closeReviewsForErasedMessages(ctx context.Context, tx pgx.Tx, reason string, intents []ids.UUID) error {
+	if len(intents) == 0 {
+		return nil
+	}
+	// THE CARD FIRST, THE REVIEW SECOND, and the order is the interesting part.
+	//
+	// Every path that touches both rows takes the APPROVAL lock before the
+	// review's: routing stages the card and then marks the review awaiting, a
+	// decline locks the approval and reaches the review through its declined
+	// effect, and consent's own closer was reordered to match. Taking them the
+	// other way round here would make this erasure the one writer that inverts
+	// them, and a cancellation or a decline landing concurrently would deadlock
+	// — with the erasure as one of the two victims, which is an Art. 17 request
+	// failing on a lock.
+	//
+	// It also puts this statement in step with redactStagedApprovals, which
+	// runs a few lines later in the SAME transaction and locks approvals too.
+	//
+	// Forced expiry rather than deletion, matching that sweep: a decider who
+	// had the card open learns the question ended instead of finding an empty
+	// row where their work was.
+	if _, err := tx.Exec(ctx, `
+		UPDATE approval
+		   SET `+blankStagedProposal+`,
+		       status = 'expired',
+		       decision_reason = '`+subjectWithdrawal+`',
+		       decided_at = now()
+		 WHERE status = 'pending'
+		   AND id IN (
+		         SELECT approval_id FROM communication_review
+		          WHERE delivery_intent_id = ANY($1::uuid[])
+		            AND resolved_at IS NULL
+		            AND approval_id IS NOT NULL)`, intents); err != nil {
+		return fmt.Errorf("retracting the cards asking about the subject's erased messages: %w", err)
+	}
+	// RETURNING the ids, so each closure can be tombstoned below. An erasure
+	// that ended somebody's work and recorded nothing is exactly the silent
+	// half this engine writes tombstones to avoid.
+	closed, err := scrubbedIDs(ctx, tx, `
+		UPDATE communication_review
+		   SET state = 'cancelled', resolved_at = now()
+		 WHERE delivery_intent_id = ANY($1::uuid[]) AND resolved_at IS NULL
+		RETURNING id`, intents)
+	if err != nil {
+		return fmt.Errorf("closing the reviews over the subject's cancelled messages: %w", err)
+	}
+	return tombstoneCollateralScrubs(ctx, tx, "communication_review", closed, reason, causeContactErasure)
 }
 
 // loweredAddresses folds the erasure's address list for the comparison above.

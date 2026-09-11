@@ -51,24 +51,57 @@ type ScheduleTimer interface {
 	ScheduleTx(ctx context.Context, tx pgx.Tx, id ids.UUID, due time.Time) error
 }
 
-// ReviewCloser closes the review a cancelled message leaves behind.
+// ReviewCloser closes the review a settled message leaves behind.
 //
-// A refusal freezes the message and opens a review for it. A rep who then
-// cancels the message has answered that review — not by sending, but by
-// deciding not to — and a review left live shows a decider work about a message
-// that is already dead. Somebody may then record an override for a send that
-// cannot happen.
+// A refusal freezes the message and opens a review for it. That review is over
+// the moment the message's fate is decided, and this module settles it two
+// ways: the message is CANCELLED, or it is RESUMED and the engine now allows it
+// so it goes out. Both left a live review showing a decider work about a
+// message that is settled, and somebody could then record an override for a
+// send that cannot happen — or, in the resumed case, for one that already has.
+//
+// RESCHEDULING IS NOT ONE OF THEM, deliberately. A moved message is still going
+// out and its decision is still outstanding, and the fire path that carries it
+// opens no review of its own — so closing here would leave a message refused at
+// its new moment held with nothing routable in front of anybody. See
+// RescheduleInTx.
+//
+// ONE METHOD TAKING THE OUTCOME rather than one method per outcome. What
+// differs between them is a sentence and a terminal state; what is identical is
+// the pair of obligations — end the review, retract the card it was handed to.
+// Splitting them gives a fresh chance to forget the second, which is the half
+// that was missing from the only closer that existed before.
 //
 // Injected because consent is a sibling module and this one may not reach into
-// it. Nil is a composition with no review surface, and a cancel then does what
-// it always did: the review it leaves behind is the state this seam exists to
-// end, not a reason to refuse the cancel.
+// it. Nil is a composition with no review surface, and a settling message then
+// does what it always did: the review it leaves behind is the state this seam
+// exists to end, not a reason to refuse the cancel.
 //
-// In the CALLER's transaction, so the message stopping and the review closing
+// In the CALLER's transaction, so the message settling and the review closing
 // are one fact.
 type ReviewCloser interface {
-	CancelReviewForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) error
+	CloseReviewForIntentTx(
+		ctx context.Context, tx pgx.Tx, intentID ids.UUID, outcome ReviewOutcome) error
 }
+
+// ReviewOutcome names what settled the message, in this module's own words.
+//
+// A STRING VOCABULARY rather than consent's own closure type, because that type
+// lives in a sibling module this one may not import. Consent maps each of these
+// onto the state and the sentence the row should carry; activities says only
+// what happened to the message, which is the fact it owns.
+type ReviewOutcome string
+
+const (
+	// ReviewOutcomeCancelled is a message nobody will send.
+	ReviewOutcomeCancelled ReviewOutcome = "cancelled"
+	// ReviewOutcomeSent is a held message resumed and allowed by the engine.
+	//
+	// It consumes no instruction, so it never reached the directed path's own
+	// closer — the message went and the review stayed live. This is the one
+	// outcome of the four that records a delivery.
+	ReviewOutcomeSent ReviewOutcome = "sent"
+)
 
 // HeldNotifier puts a stopped message in front of the human who scheduled it.
 //

@@ -35,12 +35,24 @@ type reviewRow struct {
 }
 
 // openReviews reads every live review in the installation.
+// allReviews reads every review, closed ones included, for the assertions that
+// are about a row SURVIVING rather than about it being answerable.
+func allReviews(t *testing.T, e *apptest.AppEnv) []reviewRow {
+	t.Helper()
+	return reviewRowsMatching(t, e, "TRUE")
+}
+
 func openReviews(t *testing.T, e *apptest.AppEnv) []reviewRow {
+	t.Helper()
+	return reviewRowsMatching(t, e, "resolved_at IS NULL")
+}
+
+func reviewRowsMatching(t *testing.T, e *apptest.AppEnv, where string) []reviewRow {
 	t.Helper()
 	rows, err := e.Owner.Query(context.Background(), `
 		SELECT id::text, state, reason_code, refusals::text
 		  FROM communication_review
-		 WHERE resolved_at IS NULL
+		 WHERE `+where+`
 		 ORDER BY opened_at`)
 	if err != nil {
 		t.Fatalf("reading the reviews: %v", err)
@@ -410,6 +422,13 @@ func TestAChangedMessageIsItsOwnHeldSendAndReview(t *testing.T) {
 // The row SURVIVES with its refusals emptied rather than being deleted. The
 // work may still be in front of a human, and a row vanishing under them leaves
 // a queue pointing at nothing.
+//
+// IT DOES NOT SURVIVE AS LIVE WORK, and that is a separate obligation the
+// erasure took on later (privacy/scheduledsends.go, closeReviewsForErasedMessages).
+// An erased subject's refused message is nothing anybody should act on: the
+// held row was cancelled and the payload emptied, so directing that send would
+// fire an emptied message at an emptied address list. The row stays readable
+// and stops being answerable.
 func TestErasingASubjectClearsThemFromARefusedSendReview(t *testing.T) {
 	c := setupConsent(t)
 
@@ -447,13 +466,20 @@ func TestErasingASubjectClearsThemFromARefusedSendReview(t *testing.T) {
 		t.Fatalf("fulfilling the erasure → %d", status)
 	}
 
-	after := openReviews(t, c.AppEnv)
+	// EVERY review, not only the live ones: the erasure closes this row as well
+	// as emptying it, and reading only live rows would report a surviving row
+	// as deleted.
+	after := allReviews(t, c.AppEnv)
 	if len(after) != 1 {
 		t.Fatalf("%d review(s) after the erasure, want the row to survive with its refusals "+
 			"emptied — a queue pointing at a deleted row shows a human nothing", len(after))
 	}
 	if strings.Contains(after[0].refusals, "subject@consent.test") {
 		t.Errorf("the review still names the erased subject's address: %s", after[0].refusals)
+	}
+	if len(openReviews(t, c.AppEnv)) != 0 {
+		t.Error("the review is still LIVE over an erased subject's cancelled message — somebody " +
+			"can still direct a send to an address that no longer exists")
 	}
 }
 

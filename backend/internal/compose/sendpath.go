@@ -159,10 +159,13 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		// works on one transport and silently 500s on the next.
 		WithScheduleTimer(send.ScheduleTimer).
 		WithHeldNotifier(send.HeldNotifier).
-		// Wired unconditionally: it needs nothing but the caller's transaction,
-		// so a deployment cannot forget it and leave a cancelled message's review
-		// standing in front of a decider.
-		WithReviewCloser(reviewCloser{}).
+		// Wired unconditionally, so a deployment cannot forget it and leave a
+		// settled message's review standing in front of a decider.
+		//
+		// IT CARRIES THE ROUTER, for consentGateFor's reason: closing a review
+		// has to retract the card it was handed to, or somebody is still being
+		// asked to send a message that is cancelled, moved or already gone.
+		WithReviewCloser(reviewCloser{router: retractionRouter(pool)}).
 		// Wired unconditionally, like the unsubscribe linker below: it needs
 		// nothing but the caller's transaction, so a deployment cannot forget
 		// it and leave an account-started send unable to resolve anyone.
@@ -310,10 +313,13 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		})).
 		WithSenderName(identity.NewServiceFor(InstallationDB(pool))).
 		WithHeldNotifier(send.HeldNotifier).
-		// Wired unconditionally: it needs nothing but the caller's transaction,
-		// so a deployment cannot forget it and leave a cancelled message's review
-		// standing in front of a decider.
-		WithReviewCloser(reviewCloser{}).
+		// Wired unconditionally, so a deployment cannot forget it and leave a
+		// settled message's review standing in front of a decider.
+		//
+		// IT CARRIES THE ROUTER, for consentGateFor's reason: closing a review
+		// has to retract the card it was handed to, or somebody is still being
+		// asked to send a message that is cancelled, moved or already gone.
+		WithReviewCloser(reviewCloser{router: retractionRouter(pool)}).
 		WithDraftOutcome(send.DraftOutcome)
 }
 
