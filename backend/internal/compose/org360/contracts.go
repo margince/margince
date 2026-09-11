@@ -20,6 +20,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/modules/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -55,11 +56,21 @@ func readContractStrip(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	orgPos := arg(orgID)
-	// The as-of is the DATE, not the instant. The columns are dates, and an
-	// aggregate evaluated at a timestamp drops a contract ending today the
-	// moment midnight passes while the contract's own read still calls it
-	// active all day — two surfaces disagreeing about the same row.
-	asOfPos := arg(asOf.UTC().Truncate(24 * time.Hour))
+	// The as-of is the DATE, not the instant, and derived in the installation's
+	// zone — the SAME day the contracts module's single read computes. The
+	// columns are dates, and an aggregate evaluated at a timestamp drops a
+	// contract ending today the moment UTC midnight passes while the contract's
+	// own read still calls it active all local day — two surfaces disagreeing
+	// about the same row.
+	tzName, err := identity.TimezoneAppliedTx(ctx, tx)
+	if err != nil {
+		return contractStrip{}, fmt.Errorf("resolve the installation's timezone: %w", err)
+	}
+	loc, err := storekit.LoadZone(tzName)
+	if err != nil {
+		return contractStrip{}, err
+	}
+	asOfPos := arg(storekit.WorkspaceDay(asOf, loc))
 
 	// The SAME predicate the contracts module applies to a single read. An
 	// aggregate that skipped it would leak through its total: a reader who
@@ -88,6 +99,14 @@ func readContractStrip(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
 	}
 	defer rows.Close()
 
+	return scanContractStrip(rows, baseCcy)
+}
+
+// scanContractStrip folds the active-contract rows into the strip: it counts
+// every agreement, tracks the nearest renewal and any pending cancellation, and
+// sums the ones it can price by basis (a row it cannot convert is counted but
+// not summed, so the two figures stay honest about what they cover).
+func scanContractStrip(rows pgx.Rows, baseCcy string) (contractStrip, error) {
 	strip := contractStrip{baseCurrency: baseCcy}
 	var totalBasis, annualized int64
 	var haveTotal, haveAnnualized bool

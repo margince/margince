@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
@@ -149,3 +150,12 @@ func yamlPaths(t reflect.Type, prefix string) map[string]bool {
 // The wiring itself lives in installseam, which the integration harness can
 // also reach; this stays as the name compose's own call sites use.
 func DealsInstallation() deals.Installation { return installseam.Deals() }
+
+// ContractTimezone is the installation timezone seam the contracts module reads
+// its calendar "today" through — the SAME setting deals resolves, so a contract
+// and a deal read one installation day.
+//
+// The UNGATED reader: deriving "today" is internal to a write the caller is
+// already authorized for, and a contract writer holds `contract`, not
+// `installation_settings` (identity.TimezoneAppliedTx says why).
+func ContractTimezone() contracts.TimezoneFunc { return identity.TimezoneAppliedTx }

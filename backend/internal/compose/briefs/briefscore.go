@@ -122,11 +122,11 @@ type briefDealFacts struct {
 // I/O. Every factor that lacks evidence sits at its floor by
 // construction — momentum is 1.0 only over overnight rows, warmth only
 // over §4 contributing interactions, revenue only over a real base value.
-func briefScore(f briefDealFacts, revenueNormMinor int64, now time.Time) BriefQueueItem {
+func briefScore(f briefDealFacts, revenueNormMinor int64, today time.Time) BriefQueueItem {
 	features := BriefFeatureVector{
 		Winnability: float64(f.winProbability) / 100,
 		Revenue:     briefRevenueScore(f.baseValueMinor, revenueNormMinor),
-		Timing:      briefTimingScore(f.expectedClose, now),
+		Timing:      briefTimingScore(f.expectedClose, today),
 		Momentum:    briefMomentumUnchanged,
 		Warmth:      float64(f.warmthStrength) / 100,
 	}
@@ -169,14 +169,19 @@ func briefRevenueScore(baseValueMinor *int64, revenueNormMinor int64) float64 {
 	return math.Min(1.0, float64(*baseValueMinor)/float64(revenueNormMinor))
 }
 
-// briefTimingScore buckets whole calendar days until the expected close
-// (UTC dates, like the column's date type): overdue is urgent, this week
-// is hottest, and no date at all reads as the mild-uncertainty midpoint.
-func briefTimingScore(expectedClose *time.Time, now time.Time) float64 {
+// briefTimingScore buckets whole calendar days until the expected close:
+// overdue is urgent, this week is hottest, and no date at all reads as the
+// mild-uncertainty midpoint.
+//
+// today is the installation-zone calendar day the caller resolved (Rank, via
+// localDay), not a UTC truncation: a rep east of UTC in her local evening would
+// otherwise read a day behind and see every close a day less urgent than it is.
+// expectedClose is the deal's own date column, already a calendar date, so the
+// two subtract as whole days.
+func briefTimingScore(expectedClose *time.Time, today time.Time) float64 {
 	if expectedClose == nil {
 		return 0.3
 	}
-	today := now.UTC().Truncate(24 * time.Hour)
 	d := expectedClose.Sub(today).Hours() / 24
 	switch {
 	case d < 0:

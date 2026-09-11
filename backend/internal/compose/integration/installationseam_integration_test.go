@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -130,6 +131,37 @@ func TestTodayIsComputedInTheZoneTheSettingNames(t *testing.T) {
 	}); err == nil {
 		t.Fatal("the close-date check resolved a today with an unresolvable zone stored; " +
 			"it is still reading workspace.timezone")
+	} else if !strings.Contains(err.Error(), "Margince/Nowhere") {
+		t.Errorf("the failure should name the zone it tried, got %v", err)
+	}
+}
+
+// A CONTRACT's under-contract "today" is computed in the same zone, by the same
+// technique. Under the old spelling it truncated the store clock in UTC and
+// never consulted the setting, so this create would succeed whatever the zone —
+// the unresolvable zone is what proves the reader now reads it, and the
+// installation_settings gate is not in the way (the admin here does hold it, but
+// the seam reads ungated so a contract writer holding only `contract` also can).
+func TestAContractsTodayIsComputedInTheZoneTheSettingNames(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	e.WsExec(t, `UPDATE setting SET value = '"Margince/Nowhere"'::jsonb WHERE key = 'installation.timezone'`)
+
+	org := ids.NewV7()
+	e.WsExec(t, `INSERT INTO organization (id, owner_id, display_name, source, captured_by)
+		VALUES ($1, $2, 'Anchor GmbH', 'manual', 'human:x')`, org, e.AdminUser)
+
+	starts := time.Date(2026, time.January, 5, 0, 0, 0, 0, time.UTC)
+	_, err := ContractsStore(e.DB(), e.Deals).CreateContract(admin, contracts.CreateContractInput{
+		OrganizationID: ids.From[ids.OrganizationKind](org),
+		Title:          "Framework agreement",
+		StartsOn:       &starts,
+		ValueBasis:     "total",
+		Source:         "manual",
+	})
+	if err == nil {
+		t.Fatal("the under-contract today resolved with an unresolvable zone stored; " +
+			"the contract store is not reading the installation timezone")
 	} else if !strings.Contains(err.Error(), "Margince/Nowhere") {
 		t.Errorf("the failure should name the zone it tried, got %v", err)
 	}

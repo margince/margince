@@ -195,16 +195,30 @@ func (s *Store) freezeBaseRate(ctx context.Context, tx pgx.Tx, p *storekit.Patch
 
 // freezeFx resolves the frozen currency→base conversion for a closed
 // deal: the latest fx_rate on or before asOf. Used at close (asOf = now)
-// and when a closed deal is re-priced (asOf = its close date), so the
+// and when a closed deal is re-priced (asOf = its close instant), so the
 // frozen rate always reflects the deal's close, never the edit.
+//
+// asOf is an INSTANT — a close moment or the clock — and the calendar day it
+// freezes against is that instant read in the installation's zone, not UTC: an
+// installation ahead of UTC closing in its local morning would otherwise freeze
+// the previous day's rate, and a frozen rate is a business and audit fact that
+// is never recomputed. The day is derived HERE, so every caller passes a raw
+// instant rather than a second spelling of "which day".
 func (s *Store) freezeFx(ctx context.Context, tx pgx.Tx,
 	base, currency string, asOf time.Time,
 ) (string, time.Time, error) {
-	asOfDate := asOf.UTC().Truncate(24 * time.Hour)
+	tzName, err := s.installation.Timezone(ctx, tx)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("resolve the installation's timezone: %w", err)
+	}
+	loc, err := installationZone(tzName)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	asOfDate := storekit.WorkspaceDay(asOf, loc)
 	if currency == base {
 		return "1", asOfDate, nil
 	}
-	var err error
 	var rate string
 	err = tx.QueryRow(ctx,
 		`SELECT rate::text FROM fx_rate

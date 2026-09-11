@@ -9,6 +9,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 func zoneNamed(t *testing.T, name string) Zone {
@@ -18,6 +20,15 @@ func zoneNamed(t *testing.T, name string) Zone {
 		t.Fatalf("loading %s: %v", name, err)
 	}
 	return func(context.Context) (*time.Location, error) { return loc, nil }
+}
+
+// sameDate compares two instants by the LOCAL calendar date they fall on — a
+// test assertion, distinct from the DST day-boundary walk these tests exercise
+// through storekit.
+func sameDate(a, b time.Time) bool {
+	ay, am, ad := a.Date()
+	by, bm, bd := b.Date()
+	return ay == by && am == bm && ad == bd
 }
 
 // THE DAY ENDS AT THE INSTALLATION'S MIDNIGHT, not UTC's.
@@ -175,7 +186,7 @@ func TestADayWhoseMidnightDoesNotExistEndsAtItsFirstInstant(t *testing.T) {
 				// these zones sit hours apart, and the same instant is morning
 				// in one and evening in another.
 				asOf := time.Date(day.Year(), day.Month(), day.Day(), 15, 0, 0, 0, loc).AddDate(0, 0, -1)
-				local := startOfNextDay(asOf.In(loc), loc).In(loc)
+				local := storekit.StartOfNextDay(asOf, loc).In(loc)
 				if !sameDate(local, day) {
 					t.Fatalf("the day ends at %s, which is not the start of %s", local, day.Format(time.DateOnly))
 				}
@@ -315,7 +326,7 @@ func TestADayWhoseMidnightDoesNotExistBeginsAtItsFirstInstant(t *testing.T) {
 func TestADatedRowFallsInTheRunItsDeadlineNames(t *testing.T) {
 	loc := time.FixedZone("Europe/Berlin", 2*60*60)
 	asOf := time.Date(2026, 9, 10, 14, 0, 0, 0, loc)
-	until := startOfNextDay(asOf, loc)
+	until := storekit.StartOfNextDay(asOf, loc)
 
 	cases := []struct {
 		name string

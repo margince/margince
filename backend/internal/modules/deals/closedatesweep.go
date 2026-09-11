@@ -147,8 +147,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		asOf := now.In(loc)
-		asOf = time.Date(asOf.Year(), asOf.Month(), asOf.Day(), 0, 0, 0, 0, time.UTC)
+		asOf := storekit.WorkspaceDay(now, loc)
 
 		// A pass already open for this local day is resumed, not duplicated:
 		// the retry after a worker deadline is the same pass continuing. No

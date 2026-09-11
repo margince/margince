@@ -184,7 +184,8 @@ func ContractsStore(db *database.DB, dealStore *deals.Store) *contracts.Store {
 	return contracts.NewStore(db,
 		func(ctx context.Context, tx pgx.Tx, currency string, asOf time.Time) (string, time.Time, error) {
 			return dealStore.FreezeRateAt(ctx, tx, currency, asOf)
-		})
+		},
+		identity.TimezoneAppliedTx)
 }
 
 // SchemaPool opens the owner-privileged schema-change pool the

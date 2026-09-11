@@ -87,7 +87,11 @@ func (s *Store) ChangeStatus(ctx context.Context, id ids.ContractID, to string, 
 
 	var out crmcontracts.Contract
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		existing, err := writableContract(ctx, tx, id, s.today())
+		today, err := s.today(ctx, tx)
+		if err != nil {
+			return err
+		}
+		existing, err := writableContract(ctx, tx, id, today)
 		if err != nil {
 			return err
 		}
@@ -98,7 +102,7 @@ func (s *Store) ChangeStatus(ctx context.Context, id ids.ContractID, to string, 
 		if err != nil {
 			return err
 		}
-		out, err = applyStatusTx(ctx, tx, id, existing, to, nil, ifVersion, s.today(), frozen)
+		out, err = applyStatusTx(ctx, tx, id, existing, to, nil, ifVersion, today, frozen)
 		return err
 	})
 	return out, err
@@ -210,7 +214,9 @@ func (s *Store) freezeRateForActivation(ctx context.Context, tx pgx.Tx,
 	if existing.FxRateToBase != nil {
 		return nil, nil
 	}
-	rate, on, err := s.freezeRate(ctx, tx, *existing.Currency, s.today())
+	// The clock, not s.today(): the seam resolves the calendar day in the
+	// installation's zone, and a day truncated here would be UTC's.
+	rate, on, err := s.freezeRate(ctx, tx, *existing.Currency, s.clock())
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +234,11 @@ func (s *Store) Cancel(ctx context.Context, id ids.ContractID, noticeOn, effecti
 
 	var out crmcontracts.Contract
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		existing, err := writableContract(ctx, tx, id, s.today())
+		today, err := s.today(ctx, tx)
+		if err != nil {
+			return err
+		}
+		existing, err := writableContract(ctx, tx, id, today)
 		if err != nil {
 			return err
 		}
@@ -242,7 +252,7 @@ func (s *Store) Cancel(ctx context.Context, id ids.ContractID, noticeOn, effecti
 		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract cancellation"); err != nil {
 			return err
 		}
-		out, err = readContractForCaller(ctx, tx, id, s.today())
+		out, err = readContractForCaller(ctx, tx, id, today)
 		return err
 	})
 	return out, err
@@ -266,7 +276,11 @@ func (s *Store) Renew(ctx context.Context, id ids.ContractID, successor CreateCo
 
 	var out crmcontracts.Contract
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		predecessor, err := writableContract(ctx, tx, id, s.today())
+		today, err := s.today(ctx, tx)
+		if err != nil {
+			return err
+		}
+		predecessor, err := writableContract(ctx, tx, id, today)
 		if err != nil {
 			return err
 		}
@@ -282,12 +296,12 @@ func (s *Store) Renew(ctx context.Context, id ids.ContractID, successor CreateCo
 		}
 		successor.OrganizationID = ids.OrganizationID{UUID: anchor}
 
-		created, err := createContractTx(ctx, tx, successor, by, s.today())
+		created, err := createContractTx(ctx, tx, successor, by, today)
 		if err != nil {
 			return err
 		}
 		successorID := ids.ContractID{UUID: ids.UUID(created.Id)}
-		if _, err := applyStatusTx(ctx, tx, id, predecessor, StatusSuperseded, &successorID, ifVersion, s.today(), nil); err != nil {
+		if _, err := applyStatusTx(ctx, tx, id, predecessor, StatusSuperseded, &successorID, ifVersion, today, nil); err != nil {
 			return err
 		}
 		out = created
