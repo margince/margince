@@ -312,7 +312,7 @@ func validateDirect(in DirectInput) error {
 	}
 	// A VERSION THIS BUILD ACTUALLY SERVES, not merely a non-empty string.
 	//
-	// The record's whole claim is that a named person read particular words. A
+	// The record's whole claim is that a named human read particular words. A
 	// caller free to name any version could write "v99" onto an instruction and
 	// the record would assert an acknowledgement of text nobody ever wrote —
 	// which is exactly the assertion a dispute about an override turns on.

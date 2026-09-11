@@ -3,13 +3,13 @@
 
 package consent
 
-// What a person is told before they overrule the engine.
+// What a human is told before they overrule the engine.
 //
 // An instruction records the WARNING VERSION somebody acknowledged, because a
 // record naming no version cannot say what they were told and the text changes.
 // Until now that version was a string a caller supplied and nothing published
 // the words behind it — so a client could name any version it liked, and the
-// record would say a person had read wording the installation never wrote.
+// record would say a human had read wording the installation never wrote.
 //
 // The warning is served from here instead. A surface shows what it is given and
 // echoes the version back; the record then names text that exists, and a dispute
@@ -27,7 +27,7 @@ package consent
 // changing the sentence without moving the version would silently rewrite what
 // every past acknowledgement claims to have said. A gate holds it.
 
-// OverrideWarning is the caution a person reads before directing a refused
+// OverrideWarning is the caution a human reads before directing a refused
 // send, and the version their acknowledgement will name.
 type OverrideWarning struct {
 	Version string
@@ -41,7 +41,7 @@ type OverrideWarning struct {
 // acknowledgement nobody made.
 const OverrideWarningVersion = "override-v1"
 
-// overrideWarningText is what a person is shown.
+// overrideWarningText is what a human is shown.
 //
 // It says three things, and each is there because leaving it out would let
 // somebody acknowledge something untrue:
@@ -51,7 +51,7 @@ const OverrideWarningVersion = "override-v1"
 //     refused.
 //   - the DECISION IS THEIRS, by name. The instruction records who they are and
 //     what they said, and it cannot be edited afterwards.
-//   - it covers THIS message only. The next one to the same person is refused
+//   - it covers THIS message only. The next one to the same contact is refused
 //     again, so this is not a door being opened.
 const overrideWarningText = "The engine refused this message, and that refusal stands: " +
 	"sending it now records an exception, never consent. Your name, your reason and the exact " +

@@ -8,7 +8,7 @@ package gates
 // The words behind a recorded acknowledgement cannot change without the version
 // changing.
 //
-// An instruction records that a named person read a particular warning before
+// An instruction records that a named human read a particular warning before
 // overruling the engine, and it records that as a VERSION. The whole claim
 // rests on the version identifying one fixed text: edit the sentence and leave
 // the version alone, and every past acknowledgement silently becomes a record

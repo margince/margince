@@ -289,7 +289,7 @@ func TestADirectedSendClosesTheReviewItAnswered(t *testing.T) {
 
 // THE WARNING IS THE SERVER'S OWN WORDS.
 //
-// An instruction's whole claim is that a named person read a particular
+// An instruction's whole claim is that a named human read a particular
 // caution before overruling the engine, and it records that as a version. A
 // client free to compose its own wording, or to name any version it liked,
 // would have the record assert an acknowledgement of text nobody published.

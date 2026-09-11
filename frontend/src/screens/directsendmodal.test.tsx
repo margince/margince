@@ -120,7 +120,7 @@ describe("DirectSendModal", () => {
     expect(confirm().disabled).toBe(false);
   });
 
-  // Enter in the reason must not confirm. A person typing a sentence presses it
+  // Enter in the reason must not confirm. A human typing a sentence presses it
   // without meaning to record anything, and a single-line input would submit.
   it("takes a newline in the reason rather than confirming", async () => {
     const user = userEvent.setup();

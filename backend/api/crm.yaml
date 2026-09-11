@@ -39902,7 +39902,7 @@ components:
           description: |
             What somebody must be shown before they direct this send, and the version their
             acknowledgement will name. Served rather than composed by the client: an instruction's
-            claim is that a named person read particular words, and a client free to write its own
+            claim is that a named human read particular words, and a client free to write its own
             would have the record assert an acknowledgement of text nobody published.
 
     CommunicationReviewList:
@@ -39922,7 +39922,7 @@ components:
     OverrideWarning:
       type: object
       description: |
-        The caution a person reads before overruling the engine, with the version that identifies
+        The caution a human reads before overruling the engine, with the version that identifies
         it. Both together, because a surface that could get one without the other would show words
         while naming a different version.
       required: [version, text]

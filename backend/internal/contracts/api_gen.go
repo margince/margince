@@ -21084,7 +21084,7 @@ type CommunicationReview struct {
 	// than showing them a form they have already filled in.
 	State CommunicationReviewState `json:"state"`
 
-	// Warning The caution a person reads before overruling the engine, with the version that identifies
+	// Warning The caution a human reads before overruling the engine, with the version that identifies
 	// it. Both together, because a surface that could get one without the other would show words
 	// while naming a different version.
 	Warning *OverrideWarning `json:"warning,omitempty"`
@@ -30981,7 +30981,7 @@ type OverlayUserMapPage struct {
 	NextCursor *string               `json:"next_cursor,omitempty"`
 }
 
-// OverrideWarning The caution a person reads before overruling the engine, with the version that identifies
+// OverrideWarning The caution a human reads before overruling the engine, with the version that identifies
 // it. Both together, because a surface that could get one without the other would show words
 // while naming a different version.
 type OverrideWarning struct {

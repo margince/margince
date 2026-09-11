@@ -9366,7 +9366,7 @@ export interface paths {
          * Ask somebody who may override the engine to decide this refused send.
          * @description A rep refused at the keyboard usually cannot direct the send themselves — that takes the
          *     `communication_exception` grant, which most seats do not hold. This is how they ask somebody
-         *     who does: the review is staged as an approval card, and whoever approves it is the person
+         *     who does: the review is staged as an approval card, and whoever approves it is the human
          *     whose name goes on the instruction.
          *
          *     ASKING GRANTS NOTHING. The caller still cannot direct the send, and the card is answered by
@@ -9374,7 +9374,7 @@ export interface paths {
          *     findable instead of sitting in a review only its author reads.
          *
          *     SCOPED TO THE REVIEW'S OWN INITIATOR. A seat that could route anybody's review would be
-         *     raising cards about other people's correspondence, so this answers 404 for a review that
+         *     raising cards about other colleagues' correspondence, so this answers 404 for a review that
          *     belongs to somebody else — the same answer reading one does, and for the same reason.
          *
          *     Pressing it twice raises ONE card. The question is about one refused message however many
@@ -9399,13 +9399,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Send a refused message anyway, on a named person's recorded decision.
+         * Send a refused message anyway, on a named human's recorded decision.
          * @description The engine refused this message and the refusal stands. This records that a designated human
          *     read it, was shown the compliance warning, acknowledged it, and decided in writing that the
          *     message goes — and then sends the exact message the review was holding.
          *
          *     NOTHING ABOUT THE REFUSAL CHANGES. No consent is written and no stop is lifted. The decision
-         *     rows still read `deny`; what changes is one column saying the message left under a person's
+         *     rows still read `deny`; what changes is one column saying the message left under a human's
          *     instruction rather than under the engine's permission. A subject asking later why they
          *     received it is shown the refusal AND the decision, never a grant nobody made.
          *
@@ -9420,7 +9420,7 @@ export interface paths {
          *     is the one thing a dispute about that override needs not to be possible.
          *
          *     SPENT ONCE. The decision authorizes this message to this envelope and is consumed when it
-         *     goes. The next message to the same person needs its own.
+         *     goes. The next message to the same contact needs its own.
          */
         post: operations["directCommunicationSend"];
         delete?: never;
@@ -29485,7 +29485,7 @@ export interface components {
             /**
              * @description What somebody must be shown before they direct this send, and the version their
              *     acknowledgement will name. Served rather than composed by the client: an instruction's
-             *     claim is that a named person read particular words, and a client free to write its own
+             *     claim is that a named human read particular words, and a client free to write its own
              *     would have the record assert an acknowledgement of text nobody published.
              */
             warning?: components["schemas"]["OverrideWarning"];
@@ -29500,7 +29500,7 @@ export interface components {
             total: number;
         };
         /**
-         * @description The caution a person reads before overruling the engine, with the version that identifies
+         * @description The caution a human reads before overruling the engine, with the version that identifies
          *     it. Both together, because a surface that could get one without the other would show words
          *     while naming a different version.
          */
@@ -29517,7 +29517,7 @@ export interface components {
              */
             text: string;
         };
-        /** @description What the person asking wants the decider to know. */
+        /** @description What the colleague asking wants the decider to know. */
         RequestCommunicationDecisionRequest: {
             /**
              * @description Why this message should go, in the asker's own words. Optional — a refusal is often
@@ -29552,7 +29552,7 @@ export interface components {
              */
             reason_code: "customer_requested_outside_crm" | "contractual_necessity" | "legal_obligation" | "other";
             /**
-             * @description What this person says the reason is, in their own words. Required and must say something:
+             * @description What this colleague says the reason is, in their own words. Required and must say something:
              *     a blank explanation is an acknowledgement nobody can be held to.
              */
             explanation: string;

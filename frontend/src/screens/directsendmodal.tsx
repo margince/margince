@@ -1,4 +1,4 @@
-// Sending a message the engine refused, on a named person's own authority.
+// Sending a message the engine refused, on a named human's own authority.
 //
 // This is the last thing somebody sees before an exception is recorded under
 // their name. Everything about it is shaped by that: the warning is the
@@ -7,7 +7,7 @@
 //
 // THE REFUSAL IS NOT BEING CORRECTED. Confirming does not grant consent and
 // does not lift a stop — the engine's answer stays exactly where it is, and the
-// record says a person overrode it. The copy says so because a director who
+// record says a human overrode it. The copy says so because a director who
 // believed otherwise would be acknowledging something untrue.
 //
 // WHY THE WARNING IS NOT OUR OWN COPY. The instruction records which version of
@@ -186,7 +186,7 @@ export function DirectSendModal({
         )}
       </Field>
       {/* A TEXTAREA so Enter inserts a newline. A single-line input here would
-          submit the form on Enter, which is the one key a person typing a
+          submit the form on Enter, which is the one key a human typing a
           reason presses without meaning to confirm anything. */}
       <Field label={t("directSend.explanationLabel")}>
         {(control) => (
