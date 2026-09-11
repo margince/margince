@@ -156,13 +156,22 @@ func (s *Store) recordMarketingAnswerTx(ctx context.Context, tx pgx.Tx, ref Conf
 	if err != nil {
 		return err
 	}
+	// THE QUESTION THE SUBJECT ANSWERED, where the link pinned one. See
+	// boundquestion.go: in.MarketingWording is what the client said it had
+	// shown, and a client that said something else would be believed.
+	wording, err := s.wordingForGrantTx(ctx, tx, ref, in.MarketingWording)
+	if err != nil {
+		return err
+	}
 	source := "confirm_details"
 	input := RecordInput{
-		PersonID:   ref.PersonID,
-		PurposeID:  purposeID,
-		NewState:   in.MarketingChoice,
-		Source:     &source,
-		PolicyText: &in.MarketingWording,
+		PersonID:      ref.PersonID,
+		PurposeID:     purposeID,
+		NewState:      in.MarketingChoice,
+		Source:        &source,
+		PolicyText:    &wording.Text,
+		PolicyVersion: wording.Version,
+		TextVersionID: wording.VersionID,
 		// Earned, not asserted: this is set only after spendConfirmTokenTx
 		// consumed the link that proves the mailbox.
 		MailboxProof: MailboxProvenByConfirmLink,
@@ -268,13 +277,23 @@ func validateConfirmSubmission(in ConfirmSubmission) error {
 // name its own purpose would let whoever holds one link grant any purpose,
 // which is the operator-completable round trip this whole change removed.
 func (s *Store) recordLinkedPurposeTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef, in ConfirmSubmission) error {
+	// THE SAME BINDING THE OTHER DOOR TAKES. A dedicated consent link is the
+	// path most double-opt-in grants actually arrive through, so leaving it on
+	// the client's sentence would have fixed the defect for the door fewer
+	// people use.
+	wording, err := s.wordingForGrantTx(ctx, tx, ref, in.MarketingWording)
+	if err != nil {
+		return err
+	}
 	source := "consent_link"
 	input := RecordInput{
-		PersonID:   ref.PersonID,
-		PurposeID:  ref.PurposeID,
-		NewState:   in.MarketingChoice,
-		Source:     &source,
-		PolicyText: &in.MarketingWording,
+		PersonID:      ref.PersonID,
+		PurposeID:     ref.PurposeID,
+		NewState:      in.MarketingChoice,
+		Source:        &source,
+		PolicyText:    &wording.Text,
+		PolicyVersion: wording.Version,
+		TextVersionID: wording.VersionID,
 		// Earned, not asserted: set only after spendConfirmTokenTx consumed the
 		// link that proves the mailbox. This is what satisfies a double-opt-in
 		// purpose, and the only thing that does.

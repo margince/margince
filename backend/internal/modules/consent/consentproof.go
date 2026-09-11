@@ -118,12 +118,16 @@ func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub 
 	// which takes its input by value: a default written there never reaches the
 	// INSERT, and the CHECK would refuse every row that door writes.
 	text, version := wordingFor(ConsentState(in.NewState), in.PolicyText, in.PolicyVersion)
+	// The published row this rests on, where the door knew which one. Written
+	// BESIDE policy_text rather than instead of it: the text stays readable
+	// without a join, and the id is what a reader checks it against.
 	_, err := tx.Exec(ctx, `
 		INSERT INTO consent_event (`+sub.column+`, purpose_id, new_state, lawful_basis, source,
 		                           policy_text, policy_version, double_opt_in_confirmed_at, captured_at, captured_by,
-		                           issuance_trigger)
-		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11)`,
+		                           issuance_trigger, consent_text_version_id)
+		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11, $12)`,
 		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, in.Source,
-		text, version, doiConfirmedAt, capturedAt, actorID, trigger)
+		text, version, doiConfirmedAt, capturedAt, actorID, trigger,
+		zeroUUIDAsNull(in.TextVersionID))
 	return err
 }
