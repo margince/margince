@@ -76,10 +76,10 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		// an audience from a contributor set missing exactly the seat whose
 		// sync it is.
 		//
-		// Only once the message is shown to BE the one stored: the natural key
-		// is a header the sender types, so a colliding Message-ID says nothing
-		// about which message this mailbox holds (incumbentIsThisMessageTx).
-		same, err := incumbentIsThisMessageTx(ctx, tx, id, fields, rec.Parts)
+		// Only once the claim is proven: the natural key is a header the sender
+		// types, so a colliding Message-ID says nothing about which message this
+		// mailbox holds (replayClaimIsProvenTx).
+		same, err := replayClaimIsProvenTx(ctx, tx, id, fields, rec.Parts)
 		if err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}

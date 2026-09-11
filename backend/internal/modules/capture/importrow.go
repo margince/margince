@@ -212,9 +212,17 @@ func seatDeliveredTx(
 	return mine, nil
 }
 
-// incumbentIsThisMessageTx answers whether the message a replay just collided
-// with carries the same subject and body this capture read — the evidence that
-// the two mailboxes hold ONE message rather than two that share a Message-ID.
+// replayClaimIsProvenTx answers whether this seat may record itself as an
+// importer of the message a replay just collided with.
+//
+// Freely, when the row is already this seat's: they authored or captured it, or
+// already hold an import or participant row on it. Recording the import then
+// widens nothing — the audience arm admits them already — and their own copies
+// routinely differ from the stored row: the provider's copy of a mail they sent,
+// a provider that rewrote the identity, a mailbox echoing its own send.
+//
+// Otherwise only on evidence that the two mailboxes hold ONE message rather than
+// two that share a Message-ID: the same subject, body and files.
 //
 // The address test below cannot answer that on its own. It reads the addresses
 // off the record being captured, and on a replay that record is whatever this
@@ -235,7 +243,7 @@ func seatDeliveredTx(
 // differently. Refusing is the safe direction for all of them — the seat still
 // holds the message in its own mailbox, and the capture reports it skipped
 // rather than claiming a grant it cannot prove.
-func incumbentIsThisMessageTx(
+func replayClaimIsProvenTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields ActivityFields, parts []connector.Part,
 ) (bool, error) {
 	carried := make([]string, 0, len(parts))
@@ -243,18 +251,30 @@ func incumbentIsThisMessageTx(
 		sum := sha256.Sum256(part.Body)
 		carried = append(carried, hex.EncodeToString(sum[:]))
 	}
+	// The seat the import row would name — the same one recordThisImport writes.
+	// A capture with no seat behind it claims nothing: recordImportTx writes no
+	// row for it and the delivery test has no identities to match, so there is
+	// no grant here to prove.
+	seat := actorUserID(ctx)
+	if seat == ids.Nil {
+		return true, nil
+	}
 	var same bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM activity a
 			 WHERE a.id = $1
-			   AND a.subject IS NOT DISTINCT FROM NULLIF($2, '')
-			   AND a.body IS NOT DISTINCT FROM NULLIF($3, '')
-			   AND NOT EXISTS (
-			       SELECT 1 FROM attachment f
-			        WHERE f.activity_id = a.id
-			          AND (f.checksum IS NULL OR f.checksum <> ALL($4))))`,
-		id, fields.Subject, fields.Body, carried).Scan(&same); err != nil {
+			   AND (
+			     a.captured_by LIKE $5
+			     OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $6)
+			     OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = a.id AND ap.user_id = $6)
+			     OR (a.subject IS NOT DISTINCT FROM NULLIF($2, '')
+			         AND a.body IS NOT DISTINCT FROM NULLIF($3, '')
+			         AND NOT EXISTS (
+			             SELECT 1 FROM attachment f
+			              WHERE f.activity_id = a.id
+			                AND (f.checksum IS NULL OR f.checksum <> ALL($4))))))`,
+		id, fields.Subject, fields.Body, carried, "%:"+seat.String(), seat).Scan(&same); err != nil {
 		return false, fmt.Errorf("capture: comparing %s with the message it collided with: %w", id, err)
 	}
 	return same, nil
