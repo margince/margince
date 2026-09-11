@@ -2604,20 +2604,25 @@ public.data_subject_request_one_case_per_submission CREATE UNIQUE INDEX data_sub
 public.data_subject_request_pkey CREATE UNIQUE INDEX data_subject_request_pkey ON public.data_subject_request USING btree (id)
 public.data_subject_request_receipt_reference CREATE UNIQUE INDEX data_subject_request_receipt_reference ON public.data_subject_request USING btree (receipt_reference) WHERE (receipt_reference IS NOT NULL)
 public.deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal.acquisition_source text gen=- def=-
 public.deal.amount_minor bigint gen=- def=-
 public.deal.amount_minor_base bigint gen=- def=-
 public.deal.archived_at timestamp with time zone gen=- def=-
 public.deal.captured_by text NOT NULL gen=- def=-
 public.deal.close_date_provisional boolean NOT NULL gen=- def=false
 public.deal.closed_at timestamp with time zone gen=- def=-
+public.deal.commercial_motion text gen=- def=-
 public.deal.company_id uuid gen=- def=-
 public.deal.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.currency character(3) gen=- def=-
+public.deal.deal_acquisition_source_fkey FOREIGN KEY (acquisition_source) REFERENCES deal_acquisition_source(key) ON UPDATE CASCADE ON DELETE RESTRICT
 public.deal.deal_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
 public.deal.deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT NULL)))
 public.deal.deal_closed_fx CHECK (((status = 'open'::text) OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))
+public.deal.deal_commercial_motion_check CHECK (((commercial_motion IS NULL) OR (commercial_motion = ANY (ARRAY['new_business'::text, 'renewal'::text, 'upsell'::text, 'cross_sell'::text, 'expansion'::text, 'existing_business'::text]))))
 public.deal.deal_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL (company_id)
 public.deal.deal_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
+public.deal.deal_description_bounded CHECK (((description IS NULL) OR (length(description) <= 20000)))
 public.deal.deal_forecast_category_check CHECK (((forecast_category IS NULL) OR (forecast_category = ANY (ARRAY['commit'::text, 'best_case'::text, 'pipeline'::text, 'omitted'::text]))))
 public.deal.deal_last_activity CREATE TRIGGER deal_last_activity AFTER UPDATE OF company_id ON public.deal FOR EACH ROW WHEN ((old.company_id IS DISTINCT FROM new.company_id)) EXECUTE FUNCTION trg_deal_last_activity()
 public.deal.deal_lost_reason CHECK (((status <> 'lost'::text) OR (lost_reason IS NOT NULL)))
@@ -2628,6 +2633,7 @@ public.deal.deal_partner_attribution_pairing CHECK (((partner_company_id IS NULL
 public.deal.deal_partner_company_id_fkey FOREIGN KEY (partner_company_id) REFERENCES company(id) ON DELETE SET NULL (partner_company_id)
 public.deal.deal_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE RESTRICT
 public.deal.deal_pkey PRIMARY KEY (id)
+public.deal.deal_priority_check CHECK (((priority IS NULL) OR (priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text]))))
 public.deal.deal_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL (project_id)
 public.deal.deal_stage_id_fkey FOREIGN KEY (stage_id) REFERENCES stage(id) ON DELETE RESTRICT
 public.deal.deal_stage_in_pipeline FOREIGN KEY (stage_id, pipeline_id) REFERENCES stage(id, pipeline_id)
@@ -2635,6 +2641,7 @@ public.deal.deal_status_check CHECK ((status = ANY (ARRAY['open'::text, 'won'::t
 public.deal.deal_won_without_contract_detail CHECK (((won_without_contract_reason IS DISTINCT FROM 'other'::text) OR ((won_without_contract_detail IS NOT NULL) AND (btrim(won_without_contract_detail) <> ''::text))))
 public.deal.deal_won_without_contract_only_when_won CHECK (((won_without_contract_reason IS NULL) OR (status = 'won'::text)))
 public.deal.deal_won_without_contract_reason CHECK (((won_without_contract_reason IS NULL) OR (won_without_contract_reason = ANY (ARRAY['imported'::text, 'purchase_order'::text, 'verbal'::text, 'renewal_by_email'::text, 'other'::text]))))
+public.deal.description text gen=- def=-
 public.deal.expected_close_date date gen=- def=-
 public.deal.forecast_category text gen=- def=-
 public.deal.fx_rate_date date gen=- def=-
@@ -2648,9 +2655,17 @@ public.deal.owner_id uuid gen=- def=-
 public.deal.partner_attribution text gen=- def=-
 public.deal.partner_company_id uuid gen=- def=-
 public.deal.pipeline_id uuid NOT NULL gen=- def=-
+public.deal.priority text gen=- def=-
+public.deal.priority_rank smallint gen=s def=
+CASE priority
+    WHEN 'high'::text THEN 3
+    WHEN 'medium'::text THEN 2
+    WHEN 'low'::text THEN 1
+    ELSE NULL::integer
+END
 public.deal.project_id uuid gen=- def=-
 public.deal.raw jsonb gen=- def=-
-public.deal.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))
+public.deal.search_tsv tsvector gen=s def=((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(description, ''::text))), 'B'::"char"))
 public.deal.source text NOT NULL gen=- def=-
 public.deal.stage_id uuid NOT NULL gen=- def=-
 public.deal.status text NOT NULL gen=- def='open'::text
@@ -2662,6 +2677,23 @@ public.deal.version bigint NOT NULL gen=- def=1
 public.deal.wait_until date gen=- def=-
 public.deal.won_without_contract_detail text gen=- def=-
 public.deal.won_without_contract_reason text gen=- def=-
+public.deal_acquisition_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_acquisition_source.active boolean NOT NULL gen=- def=true
+public.deal_acquisition_source.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_acquisition_source.deal_acquisition_source_key_key UNIQUE (key)
+public.deal_acquisition_source.deal_acquisition_source_key_shape CHECK (((key = lower(key)) AND (length(btrim(key)) > 0)))
+public.deal_acquisition_source.deal_acquisition_source_label_present CHECK ((length(btrim(label)) > 0))
+public.deal_acquisition_source.deal_acquisition_source_pkey PRIMARY KEY (id)
+public.deal_acquisition_source.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_acquisition_source.key text NOT NULL gen=- def=-
+public.deal_acquisition_source.label text NOT NULL gen=- def=-
+public.deal_acquisition_source.sort_order integer NOT NULL gen=- def=0
+public.deal_acquisition_source.system boolean NOT NULL gen=- def=false
+public.deal_acquisition_source.trg_deal_acquisition_source_updated CREATE TRIGGER trg_deal_acquisition_source_updated BEFORE UPDATE ON public.deal_acquisition_source FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.deal_acquisition_source.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_acquisition_source.version bigint NOT NULL gen=- def=1
+public.deal_acquisition_source_key_key CREATE UNIQUE INDEX deal_acquisition_source_key_key ON public.deal_acquisition_source USING btree (key)
+public.deal_acquisition_source_pkey CREATE UNIQUE INDEX deal_acquisition_source_pkey ON public.deal_acquisition_source USING btree (id)
 public.deal_clear_partner_attribution_on_company_delete() secdef=false cfg=- acl=- 
 BEGIN
   UPDATE deal
@@ -3490,7 +3522,9 @@ public.idx_consent_doi_token_person CREATE INDEX idx_consent_doi_token_person ON
 public.idx_consent_event_lead CREATE INDEX idx_consent_event_lead ON public.consent_event USING btree (lead_id, captured_at DESC) WHERE (lead_id IS NOT NULL)
 public.idx_consent_event_person CREATE INDEX idx_consent_event_person ON public.consent_event USING btree (person_id, captured_at DESC)
 public.idx_custom_field_object CREATE INDEX idx_custom_field_object ON public.custom_field USING btree (object, status)
+public.idx_deal_acquisition_source CREATE INDEX idx_deal_acquisition_source ON public.deal USING btree (acquisition_source) WHERE ((archived_at IS NULL) AND (acquisition_source IS NOT NULL))
 public.idx_deal_close CREATE INDEX idx_deal_close ON public.deal USING btree (expected_close_date) WHERE ((status = 'open'::text) AND (archived_at IS NULL))
+public.idx_deal_commercial_motion CREATE INDEX idx_deal_commercial_motion ON public.deal USING btree (commercial_motion) WHERE ((archived_at IS NULL) AND (commercial_motion IS NOT NULL))
 public.idx_deal_company CREATE INDEX idx_deal_company ON public.deal USING btree (company_id) WHERE ((company_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_deal_forecast_history_deal CREATE INDEX idx_deal_forecast_history_deal ON public.deal_forecast_history USING btree (deal_id, changed_at)
 public.idx_deal_name_trgm CREATE INDEX idx_deal_name_trgm ON public.deal USING gin (f_fold_apostrophes(lower(name)) gin_trgm_ops)
@@ -3498,6 +3532,7 @@ public.idx_deal_owner CREATE INDEX idx_deal_owner ON public.deal USING btree (ow
 public.idx_deal_partner CREATE INDEX idx_deal_partner ON public.deal USING btree (partner_company_id) WHERE ((partner_company_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_deal_partner_attribution CREATE INDEX idx_deal_partner_attribution ON public.deal USING btree (partner_attribution) WHERE ((partner_attribution IS NOT NULL) AND (archived_at IS NULL))
 public.idx_deal_pipeline CREATE INDEX idx_deal_pipeline ON public.deal USING btree (pipeline_id, stage_id) WHERE (archived_at IS NULL)
+public.idx_deal_priority_rank CREATE INDEX idx_deal_priority_rank ON public.deal USING btree (priority_rank DESC NULLS LAST) WHERE (archived_at IS NULL)
 public.idx_deal_project CREATE INDEX idx_deal_project ON public.deal USING btree (project_id) WHERE ((project_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_deal_room_comment_thread CREATE INDEX idx_deal_room_comment_thread ON public.deal_room_comment USING btree (thread_id, created_at)
 public.idx_deal_room_document_room CREATE INDEX idx_deal_room_document_room ON public.deal_room_document USING btree (room_id, group_key, "position") WHERE (archived_at IS NULL)
