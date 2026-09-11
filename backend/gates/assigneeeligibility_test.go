@@ -55,7 +55,7 @@ var assigneeEligibilityWriters = map[string]string{
 // The claim in auth.assigneeEligible's comment is what this holds: the rule has
 // one spelling. Before it, routing checked status and archival while
 // the manual path checked status, archival, agent and seat type, so the
-// machine could place a lead on a seat a contact was forbidden to assign to.
+// machine could place a lead on a seat a colleague was forbidden to assign to.
 // That divergence passed every gate in the tree.
 func TestSeatEligibilityIsAskedTheSameWayEverywhereItIsAsked(t *testing.T) {
 	t.Parallel()

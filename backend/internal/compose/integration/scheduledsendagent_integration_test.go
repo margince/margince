@@ -135,7 +135,7 @@ func TestAnAgentScheduledSendFiresUnderTheAgentThatScheduledIt(t *testing.T) {
 	}
 	// The specific shape of the old defect: an identity derived from the human.
 	if actorID == "agent:"+p.user {
-		t.Error("the actor id was rebuilt from the human's id — every agent acting for this contact collapses into one invented actor")
+		t.Error("the actor id was rebuilt from the human's id — every agent acting for this colleague collapses into one invented actor")
 	}
 }
 

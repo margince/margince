@@ -13,7 +13,7 @@ export type UserOption = { value: string; label: string };
  * The workspace's contacts as assignment options — everyone the roster carries
  * LESS agent seats.
  *
- * An agent seat is an Agent Runner identity, not a contact: the server refuses
+ * An agent seat is an Agent Runner identity, not a colleague: the server refuses
  * one as an assignee or owner (the activities module's
  * `ensureAssigneeCanHoldWork`), so offering it is a control whose only outcome
  * is a refusal. Every picker that hands work to somebody asks that same

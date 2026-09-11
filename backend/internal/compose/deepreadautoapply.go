@@ -78,7 +78,7 @@ func (w *siteDeepReadWorker) fillMatchedContacts(ctx context.Context, companyID 
 // auto-enrich sweep rather than a human.
 func isAutoEnrichRequest(requestedBy string) bool { return requestedBy == systemAutoEnrichActor }
 
-// applyForRequester is the human lane's terminal step: the contact asked for
+// applyForRequester is the human lane's terminal step: the requester asked for
 // this read, so its company fields and facts land directly rather than becoming a
 // proposal that asks them to confirm what they just requested.
 //

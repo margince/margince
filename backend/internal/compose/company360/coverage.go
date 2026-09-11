@@ -229,7 +229,7 @@ func (s *Service) wireCommittee(
 			return crmcontracts.CompanyCoverageCommittee{}, err
 		}
 	}
-	// Which of these seats the product read rather than a contact asserted, and
+	// Which of these seats the product read rather than a human asserted, and
 	// what it read them from. Kept out of deals.Stakeholders because one caller
 	// needing provenance is not a reason to widen the shape every caller reads.
 	marks, err := suggestedSeats(ctx, tx, dealID, seats)

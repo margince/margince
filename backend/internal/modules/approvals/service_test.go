@@ -302,10 +302,10 @@ func TestACredentialDoesNotReleaseTheProposalItMade(t *testing.T) {
 		// Deliberately allowed: an agent that changes its mind takes its own
 		// request off somebody's desk rather than leaving it there.
 		{"but it may still reject its own row", stagedBy(mine, lender), false, true},
-		// Another CREDENTIAL of the same contact: the lender could have answered
+		// Another CREDENTIAL of the same human: the lender could have answered
 		// this in the CRM themselves, so answering it on a second credential they
 		// minted is the same contact answering.
-		{"another credential of the same contact it may approve", stagedBy(theirs, lender), true, true},
+		{"another credential of the same human it may approve", stagedBy(theirs, lender), true, true},
 		// Another CONTACT's, which is the loop the tier exists to stop: two
 		// passports lent by two contacts push a confirm-first action through end to
 		// end and no human ever looks.

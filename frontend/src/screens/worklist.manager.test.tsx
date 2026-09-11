@@ -461,7 +461,7 @@ function stubRosterWalk(
 }
 
 describe("whose queue the page is answering", () => {
-  // An agent seat is an Agent Runner identity rather than a contact: it opens no
+  // An agent seat is an Agent Runner identity rather than a colleague: it opens no
   // Worklist of its own, so a lead who chose one would land on a day that comes
   // back with nothing in it and nothing saying why.
   it("offers no agent seat as an owner", async () => {

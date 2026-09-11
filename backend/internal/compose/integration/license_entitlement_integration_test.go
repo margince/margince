@@ -8,7 +8,7 @@ package integration
 // The seat count the entitlement surface reports, against a real database.
 //
 // Nothing else can prove it. The count is a SQL predicate over app_user — full
-// seats held by a contact and not deactivated — and the three decisions it makes
+// seats held by a colleague and not deactivated — and the three decisions it makes
 // are the difference between a meter that bills honestly and one that bills for
 // access the installation never had or already withdrew:
 //

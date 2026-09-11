@@ -53,7 +53,7 @@ type Colleague struct {
 // Colleagues lists the installation's seats, newest-relevant first by name, with
 // an optional case-insensitive filter over display name and email.
 //
-// Archived seats are absent: a contact who has left is not a colleague, and
+// Archived seats are absent: a seat holder who has left is not a colleague, and
 // naming one would offer work to an account that cannot receive it.
 func (s *Service) Colleagues(ctx context.Context, q string) ([]Colleague, bool, error) {
 	// Membership is the whole boundary, so it is asked for here and not left to

@@ -67,7 +67,7 @@ const aTeamNeedingALead: TeamExceptionsData = {
     },
     {
       // NOBODY answers for this one, and the row says so in its own words
-      // rather than naming a contact. An exception a teammate is carrying and
+      // rather than naming a colleague. An exception a teammate is carrying and
       // one going nowhere are different news to the reader who has to act.
       kind: "unassigned",
       owner: { kind: "unassigned" },

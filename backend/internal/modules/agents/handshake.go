@@ -72,7 +72,7 @@ func (s *Dispatcher) instructions() string {
 // `capabilities` is shared already.
 const surfaceInstructions = "A governed CRM tool surface. Every call re-authenticates and is bounded by " +
 	"the granting human's own permissions, so a tool may refuse a record this passport cannot " +
-	"reach. Tools that a contact must approve say so in their own description; calling one " +
+	"reach. Tools that a human must approve say so in their own description; calling one " +
 	"stages the effect for review rather than performing it."
 
 // queueInstruction is the REPORTING RULE, appended where the queue is served.

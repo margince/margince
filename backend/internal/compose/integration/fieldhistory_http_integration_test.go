@@ -246,7 +246,7 @@ func assertFieldHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx fieldHistor
 	}
 
 	// A MACHINE ACTOR NAMES NO HUMAN, which is the honest half: the id is a
-	// passport, not a contact, and the human behind it rides on_behalf_of_name.
+	// passport, not a human, and the human behind it rides on_behalf_of_name.
 	if newest.ActorName != nil {
 		t.Errorf("agent entry actor_name = %q, want null — the actor is a machine "+
 			"and naming it as a contact is the confusion PD-002 is about", *newest.ActorName)

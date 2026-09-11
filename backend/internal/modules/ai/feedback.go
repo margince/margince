@@ -325,7 +325,7 @@ func admitVerdict(ctx context.Context, in RecordInput) error {
 			Message: "a corrected verdict carries the human's value, and no other verdict does",
 		}
 	}
-	// Human-only, because the whole point of the row is that a CONTACT decided:
+	// Human-only, because the whole point of the row is that a HUMAN decided:
 	// the column is hard-coded source = 'human', and a verdict an agent could
 	// write would let a model launder its own claim into the ledger that is
 	// supposed to overrule it.

@@ -128,8 +128,8 @@ const proposalWindowDays = 365
 // written, and the caller — told only "error" — would retry into a committee
 // that has silently half-changed under them.
 //
-// Each seat is written as the reading AGENT rather than the contact who pressed
-// the button, on that contact's behalf: the human's own audit row records the
+// Each seat is written as the reading AGENT rather than the human who pressed
+// the button, on that human's behalf: their own audit row records the
 // decision to ask, and this one carries the machine provenance the committee
 // card renders as "read from what they wrote". That captured_by is the whole of
 // the marking — the coverage read already looks for exactly this string.

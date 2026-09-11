@@ -102,7 +102,7 @@ func TestTheSendersPageShowsWhatWasDecidedAndByWhom(t *testing.T) {
 }
 
 func TestASeatSeesOnlyTheirOwnSenders(t *testing.T) {
-	// Whose mail a contact keeps out is itself private: a colleague's list is
+	// Whose mail a colleague keeps out is itself private: a colleague's list is
 	// not a thing this product will show, to anyone.
 	e := integration.Setup(t)
 	const mine = "meins@example.test"

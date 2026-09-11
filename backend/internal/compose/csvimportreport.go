@@ -3,7 +3,7 @@
 
 package compose
 
-// What the dry run TELLS a contact before they approve it.
+// What the dry run TELLS a colleague before they approve it.
 //
 // The engine's report counts rows it would touch; this walks the file again and
 // asks the writers what each row would actually do — created, updated, unchanged,

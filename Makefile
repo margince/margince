@@ -703,7 +703,7 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ##
 ## HALF THE JUDGING IS A MODEL. A scenario's mechanical assertions are regexes —
 ## does the answer carry this name, this date, this count; its `judge:` criteria
-## are sentences a contact can read, decided per run by a pinned model, because
+## are sentences a human can read, decided per run by a pinned model, because
 ## the regexes that used to carry them scored 15% and 20% of CORRECT answers as
 ## failures on two paid sweeps. That costs a few extra calls per run, and a lane
 ## whose judge cannot be reached STOPS rather than scoring: E2E_LLM_JUDGE

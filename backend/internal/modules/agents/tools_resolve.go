@@ -13,7 +13,7 @@ package agents
 // one of them can be acted on — a caller that creates a contact because a search
 // found nothing has created the duplicate this tool exists to prevent.
 //
-// IT DECIDES NOTHING AND MERGES NOBODY. A near-match is a comparison a contact
+// IT DECIDES NOTHING AND MERGES NOBODY. A near-match is a comparison a human
 // makes, and this answers `ambiguous` however high the score. Merging stays 🟡
 // and goes through merge_records, with a human in it.
 //

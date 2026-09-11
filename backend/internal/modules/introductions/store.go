@@ -98,7 +98,7 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		// Asking a colleague for a favour is a contact's act. An agent holding
+		// Asking a colleague for a favour is a human's act. An agent holding
 		// a human's id is not that human deciding to spend their goodwill.
 		return ids.UUID{}, fmt.Errorf(
 			"introductions: asking for an introduction needs an authenticated contact: %w",

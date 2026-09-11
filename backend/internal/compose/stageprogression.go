@@ -424,7 +424,7 @@ func stageProgressionEffect(svc *approvals.Service, store *deals.Store) approval
 				// exists — which is exactly what StageAutopilotModeTx's own
 				// comment says the transaction is for.
 				//
-				// A HUMAN's approval skips this. A contact deciding is the
+				// A HUMAN's approval skips this. A human deciding is the
 				// authority, and re-asking the autopilot's thresholds would
 				// let a suspended rule block a move somebody explicitly made.
 				if err := refuseAStaleAutomaticMove(ctx, tx, change); err != nil {

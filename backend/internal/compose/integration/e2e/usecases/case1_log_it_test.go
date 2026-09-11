@@ -353,7 +353,7 @@ func TestCase1TheTranscriptIsStoredAsATranscriptAndReadWithoutAsking(t *testing.
 	routedTo, isHuman := principal.HumanUserID(requestedBy)
 	if !isHuman {
 		t.Fatalf("case 1 criterion 10: the reading was requested by %q, which the product's own "+
-			"parser does not read as a contact — the proposals it stages reach no rep", requestedBy)
+			"parser does not read as a human — the proposals it stages reach no rep", requestedBy)
 	}
 	if routedTo != s.Rep {
 		t.Fatalf("case 1 criterion 10: the reading is routed to %s, and the human behind the "+

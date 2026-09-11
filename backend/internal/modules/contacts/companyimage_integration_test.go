@@ -90,7 +90,7 @@ func TestACompanySaveRecordsWhatTheFormReplaced(t *testing.T) {
 
 // The form re-sends every field it was shown, so a save that changes one thing
 // must not present the rest as edits: an image narrowed to what moved is the
-// difference between a history a contact can read and one page of noise per save.
+// difference between a history a human can read and one page of noise per save.
 func TestACompanySaveRecordsOnlyTheFieldsThatMoved(t *testing.T) {
 	env := newAnchorEnv(t)
 	automotive := "Automotive"

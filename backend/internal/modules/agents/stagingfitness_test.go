@@ -331,7 +331,7 @@ func TestTheStagedRefusalCarriesTheSummaryTheCardWasGiven(t *testing.T) {
 		t.Fatal("the card was given no summary, so this pair compares two empty strings")
 	}
 	if staged.Summary != card {
-		t.Errorf("the human's card says %q and the caller is told %q — a contact and an agent "+
+		t.Errorf("the human's card says %q and the caller is told %q — a human and an agent "+
 			"waiting on two descriptions of one staged change", card, staged.Summary)
 	}
 	if !strings.Contains(err.Error(), card) {

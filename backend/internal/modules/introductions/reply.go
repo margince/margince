@@ -3,7 +3,7 @@
 
 package introductions
 
-// The one transition no contact can make.
+// The one transition no human can make.
 //
 // Every other move on an ask is somebody's decision, reached through an
 // endpoint and checked against who they are. `replied` is not: it is the

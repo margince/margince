@@ -134,7 +134,7 @@ type Copy struct {
 	UnsubscribeLabel       string
 	ManagePreferencesLabel string
 
-	// The password reset a contact asked for.
+	// The password reset a colleague asked for.
 	ResetSubject string
 	ResetIntro   string
 	ResetAction  string

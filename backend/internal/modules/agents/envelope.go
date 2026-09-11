@@ -129,7 +129,7 @@ var taintOf = map[string]int{trustSystem: 0, trustInternal: 1, trustExternal: 2}
 
 // capturedByHuman is the actor-kind prefix that earns T1. Provenance spells the
 // writer as "<kind>:<id>" (provenance.Provenance) and the kinds are the
-// contract's: human, agent, connector, system. Only the first is a contact
+// contract's: human, agent, connector, system. Only the first is a human
 // typing into this product; the rest are automated writers whose content this
 // surface must not present as first-party.
 const capturedByHuman = "human"

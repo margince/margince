@@ -119,7 +119,7 @@ func TestEgressBackstopAllowsAReleasedAgentWrite(t *testing.T) {
 	}
 }
 
-// A contact acting in their own seat is governed by object RBAC; gating them
+// A colleague acting in their own seat is governed by object RBAC; gating them
 // here would break the human write path the SPA and REST both offer.
 func TestEgressBackstopDoesNotGateAHumanSeat(t *testing.T) {
 	if err := refuseUngovernedAgentEgress(humanCtx(), overlay.WriteUpdate, datasource.EntityContact); err != nil {

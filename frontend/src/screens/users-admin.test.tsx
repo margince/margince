@@ -419,7 +419,7 @@ describe("UsersAdminCard", () => {
   // has to find it — but it is not a colleague, and the row has to say so. Each
   // absence below is a control the server refuses anyway, so offering it could
   // only produce a 409 an admin cannot act on.
-  it("marks the agent seat and offers it no control meant for a contact", async () => {
+  it("marks the agent seat and offers it no control meant for a colleague", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
@@ -455,7 +455,7 @@ describe("UsersAdminCard", () => {
   });
 
   // Deactivating the seat stays offered — an operator is entitled to that — and
-  // the body written for a contact describes sessions and sign-ins that the seat
+  // the body written for a colleague describes sessions and sign-ins that the seat
   // has none of. What the agent body must NOT say is that scheduled extension
   // jobs stop: a tick acts as the job it is and reads no identity, so that
   // warning would talk an operator out of a safe action for a reason that is

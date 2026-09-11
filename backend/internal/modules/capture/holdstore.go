@@ -63,7 +63,7 @@ func NewCounterpartyHoldStore(db *database.DB) *CounterpartyHoldStore {
 //
 // No id parameter and no scope clause: the statement matches on the
 // authenticated user, so there is nothing a caller could pass to read a
-// colleague's list. Whose mail a contact keeps private is itself private.
+// colleague's list. Whose mail a colleague keeps private is itself private.
 func (s *CounterpartyHoldStore) List(ctx context.Context) ([]CounterpartyHold, error) {
 	actor, err := seatItself(ctx)
 	if err != nil {

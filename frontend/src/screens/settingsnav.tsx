@@ -92,7 +92,7 @@ import { SettingsSearchBox } from "./settingssearchbox";
 // which is the same rule applied to everyone rather than to two role names.
 // The server stays the RBAC authority on every card within.
 //
-// The personal group is where a credential or a connection the CONTACT holds
+// The personal group is where a credential or a connection the COLLEAGUE holds
 // lives: `agents` carries the caller's own passports, so gating it would regress
 // passport minting for every seat that is not an admin, and `connections` carries
 // their own mailbox and their own LinkedIn network.

@@ -35,9 +35,9 @@ const (
 	OnboardingStepConfirm = "confirm"
 	// OnboardingStepBasis settles the installation's reporting basis — base
 	// currency and reporting timezone — the one installation-wide answer the
-	// setup asks for, taken before any step about the contact answering.
+	// setup asks for, taken before any step about the human answering.
 	OnboardingStepBasis = "basis"
-	// OnboardingStepInvite asks whether the contact setting the installation up
+	// OnboardingStepInvite asks whether the human setting the installation up
 	// will work in it, which decides whether the voice and connect steps are
 	// offered at all.
 	OnboardingStepInvite = "invite"

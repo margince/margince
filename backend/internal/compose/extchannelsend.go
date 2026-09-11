@@ -114,7 +114,7 @@ func (s unitChannelSender) SendMessage(ctx context.Context, _ connector.Auth, ms
 		IdempotencyKey: msg.IdempotencyKey,
 		// The seam counts retries from 0 and the published surface from 1, and
 		// the shift is stated rather than shared: a unit logging "attempt 1" for
-		// the first try is what a human reads, and a unit is other contacts's code
+		// the first try is what a human reads, and a unit is somebody else's code
 		// that should not have to know the core's convention.
 		Attempt: msg.Attempt + 1,
 	})

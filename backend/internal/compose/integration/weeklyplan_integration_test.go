@@ -75,7 +75,7 @@ func setupPlan(t *testing.T) *planEnv {
 	}
 }
 
-// A plan is one contact's. Another rep's is not a thing this caller may read,
+// A plan is one colleague's. Another rep's is not a thing this caller may read,
 // and the answer is NOT FOUND rather than a refusal: whether a colleague has
 // planned their week is itself something a stranger may not learn.
 func TestAnotherRepsPlanIsNotFound(t *testing.T) {

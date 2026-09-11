@@ -14,7 +14,7 @@ package integration
 //
 // What is proven here is the whole round trip on one credential — stage, see,
 // read, answer, redeem — plus the two bounds that make it safe to admit at all:
-// the answer is recorded as the CONTACT's, not the credential's, and a passport
+// the answer is recorded as the HUMAN's, not the credential's, and a passport
 // its human lent for reading cannot answer anything.
 
 import (
@@ -201,7 +201,7 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 	}
 
 	// ANSWER IT on another of the same human's credentials, and the answer is
-	// the CONTACT's: decided_by is the human who lent it, never the credential.
+	// the HUMAN's: decided_by is the human who lent it, never the credential.
 	decider := q.invoker(t, q.mintPassport(t, "deciding agent", "read", "write", "enrich"))
 	if _, err = decider("decide_approval", answer); err != nil {
 		t.Fatalf("decide_approval → %v", err)

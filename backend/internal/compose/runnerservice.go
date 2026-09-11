@@ -178,7 +178,7 @@ func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 // it, each job carrying that rep's own passport.
 //
 // WHY THE GRANTS DRIVE THE LOOP. An agent run acts as a contact, and the only
-// credential it may act with is one that contact minted for themselves. There
+// credential it may act with is one that colleague minted for themselves. There
 // is no workspace-wide authority to fall back on and deliberately so, so a
 // spec with no live grants has nothing to run tonight — that is a workspace
 // where nobody has said yes yet, not a fault, and it queues nothing.

@@ -37,7 +37,7 @@ type RecordClaim struct {
 var claimableTables = map[string]bool{entityContact: true, entityCompany: true, entityLead: true}
 
 // ClaimRecord makes the calling human the owner of one contact, company
-// or lead. Human-only: owning a customer record is a contact's accountability,
+// or lead. Human-only: owning a customer record is a colleague's accountability,
 // not an agent's. ifVersion, when given, is the If-Match compare.
 func (s *Store) ClaimRecord(ctx context.Context, recordType string, id ids.UUID, ifVersion *int64) (RecordClaim, error) {
 	if !claimableTables[recordType] {

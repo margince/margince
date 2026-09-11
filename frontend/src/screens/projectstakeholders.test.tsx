@@ -296,7 +296,7 @@ describe("the stakeholders on a project", () => {
     ).toBeDisabled();
   });
 
-  // The empty card is where a contact seats the FIRST stakeholder, so the verb
+  // The empty card is where a rep seats the FIRST stakeholder, so the verb
   // has to survive an empty list — the state that reads most like "nothing to
   // do here".
   it("offers the add verb on a project with nobody on it yet", () => {

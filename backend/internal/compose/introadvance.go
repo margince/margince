@@ -32,7 +32,7 @@ package compose
 //     now, which closes that spelling and no other: any other value a caller
 //     invents still lands in the column.) `captured_by` comes from
 //     the AUTHENTICATED principal through storekit.CapturedBy — a connector's
-//     is `connector:…`, a contact's is `human:…` — so it is provenance a caller
+//     is `connector:…`, a colleague's is `human:…` — so it is provenance a caller
 //     cannot assert. capture/sinkprovenance.go states the same rule for the
 //     same reason.
 //   - The activity is INBOUND. An outbound mail is the rep writing to the

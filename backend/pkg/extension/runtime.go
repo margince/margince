@@ -183,7 +183,7 @@ type Caller struct {
 	//
 	// For an agent or a connector this is the HUMAN whose authority the call
 	// carries, not a synthetic id for the agent: a unit stamping authorship
-	// wants the contact accountable for the row, and "agent ≤ human" already
+	// wants the human accountable for the row, and "agent ≤ human" already
 	// holds that agent's scopes to that human's.
 	UserID string
 

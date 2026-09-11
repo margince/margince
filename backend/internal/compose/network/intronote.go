@@ -48,8 +48,8 @@ type Completer interface {
 //
 // It binds no Voice DNA, and that is a decision rather than the gap it looks
 // like. Every other outbound drafting surface writes as the contact operating
-// it, so it loads that contact's voice; this note is sent by the COLLEAGUE, and
-// the rep operating the page is the contact being introduced. Loading the
+// it, so it loads that colleague's voice; this note is sent by the COLLEAGUE, and
+// the rep operating the page is the colleague being introduced. Loading the
 // caller's profile here would sign the colleague's message in somebody else's
 // style — and the colleague need not be a Margince user at all, so there is
 // frequently no profile to load even in principle.
@@ -66,7 +66,7 @@ func (h Reads) WithIntroNoteLane(lane Completer) Reads {
 // one fact no record holds.
 type noteFacts struct {
 	// colleague is who the contact will hear from. The note is written in
-	// their voice: they are the sender, and the rep is the contact being
+	// their voice: they are the sender, and the rep is the colleague being
 	// introduced.
 	colleague string
 	// contact is who the note is addressed to.

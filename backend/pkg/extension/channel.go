@@ -37,7 +37,7 @@ const maxProviderLength = 32
 // It is not a detail of the connection. It is the axis that decides whether a
 // captured message is the company's correspondence or one human's — a workspace
 // bot serves everybody, so its traffic is workspace business; a per-member
-// credential is one contact's own account, so their chats are theirs, which is
+// credential is one colleague's own account, so their chats are theirs, which is
 // the mailbox model with the same floor, holds and postures.
 //
 // IT DECIDES WHAT A CAPTURED MESSAGE IS BORN AS. `per_member` puts a chat on the

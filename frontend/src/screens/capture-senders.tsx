@@ -21,7 +21,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 // trust rather than audit. This is the audit.
 //
 // Read-only for everybody but the owner: the endpoint answers the caller's own
-// senders and has no admin view, because whose mail a contact keeps out is
+// senders and has no admin view, because whose mail a colleague keeps out is
 // itself private.
 
 type SenderDecision = components["schemas"]["CaptureSenderDecision"];

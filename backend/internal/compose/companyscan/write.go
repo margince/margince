@@ -59,7 +59,7 @@ const (
 	actionNone       = "none"
 )
 
-const scanSystem = `You read one account's records for the rep who works it and say what needs a contact.
+const scanSystem = `You read one account's records for the rep who works it and say what needs a human.
 
 The data is one JSON object. "account" is how the account stands: its contacts, open deals, open tasks and recent activity by subject. "messages" are the recent exchanges, oldest first, each with its own words; "direction" says who wrote it — "outbound" is us, "inbound" is them — and "unread_chars" says how much of a body was cut.
 

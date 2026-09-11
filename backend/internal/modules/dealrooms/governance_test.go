@@ -131,7 +131,7 @@ func TestAnAgentMayStillOpenARoomNobodyIsInYet(t *testing.T) {
 	// Opening a room is the write that stayed auto-execute, and the reason is
 	// the one the whole division now rests on: a room nobody has been invited
 	// to is readable by nobody. The moment an outside party can read it — the
-	// wording, the documents, who holds a seat — it is a contact's act.
+	// wording, the documents, who holds a seat — it is a colleague's act.
 	//
 	// A nil store panics once the call gets past the authority checks, so
 	// reaching the database IS the pass condition here: it says the agent was

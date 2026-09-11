@@ -46,7 +46,7 @@ const STATES: ReadonlyArray<{ caption: string; entry: AuditLogEntry }> = [
     entry: row({ action: "create" }),
   },
   {
-    caption: "Another contact — NAMED, where this used to read “A teammate”",
+    caption: "Another colleague — NAMED, where this used to read “A teammate”",
     entry: row({ actor_id: "human:u-lars", actor_name: "Lars Vogt" }),
   },
   {
@@ -56,7 +56,7 @@ const STATES: ReadonlyArray<{ caption: string; entry: AuditLogEntry }> = [
   },
   {
     caption:
-      "An agent under a human's authority — the CONTACT is the label, the tool the qualifier",
+      "An agent under a human's authority — the COLLEAGUE is the label, the tool the qualifier",
     entry: row({
       actor_type: "agent",
       actor_id: "agent:01a01740-c9c2-736d-a0b6-d3e3dcb13333",

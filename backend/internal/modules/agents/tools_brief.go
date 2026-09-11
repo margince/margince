@@ -9,7 +9,7 @@ package agents
 // their activities, the relationships behind them — was already agent-readable,
 // so withholding the ASSEMBLED answer while granting all of its parts "is a
 // distinction the surface cannot honestly explain". The queue itself stays a
-// human surface: acting, dismissing and snoozing an item are how a contact
+// human surface: acting, dismissing and snoozing an item are how a colleague
 // notices what an agent did, and an agent that curates that queue is reviewing
 // itself.
 //

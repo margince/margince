@@ -224,7 +224,7 @@ func (s *Service) WithdrawInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID
 // Both discriminators are scoped by subjectScope for a shape whose proposal is
 // one member's (stagingsubject.go). Unscoped, the memory is the WORKSPACE's: one
 // member's refusal would refuse a colleague's proposal, for exactly the kinds
-// whose own gate says a row is one contact's business — and the colleague would
+// whose own gate says a row is one colleague's business — and the colleague would
 // see no offer and no reason for its absence.
 func declinedProbeSQL(byIdentity bool, subject string) string {
 	const prefix = `SELECT status FROM approval

@@ -119,7 +119,7 @@ func (e *MissingConsentPurposeError) FieldFault() (field, code, message string) 
 // owns.
 //
 // Releasing a held draft SENDS it, and the send goes out from the approving
-// human's own mailbox under their name — so the card belongs to the contact the
+// human's own mailbox under their name — so the card belongs to the colleague the
 // message would go out as, and approvals narrows it to them. An automation with
 // no owner names nobody, and there are only three things such a firing could do:
 // stage a card decidable by nobody, which rots in the inbox until its window

@@ -146,7 +146,7 @@ func TestChangePasswordEndsEveryPriorSessionAndIssuesAFreshOne(t *testing.T) {
 		}
 	}
 	// What the caller continues on is a session the change itself minted —
-	// the contact who just proved the current password is not sent to type it a
+	// the human who just proved the current password is not sent to type it a
 	// third time — and it names the same account, not a fresh one.
 	continued, err := e.svc.Authenticate(wsCtx, freshToken)
 	if err != nil {

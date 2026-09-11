@@ -25,7 +25,7 @@ func TestTheTrustLadderReadsTheWriterNotTheChannel(t *testing.T) {
 		capturedBy string
 		want       float64
 	}{
-		{"a contact said it", human, trustHumanStatement},
+		{"a human said it", human, trustHumanStatement},
 		{"an agent wrote it", agent, trustAgentWrite},
 		{"a connector brought it in", "connector:gmail", trustCapturedExternal},
 		{"nobody is named", "", trustCapturedExternal},

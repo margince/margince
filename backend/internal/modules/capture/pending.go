@@ -323,7 +323,7 @@ func (s *PendingStore) Resolve(ctx context.Context, tx pgx.Tx, p PendingCounterp
 // and a fabricated 1.0 would read as a model that was certain.
 //
 // byOwner records WHICH AUTHORITY answered. The purge of personal mail reads it
-// to decide how long to wait before destroying, so a caller that is not a contact
+// to decide how long to wait before destroying, so a caller that is not a human
 // acting deliberately passes false — the classifier, a sweep, a registry rule.
 func (s *PendingStore) ResolveAs(
 	ctx context.Context, tx pgx.Tx, p PendingCounterparty, status, kind, reason string, byOwner bool,

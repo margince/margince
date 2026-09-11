@@ -277,7 +277,7 @@ func (s *Dispatcher) cancelTask(ctx context.Context, task Task) (map[string]any,
 //
 // Every failure below falls back to the plain refusal, which is the answer the
 // client would have got anyway. A handle this server could not create is worth
-// nothing; the sentence telling the agent a contact must approve is worth
+// nothing; the sentence telling the agent a human must approve is worth
 // something.
 func (s *Dispatcher) mintTask(ctx context.Context, fr framing, tool string, refusal error) (createTaskResult, bool) {
 	var staged *workflow.StagedApprovalError

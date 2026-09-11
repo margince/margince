@@ -18,7 +18,7 @@ package gates
 // NOTHING ERRORS WHEN THAT HAPPENS. One row inserting and the rest conflicting
 // is byte-for-byte what a correct re-seed looks like — ON CONFLICT DO NOTHING
 // is the intended path, the tick returns nil, and the log is quiet. The team
-// simply does not get briefs, and the first contact to notice is a rep who
+// simply does not get briefs, and the first colleague to notice is a rep who
 // wonders where theirs went. That is why this is a gate and not a test: the
 // defect's signature is the absence of work, and absence is what a passing
 // suite looks like.

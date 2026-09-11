@@ -187,7 +187,7 @@ func (s *Store) AwaitingMyAnswer(ctx context.Context, limit int) ([]Request, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		// No human, no queue. A caller with no contact behind it has nobody
+		// No human, no queue. A caller with no human behind it has nobody
 		// whose favour was asked for, and answering with somebody else's asks
 		// would be handing an agent a colleague's inbox.
 		return nil, apperrors.ErrPermissionDenied

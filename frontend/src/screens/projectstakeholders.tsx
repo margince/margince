@@ -3,7 +3,7 @@
 
 // The verbs on a project's stakeholders card.
 //
-// The card read the seats and offered nothing: a contact putting a sponsor on a
+// The card read the seats and offered nothing: a rep putting a sponsor on a
 // project, or taking a departed one off, had no control anywhere in the app and
 // had to reach the endpoint through an agent tool. The read was on three
 // surfaces and the write on none.

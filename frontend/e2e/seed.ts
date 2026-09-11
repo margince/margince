@@ -610,7 +610,7 @@ export const auditEntries = [
     occurred_at: "2026-07-05T07:00:00Z",
   },
   {
-    // An agent under ANOTHER human's authority, so the row reads as that contact
+    // An agent under ANOTHER human's authority, so the row reads as that human
     // rather than as the viewer — which is what lets the actor-filter assertion
     // below distinguish "Du" from a named teammate.
     id: "al-2",

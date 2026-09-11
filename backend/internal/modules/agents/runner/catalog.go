@@ -90,7 +90,7 @@ func Catalog() []AgentSpec {
 // TriggerRef names one occurrence of a scheduled spec FOR ONE SEAT; the
 // runner's idempotency (one run per trigger occurrence) hangs off this string.
 //
-// The seat belongs in the identity because the agent acts for a contact. Both
+// The seat belongs in the identity because the agent acts for a colleague. Both
 // uniqueness rules that stop a double run are keyed on this ref —
 // agent_run_trigger_unique on the ref alone, runner_job_trigger_unique on
 // (agent_spec, ref) — so a ref naming only the spec and the day makes the

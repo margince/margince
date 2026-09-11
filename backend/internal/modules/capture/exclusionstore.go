@@ -5,7 +5,7 @@ package capture
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must
 // not store at all. A workspace exclusion is the installation's rule and takes
-// admin/ops to change; a user exclusion is one contact's boundary for the
+// admin/ops to change; a user exclusion is one colleague's boundary for the
 // mailbox they connected, theirs alone to set and to lift, and binds only the
 // connections they granted. Both are read by the sink before any write
 // (excludedTx), so a matching message leaves a breadcrumb and a trace that

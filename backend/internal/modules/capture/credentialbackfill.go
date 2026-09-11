@@ -37,7 +37,7 @@ import (
 )
 
 // CredentialBackfillActor names this pass on its ledger rows. A system id
-// rather than a contact, for the reason the rows exist: an operator reading the
+// rather than a colleague, for the reason the rows exist: an operator reading the
 // trail has to be able to tell bytes the BOOT relocated from a credential a
 // colleague connected, and those are the two things that write this column.
 const CredentialBackfillActor = "system:capture-credential-backfill"

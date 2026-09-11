@@ -34,7 +34,7 @@ import (
 // off the workspace fan-out for the same reason.
 //
 // A step-up is the other: "may this agent keep reading" is a question about ONE
-// connection, and the only contact who can answer it is the human whose authority
+// connection, and the only colleague who can answer it is the human whose authority
 // that connection borrows.
 // A held scheduled send is the third: the message is one rep's, the decision is
 // whether to retry it or abandon it, and nobody else has standing to answer.

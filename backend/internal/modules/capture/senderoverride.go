@@ -12,7 +12,7 @@ package capture
 // overwrites is not a decision, it is a suggestion, and the owner would find
 // the same sender wrong again next week with no way to tell why.
 //
-// Per SEAT. A sender is personal to the contact who knows them, so one rep's
+// Per SEAT. A sender is personal to the colleague who knows them, so one rep's
 // family member is another rep's customer, and a shared list would let either
 // overrule the other about their own correspondence.
 
@@ -260,7 +260,7 @@ func machineKindForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address str
 		 ORDER BY updated_at DESC LIMIT 1`, address, user).Scan(&kind)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			// The engine never reached this sender. A contact may still decide
+			// The engine never reached this sender. A human may still decide
 			// about them — an address they know is coming, say — and the page
 			// then shows a decision that overruled nothing.
 			return "", nil

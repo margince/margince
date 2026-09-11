@@ -569,7 +569,7 @@ export const en = {
   // one name: a role that does not admit the action on this kind of record, and
   // a record the reader holds read-only through a share. Nothing on the wire
   // tells them apart, so the copy names neither and offers both ways out — an
-  // admin widens a role, the contact who shared a record widens the share. It
+  // admin widens a role, the colleague who shared a record widens the share. It
   // does not say the record may be missing: a row the reader may not see at all
   // comes back 404, so by the time this is read the record is one they may know
   // about. Two sentences, no dash (VOICE-RULE-5).
@@ -2664,7 +2664,7 @@ export const en = {
   "offer.viewPdf": "View PDF",
   "offer.pdfUnavailable": "PDF rendering not available on this deployment.",
 
-  // The queue of staged actions a contact has to decide. It is a DECISION here
+  // The queue of staged actions a colleague has to decide. It is a DECISION here
   // and an `approval` on the wire, and those two are the only names it has: it
   // was also being called an inbox, a drafts queue and a staged list, and a
   // reader told four names for one surface has been told none. Copy that has to
@@ -8765,7 +8765,7 @@ export const en = {
 
   // The release gate (src/screens/releaseskew.tsx). It renders instead of the
   // app when this bundle and the api come from different releases, so the copy
-  // has two readers at once: the contact who just wants in, and the operator who
+  // has two readers at once: the colleague who just wants in, and the operator who
   // has to fix it. The first sentence is for the first, the last for the second.
   "release.skewTitle": "This installation is part-way through an update",
   "release.skewBody":

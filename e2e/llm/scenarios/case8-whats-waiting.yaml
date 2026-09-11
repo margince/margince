@@ -118,7 +118,7 @@ must_mention:
 
 must_not_mention:
   # CRITERION 3. The failure this case exists for is not a wrong verdict — that
-  # is caught above — but a refusal to give one: the contact said approve this,
+  # is caught above — but a refusal to give one: the colleague said approve this,
   # reject that, and the assistant hands the queue back and tells them to open
   # the app. A passport decides on its human's own authority and the decision
   # happened when they gave the instruction, so an answer that routes them to a

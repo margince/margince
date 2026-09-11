@@ -1,6 +1,6 @@
 # Using Margince
 
-Guides for the contact **working in** Margince — a rep, a delivery lead, an
+Guides for the colleague **working in** Margince — a rep, a delivery lead, an
 account owner. No code, no API: a sign-in and the app.
 
 They live here rather than under [`docs/`](../docs/README.md) because that tree is

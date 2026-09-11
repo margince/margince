@@ -14,7 +14,7 @@ that is two cases a sweep failing for a reason that is not the product's, and a
 red case reads as a finding.
 
 So the semantic half is asked of a model instead, and the scenario states the
-question in a sentence a contact can read — one text that is both the prompt and
+question in a sentence a human can read — one text that is both the prompt and
 the documentation, rather than a regex and a comment that can drift apart.
 
 A CRITERION IS A STATEMENT ABOUT THE ANSWER AND "yes" MEANS IT HOLDS. That is

@@ -265,7 +265,7 @@ func TestACapturedTouchCompletesTheSystemTaskAndLeavesTheHumans(t *testing.T) {
 		t.Error("the system follow-up task is still open after the follow-up happened")
 	}
 	if e.isDone(t, humanTask) {
-		t.Error("the HUMAN's task was completed — the system claimed work a contact may not consider done")
+		t.Error("the HUMAN's task was completed — the system claimed work a colleague may not consider done")
 	}
 	if e.isDone(t, forgedTask) {
 		t.Error("a task with a forged source 'system' was completed — captured_by, not source, decides what the system minted")
@@ -337,7 +337,7 @@ func TestAPromotedLeadCompletesItsSystemTasksCarriedToTheContact(t *testing.T) {
 		t.Error("the promoted lead's system follow-up is still open — its task carried to the contact, and the resolver looked it up by the lead id promotion just nulled")
 	}
 	if e.isDone(t, humanTask) {
-		t.Error("the HUMAN's task was completed — the system claimed work a contact may not consider done")
+		t.Error("the HUMAN's task was completed — the system claimed work a colleague may not consider done")
 	}
 }
 

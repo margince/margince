@@ -24,7 +24,7 @@ import "fmt"
 // THE READER'S OWN, and that is the half that is easy to leave out. The ledger
 // is per mailbox owner: the same address can be one rep's personal adviser and
 // another's live customer. Read unscoped, the first rep's private verdict
-// silently suppresses the second rep's reconnect — one contact's privacy
+// silently suppresses the second rep's reconnect — one colleague's privacy
 // decision deciding another contact's pipeline.
 //
 // The owner's OWN correction outranks the machine, both ways. `business`

@@ -51,7 +51,7 @@ curl -sS http://localhost:8080/v1/me -H "Cookie: crm_session=$token"
 ```
 
 There is no bearer token for a human — `Authorization: Bearer` is the agent's
-credential, and a passport is not something a contact's session can be exchanged
+credential, and a passport is not something a colleague's session can be exchanged
 for. An agent calling the same routes uses its passport and skips all of this.
 
 ### What a passport is

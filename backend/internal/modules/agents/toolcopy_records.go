@@ -253,7 +253,7 @@ var listPipelinesCopy = toolCopy{
 	Limits: "It is where the id of a stage a deal could move TO comes from, so a deal cannot be " +
 		"created, or moved anywhere new, without calling this first — a deal you have already " +
 		"read carries only the stage it is in. Each stage carries a semantic — open, won or lost " +
-		"— and that, not its name, is what decides whether moving onto it needs a contact's " +
+		"— and that, not its name, is what decides whether moving onto it needs a human's " +
 		"approval; a stage called \"Closed\" may be either.",
 	Retain: "Keep the pipeline_id and the stage_id of the stage you mean: create_record for a " +
 		"deal requires both, and advance_deal and progress_deal take that stage_id as their " +

@@ -53,7 +53,7 @@ var errMemberNotActive = errors.New("identity: the member is not active")
 // refuses it, and forgot-password cannot even find it — that lookup requires an
 // existing hash. This path is the one door left open, because issuing here does
 // not require the target to hold a password already. Redeeming a link minted
-// for it would give an identity with no contact behind it a working credential,
+// for it would give an identity with no human behind it a working credential,
 // and every session opened with it would be attributable to "the agent" with
 // nothing recording which human actually signed in.
 //

@@ -7,7 +7,7 @@ package contacts
 // normalized bytes in object storage plus the page URL they were resolved
 // from, never the bytes themselves. A logo is a DISPLAY asset, so resolving
 // one is a 🟢 write that needs no confirm — but it obeys the same
-// human-precedence rule every enriched field does: a mark a contact uploaded
+// human-precedence rule every enriched field does: a mark a human uploaded
 // is never replaced by one a machine found, and a resolve that meets one
 // leaves it alone rather than staging a change nobody asked for.
 

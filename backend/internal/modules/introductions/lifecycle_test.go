@@ -93,7 +93,7 @@ func TestExpiryReachesEveryStateThatStillOwesAnAction(t *testing.T) {
 	}
 }
 
-// The clock is not a contact. A sweep that could decline on a colleague's behalf
+// The clock is not a human. A sweep that could decline on a colleague's behalf
 // would put a refusal in their mouth that they never gave.
 func TestTheSweepCanOnlyExpire(t *testing.T) {
 	answers := []Status{

@@ -41,7 +41,7 @@ because an agent acts on your data exactly as a contact does — excluding them
 would let an installation work without limit through agents.
 
 **Your installation does not come with one.** A new installation seeds no agent
-identity, so every seat it is billed for belongs to a contact.
+identity, so every seat it is billed for belongs to a human.
 
 Any agent identity that does exist is a **full seat and counted**, like any
 other. What it may do comes from the passports contacts mint for it and the
@@ -203,10 +203,10 @@ right to share. Flat, explicit grants only. Every share and un-share is audited.
 
 ## Inviting and removing contacts
 
-Only an administrator can, and only a contact — an agent may never create a human
+Only an administrator can, and only a human — an agent may never create a human
 account.
 
-**Inviting.** You choose a role, and the contact is created with no password. If
+**Inviting.** You choose a role, and the colleague is created with no password. If
 your installation sends email, they get a link. If not, the administrator mints a
 one-time link and hands it over directly: "Send this link to the member over a
 channel you trust. It works once and is shown only now." The link lasts 7 days.

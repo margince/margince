@@ -136,7 +136,7 @@ cases:
     3:
       name: The decision is taken, not handed back
       statement: >-
-        The contact gave an explicit approve and an explicit reject, and an
+        The colleague gave an explicit approve and an explicit reject, and an
         assistant that returns the queue and sends them to the web app has
         reported a limitation this surface does not have.
   case9_filed_in_the_wrong_place:
@@ -221,7 +221,7 @@ cases:
       name: The other side's calendar is not claimed to be known
       statement: >-
         Availability answers for one host and not for the invitee, and the
-        assistant must not report the slots as times both contacts are free.
+        assistant must not report the slots as times both humans are free.
   case30_a_word_for_it:
     1:
       name: The word the workspace already has is reused

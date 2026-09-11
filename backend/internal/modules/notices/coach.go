@@ -35,7 +35,7 @@ const noteBound = 500
 // tell a typo from a different field.
 const fieldRecipient = "recipient_user_id"
 
-// Teammates answers whether the recipient is on a team with the calling contact.
+// Teammates answers whether the recipient is on a team with the calling colleague.
 //
 // The caller is not a parameter: the module behind this reads it from the
 // principal, so a coach cannot ask about an edge they are not an end of. Bound
@@ -58,7 +58,7 @@ var coachSubjects = map[crmcontracts.NoticeKind]string{
 	crmcontracts.NoticeKindCoachGeneral:           "Your lead left you a note",
 }
 
-// RaiseCoachNotice records one contact's nudge to a teammate.
+// RaiseCoachNotice records one colleague's nudge to a teammate.
 //
 // AUTHORIZATION FIRST, then the request's own shape. A caller who may not coach
 // learns nothing about what a well-formed coaching request looks like — every
@@ -98,7 +98,7 @@ func (s *Store) RaiseCoachNotice(
 	if recipient.IsZero() {
 		// An absent recipient_user_id decodes to the zero UUID with no error,
 		// so without this it reaches the membership question, comes back "not a
-		// teammate", and answers 403 — a refusal about a contact the caller
+		// teammate", and answers 403 — a refusal about a colleague the caller
 		// never named and cannot connect to anything they did.
 		return Notice{}, &values.ParseError{
 			Field: fieldRecipient, Code: "missing_recipient",

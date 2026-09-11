@@ -439,7 +439,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))
 	}
 	if in.Query != nil && *in.Query != "" {
-		// subject + body are the two human-readable columns a contact would
+		// subject + body are the two human-readable columns a human would
 		// recognize an item by. The wildcard is escaped, so a caller typing %
 		// searches for a percent sign rather than matching everything.
 		pos := arg("%" + storekit.EscapeLike(*in.Query) + "%")

@@ -27,7 +27,7 @@ func NewHandlers(store *Store, mates Teammates) Handlers {
 	return Handlers{store: store, mates: mates}
 }
 
-// RaiseNotice records one contact's coaching nudge to a teammate.
+// RaiseNotice records one colleague's coaching nudge to a teammate.
 func (h Handlers) RaiseNotice(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.RaiseNoticeRequest
 	if !httperr.Decode(w, r, &req) {

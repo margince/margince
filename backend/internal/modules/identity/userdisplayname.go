@@ -7,7 +7,7 @@ package identity
 //
 // It was written once — by the invite, or by the installation's cold start —
 // and nothing could change it afterwards. `display_name` had exactly two
-// writers, both INSERTs, so a contact who married, was invited as "j.smith" or
+// writers, both INSERTs, so a colleague who married, was invited as "j.smith" or
 // was simply typed wrong carried that name beside every record they touched
 // with no way to correct it, and no admin could correct it for them either.
 //

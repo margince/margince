@@ -41,7 +41,7 @@ package compose
 // (--microsoft-signin-tenant) is an operator's explicit decision and wins
 // whenever it is set. Without one, a stored app pinned to a directory names
 // that directory — the admin who pinned it said whose mailboxes may connect,
-// and that is the same company whose contacts sign in — while a stored app
+// and that is the same company whose colleagues sign in — while a stored app
 // left on `common` names nothing and cannot sign anyone in, for the reason
 // above.
 
@@ -209,7 +209,7 @@ func (cfg MicrosoftSignInConfig) MissingFields() []string {
 	}.missingSignInFields()
 	// EVERY entry. A list with a bad id is refused whole rather than quietly
 	// served by its good half: an operator who mistyped one directory would
-	// otherwise get a working sign-in that silently turns away the contacts that
+	// otherwise get a working sign-in that silently turns away the colleagues that
 	// entry was for. An EMPTY list is not refused: it leaves the directory to
 	// the stored app's pin, and the boot log says what that means for the
 	// environment's own pair.

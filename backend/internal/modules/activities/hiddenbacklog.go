@@ -48,7 +48,7 @@ const hiddenHorizonDays = 365
 // Every figure is counted under the CALLER's own visibility, like the team
 // board's are: a count summing rows the reader may not open would publish work
 // they have no access to. So this reports what is hidden FROM THEM, which is the
-// only honest answer available without handing one contact a licence to read
+// only honest answer available without handing one colleague a licence to read
 // another's records.
 type HiddenBacklog struct {
 	// Truncated says a read hit WaitingScanCap, which makes every figure below

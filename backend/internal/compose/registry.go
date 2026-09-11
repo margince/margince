@@ -168,7 +168,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// needs the overlay guard the record verbs get from the Dispatcher for free.
 	agents.RegisterPipelineTool(registry, nativeOnlyPipelines(sorMode, pipelineLister(pool)))
 	// The confirm-first queue, read and answered from the same conversation a
-	// call was staged in. Nothing here decides anything the contact behind the
+	// call was staged in. Nothing here decides anything the human behind the
 	// passport could not decide in the app.
 	agents.RegisterApprovalTools(registry, approvalQueue(approvalsSvc))
 	agents.RegisterReportTool(registry,

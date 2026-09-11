@@ -11,7 +11,7 @@
  * string. Encoding that per screen is how one list would start selecting a
  * different slice than another from the same address.
  *
- * Commas, not repetition: an address a contact can read and edit, and the ids
+ * Commas, not repetition: an address a human can read and edit, and the ids
  * are UUIDs so no value can contain the separator.
  */
 

@@ -60,7 +60,7 @@ type Answer struct {
 //
 // Every method reads the rep from the ACTING PRINCIPAL and takes no user id.
 // That is the security property, not a convenience: an argument would let one
-// contact answer for another, and "the admin turned it on for you" is precisely
+// human answer for another, and "the admin turned it on for you" is precisely
 // what a standing grant exists not to be.
 type Store interface {
 	// MyAnswerTx reads the acting rep's own answer inside the caller's

@@ -46,7 +46,7 @@ func buildCatalog() map[Language]Copy {
 // three renderings in the order the languages are declared.
 type writeLine = func(field func(*Copy) *string, english, german, vietnamese string)
 
-// resetLines is the password reset a contact asked for.
+// resetLines is the password reset a colleague asked for.
 // unsubscribeLines is the footer beneath an outgoing message.
 func unsubscribeLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.UnsubscribeLabel },

@@ -110,7 +110,7 @@ type SARPackage struct {
 	ReplyJudgements []map[string]any `json:"reply_judgements"`
 	// Handoffs is each time this contact was passed from one seat to another as a
 	// prospect, what was decided, and why. Art. 15 owes it twice over: the note
-	// is what one colleague wrote ABOUT them, and the decision is one contacts
+	// is what one colleague wrote ABOUT them, and the decision is one colleagues
 	// made about whether they were worth working at all.
 	//
 	// That this section exists at all is held by:

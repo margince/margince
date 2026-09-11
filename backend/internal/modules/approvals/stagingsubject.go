@@ -20,7 +20,7 @@ import (
 // target and either the logical identity or the diff hash, so one member's
 // pending row could be joined as another's, expired as superseded by another's,
 // and one member's decline could refuse another member's proposal — for exactly
-// the kinds whose own gate says a row is one contact's business.
+// the kinds whose own gate says a row is one colleague's business.
 //
 // The engine's answer to this used to be that a caller builds a
 // collision-proof identity. No caller states that property and none tests it,

@@ -131,14 +131,14 @@ Read this as one of several answers, not as the whole access-control story.
 Parts of the system are not governed by these objects at all. They are open to
 the admin role and to nobody else, whatever the table above says:
 
-- **User administration** — inviting someone, changing a contact's role,
+- **User administration** — inviting someone, changing a colleague's role,
   deactivating or reactivating an account.
 - **Privacy and GDPR work** — erasing a subject's data, and assembling the
   export that answers a subject-access request.
 - **The audit log** — reading the record of who changed what.
 
 If the question is whether somebody can reach one of those, this page cannot
-answer it. The only question there is whether that contact holds the admin role.
+answer it. The only question there is whether that seat holds the admin role.
 
 ### An agent gets no more than a row here shows, and normally much less
 

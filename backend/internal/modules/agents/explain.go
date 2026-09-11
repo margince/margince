@@ -328,7 +328,7 @@ const maxRemedyBudget = 4 * httperr.MaxFaultText
 // stagedExplanation is what a caller is told about a 🟡 call now sitting in a
 // human's inbox: what it would do, and which of the two moves to make.
 //
-// The summary is the sentence the human's own card carries, so the contact and
+// The summary is the sentence the human's own card carries, so the colleague and
 // the agent are waiting on one described thing.
 //
 // IT ALSO SAYS WHAT IS NOT BLOCKED, AND TO REPORT WHAT ALREADY HAPPENED,

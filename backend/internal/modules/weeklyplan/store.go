@@ -45,7 +45,7 @@ const (
 	// reports, so a consumer filtering on it sees all of them.
 	changedCommitments = "commitments"
 	proseBound         = 2000
-	// planCap bounds one week's list. A plan is what a contact means to do in
+	// planCap bounds one week's list. A plan is what a colleague means to do in
 	// five days; past this it is a backlog, and a backlog belongs in tasks.
 	planCap = 50
 )
@@ -74,7 +74,7 @@ const (
 // plan comes to sit beside a review of a different one.
 type WeekStartFunc func(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time, error)
 
-// Teammates answers whether the caller may read a named contact's plan.
+// Teammates answers whether the caller may read a named colleague's plan.
 //
 // The lead's half of this module. Declared here as the one question it asks, so
 // the edge is injected by compose rather than imported — identity owns the

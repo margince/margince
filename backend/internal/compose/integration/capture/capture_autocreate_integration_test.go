@@ -270,7 +270,7 @@ func TestCaptureRefusesToDeriveARecord(t *testing.T) {
 			t.Fatal("suppression must not drop the captured activity")
 		}
 	})
-	t.Run("a connector with no granting human records the fault, never a contact", func(t *testing.T) {
+	t.Run("a connector with no granting human records the fault, never a human", func(t *testing.T) {
 		// A bare sink with the ensure seam wired but an ownerless connector
 		// principal: the capture itself must land, the ensure must refuse
 		// honestly (RC-8 — created rows need a human owner), and the fault

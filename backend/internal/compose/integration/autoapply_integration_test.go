@@ -400,7 +400,7 @@ func grantCompanyRepRole(t *testing.T, e *Env, user ids.UUID) {
 // sweep steps over it and keeps going.
 //
 // "Stranded" is about the WRITE, not the decision: the decision commits and the
-// effect then fails, exactly as it does when a contact clicks approve on a stale
+// effect then fails, exactly as it does when a colleague clicks approve on a stale
 // pin. What this holds is that the failure stays with its own row.
 func TestOneUnapplyableProposalDoesNotParkTheRest(t *testing.T) {
 	e := Setup(t)

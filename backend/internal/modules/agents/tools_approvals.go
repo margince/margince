@@ -220,8 +220,8 @@ func (t readApprovalTool) Handle(ctx context.Context, in json.RawMessage) (json.
 // would stage an approval in order to approve an approval, and the regress has
 // no fixed point — there is no human the second card could reach that the first
 // one could not. What stands in place of a tier here is the credential: a
-// passport decides on the authority of the contact who minted it, spends the
-// caps the release spends, and reaches nothing that contact could not decide
+// passport decides on the authority of the colleague who minted it, spends the
+// caps the release spends, and reaches nothing that colleague could not decide
 // themselves in the app.
 type decideApprovalTool struct{ inbox ApprovalInbox }
 

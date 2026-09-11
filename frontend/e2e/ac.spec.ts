@@ -1072,7 +1072,7 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
 test("AC-settings: the passport list is metadata-only and strikes revoked rows", async ({
   page,
 }) => {
-  // Agent passports are a credential the CONTACT holds, so they live on the
+  // Agent passports are a credential the COLLEAGUE holds, so they live on the
   // "Your agents" entry beside autonomy and the tool catalog — not on the
   // company's AI page, which is spend, model prices and automations.
   await page.goto("/#/settings/agents");

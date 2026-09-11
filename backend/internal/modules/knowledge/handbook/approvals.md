@@ -85,7 +85,7 @@ out-of-scope record does.
 **Nobody releases their own proposal.** An agent may not approve a card its own
 credential staged. It may still reject it.
 
-A contact's own direct action needs no approval — a human doing the thing
+A colleague's own direct action needs no approval — a human doing the thing
 themselves *is* the confirmation.
 
 ## Editing, versions and clashes

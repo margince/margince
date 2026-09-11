@@ -6,12 +6,12 @@ package attention
 // The tier that admits the three READINGS ABOUT the queue, as against the queue
 // itself.
 //
-// `/worklist` assembles one contact's day and every seat gets their own. The team
+// `/worklist` assembles one colleague's day and every seat gets their own. The team
 // board, the hidden-backlog guardrail and the response metrics are a different
 // kind of question: they ask how the WORK is going rather than what to do next,
 // and they are read by whoever can change how it goes — the horizon that is set
 // wrong, the rep marking every hard reply not_sales, the fortnight nobody
-// answered in. A rep working their queue to the bottom is not the contact who
+// answered in. A rep working their queue to the bottom is not the colleague who
 // acts on any of those.
 //
 // One spelling, because two of the three used to have none. The board refused

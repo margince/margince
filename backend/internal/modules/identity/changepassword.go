@@ -29,7 +29,7 @@ import (
 //
 // The change itself ends every credential that existed before it and mints the
 // one the caller continues on. Whoever else held a session, a grant or a token
-// for this account is out; the contact who just proved the current password is
+// for this account is out; the human who just proved the current password is
 // not asked for it a third time.
 
 // ErrCurrentPasswordWrong marks a change whose current-password check failed.
@@ -248,7 +248,7 @@ func callerUserID(ctx context.Context) (ids.UserID, bool) {
 // make: changing its own password.
 //
 // The seat ceiling is a licensing bound on what a seat may do to the BUSINESS —
-// it exists so a read seat cannot write records it was not paid for. A contact's
+// it exists so a read seat cannot write records it was not paid for. A human's
 // own credential is not business data, and the ceiling has no interest in it.
 // Left inside the cap, a read seat could never rotate its own password at all,
 // which is worst on exactly the installations this route was added for: the

@@ -117,7 +117,7 @@ Emit exactly one kind for the thread you are given:
 Only "ordinary" makes a thread readable by colleagues, so answer "ordinary" only when you are
 confident the conversation is routine company business. When a thread is about ordinary trade
 AND something sensitive, the sensitive kind wins.
-Who the bill is FOR decides. An invoice or receipt for a CONTACT's own household or consumer
+Who the bill is FOR decides. An invoice or receipt for a HUMAN's own household or consumer
 service — their home, their phone, their rent, their own bank or card — is "personal" even
 when it arrives in a work mailbox, is addressed at a work address, or is forwarded for
 reimbursement. An invoice for the COMPANY's own trade is ordinary trade, which is evidence

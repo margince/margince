@@ -3319,7 +3319,7 @@ paths:
         AI budget is exhausted, the brief degrades to a deterministic structured summary
         rather than failing — `generated_by` says which it is.
 
-        Human-only: a brief is a reading aid for a contact, and an agent reading records
+        Human-only: a brief is a reading aid for a colleague, and an agent reading records
         through a passport has the records themselves.
       parameters:
         - $ref: '#/components/parameters/BriefProjectId'
@@ -10592,7 +10592,7 @@ paths:
         yours where you gave one. A product that decides silently and shows nobody is one you have
         to trust rather than check, and the whole posture rests on being able to check.
 
-        Your own senders and nobody else's. Whose mail a contact keeps out is itself private, so
+        Your own senders and nobody else's. Whose mail a colleague keeps out is itself private, so
         there is no id here that reaches a colleague's list and no admin view of one.
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
@@ -10627,7 +10627,7 @@ paths:
         mail is withdrawn too; a record you have edited, or a sender your workspace genuinely
         corresponds with, stays.
 
-        Your own mailbox only. A sender is personal to the contact who knows them: one rep's family
+        Your own mailbox only. A sender is personal to the colleague who knows them: one rep's family
         member is another rep's customer.
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
@@ -10674,7 +10674,7 @@ paths:
         message to decide. Mail from a held party is still captured — it lands on the caller's own
         timeline and is held to the contacts on it.
 
-        The caller's own list and nobody else's. Whose mail a contact keeps private is itself
+        The caller's own list and nobody else's. Whose mail a colleague keeps private is itself
         private, so there is no id that reaches a colleague's holds and no admin view of them.
         Distinct from an exclusion, which keeps mail out of the product entirely.
       x-agent-access: human-only
@@ -11175,7 +11175,7 @@ paths:
         * `this_morning` — the overnight brief's ranked queue: where to start, not what must
           be answered. Optional by construction, which is why it is not folded into the lane
           below.
-        * `needs_you` — a decision only a contact can make: an outbound send, a merge that
+        * `needs_you` — a decision only a human can make: an outbound send, a merge that
           cannot be undone, a proposal against a record. Bounded, and ordered
           highest-stakes-first.
         * `planned` — work already agreed: today's and overdue tasks.
@@ -11655,7 +11655,7 @@ paths:
         Counted under the CALLER's own visibility, like `/worklist/team`'s counts are: a
         figure summing rows the reader may not open would publish work they have no
         access to. So this answers "how much is hidden from YOU", which is the only
-        honest reading available without giving one contact a licence to read another's
+        honest reading available without giving one colleague a licence to read another's
         records.
 
         Read by a LEAD, and refused below a row scope of `team` — the same tier
@@ -11708,7 +11708,7 @@ paths:
         Read by a LEAD, and refused below a row scope of `team`, the same tier
         `/worklist/team` and `/worklist/hidden` take. "How fast does the workspace answer"
         is a question about how the work is going rather than about what to do next, and
-        the rep answering the queue is not the contact who changes the answer.
+        the rep answering the queue is not the colleague who changes the answer.
       x-agent-access: human-only
       parameters:
         - name: days
@@ -12440,7 +12440,7 @@ paths:
       description: |
         Every domain carrying a standing admission decision: the vendors and bulk senders the
         system refused a company, and the ones a human deliberately let back in. Each entry says
-        WHAT decided it — a model verdict, a heuristic, or a contact — so an operator can tell an
+        WHAT decided it — a model verdict, a heuristic, or a human — so an operator can tell an
         automatic refusal from somebody's deliberate one.
 
         Every human role may read the list; changing an entry demands `company:update`
@@ -16574,7 +16574,7 @@ paths:
       operationId: inviteDealRoomParticipant
       summary: Admit a named contact to the room.
       description: |
-        HUMAN-ONLY. Records the contact and mints one credential for them. Whether a mail
+        HUMAN-ONLY. Records the colleague and mints one credential for them. Whether a mail
         relay took the credential is reported as `queued` — it is false when the
         installation has no outbound mail configured and when the relay refused the
         message. The participant and the invitation are recorded either way, so a mail
@@ -17674,7 +17674,7 @@ paths:
       # distinction the surface cannot honestly explain. It stays scoped to the
       # acting principal's own runs, and a passport carries the granting human's
       # user id, so an agent reads the brief of the contact it acts for. The
-      # queue's MARKS stay human-only below: they are how that contact notices
+      # queue's MARKS stay human-only below: they are how that human notices
       # what the agent did.
       #
       # The tool charges one read per item against MCP-SESS-READS. Brief items
@@ -18255,7 +18255,7 @@ paths:
         scope is named in `supersedes_id`, so what was believed on the day it was believed
         survives — which is the whole value of a call to anyone reviewing how forecasting
         went.
-      # Human-only, for now and on purpose. A call is a contact's judgement about
+      # Human-only, for now and on purpose. A call is a colleague's judgement about
       # a number they are accountable for, so an agent could at most stage one
       # for approval — and a staged approval has to name what it binds to. The
       # governed-call machinery is record-typed and a forecast call writes no
@@ -19744,7 +19744,7 @@ paths:
       summary: The sign-off appended to mail you send.
       description: |
         Always the CALLER's own, never anybody else's. A signature is the words a
-        contact signs their name with, and no seat — including admin — reads or
+        colleague signs their name with, and no seat — including admin — reads or
         edits another member's through this API.
 
         A member who has never written one has no row, and that is not an error:
@@ -37187,7 +37187,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         actor_type: { type: string, enum: [human, agent, system, connector, buyer] }
-        actor_id: { type: string, description: "User uuid, agent id, connector name (e.g. connector:gmail), 'system', or a Deal Room participant (buyer:<participant uuid>) — an external contact with no seat, who appears in no member directory." }
+        actor_id: { type: string, description: "User uuid, agent id, connector name (e.g. connector:gmail), 'system', or a Deal Room participant (buyer:<participant uuid>) — an external human with no seat, who appears in no member directory." }
         passport_id: { type: [string, 'null'], format: uuid, description: Agent Seat Passport that authorized an agent action. }
         on_behalf_of: { type: [string, 'null'], format: uuid, description: The human authority for an agent action. }
         actor_name:
@@ -38225,8 +38225,8 @@ components:
             and reporting timezone — asked of the creator once the company is confirmed, before any
             step about the contact answering. `invite` is the question asked next: whether the contact
             setting the installation up will also work in it, which is what decides whether the
-            `voice` and `connect` steps are walked now or by the first contact they invite. `team` is
-            where a creator who will not work in it invites that contact. A member's route begins at
+            `voice` and `connect` steps are walked now or by the first colleague they invite. `team` is
+            where a creator who will not work in it invites that colleague. A member's route begins at
             `voice`: the company and its basis are already settled, so their steps are the personal
             ones alone. `results` is kept for rows written before the invite existed; a client treats
             it as the connect step being next.
@@ -42538,7 +42538,7 @@ components:
             the rep's first hour.
 
             Its own lane rather than rows in `needs_you`, because the two ask different
-            things. A `needs_you` item is a decision a contact must make before something
+            things. A `needs_you` item is a decision a human must make before something
             proceeds; a briefing item is a suggestion about where to start, and answering
             it is optional. Merging them would put "nothing is waiting on you" and
             "nothing was worth flagging" behind one number.
@@ -42557,7 +42557,7 @@ components:
         needs_you:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
-          description: "Decisions only a contact can make, highest-stakes first."
+          description: "Decisions only a human can make, highest-stakes first."
         planned:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }

@@ -641,7 +641,7 @@ function MemberRow({
       >
         {/* Deactivating the agent seat is a posture an operator is entitled to
             take, so it stays offered — and the generic body (signed out, sessions
-            revoked) describes a contact rather than an identity that signs in
+            revoked) describes a colleague rather than an identity that signs in
             nowhere. The agent body's job is to say what does NOT stop: scheduled
             extension jobs keep running, because a tick acts as the job it is. */}
         <p className="t-caption">

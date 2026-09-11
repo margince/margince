@@ -507,7 +507,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // sender would open it and find it worked.
   //
   // The URL is left EXACTLY as typed. That is the whole affordance: the reader
-  // can read what they asked for, copy it, and ask the contact who has it.
+  // can read what they asked for, copy it, and ask the colleague who has it.
   const boundary =
     target.kind === "unknown"
       ? "unknown"
@@ -987,7 +987,7 @@ function LanguageSettingRow() {
   const t = useT();
   const { locale, setLocale } = useLocale();
   const queryClient = useQueryClient();
-  // The choice is written to the seat so it follows this contact to their next
+  // The choice is written to the seat so it follows this colleague to their next
   // browser; `setLocale` still keeps its local copy, which is what renders
   // before the request lands and what a signed-out reader is left with.
   //

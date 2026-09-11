@@ -1139,7 +1139,7 @@ licensed full seat is taken, inviting a member and reactivating a deactivated
 full seat are refused with `403 seat_limit_reached`, carrying the granted and
 used counts. Nothing already in use is touched: no seat is demoted, no session
 ends, and a license that lapses mid-month refuses the NEXT seat rather than
-taking away the ones contacts are working in (P7). Read seats are unlimited and
+taking away the ones colleagues are working in (P7). Read seats are unlimited and
 never counted; a suspended or deactivated seat frees its own, so an admin at the
 ceiling can make room. A license carrying no seat count caps nothing, and so
 does an unlicensed development installation — the ceiling is read live, so a

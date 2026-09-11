@@ -255,7 +255,7 @@ const (
 // that reads "needs approval" and stops has stranded the very effect the human
 // is about to release.
 const (
-	taskCreatedMessage = "A contact must approve this before it takes effect. Nothing has changed yet. " +
+	taskCreatedMessage = "A human must approve this before it takes effect. Nothing has changed yet. " +
 		"Poll tasks/get with this taskId; it completes when they decide."
 	taskRejectedMessage = "A contact declined this. Nothing was changed, and repeating the call will be " +
 		"declined the same way — tell the user rather than retrying."

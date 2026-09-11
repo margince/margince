@@ -189,7 +189,7 @@ func (s *Service) expireOne(ctx context.Context, id ids.ApprovalID) (bool, error
 		}
 
 		// decided_by stays NULL and the actor is the system: nobody decided
-		// this, and naming a contact would put a human's name on a refusal they
+		// this, and naming a human would put a human's name on a refusal they
 		// never made. That is the whole difference between this and Decide.
 		// The actor reaches the audit row from the CONTEXT, which the sweep
 		// binds — storekit reads it there rather than taking it as a parameter,

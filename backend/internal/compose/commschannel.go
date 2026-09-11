@@ -11,7 +11,7 @@ package compose
 // asks a different question of a different table: a mailbox is one HUMAN's grant
 // of one connector, while a channel is a bot an admin bound for the whole
 // workspace. Only the credential lookup moves off the human, though — the seat
-// gate still re-reads the contact who staged the message, so a rep without a
+// gate still re-reads the colleague who staged the message, so a rep without a
 // live, mutating seat is refused whichever transport they staged against.
 
 import (

@@ -24,7 +24,7 @@ const LENA = "00000000-0000-4000-8000-000000000001";
 
 // Everyone the reader may hand work to. The agent seat is in the roster on
 // purpose: `useAssigneeOptions` drops it, because the reassign endpoint checks
-// existence rather than seat kind and would park the task where no contact's
+// existence rather than seat kind and would park the task where no colleague's
 // queue shows it.
 const roster = {
   data: [

@@ -127,7 +127,7 @@ func TestRejectingACompanyArchivesItAndKeepsTheDomainFromMintingAnother(t *testi
 		t.Errorf("the stored admission is %q, want %q", admission, DomainSuppressed)
 	}
 	// The source is what makes it STICKY. A machine source would let the next
-	// bulk-sender verdict re-decide the domain a contact just ruled on.
+	// bulk-sender verdict re-decide the domain a human just ruled on.
 	if source != AdmissionSourceHuman {
 		t.Errorf("the decision's source is %q, want %q — only a human decision outranks a later verdict",
 			source, AdmissionSourceHuman)

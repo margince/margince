@@ -69,7 +69,7 @@ func publishedActivityKinds(t *testing.T) []string {
 // deliberately excluded, and nobody has decided which it is.
 var neitherSet = gatekit.Waive(map[string]string{
 	"note": "a record of one contact's thinking. Nobody was in the room and nothing was exchanged, so it has neither participants nor warmth — an unlinked note is a workspace-shared thought",
-	"task": "one contact's intent. Counting it would let a rep's own to-do list score as a relationship, and stamping participants on it would name contacts who were never told",
+	"task": "one colleague's intent. Counting it would let a rep's own to-do list score as a relationship, and stamping participants on it would name contacts who were never told",
 })
 
 // Every kind the contract publishes is either in the participant set or

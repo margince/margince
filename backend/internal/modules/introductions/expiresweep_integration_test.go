@@ -146,7 +146,7 @@ func TestAnExpiryLandsInTheWriteShapeUnderTheClocksName(t *testing.T) {
 		t.Errorf("the trail says the expiry followed %q; want accepted — an ask "+
 			"nobody answered and one a colleague dropped are different stories", before)
 	}
-	// The clock's name, not a contact's. A human's id here would put their name
+	// The clock's name, not a human's. A human's id here would put their name
 	// on a refusal they never made — and the TYPE matters as much as the id,
 	// because that is what a reader scans to tell an automated close from a
 	// colleague's decision.

@@ -364,7 +364,7 @@ export const VerdictInFlight: Story = {
   args: { ...Deck.args, pending: true },
 };
 
-// The payload came back with nothing a contact can read. `empty` is the one
+// The payload came back with nothing a human can read. `empty` is the one
 // state allowed to say "there is none", and the card says it in the caller's
 // words rather than drawing a blank body that reads as a render fault.
 export const NothingToRead: Story = {

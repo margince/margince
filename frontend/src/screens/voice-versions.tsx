@@ -87,7 +87,7 @@ export function ActiveVoiceInsights({
 
 // The evaluator writes its reasons for an operator reading a log, and they
 // reached the owner verbatim: "median voice score 0.56 is below the 0.60 floor"
-// says nothing to the contact being asked to decide. Each known shape is stated
+// says nothing to the colleague being asked to decide. Each known shape is stated
 // again in words about THEIR voice and what to do about it.
 //
 // An unrecognized reason is shown as it came rather than dropped: a reason

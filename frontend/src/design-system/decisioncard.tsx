@@ -20,7 +20,7 @@ import {
 } from "./trust";
 import "./decisioncard.css";
 
-// DecisionCard — the ONE way this product asks a contact to decide something an
+// DecisionCard — the ONE way this product asks a colleague to decide something an
 // automation staged.
 //
 // It was `ApprovalRow` in a screen file, imported by seven screens, which

@@ -151,7 +151,7 @@ func WidenHistoryTx(
 // the honest number is the one this operation is responsible for.
 //
 // The gate is the same as every other hold operation's: a human seat, acting on
-// their own imports. There is no id and no admin arm — whose mail a contact keeps
+// their own imports. There is no id and no admin arm — whose mail a colleague keeps
 // private is itself private, so an operation that reached another seat's holds
 // would disclose that they have any.
 //

@@ -127,7 +127,7 @@ func TestANumberThatIsNotAVatIdIsInvalid(t *testing.T) {
 		return time.Date(2026, 8, 31, 9, 0, 0, 0, time.UTC)
 	})
 	ctx := v.Admin()
-	// Stated by a contact, through the real writer — the shape a rep produces
+	// Stated by a human, through the real writer — the shape a rep produces
 	// when they mistype into the field.
 	malformed := "122323235sdf"
 	if _, err := v.Contacts.UpdateCompanyProfileField(ctx, v.companyID, "register_vat",

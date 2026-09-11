@@ -8,7 +8,7 @@ package approvals
 // A second agent passport, lent by a SECOND human, approving a
 // confirmation-required action it never staged — against a real database.
 //
-// The self-approval rule bound the CREDENTIAL and nothing bound the CONTACT, so
+// The self-approval rule bound the CREDENTIAL and nothing bound the HUMAN, so
 // two passports lent by two contacts walked a confirm-first action through end to
 // end — A's stages, B's approves, A's redeems — and the decide route is itself
 // auto_execute, so B's approval needed no confirmation of its own. The whole
@@ -128,7 +128,7 @@ func TestASecondContactsPassportDoesNotReleaseAConfirmationRequiredAction(t *tes
 		t.Fatalf("staging the control proposal: %v", err)
 	}
 	if _, err := e.svc.Decide(samecontact, sanctioned, true, nil); err != nil {
-		t.Fatalf("another credential of the SAME contact was refused: %v — the rule binds the contact, "+
+		t.Fatalf("another credential of the SAME human was refused: %v — the rule binds the human, "+
 			"not the credential, and this is the path the product deliberately allows", err)
 	}
 	// Redeeming is step 3, and it is also what keeps this test

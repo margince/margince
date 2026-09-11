@@ -87,7 +87,7 @@ See [Approvals](approvals.md) for what happens to a card once it is staged.
 ## An agent never has more rights than the contact behind it
 
 An agent does not have an identity of its own. It acts **on behalf of** a
-contact, using a credential that contact minted, and it is checked against that
+contact, using a credential that colleague minted, and it is checked against that
 contact's permissions on every call.
 
 Concretely:
@@ -262,7 +262,7 @@ labels are:
 
 ## Passports: how an agent is connected
 
-A **passport** is the credential that binds one agent to one contact. You mint
+A **passport** is the credential that binds one agent to one colleague. You mint
 it yourself in Settings, and you can revoke it yourself. Revoking is the kill
 switch for that one binding.
 

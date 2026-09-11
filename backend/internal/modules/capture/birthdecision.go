@@ -333,7 +333,7 @@ func mailboxPostureForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, provider
 //
 // The SQL shape excludedTx uses, and for the same reason: a domain rule covers
 // its subdomains, so holding studiolegal.de holds mail.studiolegal.de too.
-// Scoped to THIS seat — a hold is one contact's decision about their own
+// Scoped to THIS seat — a hold is one colleague's decision about their own
 // correspondence, and a workspace-wide one would let anyone hold a colleague's
 // customer out of the shared CRM.
 func heldCounterpartyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {

@@ -583,7 +583,7 @@ workspace-readable, because there is no member such a message could be held for 
 would leave a row no human can open.
 
 So a wrong value is wrong in one of two directions, and neither announces itself: a per-member
-account read as the company's publishes one contact's private chats to their colleagues, and a
+account read as the company's publishes one colleague's private chats to their colleagues, and a
 company account read as per-member hands a shared inbox to whoever connected it. Both produce a row
 that reads perfectly well to whoever it wrongly belongs to.
 

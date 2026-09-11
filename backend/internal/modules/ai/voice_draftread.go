@@ -83,7 +83,7 @@ func (s *VoiceStore) ActiveVoiceForActor(ctx context.Context) (VoiceProfile, Voi
 // An ACTOR THAT NAMES A CONTACT is that contact, and no bound sender may override
 // them. This ordering is a boundary, not a preference: a voice profile holds its
 // owner's verbatim written text, so a call that could name somebody else's owner
-// is a read of that contact's private writing. A human call already knows whose
+// is a read of that colleague's private writing. A human call already knows whose
 // voice it wants — their own — and admitting an override there would make this
 // value an authorization input, which it must never be.
 //

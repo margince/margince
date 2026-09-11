@@ -66,7 +66,7 @@ func TestASelfOnlyStagingIsAbsentFromAColleaguesTargetFilteredReads(t *testing.T
 	}
 
 	// Staged through the REAL writer, on the shape the importer produces: an
-	// agent acting for e.rep, which is what stamps on_behalf_of with a contact
+	// agent acting for e.rep, which is what stamps on_behalf_of with a colleague
 	// rather than leaving it NULL. A test that wrote the row itself would be
 	// asserting over a shape production does not make.
 	staged, err := e.svc.Stage(e.asAgent(t), StageInput{

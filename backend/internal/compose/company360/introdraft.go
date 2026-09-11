@@ -81,7 +81,7 @@ type introFacts struct {
 func (s *Service) IntroRequestDraft(
 	ctx context.Context, lane Completer, companyID ids.CompanyID, req IntroRequest,
 ) (crmcontracts.AccountEmailDraft, error) {
-	// Human-only: this spends the workspace's model budget on prose a contact
+	// Human-only: this spends the workspace's model budget on prose a colleague
 	// will send under their own name.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.AccountEmailDraft{}, err

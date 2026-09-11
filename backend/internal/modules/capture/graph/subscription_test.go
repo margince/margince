@@ -299,7 +299,7 @@ func TestASubscriptionIsFoundOnAPageAfterTheFirst(t *testing.T) {
 	}
 }
 
-// A renewal aims an authenticated PATCH — carrying the contact's own delegated
+// A renewal aims an authenticated PATCH — carrying the colleague's own delegated
 // token — at a path built from a provider-supplied id. An id carrying a path
 // segment must not redirect it at another resource.
 func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {

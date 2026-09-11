@@ -79,7 +79,7 @@ var checkAvailabilityCopy = toolCopy{
 		"host — the acting user unless another is named — not for the invitees. `calendar_backing` says " +
 		"what the window rests on: with no calendar connected the slots are only what meetings " +
 		"recorded in this CRM leave open, and for a host who is NOT the acting seat it is `unknown`, " +
-		"because another contact's connector state is theirs. Unless it says `calendar`, a free window " +
+		"because another colleague's connector state is theirs. Unless it says `calendar`, a free window " +
 		"is no evidence the host is free, and none at all that a meeting they told you about is " +
 		"missing from their diary.",
 	Instead: "Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already " +

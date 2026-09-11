@@ -12,7 +12,7 @@
 // without a fixture.
 //
 // THE ALLOWLIST IS THE PRIVACY BOUNDARY. A certificate or a DNS record can
-// carry a contact's name — an admin's, a developer's, whoever asked for the
+// carry a colleague's name — an admin's, a developer's, whoever asked for the
 // certificate. Nothing here passes a name through: a hostname becomes a signal
 // only by matching a known service label, and everything else is dropped
 // rather than stored. That is why the whole feature stays outside personal-data

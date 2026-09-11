@@ -251,7 +251,7 @@ func TestRelinkActivityRefusesATargetTypeTheStoreWouldNotAccept(t *testing.T) {
 }
 
 // Closing a project without a reason is a 422 the contract states, so a call
-// that stages, waits for a human, and THEN fails is a contact asked to decide
+// that stages, waits for a human, and THEN fails is a human asked to decide
 // something that could never have applied.
 func TestAdvanceProjectPhaseRefusesAClosureWithNoReasonBeforeStaging(t *testing.T) {
 	tool := advanceProjectPhase{advancer: unreachableAdvancer{}}

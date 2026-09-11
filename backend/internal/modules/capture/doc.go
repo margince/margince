@@ -16,7 +16,7 @@
 // 24-hour diagnostic trace of what the pipeline decided about each
 // message, swept rather than retained), capture_exclusion (the addresses
 // and domains the sink refuses before any write), capture_owner_identity
-// (a seat's OTHER addresses, so mail among a contact's own addresses is
+// (a seat's OTHER addresses, so mail among a colleague's own addresses is
 // not read as correspondence and an alias is never minted as a contact),
 // capture_import (one row per mailbox that delivered a message — an email
 // is stored once, so this is the only place a second importing seat's

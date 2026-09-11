@@ -31,7 +31,7 @@ import (
 // transport it arrived on.
 //
 // A passport carries the human it was minted by: AgentIdentity.Principal sets
-// UserID, OnBehalfOf, the seat, the teams and the permissions from that contact,
+// UserID, OnBehalfOf, the seat, the teams and the permissions from that human,
 // so an agent call is already bounded by everything a decision is bounded by —
 // the RBAC the staged effect needs, row-scope visibility of its target, and the
 // licensing ceiling. A contact answering in a chat window is the same contact
@@ -56,7 +56,7 @@ func actingForAHuman(ctx context.Context) error {
 		return nil
 	case principal.PrincipalAgent:
 		if p.OnBehalfOf.IsZero() {
-			return fmt.Errorf("this credential names no contact it acts for, so it decides nothing: %w",
+			return fmt.Errorf("this credential names no human it acts for, so it decides nothing: %w",
 				apperrors.ErrPermissionDenied)
 		}
 		return nil
@@ -132,7 +132,7 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 	// able to take its own request off somebody's desk rather than leave it
 	// there.
 	//
-	// It binds the CREDENTIAL and not the contact, which is what makes it a rule
+	// It binds the CREDENTIAL and not the human, which is what makes it a rule
 	// rather than an obstacle: the same human answers this in the app, or on a
 	// credential they had to be present to mint. What it stops is the loop that
 	// needs nobody at all.
@@ -141,7 +141,7 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 			"the contact it acts for answers it in the CRM: %w", apperrors.ErrPermissionDenied)
 	}
 	// AND IT DOES NOT CONFIRM ANOTHER CONTACT'S. The rule above binds the
-	// credential; this one binds the CONTACT behind it, and without the second the
+	// credential; this one binds the HUMAN behind it, and without the second the
 	// first buys nothing. Two humans each lend a passport: A's stages the
 	// confirm-first call, B's approves it, A's redeems it, and the whole tier has
 	// been satisfied by two autonomous agents with nobody having looked. The
@@ -149,7 +149,7 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 	// of its own — which is what turns a bounded loan into a way around the tier
 	// rather than an exercise of it.
 	//
-	// What a lent credential may answer is what the contact who lent it could have
+	// What a lent credential may answer is what the human who lent it could have
 	// answered in the CRM themselves, and a proposal staged for somebody else is
 	// not that. UserID, not OnBehalfOf, is the comparison: a passport carries its
 	// lender's user id (AgentIdentity.Principal), so this is the same "is this
@@ -167,7 +167,7 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 	// request off a desk is an obstacle rather than a rule.
 	if approve && a.OnBehalfOf != nil &&
 		(p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID) {
-		return fmt.Errorf("this credential acts for somebody other than the contact this action was "+
+		return fmt.Errorf("this credential acts for somebody other than the human this action was "+
 			"staged for, so it does not release it — that contact answers it themselves: %w",
 			apperrors.ErrPermissionDenied)
 	}
@@ -179,7 +179,7 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 	// just the release: the lender is who this card was raised for, and an agent
 	// answering it at all takes the question away from them.
 	if kind == KindVolumeRelease {
-		return fmt.Errorf("a volume step-up is answered by the contact who lent this credential, not by it: %w",
+		return fmt.Errorf("a volume step-up is answered by the human who lent this credential, not by it: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	if !p.Scopes.Has(principal.ScopeWrite) {

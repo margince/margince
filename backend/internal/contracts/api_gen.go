@@ -18877,7 +18877,7 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not read meetings.
 	MeetingsUnreported *[]AttentionItem `json:"meetings_unreported,omitempty"`
 
-	// NeedsYou Decisions only a contact can make, highest-stakes first.
+	// NeedsYou Decisions only a human can make, highest-stakes first.
 	NeedsYou []AttentionItem `json:"needs_you"`
 
 	// NoticeCases Disclosure duties nobody has discharged, soonest deadline first — the
@@ -18950,7 +18950,7 @@ type Attention struct {
 	// the rep's first hour.
 	//
 	// Its own lane rather than rows in `needs_you`, because the two ask different
-	// things. A `needs_you` item is a decision a contact must make before something
+	// things. A `needs_you` item is a decision a human must make before something
 	// proceeds; a briefing item is a suggestion about where to start, and answering
 	// it is optional. Merging them would put "nothing is waiting on you" and
 	// "nothing was worth flagging" behind one number.
@@ -19523,7 +19523,7 @@ type AuditHistoryListResponse struct {
 type AuditLogEntry struct {
 	Action AuditLogEntryAction `json:"action"`
 
-	// ActorId User uuid, agent id, connector name (e.g. connector:gmail), 'system', or a Deal Room participant (buyer:<participant uuid>) — an external contact with no seat, who appears in no member directory.
+	// ActorId User uuid, agent id, connector name (e.g. connector:gmail), 'system', or a Deal Room participant (buyer:<participant uuid>) — an external human with no seat, who appears in no member directory.
 	ActorId string `json:"actor_id"`
 
 	// ActorName The actor's display name, resolved from `app_user` on the read path.
@@ -32033,7 +32033,7 @@ type PutOnboardingStateRequest struct {
 	SiteReadId       *openapi_types.UUID                  `json:"site_read_id,omitempty"`
 	SourceMode       *PutOnboardingStateRequestSourceMode `json:"source_mode"`
 
-	// Step Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the contact answering. `invite` is the question asked next: whether the contact setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first contact they invite. `team` is where a creator who will not work in it invites that contact. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
+	// Step Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the contact answering. `invite` is the question asked next: whether the contact setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first colleague they invite. `team` is where a creator who will not work in it invites that colleague. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
 	Step         PutOnboardingStateRequestStep `json:"step"`
 	VoiceSkipped bool                          `json:"voice_skipped"`
 	WebsiteUrl   *string                       `json:"website_url,omitempty"`
@@ -32042,7 +32042,7 @@ type PutOnboardingStateRequest struct {
 // PutOnboardingStateRequestSourceMode defines model for PutOnboardingStateRequest.SourceMode.
 type PutOnboardingStateRequestSourceMode string
 
-// PutOnboardingStateRequestStep Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the contact answering. `invite` is the question asked next: whether the contact setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first contact they invite. `team` is where a creator who will not work in it invites that contact. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
+// PutOnboardingStateRequestStep Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the contact answering. `invite` is the question asked next: whether the contact setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first colleague they invite. `team` is where a creator who will not work in it invites that colleague. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
 type PutOnboardingStateRequestStep string
 
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the

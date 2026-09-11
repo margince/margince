@@ -92,7 +92,7 @@ Rules you must not break:
 // noteRequest builds the model call.
 //
 // Every fact is fenced, including the ones this server minted: a contact's name
-// and a colleague's were both typed by a contact, and the rep's own
+// and a colleague's were both typed by a human, and the rep's own
 // value_for_target is free text straight off a request body — the most obvious
 // injection surface on this call.
 func noteRequest(facts noteFacts) model.Request {
@@ -380,7 +380,7 @@ type IntroNoteFixture struct {
 	Colleague string `json:"colleague"`
 	// Contact is the customer or prospect who reads it.
 	Contact string `json:"contact"`
-	// Requester is the rep being introduced — the contact the note is about.
+	// Requester is the rep being introduced — the colleague the note is about.
 	Requester string `json:"requester"`
 	// Through names the intermediary on an indirect route, and is empty on a
 	// direct one.

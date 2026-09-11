@@ -22,7 +22,7 @@ The governing rule is one sentence:
 > It is checked against that contact on every call.
 
 An agent has no identity of its own. It acts on behalf of a contact, using a
-credential that contact minted and can revoke. If you cannot see a record, neither
+credential that colleague minted and can revoke. If you cannot see a record, neither
 can your agent. If you are not allowed to do something, it cannot do it for you.
 
 And there is a short list of things it can never do at all, however it is
@@ -120,7 +120,7 @@ like upload limits and whether sends need confirming.
 it and shows through on a few screens, which is confusing; when a search result
 group says "Companies", it means companies.
 
-**Passport** — the credential a contact mints so an AI agent can act as them.
+**Passport** — the credential a colleague mints so an AI agent can act as them.
 
 **Staged** — an action that has not happened, and is waiting for a contact to
 decide.

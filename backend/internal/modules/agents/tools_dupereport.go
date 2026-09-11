@@ -98,7 +98,7 @@ const (
 
 // duplicateWarning renders the human-readable half. It names the count and what
 // happens next, and deliberately does NOT say the record was rejected or
-// merged: it was neither. The record exists, and a contact will decide.
+// merged: it was neither. The record exists, and a human will decide.
 func duplicateWarning(n int) Warning {
 	subject := "A record already here looks like this one"
 	if n > 1 {

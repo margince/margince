@@ -27,7 +27,7 @@ Three things matter:
 REST. It gets tools, and every action it takes is logged.
 
 An agent never has more rights than the contact who lent it a passport. We
-check that contact's seat and permissions on *every* call, not once at the
+check that colleague's seat and permissions on *every* call, not once at the
 start. So if you remove someone at 09:00, their agent stops at 09:00.
 
 An agent can never approve its own work. Approvals, consent, data-subject
@@ -143,7 +143,7 @@ it on :18080, so one port serves both the UI and the contract. Sign in as
 
 That difference is the product working as intended. On a configured
 install, the *operator* picks the first admin password, and that account
-can reach nothing but the change-password screen until the contact using it
+can reach nothing but the change-password screen until the colleague using it
 picks their own. `make seed-dev` finishes that first login the way you
 would. That is why the seeded path ends on a password no config file ever
 held.

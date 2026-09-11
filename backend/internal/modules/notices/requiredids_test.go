@@ -5,7 +5,7 @@ package notices
 
 // The coaching mapping's own obligation: refuse an id the caller did not send,
 // rather than letting the zero UUID reach the membership question and come back
-// as "not your teammate" — a refusal about a contact the caller never named, and
+// as "not your teammate" — a refusal about a colleague the caller never named, and
 // one that reads exactly like the real permission failure beside it.
 
 import (

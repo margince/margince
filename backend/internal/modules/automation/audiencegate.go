@@ -170,7 +170,7 @@ func checkOwnerCanReadSubject(ctx context.Context, db *database.DB, resolver aut
 // Giving these automations a human owner at seed time was the other way to make
 // the existing gate apply. It answers a different question: what the automation
 // may read would become whatever one arbitrarily chosen seat may read, moving
-// as that contact's grants move, and the audit would record a human authority
+// as that colleague's grants move, and the audit would record a human authority
 // that never existed.
 func checkOwnerlessSubject(ctx context.Context, db *database.DB, ev workflow.Event) (gateDecision, error) {
 	var audience string

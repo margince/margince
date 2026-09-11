@@ -45,7 +45,7 @@ func advanceLines(typ MeetingType, in Input) (string, string, string) {
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFirstDiscovery, crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFollowupDiscovery:
 		return "One quantified problem, and who owns it today.",
 			"The two outcomes that matter most, and a booked session to scope them.",
-			"A written summary they agree with, and the name of the contact who has to approve it."
+			"A written summary they agree with, and the name of the colleague who has to approve it."
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDemo:
 		return "Their reaction to the two things they said they needed.",
 			"Agreement that it fits, and a date to talk commercials.",

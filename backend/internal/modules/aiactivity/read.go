@@ -27,7 +27,7 @@ const recentBound = 10
 
 // liveBound caps what is reported as in flight.
 //
-// The live set is not bounded by anything a contact controls: one rep can press
+// The live set is not bounded by anything a colleague controls: one rep can press
 // "read this document" on twenty attachments, and every live row ships to every
 // open tab on every poll. Higher than recentBound because a live occurrence is
 // the thing the reader is actually waiting on, and cutting one is worse than

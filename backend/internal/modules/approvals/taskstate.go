@@ -14,7 +14,7 @@ package approvals
 //
 // EVERY METHOD HERE IS BOUND TO THE PASSPORT THAT STAGED THE PROPOSAL, which is
 // this file's gate and the reason it needs no other. These are not a human's
-// view of an inbox — that is inbox.go, scoped to what a contact may decide —
+// view of an inbox — that is inbox.go, scoped to what a human may decide —
 // they are an agent's view of its OWN proposal, and an agent has exactly one:
 // the one it staged. So the binding is the whole authorization question, and
 // answering it in the SQL rather than above it means no caller can be added
@@ -133,7 +133,7 @@ func (s *Service) ProposedChange(ctx context.Context, id ids.ApprovalID) (json.R
 // wrapper WithdrawInTx has lacked, for callers that hold none.
 //
 // retracted reports whether there was still an offer to take. It is FALSE for
-// an approval a human already decided — what a contact answered is not the
+// an approval a human already decided — what a human answered is not the
 // agent's to take back — and a caller that reported "withdrawn" either way
 // would tell its user the proposal was gone while it sat decided in the inbox.
 func (s *Service) Withdraw(ctx context.Context, id ids.ApprovalID, reason string) (retracted bool, err error) {

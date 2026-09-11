@@ -11,7 +11,7 @@ package capture
 // product that decides silently and shows nobody is one an owner has to trust
 // rather than check, and the whole posture rests on them being able to check.
 //
-// One seat's own senders and nobody else's. Whose mail a contact keeps out is
+// One seat's own senders and nobody else's. Whose mail a colleague keeps out is
 // itself private: there is no id here that reaches a colleague's list and no
 // admin view of one.
 

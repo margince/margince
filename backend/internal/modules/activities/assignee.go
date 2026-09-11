@@ -24,7 +24,7 @@ import (
 // lands: the FK checks existence, RLS the tenancy. Nil means the caller does
 // not touch the assignee, which is not this function's to gate.
 //
-// AN AGENT SEAT IS REFUSED. It is an Agent Runner identity, not a contact: it
+// AN AGENT SEAT IS REFUSED. It is an Agent Runner identity, not a colleague: it
 // opens no Worklist, so work assigned to it leaves every human queue at once —
 // the task lane reads per human — and reads as delegated while being in fact
 // abandoned. The same posture identity.SetTeamMember takes on the same column,
@@ -64,7 +64,7 @@ func ensureAssigneeCanHoldWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.U
 type AgentAssigneeError struct{}
 
 func (e *AgentAssigneeError) Error() string {
-	return "an agent seat holds no queue, so it cannot be given a task — assign it to a contact"
+	return "an agent seat holds no queue, so it cannot be given a task — assign it to a colleague"
 }
 
 // FieldFault names the assignee: it is the field the caller has to change.
