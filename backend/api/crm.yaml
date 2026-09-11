@@ -4903,6 +4903,70 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Pipelines]
+      operationId: archivePipeline
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Retire a pipeline (soft delete; archive is the delete).
+      description: |
+        Retires a pipeline as a CHOICE. It drops out of the pickers and the new-deal flows, and
+        `listPipelines` stops returning it unless `include_archived` names it — which is
+        what that parameter has always been about and what nothing could produce until now.
+
+        It moves no work. A deal on an archived pipeline keeps its stage, its history and
+        its forecast contribution, and its record page still renders the stage it is on.
+        Forcing deals off first would turn retiring a pipeline into a bulk migration, and
+        an operation nobody dares run retires nothing.
+
+        One refusal, `422` with the code `default_pipeline_not_archivable`: the default
+        pipeline cannot be retired while it is the default. An installation with no default
+        has no answer for "where does a new deal go", and meeting that at deal-creation time
+        is worse than being refused here. The detail names the remedy — make another
+        pipeline the default first — because a refusal whose way forward the caller cannot
+        find is a wall rather than a door.
+
+        Reversible: `POST /pipelines/{id}/restore` puts it back. A retirement with no undo
+        is a support ticket, and archiving is reversible everywhere else in the product.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204': { description: Archived. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /pipelines/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Pipelines]
+      operationId: restorePipeline
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Put a retired pipeline back in use.
+      description: |
+        The undo half of `archivePipeline`. The pipeline returns to the pickers and to
+        `listPipelines` without `include_archived`; its stages and the deals on them were
+        never moved, so there is nothing to restore but the pipeline's own availability.
+
+        Restoring a pipeline that is not archived succeeds and changes nothing, so a
+        retried call after a lost response answers the same way as the first.
+
+        It does NOT make the pipeline default again. Archiving required the default to move
+        elsewhere first, and putting a pipeline back is not a claim about where new deals
+        should go — that is `updatePipeline`'s to say.
+      responses:
+        '200':
+          description: The restored pipeline.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pipeline' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   # ------------------------------ /stages -----------------------------------
   /stages:
@@ -31910,6 +31974,7 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        version: { $ref: '#/components/schemas/RowVersion' }
 
     CreatePipelineRequest:
       type: object

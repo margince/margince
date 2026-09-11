@@ -1831,12 +1831,20 @@ func (stubs) CreatePipeline(w nethttp.ResponseWriter, r *nethttp.Request, params
 	httperr.NotImplemented(w, r, "CreatePipeline")
 }
 
+func (stubs) ArchivePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchivePipelineParams) {
+	httperr.NotImplemented(w, r, "ArchivePipeline")
+}
+
 func (stubs) GetPipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetPipeline")
 }
 
 func (stubs) UpdatePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdatePipelineParams) {
 	httperr.NotImplemented(w, r, "UpdatePipeline")
+}
+
+func (stubs) RestorePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestorePipeline")
 }
 
 func (stubs) ListProducts(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListProductsParams) {

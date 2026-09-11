@@ -3263,11 +3263,64 @@ export interface paths {
         get: operations["getPipeline"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Retire a pipeline (soft delete; archive is the delete).
+         * @description Retires a pipeline as a CHOICE. It drops out of the pickers and the new-deal flows, and
+         *     `listPipelines` stops returning it unless `include_archived` names it — which is
+         *     what that parameter has always been about and what nothing could produce until now.
+         *
+         *     It moves no work. A deal on an archived pipeline keeps its stage, its history and
+         *     its forecast contribution, and its record page still renders the stage it is on.
+         *     Forcing deals off first would turn retiring a pipeline into a bulk migration, and
+         *     an operation nobody dares run retires nothing.
+         *
+         *     One refusal, `422` with the code `default_pipeline_not_archivable`: the default
+         *     pipeline cannot be retired while it is the default. An installation with no default
+         *     has no answer for "where does a new deal go", and meeting that at deal-creation time
+         *     is worse than being refused here. The detail names the remedy — make another
+         *     pipeline the default first — because a refusal whose way forward the caller cannot
+         *     find is a wall rather than a door.
+         *
+         *     Reversible: `POST /pipelines/{id}/restore` puts it back. A retirement with no undo
+         *     is a support ticket, and archiving is reversible everywhere else in the product.
+         */
+        delete: operations["archivePipeline"];
         options?: never;
         head?: never;
         /** Update a pipeline (rename / reorder / set default — bounded config). */
         patch: operations["updatePipeline"];
+        trace?: never;
+    };
+    "/pipelines/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put a retired pipeline back in use.
+         * @description The undo half of `archivePipeline`. The pipeline returns to the pickers and to
+         *     `listPipelines` without `include_archived`; its stages and the deals on them were
+         *     never moved, so there is nothing to restore but the pipeline's own availability.
+         *
+         *     Restoring a pipeline that is not archived succeeds and changes nothing, so a
+         *     retried call after a lost response answers the same way as the first.
+         *
+         *     It does NOT make the pipeline default again. Archiving required the default to move
+         *     elsewhere first, and putting a pipeline back is not a claim about where new deals
+         *     should go — that is `updatePipeline`'s to say.
+         */
+        post: operations["restorePipeline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/stages": {
@@ -22967,6 +23020,7 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+            version?: components["schemas"]["RowVersion"];
         };
         CreatePipelineRequest: {
             name: string;
@@ -39148,6 +39202,41 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    archivePipeline: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     updatePipeline: {
         parameters: {
             query?: never;
@@ -39194,6 +39283,32 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    restorePipeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restored pipeline. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pipeline"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listStages: {
