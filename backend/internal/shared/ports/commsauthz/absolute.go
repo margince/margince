@@ -31,6 +31,16 @@ const (
 	ReasonLegacyTransactionalUnevidenced = "legacy_transactional_unevidenced"
 	// ReasonUnknownPurpose is a purpose key nothing defines.
 	ReasonUnknownPurpose = "unknown_purpose"
+	// ReasonPurposeContradictsClaim is a caller naming what a message IS and a
+	// legacy purpose key that says it is something else.
+	//
+	// Not a verdict about the recipient: it is the engine declining to answer a
+	// request that asks two things at once. Reconciling the two is what let
+	// promotional mail ride the correspondence lane — the claim went in the
+	// column that records what somebody asked for, the purpose's class took
+	// the column that decides what a suppression binds, and an objection to
+	// direct marketing was never put to the message at all.
+	ReasonPurposeContradictsClaim = "purpose_contradicts_claim"
 	// ReasonNoSubject is a recipient that resolves to nobody, or to two contacts.
 	ReasonNoSubject = "recipient_resolves_to_no_single_subject"
 	// ReasonNoMarketingConsent is marketing without a grant or an exception.
@@ -86,6 +96,14 @@ var absoluteDenials = map[string]bool{
 	// the same message becomes lawful — so refusing costs a delay rather than
 	// the message.
 	ReasonFrequencyCapReached: true,
+	// A request that claims one category and names a purpose meaning another
+	// is here for the reason ReasonNoSubject is: it is not a refusal ABOUT
+	// somebody, it is the engine saying it cannot answer. Softening it does not
+	// fall back to a weaker reading of the same message — it falls back to the
+	// old gate, which answers on the PURPOSE KEY alone and so authorizes
+	// exactly the message this refusal exists to stop, past an objection that
+	// binds the category the caller themselves claimed.
+	ReasonPurposeContradictsClaim: true,
 }
 
 // Absolute reports whether this reason denies regardless of Mode.

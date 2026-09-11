@@ -153,7 +153,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	// TestAnUnsupportedClaimIsRecordedButNeverResolvedTo, which is what that
 	// test's own comment records.
 	d.Requested = res.Category
-	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, res, d, suppressed)
+	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, req.Context, res, d, suppressed)
 }
 
 // legacyVerdictFor answers on the old purpose model when the record supports no
@@ -164,7 +164,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 // answering with one body of code about one contact. A second implementation
 // here would be a second answer, and the one that stopped matching would look
 // exactly like the one that still did.
-func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purposeKey string, res resolution, d commsauthz.Decision, suppressed bool) (commsauthz.Decision, error) {
+func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, suppressed bool) (commsauthz.Decision, error) {
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
 		return commsauthz.Decision{}, err
@@ -182,7 +182,37 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purpo
 	// there alone would keep it out. Neither is redundant — they fail in
 	// different directions, and a decision that never reaches this function
 	// (the supported arm) is covered only by the first.
-	d.Resolved = resolutionForClass(purpose.Class).Category
+	fromPurpose := resolutionForClass(purpose.Class).Category
+
+	// A CLAIM AND A PURPOSE THAT DISAGREE ARE REFUSED, never reconciled.
+	//
+	// The caller said what this message IS and named a purpose key meaning
+	// something else. Taking the purpose's reading is not a conservative
+	// fallback, it is a downgrade the caller did not ask for and cannot see: a
+	// send claiming `marketing` under the `business_correspondence` key
+	// resolved to reply_to_inbound, which the correspondence arm authorizes on
+	// any recent exchange with that contact — not evidence that THIS message is
+	// a reply to anything. The message then went out as correspondence
+	// carrying promotional content.
+	//
+	// And it went out past the subject. An Art. 21 objection binds
+	// CategoryMarketing and is tested against Resolved, so a message remapped
+	// to reply_to_inbound was never put to it: the stop was recorded, appeared
+	// in the subject's own export, and did not stop the mail.
+	//
+	// Resolved still takes the PURPOSE'S reading, not the claim. An unproven
+	// claim must never reach that column — it selects the rollout mode and
+	// decides whether the advertising ceiling is counted, so a caller who set
+	// it would hold both (TestAnUnsupportedClaimIsRecordedButNeverResolvedTo).
+	// The claim is already in Requested, which is the column that exists for
+	// it, so the row still says both things: what was asked for, what it would
+	// have been read as, and that the two disagree.
+	d.Resolved = fromPurpose
+	if claimed != "" && claimed != fromPurpose {
+		d.Verdict = commsauthz.VerdictDeny
+		d.ReasonCode = commsauthz.ReasonPurposeContradictsClaim
+		return d, nil
+	}
 
 	w, err := g.store.packRulesFor(ctx, tx)
 	if err != nil {
