@@ -63,7 +63,18 @@ type KindHealth struct {
 	// intervention. The two are reported together here because the question
 	// the field answers is "will this run" and the answer is no either way;
 	// the exposition endpoint keeps them apart, where the question is why.
+	//
+	// UNBOUNDED IN AGE, and that is what makes it a report figure rather than
+	// an alarm: River retains a terminal row for seven days, so this counts a
+	// week of history and an outage that ended an hour ago reads the same as one
+	// still running.
 	Dead int64
+	// DeadRecent is the same count inside the caller's window — the number that
+	// earns the banner. The pair is the whole point: an operator can still see
+	// the week's total without being paged by it, and the red one answers "is
+	// something wrong NOW", which is the distinction the unbounded count cannot
+	// draw.
+	DeadRecent int64
 	// OldestWaitingAgeSeconds is nil when nothing of this kind is runnable
 	// right now. Nil and zero are different claims — nothing waiting versus
 	// something that just became runnable — so the absence is carried
@@ -133,8 +144,14 @@ const recentFailureLimit = 50
 // declaration in this package. This table has no RLS, so the untenanted arm
 // IS the scope — and a scope the calling surface states for itself is one
 // that surface can be gated on, which is where the gate for it lives.
-func WorkspaceHealth(ctx context.Context, pool *pgxpool.Pool, workspaceID string, dispatcherKinds []string) (Health, error) {
-	kinds, err := healthByKind(ctx, pool, workspaceID, dispatcherKinds)
+//
+// `recent` bounds DeadRecent, and arrives from the caller for the same reason:
+// it is an installation setting, and this package holds no settings reader.
+func WorkspaceHealth(
+	ctx context.Context, pool *pgxpool.Pool, workspaceID string,
+	dispatcherKinds []string, recent time.Duration,
+) (Health, error) {
+	kinds, err := healthByKind(ctx, pool, workspaceID, dispatcherKinds, recent)
 	if err != nil {
 		return Health{}, err
 	}
@@ -151,7 +168,10 @@ func WorkspaceHealth(ctx context.Context, pool *pgxpool.Pool, workspaceID string
 // somehow holds BOTH tenant and untenanted rows appears twice rather than
 // being silently attributed to one side. That would be the workspace
 // invariant breaking, and this endpoint should be the thing that shows it.
-func healthByKind(ctx context.Context, pool *pgxpool.Pool, workspaceID string, dispatcherKinds []string) ([]KindHealth, error) {
+func healthByKind(
+	ctx context.Context, pool *pgxpool.Pool, workspaceID string,
+	dispatcherKinds []string, recent time.Duration,
+) ([]KindHealth, error) {
 	const q = `
 		SELECT kind,
 		       queue,
@@ -160,6 +180,18 @@ func healthByKind(ctx context.Context, pool *pgxpool.Pool, workspaceID string, d
 		       count(*) FILTER (WHERE state::text = 'running')::bigint,
 		       count(*) FILTER (WHERE state::text = 'retryable')::bigint,
 		       count(*) FILTER (WHERE state::text IN ` + terminalBadStates + `)::bigint,
+		       -- The banner's own count. finalized_at is when a terminal row
+		       -- BECAME terminal, which is the moment an operator is being asked
+		       -- about — not created_at, which dates a job that may have sat in
+		       -- the queue for hours before it died.
+		       --
+		       -- Compared directly, with no coalesce: river_job's own
+		       -- finalized_or_finalized_at_null CHECK makes the column NOT NULL
+		       -- for exactly these states, so a fallback here would be a branch
+		       -- Postgres does not admit a row to reach.
+		       -- Held by: TestATerminalRowMustCarryTheMomentItDied
+		       count(*) FILTER (WHERE state::text IN ` + terminalBadStates + `
+		                          AND finalized_at >= now() - $3::interval)::bigint,
 		       max(EXTRACT(EPOCH FROM (now() - scheduled_at)))
 		           FILTER (WHERE state::text IN ` + runnableStates + `
 		                     AND scheduled_at <= now())::double precision
@@ -168,7 +200,7 @@ func healthByKind(ctx context.Context, pool *pgxpool.Pool, workspaceID string, d
 		GROUP BY 1, 2, 3
 		ORDER BY 1, 2, 3`
 
-	rows, err := pool.Query(ctx, q, workspaceID, dispatcherKinds)
+	rows, err := pool.Query(ctx, q, workspaceID, dispatcherKinds, recent)
 	if err != nil {
 		return nil, fmt.Errorf("jobs: reading job health by kind: %w", err)
 	}
@@ -178,7 +210,7 @@ func healthByKind(ctx context.Context, pool *pgxpool.Pool, workspaceID string, d
 	for rows.Next() {
 		var k KindHealth
 		if err := rows.Scan(&k.Kind, &k.Queue, &k.FleetWide,
-			&k.Waiting, &k.Running, &k.Retrying, &k.Dead,
+			&k.Waiting, &k.Running, &k.Retrying, &k.Dead, &k.DeadRecent,
 			&k.OldestWaitingAgeSeconds); err != nil {
 			return nil, fmt.Errorf("jobs: scanning job health by kind: %w", err)
 		}

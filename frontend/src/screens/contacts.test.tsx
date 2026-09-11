@@ -18,6 +18,9 @@ import { activityTimeline } from "../design-system/activitytimeline";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { ContactsScreen, PersonScreen } from "./contacts";
+// The header's overflow menu is the same control on both person surfaces, so
+// the openers are the testkit's rather than this file's.
+import { openRecordMenu, pressRecordVerb } from "./personpage.testkit";
 
 // B-EP09.10a acceptance: per-row provenance chips, row→360 navigation, and
 // the honest error state. Lead-specific acceptance (score thresholds,
@@ -479,8 +482,7 @@ describe("PersonScreen — edit with If-Match (P-1)", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await pressRecordVerb("edit-record");
     const title = await screen.findByLabelText("Title");
     await userEvent.clear(title);
     await userEvent.type(title, "New title");
@@ -511,8 +513,7 @@ describe("PersonScreen — edit with If-Match (P-1)", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await pressRecordVerb("edit-record");
     const title = await screen.findByLabelText("Title");
     await userEvent.clear(title);
     await userEvent.type(title, "New title");
@@ -550,8 +551,7 @@ describe("PersonScreen — correcting an address that refused a send", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await pressRecordVerb("edit-record");
 
     // The row is PREFILLED from the record, which is what makes this a
     // correction rather than a re-entry: a reader fixing one character must not
@@ -608,8 +608,7 @@ describe("PersonScreen — correcting an address that refused a send", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await pressRecordVerb("edit-record");
 
     const dead = await screen.findByDisplayValue("anna.weber@brandt.example");
     await userEvent.clear(dead);
@@ -658,8 +657,7 @@ describe("PersonScreen — correcting an address that refused a send", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await pressRecordVerb("edit-record");
     const address = await screen.findByDisplayValue(
       "anna.weber@brandt.example",
     );
@@ -703,8 +701,7 @@ describe("PersonScreen — correcting an address that refused a send", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await pressRecordVerb("edit-record");
     const address = await screen.findByDisplayValue(
       "anna.weber@brandt.example",
     );
@@ -733,8 +730,7 @@ describe("PersonScreen — correcting an address that refused a send", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await pressRecordVerb("edit-record");
 
     await screen.findByDisplayValue("anna.weber@brandt.example");
     // The row is taken OUT, which is the gesture the form offers for it —
@@ -766,10 +762,7 @@ describe("PersonScreen — archive (P-3)", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() =>
-      expect(screen.getByTestId("archive-record")).toBeTruthy(),
-    );
-    await userEvent.click(screen.getByTestId("archive-record"));
+    await pressRecordVerb("archive-record");
     expect(
       screen.getByText(
         "Are you sure? This archives the record — there is no undo control.",
@@ -810,7 +803,8 @@ describe("PersonScreen — overlay mode write affordances", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
+    await openRecordMenu();
+    expect(await screen.findByTestId("edit-record")).toBeTruthy();
     expect(screen.getByTestId("archive-record")).toBeTruthy();
     expect(screen.queryByTestId("merge-record")).toBeNull();
   });
@@ -837,8 +831,7 @@ describe("PersonScreen — overlay mode write affordances", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await pressRecordVerb("edit-record");
     const title = await screen.findByLabelText("Title");
     await userEvent.clear(title);
     await userEvent.type(title, "VP Procurement");
@@ -859,8 +852,7 @@ describe("PersonScreen — overlay mode write affordances", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await pressRecordVerb("edit-record");
     expect(
       screen.getByText(/Only the fields HubSpot accepts are written back/),
     ).toBeTruthy();
@@ -938,10 +930,7 @@ describe("PersonScreen — merge into target (P-2)", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() =>
-      expect(screen.getByTestId("merge-record")).toBeTruthy(),
-    );
-    await userEvent.click(screen.getByTestId("merge-record"));
+    await pressRecordVerb("merge-record");
     await userEvent.type(screen.getByPlaceholderText("Search…"), "otto");
 
     vi.useFakeTimers();
@@ -984,10 +973,7 @@ describe("PersonScreen — merge into target (P-2)", () => {
     });
     render(<PersonScreen id="p-1" />);
 
-    await waitFor(() =>
-      expect(screen.getByTestId("merge-record")).toBeTruthy(),
-    );
-    await userEvent.click(screen.getByTestId("merge-record"));
+    await pressRecordVerb("merge-record");
     await userEvent.type(screen.getByPlaceholderText("Search…"), "otto");
 
     vi.useFakeTimers();
@@ -1187,8 +1173,9 @@ describe("PersonScreen — archived is read-only (P-3)", () => {
     render(<PersonScreen id="p-1" />);
 
     await waitFor(() => expect(screen.getByText("Archived")).toBeTruthy());
+    await openRecordMenu();
     const refused = [
-      screen.getByTestId("edit-record"),
+      await screen.findByTestId("edit-record"),
       screen.getByTestId("merge-record"),
       screen.getByTestId("archive-record"),
       screen.getByTestId("share-record"),

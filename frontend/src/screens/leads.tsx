@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowUpRight,
   BriefcaseBusiness,
   Building2,
   FolderKanban,
@@ -23,6 +24,7 @@ import {
   Button,
   Disclosure,
   Field,
+  OverflowMenu,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
@@ -1666,7 +1668,11 @@ function LeadActions({
           }
           onClick={onQualify}
         >
-          {t("lead.promote")}
+          {/* The glyph is the promotion itself: a lead leaving this page
+              upward, for the person and deal it becomes. No `size` — the
+              button owns its icon's geometry, and a call site that names one
+              is a second author of it. */}
+          <ArrowUpRight aria-hidden="true" /> {t("lead.promote")}
         </Button>
       )}
       {/* The shared Email verb every record header carries. Not in overlay,
@@ -1679,75 +1685,92 @@ function LeadActions({
           disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
         />
       )}
-      {/* A terminal lead keeps its controls, DISABLED with the reason
+      {/* Everything else this lead offers, behind one trigger. Qualify and
+          Email are what a rep reaches for between calls; the rest are rare
+          enough that a reader hunting one of them should not have to read
+          past them to find a common verb. Worded and glyphless in here: a
+          list of named actions with one unnamed square in it makes that
+          square the only row a reader has to hover to identify.
+
+          A terminal lead keeps these controls, DISABLED with the reason
           (STATE-4a): the reason is the information, and hiding the control
           hides a fact the reader needs. Both closures reach this page — a
           disqualified lead and, since ADR-0119/A170, a promoted one — and the
           band above names which, so these controls point at that one
-          sentence rather than guessing at it. */}
-      <EditAction<Lead>
-        disabledReasonId={refusedReasonId}
-        label={t("record.edit")}
-        savedMessage={(saved) =>
-          t("record.saveDone", { name: saved.full_name ?? "" })
-        }
-        notice={overlay ? t("overlay.partialWriteBack") : undefined}
-        fields={[...leadEditFields, ...cf.formFields]}
-        record={{
-          id: lead.id,
-          version: lead.version,
-          full_name: lead.full_name ?? "",
-          email: lead.email ?? "",
-          title: lead.title ?? "",
-          company_name: lead.company_name ?? "",
-          ...cf.recordSlice(lead),
-        }}
-        update={async (values, _rows, opened) => {
-          const { data, error } = await api.PATCH("/leads/{id}", {
-            params: {
-              path: { id },
-              ...ifMatch(requireVersion(opened?.version)),
-            },
-            body: {
-              ...mapLeadUpdate(values),
-              // A diff against what the form prefilled from: a snapshot sends
-              // `null` for every empty custom field, and the API reads that as
-              // clearing a column nobody touched.
-              ...cf.toPatch(values, opened ?? {}),
-            },
-          });
-          if (error) {
-            throwProblem(error);
+          sentence rather than guessing at it. The band is also WHY the
+          sentence is passed in rather than minted here: a reason living in
+          the panel would not exist until the menu was first opened. */}
+      <OverflowMenu label={t("record.moreActions")}>
+        <EditAction<Lead>
+          labelled
+          disabledReasonId={refusedReasonId}
+          label={t("record.edit")}
+          savedMessage={(saved) =>
+            t("record.saveDone", { name: saved.full_name ?? "" })
           }
-          return data;
-        }}
-        invalidate="leads"
-        recordKey="lead"
-      />
-      {/* The overlay seam refuses disqualify (a cross-type lifecycle
-          transition) and share (a grant probes a native row a mirror lead
-          does not have), so in overlay these are genuinely UNSUPPORTED
-          rather than state-blocked — a different STATE-4a cause, and the
-          answer for that one is absence. */}
-      {!overlay && (
-        <>
-          {/* Disqualify asks why, in its own dialog — and is a secondary
-              verb, not a red one: closing a lead is routine work. A terminal
-              lead keeps the control, disabled with the page's one reason. */}
-          <Button
-            data-testid="lead-disqualify"
-            reasonId={refusedReasonId}
-            onClick={onDisqualify}
-          >
-            {t("record.disqualify")}
-          </Button>
-          <ShareAction
-            recordType="lead"
-            recordId={lead.id}
-            disabledReasonId={refusedReasonId}
-          />
-        </>
-      )}
+          notice={overlay ? t("overlay.partialWriteBack") : undefined}
+          fields={[...leadEditFields, ...cf.formFields]}
+          record={{
+            id: lead.id,
+            version: lead.version,
+            full_name: lead.full_name ?? "",
+            email: lead.email ?? "",
+            title: lead.title ?? "",
+            company_name: lead.company_name ?? "",
+            ...cf.recordSlice(lead),
+          }}
+          update={async (values, _rows, opened) => {
+            const { data, error } = await api.PATCH("/leads/{id}", {
+              params: {
+                path: { id },
+                ...ifMatch(requireVersion(opened?.version)),
+              },
+              body: {
+                ...mapLeadUpdate(values),
+                // A diff against what the form prefilled from: a snapshot
+                // sends `null` for every empty custom field, and the API
+                // reads that as clearing a column nobody touched.
+                ...cf.toPatch(values, opened ?? {}),
+              },
+            });
+            if (error) {
+              throwProblem(error);
+            }
+            return data;
+          }}
+          invalidate="leads"
+          recordKey="lead"
+        />
+        {/* The overlay seam refuses disqualify (a cross-type lifecycle
+            transition) and share (a grant probes a native row a mirror lead
+            does not have), so in overlay these are genuinely UNSUPPORTED
+            rather than state-blocked — a different STATE-4a cause, and the
+            answer for that one is absence. */}
+        {!overlay && (
+          <>
+            <ShareAction
+              recordType="lead"
+              recordId={lead.id}
+              disabledReasonId={refusedReasonId}
+            />
+            {/* Last: it is the one verb here a reader cannot walk back from
+                the header, so it does not sit where a pointer sliding down
+                the list reaches it on the way to something routine. It asks
+                why, in its own dialog, and stays a secondary verb rather than
+                a red one — closing a lead is ordinary work, and the panel's
+                seam (atoms.css) belongs to the destructive verbs. A terminal
+                lead keeps the control, disabled with the page's one reason. */}
+            <Button
+              small
+              data-testid="lead-disqualify"
+              reasonId={refusedReasonId}
+              onClick={onDisqualify}
+            >
+              {t("record.disqualify")}
+            </Button>
+          </>
+        )}
+      </OverflowMenu>
     </>
   );
 }

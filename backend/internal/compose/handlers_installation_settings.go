@@ -120,6 +120,9 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// identity's own sentence, which quotes the value that was refused. A
 	// second check here would name a different field and say less.
 	patch.FiscalYearStartMonth = req.FiscalYearStartMonth
+	// Same again: the entry's own validator holds the 1..168 bound and names
+	// this field when it refuses, so a second check here would say less.
+	patch.DeadWorkBannerHours = req.DeadWorkBannerHours
 	// Same reasoning as the month above: the entry validates against the shared
 	// kernel's set, so an unknown measure comes back naming this field and
 	// quoting the value. Converted to a plain string because the patch carries
@@ -157,6 +160,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		BaseCurrency:         s.BaseCurrency,
 		BaseLanguage:         crmcontracts.InstallationSettingsBaseLanguage(s.BaseLanguage),
 		FiscalYearStartMonth: s.FiscalYearStartMonth,
+		DeadWorkBannerHours:  s.DeadWorkBannerHours,
 		ForecastForwardMeasure: crmcontracts.InstallationSettingsForecastForwardMeasure(
 			s.ForecastForwardMeasure),
 		BaseCurrencyLocked: s.BaseCurrencyLocked,

@@ -22128,7 +22128,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers]
       properties:
         name:
           type: string
@@ -22211,6 +22211,19 @@ components:
             a file too large is refused before it is sent instead of after. The ceiling bounds
             the whole request, part framing included, which is why a client should leave a
             little room rather than compare a file against it exactly.
+        dead_work_banner_hours:
+          type: integer
+          minimum: 1
+          maximum: 168
+          description: |
+            How far back the maintenance banner looks before it calls dead work a problem, in
+            hours. 24 by default, bounded above by River's own seven-day retention — a window
+            past that cannot narrow anything, since every terminal row still there is inside it.
+
+            The full count of discarded and cancelled work is unaffected and stays a report
+            figure. This bounds only the number that is styled as an alarm: River keeps a
+            terminal row for a week, so without it an outage that ended an hour ago goes on
+            asking for a hand until the rows retire.
         forecast_forward_measure:
           type: string
           enum: [commit_evidence, weighted, manager_call]
@@ -22271,6 +22284,19 @@ components:
             Password sign-in is not a member of this list and cannot be removed by any value of
             it. Omit the field to leave the choice unchanged; send an empty array to offer
             password only.
+        dead_work_banner_hours:
+          type: integer
+          minimum: 1
+          maximum: 168
+          description: |
+            How far back the maintenance banner looks before it calls dead work a problem, in
+            hours. 24 by default, bounded above by River's own seven-day retention — a window
+            past that cannot narrow anything, since every terminal row still there is inside it.
+
+            The full count of discarded and cancelled work is unaffected and stays a report
+            figure. This bounds only the number that is styled as an alarm: River keeps a
+            terminal row for a week, so without it an outage that ended an hour ago goes on
+            asking for a hand until the rows retire.
         forecast_forward_measure:
           type: string
           enum: [commit_evidence, weighted, manager_call]
@@ -36815,9 +36841,15 @@ components:
     JobHealth:
       type: object
       additionalProperties: false
-      required: [generated_at, kinds, recent_failures]
+      required: [generated_at, dead_window_hours, kinds, recent_failures]
       properties:
         generated_at: { type: string, format: date-time }
+        dead_window_hours:
+          type: integer
+          description: >
+            How far back `dead_recent` looks, from `installation.dead_work_banner_hours`. It travels
+            with the counts so a client can NAME the span it is rendering — a number shown without
+            one asks the reader to guess, and the guess is "since forever".
         kinds:
           type: array
           items: { $ref: '#/components/schemas/JobKindHealth' }
@@ -36830,7 +36862,7 @@ components:
     JobKindHealth:
       type: object
       additionalProperties: false
-      required: [kind, queue, fleet_wide, waiting, running, retrying, dead, oldest_waiting_age_seconds]
+      required: [kind, queue, fleet_wide, waiting, running, retrying, dead, dead_recent, oldest_waiting_age_seconds]
       properties:
         kind: { type: string, description: The stable job identifier River persists in river_job.kind. }
         queue: { type: string }
@@ -36846,7 +36878,15 @@ components:
           type: integer
           description: >
             Discarded or cancelled: this work will not happen without intervention. A discarded
-            job spent every attempt; a cancelled one was stopped deliberately.
+            job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE —
+            River retains a terminal row for seven days, so this is a week's history and a report
+            figure, not a call to action.
+        dead_recent:
+          type: integer
+          description: >
+            The same count inside `dead_window_hours`. This is the one to alarm on: an outage that
+            ended an hour ago and one still running are indistinguishable in `dead`, and that is
+            the distinction a maintenance banner exists to draw.
         oldest_waiting_age_seconds:
           type: [integer, 'null']
           description: >

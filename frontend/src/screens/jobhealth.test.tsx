@@ -73,6 +73,7 @@ function stubRoutes(overrides: Record<string, () => Response> = {}) {
 
 const HEALTH = {
   generated_at: "2026-08-13T09:30:00Z",
+  dead_window_hours: 24,
   kinds: [
     {
       kind: "capture_classify",
@@ -82,6 +83,7 @@ const HEALTH = {
       running: 1,
       retrying: 2,
       dead: 0,
+      dead_recent: 0,
       oldest_waiting_age_seconds: 4_500,
     },
     {
@@ -92,6 +94,7 @@ const HEALTH = {
       running: 0,
       retrying: 0,
       dead: 0,
+      dead_recent: 0,
       oldest_waiting_age_seconds: null,
     },
   ],
@@ -288,7 +291,7 @@ describe("JobHealthCard", () => {
       "GET /admin/job-health": () =>
         jsonResponse({
           ...HEALTH,
-          kinds: [{ ...HEALTH.kinds[0], dead: 3, retrying: 0 }],
+          kinds: [{ ...HEALTH.kinds[0], dead: 3, dead_recent: 3, retrying: 0 }],
           recent_failures: [
             { ...HEALTH.recent_failures[0], state: "discarded", attempt: 5 },
           ],
@@ -301,9 +304,52 @@ describe("JobHealthCard", () => {
     expect(alert).toHaveClass("callout-danger");
     expect(alert).toHaveTextContent(/will not happen without intervention/i);
     expect(alert).toHaveTextContent(/3 jobs/);
+    // The span, in the sentence. A count with no window asks the reader to
+    // guess, and the guess is "since forever".
+    expect(alert).toHaveTextContent(/last 24 hours/i);
+    // Nothing to say about a week that holds no more than the day does.
+    expect(alert).not.toHaveTextContent(/7 days/i);
     // And the count itself carries the tone on the row it belongs to.
     expect(screen.getByText("3 dead")).toHaveClass("badge-danger");
     expect(screen.getByText("discarded")).toHaveClass("badge-danger");
+  });
+
+  // The case the window exists for: a settled outage. The rows are still there
+  // — River keeps them a week — and the banner must go quiet while the figure
+  // does not, or a finished outage goes on asking for a hand until they retire.
+  it("goes quiet once the dead work leaves the window, and still reports it", async () => {
+    stubRoutes({
+      "GET /admin/job-health": () =>
+        jsonResponse({
+          ...HEALTH,
+          kinds: [
+            { ...HEALTH.kinds[0], dead: 531, dead_recent: 0, retrying: 0 },
+          ],
+        }),
+    });
+    render(<JobHealthCard />);
+    await screen.findByText("531 dead");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  // And when both are non-zero and differ, the week's total travels WITH the
+  // alarm rather than instead of it.
+  it("names the week's total beside the window's count", async () => {
+    stubRoutes({
+      "GET /admin/job-health": () =>
+        jsonResponse({
+          ...HEALTH,
+          kinds: [
+            { ...HEALTH.kinds[0], dead: 531, dead_recent: 4, retrying: 0 },
+          ],
+        }),
+    });
+    render(<JobHealthCard />);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/4 jobs died in the last 24 hours/i);
+    expect(alert).toHaveTextContent(
+      /531 discarded or cancelled in the last 7 days/i,
+    );
   });
 
   it("keeps a healthy report free of the dead-work alert", async () => {

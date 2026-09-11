@@ -3,7 +3,7 @@
 
 import "./integrations-provider.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plug, Trash2 } from "lucide-react";
+import { Plug } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -662,7 +662,7 @@ function DestructiveActions({
         {t("provider.disconnect")}
       </Button>
       <Button small variant="danger" type="button" onClick={onDeleteData}>
-        <Trash2 aria-hidden /> {t("provider.deleteData")}
+        {t("provider.deleteData")}
       </Button>
     </OverflowMenu>
   );

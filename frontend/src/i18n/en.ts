@@ -4302,7 +4302,12 @@ export const en = {
   "jobs.waitedHours_other": "oldest has waited {count} hours",
   "jobs.waitedDays_one": "oldest has waited {count} day",
   "jobs.waitedDays_other": "oldest has waited {count} days",
-  "jobs.deadTitle": "Dead work needs a hand",
+  // The window is in the TITLE, not only the body: a count with no span asks
+  // the reader to guess, and the guess is "since forever" — which is what made
+  // a finished outage keep this red for a week.
+  "jobs.deadTitle": "{count} jobs died in the last {hours} hours",
+  "jobs.deadTotal":
+    "{count} discarded or cancelled in the last 7 days, which is as long as the records are kept.",
   "jobs.deadBody":
     "{count} jobs are discarded or cancelled: that work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. Read the failures below before re-queueing anything.",
   "jobs.failures": "Recent failures",

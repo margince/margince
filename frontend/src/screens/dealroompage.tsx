@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Pause, Play, Square } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -295,7 +295,6 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
             pending={move.isPending}
             onClick={() => move.mutate("pause")}
           >
-            <Pause aria-hidden />
             {t("roompage.pause")}
             <span className="t-caption roompage-menu-hint">
               {t("roompage.pauseHint")}
@@ -309,13 +308,11 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
             pending={move.isPending}
             onClick={() => move.mutate("resume")}
           >
-            <Play aria-hidden />
             {t("roompage.resume")}
           </Button>
         ) : null}
         {room.state === "live" || room.state === "paused" ? (
           <Button small variant="ghost" onClick={() => setClosing(true)}>
-            <Square aria-hidden />
             {t("roompage.close")}
             <span className="t-caption roompage-menu-hint">
               {t("roompage.closeHint")}

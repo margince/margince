@@ -1277,12 +1277,13 @@ test.describe("B-EP09.23: overlay mode", () => {
     page,
   }) => {
     // Update writes back through the incumbent seam and succeeds
-    // (overlay/provider_writes.go) — so the deal 360's Edit affordance
-    // renders in overlay too (deals.tsx's DealBadges) and this drives it for
-    // real: click Edit, change the name, save, and see the 360 render the
-    // saved value — the same click path AC-deal-* exercises in native mode.
+    // (overlay/provider_writes.go) — so Edit is a row of the deal's overflow
+    // menu in overlay too, and this drives it for real: open the menu, click
+    // Edit, change the name, save, and see the 360 render the saved value —
+    // the same click path AC-deal-* exercises in native mode.
     await mockApi(page, { sor: "overlay" });
     await page.goto("/#/deals/d-fleet");
+    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
     await page.getByTestId("edit-record").click();
     const name = page.getByLabel("Deal-Name *");
     // Wait for the modal's own prefill to land before typing over it — the

@@ -1,0 +1,302 @@
+# A version tag in, a GitHub release out.
+#
+# One gesture cuts a downloadable build:
+#
+#   git tag -a v0.0.1 -m "..." && git push origin v0.0.1
+#
+# The tag says which shelf it lands on. A plain v0.0.1 ships; a suffixed
+# v0.0.1-rc.1 publishes as a pre-release, so a build meant for testing does not
+# become the download the release page offers by default. The D13 deployment's
+# production promotion is meant to select on that same answer and does not yet;
+# nothing here depends on it, because a tag moves no branch, so tagging a
+# candidate deploys nothing today either way.
+#
+# WHY THIS IS NOT release.yml. That lane drafts a constellation release into the
+# dist service at test.margince.com, versioned YYYY.edition.bugfix, and its
+# version grammar (pkg/version in margince-constellation) rejects a v-prefixed
+# string by construction. The two release kinds therefore carry two version
+# schemes, and one lane cannot name a build both ways. This lane owns the
+# GitHub release and the desktop bundles; release.yml keeps the dist release and
+# has surrendered its github-release job, so exactly one lane here can create a
+# release.
+name: release-tag
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+# Serialize, never cancel: by the release job this workflow is creating a
+# release and uploading assets to it, and a killed run leaves that half done.
+concurrency:
+  group: release-tag-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Resolve and VALIDATE before spending runner time on two bundles that
+  # compile PostgreSQL from source. Both checks below fail in seconds.
+  version:
+    name: The tag is a version, on main, with a verdict
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      # merge-attest's verdict on the tagged commit. The Checks API needs its
+      # own scope, and naming any scope sets the rest to none, so contents
+      # has to be spelled out alongside it.
+      checks: read
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+          # The ancestry check needs main, and a tag push checks out one commit
+          # by default.
+          fetch-depth: 0
+
+      - name: Read the tag
+        id: v
+        env:
+          TAG: ${{ github.ref_name }}
+        run: bash scripts/release-tag-version.sh "$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: The tag is on main
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # A release built from a commit that never merged is a release nobody
+          # reviewed. origin/main is asserted SEPARATELY from the ancestry it
+          # feeds: the checkout above is credential-less by now, so nothing here
+          # can fetch what is missing, and `merge-base` against an absent ref
+          # fails exactly as a tag off main does. One message per cause, or a
+          # fetch-depth regression reads as "your tag is not on main" and sends
+          # somebody to re-merge work that is already merged.
+          if ! git rev-parse --verify --quiet origin/main >/dev/null; then
+            echo "release-tag: origin/main is not in this checkout." >&2
+            echo "  The ancestry check cannot run, so this refuses rather than" >&2
+            echo "  passing blind. Check the checkout step's fetch-depth." >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "release-tag: $TAG does not point at a commit on main." >&2
+            echo "  Merge the work first, then tag the merge commit." >&2
+            exit 1
+          fi
+
+      - name: The tagged commit has no adverse verdict
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # main takes ~85 merges a day and a repository role can merge past a
+          # red required check — deliberately, and that is not changing. So the
+          # tip is not evidence: of the 20 commits before this lane was written,
+          # 9 carried an adverse `verdict` from merge-attest and 10 were clean.
+          # A release is worth one API call to avoid tagging one of the 9.
+          #
+          # This reads merge-attest's verdict, which fires on an adverse `ci`
+          # OR on a commit no pull request names. It says NOTHING about an
+          # absent verdict — merging past `ci` is a standing decision here — so
+          # a missing check-run passes. This is a release selector, not a
+          # correctness gate, and must not be described as one.
+          #
+          # THREE states, because merge-attest waits for the `ci` fan-in and so
+          # posts minutes after the merge, not at push time:
+          #   absent     — passes, for the reason above.
+          #   unsettled  — REFUSES. A queued or running check-run carries
+          #                conclusion null, which is indistinguishable from an
+          #                absent one once the conclusions are joined, so a tag
+          #                pushed straight after the merge skipped this step
+          #                without saying it had.
+          #   completed  — judged on the conclusion.
+          #
+          # per_page=100 rather than the endpoint's default of 30: it truncates
+          # instead of erroring, so the verdict would fall off the tail as the
+          # number of checks on a commit grows and this step would degrade to
+          # "nothing to refuse". The remaining ceiling — 100 check-runs on one
+          # commit — is named rather than paginated for. `filter=latest`, the
+          # default, is deliberate and is the opposite of merge-attest's choice:
+          # that judge reads the oldest attempt because it asks what the verdict
+          # was AT the merge, and this one asks what it is now.
+          runs="$(gh api "repos/$GH_REPO/commits/$SHA/check-runs?per_page=100" \
+            --jq '[.check_runs[] | select(.name == "verdict")]')"
+          if [ "$(jq 'length' <<<"$runs")" -eq 0 ]; then
+            echo "release-tag: no verdict check-run on $SHA — nothing to refuse."
+            exit 0
+          fi
+          if [ "$(jq '[.[] | select(.status != "completed")] | length' <<<"$runs")" -gt 0 ]; then
+            echo "release-tag: the verdict on $SHA has not settled yet." >&2
+            echo "  merge-attest waits for the ci fan-in, so it reports minutes" >&2
+            echo "  after the merge. Let it finish, then re-run ALL jobs of this" >&2
+            echo "  run — a verdict that has not concluded is not a verdict this" >&2
+            echo "  lane may read as absent." >&2
+            exit 1
+          fi
+          verdict="$(jq -r '[.[] | .conclusion] | join(",")' <<<"$runs")"
+          case "$verdict" in
+            *failure*|*cancelled*|*timed_out*|*action_required* )
+              echo "release-tag: $SHA carries an adverse verdict ($verdict)." >&2
+              echo "  merge-attest reports either an adverse ci verdict or a commit" >&2
+              echo "  no pull request names. Tag a commit that has neither." >&2
+              exit 1 ;;
+            * )
+              echo "release-tag: verdict on $SHA is $verdict." ;;
+          esac
+
+  desktop-macos:
+    name: Build the macOS bundle
+    needs: [version]
+    uses: ./.github/workflows/desktop-macos.yml
+    permissions:
+      contents: read
+    with:
+      # The exact commit the release describes, not a branch that may have moved.
+      ref: ${{ github.sha }}
+      version: ${{ needs.version.outputs.version }}
+
+  desktop-windows:
+    name: Build the Windows bundle
+    needs: [version]
+    uses: ./.github/workflows/desktop-windows.yml
+    permissions:
+      contents: read
+    with:
+      ref: ${{ github.sha }}
+      version: ${{ needs.version.outputs.version }}
+
+  release:
+    name: Publish the GitHub release
+    needs: [version, desktop-macos, desktop-windows]
+    runs-on: ubuntu-24.04-arm
+    # Transfer work, not build work: two artifact downloads, one re-zip, one
+    # upload. The bundles were produced inside the desktop lanes' own ceilings.
+    timeout-minutes: 30
+    permissions:
+      # The only job here that writes to this repository, and it writes exactly
+      # one thing: the release. Every other job is read-only.
+      contents: write
+    steps:
+      # A re-run of ONLY the failed jobs does not re-execute `version`, and
+      # GitHub drops the outputs of a job that did not run. Every use of
+      # `version` below then expands to the empty string: the two downloads ask
+      # for an artifact called `margince-macos-`, and the run dies on a name
+      # that traces back to nothing the releaser did. Named here, once, rather
+      # than three times as a missing artifact.
+      - name: Require the release version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          if [ -z "$VERSION" ]; then
+            echo "The version job reported no version. That happens when only the" >&2
+            echo "failed jobs were re-run: version did not re-execute and GitHub" >&2
+            echo "dropped its outputs. Re-run ALL jobs so the tag is read again." >&2
+            exit 1
+          fi
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: margince-macos-${{ needs.version.outputs.version }}
+          path: assets
+      # The Windows lane uploads the FOLDER. upload-artifact zips it in transit
+      # and download-artifact expands it again, so what lands here is a tree and
+      # not an archive, and it has to be re-zipped to become one release asset.
+      # Downloading it INTO a directory of that name is what gives the zip a
+      # self-describing top-level folder instead of scattering into wherever the
+      # user unzipped. The macOS lane already ships a tarball, because tar is
+      # what preserves the executable bit an artifact upload drops.
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: margince-windows-${{ needs.version.outputs.version }}
+          path: windows/margince-windows
+      - name: Name the assets after the release
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          mv "assets/margince-macos.tar.gz" "assets/margince-macos-$VERSION.tar.gz"
+          (cd windows && zip -qr "../assets/margince-windows-$VERSION.zip" margince-windows)
+          ls -l assets
+          # An asset that uploaded but is empty is indistinguishable from a
+          # working download until somebody opens it.
+          for f in assets/*; do
+            if [ ! -s "$f" ]; then
+              echo "FAIL: $f is empty" >&2
+              exit 1
+            fi
+          done
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+          REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # The first-launch step belongs HERE and not only in the docs. This
+          # page is where the download happens, and the OS refuses both bundles
+          # on first launch for want of a paid signing identity — a user who has
+          # to go looking for that reads it as the build being broken.
+          #
+          # A QUOTED heredoc, so the backticks and brackets below stay literal
+          # rather than being read as command substitution, with @VERSION@
+          # substituted afterwards.
+          cat > notes.md <<'NOTES'
+          Self-contained desktop builds. Download one folder, start it, and use Margince
+          in your browser — no Docker and no prerequisites.
+
+          | | macOS | Windows |
+          |---|---|---|
+          | Asset | `margince-macos-@VERSION@.tar.gz` | `margince-windows-@VERSION@.zip` |
+          | Runs on | macOS 12 Monterey or newer, **Apple silicon** | Windows 10 or newer, x64 |
+          | Also needed | Nothing | [Microsoft Visual C++ x64 redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe) |
+          | Unpack to | A **short** path such as `~/Margince` — the database socket has a 103-byte limit | Anywhere |
+
+          **The first launch warns once.** Neither build is signed for distribution:
+          that needs a paid Apple Developer ID and an Authenticode certificate.
+
+          - **macOS** — right-click `Start Margince.command` → **Open** → **Open**.
+            One dialog and no more: the bundle clears the download quarantine from
+            its own programs, so macOS does not ask again for each of Postgres, the
+            event bus, the api and the worker as they start.
+          - **Windows** — SmartScreen shows a warning: **More info** → **Run anyway**.
+
+          It prints the address, opens your browser, and prints the generated admin
+          password on the first launch only. After that the only copy is in
+          `data/admin-password` inside the folder.
+
+          What changed in this release: [CHANGELOG.md](https://github.com/margince/margince/blob/main/CHANGELOG.md)
+
+          Configuration, updating in place, and troubleshooting:
+          [docs/how-to/build-the-desktop-app.md](https://github.com/margince/margince/blob/main/docs/how-to/build-the-desktop-app.md)
+          NOTES
+          sed -i "s/@VERSION@/$VERSION/g" notes.md
+          printf '\nRevision: %s\n' "$REVISION" >> notes.md
+
+          # Re-running a failed run after the release was created must not fail:
+          # the upload replaces the assets on the existing release instead.
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "release-tag: $VERSION already exists — replacing its assets"
+            gh release upload "$VERSION" assets/* --clobber
+            # The notes are rebuilt above on every run, so a re-run is also the
+            # only way to correct them. Without this the body keeps whatever the
+            # first run wrote, and a wrong first-launch instruction on the page
+            # people download from would be unfixable by the lane that wrote it.
+            gh release edit "$VERSION" --notes-file notes.md
+          else
+            args=(--target "$REVISION" --title "Margince $VERSION" --notes-file notes.md --verify-tag)
+            if [ "$PRERELEASE" = true ]; then
+              args+=(--prerelease)
+            fi
+            gh release create "$VERSION" "${args[@]}" assets/*
+          fi
+
+          echo "release-tag: published $VERSION" >> "$GITHUB_STEP_SUMMARY"
+          gh release view "$VERSION" --json assets -q '.assets[].name' >> "$GITHUB_STEP_SUMMARY"

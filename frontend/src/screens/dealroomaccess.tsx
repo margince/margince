@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Link2, UserX } from "lucide-react";
+import { Copy, Link2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -252,7 +252,6 @@ function ParticipantRow({
               variant="ghost"
               onClick={() => setConfirming("reissue")}
             >
-              <Link2 aria-hidden />
               {t("access.issueLink")}
             </Button>
             <Button
@@ -267,7 +266,6 @@ function ParticipantRow({
               variant="ghost"
               onClick={() => setConfirming("revoke")}
             >
-              <UserX aria-hidden />
               {t("access.revoke")}
             </Button>
           </OverflowMenu>

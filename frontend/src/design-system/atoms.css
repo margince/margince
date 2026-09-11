@@ -1781,17 +1781,6 @@
   background: var(--accentMed);
   color: var(--accentText);
 }
-/* The seam above the destructive verbs, drawn rather than declared: a
-   separator that is an ELEMENT is a child the caller has to remember to put in
-   the right place and a screen reader has to be told to ignore. This appears
-   exactly where the routine verbs stop, is announced by nothing, and cannot be
-   ordered wrongly because it is not a thing to order. */
-.overflow-menu-items > *:not(.btn-danger) + .btn-danger {
-  margin-block-start: var(--space-1);
-  border-block-start-color: var(--borderSubtle);
-  border-start-start-radius: 0;
-  border-start-end-radius: 0;
-}
 
 /* One reading at the top of a record. The tile stays neutral and only the
    VALUE takes a tone: a row of coloured boxes reads as a dashboard, and the

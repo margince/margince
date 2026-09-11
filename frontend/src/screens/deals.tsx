@@ -1109,7 +1109,7 @@ function companyEditField(
   if (opts.masked.includes("company_id")) {
     return {
       key: "company_id",
-      label: "create.relatedCompany",
+      label: "create.company",
       type: "select",
       options: [{ value: "", label: t("deal.companyWithheld") }],
     };
@@ -1121,7 +1121,7 @@ function companyEditField(
   const current = opts.currentCompany;
   return {
     key: "company_id",
-    label: "create.relatedCompany",
+    label: "create.company",
     type: "select",
     options:
       current && !options.some((option) => option.value === current.id)
@@ -1484,7 +1484,7 @@ function dealColumns(
       // looked sortable and refused would be worse than one that never
       // offered.
       key: "company",
-      header: t("create.relatedCompany"),
+      header: t("create.company"),
       cell: (deal) => <CompanyCell deal={deal} field="company_id" />,
     },
     {
@@ -1796,7 +1796,7 @@ function dealFilterChips(
     },
     {
       key: "company_id",
-      label: t("create.relatedCompany"),
+      label: t("create.company"),
       allLabel: t("deals.filterCompanyAll"),
       options: [],
       search: searchCompanies,
@@ -2358,7 +2358,7 @@ function DealCreateAction({
         },
         {
           key: "company_id",
-          label: "create.relatedCompany",
+          label: "create.company",
           type: "select",
           options: companies.map((company) => ({
             value: company.id,
@@ -3283,9 +3283,9 @@ function DealPeoplePanels({
 // They used to ride the record view's BADGES slot, which is where a record says
 // what it IS rather than what can be done to it — so the deal page passed
 // `actionsInline` with no `actions` to place, and four buttons sat in the row
-// meant for a status and a project chip. Edit leads because it is the verb a
-// reader reaches for; the three whose consequence has to be read before they
-// are pressed go behind the overflow.
+// meant for a status and a project chip. The header now carries ONE verb, the
+// mail nobody has to read a consequence for; edit, share, reopen and archive
+// go behind the overflow, each on a line of its own.
 // The shared Email verb every record header carries. Not in overlay, where
 // the mirror owns the deal's mail.
 function DealEmailVerb({
@@ -3392,77 +3392,100 @@ function DealActions({
         overlay={overlay}
         disabledReasonId={refusedByArchive}
       />
-      <EditAction<Deal>
-        disabledReasonId={refusedReasonId}
-        label={t("deal.edit")}
-        savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
-        notice={overlay ? t("overlay.partialWriteBack") : undefined}
-        fields={[
-          ...dealEditFields(t, {
-            companies,
-            partnerOptions,
-            attributedPartner: attributedPartner(deal, companies),
-            currentCompany,
-            masked,
-            me: meId,
-            currentOwner: deal.owner_id ?? null,
-            // EMPTY, not a default. `dealEditFields` only uses this to put the
-            // record's own currency at the head of the option list, and a deal
-            // nobody has priced has none to put there.
-            currency: deal.currency ?? "",
-          }),
-          ...editProjectFields(t, {
-            masked,
-            openProjects,
-            currentProject,
-            company: deal.company_id ?? undefined,
-          }),
-          ...cf.formFields,
-        ]}
-        record={seeded}
-        update={async (values, _rows, opened) => {
-          // The company the form SUBMITS, not the one the deal had: a
-          // project started here belongs to the company the save names.
-          const submitted = stringValues(values);
-          const projectId = await resolveDealProject(
-            submitted,
-            submitted.company_id?.trim() || null,
-            t,
-          );
-          const { data, error } = await api.PATCH("/deals/{id}", {
-            params: {
-              path: { id: deal.id },
-              ...ifMatch(requireVersion(opened?.version)),
-            },
-            body: {
-              ...mapDealUpdate(
-                { ...values, project_id: projectId ?? "" },
-                // The reading the form opened on, not the live one: `seeded`
-                // is rebuilt on every render, so a refetch mid-edit would make
-                // somebody else's change read as this person's.
-                opened ?? seeded,
-                masked,
-              ),
-              // The other half of the same body, diffed the same way and
-              // against the same baseline. A snapshot here reproduced the
-              // reported defect exactly: `cf_*` columns are clearable through
-              // no path, so one empty custom field refused every save.
-              ...cf.toPatch(values, opened ?? {}),
-            },
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return data;
-        }}
-        invalidate="deals"
-        recordKey="deal"
-      />
-      {/* Behind the overflow, all three: archiving a deal, handing a link to
-          somebody outside the workspace, and reopening a closed one are verbs
-          whose consequence a reader has to read before pressing, so each of
-          them wants a whole line rather than a place in a row. */}
+      {/* Behind the overflow, every verb but the mail: editing a deal,
+          handing a link to somebody outside the workspace, reopening a
+          closed one and archiving it each want a whole line rather than a
+          place in a row — the header carries identity and the one verb a
+          reader reaches for. Archive goes last, farthest from the press
+          that opened the menu. */}
       <OverflowMenu label={t("record.moreActions")}>
+        {/* Worded rather than a bare pencil: among named verbs the square
+            would be the one row naming nothing. */}
+        <EditAction<Deal>
+          labelled
+          disabledReasonId={refusedReasonId}
+          label={t("deal.edit")}
+          savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
+          notice={overlay ? t("overlay.partialWriteBack") : undefined}
+          fields={[
+            ...dealEditFields(t, {
+              companies,
+              partnerOptions,
+              attributedPartner: attributedPartner(deal, companies),
+              currentCompany,
+              masked,
+              me: meId,
+              currentOwner: deal.owner_id ?? null,
+              // EMPTY, not a default. `dealEditFields` only uses this to put the
+              // record's own currency at the head of the option list, and a deal
+              // nobody has priced has none to put there.
+              currency: deal.currency ?? "",
+            }),
+            ...editProjectFields(t, {
+              masked,
+              openProjects,
+              currentProject,
+              company: deal.company_id ?? undefined,
+            }),
+            ...cf.formFields,
+          ]}
+          record={seeded}
+          update={async (values, _rows, opened) => {
+            // The company the form SUBMITS, not the one the deal had: a
+            // project started here belongs to the company the save names.
+            const submitted = stringValues(values);
+            const projectId = await resolveDealProject(
+              submitted,
+              submitted.company_id?.trim() || null,
+              t,
+            );
+            const { data, error } = await api.PATCH("/deals/{id}", {
+              params: {
+                path: { id: deal.id },
+                ...ifMatch(requireVersion(opened?.version)),
+              },
+              body: {
+                ...mapDealUpdate(
+                  { ...values, project_id: projectId ?? "" },
+                  // The reading the form opened on, not the live one: `seeded`
+                  // is rebuilt on every render, so a refetch mid-edit would make
+                  // somebody else's change read as this person's.
+                  opened ?? seeded,
+                  masked,
+                ),
+                // The other half of the same body, diffed the same way and
+                // against the same baseline. A snapshot here reproduced the
+                // reported defect exactly: `cf_*` columns are clearable through
+                // no path, so one empty custom field refused every save.
+                ...cf.toPatch(values, opened ?? {}),
+              },
+            });
+            if (error) {
+              throwProblem(error);
+            }
+            return data;
+          }}
+          invalidate="deals"
+          recordKey="deal"
+        />
+        {!overlay && (
+          <ShareAction
+            recordType="deal"
+            recordId={deal.id}
+            disabledReasonId={refusedReasonId}
+          />
+        )}
+        {/* Reopen answers a CLOSED deal, so an open one has no reason to be
+            told about it — absent, not refused. An archived closed deal keeps
+            it, refused: the reader came asking whether this can come back. */}
+        {!overlay && (deal.status === "won" || deal.status === "lost") && (
+          <ReopenAction
+            dealId={deal.id}
+            dealVersion={deal.version}
+            openStages={openStages}
+            disabledReasonId={refusedReasonId}
+          />
+        )}
         <ArchiveAction
           disabledReasonId={refusedReasonId}
           label={t("deal.archive")}
@@ -3484,24 +3507,6 @@ function DealActions({
           recordKey="deal"
           onArchived={() => navigate({ screen: "deals" })}
         />
-        {!overlay && (
-          <ShareAction
-            recordType="deal"
-            recordId={deal.id}
-            disabledReasonId={refusedReasonId}
-          />
-        )}
-        {/* Reopen answers a CLOSED deal, so an open one has no reason to be
-            told about it — absent, not refused. An archived closed deal keeps
-            it, refused: the reader came asking whether this can come back. */}
-        {!overlay && (deal.status === "won" || deal.status === "lost") && (
-          <ReopenAction
-            dealId={deal.id}
-            dealVersion={deal.version}
-            openStages={openStages}
-            disabledReasonId={refusedReasonId}
-          />
-        )}
       </OverflowMenu>
     </>
   );

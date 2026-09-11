@@ -534,6 +534,10 @@ describe("a deal's edit form over a withheld reference", () => {
       stubBackend({ deals: [single], single, page, byId, project }),
     );
     render(<DealScreen id={single.id} />);
+    // Edit lives in the header's overflow, so the form is two presses away.
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
     await user.click(await screen.findByTestId("edit-record"));
     return user;
   };

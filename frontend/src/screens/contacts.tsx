@@ -5,7 +5,7 @@ import type { components } from "../api/schema";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { activityTimeline } from "../design-system/activitytimeline";
-import { Badge, SegmentedControl } from "../design-system/atoms";
+import { Badge, OverflowMenu, SegmentedControl } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import { EmailDetail } from "../design-system/emaildetail";
 import {
@@ -415,30 +415,34 @@ function PersonActionBadges({
         </Badge>
       )}
       {person.archived_at && <Badge tone="warn">{t("record.archived")}</Badge>}
-      {/* An archived record is read-only: the backend rejects
-          edit/merge/archive on a non-live row (there is no
-          unarchive path). The verbs stay VISIBLE and refused,
-          pointing at the page's one sentence about the archive
-          (STATE-4a): a missing control says nothing about the
-          record, while a refused one names the reason. */}
-      <PersonEditMergeArchive
-        person={person}
-        cf={cf}
-        disabledReasonId={disabledReasonId}
-        overlay={overlay}
-      />
-      {/* A record grant probes the native row via
-          auth.EnsureLinkTarget, which a mirrored record has
-          no row for — sharing stays hidden in overlay
-          regardless of record type (see deals.tsx's
-          DealBadges). */}
-      {!overlay && (
-        <ShareAction
-          recordType="person"
-          recordId={person.id}
+      {/* The record's verbs behind one control, the shape the contact page
+          carries (personactions.tsx). An archived record is read-only: the
+          backend rejects edit/merge/archive on a non-live row (there is no
+          unarchive path). The verbs stay VISIBLE and refused inside the menu,
+          pointing at the page's one sentence about the archive (STATE-4a): a
+          missing control says nothing about the record, while a refused one
+          names the reason. */}
+      <OverflowMenu label={t("record.moreActions")}>
+        <PersonEditMergeArchive
+          person={person}
+          cf={cf}
           disabledReasonId={disabledReasonId}
+          overlay={overlay}
+          beforeArchive={
+            // A record grant probes the native row via
+            // auth.EnsureLinkTarget, which a mirrored record has no row for —
+            // sharing stays hidden in overlay regardless of record type (see
+            // deals.tsx's DealBadges).
+            !overlay && (
+              <ShareAction
+                recordType="person"
+                recordId={person.id}
+                disabledReasonId={disabledReasonId}
+              />
+            )
+          }
         />
-      )}
+      </OverflowMenu>
     </>
   );
 }

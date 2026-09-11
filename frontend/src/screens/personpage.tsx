@@ -43,7 +43,6 @@ import {
 } from "./personcards";
 import { EnrichedFields } from "./personcorrections";
 import { PersonResearchDrawer } from "./persondrawers";
-import { PersonEditMergeArchive } from "./personeditmergearchive";
 import { PersonFilesTab } from "./personfiles";
 import { PersonMemory } from "./personmemory";
 import { PersonNetworkTab } from "./personnetwork";
@@ -432,25 +431,15 @@ export function PersonPageV2({
           avatarSrc={null}
           subtitle={<PersonSubtitle view={view.data} />}
           pulse={<PersonIdentityLine view={view.data} />}
-          // Edit, merge, archive — the record's core write verbs. Before
-          // this, the form to correct an email, a phone or a misspelled
-          // name reached nothing on this page, and API-only was the only
-          // way left to do it. refusedReasonId is the SAME sentence the
-          // band below states and PersonActions' Share already points at —
-          // one write-gate for the whole header, not a narrower one for
-          // the verbs that live here.
-          badges={
-            <PersonEditMergeArchive
-              person={person}
-              cf={cf}
-              disabledReasonId={refusedReasonId}
-              overlay={overlay}
-            />
-          }
           actions={
+            // refusedReasonId is the SAME sentence the band below states —
+            // one write-gate for the whole header, not a narrower one per
+            // verb. Edit, merge and archive ride inside the header's menu,
+            // so they read it too.
             <PersonActions
               view={view.data}
               personId={id}
+              cf={cf}
               overlay={overlay}
               onWrite={() => openComposer("")}
               onResearch={() => setDrawer("research")}
