@@ -194,6 +194,41 @@ func TestFlipChecksRefuseAProjectionAnOlderDeclarationProduced(t *testing.T) {
 	}
 }
 
+// An operator held by force_fresh_incomplete is waiting on one of two things,
+// and they need opposite actions: a sweep that has not finished, or a mapping
+// nobody has repaired. The preflight told them neither — only that it failed.
+//
+// Both arms, because the count is only useful if zero is trustworthy: a
+// PENDING row blocks the flip too and is not stuck, so reporting it here would
+// send somebody looking for a declaration to fix that is already correct.
+func TestFlipChecksCountTheRowsNoDeclarationCanProject(t *testing.T) {
+	ctx, pool, ws := testWorkspaceCtx(t)
+	seedOverlayWorkspace(ctx, t, pool)
+	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))
+	svc := flipServiceJudgingContacts(db)
+	ms := NewMirrorStore(db, nil)
+	recordSweepSuccess(ctx, t, pool)
+	markBackfillDone(ctx, t, pool, IncumbentClassContacts)
+
+	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
+	ingestMirrorRow(ctx, t, ms, "person", "p-old-1", oldContactsDeclaration, baseline)
+	ingestMirrorRow(ctx, t, ms, "person", "p-old-2", oldContactsDeclaration, baseline)
+	ingestMirrorRow(ctx, t, ms, "person", "p-current", currentContactsDeclaration, baseline)
+
+	checks, err := svc.FlipChecks(ctx)
+	if err != nil {
+		t.Fatalf("FlipChecks: %v", err)
+	}
+	if checks.ForceFreshDone {
+		t.Fatal("force-fresh reported done with rows the current declaration cannot project")
+	}
+	if checks.UnprojectableRows != 2 {
+		t.Errorf("the preflight reports %d un-projectable rows, want 2 — an operator blocked by "+
+			"force_fresh_incomplete is told the flip failed and not how much is stuck",
+			checks.UnprojectableRows)
+	}
+}
+
 // TestFlipChecksBlockOnARowWhoseReprojectionFailed is the line the sweep's
 // skip must not cross. Recording that a row could not be re-projected spares it
 // the incumbent call a re-read would waste; it says nothing about the payload,

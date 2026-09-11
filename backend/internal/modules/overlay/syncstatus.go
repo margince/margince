@@ -46,6 +46,21 @@ type ObjectSyncStatus struct {
 	// is the difference between "sync is paused for the cutover" and a
 	// mirror that merely looks idle.
 	FrozenForFlip bool
+	// Unprojectable is how many of the class's rows the CURRENT declaration
+	// cannot map — rows whose projection_fingerprint no live declaration
+	// could have stamped.
+	//
+	// It is what separates the two readings `stale` collapses, and they need
+	// opposite responses: rows the sweep has not reached converge on their
+	// own and need nothing, while rows the mapping cannot project never
+	// converge and hold force_fresh_incomplete shut until somebody repairs
+	// the declaration. Zero means wait; non-zero means look.
+	//
+	// A count rather than a list, deliberately: the operator's question is
+	// "is anything stuck, and does this need me", not "which ids". The ids
+	// matter at the next step, and that step should be built by somebody
+	// whose count was actually non-zero.
+	Unprojectable int
 }
 
 // SyncStatus states (overlay_mirror.sync_state's CHECK vocabulary,
@@ -112,10 +127,16 @@ func (s *Service) resolveOverlayMode(ctx context.Context) (incumbent string, err
 // mean the mirror holds a payload the current mapping would not produce, and
 // both hold the flip's force-fresh check open — so reading this surface is how
 // an operator sees WHICH class keeps force_fresh_incomplete from clearing.
+//
+// The same predicate is also COUNTED, and that is the difference between
+// knowing a class is stale and knowing whether waiting will fix it. The two
+// situations `stale` collapses need opposite responses, and the count is the
+// one number that tells them apart.
 const selectMirrorSyncAggregateSQL = `
 SELECT object_class, max(last_synced_at),
        bool_or(sync_state = $1) AS any_pending,
-       bool_or(sync_state = $2 OR ` + staleProjectionSQL + `) AS any_stale
+       bool_or(sync_state = $2 OR ` + staleProjectionSQL + `) AS any_stale,
+       count(*) FILTER (WHERE ` + staleProjectionSQL + `) AS unprojectable
 FROM overlay_mirror
 GROUP BY object_class
 ORDER BY object_class`
@@ -161,14 +182,16 @@ func (s *Service) SyncStatus(ctx context.Context) ([]ObjectSyncStatus, error) {
 			var objectClass string
 			var lastSyncedAt time.Time
 			var flags mirrorStateFlags
-			if err := rows.Scan(&objectClass, &lastSyncedAt, &flags.anyPending, &flags.anyStale); err != nil {
+			var unprojectable int
+			if err := rows.Scan(&objectClass, &lastSyncedAt, &flags.anyPending, &flags.anyStale, &unprojectable); err != nil {
 				rows.Close()
 				return fmt.Errorf("overlay: scanning a mirror sync aggregate row: %w", err)
 			}
 			out = append(out, ObjectSyncStatus{
-				Object:       objectClass,
-				LastSyncedAt: lastSyncedAt,
-				State:        aggregateState(flags),
+				Object:        objectClass,
+				LastSyncedAt:  lastSyncedAt,
+				State:         aggregateState(flags),
+				Unprojectable: unprojectable,
 			})
 		}
 		if err := rows.Err(); err != nil {

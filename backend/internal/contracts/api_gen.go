@@ -29879,6 +29879,9 @@ type OverlayFlipPreflight struct {
 	// Snapshot The sealed frozen-mirror snapshot the flip imports.
 	Snapshot *OverlayFlipSnapshot `json:"snapshot,omitempty"`
 
+	// UnprojectableRows How many mirror rows the CURRENT declaration cannot project — a SUBSET of what holds `force_fresh_incomplete`, and the only part of it that never clears on its own. It is sent whether or not the flip is blocked, and zero is a real answer: an operator waiting on `force_fresh_incomplete` with zero here is waiting on a sweep that will finish, while a non-zero count is waiting on somebody repairing the mapping. Which class holds them is on the sync-status read, per object.
+	UnprojectableRows *int `json:"unprojectable_rows,omitempty"`
+
 	// UnresolvedConflicts Open incumbent-wins conflicts awaiting acceptance; each blocks the flip. Empty in this build: branch 1 reconciliation resolves incumbent-wins at ingest and persists no conflict queue, so the producer arrives with write-back (branch 2). The field is required by OVA-WIRE-7's response shape.
 	UnresolvedConflicts []OverlayFlipUnresolvedConflict `json:"unresolved_conflicts"`
 }
@@ -29935,6 +29938,9 @@ type OverlaySyncStatus struct {
 		LastSyncedAt  *time.Time                     `json:"lastSyncedAt,omitempty"`
 		Object        *string                        `json:"object,omitempty"`
 		State         *OverlaySyncStatusObjectsState `json:"state,omitempty"`
+
+		// UnprojectableRows How many of the class's mirror rows the CURRENT declaration cannot project. It is what tells the two readings of `stale` apart, and they want opposite responses: `stale` with ZERO here is converging — the sweep has not reached those rows and will — while `stale` with a NON-ZERO count never converges on its own and holds `force_fresh_incomplete` shut until somebody repairs the mapping. Zero means wait; non-zero means look. A count and not a list, because the question an operator is answering is whether anything needs them, not which ids.
+		UnprojectableRows *int `json:"unprojectableRows,omitempty"`
 	} `json:"objects,omitempty"`
 }
 

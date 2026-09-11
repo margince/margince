@@ -24705,6 +24705,17 @@ components:
                   the sweep skips this workspace entirely, so staleness grows
                   on purpose. Stated rather than left to be inferred from a
                   mirror that merely looks idle.
+              unprojectableRows:
+                type: integer
+                description: >-
+                  How many of the class's mirror rows the CURRENT declaration cannot project.
+                  It is what tells the two readings of `stale` apart, and they want opposite
+                  responses: `stale` with ZERO here is converging — the sweep has not reached
+                  those rows and will — while `stale` with a NON-ZERO count never converges on
+                  its own and holds `force_fresh_incomplete` shut until somebody repairs the
+                  mapping. Zero means wait; non-zero means look.
+                  A count and not a list, because the question an operator is answering is
+                  whether anything needs them, not which ids.
     OverlayBudget:
       type: object
       description: >-
@@ -24784,6 +24795,15 @@ components:
           items:
             type: string
             enum: [incumbent_unreachable, force_fresh_incomplete, pending_sync_draining, unresolved_conflicts, export_missing]
+        unprojectable_rows:
+          type: integer
+          description: >-
+            How many mirror rows the CURRENT declaration cannot project — a SUBSET of what holds
+            `force_fresh_incomplete`, and the only part of it that never clears on its own. It is
+            sent whether or not the flip is blocked, and zero is a real answer: an operator waiting
+            on `force_fresh_incomplete` with zero here is waiting on a sweep that will finish, while
+            a non-zero count is waiting on somebody repairing the mapping. Which class holds them is
+            on the sync-status read, per object.
         unresolved_conflicts:
           type: array
           description: >-
