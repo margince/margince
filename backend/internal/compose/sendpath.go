@@ -166,6 +166,10 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		// has to retract the card it was handed to, or somebody is still being
 		// asked to send a message that is cancelled, moved or already gone.
 		WithReviewCloser(reviewCloser{router: retractionRouter(pool)}).
+		// The other half of the same seam: closing a review is what a settled
+		// message does, and FINDING one is what a held message needs so a rep
+		// can reach the work that would unstop it.
+		WithReviewLookup(reviewLookup{pool: pool}).
 		// Wired unconditionally, like the unsubscribe linker below: it needs
 		// nothing but the caller's transaction, so a deployment cannot forget
 		// it and leave an account-started send unable to resolve anyone.
@@ -320,6 +324,10 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		// has to retract the card it was handed to, or somebody is still being
 		// asked to send a message that is cancelled, moved or already gone.
 		WithReviewCloser(reviewCloser{router: retractionRouter(pool)}).
+		// The other half of the same seam: closing a review is what a settled
+		// message does, and FINDING one is what a held message needs so a rep
+		// can reach the work that would unstop it.
+		WithReviewLookup(reviewLookup{pool: pool}).
 		WithDraftOutcome(send.DraftOutcome)
 }
 

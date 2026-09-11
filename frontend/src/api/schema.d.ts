@@ -24435,6 +24435,21 @@ export interface components {
              * @enum {string|null}
              */
             held_reason?: "consent_withdrawn" | "sender_inactive" | "missed_window" | "timer_exhausted" | "send_refused" | null;
+            /**
+             * Format: uuid
+             * @description The review this message's refusal opened, when one stands. Null on every message
+             *     nobody refused, and on a held row whose review has since been answered.
+             *
+             *     WHY IT IS ON THE ROW. A refusal answers `422 send_needs_review` carrying the review,
+             *     and that answer reaches the rep once — at the moment they pressed send. Navigate
+             *     away and the held message is a row explaining why it stopped with no way back to the
+             *     work that would unstop it. The id is what lets a held row open its own review.
+             *
+             *     It is a POINTER, never permission: reading the review is gated on its own terms
+             *     (initiator, assignee, or the `communication_exception` grant), so a caller holding
+             *     this id still gets 404 if the review is not theirs to see.
+             */
+            review_id?: string | null;
             /** Format: int64 */
             version: number;
             /** Format: date-time */

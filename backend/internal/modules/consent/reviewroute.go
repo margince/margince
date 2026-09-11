@@ -358,3 +358,69 @@ func (s *Store) AwaitingDecision(ctx context.Context, limit int) ([]Review, int,
 // is worked from the end that has been waiting longest rather than from
 // whichever rows the planner happened to reach.
 const maxAwaitingDecision = 100
+
+// LiveReviewsForIntents answers which review, if any, stands over each of these
+// held messages. It implements activities.ReviewLookup; compose binds it.
+//
+// GATED ON READING THE MESSAGE, and SCOPED TO THE CALLER'S OWN REVIEWS.
+//
+// The grant is activity:read, the same check the scheduled-send list makes
+// before it has any ids to ask about. Gating on the REVIEW's own grant would
+// refuse the rep whose message it is — they may not direct a send, and this is
+// their own held message they are looking at.
+//
+// THE SCOPE IS THE HALF THAT MATTERS, and it took a review round to add. The
+// caller supplies the ids, and this is an exported store method — so an
+// argument resting on what today's call sites happen to pass is an argument
+// about them rather than about this function, and the next caller inherits
+// none of it. Without the predicate below, anybody holding activity:read could
+// pass somebody else's message id and learn that their correspondence carries
+// an outstanding refusal, a fact ReviewForReader hides with a 404.
+//
+// ON initiated_by, which is the rep who pressed send and therefore the rep the
+// held message belongs to. Consent cannot read scheduled_send to check
+// ownership directly — that is activities' table — and it does not need to:
+// the review records who was refused, and that is the same person.
+//
+// ONE READ FOR EVERY ID, because the surface that needs this is a list.
+func (s *Store) LiveReviewsForIntents(
+	ctx context.Context, intents []ids.UUID,
+) (map[ids.UUID]ids.UUID, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	// A principal with no seat — a system worker, a connector — initiated no
+	// review, so the predicate below would match nothing. Answering empty says
+	// that plainly rather than sending a zero uuid into the query.
+	seat := initiatingSeat(ctx)
+	out := make(map[ids.UUID]ids.UUID, len(intents))
+	if len(intents) == 0 || seat.IsZero() {
+		// An empty map rather than a nil one: the answer is "no review stands
+		// over any of these", which every caller reads the same way.
+		return out, nil
+	}
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT delivery_intent_id, id
+			  FROM communication_review
+			 WHERE delivery_intent_id = ANY($1::uuid[])
+			   AND resolved_at IS NULL
+			   AND initiated_by = $2`, intents, seat)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var intent, review ids.UUID
+			if err := rows.Scan(&intent, &review); err != nil {
+				return err
+			}
+			out[intent] = review
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("consent: finding the reviews standing over these messages: %w", err)
+	}
+	return out, nil
+}
