@@ -482,7 +482,7 @@ internal/modules/people/lead_read.go#const liveOnlyClause
 internal/modules/people/leadmanualsignal.go#func manualSignalImage
 internal/modules/people/leadstatus.go#method LeadStatus.Open
 internal/modules/people/linkedinmatch.go#method Store.MatchLinkedInConnections
-internal/modules/people/linkedinmatch.go#var suggestNameEmployerMatchSQL
+internal/modules/people/linkedinmatch.go#var nameEmployerCandidatesSQL
 internal/modules/people/linkedinorgplace.go#func orgKeys
 internal/modules/people/linkedinrenormalize.go#func matchRank
 internal/modules/people/linkedinrenormalize.go#var matchRankOrder
