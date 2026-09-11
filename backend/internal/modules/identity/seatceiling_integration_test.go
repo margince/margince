@@ -210,6 +210,40 @@ func TestSeatCeilingDoesNotHoldAReadSeatToTheFullSeatGrant(t *testing.T) {
 	}
 }
 
+// An agent identity is not a Seat, so it is neither metered nor allowed to spend
+// somebody's licensed seat.
+//
+// LICENSE is the authority: a Seat is "a single, identified natural person", and
+// an automated agent acting under the authority of a counted Seat explicitly is
+// not one. A meter that counted them would cap an installation for something its
+// licence gives away — and the way a customer meets that is not the number on
+// the entitlement screen, it is being refused the last person they are entitled
+// to, which is what the second half asserts.
+func TestSeatCeilingDoesNotMeterAnAgentAgainstTheLicence(t *testing.T) {
+	e := setupRevocationEnv(t, "seat-ceiling-agent")
+	before := seatsInUse(t, e)
+
+	seedAgentIdentity(t, e.owner, "runner-"+e.slug+"@seatceiling.test")
+
+	if got := seatsInUse(t, e); got != before {
+		t.Fatalf("seats in use went %d → %d when an agent identity landed; want it unchanged — "+
+			"LICENSE says an agent is not a Seat, and this meter is what that document is read against",
+			before, got)
+	}
+	// The agent row is really there, so the assertion above is about the
+	// predicate rather than about an insert that silently did nothing.
+	if agents := readAgentSeats(t, e.owner); len(agents) != 1 {
+		t.Fatalf("found %d agent identities, want the 1 just seeded — the count above proved nothing", len(agents))
+	}
+
+	// And the seat it does not take is still there to give away. This is the
+	// harm: an installation licensed for its people gets refused one of them.
+	licenseFor(t, e, licensedSeats(before+1))
+	if err := inviteOneMore(t, e, "the-person-the-agent-displaced"); err != nil {
+		t.Errorf("inviting into a licensed seat alongside an agent: %v — the agent spent a seat the licence did not sell", err)
+	}
+}
+
 // What an unlicensed installation and an uncapped license have in common: no
 // number to hold anybody to. Both reach identity as the same answer, and a
 // service nobody wired is the third spelling of it.
