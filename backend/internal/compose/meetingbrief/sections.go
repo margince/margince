@@ -269,6 +269,14 @@ func attendeeLine(attendee AttendeeIn, now time.Time) string {
 	if attendee.FirstTime {
 		return line + " — first time you are meeting them."
 	}
+	// No recorded last contact is NOT the same as a first meeting: the
+	// assembler leaves it unset when it found no prior activity it could date,
+	// and claiming either would be a fact nobody can check. Saying nothing about
+	// timing is the honest line — and dereferencing it took the whole brief down
+	// with a panic rather than degrading to the floor.
+	if attendee.LastTouch == nil {
+		return line
+	}
 	days := elapsed.Days(*attendee.LastTouch, now)
 	if days <= 0 {
 		return line + " — last spoke today."

@@ -155,12 +155,10 @@ func accountEvidence(companyID string) []Evidence {
 // writer has never seen, so no subject line can close the span and be read
 // as instruction.
 //
-// The company profile is withheld from the request. Appending those lines
-// afterwards only guarantees the approved wording APPEARS; a model that had
-// read them could still put its own wording next to it, cited to the
-// company and so accepted by the grounding check. Withholding them is
-// what makes "the model never rewrites the company description" true of the
-// request rather than of the concatenation.
+// The company profile RIDES this request, unlike the one AskRequest sends: the
+// brief is allowed to assess, and a fit assessment cannot be written without
+// knowing what we sell (see Input.withoutProfile). What keeps that honest is
+// the nature label on every claim, not withholding the text.
 func BriefRequest(in Input, lang string) model.Request {
 	return groundedRequest(briefSystemFor, in, lang)
 }

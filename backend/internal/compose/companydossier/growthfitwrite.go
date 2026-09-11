@@ -71,12 +71,12 @@ func GrowthFitRequest(in Input, lang string) model.Request {
 	return model.Request{
 		System:   growthFitSystemFor(fence, lang),
 		Messages: []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
-		// Our own offering is what makes this a FIT rather than a description,
-		// so it is requested unconditionally — a growth fit written without it
-		// is the guess the band cap exists to flag.
-		IncludeCompanyContext: true,
-		MaxTokens:             ai.ReasoningOutputMaxTokens,
-		SecretStripper:        ai.NewSecretStripper(),
+		// Our own offering is what makes this a FIT rather than a description, so
+		// the task contract declares the company block UNCONDITIONAL here and
+		// there is no flag to set: a growth fit written without it is the guess
+		// the band cap exists to flag.
+		MaxTokens:      ai.ReasoningOutputMaxTokens,
+		SecretStripper: ai.NewSecretStripper(),
 	}
 }
 

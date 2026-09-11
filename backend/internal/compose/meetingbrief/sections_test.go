@@ -370,3 +370,44 @@ func TestEveryPriorMeetingCitesTheMeetingItNames(t *testing.T) {
 		t.Errorf("evidence = %+v, want the earlier meeting's own activity", cited)
 	}
 }
+
+// An attendee with no recorded last contact and no first-time mark is a real
+// assembly: the assembler leaves LastTouch unset when it found no prior
+// activity it could date. Rendering one used to dereference the nil and take
+// the whole brief down with a panic, where the contract is that a brief always
+// has a deterministic floor to fall back to.
+func TestAnAttendeeWithNoRecordedContactDoesNotTakeTheBriefDown(t *testing.T) {
+	t.Parallel()
+	in := Input{
+		ActivityID: "01998f00-0000-7000-8000-00000000000a",
+		Subject:    "Coffee with Rainer",
+		Company:    "Asia Flight Services",
+		Now:        time.Date(2026, time.August, 4, 12, 0, 0, 0, time.UTC),
+		Attendees: []AttendeeIn{{
+			PersonID: "01998f00-0000-7000-8000-00000000000b",
+			FullName: "Rainer Vogt",
+			// Neither FirstTime nor LastTouch: nothing is known about when
+			// anyone last spoke to them.
+		}},
+	}
+	sections := Deterministic(in)
+	var line string
+	for _, section := range sections {
+		if section.Kind != crmcontracts.MeetingBriefSectionKindAttendees {
+			continue
+		}
+		for _, sentence := range section.Sentences {
+			line += sentence.Text
+		}
+	}
+	if !strings.Contains(line, "Rainer Vogt") {
+		t.Fatalf("the attendees section never named the attendee: %q", line)
+	}
+	// Saying nothing about timing is the honest line. Claiming either a first
+	// meeting or a date would be a fact nobody can check.
+	for _, invented := range []string{"first time", "last spoke"} {
+		if strings.Contains(line, invented) {
+			t.Errorf("the line claims %q about an attendee with no recorded contact: %q", invented, line)
+		}
+	}
+}
