@@ -304,6 +304,7 @@ func Definitions() []settings.Definition {
 		BaseLanguage,
 		Country,
 		FiscalYearStartMonth,
+		DeadWorkBannerHours,
 		ForecastForwardMeasure,
 		EnabledOidcProviders,
 		SMTPPasswordRef,

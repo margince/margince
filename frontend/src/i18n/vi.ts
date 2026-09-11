@@ -4144,7 +4144,9 @@ export const vi = {
   "jobs.waitedHours_other": "cũ nhất đã chờ {count} giờ",
   "jobs.waitedDays_one": "cũ nhất đã chờ {count} ngày",
   "jobs.waitedDays_other": "cũ nhất đã chờ {count} ngày",
-  "jobs.deadTitle": "Việc đã chết cần bạn ra tay",
+  "jobs.deadTitle": "{count} tác vụ đã chết trong {hours} giờ qua",
+  "jobs.deadTotal":
+    "{count} bị loại bỏ hoặc bị huỷ trong 7 ngày qua — đó cũng là thời gian bản ghi được giữ lại.",
   "jobs.deadBody":
     "{count} tác vụ đã bị loại bỏ hoặc bị huỷ: công việc đó sẽ không tự diễn ra nữa. Một tác vụ bị loại bỏ đã dùng hết mọi lần thử; một tác vụ bị huỷ là do có người chủ động dừng. Hãy đọc các lỗi bên dưới trước khi xếp lại vào hàng đợi.",
   "jobs.failures": "Lỗi gần đây",

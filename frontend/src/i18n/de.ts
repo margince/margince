@@ -4212,7 +4212,10 @@ export const de = {
   "jobs.waitedHours_other": "ältester wartet seit {count} Stunden",
   "jobs.waitedDays_one": "ältester wartet seit {count} Tag",
   "jobs.waitedDays_other": "ältester wartet seit {count} Tagen",
-  "jobs.deadTitle": "Tote Arbeit braucht deine Hand",
+  "jobs.deadTitle":
+    "{count} Jobs sind in den letzten {hours} Stunden gestorben",
+  "jobs.deadTotal":
+    "{count} in den letzten 7 Tagen verworfen oder abgebrochen — so lange werden die Einträge aufbewahrt.",
   "jobs.deadBody":
     "{count} Jobs sind verworfen oder abgebrochen: diese Arbeit passiert ohne Eingriff nicht mehr. Ein verworfener Job hat alle Versuche verbraucht, ein abgebrochener wurde absichtlich gestoppt. Lies die Fehler unten, bevor du etwas neu einreihst.",
   "jobs.failures": "Letzte Fehler",

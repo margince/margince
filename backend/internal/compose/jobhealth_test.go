@@ -157,7 +157,7 @@ func TestBothTenantAndDispatcherFailuresReachTheResponse(t *testing.T) {
 	got := jobHealthResponse(jobs.Health{Failures: []jobs.Failure{
 		{Kind: "tenant_pass", WorkspaceID: &someoneElse, State: "discarded"},
 		{Kind: "the_dispatcher", WorkspaceID: nil, State: "discarded"},
-	}})
+	}}, 24*time.Hour)
 
 	if len(got.RecentFailures) != 2 {
 		t.Fatalf("mapped %d failures, want 2", len(got.RecentFailures))
@@ -177,7 +177,7 @@ func TestAnAbsentOldestAgeStaysAbsent(t *testing.T) {
 	got := jobHealthResponse(jobs.Health{Kinds: []jobs.KindHealth{
 		{Kind: "idle", OldestWaitingAgeSeconds: nil},
 		{Kind: "waiting", OldestWaitingAgeSeconds: &measured},
-	}})
+	}}, 24*time.Hour)
 
 	if got.Kinds[0].OldestWaitingAgeSeconds != nil {
 		t.Errorf("an unmeasured age became %d", *got.Kinds[0].OldestWaitingAgeSeconds)
@@ -194,7 +194,7 @@ func TestAnAbsentOldestAgeStaysAbsent(t *testing.T) {
 // arrays, and a JSON null where a list belongs breaks a client that
 // iterates it.
 func TestAnIdleFleetMapsToEmptyListsNotNulls(t *testing.T) {
-	got := jobHealthResponse(jobs.Health{})
+	got := jobHealthResponse(jobs.Health{}, 24*time.Hour)
 
 	if got.Kinds == nil {
 		t.Error("kinds serialized as null rather than []")
