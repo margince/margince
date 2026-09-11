@@ -146,21 +146,7 @@ func (c *voiceDemoDraftCase) Run(ctx context.Context, completer aitasks.Complete
 // production shows a blank card for it — the state the whole step exists to
 // avoid.
 func (c *voiceDemoDraftCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	reply, err := readVoiceEvalDraft(trace.Output)
-	if err != nil {
-		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
-	}
-	proximity := stylometricProximity(c.artifact.Stats, reply.body)
-	result := aitasks.OutcomeAccepted
-	detail := fmt.Sprintf("the draft sits at %.4f of the corpus fingerprint", proximity)
-	if proximity < c.floor {
-		result = aitasks.OutcomeWrongAnswer
-		detail += fmt.Sprintf(", and the scenario expects at least %.4f", c.floor)
-	}
-	if len(reply.tells) > 0 {
-		detail += "; " + voiceEvalTellNote(reply.tells)
-	}
-	return aitasks.Outcome{Result: result, Detail: detail}
+	return voiceDraftProximityOutcome(c.artifact.Stats, c.floor, trace.Output)
 }
 
 // anyExemplarCarriesText reports whether at least one example has words in it.

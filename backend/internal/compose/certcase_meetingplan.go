@@ -176,23 +176,28 @@ func refuseUnusableMeetingFixture(site string, f meetingPlanFixture, want meetin
 				site, i+1, claim.FromLabel)
 		}
 	}
-	if !strings.Contains(bodiesOf(f), want.NamesToken) {
+	// The token has to be in the CITED message, not merely somewhere in the
+	// fixture. meeting_brief requires one sentence to both cite that message
+	// and carry the token, so a token living only in a distractor describes an
+	// answer no correct reply could give — and on the plan side it would accept
+	// a citation and a phrase that have nothing to do with each other.
+	if !strings.Contains(citedMessageText(f, want.CitesLabel), want.NamesToken) {
 		return fmt.Errorf(
-			"%s: the expectation's token %q appears in no message, so only an invented answer could name it",
-			site, want.NamesToken)
+			"%s: the expectation's token %q does not appear in the message it names, %q, so no reply could both "+
+				"cite that conversation and say it", site, want.NamesToken, want.CitesLabel)
 	}
 	return nil
 }
 
-func bodiesOf(f meetingPlanFixture) string {
-	var all strings.Builder
+// citedMessageText is the subject and body of the one message an expectation
+// names, which is where its token has to live.
+func citedMessageText(f meetingPlanFixture, label string) string {
 	for _, message := range f.Messages {
-		all.WriteString(message.Subject)
-		all.WriteString(" ")
-		all.WriteString(message.Body)
-		all.WriteString(" ")
+		if message.Label == label {
+			return message.Subject + " " + message.Body
+		}
 	}
-	return all.String()
+	return ""
 }
 
 // meetingPlanInput assembles what the service assembles, with minted ids.

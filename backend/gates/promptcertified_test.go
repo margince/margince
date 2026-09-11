@@ -116,6 +116,15 @@ type promptGraph struct {
 	// conduits mint on behalf of a CALLER: the system prompt comes in as a
 	// parameter, so the literal is one and the sites are many.
 	conduits map[funcKey]bool
+	// promptArg is, for each conduit, WHICH parameter position carries the
+	// prompt. Forwarding any old argument into a conduit does not make a
+	// wrapper one — forwarding the prompt does.
+	promptArg map[funcKey]int
+	// forwards records, per call, the argument positions a function fills with
+	// its OWN parameters. A wrapper that forwards its prompt into a conduit's
+	// prompt position is a conduit itself, and without this the propagation
+	// stops at the wrapper — leaving whoever chose the prompt out of the census.
+	forwards map[funcKey]map[funcKey]map[int]bool
 }
 
 func TestEveryPromptIsCertified(t *testing.T) {
@@ -157,10 +166,12 @@ func TestEveryPromptIsCertified(t *testing.T) {
 func walkPromptTree(t *testing.T, root string) promptGraph {
 	t.Helper()
 	g := promptGraph{
-		minting:  map[funcKey]bool{},
-		calls:    map[funcKey][]funcKey{},
-		roots:    map[funcKey]bool{},
-		conduits: map[funcKey]bool{},
+		minting:   map[funcKey]bool{},
+		calls:     map[funcKey][]funcKey{},
+		roots:     map[funcKey]bool{},
+		conduits:  map[funcKey]bool{},
+		promptArg: map[funcKey]int{},
+		forwards:  map[funcKey]map[funcKey]map[int]bool{},
 	}
 	fset := token.NewFileSet()
 	type parsed struct {
@@ -285,7 +296,8 @@ func collectFunc(g *promptGraph, fn *ast.FuncDecl, f fileFacts) {
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		if f.modelImported && mintsSystemPrompt(n, f.modelPkg) {
 			g.minting[self] = true
-			if systemComesFromAParameter(n, fn) {
+			if at, fromParam := systemParameterIndex(n, fn); fromParam {
+				g.promptArg[self] = at
 				// The prompt is the CALLER's. One literal, many sites — so
 				// mintness propagates up to whoever supplies it.
 				g.conduits[self] = true
@@ -297,6 +309,12 @@ func collectFunc(g *promptGraph, fn *ast.FuncDecl, f fileFacts) {
 		}
 		if callee, named := promptCalleeOf(n, f.dir, f.imports, shadowed, locals, g.returns); named {
 			g.calls[self] = append(g.calls[self], callee)
+			if at := forwardedParameterPositions(n, fn); len(at) > 0 {
+				if g.forwards[self] == nil {
+					g.forwards[self] = map[funcKey]map[int]bool{}
+				}
+				g.forwards[self][callee] = at
+			}
 		}
 		return true
 	})
@@ -708,20 +726,26 @@ func constructedType(expr ast.Expr, dir string, imports map[string]string, retur
 	return ""
 }
 
-// systemComesFromAParameter reports whether a request literal takes its system
-// prompt from one of the enclosing function's parameters. Such a function is a
-// conduit: companybrief.groundedRequest holds ONE literal and serves every caller
-// that hands it a prompt builder, so counting literals would count one site
-// where there are several, and a new caller would add no literal at all.
-func systemComesFromAParameter(n ast.Node, fn *ast.FuncDecl) bool {
+// systemParameterIndex reports which of the enclosing function's parameters
+// supplies a request literal's system prompt, by position. Such a function is a
+// conduit: companybrief.groundedRequest holds ONE literal and serves every
+// caller that hands it a prompt builder, so counting literals would count one
+// site where there are several, and a new caller would add no literal at all.
+//
+// The prompt must BE a parameter or be built by CALLING one. A parameter merely
+// mentioned in the expression — a language code, a name — is data the site chose
+// for itself, not a prompt handed in from outside.
+func systemParameterIndex(n ast.Node, fn *ast.FuncDecl) (int, bool) {
 	lit, ok := n.(*ast.CompositeLit)
 	if !ok || fn.Type.Params == nil {
-		return false
+		return 0, false
 	}
-	params := map[string]bool{}
+	at := map[string]int{}
+	position := 0
 	for _, field := range fn.Type.Params.List {
 		for _, name := range field.Names {
-			params[name.Name] = true
+			at[name.Name] = position
+			position++
 		}
 	}
 	for _, elt := range lit.Elts {
@@ -733,19 +757,47 @@ func systemComesFromAParameter(n ast.Node, fn *ast.FuncDecl) bool {
 		if !isIdent || key.Name != "System" {
 			continue
 		}
-		// The prompt IS a parameter, or is built by CALLING one. A parameter
-		// merely mentioned in the expression — a language code, a name — is
-		// data the site chose for itself, not a prompt handed in from outside.
 		switch value := kv.Value.(type) {
 		case *ast.Ident:
-			return params[value.Name]
+			index, fromParam := at[value.Name]
+			return index, fromParam
 		case *ast.CallExpr:
-			fn, isIdent := value.Fun.(*ast.Ident)
-			return isIdent && params[fn.Name]
+			called, isIdent := value.Fun.(*ast.Ident)
+			if !isIdent {
+				return 0, false
+			}
+			index, fromParam := at[called.Name]
+			return index, fromParam
 		}
-		return false
+		return 0, false
 	}
-	return false
+	return 0, false
+}
+
+// forwardedParameterPositions answers which argument positions of one call the
+// caller fills with its own parameters — the shape that makes a wrapper stand
+// in for whoever supplied the value.
+func forwardedParameterPositions(n ast.Node, fn *ast.FuncDecl) map[int]bool {
+	call, ok := n.(*ast.CallExpr)
+	if !ok || fn.Type.Params == nil {
+		return nil
+	}
+	params := map[string]bool{}
+	for _, field := range fn.Type.Params.List {
+		for _, name := range field.Names {
+			params[name.Name] = true
+		}
+	}
+	out := map[int]bool{}
+	for position, arg := range call.Args {
+		if ident, isIdent := arg.(*ast.Ident); isIdent && params[ident.Name] {
+			out[position] = true
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // propagateConduits makes every caller of a conduit a site in its own right,
@@ -770,6 +822,12 @@ func propagateConduits(g *promptGraph) {
 				continue
 			}
 			g.minting[caller] = true
+			// A wrapper that FORWARDS its own parameter into a conduit is a
+			// conduit too. Without this the walk stops at the wrapper and the
+			// function that actually chose the prompt is never counted.
+			if at, known := g.promptArg[cur]; known && g.forwards[caller][cur][at] {
+				g.conduits[caller] = true
+			}
 			// A site is never its own certification, whether the literal is its
 			// own or a conduit's. collectFunc refuses that for a direct minter;
 			// a conduit's caller is a site by the same reasoning and has to be
@@ -873,11 +931,13 @@ func graphOf(t *testing.T, src, name, dir string, isCert bool) promptGraph {
 		t.Fatalf("parsing the case source: %v", err)
 	}
 	g := promptGraph{
-		minting:  map[funcKey]bool{},
-		calls:    map[funcKey][]funcKey{},
-		roots:    map[funcKey]bool{},
-		conduits: map[funcKey]bool{},
-		returns:  map[funcKey]string{},
+		minting:   map[funcKey]bool{},
+		calls:     map[funcKey][]funcKey{},
+		roots:     map[funcKey]bool{},
+		conduits:  map[funcKey]bool{},
+		returns:   map[funcKey]string{},
+		promptArg: map[funcKey]int{},
+		forwards:  map[funcKey]map[funcKey]map[int]bool{},
 	}
 	collectFile(&g, file, dir, isCert)
 	return g
@@ -901,5 +961,29 @@ func selfCertifyingViaConduit() model.Request { return conduit(func() string { r
 	}
 	if g.roots[self] {
 		t.Error("a conduit's caller inside a certification file was rooted, so it certifies itself")
+	}
+}
+
+// A wrapper that FORWARDS its prompt into a conduit is a conduit too. Without
+// that, propagation stops at the wrapper and the function that actually chose
+// the prompt — the site — is never counted. Forwarding some OTHER argument does
+// not make a wrapper one: a language code handed along is data, not a prompt.
+func TestConduitStatusCarriesThroughAForwardingWrapper(t *testing.T) {
+	t.Parallel()
+	src := `package p
+import "x/shared/ports/model"
+func conduit(systemFor func() string) model.Request { return model.Request{System: systemFor()} }
+func wrap(sys func() string) model.Request { return conduit(sys) }
+func chooser() model.Request { return wrap(func() string { return "mine" }) }
+func passesDataOnly(lang string) model.Request { return wrap(func() string { return lang }) }`
+	g := graphOf(t, src, "p.go", "p", false)
+	propagateConduits(&g)
+	for _, name := range []string{"wrap", "chooser"} {
+		if !g.minting[funcKey{dir: "p", name: name}] {
+			t.Errorf("%s is not counted as a site, so a prompt behind a wrapper goes ungraded", name)
+		}
+	}
+	if !g.conduits[funcKey{dir: "p", name: "wrap"}] {
+		t.Error("the wrapper was not promoted to a conduit, so propagation stops at it")
 	}
 }

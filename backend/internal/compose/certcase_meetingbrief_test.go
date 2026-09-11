@@ -170,7 +170,16 @@ func TestTheMeetingBriefCaseRefusesScenariosThatMeasureNothing(t *testing.T) {
 			name:     "a token no message produced could only be invented",
 			fixture:  planFixture,
 			expected: `{"cites_label":"wish_list","names_token":"zeppelin leasing"}`,
-			want:     "appears in no message",
+			want:     "does not appear in the message it names",
+		},
+		{
+			// The token lives in the distractor, not in the conversation the
+			// expectation says a correct brief is about — so no reply could
+			// both cite that thread and say it.
+			name:     "a token that lives only in the distractor is unsatisfiable",
+			fixture:  planFixture,
+			expected: `{"cites_label":"wish_list","names_token":"release notes"}`,
+			want:     "does not appear in the message it names",
 		},
 		{
 			name:     "a fixture of the wrong shape",
