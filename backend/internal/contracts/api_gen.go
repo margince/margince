@@ -5004,11 +5004,12 @@ func (e ConsentEventNewState) Valid() bool {
 
 // Defines values for ConsentQualifyingEventKind.
 const (
-	ConsentQualifyingEventKindActiveDeal     ConsentQualifyingEventKind = "active_deal"
-	ConsentQualifyingEventKindInPerson       ConsentQualifyingEventKind = "in_person"
-	ConsentQualifyingEventKindInboundMessage ConsentQualifyingEventKind = "inbound_message"
-	ConsentQualifyingEventKindInquiry        ConsentQualifyingEventKind = "inquiry"
-	ConsentQualifyingEventKindMeeting        ConsentQualifyingEventKind = "meeting"
+	ConsentQualifyingEventKindActiveDeal         ConsentQualifyingEventKind = "active_deal"
+	ConsentQualifyingEventKindInPerson           ConsentQualifyingEventKind = "in_person"
+	ConsentQualifyingEventKindInboundMessage     ConsentQualifyingEventKind = "inbound_message"
+	ConsentQualifyingEventKindInquiry            ConsentQualifyingEventKind = "inquiry"
+	ConsentQualifyingEventKindMeeting            ConsentQualifyingEventKind = "meeting"
+	ConsentQualifyingEventKindRequestedBySubject ConsentQualifyingEventKind = "requested_by_subject"
 )
 
 // Valid indicates whether the value is a known member of the ConsentQualifyingEventKind enum.
@@ -5023,6 +5024,8 @@ func (e ConsentQualifyingEventKind) Valid() bool {
 	case ConsentQualifyingEventKindInquiry:
 		return true
 	case ConsentQualifyingEventKindMeeting:
+		return true
+	case ConsentQualifyingEventKindRequestedBySubject:
 		return true
 	default:
 		return false
@@ -10636,6 +10639,24 @@ func (e RecordClaimRecordType) Valid() bool {
 	}
 }
 
+// Defines values for RecordCommunicationContextRequestKind.
+const (
+	RecordCommunicationContextRequestKindInPerson           RecordCommunicationContextRequestKind = "in_person"
+	RecordCommunicationContextRequestKindRequestedBySubject RecordCommunicationContextRequestKind = "requested_by_subject"
+)
+
+// Valid indicates whether the value is a known member of the RecordCommunicationContextRequestKind enum.
+func (e RecordCommunicationContextRequestKind) Valid() bool {
+	switch e {
+	case RecordCommunicationContextRequestKindInPerson:
+		return true
+	case RecordCommunicationContextRequestKindRequestedBySubject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordConfirmationPageKind.
 const (
 	RecordConfirmationPageKindRecordConfirmation RecordConfirmationPageKind = "record_confirmation"
@@ -10755,13 +10776,16 @@ func (e RecordGrantSubjectType) Valid() bool {
 
 // Defines values for RecordQualifyingEventRequestKind.
 const (
-	RecordQualifyingEventRequestKindInPerson RecordQualifyingEventRequestKind = "in_person"
+	RecordQualifyingEventRequestKindInPerson           RecordQualifyingEventRequestKind = "in_person"
+	RecordQualifyingEventRequestKindRequestedBySubject RecordQualifyingEventRequestKind = "requested_by_subject"
 )
 
 // Valid indicates whether the value is a known member of the RecordQualifyingEventRequestKind enum.
 func (e RecordQualifyingEventRequestKind) Valid() bool {
 	switch e {
 	case RecordQualifyingEventRequestKindInPerson:
+		return true
+	case RecordQualifyingEventRequestKindRequestedBySubject:
 		return true
 	default:
 		return false
@@ -23705,7 +23729,7 @@ type ConsentPurpose struct {
 type ConsentQualifyingEvent struct {
 	Kind ConsentQualifyingEventKind `json:"kind"`
 
-	// Note The typed evidence for an `in_person` exchange, where a named human's note IS the record.
+	// Note The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note IS the record.
 	Note             *string                                 `json:"note,omitempty"`
 	OccurredAt       time.Time                               `json:"occurred_at"`
 	SourceEntityId   *openapi_types.UUID                     `json:"source_entity_id,omitempty"`
@@ -32173,6 +32197,28 @@ type RecordClaim struct {
 // RecordClaimRecordType defines model for RecordClaim.RecordType.
 type RecordClaimRecordType string
 
+// RecordCommunicationContextRequest One rep's statement about one person, answering one refusal.
+type RecordCommunicationContextRequest struct {
+	// Kind How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
+	// person asking us to write to them by phone or across a counter.
+	Kind RecordCommunicationContextRequestKind `json:"kind"`
+
+	// Note What happened, in the words of whoever was there. Required — it is the only evidence there is.
+	Note string `json:"note"`
+
+	// OccurredAt When it happened, not when it was typed in. A future moment is refused.
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// SubjectId The person this statement is about. It must be somebody this review was refused for,
+	// and the refusal must be one a statement can answer — a review naming three people
+	// takes three statements, not one copied across them.
+	SubjectId openapi_types.UUID `json:"subject_id"`
+}
+
+// RecordCommunicationContextRequestKind How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
+// person asking us to write to them by phone or across a counter.
+type RecordCommunicationContextRequestKind string
+
 // RecordConfirmationPage One contact's own view of what the workspace holds about them, for the no-login confirm page.
 // A purpose-built projection and never the Person360 read model, which carries this workspace's
 // working notes — owner, lifecycle, scores — rather than the subject's own data.
@@ -32278,23 +32324,29 @@ type RecordGrantSubjectType string
 
 // RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.
 type RecordQualifyingEventRequest struct {
-	// Kind Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
-	// active_deal, meeting — is DERIVED from records the product already holds, and a
-	// hand-written one would be a second, unbacked answer to a question the data already
-	// settles.
+	// Kind The two kinds a human may state. `in_person` is an exchange that happened in a room —
+	// a card handed over at a stand. `requested_by_subject` is the person asking us to write
+	// to them away from every system: a phone call, a conversation at a counter.
+	//
+	// Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
+	// records the product already holds, and a hand-written one would be a second, unbacked
+	// answer to a question the data already settles.
 	Kind RecordQualifyingEventRequestKind `json:"kind"`
 
-	// Note What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has.
+	// Note What happened, in the words of whoever was there. Required — it is the only evidence a hand-recorded exchange has.
 	Note string `json:"note"`
 
 	// OccurredAt When the exchange happened, not when it was typed in.
 	OccurredAt time.Time `json:"occurred_at"`
 }
 
-// RecordQualifyingEventRequestKind Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
-// active_deal, meeting — is DERIVED from records the product already holds, and a
-// hand-written one would be a second, unbacked answer to a question the data already
-// settles.
+// RecordQualifyingEventRequestKind The two kinds a human may state. `in_person` is an exchange that happened in a room —
+// a card handed over at a stand. `requested_by_subject` is the person asking us to write
+// to them away from every system: a phone call, a conversation at a counter.
+//
+// Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
+// records the product already holds, and a hand-written one would be a second, unbacked
+// answer to a question the data already settles.
 type RecordQualifyingEventRequestKind string
 
 // RecordTag One tag on one record, with the assignment that put it there.
@@ -43263,6 +43315,9 @@ type ColdStartPreviewJSONRequestBody = ColdStartRequest
 // DecideCommissionEntryJSONRequestBody defines body for DecideCommissionEntry for application/json ContentType.
 type DecideCommissionEntryJSONRequestBody = DecideCommissionRequest
 
+// RecordCommunicationContextJSONRequestBody defines body for RecordCommunicationContext for application/json ContentType.
+type RecordCommunicationContextJSONRequestBody = RecordCommunicationContextRequest
+
 // DirectCommunicationSendJSONRequestBody defines body for DirectCommunicationSend for application/json ContentType.
 type DirectCommunicationSendJSONRequestBody = DirectCommunicationSendRequest
 
@@ -52207,6 +52262,9 @@ type ServerInterface interface {
 	// What a refused send was refused for, and for whom.
 	// (GET /communication-reviews/{id})
 	GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Answer a refusal by saying what happened away from the system.
+	// (POST /communication-reviews/{id}/context)
+	RecordCommunicationContext(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Send a refused message anyway, on a named person's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
 	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -54505,6 +54563,12 @@ func (_ Unimplemented) ListCommunicationReviews(w http.ResponseWriter, r *http.R
 // What a refused send was refused for, and for whom.
 // (GET /communication-reviews/{id})
 func (_ Unimplemented) GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a refusal by saying what happened away from the system.
+// (POST /communication-reviews/{id}/context)
+func (_ Unimplemented) RecordCommunicationContext(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -62479,6 +62543,38 @@ func (siw *ServerInterfaceWrapper) GetCommunicationReview(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCommunicationReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordCommunicationContext operation middleware
+func (siw *ServerInterfaceWrapper) RecordCommunicationContext(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordCommunicationContext(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -84542,6 +84638,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/communication-reviews/{id}", wrapper.GetCommunicationReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/communication-reviews/{id}/context", wrapper.RecordCommunicationContext)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/communication-reviews/{id}/direct-send", wrapper.DirectCommunicationSend)

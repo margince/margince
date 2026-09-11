@@ -579,6 +579,10 @@ func (stubs) GetCommunicationReview(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "GetCommunicationReview")
 }
 
+func (stubs) RecordCommunicationContext(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RecordCommunicationContext")
+}
+
 func (stubs) DirectCommunicationSend(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "DirectCommunicationSend")
 }
