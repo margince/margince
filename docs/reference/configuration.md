@@ -155,7 +155,7 @@ copy reported a truthful-looking zero. That stays true — the worker never
 re-serves a job-table gauge, and `--observe-addr` below is about the process,
 not the fleet.
 
-**`/metrics` — is a queue growing?** Nine gauge families over the job table:
+**`/metrics` — is a queue growing?** Ten gauge families over the job table:
 
 | Family | Labels | Meaning |
 |---|---|---|
@@ -168,8 +168,16 @@ not the fleet.
 | `margince_sweep_workspaces_failed` | `sweep` | those whose MOST RECENT child is discarded or cancelled |
 | `margince_sweep_units` | `sweep`, `unit` | the same reading one grain down, for the dispatchers that fan out per **connection** or per **build**: units with a surviving child |
 | `margince_sweep_units_failed` | `sweep`, `unit` | those whose MOST RECENT child is discarded or cancelled |
+| `margince_job_failures` | `kind`, `class` | failing work (retryable or discarded) by WHAT went wrong — the same class the failure list shows. `unclassified` is a failure whose recorded text nothing recognises, which is what an outage nobody has enumerated looks like. Cancelled work is not here: a deliberate stop is not an outage |
 
-The last two exist because the workspace pair counts each workspace once, and
+`margince_job_failures` is the one that makes an outage alertable rather than
+only readable. Without a class the only signal a monitor sees is the discarded
+count rising, and that rises identically for a provider outage, a revoked
+credential and a bug — three situations wanting three different responses. Its
+cardinality is bounded by the vocabularies: every class the core declares, plus
+each composed unit's own, plus the reserved one, for each failing kind.
+
+The sweep pairs exist because the workspace pair counts each workspace once, and
 four dispatchers fan out below that grain. They report **only** the kinds whose
 declared `fan_out_unit` is finer than a workspace — for the other twenty the
 unit *is* the workspace, so the two pairs would carry the same numbers.

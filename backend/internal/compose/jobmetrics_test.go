@@ -240,6 +240,7 @@ func TestAnEmptySnapshotWritesEveryFamilyHeaderAndNoSeries(t *testing.T) {
 		"margince_sweep_workspaces_failed",
 		"margince_sweep_units",
 		"margince_sweep_units_failed",
+		"margince_job_failures",
 	} {
 		if !strings.Contains(buf.String(), "# TYPE "+family+" gauge") {
 			t.Errorf("family header for %s missing from an empty snapshot\ngot:\n%s", family, buf.String())

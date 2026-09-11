@@ -245,6 +245,9 @@ func writeJobMetrics(w io.Writer, snap jobs.Snapshot) error {
 	if err := writeSweepUnitGauges(w, snap.Units); err != nil {
 		return err
 	}
+	if err := writeJobFailureGauge(w, snap.Failures); err != nil {
+		return err
+	}
 	if err := writeUnrecognisedStateGauge(w, unrecognised); err != nil {
 		return err
 	}
