@@ -170,6 +170,9 @@ export const vi = {
   "history.field.target_end_date": "Ngày kết thúc mục tiêu",
   "history.field.title": "Chức danh",
   "history.field.wait_until": "Chờ đến",
+  "history.field.commercial_motion": "Loại giao dịch",
+  "history.field.priority": "Độ ưu tiên",
+  "history.field.acquisition_source": "Nguồn tiếp cận",
   "history.emptyList": "chưa thiết lập",
 
   "confidence.high": "cao",
@@ -6433,7 +6436,7 @@ export const vi = {
     "Th\u00e0nh t\u00edch c\u1ee7a t\u1eebng b\u01b0\u1edbc chuy\u1ec3n giai \u0111o\u1ea1n, tr\u01b0\u1edbc khi \u0111\u01b0\u1ee3c tin \u0111\u1ec3 t\u1ef1 di chuy\u1ec3n th\u01b0\u01a1ng v\u1ee5.",
   "settings.page.pipelines.sub":
     "C\u00e1c giai \u0111o\u1ea1n m\u1ed9t deal \u0111i qua, cho to\u00e0n c\u00f4ng ty.",
-  "settings.page.acquisition-sources.sub":
+  "settings.page.acquisition.sub":
     "Các kênh kinh doanh mà một thương vụ có thể được quy về.",
   "settings.page.leads.sub":
     "T\u1eeb ng\u1eef c\u00f4ng ty n\u00e0y d\u00f9ng \u0111\u1ec3 m\u00f4 t\u1ea3 m\u1ed9t lead \u0111\u1ebfn t\u1eeb \u0111\u00e2u.",
@@ -6493,7 +6496,7 @@ export const vi = {
   "settings.tab.seats": "Giấy phép & chỗ ngồi",
   "settings.tab.stageautomation": "T\u1ef1 \u0111\u1ed9ng giai \u0111o\u1ea1n",
   "settings.tab.pipelines": "Quy trình",
-  "settings.tab.acquisition-sources": "Nguồn tiếp cận",
+  "settings.tab.acquisition": "Nguồn tiếp cận",
   "settings.tab.leads": "Xử lý khách tiềm năng",
   "settings.tab.fields": "Trường",
   "settings.tab.tags": "Thẻ",

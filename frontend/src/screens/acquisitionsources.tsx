@@ -163,7 +163,7 @@ function AddAcquisitionSourceDialog({
   const [label, setLabel] = useState("");
   return (
     <Modal open onClose={onClose} labelledBy="acq-source-add-title">
-      <h2 id="acq-source-add-title" className="t-title">
+      <h2 className="t-h3 modal-title" id="acq-source-add-title">
         {t("acqSources.addTitle")}
       </h2>
       <Field label={t("acqSources.addLabel")} hint={t("acqSources.addHint")}>

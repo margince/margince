@@ -72,7 +72,7 @@ function story(allow: Parameters<typeof meRoute>[0]) {
 }
 
 const meta: Meta<typeof AcquisitionSourcesCard> = {
-  title: "Settings/Sales/Acquisition sources",
+  title: "Settings/Sales/Acquisition sources/Sources",
   component: AcquisitionSourcesCard,
 };
 export default meta;

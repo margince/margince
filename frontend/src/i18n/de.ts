@@ -164,6 +164,9 @@ export const de = {
   "history.field.target_end_date": "Geplantes Ende",
   "history.field.title": "Position",
   "history.field.wait_until": "Wartet bis",
+  "history.field.commercial_motion": "Geschäftsart",
+  "history.field.priority": "Priorität",
+  "history.field.acquisition_source": "Akquisequelle",
   "history.emptyList": "nichts gesetzt",
 
   "confidence.high": "hoch",
@@ -6510,7 +6513,7 @@ export const de = {
     "Was jeder Phasen\u00fcbergang vorzuweisen hat, bevor ihm zugetraut wird, Gesch\u00e4fte selbst zu bewegen.",
   "settings.page.pipelines.sub":
     "Die Phasen, die ein Deal durchl\u00e4uft \u2014 f\u00fcr das ganze Unternehmen.",
-  "settings.page.acquisition-sources.sub":
+  "settings.page.acquisition.sub":
     "Die Geschäftskanäle, denen ein Deal zugeordnet werden kann.",
   "settings.page.leads.sub":
     "Die Worte, mit denen dieses Unternehmen beschreibt, woher ein Lead kam.",
@@ -6569,7 +6572,7 @@ export const de = {
   "settings.tab.seats": "Lizenzen & Plätze",
   "settings.tab.stageautomation": "Phasen-Automatik",
   "settings.tab.pipelines": "Pipelines",
-  "settings.tab.acquisition-sources": "Akquisequellen",
+  "settings.tab.acquisition": "Akquisequellen",
   "settings.tab.leads": "Lead-Bearbeitung",
   "settings.tab.fields": "Felder",
   "settings.tab.tags": "Tags",

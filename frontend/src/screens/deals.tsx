@@ -105,6 +105,8 @@ import {
   type ObjectCustomFields,
   useObjectCustomFields,
 } from "./customfields.form";
+import { DealBrief } from "./deal360/dealbrief";
+import { DealCommercial } from "./deal360/dealcommercial";
 import {
   commercialMotion,
   dealCommercialFields,
@@ -113,8 +115,6 @@ import {
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
 import { DealCommitteeMap } from "./deal360/dealcommittee";
-import { DealBrief } from "./deal360/dealbrief";
-import { DealCommercial } from "./deal360/dealcommercial";
 import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { DealPulse } from "./deal360/dealpulse";
 import { DealSeats } from "./deal360/dealseats";

@@ -257,7 +257,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
           <LeadHandlingCard />
         </>
       );
-    case "acquisition-sources":
+    case "acquisition":
       return <AcquisitionSourcesCard />;
     case "fields":
       return <CustomFieldsAdmin />;

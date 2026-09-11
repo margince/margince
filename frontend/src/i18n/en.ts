@@ -164,6 +164,9 @@ export const en = {
   "history.field.target_end_date": "Target end",
   "history.field.title": "Job title",
   "history.field.wait_until": "Waiting until",
+  "history.field.commercial_motion": "Commercial motion",
+  "history.field.priority": "Priority",
+  "history.field.acquisition_source": "Acquisition source",
   // What an empty stored jsonb array means to a reader of a change row —
   // never a blank, which reads as a value the row failed to show.
   "history.emptyList": "nothing set",
@@ -6636,7 +6639,7 @@ export const en = {
     "The record each stage transition has earned, before it is trusted to move deals by itself.",
   "settings.page.pipelines.sub":
     "The stages a deal moves through, for the whole company.",
-  "settings.page.acquisition-sources.sub":
+  "settings.page.acquisition.sub":
     "The business channels a deal can be attributed to.",
   "settings.page.leads.sub":
     "The words this company uses to describe where a lead came from.",
@@ -6692,7 +6695,7 @@ export const en = {
   "settings.tab.seats": "Seats & license",
   "settings.tab.stageautomation": "Stage automation",
   "settings.tab.pipelines": "Pipelines",
-  "settings.tab.acquisition-sources": "Acquisition sources",
+  "settings.tab.acquisition": "Acquisition sources",
   "settings.tab.leads": "Lead handling",
   "settings.tab.fields": "Fields",
   "settings.tab.tags": "Tags",
