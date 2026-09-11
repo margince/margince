@@ -238,7 +238,7 @@ var legalEntityNoise = map[string]bool{
 
 // debugProposal is byte-for-byte what siteDeepReadWorker.stage would
 // marshal, minus the identities a DB-less run does not have (zero
-// organization and read ids). Nil when nothing survived — the staged
+// company and read ids). Nil when nothing survived — the staged
 // path stages nothing then, too.
 func debugProposal(seedURL string, mergedFields []evidencedField, mergedFacts []people.DeepReadFact) *people.DeepReadProposal {
 	if len(mergedFields)+len(mergedFacts) == 0 {

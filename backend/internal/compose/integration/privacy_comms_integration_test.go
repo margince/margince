@@ -256,7 +256,7 @@ func TestErasureRedactsTheDeliveryBehindARedactedActivity(t *testing.T) {
 	e.SeedWonDealLinkedTo(t, shielded.activity)
 	// The class the link-walk cannot see: a message this installation SENT to
 	// the subject whose activity inherited no person link (its anchor had
-	// none, or was linked to an organization or deal instead). Nothing links
+	// none, or was linked to a company or deal instead). Nothing links
 	// it to the subject, and its captured_by is a human — so both halves of
 	// the timeline selector miss it unless erasure reaches mail by address.
 	unlinked := seedDelivery(t, e, "9 years", "Sent with no timeline link", "the unlinked quote", "sent", mailRecipientEmail, ids.UUID{})
@@ -378,7 +378,7 @@ func TestErasureParksAPendingDeliveryInsteadOfLeavingItToTransmit(t *testing.T) 
 
 // linkToHeldDeal hangs an activity off a deal under legal_hold — the position
 // a sent reply lands in by default, because the send path copies its anchor's
-// organization and deal links onto the message it stages. No person link is
+// company and deal links onto the message it stages. No person link is
 // written: this is the arm the link-walk cannot see.
 func linkToHeldDeal(t *testing.T, e *Env, activityID ids.UUID) {
 	t.Helper()
@@ -392,7 +392,7 @@ func linkToHeldDeal(t *testing.T, e *Env, activityID ids.UUID) {
 }
 
 // A litigation hold reaches mail the link-walk cannot see. Sent mail is
-// STRUCTURALLY organization- and deal-linked — the send path inherits the
+// STRUCTURALLY company- and deal-linked — the send path inherits the
 // anchor's links — and carries no person link of its own, so it is reached by
 // address rather than by link. Destroying it because of that would spoliate
 // litigation-held evidence the nightly retention evaluator refuses to touch,

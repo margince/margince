@@ -30,39 +30,39 @@ func TestADealMayOnlyNameARealPartner(t *testing.T) {
 
 	// Two ordinary companies. One is made a partner; the other stays a plain
 	// customer, which is exactly what somebody picks by mistake.
-	partnerOrg := orgIDOf(e.SeedOrg(t, "Northgate Partners", nil))
-	plainOrg := orgIDOf(e.SeedOrg(t, "Just A Customer", nil))
+	partnerCompany := companyIDOf(e.SeedCompany(t, "Northgate Partners", nil))
+	plainCompany := companyIDOf(e.SeedCompany(t, "Just A Customer", nil))
 	tier := "tier2_20"
 	if _, err := e.People.UpsertPartner(admin, people.UpsertPartnerInput{
-		OrganizationID: partnerOrg,
-		PartnerRole:    "consulting",
-		MarginTier:     &tier,
+		CompanyID:   partnerCompany,
+		PartnerRole: "consulting",
+		MarginTier:  &tier,
 	}); err != nil {
-		t.Fatalf("making the organization a partner: %v", err)
+		t.Fatalf("making the company a partner: %v", err)
 	}
 
 	t.Run("create refuses a company that is not a partner", func(t *testing.T) {
 		_, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
 			Name: "Misattributed", PipelineID: pipeline, StageID: open, Source: "ui",
-			PartnerOrganizationID: &plainOrg,
+			PartnerCompanyID: &plainCompany,
 		})
 		var notPartner *people.NotAPartnerError
 		if !errors.As(err, &notPartner) {
 			t.Fatalf("CreateDeal naming a non-partner → %v, want NotAPartnerError", err)
 		}
 		// The refusal names the field the caller can act on, and says what to
-		// do — a bare 422 would leave them guessing which of two org fields
+		// do — a bare 422 would leave them guessing which of two company fields
 		// was wrong.
 		field, code, _ := notPartner.FieldFault()
-		if field != "partner_org_id" || code != "not_a_partner" {
-			t.Errorf("fault = (%s, %s), want (partner_org_id, not_a_partner)", field, code)
+		if field != "partner_company_id" || code != "not_a_partner" {
+			t.Errorf("fault = (%s, %s), want (partner_company_id, not_a_partner)", field, code)
 		}
 	})
 
 	t.Run("update refuses a company that is not a partner", func(t *testing.T) {
 		deal := ids.From[ids.DealKind](e.SeedDeal(t, "Repointed", pipeline, open, &e.Rep1))
 		_, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{
-			PartnerOrganizationID: &plainOrg,
+			PartnerCompanyID: &plainCompany,
 		})
 		var notPartner *people.NotAPartnerError
 		if !errors.As(err, &notPartner) {
@@ -76,23 +76,23 @@ func TestADealMayOnlyNameARealPartner(t *testing.T) {
 	t.Run("both paths still accept a real partner", func(t *testing.T) {
 		created, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
 			Name: "Sourced properly", PipelineID: pipeline, StageID: open, Source: "ui",
-			PartnerOrganizationID: &partnerOrg,
+			PartnerCompanyID: &partnerCompany,
 		})
 		if err != nil {
 			t.Fatalf("CreateDeal naming a real partner → %v, want ok", err)
 		}
-		if created.PartnerOrgId == nil {
+		if created.PartnerCompanyId == nil {
 			t.Error("the partner named at birth did not reach the row")
 		}
 
 		deal := ids.From[ids.DealKind](e.SeedDeal(t, "Repointed properly", pipeline, open, &e.Rep1))
 		updated, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{
-			PartnerOrganizationID: &partnerOrg,
+			PartnerCompanyID: &partnerCompany,
 		})
 		if err != nil {
 			t.Fatalf("UpdateDeal naming a real partner → %v, want ok", err)
 		}
-		if updated.PartnerOrgId == nil {
+		if updated.PartnerCompanyId == nil {
 			t.Error("the partner named on update did not reach the row")
 		}
 	})
@@ -110,18 +110,18 @@ func TestMergingAPartnerLeavesItsDealsNamingAPartner(t *testing.T) {
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
 
 	tier := "tier2_20"
-	source := e.SeedPartnerOrg(t, "Partner Source", &tier, nil)
-	target := e.SeedOrg(t, "Plain Target", nil)
-	sourceID := ids.From[ids.OrganizationKind](source)
+	source := e.SeedPartnerCompany(t, "Partner Source", &tier, nil)
+	target := e.SeedCompany(t, "Plain Target", nil)
+	sourceID := ids.From[ids.CompanyKind](source)
 
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Sourced by the merged partner", pipeline, open, &e.Rep1))
 	if _, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{
-		PartnerOrganizationID: &sourceID,
+		PartnerCompanyID: &sourceID,
 	}); err != nil {
 		t.Fatalf("attributing the deal to the source partner: %v", err)
 	}
 
-	if _, err := e.People.MergeOrganization(e.Admin(), orgIDOf(source), orgIDOf(target)); err != nil {
+	if _, err := e.People.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target)); err != nil {
 		t.Fatalf("merging the partner into the plain company: %v", err)
 	}
 
@@ -131,17 +131,17 @@ func TestMergingAPartnerLeavesItsDealsNamingAPartner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the merged deal: %v", err)
 	}
-	if moved.PartnerOrgId == nil || ids.UUID(*moved.PartnerOrgId) != target {
-		t.Fatalf("partner = %v, want the survivor %v", moved.PartnerOrgId, target)
+	if moved.PartnerCompanyId == nil || ids.UUID(*moved.PartnerCompanyId) != target {
+		t.Fatalf("partner = %v, want the survivor %v", moved.PartnerCompanyId, target)
 	}
 
 	// The survivor is asked through the store rather than by reading the table:
 	// re-naming it must be ACCEPTED, which is the same question the check asks
 	// and the one that matters — a merge that left an attribution the product
 	// would now refuse has broken the invariant even if the row looks fine.
-	survivor := orgIDOf(target)
+	survivor := companyIDOf(target)
 	if _, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{
-		PartnerOrganizationID: &survivor,
+		PartnerCompanyID: &survivor,
 	}); err != nil {
 		t.Errorf("re-naming the survivor as partner → %v; the merge left an attribution the store refuses", err)
 	}

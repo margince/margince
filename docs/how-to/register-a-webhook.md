@@ -17,14 +17,14 @@ contract-generated** payload (`backend/api/public-events.yaml` → `internal/con
 scheme — the same convention used by Anthropic, OpenAI, Stripe, and Svix — so any off-the-shelf SW
 verifier library works unmodified.
 
-> **Single-organization installation.** One installation serves one organization; the
-> server resolves its singleton organization itself, so no request selects a tenant — there is no
+> **Single-company installation.** One installation serves one company; the
+> server resolves its singleton company itself, so no request selects a tenant — there is no
 > `X-Workspace-Slug` header. The `curl`s below carry only the session cookie. ("Workspace" still names
 > the internal tenant identity `WithWorkspaceTx` binds the transaction to.)
 
 ## Prerequisites
 
-- **Admin or ops RBAC.** Managing subscriptions is organization-wide integration config (the same
+- **Admin or ops RBAC.** Managing subscriptions is company-wide integration config (the same
   posture as custom fields), gated `admin`/`ops`-only; every role may *read* a subscription and its
   deliveries.
 - **A deployment signing key must be configured** — `MARGINCE_WEBHOOK_KEY` (see step 1). Without it the

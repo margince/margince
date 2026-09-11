@@ -236,7 +236,7 @@ export function PersonTagsSection({ view }: Readonly<{ view: Person360 }>) {
 // patchPersonField sends one field through the ordinary person PATCH, with
 // the record's own version as If-Match — the same shape companyheader.tsx's
 // patchCompanyField uses for the account, so a person edit and an
-// organization edit cannot end up disagreeing about what a version conflict
+// company edit cannot end up disagreeing about what a version conflict
 // or a failed save looks like.
 //
 // It throws on failure rather than swallowing: InlineText renders what is
@@ -523,16 +523,19 @@ type CreateRelationshipRequest =
 type UpdateRelationshipRequest =
   components["schemas"]["UpdateRelationshipRequest"];
 
-async function searchOrganizationCandidates(
+async function searchCompanyCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/organizations", {
+  const { data, error } = await api.GET("/companies", {
     params: { query: { q, limit: 10 } },
   });
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((org) => ({ id: org.id, name: org.display_name }));
+  return data.data.map((company) => ({
+    id: company.id,
+    name: company.display_name,
+  }));
 }
 
 // Person360Employment is the 360's own projection of an employment edge — it
@@ -541,7 +544,7 @@ async function searchOrganizationCandidates(
 // (relationships.tsx's RelationshipsTab keeps the same note, for the same
 // reason). The one honest way to get an If-Match for a row this rail only
 // knows by id is to re-read it through the list endpoint, scoped tight enough
-// (this person, this org, this kind) that it can only answer with the one
+// (this person, this company, this kind) that it can only answer with the one
 // edge this row is already showing.
 async function fetchEmploymentVersion(
   employment: Employment,
@@ -551,7 +554,7 @@ async function fetchEmploymentVersion(
     params: {
       query: {
         person_id: personId,
-        organization_id: employment.organization_id,
+        company_id: employment.company_id,
         kind: "employment",
       },
     },
@@ -680,7 +683,7 @@ function Employers({ view }: Readonly<{ view: Person360 }>) {
       Number(b.is_current_primary && stillHeld(b)) -
       Number(a.is_current_primary && stillHeld(a)),
   );
-  // Every org this person already has a live edge to — the 360 projection
+  // Every company this person already has a live edge to — the 360 projection
   // drops an edge the moment it is removed, so this list IS the live set,
   // nothing further to filter. AddEmploymentModal excludes these from its
   // own picker so a rep cannot draw a second edge to a company already on
@@ -695,13 +698,13 @@ function Employers({ view }: Readonly<{ view: Person360 }>) {
   // `stable` rather than the reader's collation, because this string is only
   // ever compared against a previous rendering of itself: whose locale produced
   // it must not be part of the answer.
-  const connectedOrgKey = employments
-    .map((employment) => employment.organization_id)
+  const connectedCompanyKey = employments
+    .map((employment) => employment.company_id)
     .sort(stable)
     .join(",");
-  const connectedOrgIds = useMemo(
-    () => (connectedOrgKey === "" ? [] : connectedOrgKey.split(",")),
-    [connectedOrgKey],
+  const connectedCompanyIds = useMemo(
+    () => (connectedCompanyKey === "" ? [] : connectedCompanyKey.split(",")),
+    [connectedCompanyKey],
   );
   return (
     <Panel
@@ -739,7 +742,7 @@ function Employers({ view }: Readonly<{ view: Person360 }>) {
           onClose={() => setAdding(false)}
           personId={person.id}
           create={actions.create}
-          excludedOrgIds={connectedOrgIds}
+          excludedCompanyIds={connectedCompanyIds}
           hasCurrentEmployment={employments.some(stillHeld)}
         />
         {/* Remove is the irreversible verb — the connection and its history are
@@ -770,7 +773,7 @@ function Employers({ view }: Readonly<{ view: Person360 }>) {
         >
           <p className="t-body">
             {t("person.rail.removeEmploymentBody", {
-              org: removing?.organization_name ?? t("field.unset"),
+              company: removing?.company_name ?? t("field.unset"),
             })}
           </p>
         </ConfirmModal>
@@ -779,7 +782,7 @@ function Employers({ view }: Readonly<{ view: Person360 }>) {
   );
 }
 
-// One employment edge: the org it names, the role at that org (inline-
+// One employment edge: the company it names, the role at that company (inline-
 // editable — this is the ONE place a per-company title is corrected;
 // `person.title` is a different field, edited in Details above), the dates,
 // and the row's own verbs folded behind an OverflowMenu — this row already
@@ -818,19 +821,19 @@ function EmploymentRow({
   return (
     <div className="pe-employment">
       <span className="pe-employment-body">
-        <span className="pe-employment-org">
-          {employment.organization_name ? (
+        <span className="pe-employment-company">
+          {employment.company_name ? (
             <button
               type="button"
               className="pe-meta-link"
               onClick={() =>
                 navigate({
                   screen: "companies",
-                  id: employment.organization_id,
+                  id: employment.company_id,
                 })
               }
             >
-              {employment.organization_name}
+              {employment.company_name}
             </button>
           ) : (
             <span className="inlinetext">{t("field.unset")}</span>
@@ -885,7 +888,7 @@ function EmploymentRow({
   );
 }
 
-// The "add a company" modal: pick the org (RecordPicker, the shared
+// The "add a company" modal: pick the company (RecordPicker, the shared
 // debounced search-and-pick), optionally its role, and whether it is the
 // current primary employer — a Checkbox, not a Switch, because ticking it
 // states an intent this modal's own Save then writes, it is not itself the
@@ -895,17 +898,17 @@ function AddEmploymentModal({
   onClose,
   personId,
   create,
-  excludedOrgIds,
+  excludedCompanyIds,
   hasCurrentEmployment,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   personId: string;
   create: EmploymentActions["create"];
-  // Organizations this person already has a live employment edge to — the
+  // Companies this person already has a live employment edge to — the
   // picker refuses to offer a second edge to the same company, since only
   // a duplicated current-primary is refused server-side.
-  excludedOrgIds: ReadonlyArray<string>;
+  excludedCompanyIds: ReadonlyArray<string>;
   // Whether this person already holds a job that has not ended. It is the exact
   // fact the server's own rule turns on, read off the same rows, so the box can
   // START in the state the save will produce instead of showing the reader one
@@ -914,7 +917,7 @@ function AddEmploymentModal({
 }>) {
   const t = useT();
   const headingId = useId();
-  const [org, setOrg] = useState<RecordPickerCandidate | null>(null);
+  const [company, setCompany] = useState<RecordPickerCandidate | null>(null);
   const [role, setRole] = useState("");
   // Ticked by default for somebody with no current job, because that is what
   // the save will do either way: the server marks a person's only current
@@ -942,15 +945,15 @@ function AddEmploymentModal({
   }, [open, hasCurrentEmployment]);
   const [allConnected, setAllConnected] = useState(false);
 
-  // Wraps the shared org search with this person's own already-connected
-  // list. Kept on `excludedOrgIds` alone, nothing that changes while the
+  // Wraps the shared company search with this person's own already-connected
+  // list. Kept on `excludedCompanyIds` alone, nothing that changes while the
   // reader types — RecordPicker treats a new `searchTargets` identity as a
   // new search space and empties whatever it was already showing.
   const searchTargets = useCallback(
     async (q: string) => {
-      const results = await searchOrganizationCandidates(q);
+      const results = await searchCompanyCandidates(q);
       const offered = results.filter(
-        (candidate) => !excludedOrgIds.includes(candidate.id),
+        (candidate) => !excludedCompanyIds.includes(candidate.id),
       );
       // Every match this query found is a company already on the list, not
       // an empty search — the two read the same in a bare candidate box, so
@@ -958,11 +961,11 @@ function AddEmploymentModal({
       setAllConnected(results.length > 0 && offered.length === 0);
       return offered;
     },
-    [excludedOrgIds],
+    [excludedCompanyIds],
   );
 
   function close() {
-    setOrg(null);
+    setCompany(null);
     setRole("");
     setAllConnected(false);
     create.reset();
@@ -984,12 +987,14 @@ function AddEmploymentModal({
           <RecordPicker
             label={t("person.rail.employer")}
             searchTargets={searchTargets}
-            selected={org}
-            onPick={setOrg}
+            selected={company}
+            onPick={setCompany}
             disabled={create.isPending}
           />
-          {!org && allConnected && (
-            <p className="t-caption">{t("person.rail.allOrgsConnected")}</p>
+          {!company && allConnected && (
+            <p className="t-caption">
+              {t("person.rail.allCompaniesConnected")}
+            </p>
           )}
         </div>
         <Field label={t("rel.role")}>
@@ -1024,16 +1029,16 @@ function AddEmploymentModal({
         </Button>
         <Button
           variant="primary"
-          disabled={!org || create.isPending}
+          disabled={!company || create.isPending}
           onClick={() => {
-            if (!org) {
+            if (!company) {
               return;
             }
             create.mutate(
               {
                 kind: "employment",
                 person_id: personId,
-                organization_id: org.id,
+                company_id: company.id,
                 role: role.trim() || undefined,
                 is_current_primary: isCurrent,
                 // `manual` is the one word for a first-party write by a

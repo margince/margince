@@ -21,15 +21,17 @@ import (
 // EntityType names the domain entities the provider serves.
 type EntityType string
 
+// The record types a provider can be asked about. One word per thing: the
+// engine, the wire and the database all use these.
 const (
-	EntityPerson       EntityType = "person"
-	EntityOrganization EntityType = "organization"
-	EntityDeal         EntityType = "deal"
-	EntityLead         EntityType = "lead"
-	EntityActivity     EntityType = "activity"
-	EntityProject      EntityType = "project"
+	EntityPerson   EntityType = "person"
+	EntityCompany  EntityType = "company"
+	EntityDeal     EntityType = "deal"
+	EntityLead     EntityType = "lead"
+	EntityActivity EntityType = "activity"
+	EntityProject  EntityType = "project"
 	// EntityRelationship is an EDGE between two records — employment, a deal
-	// or project stakeholder seat, an org↔org partner tie. It belongs in THIS
+	// or project stakeholder seat, a company↔company partner tie. It belongs in THIS
 	// vocabulary and deliberately not in RecordType below: the seam's record
 	// verbs serve it, but nothing points AT an edge. You cannot tag one, add
 	// one to a list, link an activity to it, or grant access to it — so adding
@@ -44,13 +46,13 @@ const (
 	// migrations/core/0171 is that reconciliation, and says what each widening
 	// does and does not open.
 	EntityRelationship EntityType = "relationship"
-	// EntityPartner is the partner EXTENSION on an organization, not a second
-	// kind of company: the row is 1:1 with `organization` and is addressed by
-	// that organization's id, which is why the seam's read verb takes the org
+	// EntityPartner is the partner EXTENSION on a company, not a second
+	// kind of company: the row is 1:1 with `company` and is addressed by
+	// that company's id, which is why the seam's read verb takes the company
 	// id here and no partner id exists to take its place.
 	//
 	// It is deliberately absent from RecordType. Nothing points AT a partner —
-	// you tag, list, link and grant against the ORGANIZATION, and the partner
+	// you tag, list, link and grant against the COMPANY, and the partner
 	// row travels with it. Adding a RecordPartner would widen five polymorphic
 	// columns to hold a target every one of them already reaches by another
 	// name, and give two spellings for one company.
@@ -76,7 +78,7 @@ const (
 // is how `object=activity` came to be creatable and never served.
 func EntityTypes() []EntityType {
 	return []EntityType{
-		EntityPerson, EntityOrganization, EntityDeal, EntityLead,
+		EntityPerson, EntityCompany, EntityDeal, EntityLead,
 		EntityActivity, EntityProject, EntityRelationship, EntityPartner,
 	}
 }
@@ -93,11 +95,11 @@ type RecordType string
 // The record vocabulary. Each value is mirrored by a schema CHECK, pinned
 // together by TestEveryDomainEnumMatchesItsSchemaCheck.
 const (
-	RecordPerson       RecordType = "person"
-	RecordOrganization RecordType = "organization"
-	RecordDeal         RecordType = "deal"
-	RecordLead         RecordType = "lead"
-	RecordProject      RecordType = "project"
+	RecordPerson  RecordType = "person"
+	RecordCompany RecordType = "company"
+	RecordDeal    RecordType = "deal"
+	RecordLead    RecordType = "lead"
+	RecordProject RecordType = "project"
 )
 
 // RecordTypes returns the vocabulary in a stable order, for the callers
@@ -105,7 +107,7 @@ const (
 // polymorphic column maps — rather than branch on a single value. It hands
 // back a fresh slice so no caller can widen the vocabulary for the others.
 func RecordTypes() []RecordType {
-	return []RecordType{RecordPerson, RecordOrganization, RecordDeal, RecordLead, RecordProject}
+	return []RecordType{RecordPerson, RecordCompany, RecordDeal, RecordLead, RecordProject}
 }
 
 // EntityRef points at one record.
@@ -146,13 +148,13 @@ type SystemOfRecordProvider interface {
 	Create(ctx context.Context, in CreateInput) (EntityRef, error)
 	Update(ctx context.Context, in UpdateInput) (EntityRef, error)
 	AdvanceDeal(ctx context.Context, in AdvanceDealInput) (EntityRef, error)
-	// Archive soft-deletes one person/organization/deal/project, or one
+	// Archive soft-deletes one person/company/deal/project, or one
 	// relationship edge (🟡 on the tool surface: a visibility change is hard to
 	// undo for whoever needed the row). Leads leave through their own lifecycle
 	// verbs. Archiving an edge is how a person's employment ENDS on this seam —
 	// an edge's endpoints are what it is, so they are never patched.
 	Archive(ctx context.Context, ref EntityRef) (EntityRef, error)
-	// Merge folds source into target (person/organization only), non-lossy,
+	// Merge folds source into target (person/company only), non-lossy,
 	// and returns the survivor's ref (features/01 §1.3). 🟡 on the tool
 	// surface: collapsing two records into one is destructive and hard to
 	// reverse, so an agent stages it for human confirmation. It is a
@@ -235,7 +237,7 @@ type AdvanceDealInput struct {
 }
 
 // MergeInput folds SourceID into TargetID (the survivor). Type is person
-// or organization only — deals and leads have no merge verb. The audit
+// or company only — deals and leads have no merge verb. The audit
 // provenance comes from the acting Principal on ctx, like every write.
 type MergeInput struct {
 	Type     EntityType

@@ -11,14 +11,14 @@ two cross-module orchestration groups that own view state of their own.
 Six endpoints serve one screen. Which one owns which part:
 
 ```text
-                    the company record screen (organizations.tsx)
+                    the company record screen (companies.tsx)
         ┌──────────────────────────────────────────────────────────┐
         │  header · state strip · health          suggestions card │
         │  contacts · deals · timeline            connections card │
         │  work in flight · facts box             Ask Margince     │
         └──────────────────────────────────────────────────────────┘
              ▲                    ▲                    ▲
- GET /organizations/{id}/360   GET …/graph        POST …/ask
+ GET /companies/{id}/360   GET …/graph        POST …/ask
    ONE tx, gated per section,    one-hop            per-viewer, prepared
    a refused section is          node/edge set,     questions over the same
    NAMED in sections_omitted     per-group grants   assembly (…/brief too,
@@ -33,7 +33,7 @@ Six endpoints serve one screen. Which one owns which part:
 
 ## One gated read
 
-`GET /organizations/{id}/360` serves the whole page. Everything below is one
+`GET /companies/{id}/360` serves the whole page. Everything below is one
 composite read assembled inside a single `database.WithWorkspaceTx`, and the
 response carries the `as_of` stamp of that read. The isolation level is Read
 Committed — the platform's posture — so a concurrent commit can land between two
@@ -41,7 +41,7 @@ sections; the stamp is what keeps that honest rather than hidden. No section
 opens a second transaction, which is why every module store the assembly calls
 exposes a transaction-taking variant of its read.
 
-**Authorization is per section.** Reading the organization is mandatory, and its
+**Authorization is per section.** Reading the company is mandatory, and its
 refusal is the whole read's refusal (403/404 as usual). Every other section
 needs its own object grant, and a section refused with
 `apperrors.ErrPermissionDenied` is **omitted from the payload and named in
@@ -55,7 +55,7 @@ Empty arrays would be indistinguishable from an account with no contacts, no
 deals and no history — and would be *believed*. The named-omission vocabulary
 lets every card on the screen say **"hidden from you"** instead of drawing a
 blank list. The section names are spelled once
-(`org360/assemble.go`) and are simultaneously the contract's
+(`company360/assemble.go`) and are simultaneously the contract's
 `sections_omitted` enum and the keys the assembly reasons about, so a rename
 cannot leave the two halves disagreeing:
 
@@ -98,7 +98,7 @@ The overview's lead card is **the account's work in flight**
 (`frontend/src/screens/companywork.tsx`): one line per open deal, one per live
 project, each carrying at most ONE reason it needs a person — an overdue task,
 or a commitment they made to us that is still open. The reasons are decorated
-server-side (`compose/org360/workattention.go`) in three set-based queries, and
+server-side (`compose/company360/workattention.go`) in three set-based queries, and
 rendered through i18n templates over typed fields. Nothing on the card is
 model-written, which is what makes each line checkable against the record it
 links to. When nothing is in flight the growth-fit panel takes the slot.
@@ -109,10 +109,10 @@ became a sentence about another, and a figure read out of the blend had nowhere
 to be checked. A deal and a project are two stories, and the card's structure
 says so — two groups under their own subheads, never interleaved.
 
-`GET /organizations/{id}/brief` (and `POST` for an explicit rewrite) still
+`GET /companies/{id}/brief` (and `POST` for an explicit rewrite) still
 serves that brief and is **deprecated**: no screen renders it. It stays because
 `POST …/ask` is served from the same handlers and the same assembly. It lives in
-`internal/compose/orgbrief` and owns one table, `org_brief`.
+`internal/compose/companybrief` and owns one table, `company_brief`.
 
 **Assembled AS the caller.** The brief's input comes from running the 360
 itself, as the requesting principal, inside the normal gates — the `Assembler`
@@ -128,12 +128,12 @@ and activities to a restricted reader; one written from the intersection would
 degrade to the lowest common scope and tell the account owner *less* than the
 page already shows them. Per-viewer is not caution, it is the only shape that is
 both safe and useful — so the cache is keyed `(workspace_id, user_id,
-organization_id)`.
+company_id)`.
 
 **Cached on the inputs, not on the record.** The key is a SHA-256 over the
 prompt version, the routing version, and the JSON-encoded assembled input
-(`orgbrief/input.go`). Facts, deals, activities and grants all move without
-touching the `organization` row, so a key derived from that row's version would
+(`companybrief/input.go`). Facts, deals, activities and grants all move without
+touching the `company` row, so a key derived from that row's version would
 serve a brief describing a pipeline the account no longer has — indefinitely.
 Folding the routing version in means re-pointing the model lane rewrites briefs
 rather than leaving text attributed to a model that no longer writes it.
@@ -147,7 +147,7 @@ nothing in the contract claims it.
 **It degrades rather than fails.** With no model lane configured, or the
 workspace's AI budget exhausted, or a reply the validator refuses, the brief
 falls back to a deterministic structured summary over the same inputs
-(`orgbrief/deterministic.go`) — identity, pipeline, each stalled deal on its own
+(`companybrief/deterministic.go`) — identity, pipeline, each stalled deal on its own
 line, the last touch, open tasks, then what the company *is* from its curated
 profile fields. Every deterministic sentence cites the record it came from
 exactly as the model path does, so the card renders and behaves identically
@@ -168,7 +168,7 @@ passport has the records themselves.
 
 ## Ask
 
-`POST /organizations/{id}/ask` answers **one of three prepared questions** about
+`POST /companies/{id}/ask` answers **one of three prepared questions** about
 the account — `whats_open`, `meeting_prep`, `whats_changed`. The question is
 *chosen, not typed*, and that is the design rather than a stopgap: each prepared
 question names the slice of the account its answer may be written from, which is
@@ -244,7 +244,7 @@ card offers at most three, and the remainder is reported in
 applied server-side so the dropped count and the rows shown can never describe
 different lists.
 
-**Dismissals are per user.** `POST /organizations/{id}/suggestions/dismiss`
+**Dismissals are per user.** `POST /companies/{id}/suggestions/dismiss`
 takes the suggestion's `fingerprint` — a hash over the kind, subject and records
 it fired on, not over the kind alone. So advice stays gone *while the situation
 holds* and **re-arms by itself when the evidence changes**, because the situation
@@ -308,10 +308,10 @@ corpus ask), no id in the prose — and drops one whole rather than showing it
 with its citation stripped. What survives is the same suggestion shape the
 rules produce, `written_by: model`, carrying the message's subject, date,
 channel and the quote as its receipt, and a fingerprint from the same helper
-the rules use (`org360.SuggestionFingerprint`).
+the rules use (`company360.SuggestionFingerprint`).
 
 **One list, one dismissal.** `GET …/scan` answers the merged advice: the
-rules run live through `org360.Service.UndismissedAdvice`, the model's stored
+rules run live through `company360.Service.UndismissedAdvice`, the model's stored
 findings are filtered through `KeepUndismissed`, the two are deduplicated by
 fingerprint, capped at five with the cap reported. Dismissing a finding goes
 through the same endpoint as dismissing a rule's row: the 360's dismissal
@@ -329,7 +329,7 @@ fingerprint, never the in-flight check. A reader who never opens an account
 never pays for it, and a busy inbox does not re-read the account on every
 message.
 
-**The row is the carrier.** `org_scan` holds one row per (reader, account):
+**The row is the carrier.** `company_scan` holds one row per (reader, account):
 the read in flight — `status` in the AI activity rail's own vocabulary,
 attempt, lease-bearing timestamps, `next_attempt_at` for a budget deferral —
 and the last findings that settled, kept while a new read runs so the page
@@ -365,7 +365,7 @@ That number was a MAX over the account's contacts, so one talkative contact
 spoke for the whole account, and nobody could scale it.
 
 **The state strip** is the three readings the overview leads with. The *account*
-half (lifecycle, relationship types) needs no grant beyond the organization the
+half (lifecycle, relationship types) needs no grant beyond the company the
 caller already read. *Engagement* (last inbound, last outbound, a derived state)
 rides the timeline grant; *commercial* (open count, stalled count) rides the deal
 grant; the *signal* slot carries the worst thing standing open. Each is **null
@@ -403,7 +403,7 @@ Each is null when the corresponding grant is absent — "not counted" stays
 distinct from "counted as zero".
 
 **The baseline moves forward only through an explicit operation**,
-`POST /organizations/{id}/view-ack`. A GET that advanced it as a side effect
+`POST /companies/{id}/view-ack`. A GET that advanced it as a side effect
 would destroy the very answer the caller opened the page to read, and would make
 a prefetch indistinguishable from a visit. The upsert is monotonic —
 `GREATEST(stored, now)` — so a slow tab's late-arriving ack can never rewind a
@@ -416,7 +416,7 @@ row scope works for passports), so "resolve the acting user" would happily write
 a baseline marking an account as *seen* by a human who never opened it —
 consuming their unread marker on their behalf.
 
-**The client dwell-gates it.** `useAcknowledgeOrganizationView` waits
+**The client dwell-gates it.** `useAcknowledgeCompanyView` waits
 `VIEW_ACK_DWELL_MS` — 5 seconds — with the account open before firing, and
 leaving cancels the timer: opening a record and bouncing straight back out is
 not reading it, and an ack from that would mark unread activity as seen. Only an
@@ -429,7 +429,7 @@ than hiding one — so a failed ack is not even surfaced as an error.
 
 ## The logo
 
-`Organization.logo_url` points at `GET /organizations/{id}/logo`. The mark is
+`Company.logo_url` points at `GET /companies/{id}/logo`. The mark is
 resolved during a deep read from the page that read already fetched — its
 `og:image` and its declared icons — so a face for every company costs no
 third-party logo API and no new egress beyond the asset itself. Candidates are
@@ -455,7 +455,7 @@ endpoint answers 404 for every company; a deployment that *had* a store and lost
 it gets `501 not_implemented` on the records that still name an object. **All
 three answers render the same thing**, and that is the point: 404 also covers
 "invisible to the caller" and "does not exist", so distinguishing them would
-leak which organizations exist.
+leak which companies exist.
 
 The floor is the **deterministic monogram** — `Avatar` derives initials from the
 name and, when tinted, picks one of six tone pairs from a stable hash over the
@@ -474,12 +474,12 @@ a 32px box is a row of illegible strokes.
 
 The icon is a second pair of columns on the same row (`logo_icon_object_key`,
 `logo_icon_origin`), read back as `CompanyProfile.logo_icon_url` and streamed
-from `GET /organizations/{id}/logo/icon` on exactly the terms above — same
+from `GET /companies/{id}/logo/icon` on exactly the terms above — same
 re-encode, same headers, same 404 for absent, invisible and non-existent alike.
 Two writers reach it: the cold-start website read, and `uploadCompanyLogoIcon`.
 A person's upload outranks the read, under the same provenance check the wide
 mark's writers take, so this slot has a machine writer to hold off and holds it
-off the same way. Every organization but the anchor answers 404 for it.
+off the same way. Every company but the anchor answers 404 for it.
 
 **The cold-start read resolves both marks.** The onboarding read is the one
 read whose company is drawn at two widths, so it runs two chains over the seed
@@ -504,7 +504,7 @@ collapsed rail falls back to the wide mark on its own, so a second copy would
 be bytes stored for nothing. Both marks wait on the dossier
 (`site_read.logo_object_key`, `site_read.logo_icon_object_key`) and the
 confirmation binds each to its slot on the record, slot by slot under the
-human-precedence rule. Enrichment reads of every other organization keep
+human-precedence rule. Enrichment reads of every other company keep
 resolving the one square-preferring mark: a wordmark letterboxed into a record
 card's square avatar would be the illegible row of strokes the badge exists to
 avoid. `worker siteread` reports both slots and every candidate each one tried.
@@ -515,7 +515,7 @@ installation did before the slot existed.
 
 ## The connections card
 
-`GET /organizations/{id}/graph` is a **second** read serving the same page: the
+`GET /companies/{id}/graph` is a **second** read serving the same page: the
 account's one-hop neighbourhood as an explicit node/edge set the browser draws.
 Separate from the 360 because a client that wants the profile does not always
 want the graph, and because its unit of authorization is a **node group** rather
@@ -529,7 +529,7 @@ is a different read with a different cost, and a card that sometimes went two
 hops would have no honest cap.
 
 The display caps are what fits a picture a rep reads at a glance — 15 contacts,
-10 deals, 10 related organizations, 10 colleagues — with a scan bound of 500 on
+10 deals, 10 related companies, 10 colleagues — with a scan bound of 500 on
 the one group whose display order the database cannot know (contacts are ordered
 by a relationship strength computed after the read). Stakeholder contacts have
 no cap of their own; they are bounded by the deals already selected.
@@ -553,9 +553,9 @@ ruling, gated by `backend/gates/tableownership_test.go`:
 
 | Table | Owner | What it is |
 |---|---|---|
-| `user_record_view` | `internal/compose/org360` | the per-user visit baseline |
-| `suggestion_dismissal` | `internal/compose/org360` | the rep's "not this, not now" |
-| `org_brief` | `internal/compose/orgbrief` | the per-user brief cache |
+| `user_record_view` | `internal/compose/company360` | the per-user visit baseline |
+| `suggestion_dismissal` | `internal/compose/company360` | the rep's "not this, not now" |
+| `company_brief` | `internal/compose/companybrief` | the per-user brief cache |
 
 This is the exception to [write-backbone.md](write-backbone.md)'s
 non-negotiable domain-row + `audit_log` + `event_outbox` shape, and it is narrow
@@ -568,7 +568,7 @@ recorded inline against each entry so the gate is self-contained on a clean
 checkout.
 
 Both `compose` subpackages otherwise obey the composition-layer charter: they
-coordinate modules (organization, person, relationship, deal, activity, tag,
+coordinate modules (company, person, relationship, deal, activity, tag,
 list, approval, signal) and durably own no business entity. See
 [composition-layer.md](composition-layer.md).
 
@@ -576,34 +576,34 @@ list, approval, signal) and durably own no business entity. See
 
 | | |
 |---|---|
-| The composite read + its section registry | `backend/internal/compose/org360/assemble.go` |
-| Section vocabulary, caps, row-scope predicates, next steps | `backend/internal/compose/org360/sections.go` |
-| Contacts / deals / tags + lists / signal facts | `backend/internal/compose/org360/{contacts,deals,collections,signalfacts}.go` |
-| The state strip, last touch, health | `backend/internal/compose/org360/accountstate.go` |
-| Suggestion rules and their reads | `backend/internal/compose/org360/{suggestions,suggestionreads}.go` |
-| Dismissals (`suggestion_dismissal`) | `backend/internal/compose/org360/dismissal.go` |
-| The advice seam the scan merges with, and the shared fingerprint | `backend/internal/compose/org360/advice.go` |
-| The account scan: input, words, prompt, grounding | `backend/internal/compose/orgscan/{input,words,write}.go` |
-| The account scan: row, rail carrier, ensure rule, merge | `backend/internal/compose/orgscan/{store,service}.go` |
+| The composite read + its section registry | `backend/internal/compose/company360/assemble.go` |
+| Section vocabulary, caps, row-scope predicates, next steps | `backend/internal/compose/company360/sections.go` |
+| Contacts / deals / tags + lists / signal facts | `backend/internal/compose/company360/{contacts,deals,collections,signalfacts}.go` |
+| The state strip, last touch, health | `backend/internal/compose/company360/accountstate.go` |
+| Suggestion rules and their reads | `backend/internal/compose/company360/{suggestions,suggestionreads}.go` |
+| Dismissals (`suggestion_dismissal`) | `backend/internal/compose/company360/dismissal.go` |
+| The advice seam the scan merges with, and the shared fingerprint | `backend/internal/compose/company360/advice.go` |
+| The account scan: input, words, prompt, grounding | `backend/internal/compose/companyscan/{input,words,write}.go` |
+| The account scan: row, rail carrier, ensure rule, merge | `backend/internal/compose/companyscan/{store,service}.go` |
 | The account scan's job, and its wiring into both roles | `backend/internal/compose/jobs_accountscan.go` |
-| The visit baseline (`user_record_view`) | `backend/internal/compose/org360/viewbaseline.go` |
-| The account card, and the moment vocabulary every record page reads it with | `backend/internal/compose/org360/moment.go`, `frontend/src/screens/record360/moment.tsx` |
+| The visit baseline (`user_record_view`) | `backend/internal/compose/company360/viewbaseline.go` |
+| The account card, and the moment vocabulary every record page reads it with | `backend/internal/compose/company360/moment.go`, `frontend/src/screens/record360/moment.tsx` |
 | The live record cadence (FE-PARAM-5), and which reads it recognises | `frontend/src/app/queryclient.ts`, `frontend/src/screens/activitykeys.ts` |
-| The connections graph | `backend/internal/compose/org360/{graph,graphreads,graphplace,graphourside}.go` |
-| HTTP transport + the overlay refusal | `backend/internal/compose/org360/handlers.go` |
-| The brief: cache, input, fingerprint | `backend/internal/compose/orgbrief/{service,input}.go` |
-| The brief: model path and its validator | `backend/internal/compose/orgbrief/write.go` |
-| The deterministic floor | `backend/internal/compose/orgbrief/deterministic.go` |
-| The prepared questions | `backend/internal/compose/orgbrief/ask.go` |
+| The connections graph | `backend/internal/compose/company360/{graph,graphreads,graphplace,graphourside}.go` |
+| HTTP transport + the overlay refusal | `backend/internal/compose/company360/handlers.go` |
+| The brief: cache, input, fingerprint | `backend/internal/compose/companybrief/{service,input}.go` |
+| The brief: model path and its validator | `backend/internal/compose/companybrief/write.go` |
+| The deterministic floor | `backend/internal/compose/companybrief/deterministic.go` |
+| The prepared questions | `backend/internal/compose/companybrief/ask.go` |
 | Logo resolve (candidates, normalize, store; the cold start's lockup and slot decision) | `backend/internal/compose/{sitelogo,sitelogocandidates,sitelockup}.go` |
-| Logo row, provenance precedence, `LogoURL` | `backend/internal/modules/people/organizationlogo.go` |
-| Logo streaming handler | `backend/internal/modules/people/handlers_organization.go` |
-| Contract | `backend/api/crm.yaml` — `/organizations/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,scan,logo}` |
+| Logo row, provenance precedence, `LogoURL` | `backend/internal/modules/people/companylogo.go` |
+| Logo streaming handler | `backend/internal/modules/people/handlers_company.go` |
+| Contract | `backend/api/crm.yaml` — `/companies/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,scan,logo}` |
 | Table-ownership ruling | `backend/gates/tableownership_test.go` |
-| The screen | `frontend/src/screens/organizations.tsx` (`CompanyScreen`) |
+| The screen | `frontend/src/screens/companies.tsx` (`CompanyScreen`) |
 | The scan on the page: ensure on open, poll, the pending row | `frontend/src/screens/accountscan.tsx`, `companytoday.tsx` |
 | Data layer + right-rail cards | `frontend/src/screens/company360.tsx`, `company360.css` |
-| The connections card | `frontend/src/screens/network.tsx`, with `organizationgraph.ts` as its read |
+| The connections card | `frontend/src/screens/network.tsx`, with `companygraph.ts` as its read |
 | Header actions (new deal, tag, list) | `frontend/src/screens/companyactions.tsx` |
 
 ## Where to go next

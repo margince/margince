@@ -43,7 +43,7 @@ func patchRequest(path string, id ids.UUID, body []byte) *http.Request {
 func TestACreateStagesItsRecordTypeWithNoTargetID(t *testing.T) {
 	staging := &capturingApprovals{}
 	pol := agentPolicy{Op: "createProject", Access: accessTool, Tool: "create_record", RecordType: recordTypeProject}
-	body := []byte(`{"name":"New Project","organization_id":"018f2a10-0000-7000-8000-000000000001"}`)
+	body := []byte(`{"name":"New Project","company_id":"018f2a10-0000-7000-8000-000000000001"}`)
 
 	stageRefusal(httptest.NewRecorder(), createRequest("/v1/projects", body), staging, restCommandDeps{}, pol, body)
 

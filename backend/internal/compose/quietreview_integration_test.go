@@ -55,7 +55,7 @@ func (e *closeDateEnv) grantOwnerRealPermissions(t *testing.T, userID ids.UUID) 
 	t.Helper()
 	e.grantOwnerRole(t, userID, `{"objects":{"person":{"read":true},
 		   "deal":{"read":true,"update":true},"activity":{"read":true},
-		   "organization":{"read":true}},"row_scope":"all"}`)
+		   "company":{"read":true}},"row_scope":"all"}`)
 }
 
 // grantOwnerWithoutPeople is the same owner minus person:read — the reader the
@@ -64,7 +64,7 @@ func (e *closeDateEnv) grantOwnerRealPermissions(t *testing.T, userID ids.UUID) 
 func (e *closeDateEnv) grantOwnerWithoutPeople(t *testing.T, userID ids.UUID) {
 	t.Helper()
 	e.grantOwnerRole(t, userID, `{"objects":{"deal":{"read":true,"update":true},
-		   "activity":{"read":true},"organization":{"read":true}},
+		   "activity":{"read":true},"company":{"read":true}},
 		  "row_scope":"all"}`)
 }
 
@@ -345,7 +345,7 @@ func TestQuietReviewWithoutPersonReadGivesDatesButNoName(t *testing.T) {
 func TestQuietReviewWithoutActivityReadReadsNoCorrespondence(t *testing.T) {
 	e := setupCloseDate(t)
 	e.grantOwnerRole(t, e.Rep1, `{"objects":{"deal":{"read":true,"update":true},
-		   "person":{"read":true},"organization":{"read":true}},"row_scope":"all"}`)
+		   "person":{"read":true},"company":{"read":true}},"row_scope":"all"}`)
 	id := e.seedSweepDeal(t, "No activity grant", e.late, stringp("commit"), intp(30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
 

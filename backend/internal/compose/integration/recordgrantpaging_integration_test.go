@@ -34,9 +34,9 @@ func TestTheRecordGrantListServesThePageItWasAskedFor(t *testing.T) {
 
 	const total = 5
 	for i := range total {
-		org := e.SeedOrg(t, "Shared Holding", &e.Rep1)
+		company := e.SeedCompany(t, "Shared Holding", &e.Rep1)
 		if _, err := shares.CreateRecordGrant(ctx, identity.CreateGrantInput{
-			RecordType: "organization", RecordID: org,
+			RecordType: "company", RecordID: company,
 			SubjectType: "user", SubjectID: e.Rep3, Access: "read",
 		}); err != nil {
 			t.Fatalf("sharing record %d: %v", i, err)
@@ -98,9 +98,9 @@ func TestTheRecordGrantListIsBoundedWithoutADial(t *testing.T) {
 	shares := identity.NewServiceFor(e.DB())
 	bound := storekit.ClampLimit(nil)
 	for range bound + 1 {
-		org := e.SeedOrg(t, "Shared Holding", &e.Rep1)
+		company := e.SeedCompany(t, "Shared Holding", &e.Rep1)
 		if _, err := shares.CreateRecordGrant(ctx, identity.CreateGrantInput{
-			RecordType: "organization", RecordID: org,
+			RecordType: "company", RecordID: company,
 			SubjectType: "user", SubjectID: e.Rep3, Access: "read",
 		}); err != nil {
 			t.Fatalf("sharing a record: %v", err)

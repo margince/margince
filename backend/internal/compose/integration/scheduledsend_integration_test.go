@@ -870,7 +870,7 @@ func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
 
 	// A record the anchor does not carry — the shape a project attached to the
 	// deal after the conversation began takes.
-	org := p.seedCompany(t, "Zephyr Freight")
+	company := p.seedCompany(t, "Zephyr Freight")
 
 	var scheduled struct {
 		ID string `json:"id"`
@@ -880,7 +880,7 @@ func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
 		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
 		"scheduled_at": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339),
 		"scheduled_tz": "Europe/Berlin",
-		"also_links":   []AnyMap{{"entity_type": "organization", "entity_id": org.String()}},
+		"also_links":   []AnyMap{{"entity_type": "company", "entity_id": company.String()}},
 	}, nil, &scheduled)
 	if status != http.StatusCreated {
 		t.Fatalf("scheduling a reply with also_links → %d, want 201", status)
@@ -897,7 +897,7 @@ func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
 		t.Fatalf("firing did not send: %q/%q", st, reason)
 	}
 
-	if got := p.countLinks(t, id, "organization", org); got != 1 {
+	if got := p.countLinks(t, id, "company", company); got != 1 {
 		t.Errorf("the fired reply is filed under the named company %d times, want once — a scheduled reply "+
 			"must file the way the immediate one written beside it does", got)
 	}
@@ -909,7 +909,7 @@ func (p *preflightEnv) seedCompany(t *testing.T, name string) ids.UUID {
 	var created struct {
 		ID string `json:"id"`
 	}
-	if status := p.Call(t, "POST", "/v1/organizations",
+	if status := p.Call(t, "POST", "/v1/companies",
 		AnyMap{"display_name": name}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("seeding %s → %d, want 201", name, status)
 	}
@@ -931,7 +931,7 @@ func (p *preflightEnv) countLinks(t *testing.T, scheduledID ids.UUID, entityType
 			SELECT count(*)
 			  FROM activity_link al
 			  JOIN scheduled_send s ON s.activity_id = al.activity_id
-			 WHERE s.id = $1 AND al.entity_type = $2 AND al.organization_id = $3`,
+			 WHERE s.id = $1 AND al.entity_type = $2 AND al.company_id = $3`,
 			scheduledID, entityType, entity).Scan(&count)
 	}); err != nil {
 		t.Fatalf("counting the fired reply's links: %v", err)

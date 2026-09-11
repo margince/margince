@@ -16,7 +16,7 @@ package compose
 // no resource step at all, so for them a document with no door is reachable by
 // refusal alone. The refusals are good — every one names the offending key and
 // returns the accepted list — and they are not free: a tools-only run writing an
-// organization, a person and a relationship from one business card spent one
+// company, a person and a relationship from one business card spent one
 // turn per record type being told the field names it had guessed, because
 // margince://schema/record-fields was published with no door while the four
 // documents around it had one.

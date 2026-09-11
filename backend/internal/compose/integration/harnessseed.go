@@ -36,8 +36,8 @@ import (
 // PersonIDOf widens a harness fixture id to a person id.
 func PersonIDOf(u ids.UUID) ids.PersonID { return ids.From[ids.PersonKind](u) }
 
-// orgIDOf widens a harness fixture id to an organization id.
-func orgIDOf(u ids.UUID) ids.OrganizationID { return ids.From[ids.OrganizationKind](u) }
+// companyIDOf widens a harness fixture id to a company id.
+func companyIDOf(u ids.UUID) ids.CompanyID { return ids.From[ids.CompanyKind](u) }
 
 // leadIDOf widens a harness fixture id to a lead id.
 func leadIDOf(u ids.UUID) ids.LeadID       { return ids.From[ids.LeadKind](u) }
@@ -64,32 +64,32 @@ func (e *Env) SeedPerson(t *testing.T, name string, owner *ids.UUID) ids.UUID {
 	return ids.UUID(p.Id)
 }
 
-// SeedOrg creates an organization owned by the given user, acting as admin.
-func (e *Env) SeedOrg(t *testing.T, name string, owner *ids.UUID) ids.UUID {
+// SeedCompany creates a company owned by the given user, acting as admin.
+func (e *Env) SeedCompany(t *testing.T, name string, owner *ids.UUID) ids.UUID {
 	t.Helper()
-	org, err := e.People.CreateOrganization(e.Admin(), people.CreateOrganizationInput{
+	company, err := e.People.CreateCompany(e.Admin(), people.CreateCompanyInput{
 		DisplayName: name, OwnerID: userIDPtr(owner),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ids.UUID(org.Id)
+	return ids.UUID(company.Id)
 }
 
-// SeedPartnerOrg creates an organization and gives it a partner programme, so
+// SeedPartnerCompany creates a company and gives it a partner programme, so
 // a deal may name it.
 //
 // A deal's partner must BE a partner (the store refuses any other company,
 // because commission prices from the margin tier on that row). A fixture that
-// pointed a deal at a plain organization was writing a row the product itself
+// pointed a deal at a plain company was writing a row the product itself
 // will not write, which is the shape of test that proves nothing.
 //
 // The tier is optional: a partner with none is a real and common state — the
 // arrangement exists, the rate has not been agreed — and accrual treats it as
 // earning nothing rather than as an error.
-func (e *Env) SeedPartnerOrg(t *testing.T, name string, tier *string, owner *ids.UUID) ids.UUID {
+func (e *Env) SeedPartnerCompany(t *testing.T, name string, tier *string, owner *ids.UUID) ids.UUID {
 	t.Helper()
-	org := e.SeedOrg(t, name, owner)
+	company := e.SeedCompany(t, name, owner)
 	// The harness's AdminPerms deliberately carries no `partner` grant, so the
 	// seeding acts as a seat that has one. Borrowing the caller's context would
 	// make every suite that seeds a partner grow a permission it is not testing.
@@ -97,36 +97,36 @@ func (e *Env) SeedPartnerOrg(t *testing.T, name string, tier *string, owner *ids
 		RoleKeys: []string{"admin"},
 		Objects: map[string]principal.ObjectGrant{
 			"partner": {Create: true, Read: true, Update: true},
-			// Becoming a partner also stamps the organization's relationship
+			// Becoming a partner also stamps the company's relationship
 			// types, so the seat needs the company as well as the programme.
-			objOrg: {Read: true, Update: true},
+			objCompany: {Read: true, Update: true},
 		},
 		RowScope: principal.RowScopeAll,
 	})
 	if _, err := e.People.UpsertPartner(seeder, people.UpsertPartnerInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		PartnerRole:    "consulting",
-		MarginTier:     tier,
+		CompanyID:   ids.From[ids.CompanyKind](company),
+		PartnerRole: "consulting",
+		MarginTier:  tier,
 	}); err != nil {
 		t.Fatalf("giving %s a partner programme: %v", name, err)
 	}
-	return org
+	return company
 }
 
-// SeedOrgAs creates an ownerless organization in a SECOND workspace, under
-// that workspace's own context — unlike SeedOrg, which always writes the
+// SeedCompanyAs creates an ownerless company in a SECOND workspace, under
+// that workspace's own context — unlike SeedCompany, which always writes the
 // harness's primary workspace as e.Admin().
 //
 // It names the workspace as well as the ctx because the row lands wherever the
 // STORE is bound: the harness's own store would stamp the second tenant's ids
 // into the first tenant's transaction, which RLS refuses.
-func (e *Env) SeedOrgAs(ctx context.Context, t *testing.T, ws ids.UUID, name string) ids.UUID {
+func (e *Env) SeedCompanyAs(ctx context.Context, t *testing.T, ws ids.UUID, name string) ids.UUID {
 	t.Helper()
-	org, err := e.PeopleFor(ws).CreateOrganization(ctx, people.CreateOrganizationInput{DisplayName: name})
+	company, err := e.PeopleFor(ws).CreateCompany(ctx, people.CreateCompanyInput{DisplayName: name})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ids.UUID(org.Id)
+	return ids.UUID(company.Id)
 }
 
 // SeedDeal creates a deal owned by the given user, acting as admin.
@@ -141,16 +141,16 @@ func (e *Env) SeedDeal(t *testing.T, name string, pipeline ids.PipelineID, stage
 	return ids.UUID(d.Id)
 }
 
-// MakeCapturePrivate turns a seeded person or organization into a
+// MakeCapturePrivate turns a seeded person or company into a
 // capture-private row — `visibility='owner'`, owned by the given user — the
-// state a connector leaves an unpromoted contact in. Person, organization,
+// state a connector leaves an unpromoted contact in. Person, company,
 // lead and deal are otherwise readable by every seat of the workspace, so
 // this is the ONE way a test still has to put an identity row out of a
 // caller's read scope; a test about row scope on a commercial table seeds a
 // project instead.
 func (e *Env) MakeCapturePrivate(t *testing.T, table string, id, owner ids.UUID) {
 	t.Helper()
-	if table != objPerson && table != objOrg {
+	if table != objPerson && table != objCompany {
 		t.Fatalf("MakeCapturePrivate: %s carries no visibility column", table)
 	}
 	e.WsExec(t, `UPDATE `+table+` SET visibility = 'owner', owner_id = $2 WHERE id = $1`, id, owner)
@@ -163,7 +163,7 @@ func (e *Env) MakeCapturePrivate(t *testing.T, table string, id, owner ids.UUID)
 // its subject and cascades over its links, and an archived record is withheld or
 // refused on those grounds whatever any boundary says. A tombstone on a LIVE
 // record is therefore the only seed that isolates the erasure boundary itself,
-// and no product path writes one for an organization at all — so this is the
+// and no product path writes one for a company at all — so this is the
 // fixture that makes a boundary filter falsifiable rather than merely present.
 func (e *Env) SeedScrubTombstone(t *testing.T, entityType string, id ids.UUID, at time.Time) {
 	t.Helper()

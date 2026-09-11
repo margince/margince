@@ -63,7 +63,7 @@ var roomPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"person":                {Create: true, Read: true, Update: true},
-		"organization":          {Read: true},
+		"company":               {Read: true},
 		"relationship":          {Read: true},
 		"activity":              {Create: true, Read: true, Update: true},
 		"deal":                  {Read: true},
@@ -120,7 +120,7 @@ func TestPerson360NamesTheSectionsACallerMayNotRead(t *testing.T) {
 	perms := roomPerms
 	perms.Objects = map[string]principal.ObjectGrant{
 		"person":       {Read: true},
-		"organization": {Read: true},
+		"company":      {Read: true},
 		"relationship": {Read: true},
 	}
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
@@ -584,12 +584,12 @@ func TestErasureReachesTheEnrichmentSidecarAndTheLedger(t *testing.T) {
 func TestPerson360AssemblesEverySectionFromRealRows(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	org := e.SeedOrg(t, "ScaleCommerce", &e.Rep1)
+	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)
 	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
 
 	SeedIDRow(t, owner, `INSERT INTO relationship
-		(id, kind, person_id, organization_id, role, is_current_primary, source, captured_by)
-		VALUES ($1, 'employment', '`+mine.String()+`', '`+org.String()+`',
+		(id, kind, person_id, company_id, role, is_current_primary, source, captured_by)
+		VALUES ($1, 'employment', '`+mine.String()+`', '`+company.String()+`',
 		        'Head of Procurement', true, 'manual', 'human:x')`)
 
 	// One inbound message and one open task: the timeline, the last-touch

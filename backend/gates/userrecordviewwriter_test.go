@@ -23,7 +23,7 @@ package gates
 // window: they agree right up until the moment one of them is edited.
 //
 // What the callers keep is the part that legitimately differs: their own
-// visibility gate. org360 asks `EnsureVisible`; person360 asks
+// visibility gate. company360 asks `EnsureVisible`; person360 asks
 // `EnsureVisibleLive`, because Art. 17 anonymizes a person in place while
 // leaving owner_id alone and the plain probe would still admit them. That is a
 // ruling per record type. The upsert is not.
@@ -40,9 +40,9 @@ import (
 )
 
 // viewBaselineOwner is the file that may write the table. Keyed to the FILE and
-// not the package: a second file in org360 writing its own upsert is the same
+// not the package: a second file in company360 writing its own upsert is the same
 // defect wearing the right import path.
-const viewBaselineOwner = "internal/compose/org360/viewbaseline.go"
+const viewBaselineOwner = "internal/compose/company360/viewbaseline.go"
 
 // writesViewBaseline matches a statement that INSERTs or UPDATEs the table.
 //
@@ -79,7 +79,7 @@ var writesViewBaseline = regexp.MustCompile(
 	`(?is)(INSERT\s+INTO|UPDATE(?:\s+ONLY)?)\s+` +
 		`(?:"?[\w$]+"?\s*\.\s*)*(?:(?-i:"user_record_view")|user_record_view)(?:[^\w$".]|$)`)
 
-// TestUserRecordViewHasOneWriter is the census `org360.RecordVisit`'s doc
+// TestUserRecordViewHasOneWriter is the census `company360.RecordVisit`'s doc
 // comment names.
 func TestUserRecordViewHasOneWriter(t *testing.T) {
 	t.Parallel()
@@ -132,7 +132,7 @@ func TestUserRecordViewHasOneWriter(t *testing.T) {
 		t.Errorf("%d statement(s) write user_record_view outside %s.\n\n"+
 			"The mark's correctness is one word — GREATEST(stored, EXCLUDED) — and a second "+
 			"statement that loses it rewinds a baseline on a late-arriving ack, handing a reader "+
-			"back an unread marker they had already consumed. Call org360.RecordVisit inside your "+
+			"back an unread marker they had already consumed. Call company360.RecordVisit inside your "+
 			"own transaction, after your own visibility gate:\n\n\t%s",
 			len(findings), viewBaselineOwner, strings.Join(findings, "\n\t"))
 	}

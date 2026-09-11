@@ -68,12 +68,12 @@ var openDealValueBaseExpr = "(SELECT coalesce(sum(" + deals.OpenDealBaseValueSQL
 // columns a reader needs to act on it.
 func projectRowDimensions() map[string]string {
 	return map[string]string{
-		fieldProjectID:      colProjectRowID,
-		fieldName:           colName,
-		fieldKey:            colKey,
-		fieldPhase:          colPhase,
-		fieldOwnerID:        colOwnerID,
-		fieldOrganizationID: colProjectCustomer,
+		fieldProjectID: colProjectRowID,
+		fieldName:      colName,
+		fieldKey:       colKey,
+		fieldPhase:     colPhase,
+		fieldOwnerID:   colOwnerID,
+		fieldCompanyID: colProjectCustomer,
 	}
 }
 
@@ -82,10 +82,10 @@ func projectRowDimensions() map[string]string {
 //
 // A project is worked by several companies, and a dimension has to be one value
 // per row — you cannot group a project under three headings at once. The
-// customer is the honest choice: it is what organization_id has meant since the
+// customer is the honest choice: it is what company_id has meant since the
 // edge existed, and it is the company a reader means when they ask which
 // account a delivery is for.
-const colProjectCustomer = "(SELECT c.organization_id FROM relationship c" +
+const colProjectCustomer = "(SELECT c.company_id FROM relationship c" +
 	" WHERE c.kind = 'project_company' AND c.project_id = t.id" +
 	" AND c.archived_at IS NULL AND c.role = 'customer'" +
 	" ORDER BY c.created_at, c.id LIMIT 1)"
@@ -93,7 +93,7 @@ const colProjectCustomer = "(SELECT c.organization_id FROM relationship c" +
 // colProjectAnyCompany is what a company FILTER matches: any live company on
 // the project, so narrowing a report to a partner shows the deliveries that
 // partner is genuinely on rather than only the ones they are the customer of.
-const colProjectAnyCompany = "(SELECT c.organization_id FROM relationship c" +
+const colProjectAnyCompany = "(SELECT c.company_id FROM relationship c" +
 	" WHERE c.kind = 'project_company' AND c.project_id = t.id AND c.archived_at IS NULL" +
 	" ORDER BY (c.role = 'customer') DESC, c.created_at, c.id LIMIT 1)"
 
@@ -116,20 +116,20 @@ func projectsByPhaseSpec() reportSpec {
 		// unowned-row arm (analyticsscope.go) still reaches this report's own
 		// default population.
 		dimensions: map[string]string{
-			fieldPhase:          colPhase,
-			fieldOrganizationID: colProjectCustomer,
-			fieldOwnerID:        colOwnerID,
+			fieldPhase:     colPhase,
+			fieldCompanyID: colProjectCustomer,
+			fieldOwnerID:   colOwnerID,
 		},
 		measures: map[string]string{
 			measureOpenDealValue: openDealValueBaseExpr,
 			measureWonDealValue:  wonDealValueBaseExpr,
 		},
 		filters: map[string]string{
-			fieldOrganizationID: colProjectAnyCompany,
-			fieldOwnerID:        colOwnerID,
-			fieldPhase:          colPhase,
+			fieldCompanyID: colProjectAnyCompany,
+			fieldOwnerID:   colOwnerID,
+			fieldPhase:     colPhase,
 		},
-		referenceScopes: map[string]string{colProjectCustomer: tableOrganization, colProjectAnyCompany: tableOrganization},
+		referenceScopes: map[string]string{colProjectCustomer: tableCompany, colProjectAnyCompany: tableCompany},
 		// The money measures fold DEALS, which the project grant says nothing
 		// about: the deal grant is owed before either is served.
 		grants:    map[string]string{measureOpenDealValue: tableDeal, measureWonDealValue: tableDeal},
@@ -162,11 +162,11 @@ func projectCommitmentsSpec() reportSpec {
 			measureOverdue:         overdueCommitmentsExpr,
 		},
 		filters: map[string]string{
-			fieldOrganizationID: colProjectAnyCompany,
-			fieldOwnerID:        colOwnerID,
-			fieldPhase:          colPhase,
+			fieldCompanyID: colProjectAnyCompany,
+			fieldOwnerID:   colOwnerID,
+			fieldPhase:     colPhase,
 		},
-		referenceScopes: map[string]string{colProjectCustomer: tableOrganization, colProjectAnyCompany: tableOrganization},
+		referenceScopes: map[string]string{colProjectCustomer: tableCompany, colProjectAnyCompany: tableCompany},
 		// The commitment counts read TASKS, which take the activity grant.
 		grants:    map[string]string{measureOpenCommitments: tableActivity, measureOverdue: tableActivity},
 		defaultBy: []string{fieldProjectID, fieldName, fieldKey, fieldPhase, fieldOwnerID},
@@ -198,9 +198,9 @@ func projectsGoneQuietSpec() reportSpec {
 		dimensions: dimensions,
 		measures:   map[string]string{},
 		filters: map[string]string{
-			fieldOrganizationID: colProjectAnyCompany,
-			fieldOwnerID:        colOwnerID,
-			fieldPhase:          colPhase,
+			fieldCompanyID: colProjectAnyCompany,
+			fieldOwnerID:   colOwnerID,
+			fieldPhase:     colPhase,
 		},
 		thresholds: map[string]reportThreshold{
 			fieldDays: {
@@ -208,7 +208,7 @@ func projectsGoneQuietSpec() reportSpec {
 				defaultValue: projects.DefaultProjectQuietDays,
 			},
 		},
-		referenceScopes: map[string]string{colProjectCustomer: tableOrganization, colProjectAnyCompany: tableOrganization},
+		referenceScopes: map[string]string{colProjectCustomer: tableCompany, colProjectAnyCompany: tableCompany},
 		defaultBy:       []string{fieldProjectID, fieldName, fieldKey, fieldPhase, fieldOwnerID, fieldLastActivityAt, fieldQuietSince},
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: "projects"},

@@ -89,7 +89,7 @@ func versionedTables(t *testing.T) map[string]bool {
 				return err
 			}
 			current := ""
-			for _, line := range strings.Split(string(raw), "\n") {
+			for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
 				if m := createTableLine.FindStringSubmatch(line); m != nil {
 					current = m[1]
 					continue
@@ -176,7 +176,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// That rationale answers "do two archives race each other", and it is
 	// still true of every entry below. It does NOT answer "did this archive
 	// land on the record the decider judged" — and for the six types
-	// archive_record stages a human confirmation for (person, organization,
+	// archive_record stages a human confirmation for (person, company,
 	// deal, project, relationship, activity) that is the question, because a
 	// concurrent UPDATE in the window between a released approval and the
 	// write changes the record without racing the archive at all. Those six
@@ -215,9 +215,9 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/deals:ArchiveOffer":                       "runs under the offer row lock taken by visibleOfferLocked, and the write itself is an absolute archive transition",
 	"internal/modules/deals:UpdateOfferLineItem":                "runs under the parent offer's row lock taken by visibleOfferLocked, which serializes every line edit",
 	"internal/modules/deals:recomputeOfferTotals":               "every caller holds the offer row lock via visibleOfferLocked, except createOfferTx where the offer row was inserted in the same transaction",
-	"internal/modules/people:absorbOrgReferences":               "runs under the merge pair lock (storekit.LockPair on both organization rows) taken by MergeOrganization",
+	"internal/modules/people:absorbCompanyReferences":           "runs under the merge pair lock (storekit.LockPair on both company rows) taken by MergeCompany",
 	"internal/modules/signals:dropUnattributable":               "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
-	"internal/modules/signals:resolveToOrg":                     "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
+	"internal/modules/signals:resolveToCompany":                 "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
 	"internal/modules/signals:flagAmbiguous":                    "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
 	"internal/modules/ai:SetBuildStage":                         "stage is display-only forward progress; the status=running predicate makes a raced write a harmless no-op",
 	"internal/modules/ai:DeferBuild":                            "the status=running predicate is the CAS: a build already finished or re-claimed matches zero rows and the deferral is dropped",
@@ -242,7 +242,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// executor by value instead of by name, and a reader taught to excuse it
 	// would excuse the writers that DO need judging along with it.
 	//
-	// The lock this names is the ORGANIZATION row's, not the workspace row's.
+	// The lock this names is the COMPANY row's, not the workspace row's.
 	// SaveCompany also takes lockCompanyState — `SELECT id FROM workspace … FOR
 	// UPDATE` — and that one is deliberately not what ratifies this: it names a
 	// different table from the one being written, which is exactly the free
@@ -364,8 +364,8 @@ func lockTableConsts(t *testing.T, fset *token.FileSet, cache map[string]map[str
 // and the guard is that function's to carry. Reading only the body's literals
 // left those statements outside the census entirely — not reported as a gap but
 // silently absent, which is the one way a census must not fail. The sibling
-// census in orgrenamerecheck_test.go already folds them; this one had stayed
-// narrower, and eight organization writes were sitting in the difference.
+// census in companyrenamerecheck_test.go already folds them; this one had stayed
+// narrower, and eight company writes were sitting in the difference.
 //
 // A name the function DECLARES is its own, whatever the package calls something
 // of the same name — attributing by spelling alone hands a package-level
@@ -563,7 +563,7 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 		return nil
 	case *ast.SelectorExpr:
 		// `spec.update` names a FIELD, not this package's `update`, so the Sel
-		// is not read as a local name. But `storekit.ProbeRenameOrg` is a
+		// is not read as a local name. But `storekit.ProbeRenameCompany` is a
 		// statement held one import away, and dropping the Sel outright left
 		// that silence exactly where this change closed the same one inside a
 		// package. So the Sel is looked up in what the file's in-module imports
@@ -588,7 +588,7 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 		return nil
 	case *ast.AssignStmt:
 		// `statement += " FOR UPDATE"` is the third spelling of the same
-		// assembly, and the one anchorOrganization uses to add the row lock that
+		// assembly, and the one anchorCompany uses to add the row lock that
 		// guards the company form. Each half is read on its own below; this
 		// folds them so the whole is read too.
 		if n.Tok == token.ADD_ASSIGN && len(n.Lhs) == 1 && len(n.Rhs) == 1 {

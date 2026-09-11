@@ -1,6 +1,6 @@
 name: scan_finds_the_question_nobody_answered
 task: account_scan
-site: org_scan
+site: company_scan
 source: hand_authored
 sanitized_by: hand_authored/claude-fable-5-1
 fixture:

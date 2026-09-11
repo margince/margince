@@ -46,35 +46,35 @@ func (e *dedupeEnv) asRowScope(scope principal.RowScope) context.Context {
 	return principal.WithActor(ctx, actor)
 }
 
-// orgCandidatesFor counts the review-queue pairs filed for an organization,
+// companyCandidatesFor counts the review-queue pairs filed for a company,
 // in any disposition.
-func (e *dedupeEnv) orgCandidatesFor(ctx context.Context, t *testing.T, org ids.OrganizationID) int {
+func (e *dedupeEnv) companyCandidatesFor(ctx context.Context, t *testing.T, company ids.CompanyID) int {
 	t.Helper()
 	var n int
 	err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM dedupe_candidate
-			 WHERE entity_type = 'organization' AND (left_org_id = $1 OR right_org_id = $1)`,
-			org).Scan(&n)
+			 WHERE entity_type = 'company' AND (left_company_id = $1 OR right_company_id = $1)`,
+			company).Scan(&n)
 	})
 	if err != nil {
-		t.Fatalf("count org dedupe candidates: %v", err)
+		t.Fatalf("count company dedupe candidates: %v", err)
 	}
 	return n
 }
 
-// TestARenamedOrganizationIsRescoredAgainstItsNeighbours is the Baqend
+// TestARenamedCompanyIsRescoredAgainstItsNeighbours is the Baqend
 // regression. A company captured from a second domain is named after that
 // domain, so at create time it resembles nothing. The signature sweep later
 // renames it to the company's real name — the first moment the duplicate is
 // visible, and the moment nothing used to look.
-func TestARenamedOrganizationIsRescoredAgainstItsNeighbours(t *testing.T) {
+func TestARenamedCompanyIsRescoredAgainstItsNeighbours(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
-	incumbent, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	incumbent, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Baqend", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "baqend.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "baqend.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -82,36 +82,36 @@ func TestARenamedOrganizationIsRescoredAgainstItsNeighbours(t *testing.T) {
 	// The same company captured from its product's domain: named "Speedkit",
 	// provisional, and no relation to "Baqend" that any name comparison could
 	// see at this point.
-	twin, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	twin, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Speedkit", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "speedkit.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "speedkit.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	twinID := ids.From[ids.OrganizationKind](ids.UUID(twin.Id))
-	if got := e.orgCandidatesFor(ctx, t, twinID); got != 0 {
+	twinID := ids.From[ids.CompanyKind](ids.UUID(twin.Id))
+	if got := e.companyCandidatesFor(ctx, t, twinID); got != 0 {
 		t.Fatalf("dedupe candidates before the rename = %d, want 0 — the two names have nothing in common yet", got)
 	}
 
 	// The signature sweep promotes the name the company's own people sign with.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx,
-			`UPDATE organization SET name_source = 'domain' WHERE id = $1`, twinID); err != nil {
+			`UPDATE company SET name_source = 'domain' WHERE id = $1`, twinID); err != nil {
 			return err
 		}
-		_, err := e.store.PromoteOrgNameTx(ctx, tx, twinID, "Baqend GmbH", "two employees")
+		_, err := e.store.PromoteCompanyNameTx(ctx, tx, twinID, "Baqend GmbH", "two employees")
 		return err
 	}); err != nil {
-		t.Fatalf("promote org name: %v", err)
+		t.Fatalf("promote company name: %v", err)
 	}
 
-	if got := e.orgCandidatesFor(ctx, t, twinID); got != 1 {
+	if got := e.companyCandidatesFor(ctx, t, twinID); got != 1 {
 		t.Fatalf("dedupe candidates after the rename = %d, want 1 — "+
 			"\"Baqend GmbH\" normalizes onto the live \"Baqend\" and the pair belongs on the queue", got)
 	}
 	// The rename itself stands: detection never blocks the write it observed.
-	after, err := e.store.GetOrganization(ctx, twinID, 0)
+	after, err := e.store.GetCompany(ctx, twinID, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,75 +119,75 @@ func TestARenamedOrganizationIsRescoredAgainstItsNeighbours(t *testing.T) {
 		t.Fatalf("display_name = %q, want the promoted name — the re-check must not undo the rename", after.DisplayName)
 	}
 	if incumbent.Id == twin.Id {
-		t.Fatal("the two organizations collapsed into one — fuzzy matching must never merge")
+		t.Fatal("the two companies collapsed into one — fuzzy matching must never merge")
 	}
 }
 
-// TestARenamedOrganizationDoesNotRefileAPairTheQueueAnswered keeps the
+// TestARenamedCompanyDoesNotRefileAPairTheQueueAnswered keeps the
 // re-check from re-asking. It runs on every rename, and a pair a human
 // dismissed is answered for good.
-func TestARenamedOrganizationDoesNotRefileAPairTheQueueAnswered(t *testing.T) {
+func TestARenamedCompanyDoesNotRefileAPairTheQueueAnswered(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
-	if _, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Northwind Logistics", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "northwind.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "northwind.test", IsPrimary: true}},
 	}); err != nil {
 		t.Fatal(err)
 	}
-	twin, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	twin, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Provisional Name", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "northwind-eu.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "northwind-eu.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	twinID := ids.From[ids.OrganizationKind](ids.UUID(twin.Id))
+	twinID := ids.From[ids.CompanyKind](ids.UUID(twin.Id))
 
 	rename := func(to string) {
 		t.Helper()
 		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(ctx,
-				`UPDATE organization SET name_source = 'domain' WHERE id = $1`, twinID); err != nil {
+				`UPDATE company SET name_source = 'domain' WHERE id = $1`, twinID); err != nil {
 				return err
 			}
-			_, err := e.store.PromoteOrgNameTx(ctx, tx, twinID, to, "corroborated")
+			_, err := e.store.PromoteCompanyNameTx(ctx, tx, twinID, to, "corroborated")
 			return err
 		}); err != nil {
-			t.Fatalf("promote org name to %q: %v", to, err)
+			t.Fatalf("promote company name to %q: %v", to, err)
 		}
 	}
 	rename("Northwind Logistics GmbH")
-	if got := e.orgCandidatesFor(ctx, t, twinID); got != 1 {
+	if got := e.companyCandidatesFor(ctx, t, twinID); got != 1 {
 		t.Fatalf("candidates after the first rename = %d, want 1", got)
 	}
 	// A second rename that still resembles the same incumbent must not file the
 	// pair again — the queue already holds it.
 	rename("Northwind Logistics AG")
-	if got := e.orgCandidatesFor(ctx, t, twinID); got != 1 {
+	if got := e.companyCandidatesFor(ctx, t, twinID); got != 1 {
 		t.Fatalf("candidates after a second rename = %d, want 1 — the pair was already filed", got)
 	}
 }
 
-// TestOrganizationDedupeReadsTheLegalNameAxis covers the other half of the
+// TestCompanyDedupeReadsTheLegalNameAxis covers the other half of the
 // Baqend shape: two records whose display names differ but whose registered
 // name is identical. Before this the fuzzy tier compared display names only,
 // so the strongest signal on the row was invisible to it.
-func TestOrganizationDedupeReadsTheLegalNameAxis(t *testing.T) {
+func TestCompanyDedupeReadsTheLegalNameAxis(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	legal := "Contoso Handels GmbH"
-	if _, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Contoso Shop", LegalName: &legal, Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "contoso-shop.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "contoso-shop.test", IsPrimary: true}},
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	// A different marketing name, no shared domain — the two collide only on
 	// the registered entity.
-	m := e.dedupeOrgInTx(ctx, t, OrganizationCandidate{
+	m := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
 		DisplayName: "Contoso Wholesale",
 		LegalName:   "Contoso Handels GmbH",
 		Domains:     []string{"contoso-wholesale.test"},
@@ -303,24 +303,24 @@ func TestTheChokepointRefusalHidesARecordTheCallerCannotRead(t *testing.T) {
 	}
 }
 
-// TestOrganizationDedupeExcludesItself guards the re-check's own precondition:
+// TestCompanyDedupeExcludesItself guards the re-check's own precondition:
 // an existing row scored against the workspace holds its own name and its own
 // domains, and without self-exclusion it matches itself perfectly and hides
 // every real rival behind that score.
-func TestOrganizationDedupeExcludesItself(t *testing.T) {
+func TestCompanyDedupeExcludesItself(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	subject, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	subject, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Umbrella Corp", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "umbrella.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "umbrella.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	subjectID := ids.From[ids.OrganizationKind](ids.UUID(subject.Id))
+	subjectID := ids.From[ids.CompanyKind](ids.UUID(subject.Id))
 
 	// Without the exclusion this is an exact domain collision with itself.
-	m := e.dedupeOrgInTx(ctx, t, OrganizationCandidate{
+	m := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
 		DisplayName: "Umbrella Corp",
 		Domains:     []string{"umbrella.test"},
 		ExcludeID:   &subjectID,
@@ -479,20 +479,20 @@ func TestTheChokepointRefusesToMintOverAnExactCollision(t *testing.T) {
 		t.Fatalf("the refused create left %d person rows behind", people)
 	}
 
-	var orgRefusal error
-	var orgs int
+	var companyRefusal error
+	var companies int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, orgRefusal = createOrganization(ctx, tx, OrganizationMatch{
-			Decision: DecisionExactCollision, OrganizationID: ids.New[ids.OrganizationKind](),
-		}, OrgSpec{DisplayName: "Ghost Co", Source: "manual", CapturedBy: "human:test"})
-		return tx.QueryRow(ctx, `SELECT count(*) FROM organization`).Scan(&orgs)
+		_, companyRefusal = createCompany(ctx, tx, CompanyMatch{
+			Decision: DecisionExactCollision, CompanyID: ids.New[ids.CompanyKind](),
+		}, CompanySpec{DisplayName: "Ghost Co", Source: "manual", CapturedBy: "human:test"})
+		return tx.QueryRow(ctx, `SELECT count(*) FROM company`).Scan(&companies)
 	}); err != nil {
-		t.Fatalf("probe the organization chokepoint: %v", err)
+		t.Fatalf("probe the company chokepoint: %v", err)
 	}
-	if orgRefusal == nil {
-		t.Fatal("createOrganization minted an organization while the ladder held an exact domain collision")
+	if companyRefusal == nil {
+		t.Fatal("createCompany minted a company while the ladder held an exact domain collision")
 	}
-	if orgs != 0 {
-		t.Fatalf("the refused create left %d organization rows behind", orgs)
+	if companies != 0 {
+		t.Fatalf("the refused create left %d company rows behind", companies)
 	}
 }

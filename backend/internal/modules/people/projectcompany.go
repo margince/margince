@@ -63,24 +63,24 @@ const relationshipRoleField = "role"
 // holds a lock on.
 func AttachCompanyToProjectTx(
 	ctx context.Context, tx pgx.Tx,
-	projectID ids.ProjectID, organizationID ids.OrganizationID, role, by string,
+	projectID ids.ProjectID, companyID ids.CompanyID, role, by string,
 ) error {
 	// The company is a client-supplied reference to a row-scoped record, so
 	// naming it is a read of it: a caller who cannot see a company may not put
 	// a project's work on it.
-	if err := auth.EnsureLinkTarget(ctx, tx, "organization", organizationID.UUID); err != nil {
+	if err := auth.EnsureLinkTarget(ctx, tx, "company", companyID.UUID); err != nil {
 		return err
 	}
 	// The same one statement the attach surface uses, so a project's first
 	// company and a company added later are written one way — including the
 	// audit and outbox rows, which ride the caller's transaction.
-	return setCompanyRoleTx(ctx, tx, projectID, organizationID, role, by, false)
+	return setCompanyRoleTx(ctx, tx, projectID, companyID, role, by, false)
 }
 
 // CompaniesOnProjectTx lists the companies on a project in the order they were
 // attached, inside the caller's transaction.
 //
-// Every row carries the caller's organization row scope: a project readable
+// Every row carries the caller's company row scope: a project readable
 // across the workspace does not license reading every company on it, and a
 // company the reader cannot see is omitted rather than named. That is the same
 // rule the stakeholder roster keeps for people.
@@ -116,7 +116,7 @@ func CompaniesOnProjectTx(
 	}
 	// And the company itself is a row-scoped record, so one the caller may not
 	// open is omitted rather than named.
-	scope, err := auth.ScopeClauseFor(ctx, "organization", "o", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
 	if err != nil {
 		return nil, err
 	}
@@ -124,9 +124,9 @@ func CompaniesOnProjectTx(
 		scope = sqlAlwaysVisible
 	}
 	rows, err := tx.Query(ctx, storekit.SQLf(`
-		SELECT r.organization_id, o.display_name, coalesce(r.role, '')
+		SELECT r.company_id, o.display_name, coalesce(r.role, '')
 		  FROM relationship r
-		  JOIN organization o ON o.id = r.organization_id
+		  JOIN company o ON o.id = r.company_id
 		 WHERE r.kind = '`+ProjectCompanyKind+`' AND r.project_id = $%d
 		   AND r.archived_at IS NULL AND o.archived_at IS NULL
 		   AND (%s) AND (%s)
@@ -138,7 +138,7 @@ func CompaniesOnProjectTx(
 	var out []ProjectCompany
 	for rows.Next() {
 		var one ProjectCompany
-		if err := rows.Scan(&one.OrganizationID, &one.DisplayName, &one.Role); err != nil {
+		if err := rows.Scan(&one.CompanyID, &one.DisplayName, &one.Role); err != nil {
 			return nil, fmt.Errorf("read one company on the project: %w", err)
 		}
 		out = append(out, one)
@@ -151,16 +151,16 @@ func CompaniesOnProjectTx(
 
 // ProjectCompany is one company's place on a project.
 type ProjectCompany struct {
-	OrganizationID ids.OrganizationID
-	DisplayName    string
-	Role           string
+	CompanyID   ids.CompanyID
+	DisplayName string
+	Role        string
 }
 
 // SetProjectCompanyInput is one company's place on a project.
 type SetProjectCompanyInput struct {
-	ProjectID      ids.ProjectID
-	OrganizationID ids.OrganizationID
-	Role           string
+	ProjectID ids.ProjectID
+	CompanyID ids.CompanyID
+	Role      string
 }
 
 // SetProjectCompany puts a company on a project, or re-roles the edge that
@@ -171,7 +171,7 @@ type SetProjectCompanyInput struct {
 // list assembled after the other's write, and neither reader would see what
 // they did.
 func (s *Store) SetProjectCompany(ctx context.Context, in SetProjectCompanyInput) ([]ProjectCompany, error) {
-	if err := httperr.RequireBodyID(siteReadOrgKey, in.OrganizationID.UUID); err != nil {
+	if err := httperr.RequireBodyID(siteReadCompanyKey, in.CompanyID.UUID); err != nil {
 		return nil, err
 	}
 	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
@@ -200,7 +200,7 @@ func (s *Store) SetProjectCompany(ctx context.Context, in SetProjectCompanyInput
 		if err := auth.EnsureWritableLive(ctx, tx, projectObjectName, in.ProjectID.UUID); err != nil {
 			return err
 		}
-		if err := setCompanyRoleTx(ctx, tx, in.ProjectID, in.OrganizationID, role, by, true); err != nil {
+		if err := setCompanyRoleTx(ctx, tx, in.ProjectID, in.CompanyID, role, by, true); err != nil {
 			return err
 		}
 		var readErr error
@@ -218,9 +218,9 @@ func (s *Store) SetProjectCompany(ctx context.Context, in SetProjectCompanyInput
 // project.created already says a project appeared and names its company.
 func setCompanyRoleTx(
 	ctx context.Context, tx pgx.Tx,
-	projectID ids.ProjectID, organizationID ids.OrganizationID, role, by string, announce bool,
+	projectID ids.ProjectID, companyID ids.CompanyID, role, by string, announce bool,
 ) error {
-	if err := auth.EnsureLinkTarget(ctx, tx, "organization", organizationID.UUID); err != nil {
+	if err := auth.EnsureLinkTarget(ctx, tx, "company", companyID.UUID); err != nil {
 		return err
 	}
 	// RETURNING carries the written row into the write shape below: the audit
@@ -243,15 +243,15 @@ func setCompanyRoleTx(
 		`WITH was AS (
 		   SELECT role FROM relationship
 		    WHERE kind = '`+ProjectCompanyKind+`' AND project_id = $1
-		      AND organization_id = $2 AND archived_at IS NULL
+		      AND company_id = $2 AND archived_at IS NULL
 		 )
-		 INSERT INTO relationship (kind, project_id, organization_id, role, source, captured_by)
+		 INSERT INTO relationship (kind, project_id, company_id, role, source, captured_by)
 		 VALUES ('`+ProjectCompanyKind+`', $1, $2, $3, $4, $5)
-		 ON CONFLICT (project_id, organization_id)
+		 ON CONFLICT (project_id, company_id)
 		   WHERE kind = '`+ProjectCompanyKind+`' AND archived_at IS NULL
 		   DO UPDATE SET role = EXCLUDED.role
 		 RETURNING `+relationshipColumns+`, (SELECT was.role FROM was), xmax = 0`,
-		projectID, organizationID, role, projectCompanySource, by)
+		projectID, companyID, role, projectCompanySource, by)
 	row, err := scanRelationshipWithPrior(scan, &priorRole, &inserted)
 	if err != nil {
 		return fmt.Errorf("put the company on the project: %w", err)
@@ -294,7 +294,7 @@ func setCompanyRoleTx(
 // back to it — so the refusal is the only answer that leaves the record
 // reachable. The count and the archive share one transaction, or two
 // concurrent removals each see two companies and both proceed.
-func (s *Store) RemoveProjectCompany(ctx context.Context, projectID ids.ProjectID, organizationID ids.OrganizationID) error {
+func (s *Store) RemoveProjectCompany(ctx context.Context, projectID ids.ProjectID, companyID ids.CompanyID) error {
 	if err := auth.Require(ctx, "relationship", principal.ActionDelete); err != nil {
 		return err
 	}
@@ -314,11 +314,11 @@ func (s *Store) RemoveProjectCompany(ctx context.Context, projectID ids.ProjectI
 		// than counting the same two companies this one is about to reduce.
 		var live, mine int
 		if err := tx.QueryRow(ctx,
-			`SELECT count(*), count(*) FILTER (WHERE organization_id = $3) FROM (
-			   SELECT organization_id FROM relationship
+			`SELECT count(*), count(*) FILTER (WHERE company_id = $3) FROM (
+			   SELECT company_id FROM relationship
 			    WHERE kind = $1 AND project_id = $2 AND archived_at IS NULL
 			    FOR UPDATE) held`,
-			ProjectCompanyKind, projectID, organizationID).Scan(&live, &mine); err != nil {
+			ProjectCompanyKind, projectID, companyID).Scan(&live, &mine); err != nil {
 			return fmt.Errorf("count the companies on the project: %w", err)
 		}
 		if mine == 0 {
@@ -328,7 +328,7 @@ func (s *Store) RemoveProjectCompany(ctx context.Context, projectID ids.ProjectI
 			return &LastProjectCompanyError{}
 		}
 		// A deal names a company AND a project, and the two must agree — the
-		// deal_project_same_org trigger enforces that on deal writes, but a
+		// deal_project_same_company trigger enforces that on deal writes, but a
 		// company leaving the project is not a deal write, so nothing would stop
 		// this from stranding those deals in a state the trigger forbids.
 		//
@@ -337,8 +337,8 @@ func (s *Store) RemoveProjectCompany(ctx context.Context, projectID ids.ProjectI
 		var stranded int
 		if err := tx.QueryRow(ctx,
 			`SELECT count(*) FROM deal
-			  WHERE project_id = $1 AND organization_id = $2 AND archived_at IS NULL`,
-			projectID, organizationID).Scan(&stranded); err != nil {
+			  WHERE project_id = $1 AND company_id = $2 AND archived_at IS NULL`,
+			projectID, companyID).Scan(&stranded); err != nil {
 			return fmt.Errorf("count the deals this company holds on the project: %w", err)
 		}
 		if stranded > 0 {
@@ -346,9 +346,9 @@ func (s *Store) RemoveProjectCompany(ctx context.Context, projectID ids.ProjectI
 		}
 		row, err := scanRelationship(tx.QueryRow(ctx,
 			`UPDATE relationship SET archived_at = now()
-			  WHERE kind = $1 AND project_id = $2 AND organization_id = $3 AND archived_at IS NULL
+			  WHERE kind = $1 AND project_id = $2 AND company_id = $3 AND archived_at IS NULL
 			  RETURNING `+relationshipColumns,
-			ProjectCompanyKind, projectID, organizationID))
+			ProjectCompanyKind, projectID, companyID))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -368,14 +368,14 @@ func (e *LastProjectCompanyError) Error() string {
 
 // FieldFault names the company the caller tried to remove.
 func (e *LastProjectCompanyError) FieldFault() (field, code, message string) {
-	return siteReadOrgKey, "last_project_company", e.Error()
+	return siteReadCompanyKey, "last_project_company", e.Error()
 }
 
 // Company answers which company this row names. It, Name and OnProjectAs
 // together satisfy modules/projects' CompanyRow: that module asks for the three
 // facts a project needs about a company, and this row supplies them without
 // either module importing the other's type.
-func (p ProjectCompany) Company() ids.OrganizationID { return p.OrganizationID }
+func (p ProjectCompany) Company() ids.CompanyID { return p.CompanyID }
 
 // Name answers what the company is called, for a reader.
 func (p ProjectCompany) Name() string { return p.DisplayName }
@@ -394,5 +394,5 @@ func (e *CompanyHasDealsOnProjectError) Error() string {
 
 // FieldFault names the company the caller tried to take off.
 func (e *CompanyHasDealsOnProjectError) FieldFault() (field, code, message string) {
-	return siteReadOrgKey, "company_has_deals_on_project", e.Error()
+	return siteReadCompanyKey, "company_has_deals_on_project", e.Error()
 }

@@ -106,7 +106,7 @@ is, even if you rename the project. **Owner** offers *Me*, *Unassign*, and —
 when somebody else owns it — *Keep current owner*.
 
 The **Companies** section on the project page is where the company set is
-changed — attach, re-role and detach. The anchor `organization_id` the list
+changed — attach, re-role and detach. The anchor `company_id` the list
 column shows is not editable on this form, but which company holds the
 **Customer** role is: attach it again under a different role.
 

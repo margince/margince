@@ -92,7 +92,7 @@ func TestColdStartStagesOnlyEvidencedFields(t *testing.T) {
 		t.Fatalf("staging landed as kind=%s status=%s events=%d, want coldstart/pending/2", kind, status, eventCount)
 	}
 
-	// Accepting needs organization.update (the effect the proposal
+	// Accepting needs company.update (the effect the proposal
 	// writes on acceptance) — the admin has it; the decision echoes
 	// coldstart.accepted.
 	svc := approvals.NewService(e.DB())
@@ -296,10 +296,10 @@ func TestColdStartRefusesWhenNothingSurvivesTheGate(t *testing.T) {
 }
 
 // The ACCEPT executor (features/07 §1): a human approval WRITES the
-// accepted fields — org resolved/created by the source domain, empty
+// accepted fields — company resolved/created by the source domain, empty
 // columns filled, evidence rows landed, human-set values untouched,
 // exactly once even if the decision path re-fires.
-func TestColdStartAcceptWritesProfileOntoOrganization(t *testing.T) {
+func TestColdStartAcceptWritesProfileOntoCompany(t *testing.T) {
 	e := integration.Setup(t)
 	extraction := `{"fields":[
 		{"field":"legal_name","value":"Acme GmbH","evidence_snippet":"Acme GmbH","confidence":0.95},
@@ -307,10 +307,10 @@ func TestColdStartAcceptWritesProfileOntoOrganization(t *testing.T) {
 		{"field":"icp","value":"RevOps at SaaS scale-ups","evidence_snippet":"Built for RevOps leaders at scaling SaaS companies","confidence":0.7}]}`
 	brain := ai.NewFakeClient().Script(extraction, extraction)
 
-	// The org already exists with a HUMAN-set industry: acceptance may
+	// The company already exists with a HUMAN-set industry: acceptance may
 	// fill what is empty, never overwrite a human's value.
 	admin := e.Admin()
-	orgID := seedAcmeOrgWithHumanIndustry(t, e, admin)
+	companyID := seedAcmeCompanyWithHumanIndustry(admin, t, e)
 
 	svc := approvals.NewService(e.DB())
 	svc.WithEffect("coldstart", coldstartAcceptEffect(svc, people.NewStore(e.DB())))
@@ -328,7 +328,7 @@ func TestColdStartAcceptWritesProfileOntoOrganization(t *testing.T) {
 		t.Fatalf("accept: %v", err)
 	}
 
-	assertAcceptFilledOnlyEmptyColumns(t, e, admin, orgID)
+	assertAcceptFilledOnlyEmptyColumns(admin, t, e, companyID)
 
 	// The approval is consumed; deciding again is refused and applies
 	// nothing twice.
@@ -353,64 +353,64 @@ func TestColdStartAcceptWritesProfileOntoOrganization(t *testing.T) {
 	if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](ids.UUID(proposal2.ProposalId)), false, nil); err != nil {
 		t.Fatalf("reject: %v", err)
 	}
-	var orgs int
+	var companies int
 	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT count(*) FROM organization`).Scan(&orgs)
+		return tx.QueryRow(context.Background(), `SELECT count(*) FROM company`).Scan(&companies)
 	})
-	if err != nil || orgs != 1 {
-		t.Fatalf("reject still wrote an organization (%d rows, err=%v)", orgs, err)
+	if err != nil || companies != 1 {
+		t.Fatalf("reject still wrote a company (%d rows, err=%v)", companies, err)
 	}
 }
 
-// seedAcmeOrgWithHumanIndustry plants the pre-existing acme.example
-// organization with a HUMAN-set industry, so acceptance can prove it
+// seedAcmeCompanyWithHumanIndustry plants the pre-existing acme.example
+// company with a HUMAN-set industry, so acceptance can prove it
 // fills only empty columns.
-func seedAcmeOrgWithHumanIndustry(t *testing.T, e *integration.Env, admin context.Context) ids.UUID {
+func seedAcmeCompanyWithHumanIndustry(admin context.Context, t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
-	orgID := ids.NewV7()
+	companyID := ids.NewV7()
 	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO organization (id, display_name, industry, source, captured_by)
-			VALUES ($1, 'Acme', 'Handcrafted Industry', 'manual', 'human:owner')`, orgID); err != nil {
+			INSERT INTO company (id, display_name, industry, source, captured_by)
+			VALUES ($1, 'Acme', 'Handcrafted Industry', 'manual', 'human:owner')`, companyID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO organization_domain (organization_id, domain, is_primary, source, captured_by)
-			VALUES ($1, 'acme.example', true, 'manual', 'human:owner')`, orgID)
+			INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
+			VALUES ($1, 'acme.example', true, 'manual', 'human:owner')`, companyID)
 		return err
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return orgID
+	return companyID
 }
 
 // assertAcceptFilledOnlyEmptyColumns proves the accept executor's write
-// discipline: org resolved (not duplicated), empty legal_name filled,
+// discipline: company resolved (not duplicated), empty legal_name filled,
 // the human-set industry untouched, and the evidence rows landed as the
 // coldstart agent.
-func assertAcceptFilledOnlyEmptyColumns(t *testing.T, e *integration.Env, admin context.Context, orgID ids.UUID) {
+func assertAcceptFilledOnlyEmptyColumns(admin context.Context, t *testing.T, e *integration.Env, companyID ids.UUID) {
 	t.Helper()
 	var legalName, industry, capturedBy string
-	var profileRows, orgs int
+	var profileRows, companies int
 	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
-			`SELECT coalesce(legal_name, ''), industry FROM organization WHERE id = $1`, orgID).Scan(&legalName, &industry); err != nil {
+			`SELECT coalesce(legal_name, ''), industry FROM company WHERE id = $1`, companyID).Scan(&legalName, &industry); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM organization`).Scan(&orgs); err != nil {
+			`SELECT count(*) FROM company`).Scan(&companies); err != nil {
 			return err
 		}
 		return tx.QueryRow(context.Background(), `
-			SELECT count(*), max(captured_by) FROM organization_profile_field WHERE organization_id = $1`,
-			orgID).Scan(&profileRows, &capturedBy)
+			SELECT count(*), max(captured_by) FROM company_profile_field WHERE company_id = $1`,
+			companyID).Scan(&profileRows, &capturedBy)
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if orgs != 1 {
-		t.Fatalf("accept created a duplicate org (%d rows) instead of resolving acme.example", orgs)
+	if companies != 1 {
+		t.Fatalf("accept created a duplicate company (%d rows) instead of resolving acme.example", companies)
 	}
 	if legalName != "Acme GmbH" {
 		t.Fatalf("empty legal_name not filled: %q", legalName)

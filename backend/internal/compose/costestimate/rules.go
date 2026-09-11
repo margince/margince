@@ -88,14 +88,14 @@ var unitRulesByName = map[string]unitRule{
 		},
 	},
 	"per_entity": {
-		// person/org embed entities are counted from the run's own committed
+		// person/company embed entities are counted from the run's own committed
 		// yields, which are an honest UNDER-count: a sender the tier gate deferred
 		// is resolved by the verdict engine long after the page that saw it, and
 		// the person it may eventually mint is nobody's page to claim. Embeddings
 		// is NOT floored on that shortfall: captured is exact and dominates the
 		// entity mix, so the observed ratio stays the honest anchor.
 		observedUnits: func(scanned int64, y capture.BackfillYields) (int64, bool) {
-			return scanned * (y.Captured + y.PeopleCreated + y.OrganizationsCreated) / y.Scanned, true // entities
+			return scanned * (y.Captured + y.PeopleCreated + y.CompaniesCreated) / y.Scanned, true // entities
 		},
 		observedDenom: func(slices []ai.ServedTaskTotal, _ int64) int64 { return sumCompletedCalls(slices) },
 		denomIsCalls:  true, // one embed call per entity

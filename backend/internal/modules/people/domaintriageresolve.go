@@ -4,14 +4,14 @@
 package people
 
 // Where a triage verdict becomes rows. The triage read decides what a domain
-// is; this settles the ledger and, for a company, creates the organization the
+// is; this settles the ledger and, for a company, creates the company the
 // capture path deliberately did not create earlier — named from the dossier
 // rather than from the raw domain label, with an employment edge for every
 // person who has accumulated on that domain while the question was open.
 //
-// One transaction: the verdict, the organization, its domain, the edges, the
+// One transaction: the verdict, the company, its domain, the edges, the
 // dossier's findings and the dossier binding all commit together or not at all.
-// A ledger row reading 'company' beside no organization would be a lie the
+// A ledger row reading 'company' beside no company would be a lie the
 // ensure ladder then acts on.
 
 import (
@@ -30,7 +30,7 @@ import (
 )
 
 // ResolveDomainTriageInput is one answered triage: the verdict, what produced
-// it, and — for a company — the dossier to name the organization from and fill
+// it, and — for a company — the dossier to name the company from and fill
 // it with.
 type ResolveDomainTriageInput struct {
 	Domain   string
@@ -50,16 +50,16 @@ type ResolveDomainTriageInput struct {
 
 // ResolveDomainTriageResult reports what the verdict actually did.
 type ResolveDomainTriageResult struct {
-	OrganizationID *ids.OrganizationID
-	OrgCreated     bool
+	CompanyID      *ids.CompanyID
+	CompanyCreated bool
 	EdgesPlanted   int
 }
 
 // ResolveDomainTriage settles a domain's verdict. A non-company answer writes
-// the ledger and stops; a company answer creates or adopts the organization and
+// the ledger and stops; a company answer creates or adopts the company and
 // wires everything the deferred ensures could not.
 //
-// Idempotent on replay: the dedupe lands a re-run on the organization the first
+// Idempotent on replay: the dedupe lands a re-run on the company the first
 // run created, the edge insert is conflict-free, and the field apply fills only
 // what is still empty. A worker that dies mid-verdict and retries therefore
 // converges rather than duplicating.
@@ -84,12 +84,12 @@ func (s *Store) ResolveDomainTriage(ctx context.Context, in ResolveDomainTriageI
 //
 // A domain that is somebody's name is theirs, and that settles.
 //
-// Anything else is WITHHELD, not created. It used to get "the organization it
+// Anything else is WITHHELD, not created. It used to get "the company it
 // would have got before triage existed" on the reasoning that a real business
 // whose site is down must not lose its record over an outage — but the record
 // it got was a title-cased domain label with every field empty, and the
 // disposition settled so nothing ever asked again. That produced 40 of 108
-// organizations in a real import, "Pwc" and "Mckinsey" among them, each frozen
+// companies in a real import, "Pwc" and "Mckinsey" among them, each frozen
 // as a shell. A withheld domain stays PENDING with its reason recorded, so the
 // site can be read again later and a human can decide meanwhile.
 func (s *Store) ResolveUnreadableDomainTriage(ctx context.Context, in ResolveDomainTriageInput) (ResolveDomainTriageResult, error) {
@@ -128,7 +128,7 @@ func (s *Store) ResolveUnreadableDomainTriage(ctx context.Context, in ResolveDom
 // site still unreadable must not quietly reopen their decision.
 func markDispositionUnevidenced(ctx context.Context, tx pgx.Tx, domain, evidence string) error {
 	if _, err := tx.Exec(ctx, `
-		UPDATE organization_domain_disposition
+		UPDATE company_domain_disposition
 		   SET pending_reason = 'unevidenced', evidence = NULLIF($2, ''),
 		       next_attempt_at = NULL, updated_at = now()
 		 WHERE domain = $1 AND status = $3`,
@@ -153,10 +153,10 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 		// Already answered. A worker that resolved this and then died before
 		// recording its dossier gets its whole run replayed by the reclaim, and
 		// without this a domain settled `personal` would reach the create path
-		// on the second pass and get the organization the first pass refused —
+		// on the second pass and get the company the first pass refused —
 		// while settleDisposition's own pending-guard kept the ledger saying
 		// `personal`. The answer stands; the replay is a no-op.
-		return ResolveDomainTriageResult{OrganizationID: prior.OrganizationID}, nil
+		return ResolveDomainTriageResult{CompanyID: prior.CompanyID}, nil
 	}
 	// The last gate before a company exists, and it reads the LOCKED row: a
 	// crawl already in flight when the domain was refused would otherwise land
@@ -171,43 +171,43 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 		return ResolveDomainTriageResult{}, settleDisposition(ctx, tx, in, nil)
 	}
 
-	res, err := s.adoptOrCreateTriagedOrg(ctx, tx, in, prior)
+	res, err := s.adoptOrCreateTriagedCompany(ctx, tx, in, prior)
 	if err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
-	if res.EdgesPlanted, err = plantDomainEmployment(ctx, tx, in.Domain, *res.OrganizationID); err != nil {
+	if res.EdgesPlanted, err = plantDomainEmployment(ctx, tx, in.Domain, *res.CompanyID); err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
 	if len(in.Fields) > 0 || len(in.Facts) > 0 {
 		if err := s.ApplyDeepReadTx(ctx, tx, DeepReadProposal{
-			OrganizationID: *res.OrganizationID,
-			SourceURL:      in.SeedURL,
-			SiteReadID:     in.ReadID,
-			Fields:         in.Fields,
-			Facts:          in.Facts,
+			CompanyID:  *res.CompanyID,
+			SourceURL:  in.SeedURL,
+			SiteReadID: in.ReadID,
+			Fields:     in.Fields,
+			Facts:      in.Facts,
 		}); err != nil {
 			return ResolveDomainTriageResult{}, err
 		}
 	}
-	if err := bindTriageDossier(ctx, tx, in.ReadID, *res.OrganizationID); err != nil {
+	if err := bindTriageDossier(ctx, tx, in.ReadID, *res.CompanyID); err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
-	return res, settleDisposition(ctx, tx, in, res.OrganizationID)
+	return res, settleDisposition(ctx, tx, in, res.CompanyID)
 }
 
-// adoptOrCreateTriagedOrg returns the organization the verdict belongs to. It
+// adoptOrCreateTriagedCompany returns the company the verdict belongs to. It
 // looks for an existing one FIRST: a human may have typed the company in while
 // the crawl ran, and a second row for the same domain would be exactly the
 // duplicate the dedupe chokepoint exists to prevent.
-func (s *Store) adoptOrCreateTriagedOrg(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, prior DomainDisposition) (ResolveDomainTriageResult, error) {
-	if err := auth.Require(ctx, entityOrganization, principal.ActionCreate); err != nil {
+func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, prior DomainDisposition) (ResolveDomainTriageResult, error) {
+	if err := auth.Require(ctx, entityCompany, principal.ActionCreate); err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
-	// The site stated a name, so this organization is born with the name a
+	// The site stated a name, so this company is born with the name a
 	// human would have typed rather than a title-cased domain label — and with
 	// the provenance to say so, which keeps a later dossier from overwriting it.
 	displayName, nameSource := in.DossierName, nameSourceDossier
@@ -222,7 +222,7 @@ func (s *Store) adoptOrCreateTriagedOrg(ctx context.Context, tx pgx.Tx, in Resol
 	// PO-F-2 reads. Asking about the domain alone leaves the fuzzy tier nothing
 	// to score, and two domains of one company ("acme.de", "acme.eu") derive
 	// the same label — the shape that put one company in a workspace twice.
-	match, err := DedupeOrganizationForCreate(ctx, tx, OrganizationCandidate{
+	match, err := DedupeCompanyForCreate(ctx, tx, CompanyCandidate{
 		DisplayName: displayName,
 		Domains:     []string{in.Domain},
 	})
@@ -230,38 +230,38 @@ func (s *Store) adoptOrCreateTriagedOrg(ctx context.Context, tx pgx.Tx, in Resol
 		return ResolveDomainTriageResult{}, err
 	}
 	if match.Decision == DecisionExactCollision {
-		return ResolveDomainTriageResult{OrganizationID: &match.OrganizationID}, nil
+		return ResolveDomainTriageResult{CompanyID: &match.CompanyID}, nil
 	}
 
-	orgID, err := createOrganization(ctx, tx, match, OrgSpec{
+	companyID, err := createCompany(ctx, tx, match, CompanySpec{
 		DisplayName: displayName,
 		NameSource:  nameSource,
 		OwnerID:     ownerFromUUID(prior.OwnerID),
 		Visibility:  visibilityWorkspace,
-		Domains:     []OrgDomainInput{{Domain: in.Domain, IsPrimary: true}},
+		Domains:     []CompanyDomainInput{{Domain: in.Domain, IsPrimary: true}},
 		Source:      domainTriageSource(in.Domain),
 		CapturedBy:  by,
 	})
 	if err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
-	auditID, err := storekit.Audit(ctx, tx, "create", entityOrganization, orgID.UUID, nil, map[string]any{
+	auditID, err := storekit.Audit(ctx, tx, "create", entityCompany, companyID.UUID, nil, map[string]any{
 		fieldDisplayName: displayName, auditKeyNameSource: nameSource, auditKeyDomain: in.Domain,
 	})
 	if err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, orgID.UUID,
-		crmcontracts.PublicEventOrganizationCreated{DisplayName: &displayName}); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID,
+		crmcontracts.PublicEventCompanyCreated{DisplayName: &displayName}); err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
 	// A near-match creates anyway — triage is resolving a question a human
 	// already answered, and DEDUPE_FUZZY_AUTOMERGE is pinned never — but the
 	// pair goes on the review queue so the twin is visible.
-	if err := match.recordIfReview(ctx, tx, orgID, displayName, domainTriageSource(in.Domain), by); err != nil {
+	if err := match.recordIfReview(ctx, tx, companyID, domainTriageSource(in.Domain), by); err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
-	return ResolveDomainTriageResult{OrganizationID: &orgID, OrgCreated: true}, nil
+	return ResolveDomainTriageResult{CompanyID: &companyID, CompanyCreated: true}, nil
 }
 
 // plantDomainEmployment gives every live person on the domain their employment
@@ -272,7 +272,7 @@ func (s *Store) adoptOrCreateTriagedOrg(ctx context.Context, tx pgx.Tx, in Resol
 //
 // It never reassigns: someone whose current employer a human already recorded
 // keeps it, exactly as the capture ensure never overrides one.
-func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID ids.OrganizationID) (int, error) {
+func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, companyID ids.CompanyID) (int, error) {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return 0, err
@@ -302,7 +302,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID 
 	// point of the split: the candidate read above is a snapshot, and this is
 	// the decision.
 	rows, err := tx.Query(ctx, `
-		INSERT INTO relationship (kind, person_id, organization_id, is_current_primary, source, captured_by)
+		INSERT INTO relationship (kind, person_id, company_id, is_current_primary, source, captured_by)
 		SELECT 'employment', p.id, $1, true, $2, $3
 		FROM person p
 		WHERE p.id = ANY($4)
@@ -311,7 +311,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID 
 			WHERE r.person_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id, person_id`,
-		orgID, domainTriageSource(domain), by, candidates)
+		companyID, domainTriageSource(domain), by, candidates)
 	if err != nil {
 		return 0, fmt.Errorf("people: planting the employment edges for %s: %w", domain, err)
 	}
@@ -337,7 +337,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID 
 	// the change the trail exists to explain, and the bus is how the surfaces
 	// that count a company's contacts learn to recount.
 	for _, one := range made {
-		if err := auditCapturedEmployment(ctx, tx, one.edge, one.person, orgID, relationshipOriginCapture); err != nil {
+		if err := auditCapturedEmployment(ctx, tx, one.edge, one.person, companyID, relationshipOriginCapture); err != nil {
 			return 0, err
 		}
 	}
@@ -394,16 +394,16 @@ func domainEmploymentCandidates(ctx context.Context, tx pgx.Tx, domain string) (
 	return out, nil
 }
 
-// bindTriageDossier attaches the triage read to the organization it produced.
+// bindTriageDossier attaches the triage read to the company it produced.
 // confirmed_at is what the row's target-shape CHECK requires alongside the
-// organization, and it is honest here: the verdict IS the confirmation.
-func bindTriageDossier(ctx context.Context, tx pgx.Tx, readID ids.UUID, orgID ids.OrganizationID) error {
+// company, and it is honest here: the verdict IS the confirmation.
+func bindTriageDossier(ctx context.Context, tx pgx.Tx, readID ids.UUID, companyID ids.CompanyID) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE site_read
-		   SET organization_id = $2, confirmed_at = now(), updated_at = now()
-		 WHERE id = $1 AND target_kind = $3 AND organization_id IS NULL`,
-		readID, orgID, TargetKindDomainTriage); err != nil {
-		return fmt.Errorf("people: binding the triage dossier to its organization: %w", err)
+		   SET company_id = $2, confirmed_at = now(), updated_at = now()
+		 WHERE id = $1 AND target_kind = $3 AND company_id IS NULL`,
+		readID, companyID, TargetKindDomainTriage); err != nil {
+		return fmt.Errorf("people: binding the triage dossier to its company: %w", err)
 	}
 	return nil
 }
@@ -414,30 +414,30 @@ func bindTriageDossier(ctx context.Context, tx pgx.Tx, readID ids.UUID, orgID id
 // Guarded on `status = 'pending'`: a verdict answers an OPEN question. A late
 // duplicate — a re-queued job, a sweep racing a trigger — must not overwrite the
 // answer that already landed, and must never undo a human who settled it by
-// hand (adoptDispositionForOrg, which is deliberately not guarded because
+// hand (adoptDispositionForCompany, which is deliberately not guarded because
 // overriding is its whole job).
-func settleDisposition(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, orgID *ids.OrganizationID) error {
+func settleDisposition(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, companyID *ids.CompanyID) error {
 	var readID *ids.UUID
 	if !in.ReadID.IsZero() {
 		readID = &in.ReadID
 	}
 	if _, err := tx.Exec(ctx, `
-		UPDATE organization_domain_disposition
+		UPDATE company_domain_disposition
 		   SET status = $2, source = $3, evidence = NULLIF($4, ''),
-		       organization_id = $5, site_read_id = $6,
+		       company_id = $5, site_read_id = $6,
 		       -- The question is answered, so it is no longer waiting on
 		       -- evidence. Leaving the marker would keep a settled domain in
 		       -- the "needs a human" list for ever.
 		       pending_reason = NULL,
 		       next_attempt_at = NULL, updated_at = now()
 		 WHERE domain = $1 AND status = 'pending'`,
-		in.Domain, in.Status, in.Source, in.Evidence, orgID, readID); err != nil {
+		in.Domain, in.Status, in.Source, in.Evidence, companyID, readID); err != nil {
 		return fmt.Errorf("people: settling the disposition of %s: %w", in.Domain, err)
 	}
 	return nil
 }
 
-// The audit-payload keys a triage-created organization carries. auditKeyDomain
+// The audit-payload keys a triage-created company carries. auditKeyDomain
 // is deliberately its own constant and not nameSourceDomain: one is a payload
 // field name, the other a provenance value, and they collide only by spelling.
 const (

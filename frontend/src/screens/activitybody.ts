@@ -111,7 +111,7 @@ export function activityRequestBody(
     ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
     ...(isTranscript ? { source_system: "transcript" } : {}),
     // The attendee REPLACES the company link rather than joining it. The
-    // server refuses an organization link on a meeting or a call whichever
+    // server refuses a company link on a meeting or a call whichever
     // else are present, and the company still reaches the activity: the
     // employer walk carries it there through the person who was named.
     //

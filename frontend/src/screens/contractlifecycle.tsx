@@ -130,16 +130,16 @@ async function renewContract(
   return data?.id ?? "";
 }
 
-// The organization's own deals, for the picker below — every status, not only
+// The company's own deals, for the picker below — every status, not only
 // `open`: a renewal is usually recorded after the opportunity that won it has
 // already closed, so filtering to `open` would hide the one deal a renewal is
 // most often actually tied to.
-function dealsForOrg(organizationId: string) {
+function dealsForCompany(companyId: string) {
   return {
-    queryKey: ["orgDeals", organizationId],
+    queryKey: ["companyDeals", companyId],
     queryFn: async () => {
       const { data, error } = await api.GET("/deals", {
-        params: { query: { organization_id: organizationId, limit: 100 } },
+        params: { query: { company_id: companyId, limit: 100 } },
       });
       if (error) {
         throwProblem(error);
@@ -172,9 +172,9 @@ export function ContractRenewModal({
   // write authority follows the deal — so the modal keeps working and the deal
   // picker, which can only be filled by listing that company's deals, says why
   // it is not there rather than showing an empty list that reads as "no deals".
-  const anchor = contract.organization_id;
+  const anchor = contract.company_id;
   const deals = useQuery({
-    ...dealsForOrg(anchor ?? ""),
+    ...dealsForCompany(anchor ?? ""),
     enabled: open && anchor != null,
   });
 
@@ -202,10 +202,10 @@ export function ContractRenewModal({
       renewContract(submitted.predecessor, submitted.draft, submitted.dealId),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["orgContracts", contract.organization_id],
+        queryKey: ["companyContracts", contract.company_id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["organization360", contract.organization_id],
+        queryKey: ["company360", contract.company_id],
       });
       onClose();
     },
@@ -334,10 +334,10 @@ export function ContractStatusModal({
     }) => changeContractStatus(submitted.contract, submitted.status),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["orgContracts", contract.organization_id],
+        queryKey: ["companyContracts", contract.company_id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["organization360", contract.organization_id],
+        queryKey: ["company360", contract.company_id],
       });
       onClose();
     },
@@ -453,10 +453,10 @@ export function ContractCancelModal({
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["orgContracts", contract.organization_id],
+        queryKey: ["companyContracts", contract.company_id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["organization360", contract.organization_id],
+        queryKey: ["company360", contract.company_id],
       });
       onClose();
     },

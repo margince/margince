@@ -84,7 +84,7 @@ curl -sS -X POST http://localhost:8080/v1/overlay/reconcile -b cookies.txt
 curl -sS http://localhost:8080/v1/overlay/sync-status -b cookies.txt | jq '.objects'
 curl -sS 'http://localhost:8080/v1/deals?limit=10'         -b cookies.txt | jq '.data[].name'    # [fixture] deals
 curl -sS 'http://localhost:8080/v1/people?limit=10'        -b cookies.txt | jq '.data[].full_name'
-curl -sS 'http://localhost:8080/v1/organizations?limit=10' -b cookies.txt | jq '.data[].name'
+curl -sS 'http://localhost:8080/v1/companies?limit=10' -b cookies.txt | jq '.data[].name'
 curl -sS http://localhost:8080/v1/overlay/budget           -b cookies.txt | jq  # window/consumed/band + per-source sources + ~unknown headroom + search
 ```
 Or just open **http://localhost:8080** and log in — records list and open normally, a top bar mode chip
@@ -99,7 +99,7 @@ curl -sS -X PATCH "http://localhost:8080/v1/deals/$DEAL" -b cookies.txt \
   -H 'content-type: application/json' -d '{"name":"[fixture] Acme Renewal (edited)"}'
 ```
 It writes to HubSpot **first**, then re-mirrors — confirm the rename in the test account's HubSpot UI.
-Update and archive on person/organization/deal, plus update on lead and activity, all write back this
+Update and archive on person/company/deal, plus update on lead and activity, all write back this
 way; the 360 screens show Edit/Archive in overlay mode for every type that supports them. `create`,
 `merge`, `advance-deal`, `promote-lead`, and `disqualify-lead` still answer `422 unsupported_by_sor`:
 `create` because a record made this way would carry no `owner_id`, and the fail-closed visibility rule
@@ -115,7 +115,7 @@ custom field and `owner_id` — has no writable counterpart and is dropped from 
 | Entity | Writable fields |
 | --- | --- |
 | person | `first_name`, `last_name`, `title` |
-| organization | `display_name`, `industry` |
+| company | `display_name`, `industry` |
 | lead | `full_name` |
 | deal | `name`, `expected_close_date`, `amount_minor` + `currency` (a pair — supply both or neither; `pipeline_id`/`stage_id` are read-only and always `null` in overlay) |
 | activity | varies by engagement kind (`activityWriteSpecs`): `subject` + `body` for call/meeting/email/task, `body` only for note; plus `direction` (call, email), `duration_seconds` (call), or `due_at` (task) — `occurred_at` and `meeting_status` are read-only for every kind |
@@ -162,7 +162,7 @@ HUBSPOT_TOKEN=pat-XXXX scripts/overlay-hubspot-fixture.sh whoami  # print the ow
   classes (calls/meetings/emails/notes/tasks) are swept **best-effort** with no requested scope, so a
   portal that gates one of them (HubSpot 403s leads/emails, 400s some engagement endpoints on a starter
   portal) logs a "best-effort object class not accessible … skipping" line and moves on. The
-  scope-backed classes (contacts/companies/deals → person/organization/deal) still mirror fully. A `403`
+  scope-backed classes (contacts/companies/deals → person/company/deal) still mirror fully. A `403`
   on one of *those* three, by contrast, is a real token/scope problem and aborts the sweep.
 - **`sync-status` shows `pending`/`stale`.** Give the poller a beat or `POST /overlay/reconcile` again;
   `backfillComplete: true` + `state: "fresh"` per class means it's caught up.

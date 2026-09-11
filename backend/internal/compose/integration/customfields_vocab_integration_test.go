@@ -203,10 +203,10 @@ func coreVocabResources(dealCtx context.Context, f cfvFixture, dealStore *deals.
 				return err
 			},
 		},
-		"organizations (DM-VOCAB-2)": {
+		"companies (DM-VOCAB-2)": {
 			specFields: []string{"created_at", "updated_at", "display_name", "owner_id"},
 			list: func(sort string) error {
-				_, _, err := f.store.ListOrganizations(f.ctx, people.ListOrganizationsInput{Sort: &sort})
+				_, _, err := f.store.ListCompanies(f.ctx, people.ListCompaniesInput{Sort: &sort})
 				return err
 			},
 		},

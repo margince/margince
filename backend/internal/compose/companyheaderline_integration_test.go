@@ -27,7 +27,7 @@ func anchorDescription(t *testing.T, e *integration.Env) string {
 	var description *string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT description FROM organization WHERE is_anchor AND archived_at IS NULL`).Scan(&description)
+			`SELECT description FROM company WHERE is_anchor AND archived_at IS NULL`).Scan(&description)
 	}); err != nil {
 		t.Fatalf("reading the anchor's header line: %v", err)
 	}

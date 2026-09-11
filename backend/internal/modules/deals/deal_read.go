@@ -47,7 +47,7 @@ func (s *Store) GetDeal(ctx context.Context, id ids.DealID, archived storekit.Ar
 // is a read: the row a PATCH echoes is the same row a GET withholds from, and
 // the reference withholding cannot ride on write authority the way a role mask
 // does — being allowed to change the DEAL says nothing about being allowed to
-// read the ORGANIZATION it names.
+// read the COMPANY it names.
 //
 // readDeal itself stays unmasked on purpose. The update path builds its
 // before-image from it, and an audit diff taken against a withheld null would
@@ -68,18 +68,18 @@ const dealTaggableType = "deal"
 type ListDealsInput struct {
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the person and account lists.
-	TagIDs         []ids.UUID
-	TagMode        storekit.TagMode
-	Cursor         *string
-	Limit          *int
-	Query          *string
-	PipelineID     *ids.PipelineID
-	StageID        *ids.StageID
-	OwnerID        *ids.UserID
-	OrganizationID *ids.OrganizationID
-	ProjectID      *ids.ProjectID
-	PartnerOrgID   *ids.OrganizationID
-	PartnerSourced *bool
+	TagIDs           []ids.UUID
+	TagMode          storekit.TagMode
+	Cursor           *string
+	Limit            *int
+	Query            *string
+	PipelineID       *ids.PipelineID
+	StageID          *ids.StageID
+	OwnerID          *ids.UserID
+	CompanyID        *ids.CompanyID
+	ProjectID        *ids.ProjectID
+	PartnerCompanyID *ids.CompanyID
+	PartnerSourced   *bool
 	// PartnerAttribution narrows to what the partner did — "sourced" or
 	// "influenced". Narrower than PartnerSourced, which only asks whether a
 	// partner is named at all.
@@ -121,18 +121,18 @@ const dealNameColumn = "name"
 // disagree, this follows the rule.
 //
 // Three of the eight are not columns of `deal` at all: a stage and the two
-// organizations are references, so each carries the expression that orders it.
+// companies are references, so each carries the expression that orders it.
 var dealListFields = map[string]storekit.SortField{
-	"created_at":         storekit.Column(storekit.KindTimestamp),
-	"updated_at":         storekit.Column(storekit.KindTimestamp),
-	"last_activity_at":   storekit.Column(storekit.KindTimestamp),
-	"amount_minor":       storekit.Column(fieldcatalog.TypeCurrency),
-	closeDateField:       storekit.Column(fieldcatalog.TypeDate),
-	dealNameColumn:       storekit.Column(fieldcatalog.TypeText),
-	"status":             storekit.Column(fieldcatalog.TypeText),
-	filterStageID:        {Kind: fieldcatalog.TypeNumber, Expr: orderByStagePosition},
-	filterOrganizationID: {Kind: fieldcatalog.TypeText, Expr: orderByReadableOrgName(filterOrganizationID)},
-	filterPartnerOrgID:   {Kind: fieldcatalog.TypeText, Expr: orderByReadableOrgName(filterPartnerOrgID)},
+	"created_at":           storekit.Column(storekit.KindTimestamp),
+	"updated_at":           storekit.Column(storekit.KindTimestamp),
+	"last_activity_at":     storekit.Column(storekit.KindTimestamp),
+	"amount_minor":         storekit.Column(fieldcatalog.TypeCurrency),
+	closeDateField:         storekit.Column(fieldcatalog.TypeDate),
+	dealNameColumn:         storekit.Column(fieldcatalog.TypeText),
+	"status":               storekit.Column(fieldcatalog.TypeText),
+	filterStageID:          {Kind: fieldcatalog.TypeNumber, Expr: orderByStagePosition},
+	filterCompanyID:        {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompanyName(filterCompanyID)},
+	filterPartnerCompanyID: {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompanyName(filterPartnerCompanyID)},
 }
 
 // wireRowTags renders one deal row's tag chips. A twin of the people module's:
@@ -264,9 +264,9 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		column, table string
 		id            *ids.UUID
 	}{
-		{filterOrganizationID, "organization", uuidOfFilter(in.OrganizationID)},
+		{filterCompanyID, "company", uuidOfFilter(in.CompanyID)},
 		{filterProjectID, "project", uuidOfFilter(in.ProjectID)},
-		{filterPartnerOrgID, "organization", uuidOfFilter(in.PartnerOrgID)},
+		{filterPartnerCompanyID, "company", uuidOfFilter(in.PartnerCompanyID)},
 	} {
 		if ref.id == nil {
 			continue
@@ -316,7 +316,7 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 
 // uuidOfFilter widens one optional typed filter id to the untyped UUID the
 // reference table above walks. It is deliberately the only widening here: the
-// phantom kind is what stops a project id being probed against organization.
+// phantom kind is what stops a project id being probed against company.
 func uuidOfFilter[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
 	if id == nil {
 		return nil
@@ -328,7 +328,7 @@ func uuidOfFilter[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
 // to the rows whose target the caller may read.
 //
 // Filtering by an id is asking whether it is there. A bare
-// `organization_id = $1` answers that question for an organization the caller
+// `company_id = $1` answers that question for a company the caller
 // cannot open — the same existence oracle the projection now withholds — so
 // the arm carries the target's own visibility predicate. An empty page is the
 // honest answer, and it is indistinguishable from a visible company that has
@@ -365,7 +365,7 @@ func partnerAttributionFilterClause(ctx context.Context, attribution string, arg
 		return "", err
 	}
 	clause := storekit.SQLf("partner_attribution = $%d", arg(attribution))
-	scope, err := auth.ScopeClauseFor(ctx, "organization", "pref", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "company", "pref", arg)
 	if err != nil {
 		return "", err
 	}
@@ -373,11 +373,11 @@ func partnerAttributionFilterClause(ctx context.Context, attribution string, arg
 		return clause, nil
 	}
 	return clause + storekit.SQLf(
-		" AND EXISTS (SELECT 1 FROM organization pref WHERE pref.id = partner_org_id AND %s)", scope), nil
+		" AND EXISTS (SELECT 1 FROM company pref WHERE pref.id = partner_company_id AND %s)", scope), nil
 }
 
 const dealColumns = `id, name, amount_minor, currency, pipeline_id, stage_id,
-	organization_id, project_id, owner_id, partner_org_id, partner_attribution, status, lost_reason,
+	company_id, project_id, owner_id, partner_company_id, partner_attribution, status, lost_reason,
 	won_without_contract_reason, won_without_contract_detail,
 	expected_close_date, close_date_provisional, closed_at, forecast_category, wait_until, last_activity_at,
 	source, captured_by, version, created_at, updated_at, archived_at`
@@ -403,7 +403,7 @@ func readDeal(ctx context.Context, tx pgx.Tx, id ids.DealID, archived storekit.A
 func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontracts.Deal, error) {
 	var d crmcontracts.Deal
 	var id, pipelineID, stageID ids.UUID
-	var orgID, projectID, ownerID, partnerID *ids.UUID
+	var companyID, projectID, ownerID, partnerID *ids.UUID
 	var status string
 	var forecastCat *string
 	var expectedClose, waitUntil *time.Time
@@ -413,7 +413,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var wonReason *string
 	dests := []any{
 		&id, &d.Name, &d.AmountMinor, &d.Currency, &pipelineID, &stageID,
-		&orgID, &projectID, &ownerID, &partnerID, &d.PartnerAttribution, &status, &d.LostReason,
+		&companyID, &projectID, &ownerID, &partnerID, &d.PartnerAttribution, &status, &d.LostReason,
 		&wonReason, &d.WonWithoutContractDetail,
 		&expectedClose, &closeDateProvisional, &d.ClosedAt, &forecastCat, &waitUntil, &d.LastActivityAt,
 		&d.Source, &d.CapturedBy, &version, &d.CreatedAt, &d.UpdatedAt, &d.ArchivedAt,
@@ -439,10 +439,10 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	d.PipelineId = &pid
 	sid := openapi_types.UUID(stageID)
 	d.StageId = &sid
-	d.OrganizationId = uuidPtr(orgID)
+	d.CompanyId = uuidPtr(companyID)
 	d.ProjectId = uuidPtr(projectID)
 	d.OwnerId = uuidPtr(ownerID)
-	d.PartnerOrgId = uuidPtr(partnerID)
+	d.PartnerCompanyId = uuidPtr(partnerID)
 	d.Status = crmcontracts.DealStatus(status)
 	if expectedClose != nil {
 		d.ExpectedCloseDate = &openapi_types.Date{Time: *expectedClose}

@@ -530,22 +530,25 @@ describe("deal create flow", () => {
 describe("a field that depends on another", () => {
   const fields: CreateField[] = [
     { key: "name", label: "create.dealName", required: true },
-    { key: "partner_org_id", label: "deal.partnerOrg", type: "select" },
+    { key: "partner_company_id", label: "deal.partnerCompany", type: "select" },
     {
       key: "partner_attribution",
       label: "deal.partnerAttribution",
       type: "select",
-      showWhen: (values) => Boolean(values.partner_org_id),
+      showWhen: (values) => Boolean(values.partner_company_id),
     },
   ];
 
   it("stays hidden until the field it depends on is answered", () => {
-    const shown = visibleFields(fields, { name: "x", partner_org_id: "" });
-    expect(shown.map((f) => f.key)).toEqual(["name", "partner_org_id"]);
+    const shown = visibleFields(fields, { name: "x", partner_company_id: "" });
+    expect(shown.map((f) => f.key)).toEqual(["name", "partner_company_id"]);
   });
 
   it("appears once that field is answered", () => {
-    const shown = visibleFields(fields, { name: "x", partner_org_id: "p-1" });
+    const shown = visibleFields(fields, {
+      name: "x",
+      partner_company_id: "p-1",
+    });
     expect(shown.map((f) => f.key)).toContain("partner_attribution");
   });
 
@@ -555,7 +558,7 @@ describe("a field that depends on another", () => {
   it("does not submit a value whose field went away", () => {
     const sent = submittedValues(fields, {
       name: "x",
-      partner_org_id: "",
+      partner_company_id: "",
       partner_attribution: "influenced",
     });
     expect(sent.partner_attribution).toBe("");
@@ -565,7 +568,7 @@ describe("a field that depends on another", () => {
   it("submits the value while its field is showing", () => {
     const sent = submittedValues(fields, {
       name: "x",
-      partner_org_id: "p-1",
+      partner_company_id: "p-1",
       partner_attribution: "influenced",
     });
     expect(sent.partner_attribution).toBe("influenced");
@@ -586,7 +589,7 @@ describe("a field that depends on another", () => {
     // The state the form holds the moment A is cleared.
     const cleared = submittedValues(fields, {
       name: "x",
-      partner_org_id: "",
+      partner_company_id: "",
       partner_attribution: "influenced",
     });
     expect(cleared.partner_attribution).toBe("");
@@ -594,7 +597,7 @@ describe("a field that depends on another", () => {
     // Naming B from that state starts the claim over rather than inheriting.
     const withB = submittedValues(fields, {
       ...cleared,
-      partner_org_id: "p-b",
+      partner_company_id: "p-b",
     });
     expect(withB.partner_attribution).toBe("");
   });
@@ -608,14 +611,14 @@ describe("the deal form's partner fields", () => {
   const partnerRoutes = {
     "GET /pipelines": () =>
       jsonResponse({ data: [pipeline], page: { next_cursor: null } }),
-    "GET /organizations": () =>
+    "GET /companies": () =>
       jsonResponse({
         data: [{ id: "o-1", display_name: "VietnamPartner JSC" }],
         page: { next_cursor: null },
       }),
     "GET /partners": () =>
       jsonResponse({
-        data: [{ organization_id: "o-1", margin_tier: "tier2_20" }],
+        data: [{ company_id: "o-1", margin_tier: "tier2_20" }],
         page: { next_cursor: null },
       }),
   };
@@ -649,12 +652,12 @@ describe("the deal form's partner fields", () => {
     expect(await screen.findByLabelText("What the partner did")).toBeTruthy();
   });
 
-  // Only actual partners: the picker once listed every organization, which let
+  // Only actual partners: the picker once listed every company, which let
   // a deal be attributed to an ordinary customer and silently never pay.
   it("offers only companies that are partners", async () => {
     stubApi({
       ...partnerRoutes,
-      "GET /organizations": () =>
+      "GET /companies": () =>
         jsonResponse({
           data: [
             { id: "o-1", display_name: "VietnamPartner JSC" },

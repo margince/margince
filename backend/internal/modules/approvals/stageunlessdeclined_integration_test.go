@@ -109,20 +109,20 @@ func (e *stagingEnv) as() context.Context {
 func TestStageUnlessDeclinedWaitsForACompetingPassBeforeReading(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.as()
-	// A real organization: the staging path resolves its target's version, so a
+	// A real company: the staging path resolves its target's version, so a
 	// target that does not exist would fail the run for a reason that has nothing
 	// to do with the ordering under test.
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO organization (id, display_name, source, captured_by)
+		INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Gitex', 'gmail:seed', 'connector:gmail')`, target); err != nil {
 		t.Fatal(err)
 	}
 	in := StageInput{
-		Kind:           "org_name_promotion",
+		Kind:           "company_name_promotion",
 		ProposedChange: []byte(`{"proposed_name":"Gitex Global"}`),
 		DiffHash:       "deterministic-hash-for-this-proposal",
-		TargetType:     "organization",
+		TargetType:     "company",
 		TargetID:       target,
 		Summary:        "Rename Gitex to Gitex Global?",
 		JoinPending:    true,
@@ -238,15 +238,15 @@ func TestStageUnlessDeclinedStagesWhenNothingWasRefused(t *testing.T) {
 	e := setupStaging(t)
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO organization (id, display_name, source, captured_by)
+		INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Gitex', 'gmail:seed', 'connector:gmail')`, target); err != nil {
 		t.Fatal(err)
 	}
 	in := StageInput{
-		Kind:           "org_name_promotion",
+		Kind:           "company_name_promotion",
 		ProposedChange: []byte(`{"proposed_name":"Gitex Global"}`),
 		DiffHash:       "hash-nothing-refused",
-		TargetType:     "organization",
+		TargetType:     "company",
 		TargetID:       target,
 		Summary:        "Rename Gitex to Gitex Global?",
 		JoinPending:    true,
@@ -304,15 +304,15 @@ func TestStageUnlessDeclinedRefusesWithoutJoinPending(t *testing.T) {
 	e := setupStaging(t)
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO organization (id, display_name, source, captured_by)
+		INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Gitex', 'gmail:seed', 'connector:gmail')`, target); err != nil {
 		t.Fatal(err)
 	}
 	in := StageInput{
-		Kind:           "org_name_promotion",
+		Kind:           "company_name_promotion",
 		ProposedChange: []byte(`{"proposed_name":"Gitex Global"}`),
 		DiffHash:       "hash-no-join",
-		TargetType:     "organization",
+		TargetType:     "company",
 		TargetID:       target,
 		Summary:        "Rename Gitex to Gitex Global?",
 	}

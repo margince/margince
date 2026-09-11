@@ -79,7 +79,7 @@ func uploadMark(t *testing.T, e *integration.Env, handlers companyHandlers, imag
 		WithContext(e.As(e.Rep1, nil, integration.AdminPerms))
 	request.Header.Set("Content-Type", contentType)
 	recorder := httptest.NewRecorder()
-	handlers.UploadCompanyLogo(recorder, request)
+	handlers.UploadAnchorCompanyLogo(recorder, request)
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("upload → %d %s, want 200", recorder.Code, recorder.Body.String())
 	}
@@ -103,11 +103,11 @@ func TestAnUploadedMarkIsStoredAsThisServersOwnPNG(t *testing.T) {
 
 	uploaded := uploadMark(t, e, handlers, logoFixture(t, 400, 400), "acme-logo.png")
 
-	key, err := e.People.OrganizationLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.OrganizationID, people.LogoWide)
+	key, err := e.People.CompanyLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.CompanyID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the company wears no mark after its own upload: %v", err)
 	}
-	wantURL := *people.LogoURL(company.OrganizationID.UUID, &key, people.LogoWide)
+	wantURL := *people.LogoURL(company.CompanyID.UUID, &key, people.LogoWide)
 	if uploaded.LogoUrl == nil || *uploaded.LogoUrl != wantURL {
 		t.Fatalf("logo_url = %v, want %q — the face the shell and the record both render",
 			uploaded.LogoUrl, wantURL)
@@ -147,7 +147,7 @@ func TestAPersonsMarkOutranksWhatAWebsiteReadResolves(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	uploadMark(t, e, handlers, logoFixture(t, 400, 400), "acme-logo.png")
-	chosen, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide)
+	chosen, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("reading the uploaded mark: %v", err)
 	}
@@ -155,7 +155,7 @@ func TestAPersonsMarkOutranksWhatAWebsiteReadResolves(t *testing.T) {
 	// A read resolving a different mark afterwards. It reports that it wrote
 	// nothing and hands its own object back, which is what lets the resolve lane
 	// collect bytes the record never took.
-	written, superseded, err := e.People.SetOrganizationLogo(ctx, company.OrganizationID,
+	written, superseded, err := e.People.SetCompanyLogo(ctx, company.CompanyID,
 		chosen+"-from-the-site", touchIconURL)
 	if err != nil {
 		t.Fatalf("the resolve failed outright: %v", err)
@@ -166,7 +166,7 @@ func TestAPersonsMarkOutranksWhatAWebsiteReadResolves(t *testing.T) {
 	if superseded != nil {
 		t.Fatalf("a declined resolve reported %q as superseded, want nothing", *superseded)
 	}
-	after, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide)
+	after, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("reading the mark after the resolve: %v", err)
 	}
@@ -183,13 +183,13 @@ func TestRemovingAMarkGivesTheFieldBackToTheNextRead(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	uploadMark(t, e, handlers, logoFixture(t, 400, 400), "acme-logo.png")
-	uploaded, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide)
+	uploaded, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("reading the uploaded mark: %v", err)
 	}
 
 	recorder := httptest.NewRecorder()
-	handlers.DeleteCompanyLogo(recorder,
+	handlers.DeleteAnchorCompanyLogo(recorder,
 		httptest.NewRequest(http.MethodDelete, "/v1/company/logo", nil).WithContext(ctx))
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("delete → %d %s, want 200", recorder.Code, recorder.Body.String())
@@ -205,7 +205,7 @@ func TestRemovingAMarkGivesTheFieldBackToTheNextRead(t *testing.T) {
 
 	// And the field is genuinely back: the removal is not a standing hold, so a
 	// later read may give this company a face again.
-	written, _, err := e.People.SetOrganizationLogo(ctx, company.OrganizationID,
+	written, _, err := e.People.SetCompanyLogo(ctx, company.CompanyID,
 		uploaded+"-from-the-site", touchIconURL)
 	if err != nil {
 		t.Fatalf("the resolve after a removal failed: %v", err)
@@ -232,7 +232,7 @@ func TestReReadingTheCompanysSiteReplacesTheMarkAnEarlierReadLanded(t *testing.T
 	// person's, which is the case that must NOT be replaced.
 	firstArgs, first := readTheAnchorsSiteFor(t, e, blob)
 	created := confirmTheAnchorAsTheAPIDoes(t, e, engine, firstArgs)
-	if wearing, err := e.People.OrganizationLogoKey(human, created, people.LogoWide); err != nil || wearing != first {
+	if wearing, err := e.People.CompanyLogoKey(human, created, people.LogoWide); err != nil || wearing != first {
 		t.Fatalf("after onboarding the company wears %q (%v), want the first read's mark at %q — "+
 			"this case has no replacement to observe otherwise", wearing, err, first)
 	}
@@ -240,21 +240,21 @@ func TestReReadingTheCompanysSiteReplacesTheMarkAnEarlierReadLanded(t *testing.T
 	// The second read, which is the settings card's refresh against a company
 	// that already exists.
 	args, parked := readTheAnchorsSiteFor(t, e, blob)
-	orgID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
+	companyID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 	// The SAME company, which is what makes this a re-read rather than two
 	// unrelated onboardings: a workspace has at most one live anchor
-	// (uq_organization_anchor), so the second confirmation resolves the record
+	// (uq_company_anchor), so the second confirmation resolves the record
 	// the first one created instead of minting a rival.
-	if orgID != created {
+	if companyID != created {
 		t.Fatalf("the second confirmation landed on %s, want the company the first created (%s)",
-			orgID, created)
+			companyID, created)
 	}
 	if parked == first {
 		t.Fatal("both reads parked one object, so this case cannot tell a replacement from a no-op")
 	}
 	stale := first
 
-	wearing, err := e.People.OrganizationLogoKey(human, orgID, people.LogoWide)
+	wearing, err := e.People.CompanyLogoKey(human, companyID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the company lost its logo to the re-read: %v", err)
 	}

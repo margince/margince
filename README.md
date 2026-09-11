@@ -124,7 +124,7 @@ background; `make dev-stop` stops them.
 make dev
 ```
 
-It boots **cold**. You get the organisation and the admin seat that the
+It boots **cold**. You get the company and the admin seat that the
 api creates from `config/margince.yaml`, and no other data. That is what a
 real first customer sees, so you develop against onboarding and empty
 states by default.
@@ -153,7 +153,7 @@ earlier session left data behind and you want the first-run experience
 again. Plain `make dev` keeps what is there.
 
 **Skip the cold start** with `make seed-dev` against a running stack. It
-adds demo people, organisations and deals, plus two rep seats and FX
+adds demo people, companies and deals, plus two rep seats and FX
 rates. The seed goes through the public API, so it produces the same audit
 trail and the same events as real traffic. You can run it twice safely.
 `make seed-reset` wipes the demo workspace for a clean re-seed.
@@ -243,7 +243,7 @@ enforce per-client throttling at the proxy.
   read from a request body. Publishing always goes through the outbox to
   Redis Streams, and consumers de-duplicate, because the bus delivers at
   least once.
-- **One installation, one organisation.** This is not multi-tenant
+- **One installation, one company.** This is not multi-tenant
   software, and it does not pretend to be. Boot refuses a second
   workspace. No table has row-level security. Isolation is SQL predicates
   in the application, reached only through the one workspace-transaction
@@ -290,7 +290,7 @@ this product will look for them.
   whose daily work is unattended outbound sequences is not served yet.
 - **Telephony and click-to-call.** Deferred in the contract.
 - **Hosted SaaS and multi-tenancy.** Not in this repository. One
-  installation serves one organisation, and boot refuses a second.
+  installation serves one company, and boot refuses a second.
 
 ## Working conventions (where findings go)
 

@@ -27,7 +27,7 @@ import (
 // twin of GmailConfig. ClientID+ClientSecret enable the background sync
 // (token refresh); StateKey+PublicBaseURL additionally enable the
 // connect/callback transport. Tenant narrows the identity endpoint to one
-// Microsoft 365 tenant; empty means "common" (any organization).
+// Microsoft 365 tenant; empty means "common" (any company).
 type GraphConfig struct {
 	ClientID     string
 	ClientSecret string

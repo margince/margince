@@ -22,7 +22,7 @@ import (
 //
 // This fails in BOTH directions on purpose. A field the detector writes and the
 // contract omits reaches a person as a database column — the leak that put
-// `full_name` and `org` on screen. A field the contract publishes and nothing
+// `full_name` and `company` on screen. A field the contract publishes and nothing
 // writes is a word three translations carry for a row that never arrives.
 func TestEveryDedupeEvidenceFieldIsNameableOnTheWire(t *testing.T) {
 	t.Parallel()

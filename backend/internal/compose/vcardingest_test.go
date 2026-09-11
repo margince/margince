@@ -293,18 +293,18 @@ func TestRecordStagingFailureRefusesAnUnboundActor(t *testing.T) {
 // must still produce the SAME key each, not each other's.
 func TestVCardStagingFailureKeyIgnoresPosition(t *testing.T) {
 	alice := people.VCardEntry{
-		FullName: "Alice Example", Organization: "Acme",
+		FullName: "Alice Example", Company: "Acme",
 		Emails: []people.VCardChannel{{Value: "alice@example.com"}},
 	}
 	// A second, independently-built value with the same content — not the
 	// same variable read twice — so the determinism check below is not the
 	// tautological "x == x" a linter (and a reader) would rightly distrust.
 	aliceAgain := people.VCardEntry{
-		FullName: "Alice Example", Organization: "Acme",
+		FullName: "Alice Example", Company: "Acme",
 		Emails: []people.VCardChannel{{Value: "alice@example.com"}},
 	}
 	bob := people.VCardEntry{
-		FullName: "Bob Example", Organization: "Acme",
+		FullName: "Bob Example", Company: "Acme",
 		Emails: []people.VCardChannel{{Value: "bob@example.com"}},
 	}
 

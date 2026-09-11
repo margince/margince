@@ -26,12 +26,13 @@ import {
   useSorMode,
   useViewerId,
 } from "./common";
+import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companies";
 import { DecisionsChip } from "./companyapprovals";
 import {
   addressFrom,
   companyEditFields,
-  mapOrgUpdate,
-  searchOrgTargets,
+  mapCompanyUpdate,
+  searchCompanyTargets,
 } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
@@ -47,7 +48,6 @@ import {
 } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { MergeAction } from "./merge";
-import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./organizations";
 import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
 
@@ -62,15 +62,14 @@ import { ShareAction } from "./share";
 // edit modal, which is what buried them behind a form the last time this
 // header changed shape.
 //
-// Split out of organizations.tsx because that file had grown past 2,700 lines
+// Split out of companies.tsx because that file had grown past 2,700 lines
 // carrying the list screen, the enrichment tools, the evidence cards and this
 // at once — and the V2 work adds to every one of them.
 
-type Organization = components["schemas"]["Organization"];
-type Organization360View = components["schemas"]["Organization360"];
-type Lifecycle = NonNullable<Organization["lifecycle"]>;
-type UpdateOrganizationRequest =
-  components["schemas"]["UpdateOrganizationRequest"];
+type Company = components["schemas"]["Company"];
+type Company360View = components["schemas"]["Company360"];
+type Lifecycle = NonNullable<Company["lifecycle"]>;
+type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 
 // The verbs a rep reaches for on an account, in the header where they can see
 // them. They were one button — "Log activity" — and setting what happens NEXT
@@ -83,12 +82,12 @@ type UpdateOrganizationRequest =
 // — a new thread filed under this company — rather than fabricating an
 // activity to reply to.
 export function CompanyPrimaryActions({
-  org,
+  company,
   composerOpen,
   onComposerOpen,
   archivedReasonId,
 }: Readonly<{
-  org: Organization;
+  company: Company;
   // The composer's open state belongs to the PAGE, not to this button: the
   // drawer opens into the right rail's column, so the rail has to know it is
   // open in order to stand down. Held here as a controlled pair rather than
@@ -113,7 +112,7 @@ export function CompanyPrimaryActions({
   // caller that forgot would otherwise turn an archived account back into one
   // that LOOKS writable, which is worse than saying it twice.
   const reasonId = archivedReasonId ?? ownReasonId;
-  const archived = org.archived_at ? reasonId : undefined;
+  const archived = company.archived_at ? reasonId : undefined;
   // useCanWrite, not useCan: the two log verbs below issue a POST, and a read
   // seat is refused before RBAC is consulted — the same rule personpage.tsx
   // states for the identical verb. Independent of `archived`: a live record a
@@ -147,7 +146,7 @@ export function CompanyPrimaryActions({
         </p>
       )}
       <WriteEmailAction
-        org={org}
+        company={company}
         open={composerOpen}
         onOpen={onComposerOpen}
         disabledReasonId={archived}
@@ -157,15 +156,15 @@ export function CompanyPrimaryActions({
           neither glyph says the verb on its own — a tick box is the mark for
           COMPLETING a task, not for filing one. The button sizes them. */}
       <LogActivityAction
-        entityType="organization"
-        entityId={org.id}
+        entityType="company"
+        entityId={company.id}
         triggerIcon={<FileText aria-hidden="true" />}
         disabled={logPending}
         disabledReasonId={logRefused}
       />
       <LogActivityAction
-        entityType="organization"
-        entityId={org.id}
+        entityType="company"
+        entityId={company.id}
         askedKind="task"
         triggerLabel="log.addTask"
         triggerIcon={<CheckSquare aria-hidden="true" />}
@@ -188,12 +187,12 @@ export function CompanyPrimaryActions({
 // type, and sending mail is not one of them. Hiding it would take a working
 // capability away from a mirrored workspace.
 function WriteEmailAction({
-  org,
+  company,
   open,
   onOpen,
   disabledReasonId,
 }: Readonly<{
-  org: Organization;
+  company: Company;
   open: boolean;
   onOpen: (open: boolean) => void;
   disabledReasonId?: string;
@@ -212,9 +211,9 @@ function WriteEmailAction({
         // the links payload follows the new one — a message composed for A,
         // filed against B, with nothing on screen saying so.
         <ComposeModal
-          key={org.id}
-          entityType="organization"
-          entityId={org.id}
+          key={company.id}
+          entityType="company"
+          entityId={company.id}
           open={open}
           onClose={() => onOpen(false)}
         />
@@ -223,7 +222,7 @@ function WriteEmailAction({
   );
 }
 
-// patchCompanyField sends one field through the ordinary organization PATCH,
+// patchCompanyField sends one field through the ordinary company PATCH,
 // with the record's own version as If-Match. The inline controls share it so a
 // lifecycle change and an owner change cannot end up with different conflict,
 // refusal or invalidation behaviour.
@@ -232,11 +231,14 @@ function WriteEmailAction({
 // thrown beside the control, and the server's problem detail is a better
 // sentence than any this layer could invent.
 async function patchCompanyField(
-  org: Organization,
-  body: UpdateOrganizationRequest,
+  company: Company,
+  body: UpdateCompanyRequest,
 ): Promise<void> {
-  const { error } = await api.PATCH("/organizations/{id}", {
-    params: { path: { id: org.id }, ...ifMatch(requireVersion(org.version)) },
+  const { error } = await api.PATCH("/companies/{id}", {
+    params: {
+      path: { id: company.id },
+      ...ifMatch(requireVersion(company.version)),
+    },
     body,
   });
   if (error) {
@@ -251,7 +253,7 @@ async function patchCompanyField(
 //
 // Exported so the rail's own Details grid (companyrail.tsx) wires its inline
 // edits to the SAME PATCH shape and the SAME three-key invalidation rather
-// than keeping a second copy: one inline organization edit and another that
+// than keeping a second copy: one inline company edit and another that
 // silently invalidates a different set of caches is the drift this file
 // already exists to prevent within its own component.
 // Through useMutation rather than a bare async call, so the write is a
@@ -259,39 +261,39 @@ async function patchCompanyField(
 // record's open history after any successful write hangs off the mutation
 // cache, and an inline edit that bypassed it left the history on screen showing
 // the state before the edit.
-export function useCompanyFieldPatch(org: Organization) {
+export function useCompanyFieldPatch(company: Company) {
   const queryClient = useQueryClient();
   const save = useMutation({
     // The record travels WITH the body, for the reason the invalidation below
-    // exists: `org.version` is the If-Match this write pins and it moves on
+    // exists: `company.version` is the If-Match this write pins and it moves on
     // every successful write. Read out of the closure, two edits from one
     // render would both send the version that predates the first, and the
     // second would fail a conflict check it should pass.
-    mutationFn: ({ org: target, body }: CompanyFieldPress) =>
+    mutationFn: ({ company: target, body }: CompanyFieldPress) =>
       patchCompanyField(target, body),
-    onSuccess: async (_result, { org: target }) => {
-      await queryClient.invalidateQueries({ queryKey: ["organizations"] });
+    onSuccess: async (_result, { company: target }) => {
+      await queryClient.invalidateQueries({ queryKey: ["companies"] });
       await queryClient.invalidateQueries({
-        queryKey: ["organization360", target.id],
+        queryKey: ["company360", target.id],
       });
       // The header renders from the SINGLE-record query, and its version is the
       // If-Match the next inline edit sends. Leaving it stale shows the old value
       // after a successful save and makes the following edit fail on a version
       // the server has already moved past.
       await queryClient.invalidateQueries({
-        queryKey: ["organization", target.id],
+        queryKey: ["company", target.id],
       });
     },
   });
-  return (body: UpdateOrganizationRequest) =>
-    save.mutateAsync({ org, body }).then(() => undefined);
+  return (body: UpdateCompanyRequest) =>
+    save.mutateAsync({ company, body }).then(() => undefined);
 }
 
 // What one inline account edit carries: the record it is written against and
 // the field values, so neither is read out of the closure at click time.
 type CompanyFieldPress = Readonly<{
-  org: Organization;
-  body: UpdateOrganizationRequest;
+  company: Company;
+  body: UpdateCompanyRequest;
 }>;
 
 // companyReadOnlyReason says why this record cannot be edited, when there is
@@ -302,20 +304,18 @@ type CompanyFieldPress = Readonly<{
 // Details grid gates its own edit affordances on `writable`, and the reason
 // an archived or overlay-mirrored account is read-only is a fact about the
 // RECORD, not about which component happens to be drawing it.
-export function useCompanyReadOnlyReason(
-  org: Organization,
-): string | undefined {
+export function useCompanyReadOnlyReason(company: Company): string | undefined {
   const t = useT();
   const overlay = useSorMode() === "overlay";
   // The per-ROW question only. The object grant and the seat ceiling are the
   // caller's to apply — every mount point here already ANDs `useCan` with this
   // reason, and folding them in again would answer "no grant" as though it were
   // a fact about the record.
-  const mine = org.writable ?? false;
+  const mine = company.writable ?? false;
   // Archived first: it is the reason a reader can act on, by restoring the
   // record. Ownership comes last because it is the standing state — a company
   // that is simply somebody else's is not a problem to solve, it is who owns it.
-  if (org.archived_at) {
+  if (company.archived_at) {
     return t("record.archivedReadOnly");
   }
   if (overlay) {
@@ -325,7 +325,7 @@ export function useCompanyReadOnlyReason(
   // claim door is deliberately open to every seat. Reporting it read-only here
   // would shut the one control that makes it writable, which is the opposite of
   // what this reason is for.
-  if (!mine && org.owner_id) {
+  if (!mine && company.owner_id) {
     return t("record.notYoursToChange");
   }
   return undefined;
@@ -339,25 +339,25 @@ export function useCompanyReadOnlyReason(
 // they last wrote. `hideLabel` is unconditional: both callers name the field
 // themselves, the badge beside the name and the grid's own label column.
 export function CompanyLifecycleControl({
-  org,
-}: Readonly<{ org: Organization }>) {
+  company,
+}: Readonly<{ company: Company }>) {
   const t = useT();
   // useCanWriteRecord, not useCanWrite: the grant and the seat say this ROLE
   // may change accounts, and the row says whether this one is theirs to change.
   // Gating on the grant alone offers an active control whose save is rejected.
-  const canUpdate = useCanWriteRecord("organization", org);
-  const readOnlyReason = useCompanyReadOnlyReason(org);
-  const patch = useCompanyFieldPatch(org);
+  const canUpdate = useCanWriteRecord("company", company);
+  const readOnlyReason = useCompanyReadOnlyReason(company);
+  const patch = useCompanyFieldPatch(company);
   return (
     <InlineChoice
-      label={t("org.lifecycle")}
+      label={t("company.lifecycle")}
       // The badge already reads as the account's standing beside its name —
       // a "Lifecycle: " prefix in front of it would be the one value on the
       // line saying its own name twice. `label` still drives the accessible
       // name (aria-label, sr-only form label), so a screen reader hears
       // "Lifecycle" regardless.
       hideLabel
-      value={org.lifecycle ?? "unknown"}
+      value={company.lifecycle ?? "unknown"}
       options={LIFECYCLE_OPTIONS.map((value) => ({
         value,
         label: t(LIFECYCLE_LABELS[value]),
@@ -372,9 +372,7 @@ export function CompanyLifecycleControl({
       )}
       onSave={(next) =>
         patch({
-          lifecycle: next as NonNullable<
-            UpdateOrganizationRequest["lifecycle"]
-          >,
+          lifecycle: next as NonNullable<UpdateCompanyRequest["lifecycle"]>,
         })
       }
     />
@@ -404,9 +402,9 @@ function unresolvedOwnerLabel(
 // FieldRow label column say "Owner" once instead of this control saying it
 // again — the header call site omits it and keeps its current prose.
 export function CompanyOwnerControl({
-  org,
+  company,
   hideLabel,
-}: Readonly<{ org: Organization; hideLabel?: boolean }>) {
+}: Readonly<{ company: Company; hideLabel?: boolean }>) {
   const t = useT();
   // Two different questions, deliberately.
   //
@@ -416,12 +414,12 @@ export function CompanyOwnerControl({
   // close the only door out of that state. The claim is its own authority and
   // the server holds it — this is the grant plus the seat, which is what the
   // claim endpoint itself requires.
-  const canClaim = useCanWrite("organization", "update");
+  const canClaim = useCanWrite("company", "update");
   const canUpdate =
-    useCanWriteRecord("organization", org) || (!org.owner_id && canClaim);
-  const readOnlyReason = useCompanyReadOnlyReason(org);
-  const patch = useCompanyFieldPatch(org);
-  const claim = useClaimRecord("organization", org.id, org.version);
+    useCanWriteRecord("company", company) || (!company.owner_id && canClaim);
+  const readOnlyReason = useCompanyReadOnlyReason(company);
+  const patch = useCompanyFieldPatch(company);
+  const claim = useClaimRecord("company", company.id, company.version);
   const viewerId = useViewerId();
   const roster = useRoster("user", true);
   const rosterPartial = useRosterPartial("user", true);
@@ -436,9 +434,12 @@ export function CompanyOwnerControl({
   // control honest about who owns it today even when it cannot resolve them;
   // which sentence is honest is `unresolvedOwnerLabel`'s question, not this
   // one's.
-  if (org.owner_id && !owners.some((user) => user.value === org.owner_id)) {
+  if (
+    company.owner_id &&
+    !owners.some((user) => user.value === company.owner_id)
+  ) {
     owners.unshift({
-      value: org.owner_id,
+      value: company.owner_id,
       label: unresolvedOwnerLabel(roster, rosterPartial, t),
     });
   }
@@ -446,7 +447,7 @@ export function CompanyOwnerControl({
   // carry "unassign" on the wire — a null is indistinguishable from an omitted
   // field — so offering it on an owned account would take the answer and drop
   // it. Present as the truthful current state, absent as an edit we cannot make.
-  const options = org.owner_id
+  const options = company.owner_id
     ? owners
     : [{ value: "", label: t("co.pulse.unowned") }, ...owners];
   return (
@@ -456,7 +457,7 @@ export function CompanyOwnerControl({
       // immediately before this control, and the grid has its own label
       // column. `label` still drives the accessible name either way.
       hideLabel={hideLabel}
-      value={org.owner_id ?? ""}
+      value={company.owner_id ?? ""}
       options={options}
       canEdit={canUpdate && !readOnlyReason}
       readOnlyReason={readOnlyReason}
@@ -480,7 +481,9 @@ export function CompanyOwnerControl({
       // leaves open to every seat — while naming a colleague stays a patch,
       // which an unbounded seat may make and a bounded one may not.
       onSave={(next) =>
-        !org.owner_id && next === viewerId ? claim() : patch({ owner_id: next })
+        !company.owner_id && next === viewerId
+          ? claim()
+          : patch({ owner_id: next })
       }
     />
   );
@@ -506,27 +509,27 @@ export function CompanyOwnerControl({
 // could only fail. The way IN stays open regardless — the owner control keeps
 // its claim door on its own predicate (CompanyOwnerControl), and that is the
 // verb an unowned account offers.
-export function useCompanyVerbRefusal(org: Organization): string | undefined {
+export function useCompanyVerbRefusal(company: Company): string | undefined {
   const t = useT();
-  return useRecordWriteRefusal("organization", org, {
+  return useRecordWriteRefusal("company", company, {
     archived: t("record.archivedReadOnly"),
     notYours: t("record.notYoursToChange"),
   });
 }
 
 function CompanyEditAction({
-  org,
+  company,
   overlay,
   disabledReasonId,
 }: Readonly<{
-  org: Organization;
+  company: Company;
   overlay: boolean;
   // Passed straight to EditAction: the id of the sentence saying why this
   // account takes no edits, when it does not.
   disabledReasonId?: string;
 }>) {
   const t = useT();
-  const cf = useObjectCustomFields("organization");
+  const cf = useObjectCustomFields("company");
   const roster = useRoster("user", true);
   const rosterPartial = useRosterPartial("user", true);
   // The roster hook serves users and teams alike, so narrow to the entries
@@ -542,14 +545,17 @@ function CompanyEditAction({
   // set, saving anything else would then force a reassignment nobody asked for.
   // The form names them exactly as the header does, off the same four readings:
   // the same roster read cannot be a departure here and a refusal there.
-  if (org.owner_id && !owners.some((user) => user.id === org.owner_id)) {
+  if (
+    company.owner_id &&
+    !owners.some((user) => user.id === company.owner_id)
+  ) {
     owners.push({
-      id: org.owner_id,
+      id: company.owner_id,
       display_name: unresolvedOwnerLabel(roster, rosterPartial, t),
     });
   }
   return (
-    <EditAction<Organization>
+    <EditAction<Company>
       disabledReasonId={disabledReasonId}
       // This one lives in the overflow menu, among rows that say what they do.
       labelled
@@ -559,29 +565,31 @@ function CompanyEditAction({
       }
       notice={overlay ? t("overlay.partialWriteBack") : undefined}
       fields={[
-        ...companyEditFields(owners, Boolean(org.owner_id), t),
+        ...companyEditFields(owners, Boolean(company.owner_id), t),
         ...cf.formFields,
       ]}
       record={{
-        id: org.id,
-        version: org.version,
-        display_name: org.display_name,
-        owner_id: org.owner_id ?? "",
-        legal_name: org.legal_name ?? "",
-        industry: org.industry ?? "",
-        size_band: org.size_band ?? "",
+        id: company.id,
+        version: company.version,
+        display_name: company.display_name,
+        owner_id: company.owner_id ?? "",
+        legal_name: company.legal_name ?? "",
+        industry: company.industry ?? "",
+        size_band: company.size_band ?? "",
         // Both stage fields prefill from the live record. relationship_types
         // is a REPLACE-SET: an unseeded multiselect collects as the empty
-        // string, which mapOrgUpdate reads as the honest empty set, so saving
+        // string, which mapCompanyUpdate reads as the honest empty set, so saving
         // an unrelated field would clear every type the account has.
-        lifecycle: org.lifecycle ?? "",
-        relationship_types: joinMultiselectValue(org.relationship_types ?? []),
-        linkedin_url: org.linkedin_url ?? "",
-        ...addressFrom(org.address),
-        // The repeatable domains field prefills from the org's live set;
+        lifecycle: company.lifecycle ?? "",
+        relationship_types: joinMultiselectValue(
+          company.relationship_types ?? [],
+        ),
+        linkedin_url: company.linkedin_url ?? "",
+        ...addressFrom(company.address),
+        // The repeatable domains field prefills from the company's live set;
         // its rows are string-keyed, so the primary flag stringifies to
         // match the "true"/"" the primary radio writes.
-        domains: (org.domains ?? []).map((domain) => ({
+        domains: (company.domains ?? []).map((domain) => ({
           domain: domain.domain,
           is_primary: String(domain.is_primary),
         })),
@@ -590,20 +598,20 @@ function CompanyEditAction({
         // rows were prefilled from. The mapper wants the record's own shape,
         // which the prefilled rows above have already been stringified out of;
         // the form never reads this key, because prefill walks the field list.
-        domains_at_open: org.domains ?? [],
-        ...cf.recordSlice(org),
+        domains_at_open: company.domains ?? [],
+        ...cf.recordSlice(company),
       }}
       update={async (values, rows, opened) => {
-        const { data, error } = await api.PATCH("/organizations/{id}", {
+        const { data, error } = await api.PATCH("/companies/{id}", {
           params: {
-            path: { id: org.id },
+            path: { id: company.id },
             ...ifMatch(requireVersion(opened?.version)),
           },
           body: {
-            ...mapOrgUpdate(
+            ...mapCompanyUpdate(
               values,
               rows ?? {},
-              opened?.domains_at_open as Organization["domains"],
+              opened?.domains_at_open as Company["domains"],
             ),
             // A DIFF, like the core half above. recordSlice is what the form
             // prefilled from, so it is what "unchanged" is measured against —
@@ -617,8 +625,8 @@ function CompanyEditAction({
         }
         return data;
       }}
-      invalidate="organizations"
-      recordKey="organization"
+      invalidate="companies"
+      recordKey="company"
       resolveExisting={(_code, existingId) => ({
         screen: "companies",
         id: existingId,
@@ -652,12 +660,12 @@ function CompanyEditAction({
  * current tense.
  */
 export function CompanyRelationshipBadges({
-  org,
-}: Readonly<{ org: Organization }>) {
+  company,
+}: Readonly<{ company: Company }>) {
   const t = useT();
   return (
     <>
-      {relationshipBadges(org, t).map((relType) => (
+      {relationshipBadges(company, t).map((relType) => (
         <Badge key={relType} tone="accent">
           {t(RELATIONSHIP_TYPE_LABELS[relType])}
         </Badge>
@@ -667,15 +675,15 @@ export function CompanyRelationshipBadges({
 }
 
 export function CompanyActionBadges({
-  org,
+  company,
   view,
   onOpenHistory,
   onSetUpPartner,
   onOpenDecisions,
   archivedReasonId,
 }: Readonly<{
-  org: Organization;
-  view?: Organization360View;
+  company: Company;
+  view?: Company360View;
   onOpenHistory: () => void;
   onSetUpPartner: () => void;
   onOpenDecisions?: () => void;
@@ -697,7 +705,7 @@ export function CompanyActionBadges({
   // whether these verbs are refused.
   const ownReasonId = useId();
   const menuReasonId = archivedReasonId ?? ownReasonId;
-  const refusedReason = useCompanyVerbRefusal(org);
+  const refusedReason = useCompanyVerbRefusal(company);
   const refusedByState = refusedReason ? menuReasonId : undefined;
   return (
     <>
@@ -706,7 +714,7 @@ export function CompanyActionBadges({
           record. Drawn here as well it was the same badge in two places on one
           screen, and a reader who found both had to satisfy themselves the two
           agreed. */}
-      {org.archived_at && <Badge tone="warn">{t("record.archived")}</Badge>}
+      {company.archived_at && <Badge tone="warn">{t("record.archived")}</Badge>}
       {/* The trigger is unconditional because the menu always holds something
           to say: an archived account's verbs are refused rather than dropped,
           and the sentence refusing them travels with them. Only a panel with
@@ -718,7 +726,7 @@ export function CompanyActionBadges({
           </p>
         )}
         <CompanyEditAction
-          org={org}
+          company={company}
           overlay={overlay}
           disabledReasonId={refusedByState}
         />
@@ -730,28 +738,25 @@ export function CompanyActionBadges({
         {!overlay && (
           <MergeAction
             disabledReasonId={refusedByState}
-            label={t("merge.org")}
-            sourceId={org.id}
-            sourceName={org.display_name}
-            searchTargets={searchOrgTargets}
+            label={t("merge.company")}
+            sourceId={company.id}
+            sourceName={company.display_name}
+            searchTargets={searchCompanyTargets}
             merge={async (targetId) => {
-              const { data, error } = await api.POST(
-                "/organizations/{id}/merge",
-                {
-                  params: {
-                    path: { id: org.id },
-                    ...ifMatch(requireVersion(org.version)),
-                  },
-                  body: { target_id: targetId },
+              const { data, error } = await api.POST("/companies/{id}/merge", {
+                params: {
+                  path: { id: company.id },
+                  ...ifMatch(requireVersion(company.version)),
                 },
-              );
+                body: { target_id: targetId },
+              });
               if (error) {
                 throwProblem(error, t);
               }
               return data;
             }}
-            invalidate="organizations"
-            recordKey="organization"
+            invalidate="companies"
+            recordKey="company"
             survivorRoute={(targetId) => ({
               screen: "companies",
               id: targetId,
@@ -764,8 +769,8 @@ export function CompanyActionBadges({
             DealBadges). */}
         {!overlay && (
           <ShareAction
-            recordType="organization"
-            recordId={org.id}
+            recordType="company"
+            recordId={company.id}
             disabledReasonId={refusedByState}
           />
         )}
@@ -788,11 +793,12 @@ export function CompanyActionBadges({
             for rather than offered. Below Full history rather than beside
             Merge: every row above is a verb EVERY record carries, in the order
             they all carry them, and every row below is this account's own. */}
-        {!overlay && !(org.relationship_types ?? []).includes("partner") && (
-          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
-            {t("org.partnerSetUp")}
-          </Button>
-        )}
+        {!overlay &&
+          !(company.relationship_types ?? []).includes("partner") && (
+            <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
+              {t("company.partnerSetUp")}
+            </Button>
+          )}
         {/* The account's own waiting decisions. It reads as a count in the
               header, which is a state, and this is the verb that answers it —
               so it sits with the other rare verbs rather than as a chip beside
@@ -808,7 +814,10 @@ export function CompanyActionBadges({
             when either says no. Hidden in overlay with the rest of the native
             verbs; the server refuses it there too. */}
         {!overlay && (
-          <CompanyRejectAction org={org} disabledReasonId={refusedByState} />
+          <CompanyRejectAction
+            company={company}
+            disabledReasonId={refusedByState}
+          />
         )}
         {/* Last, and set apart by the panel's own seam (atoms.css). This is
             the one verb here a reader cannot walk back from the header, so it
@@ -818,18 +827,20 @@ export function CompanyActionBadges({
           disabledReasonId={refusedByState}
           label={t("record.archive")}
           confirmText={t("record.archiveConfirm")}
-          archivedMessage={t("record.archiveDone", { name: org.display_name })}
+          archivedMessage={t("record.archiveDone", {
+            name: company.display_name,
+          })}
           archive={async () => {
-            const { data, error } = await api.DELETE("/organizations/{id}", {
-              params: { path: { id: org.id } },
+            const { data, error } = await api.DELETE("/companies/{id}", {
+              params: { path: { id: company.id } },
             });
             if (error) {
               throwProblem(error);
             }
             return data;
           }}
-          invalidate="organizations"
-          recordKey="organization"
+          invalidate="companies"
+          recordKey="company"
           onArchived={() => navigate({ screen: "companies" })}
         />
       </OverflowMenu>
@@ -854,10 +865,13 @@ export function displayHost(url: string): string {
 // the one identifying fact the reader had before. Shared by every reader of
 // the company's web presence, so the fallback lives in one place rather than
 // being re-derived per caller.
-function companyWebsite(org: Organization): string | undefined {
-  const primaryDomain = (org.domains ?? []).find((d) => d.is_primary)?.domain;
+function companyWebsite(company: Company): string | undefined {
+  const primaryDomain = (company.domains ?? []).find(
+    (d) => d.is_primary,
+  )?.domain;
   return (
-    org.website_url ?? (primaryDomain ? `https://${primaryDomain}` : undefined)
+    company.website_url ??
+    (primaryDomain ? `https://${primaryDomain}` : undefined)
   );
 }
 
@@ -868,25 +882,25 @@ function companyWebsite(org: Organization): string | undefined {
 // written and by whom — the readings row under the tabs carries the pipeline
 // and the last touch, so neither is repeated here.
 export function CompanyIdentityLine({
-  org,
+  company,
   view,
   loading,
 }: Readonly<{
-  org: Organization;
-  view?: Organization360View;
+  company: Company;
+  view?: Company360View;
   loading?: boolean;
 }>) {
   const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   const roster = useRoster("user", true);
-  const owner = org.owner_id
-    ? roster.data?.find((candidate) => candidate.id === org.owner_id)
+  const owner = company.owner_id
+    ? roster.data?.find((candidate) => candidate.id === company.owner_id)
     : undefined;
   const ownerName =
     owner && "display_name" in owner ? owner.display_name : undefined;
   const wayIn = loading ? undefined : view?.strength;
-  const website = companyWebsite(org);
+  const website = companyWebsite(company);
   const facts: ReactElement[] = [];
   if (website) {
     facts.push(
@@ -895,20 +909,22 @@ export function CompanyIdentityLine({
       </a>,
     );
   }
-  if (org.address?.city) {
-    facts.push(<span key="city">{org.address.city}</span>);
+  if (company.address?.city) {
+    facts.push(<span key="city">{company.address.city}</span>);
   }
-  if (org.industry) {
-    facts.push(<span key="industry">{org.industry}</span>);
+  if (company.industry) {
+    facts.push(<span key="industry">{company.industry}</span>);
   }
-  if (org.size_band) {
+  if (company.size_band) {
     facts.push(
-      <span key="size">{t("co.pulse.sizeBand", { band: org.size_band })}</span>,
+      <span key="size">
+        {t("co.pulse.sizeBand", { band: company.size_band })}
+      </span>,
     );
   }
   // An owner named only once the roster can name them: "Unassigned" while the
   // roster is still loading would call a real owner gone.
-  if (!org.owner_id || ownerName) {
+  if (!company.owner_id || ownerName) {
     facts.push(
       <span key="owner">
         {t("co.pulse.owner")} <b>{ownerName ?? t("co.pulse.unowned")}</b>
@@ -926,7 +942,7 @@ export function CompanyIdentityLine({
       </span>,
     );
   }
-  facts.push(<CompanyRecordProvenance key="provenance" org={org} />);
+  facts.push(<CompanyRecordProvenance key="provenance" company={company} />);
   // Clauses of ONE sentence about the account — what it is, where, how big,
   // whose — so they are strung on dots rather than left to stand apart.
   return (
@@ -940,7 +956,7 @@ export function CompanyIdentityLine({
 // provenance tag exists for, on every record page. A fact about the ROW rather
 // than about the account, so it closes the line in the meta ink rather than
 // opening it.
-function CompanyRecordProvenance({ org }: Readonly<{ org: Organization }>) {
+function CompanyRecordProvenance({ company }: Readonly<{ company: Company }>) {
   const t = useT();
   const { locale } = useLocale();
   const viewerId = useViewerId();
@@ -954,11 +970,11 @@ function CompanyRecordProvenance({ org }: Readonly<{ org: Organization }>) {
     <span className="co-record-provenance">
       <span>
         {t("co.pulse.created", {
-          when: formatDateAbbrev(org.created_at, locale, recordZone),
+          when: formatDateAbbrev(company.created_at, locale, recordZone),
         })}
       </span>
       <ProvenanceTag
-        provenance={provenanceOf(org.captured_by, viewerId)}
+        provenance={provenanceOf(company.captured_by, viewerId)}
         renderUser={authorName}
       />
     </span>

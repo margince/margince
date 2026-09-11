@@ -69,23 +69,23 @@ var ErrBackfillUnsupported = errors.New("capture: this provider does not support
 
 // BackfillRun is the CAP-DDL-4 row — the single-row activation read.
 type BackfillRun struct {
-	ID            ids.UUID
-	ConnectionID  ids.UUID
-	WindowMonths  int
-	AfterDate     time.Time
-	Status        string
-	Cursor        []byte
-	Estimate      *int
-	Scanned       int
-	Captured      int
-	Skipped       int
-	People        int
-	Organizations int
-	DedupeCands   int
-	StartedAt     *time.Time
-	CompletedAt   *time.Time
-	UpdatedAt     time.Time
-	ErrorClass    *string
+	ID           ids.UUID
+	ConnectionID ids.UUID
+	WindowMonths int
+	AfterDate    time.Time
+	Status       string
+	Cursor       []byte
+	Estimate     *int
+	Scanned      int
+	Captured     int
+	Skipped      int
+	People       int
+	Companies    int
+	DedupeCands  int
+	StartedAt    *time.Time
+	CompletedAt  *time.Time
+	UpdatedAt    time.Time
+	ErrorClass   *string
 }
 
 // connectionForUser resolves the calling user's connection for provider.
@@ -264,14 +264,14 @@ func latestBackfill(ctx context.Context, tx pgx.Tx, connID ids.UUID) (*BackfillR
 	row := tx.QueryRow(ctx, `
 		SELECT b.id, b.connection_id, b.window_months, b.after_date, b.status, b.cursor, b.total_estimate,
 		       b.scanned + b.inflight_scanned, b.captured + b.inflight_captured, b.skipped + b.inflight_skipped,
-		       b.people_created, b.organizations_created,
+		       b.people_created, b.companies_created,
 		       b.dedupe_candidates,
 		       b.started_at, b.completed_at, b.updated_at, b.last_error_class
 		FROM capture_backfill b WHERE b.connection_id = $1
 		ORDER BY b.created_at DESC LIMIT 1`, connID)
 	var b BackfillRun
 	err := row.Scan(&b.ID, &b.ConnectionID, &b.WindowMonths, &b.AfterDate, &b.Status, &b.Cursor, &b.Estimate,
-		&b.Scanned, &b.Captured, &b.Skipped, &b.People, &b.Organizations, &b.DedupeCands,
+		&b.Scanned, &b.Captured, &b.Skipped, &b.People, &b.Companies, &b.DedupeCands,
 		&b.StartedAt, &b.CompletedAt, &b.UpdatedAt, &b.ErrorClass)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil //nolint:nilnil // absence IS the answer: the contract's state "none", not an error

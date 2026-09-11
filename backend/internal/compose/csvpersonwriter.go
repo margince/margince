@@ -103,7 +103,7 @@ const personEmailClaimedReason = "this email address is already held in the CRM,
 // personCollides answers whether this row names someone the caller can already
 // see, running the same ladder the create path runs.
 //
-// The visibility asymmetry with the organization arm is real and is not an
+// The visibility asymmetry with the company arm is real and is not an
 // oversight: DedupePerson answers ONE person, not a ranked set, so there is no
 // candidate behind the winner for an invisible record to mask. The single match
 // is the only row to ask about, and asking about it is the whole filter.

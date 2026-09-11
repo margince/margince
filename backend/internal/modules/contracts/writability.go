@@ -17,7 +17,7 @@ package contracts
 //
 // The anchor rule is visibility.go's, restated once here rather than re-derived:
 // a contract WITH a deal is judged by that deal, and one without is judged by
-// its organization. Widening a deal-anchored contract to its company would hand
+// its company. Widening a deal-anchored contract to its company would hand
 // a caller agreements attached to deals they cannot see; narrowing it to both
 // would refuse a legitimate editor who holds only the deal.
 
@@ -103,5 +103,5 @@ func ensureAnchorWritable(ctx context.Context, tx pgx.Tx, contract crmcontracts.
 	if err != nil {
 		return err
 	}
-	return auth.EnsureWritable(ctx, tx, organizationTable, anchor)
+	return auth.EnsureWritable(ctx, tx, companyTable, anchor)
 }

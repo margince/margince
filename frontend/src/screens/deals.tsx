@@ -168,7 +168,7 @@ import { WON_REASON_LABELS, WON_REASONS, type WonReason } from "./winreason";
 // across currencies).
 
 type Deal = components["schemas"]["Deal"];
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 type Stage = components["schemas"]["Stage"];
 type Pipeline = components["schemas"]["Pipeline"];
 type Offer = components["schemas"]["Offer"];
@@ -238,7 +238,7 @@ type DealFilters = {
   includeArchived: boolean;
   filters: Record<string, string>;
   // Overlay mode reads a mirror that refuses every dial below (sort, and the
-  // pipeline/stage/owner/org filters) with a 422 — so in overlay we send none
+  // pipeline/stage/owner/company filters) with a 422 — so in overlay we send none
   // of them and let the deals list come back flat. The screen forces the table
   // view and hides the pickers to match (a stage-keyed board cannot place a
   // mirror deal, whose pipeline/stage is null in overlay, OVA-MAP-6).
@@ -298,7 +298,7 @@ function forecastCategoryFilter(
 }
 
 // dealsQueryParams builds the native board's /deals query — the full dial
-// set (pipeline/stage/owner/org filters + sort). It is never called in
+// set (pipeline/stage/owner/company filters + sort). It is never called in
 // overlay mode (useDeals is disabled there and OverlayDealsTable sends its
 // own overlay-shaped params), so it carries no overlay branch.
 function dealsQueryParams(f: DealFilters) {
@@ -310,8 +310,8 @@ function dealsQueryParams(f: DealFilters) {
     sort: f.sort || undefined,
     stage_id: filters.stage_id || undefined,
     owner_id: filters.owner_id || undefined,
-    organization_id: filters.organization_id || undefined,
-    partner_org_id: filters.partner_org_id || undefined,
+    company_id: filters.company_id || undefined,
+    partner_company_id: filters.partner_company_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
     forecast_category: forecastCategoryFilter(filters.forecast_category),
     partner_sourced: filters.partner_sourced === "true" ? true : undefined,
@@ -372,8 +372,9 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (f.pipelineId) out.pipeline_id = f.pipelineId;
   if (filters.owner_id) out.owner_id = filters.owner_id;
-  if (filters.organization_id) out.organization_id = filters.organization_id;
-  if (filters.partner_org_id) out.partner_org_id = filters.partner_org_id;
+  if (filters.company_id) out.company_id = filters.company_id;
+  if (filters.partner_company_id)
+    out.partner_company_id = filters.partner_company_id;
   if (filters.stalled === "true") out.stalled = true;
   if (filters.partner_sourced === "true") out.partner_sourced = true;
   return out;
@@ -535,24 +536,24 @@ function OverlayDealsTable({
 }
 
 /** A company's display name and the mark drawn beside it. */
-type OrgMark = { name: string; logoUrl?: string | null };
+type CompanyMark = { name: string; logoUrl?: string | null };
 
 /**
- * Every company the loaded deals name, id → mark (`useOrgMarks` resolves them).
+ * Every company the loaded deals name, id → mark (`useCompanyMarks` resolves them).
  *
  * A company this reader may not read is in no map: the wire sends
- * `organization_id` as null and names it in `masked_fields`, so what the card
+ * `company_id` as null and names it in `masked_fields`, so what the card
  * needs there is the withheld READING, which the card itself spells as the mask
  * — not a name this screen could supply.
  */
-export type CompanyMarks = ReadonlyMap<string, OrgMark>;
+export type CompanyMarks = ReadonlyMap<string, CompanyMark>;
 
 /**
  * What the screen knows about the companies its deals name.
  *
  * `unreadable` is the reading the board used to lose. A read that FAILED — a
  * 403 because the reader holds row visibility of the company but no
- * `organization:read` grant, a 5xx, a dropped connection — is not the same fact
+ * `company:read` grant, a 5xx, a dropped connection — is not the same fact
  * as a deal that names no company, and collapsing the two told the reader the
  * most misleading of the two. The table has always had this reading through
  * `EntityRef`'s failed state; this is the board's half of it.
@@ -580,28 +581,30 @@ function dealCompany(
   naming: CompanyNaming,
 ): Pick<
   BoardDeal,
-  "org" | "orgHref" | "orgLogoUrl" | "orgWithheld" | "orgUnreadable"
+  | "company"
+  | "companyHref"
+  | "companyLogoUrl"
+  | "companyWithheld"
+  | "companyUnreadable"
 > {
-  if (deal.masked_fields?.includes("organization_id")) {
-    return { org: "", orgWithheld: true };
+  if (deal.masked_fields?.includes("company_id")) {
+    return { company: "", companyWithheld: true };
   }
-  if (deal.organization_id && naming.unreadable.has(deal.organization_id)) {
-    return { org: "", orgUnreadable: true };
+  if (deal.company_id && naming.unreadable.has(deal.company_id)) {
+    return { company: "", companyUnreadable: true };
   }
-  const mark = deal.organization_id
-    ? naming.marks.get(deal.organization_id)
-    : undefined;
+  const mark = deal.company_id ? naming.marks.get(deal.company_id) : undefined;
   return {
-    org: mark?.name ?? "",
+    company: mark?.name ?? "",
     // The company's address, built HERE because this is the tier that holds
     // routes. A deal with no company, or one whose name has not resolved,
     // gets none — the card then draws prose, which is what a slot with no
     // name has to say anyway.
-    orgHref:
-      deal.organization_id && mark?.name
-        ? routeHash({ screen: "companies", id: deal.organization_id })
+    companyHref:
+      deal.company_id && mark?.name
+        ? routeHash({ screen: "companies", id: deal.company_id })
         : undefined,
-    orgLogoUrl: mark?.logoUrl,
+    companyLogoUrl: mark?.logoUrl,
   };
 }
 
@@ -667,8 +670,8 @@ function dealEditRecord(deal: Deal): Record<
         : "",
     currency: deal.currency ?? "",
     owner_id: deal.owner_id ?? "",
-    organization_id: deal.organization_id ?? "",
-    partner_org_id: deal.partner_org_id ?? "",
+    company_id: deal.company_id ?? "",
+    partner_company_id: deal.partner_company_id ?? "",
     partner_attribution: deal.partner_attribution ?? "",
     forecast_category: deal.forecast_category ?? "",
     expected_close_date: deal.expected_close_date ?? "",
@@ -791,22 +794,18 @@ export function mapDealUpdate(
     patch.amount_minor = amount ? toMinorUnits(Number(amount), currency) : null;
   }
   onMove("currency", "currency", () => currency || undefined);
-  onMove(
-    "organization_id",
-    "organization_id",
-    () => str(values.organization_id) || null,
-  );
+  onMove("company_id", "company_id", () => str(values.company_id) || null);
   onMove("owner_id", "owner_id", () => str(values.owner_id) || null);
   onMove(
-    "partner_org_id",
-    "partner_org_id",
-    () => str(values.partner_org_id) || null,
+    "partner_company_id",
+    "partner_company_id",
+    () => str(values.partner_company_id) || null,
   );
   // Only alongside a partner. Clearing the partner clears what they did with
   // it — the two are one fact, stored under one CHECK — so sending the
   // attribution's own null beside it would name a claim with nobody left to
   // attribute it to, which the API refuses.
-  if (str(values.partner_org_id)) {
+  if (str(values.partner_company_id)) {
     onMove("partner_attribution", "partner_attribution", () =>
       partnerAttribution(str(values.partner_attribution)),
     );
@@ -829,7 +828,7 @@ export function mapDealUpdate(
 /**
  * The patch minus every field the reader was not shown.
  *
- * `partner_org_id` carries its attribution: the server withholds the pair
+ * `partner_company_id` carries its attribution: the server withholds the pair
  * together, so returning one half of it would decide what a partner nobody
  * could see is owed.
  */
@@ -843,7 +842,7 @@ function withoutMasked(
   const out: Record<string, unknown> = { ...patch };
   for (const field of masked) {
     delete out[field];
-    if (field === "partner_org_id") {
+    if (field === "partner_company_id") {
       delete out.partner_attribution;
     }
     if (field === "amount_minor") {
@@ -879,8 +878,8 @@ export function mapDealCreate(
     // priced the deal a hundredfold and nothing downstream could tell.
     amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
     currency,
-    organization_id: str(values.organization_id) || null,
-    partner_org_id: str(values.partner_org_id) || null,
+    company_id: str(values.company_id) || null,
+    partner_company_id: str(values.partner_company_id) || null,
     // The empty option means the caller made no claim, and null is how that
     // travels: the server then reads a named partner as `sourced`, which is
     // what the option says it does. An attribution naming no partner is
@@ -918,7 +917,7 @@ const ATTRIBUTION_OPTIONS: { value: string; label: MessageKey }[] = [
  * The companies a deal may name as the partner who brought it.
  *
  * Only companies that ARE partners: the picker once offered every
- * organization, which let a deal be attributed to an ordinary customer — and
+ * company, which let a deal be attributed to an ordinary customer — and
  * an attribution to a company with no partner row has no margin tier behind
  * it, so it looks attributed and silently never earns anything.
  *
@@ -927,7 +926,7 @@ const ATTRIBUTION_OPTIONS: { value: string; label: MessageKey }[] = [
  * question to ask, and the two fields stay off the form entirely.
  */
 export function usePartnerOptions(
-  orgs: { id: string; display_name: string }[],
+  companies: { id: string; display_name: string }[],
 ): { value: string; label: string }[] {
   const partners = useQuery({
     queryKey: ["partners", "options"],
@@ -943,9 +942,9 @@ export function usePartnerOptions(
     staleTime: 60_000,
   });
   // The names come from a read of the PARTNER companies rather than from
-  // whatever page of organizations the screen happens to hold.
+  // whatever page of companies the screen happens to hold.
   //
-  // The caller's `orgs` is one capped page (50 on the deals screen), and
+  // The caller's `companies` is one capped page (50 on the deals screen), and
   // intersecting the two dropped any partner whose company fell outside it —
   // silently, and differently depending on which screen asked. That is
   // survivable for a form picker, which injects the deal's own stored partner
@@ -958,7 +957,7 @@ export function usePartnerOptions(
       // relationship_type=partner reads the same set from the other side, so
       // the page is partner companies rather than the first N companies of
       // any kind. The cap matches /partners' own.
-      const { data, error } = await api.GET("/organizations", {
+      const { data, error } = await api.GET("/companies", {
         params: { query: { relationship_type: "partner", limit: 200 } },
       });
       if (error) {
@@ -970,17 +969,17 @@ export function usePartnerOptions(
   // Still the caller's page as a fallback while the keyed read is in flight,
   // so the options do not blink empty on every mount.
   const named = new Map<string, string>(
-    orgs.map((org) => [org.id, org.display_name]),
+    companies.map((company) => [company.id, company.display_name]),
   );
-  for (const org of names.data ?? []) {
-    named.set(org.id, org.display_name);
+  for (const company of names.data ?? []) {
+    named.set(company.id, company.display_name);
   }
   return (partners.data ?? []).flatMap((partner) => {
-    const label = named.get(partner.organization_id);
-    // A partner whose organization the caller cannot read is left out rather
+    const label = named.get(partner.company_id);
+    // A partner whose company the caller cannot read is left out rather
     // than offered as a bare id: picking it would name a company the picker
     // could not show them.
-    return label ? [{ value: partner.organization_id, label }] : [];
+    return label ? [{ value: partner.company_id, label }] : [];
   });
 }
 
@@ -1021,8 +1020,8 @@ function partnerFields(
     // here to attribute either. `mapDealUpdate` leaves both out of the patch.
     return [
       {
-        key: "partner_org_id",
-        label: "deal.partnerOrg",
+        key: "partner_company_id",
+        label: "deal.partnerCompany",
         type: "select",
         options: [{ value: "", label: t("deal.partnerWithheld") }],
       },
@@ -1041,8 +1040,8 @@ function partnerFields(
       : partnerOptions;
   return [
     {
-      key: "partner_org_id",
-      label: "deal.partnerOrg",
+      key: "partner_company_id",
+      label: "deal.partnerCompany",
       type: "select",
       options,
     },
@@ -1052,7 +1051,7 @@ function partnerFields(
       key: "partner_attribution",
       label: "deal.partnerAttribution",
       type: "select",
-      showWhen: (values) => Boolean(values.partner_org_id),
+      showWhen: (values) => Boolean(values.partner_company_id),
       options: ATTRIBUTION_OPTIONS.map((o) => ({
         value: o.value,
         label: t(o.label),
@@ -1064,21 +1063,23 @@ function partnerFields(
 /**
  * The partner a deal already names, ready to stand as its own option.
  *
- * Falls back to the raw id when the org list cannot name it — an unreadable or
+ * Falls back to the raw id when the company list cannot name it — an unreadable or
  * off-page company. Ugly, and correct: the alternative is a blank select whose
  * save clears an attribution the reader never touched.
  */
 function attributedPartner(
   deal: Deal,
-  orgs: { id: string; display_name: string }[],
+  companies: { id: string; display_name: string }[],
 ): { id: string; label: string } | undefined {
-  if (!deal.partner_org_id) {
+  if (!deal.partner_company_id) {
     return undefined;
   }
-  const named = orgs.find((org) => org.id === deal.partner_org_id);
+  const named = companies.find(
+    (company) => company.id === deal.partner_company_id,
+  );
   return {
-    id: deal.partner_org_id,
-    label: named?.display_name ?? deal.partner_org_id,
+    id: deal.partner_company_id,
+    label: named?.display_name ?? deal.partner_company_id,
   };
 }
 
@@ -1100,27 +1101,27 @@ function attributedPartner(
 function companyEditField(
   t: (k: MessageKey) => string,
   opts: {
-    orgs: { id: string; display_name: string }[];
+    companies: { id: string; display_name: string }[];
     masked: readonly string[];
     currentCompany?: { id: string; label: string };
   },
 ): CreateField {
-  if (opts.masked.includes("organization_id")) {
+  if (opts.masked.includes("company_id")) {
     return {
-      key: "organization_id",
-      label: "create.organization",
+      key: "company_id",
+      label: "create.relatedCompany",
       type: "select",
       options: [{ value: "", label: t("deal.companyWithheld") }],
     };
   }
-  const options = opts.orgs.map((org) => ({
-    value: org.id,
-    label: org.display_name,
+  const options = opts.companies.map((company) => ({
+    value: company.id,
+    label: company.display_name,
   }));
   const current = opts.currentCompany;
   return {
-    key: "organization_id",
-    label: "create.organization",
+    key: "company_id",
+    label: "create.relatedCompany",
     type: "select",
     options:
       current && !options.some((option) => option.value === current.id)
@@ -1132,7 +1133,7 @@ function companyEditField(
 export function dealEditFields(
   t: (k: MessageKey) => string,
   opts: {
-    orgs: { id: string; display_name: string }[];
+    companies: { id: string; display_name: string }[];
     partnerOptions: { value: string; label: string }[];
     // The partner this deal ALREADY names, when it names one. Keeps the field
     // (and its stored value) on a form whose pickable list does not reach it.
@@ -1185,7 +1186,7 @@ export function dealEditFields(
       t,
       opts.partnerOptions,
       opts.attributedPartner,
-      opts.masked.includes("partner_org_id"),
+      opts.masked.includes("partner_company_id"),
     ),
     {
       key: "forecast_category",
@@ -1273,7 +1274,7 @@ export function buildStageTotals(
 /**
  * The company marks the board draws, for every company its cards name.
  *
- * The create form's picker reads ONE capped page of organizations, and the
+ * The create form's picker reads ONE capped page of companies, and the
  * board took its marks from exactly that page — so a deal whose company fell
  * outside it drew a card with no company row at all, which a reader reads as a
  * deal nobody has linked. The set that has to be resolvable is the set the
@@ -1284,20 +1285,20 @@ export function buildStageTotals(
  * A withheld company is never among them — the wire sends no id to read — so
  * this cannot turn a mask into a name.
  */
-export function useOrgMarks(
+export function useCompanyMarks(
   deals: Deal[],
-  page: Organization[],
+  page: Company[],
   pageSettled: boolean,
 ): CompanyNaming {
-  const fromPage = new Map<string, OrgMark>(
-    page.map((org) => [
-      org.id,
-      { name: org.display_name, logoUrl: org.logo_url },
+  const fromPage = new Map<string, CompanyMark>(
+    page.map((company) => [
+      company.id,
+      { name: company.display_name, logoUrl: company.logo_url },
     ]),
   );
   // Nothing is fanned out until the picker's page has ANSWERED. The two reads
   // are issued together and settle in no fixed order, so on every render where
-  // the deals have arrived and the organizations have not, `fromPage` is empty
+  // the deals have arrived and the companies have not, `fromPage` is empty
   // and every company a loaded deal names looks unresolved — one request each,
   // for a page that is about to answer most of them. A cold board paint fired
   // up to a hundred, and nothing un-sends a request.
@@ -1305,8 +1306,8 @@ export function useOrgMarks(
     ? [
         ...new Set(
           deals.flatMap((deal) =>
-            deal.organization_id && !fromPage.has(deal.organization_id)
-              ? [deal.organization_id]
+            deal.company_id && !fromPage.has(deal.company_id)
+              ? [deal.company_id]
               : [],
           ),
         ),
@@ -1314,9 +1315,9 @@ export function useOrgMarks(
     : [];
   const reads = useQueries({
     queries: unnamed.map((id) => ({
-      queryKey: ["organizations", "mark", id],
-      queryFn: async (): Promise<OrgMark | null> => {
-        const { data, error, response } = await api.GET("/organizations/{id}", {
+      queryKey: ["companies", "mark", id],
+      queryFn: async (): Promise<CompanyMark | null> => {
+        const { data, error, response } = await api.GET("/companies/{id}", {
           params: { path: { id } },
         });
         if (error) {
@@ -1416,7 +1417,7 @@ export function buildColumns(
 function CompanyCell({
   deal,
   field,
-}: Readonly<{ deal: Deal; field: "organization_id" | "partner_org_id" }>) {
+}: Readonly<{ deal: Deal; field: "company_id" | "partner_company_id" }>) {
   if (deal.masked_fields?.includes(field)) {
     return <FieldGuard mode="masked" />;
   }
@@ -1424,7 +1425,7 @@ function CompanyCell({
   if (!id) {
     return null;
   }
-  return <EntityRef kind="organization" id={id} asText />;
+  return <EntityRef kind="company" id={id} asText />;
 }
 
 // The amount's three readings, in one place because two tables draw them: the
@@ -1473,7 +1474,7 @@ function dealColumns(
     tagsColumn<Deal>(t),
     {
       // The company the deal is with. Withheld is not empty: the wire sends a
-      // null `organization_id` and names the field in `masked_fields` when the
+      // null `company_id` and names the field in `masked_fields` when the
       // reader may not read that company, and a blank cell cannot be told
       // apart from a deal nobody has linked.
       //
@@ -1483,9 +1484,9 @@ function dealColumns(
       // what ordering it means. A company this reader may not open sorts last,
       // with the rest, because ordering by a name is reading it.
       key: "company",
-      header: t("create.organization"),
-      sort: "organization_id",
-      cell: (deal) => <CompanyCell deal={deal} field="organization_id" />,
+      header: t("create.relatedCompany"),
+      sort: "company_id",
+      cell: (deal) => <CompanyCell deal={deal} field="company_id" />,
     },
     {
       // Which partner brought the deal, when one did. Optional: a workspace
@@ -1494,9 +1495,9 @@ function dealColumns(
       // and goes cannot be scanned down.
       //
       key: "partner",
-      header: t("deal.partnerOrg"),
-      sort: "partner_org_id",
-      cell: (deal) => <CompanyCell deal={deal} field="partner_org_id" />,
+      header: t("deal.partnerCompany"),
+      sort: "partner_company_id",
+      cell: (deal) => <CompanyCell deal={deal} field="partner_company_id" />,
     },
     {
       key: "stage",
@@ -1725,7 +1726,7 @@ export function dealStatusTone(
 }
 
 // Bespoke selects for the filters whose option labels are runtime strings
-// (pipeline/stage/org names) — a chip's option label is a MessageKey, so
+// (pipeline/stage/company names) — a chip's option label is a MessageKey, so
 // these three cannot go through ListTable's chips. Each writes into the
 // same ListQuery.filters bag the table's chips read, deleting the key on a
 // blank choice so the two stay in one coherent query state.
@@ -1745,19 +1746,22 @@ function setOrClearFilter(
   });
 }
 
-// The company filter's own value source: a workspace holds more organizations
-// than any fixed list should offer, so the value step searches /organizations
+// The company filter's own value source: a workspace holds more companies
+// than any fixed list should offer, so the value step searches /companies
 // by name instead of one this screen happened to fetch for something else.
 async function searchCompanies(
   query: string,
 ): Promise<readonly { value: string; label: string }[]> {
-  const { data, error } = await api.GET("/organizations", {
+  const { data, error } = await api.GET("/companies", {
     params: { query: { q: query, limit: 20 } },
   });
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((org) => ({ value: org.id, label: org.display_name }));
+  return data.data.map((company) => ({
+    value: company.id,
+    label: company.display_name,
+  }));
 }
 
 // Whether the reader has narrowed this list themselves.
@@ -1792,9 +1796,9 @@ function dealFilterChips(
       options: stages.map((stage) => ({ value: stage.id, label: stage.name })),
     },
     {
-      key: "organization_id",
-      label: t("create.organization"),
-      allLabel: t("deals.filterOrgAll"),
+      key: "company_id",
+      label: t("create.relatedCompany"),
+      allLabel: t("deals.filterCompanyAll"),
       options: [],
       search: searchCompanies,
     },
@@ -1885,8 +1889,8 @@ function DealBoardBody({
   effectivePipeline,
   loadedDeals,
   stageTotalsQuery,
-  orgs,
-  orgsSettled,
+  companies,
+  companiesSettled,
   openDeal,
   cardDragHandlers,
   columnDropHandlers,
@@ -1901,8 +1905,8 @@ function DealBoardBody({
   // totalsWithheldBecause where the query's own `enabled` reads it, so the
   // column's explanation and the query's absence cannot disagree.
   totalsWithheld?: MessageKey;
-  orgs: Organization[];
-  orgsSettled: boolean;
+  companies: Company[];
+  companiesSettled: boolean;
   openDeal: ComponentProps<typeof PipelineBoard>["onOpen"];
   cardDragHandlers: ComponentProps<typeof PipelineBoard>["cardDragHandlers"];
   columnDropHandlers: ComponentProps<
@@ -1918,13 +1922,17 @@ function DealBoardBody({
     loadedDeals.some((deal) => Boolean(deal.owner_id)),
   );
   // Every company the CARDS name. The picker's capped page answers most of them
-  // for free; the rest are resolved by id (useOrgMarks), so no card is left
+  // for free; the rest are resolved by id (useCompanyMarks), so no card is left
   // standing over a company the board simply failed to look up.
   //
   // Only the board asks: the table names its companies through the same
   // per-record reference every other cross-record cell uses, and handing it
   // this map as well would read each company twice.
-  const orgMarks = useOrgMarks(loadedDeals, orgs, orgsSettled);
+  const companyMarks = useCompanyMarks(
+    loadedDeals,
+    companies,
+    companiesSettled,
+  );
   return (
     <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
       {() =>
@@ -1949,7 +1957,7 @@ function DealBoardBody({
                   effectivePipeline.stages ?? [],
                   loadedDeals,
                   stageTotalsQuery.data ?? new Map(),
-                  orgMarks,
+                  companyMarks,
                   totalsWithheld ? t(totalsWithheld) : undefined,
                   rosterOwnerNaming(roster),
                 )}
@@ -2227,14 +2235,14 @@ function dealSurfaceChips({
     // company this reader cannot open is not offered — picking it
     // would name a company the screen could not then show them.
     // Present whenever there are partners to pick OR one is already
-    // applied. A saved view can restore a partner_org_id after the
+    // applied. A saved view can restore a partner_company_id after the
     // programme was wound down or while the options are still in
     // flight, and hiding the chip then would leave the list narrowed
     // by a filter with no dial to see or clear it.
     ...(partnerOptions.length > 0 || partnerApplied
       ? [
           {
-            key: "partner_org_id" as const,
+            key: "partner_company_id" as const,
             label: "deals.filterPartner" as const,
             allLabel: "deals.filterPartnerAnyOne" as const,
             // `text`, not `label`: a partner's name is the server's
@@ -2263,7 +2271,7 @@ function DealCreateAction({
   pipeline,
   cf,
   openStages,
-  orgs,
+  companies,
   partnerOptions,
   startOpen,
 }: Readonly<{
@@ -2272,7 +2280,7 @@ function DealCreateAction({
   // screen's own rather than waiting for the pipelines this form is gated on.
   cf: ObjectCustomFields;
   openStages: Stage[];
-  orgs: Organization[];
+  companies: Company[];
   partnerOptions: { value: string; label: string }[];
   startOpen: boolean;
 }>) {
@@ -2300,7 +2308,7 @@ function DealCreateAction({
     // so the deal can name it at birth.
     const projectId = await resolveDealProject(
       values,
-      values.organization_id?.trim() || null,
+      values.company_id?.trim() || null,
       t,
     );
     const { data, error } = await api.POST("/deals", {
@@ -2325,7 +2333,7 @@ function DealCreateAction({
       screen="deals"
       create={createDeal}
       startOpen={startOpen}
-      onValuesChange={(values) => setFormCompany(values.organization_id ?? "")}
+      onValuesChange={(values) => setFormCompany(values.company_id ?? "")}
       fields={[
         { key: "name", label: "create.dealName", required: true },
         { key: "amount", label: "create.amount", type: "number" },
@@ -2350,12 +2358,12 @@ function DealCreateAction({
           })),
         },
         {
-          key: "organization_id",
-          label: "create.organization",
+          key: "company_id",
+          label: "create.relatedCompany",
           type: "select",
-          options: orgs.map((org) => ({
-            value: org.id,
-            label: org.display_name,
+          options: companies.map((company) => ({
+            value: company.id,
+            label: company.display_name,
           })),
         },
         // The body of work this deal is about, chosen or started here: a
@@ -2580,10 +2588,10 @@ export function DealsScreen({
     },
   };
 
-  const orgsQuery = useQuery({
-    queryKey: ["organizations"],
+  const companiesQuery = useQuery({
+    queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations", {
+      const { data, error } = await api.GET("/companies", {
         params: { query: { limit: 50 } },
       });
       if (error) {
@@ -2593,7 +2601,7 @@ export function DealsScreen({
     },
   });
 
-  const partnerOptions = usePartnerOptions(orgsQuery.data?.data ?? []);
+  const partnerOptions = usePartnerOptions(companiesQuery.data?.data ?? []);
 
   // Open-stage targets only: a deal is born open (INV-CLOSE-PAST twin rule);
   // won/lost are reached through the confirmed advance, never at create.
@@ -2611,7 +2619,7 @@ export function DealsScreen({
       pipeline={effectivePipeline}
       cf={cf}
       openStages={openStages}
-      orgs={orgsQuery.data?.data ?? []}
+      companies={companiesQuery.data?.data ?? []}
       partnerOptions={partnerOptions}
       startOpen={startCreating}
     />
@@ -2660,8 +2668,8 @@ export function DealsScreen({
         loadedDeals={loadedDeals}
         stageTotalsQuery={stageTotalsQuery}
         totalsWithheld={totalsWithheld}
-        orgs={orgsQuery.data?.data ?? []}
-        orgsSettled={orgsQuery.isSuccess}
+        companies={companiesQuery.data?.data ?? []}
+        companiesSettled={companiesQuery.isSuccess}
         openDeal={openDeal}
         cardDragHandlers={cardDragHandlers}
         columnDropHandlers={columnDropHandlers}
@@ -2710,7 +2718,7 @@ export function DealsScreen({
         chips={dealSurfaceChips({
           me: meQuery.data,
           partnerOptions,
-          partnerApplied: query.filters.partner_org_id,
+          partnerApplied: query.filters.partner_company_id,
         })}
         views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
       />
@@ -3311,13 +3319,13 @@ function DealEmailVerb({
 
 function DealActions({
   deal,
-  orgs,
+  companies,
   meId,
   openStages,
   refusedReasonId,
 }: Readonly<{
   deal: Deal;
-  orgs: { id: string; display_name: string }[];
+  companies: { id: string; display_name: string }[];
   meId: string;
   openStages: Stage[];
   // The id of the page's one sentence about why this deal takes no changes —
@@ -3330,26 +3338,26 @@ function DealActions({
   const cf = useObjectCustomFields("deal");
   // Reads the same cached partner list the deals list built, so opening Edit
   // costs no extra request.
-  const partnerOptions = usePartnerOptions(orgs);
+  const partnerOptions = usePartnerOptions(companies);
   const masked = deal.masked_fields ?? [];
   // The company this deal names, resolvable whether or not the picker's capped
   // page reached it. The page answers first; only a company it does not carry
   // is read by id, through the SAME cache entry the subtitle's own reference
   // already fills, so the common case costs nothing.
-  const companyOnPage = orgs.find((org) => org.id === deal.organization_id);
-  const companyById = useEntityName(
-    "organization",
-    companyOnPage ? null : deal.organization_id,
+  const companyOnPage = companies.find(
+    (company) => company.id === deal.company_id,
   );
-  const currentCompany = deal.organization_id
+  const companyById = useEntityName(
+    "company",
+    companyOnPage ? null : deal.company_id,
+  );
+  const currentCompany = deal.company_id
     ? {
-        id: deal.organization_id,
+        id: deal.company_id,
         // The raw id is the floor rather than the aim: ugly, and still better
         // than a blank picker whose save clears the company nobody touched.
         label:
-          companyOnPage?.display_name ??
-          companyById.name ??
-          deal.organization_id,
+          companyOnPage?.display_name ?? companyById.name ?? deal.company_id,
       }
     : undefined;
   // The seam serves update and archive for a mirrored deal (write-back
@@ -3366,9 +3374,9 @@ function DealActions({
   const refusedByArchive = deal.archived_at ? refusedReasonId : undefined;
   // This deal's company, so the picker offers the projects that company is on —
   // as customer, partner or subcontractor. The server decides which; asking for
-  // every project and filtering here on organization_id would show only the
+  // every project and filtering here on company_id would show only the
   // ones it is the CUSTOMER of.
-  const openProjects = useProjectsOfCompany(deal.organization_id ?? undefined);
+  const openProjects = useProjectsOfCompany(deal.company_id ?? undefined);
   const projectById = useEntityName("project", deal.project_id);
   const currentProject = deal.project_id
     ? { id: deal.project_id, label: projectById.name ?? deal.project_id }
@@ -3402,9 +3410,9 @@ function DealActions({
           notice={overlay ? t("overlay.partialWriteBack") : undefined}
           fields={[
             ...dealEditFields(t, {
-              orgs,
+              companies,
               partnerOptions,
-              attributedPartner: attributedPartner(deal, orgs),
+              attributedPartner: attributedPartner(deal, companies),
               currentCompany,
               masked,
               me: meId,
@@ -3418,7 +3426,7 @@ function DealActions({
               masked,
               openProjects,
               currentProject,
-              company: deal.organization_id ?? undefined,
+              company: deal.company_id ?? undefined,
             }),
             ...cf.formFields,
           ]}
@@ -3429,7 +3437,7 @@ function DealActions({
             const submitted = stringValues(values);
             const projectId = await resolveDealProject(
               submitted,
-              submitted.organization_id?.trim() || null,
+              submitted.company_id?.trim() || null,
               t,
             );
             const { data, error } = await api.PATCH("/deals/{id}", {
@@ -4058,10 +4066,10 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // Asked here rather than inside the aside, because an element is truthy
   // whatever it renders: a slot filled with a component that draws nothing
   // still reserves the aside column and its landmark.
-  const orgs = useQuery({
-    queryKey: ["organizations"],
+  const companies = useQuery({
+    queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations", {
+      const { data, error } = await api.GET("/companies", {
         params: { query: { limit: 50 } },
       });
       if (error) {
@@ -4193,7 +4201,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               actions={
                 <DealActions
                   deal={deal}
-                  orgs={orgs.data?.data ?? []}
+                  companies={companies.data?.data ?? []}
                   meId={me.data?.user.id ?? ""}
                   openStages={openStages}
                   refusedReasonId={refusedReasonId}

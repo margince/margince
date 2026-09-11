@@ -51,12 +51,12 @@ type geoColumns struct {
 
 // geoCapableTargets maps a record type to the columns that make it locatable.
 //
-// Only `organization` today, and that is a product fact rather than a
+// Only `company` today, and that is a product fact rather than a
 // limitation of this code: a company has an address that means a place on the
 // earth. A person's address is where somebody lives, which this product does
 // not geocode and should think hard about before it does.
 var geoCapableTargets = map[string]geoColumns{
-	"organization": {Lat: "geocode_lat", Lon: "geocode_lon", Status: "geocode_status"},
+	"company": {Lat: "geocode_lat", Lon: "geocode_lon", Status: "geocode_status"},
 }
 
 // locatableTarget reports whether this record type can be somewhere at all.
@@ -369,7 +369,7 @@ func secondRadius(clauses []Predicate) (string, bool) {
 // WHY THE QUESTION IS ASKED OF THE ROWS AND NOT THE SCHEMA. bindGeo settles
 // whether the deployment CAN rank by distance by looking at the columns, and
 // that was read as the whole capability. It is half of it: a workspace whose
-// organizations all sit at geocode_status 'stale' runs the statement, matches
+// companies all sit at geocode_status 'stale' runs the statement, matches
 // nothing, and answers zero rows at coverage complete_exact with no note —
 // a search that failed short in the shape of a complete, exact answer. The
 // caller then reports that nobody is near Cologne, which is a claim about the

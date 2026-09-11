@@ -129,9 +129,9 @@ func hasHit(page search.Page, id ids.UUID) bool {
 func TestProjectSearchHitsCarryTheKeyAndTheCompanyAsTheSnippet(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	org := e.SeedOrg(t, "Acme Tooling", &e.Rep1)
+	company := e.SeedCompany(t, "Acme Tooling", &e.Rep1)
 	keyed, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{
-		Name: "Cutover rehearsal", OrganizationID: orgIDOf(org), Source: "manual",
+		Name: "Cutover rehearsal", CompanyID: companyIDOf(company), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create keyed project: %v", err)
@@ -141,7 +141,7 @@ func TestProjectSearchHitsCarryTheKeyAndTheCompanyAsTheSnippet(t *testing.T) {
 	}
 	key := *keyed.Key
 	keyless, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{
-		Name: "Cutover planning", OrganizationID: orgIDOf(org), Source: "manual",
+		Name: "Cutover planning", CompanyID: companyIDOf(company), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create keyless project: %v", err)
@@ -167,15 +167,15 @@ func TestProjectSearchHitsCarryTheKeyAndTheCompanyAsTheSnippet(t *testing.T) {
 	}
 }
 
-// Naming the company behind a project is a read of the organization row. A
+// Naming the company behind a project is a read of the company row. A
 // searcher outside that row's scope — here a capture-private company another
-// rep owns — is shown the key alone, and a searcher with no organization grant
+// rep owns — is shown the key alone, and a searcher with no company grant
 // at all likewise; the project hit itself still answers.
 func TestProjectSearchSnippetNamesTheCompanyOnlyToACallerWhoMayReadIt(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme Tooling", &e.Rep1)
+	company := e.SeedCompany(t, "Acme Tooling", &e.Rep1)
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
-		Name: "Cutover rehearsal", OrganizationID: orgIDOf(org), Source: "manual",
+		Name: "Cutover rehearsal", CompanyID: companyIDOf(company), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create project: %v", err)
@@ -186,7 +186,7 @@ func TestProjectSearchSnippetNamesTheCompanyOnlyToACallerWhoMayReadIt(t *testing
 	key := *project.Key
 	// Owner-private AFTER the project exists: creating one is a read of the
 	// company, and a private company is out of even the admin's scope.
-	e.MakeCapturePrivate(t, "organization", org, e.Rep1)
+	e.MakeCapturePrivate(t, "company", company, e.Rep1)
 	snippetFor := func(ctx context.Context) string {
 		t.Helper()
 		page, err := search.NewStore(e.DB()).Search(ctx, search.Input{Query: "Cutover", Types: []string{"project"}})
@@ -208,7 +208,7 @@ func TestProjectSearchSnippetNamesTheCompanyOnlyToACallerWhoMayReadIt(t *testing
 	if got := snippetFor(e.As(e.Rep3, []ids.UUID{e.Team2}, roomPerms)); got != key {
 		t.Errorf("another rep's snippet = %q, want the key alone — the company is capture-private to Rep1", got)
 	}
-	if got := snippetFor(e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(roomPerms, "organization"))); got != key {
-		t.Errorf("snippet without the organization grant = %q, want the key alone", got)
+	if got := snippetFor(e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(roomPerms, "company"))); got != key {
+		t.Errorf("snippet without the company grant = %q, want the key alone", got)
 	}
 }

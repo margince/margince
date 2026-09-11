@@ -96,23 +96,23 @@ func (s *Service) employmentsSection(ctx context.Context, tx pgx.Tx, personID id
 	}
 	data := make([]crmcontracts.Person360Employment, 0, len(rows))
 	for _, r := range rows {
-		if r.OrganizationID == nil {
+		if r.CompanyID == nil {
 			continue // an employment edge with no employer names nothing
 		}
 		e := crmcontracts.Person360Employment{
 			RelationshipId:   openapi_types.UUID(r.ID),
-			OrganizationId:   openapi_types.UUID(r.OrganizationID.UUID),
+			CompanyId:        openapi_types.UUID(r.CompanyID.UUID),
 			IsCurrentPrimary: r.IsCurrentPrimary,
 			Role:             r.Role,
 			StartedAt:        r.StartedAt,
 			EndedAt:          r.EndedAt,
 		}
-		name, err := s.organizationName(ctx, tx, *r.OrganizationID)
+		name, err := s.companyName(ctx, tx, *r.CompanyID)
 		if err != nil {
 			return err
 		}
 		if name != "" {
-			e.OrganizationName = &name
+			e.CompanyName = &name
 		}
 		data = append(data, e)
 	}
@@ -136,32 +136,32 @@ func (s *Service) employmentsSection(ctx context.Context, tx pgx.Tx, personID id
 	return nil
 }
 
-// organizationName resolves an employer's display name. A name the caller
+// companyName resolves an employer's display name. A name the caller
 // cannot read is simply absent — the edge still shows, without asserting a
 // company the reader has no grant for.
-func (s *Service) organizationName(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (string, error) {
+func (s *Service) companyName(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (string, error) {
 	// The two refusals the paragraph above promises, spelled as the two
 	// questions they actually are. The row-scope miss was the only one the
 	// statement asked — its id-and-archived_at predicate says nothing about
-	// who is reading — so a caller holding no organization grant at all read
+	// who is reading — so a caller holding no company grant at all read
 	// employer names through the employment edge. auth.Require answers the
 	// object question and auth.EnsureVisible the row one, and both refuse by
 	// leaving the name absent rather than failing the section, because an
 	// employment the reader may see is still a true edge.
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return "", nil
 		}
 		return "", err
 	}
-	if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
+	if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 			return "", nil
 		}
 		return "", err
 	}
 	var name string
-	err := tx.QueryRow(ctx, `SELECT display_name FROM organization WHERE id = $1 AND archived_at IS NULL`, orgID).Scan(&name)
+	err := tx.QueryRow(ctx, `SELECT display_name FROM company WHERE id = $1 AND archived_at IS NULL`, companyID).Scan(&name)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Archived, or outside this caller's row scope. The edge still shows;
 		// it just does not assert a company name the reader has no grant for.

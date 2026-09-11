@@ -63,7 +63,7 @@ const (
 
 // loggedMeeting is what one run of this journey created.
 type loggedMeeting struct {
-	org      ids.UUID
+	company  ids.UUID
 	person   ids.UUID
 	deal     ids.UUID
 	activity ids.UUID
@@ -94,20 +94,20 @@ func (s *scenario) logTheMeeting(t *testing.T) loggedMeeting {
 	t.Helper()
 	var m loggedMeeting
 
-	m.org = s.createRecord(t, "organization", map[string]any{"display_name": newCompanyName})
+	m.company = s.createRecord(t, "company", map[string]any{"display_name": newCompanyName})
 	m.person = s.createRecord(t, "person", map[string]any{"full_name": newPersonName})
 	// The employment edge, so the person is AT the company rather than merely
 	// mentioned in the same conversation.
 	s.MCP.CallOK(t, "create_record", map[string]any{
 		"record_type": "relationship",
 		"fields": map[string]any{
-			"kind": "employment", "person_id": m.person.String(), "organization_id": m.org.String(),
+			"kind": "employment", "person_id": m.person.String(), "company_id": m.company.String(),
 		},
 	})
 
 	pipeline, stage := s.defaultOpenStage(t)
 	m.deal = s.createRecord(t, "deal", map[string]any{
-		"name": newDealName, "organization_id": m.org.String(),
+		"name": newDealName, "company_id": m.company.String(),
 		"pipeline_id": pipeline.String(), "stage_id": stage.String(),
 	})
 
@@ -162,7 +162,7 @@ func TestCase1TheCompanyThePersonAndTheDealAllExistAfterwards(t *testing.T) {
 		id            ids.UUID
 		value         string
 	}{
-		{"organization", "display_name", m.org, newCompanyName},
+		{"company", "display_name", m.company, newCompanyName},
 		{"person", "full_name", m.person, newPersonName},
 		{"deal", "name", m.deal, newDealName},
 	} {
@@ -174,8 +174,8 @@ func TestCase1TheCompanyThePersonAndTheDealAllExistAfterwards(t *testing.T) {
 
 	// Criterion 2: attached once, not twice.
 	if edges := s.countRows(t, `SELECT count(*) FROM relationship
-		WHERE kind = 'employment' AND person_id = $1 AND organization_id = $2
-		  AND archived_at IS NULL`, m.person, m.org); edges != 1 {
+		WHERE kind = 'employment' AND person_id = $1 AND company_id = $2
+		  AND archived_at IS NULL`, m.person, m.company); edges != 1 {
 		t.Fatalf("case 1 criterion 2: %s is linked to %s %d times — a duplicate edge makes the "+
 			"person's page list the company twice", newPersonName, newCompanyName, edges)
 	}
@@ -224,8 +224,8 @@ func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 	// still sees the meeting — through the person who was in it — and that half
 	// is asserted below against the timeline an assistant actually reads.
 	if n := s.countRows(t,
-		`SELECT count(*) FROM activity_link WHERE activity_id = $1 AND organization_id = $2`,
-		m.activity, m.org); n != 0 {
+		`SELECT count(*) FROM activity_link WHERE activity_id = $1 AND company_id = $2`,
+		m.activity, m.company); n != 0 {
 		t.Fatalf("case 1 criterion 4: the meeting is filed against the company %d times; a meeting "+
 			"is with a person, and a direct link is the redundancy that made two records disagree "+
 			"about who was in the room", n)
@@ -269,7 +269,7 @@ func TestCase1TheAccountSeesTheMeetingThroughThePersonWhoWasInIt(t *testing.T) {
 	m := s.logTheMeeting(t)
 
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
-		"record_type": "organization", "record_id": m.org.String(),
+		"record_type": "company", "record_id": m.company.String(),
 	})
 	var answer agents.AssembledContextResult
 	got.JSON(t, &answer)
@@ -299,7 +299,7 @@ func TestCase1FilingTheMeetingAgainstTheCompanyIsRefusedWithSomethingToDo(t *tes
 		"kind": "meeting", "body": meetingTranscript,
 		"links": []map[string]any{
 			{"entity_type": "person", "entity_id": m.person.String()},
-			{"entity_type": "organization", "entity_id": m.org.String()},
+			{"entity_type": "company", "entity_id": m.company.String()},
 		},
 	})
 	for _, want := range []string{"with a person", "employer"} {

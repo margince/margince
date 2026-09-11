@@ -23,7 +23,7 @@ const oneWriteThreeFields: FieldHistoryEntry[] = [
   "legal_name",
 ].map((field) => ({
   id: "a-1",
-  entity_type: "organization",
+  entity_type: "company",
   entity_id: "o-1",
   field,
   old_value: null,

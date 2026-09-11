@@ -28,7 +28,7 @@ func testMailbox() Mailbox {
 // TestEveryLanguageAnswersEveryThreadKey instead, which reads the maps directly.
 func testAccount(domain, name string) Account {
 	return Account{
-		OrganizationID: "01a00000-0000-7000-8000-000000000001",
+		CompanyID:      "01a00000-0000-7000-8000-000000000001",
 		Name:           name,
 		Domain:         domain,
 		Lifecycle:      "customer",

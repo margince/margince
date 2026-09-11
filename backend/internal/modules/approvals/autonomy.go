@@ -130,9 +130,9 @@ func decisionOutcomeOf(approve bool, edited json.RawMessage) decisionOutcome {
 const closeDateCorrectionKind = "close_date_correction"
 
 var AutoApplyKinds = map[string]bool{
-	closeDateCorrectionKind: true,
-	"org_name_promotion":    true,
-	"lifecycle_change":      true,
+	closeDateCorrectionKind:  true,
+	"company_name_promotion": true,
+	"lifecycle_change":       true,
 }
 
 // AdminGovernedAutoKinds are the kinds that may apply without asking on an

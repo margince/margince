@@ -27,11 +27,9 @@ import {
 import type { CreateField, FormRows } from "./create";
 import { splitMultiselectValue } from "./create";
 
-type Organization = components["schemas"]["Organization"];
-type CreateOrganizationRequest =
-  components["schemas"]["CreateOrganizationRequest"];
-type UpdateOrganizationRequest =
-  components["schemas"]["UpdateOrganizationRequest"];
+type Company = components["schemas"]["Company"];
+type CreateCompanyRequest = components["schemas"]["CreateCompanyRequest"];
+type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 
 function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -39,10 +37,10 @@ function stringField(value: unknown): string {
 
 // Merge-target search (P-2): mirrors searchPeopleTargets (contacts.tsx) — the
 // caller filters out the source row.
-export async function searchOrgTargets(
+export async function searchCompanyTargets(
   q: string,
 ): Promise<{ id: string; name: string }[]> {
-  const { data, error } = await api.GET("/organizations", {
+  const { data, error } = await api.GET("/companies", {
     params: { query: { q, limit: 10 } },
   });
   if (error) {
@@ -56,9 +54,9 @@ export async function searchOrgTargets(
 
 function asSizeBand(
   value: string | undefined,
-): CreateOrganizationRequest["size_band"] {
+): CreateCompanyRequest["size_band"] {
   return (SIZE_BAND_OPTIONS as readonly string[]).includes(value ?? "")
-    ? (value as CreateOrganizationRequest["size_band"])
+    ? (value as CreateCompanyRequest["size_band"])
     : undefined;
 }
 
@@ -68,12 +66,12 @@ function asSizeBand(
 // An empty result is `undefined` — on create that means "no domains", on
 // update the field is omitted so the stored set stays untouched (never
 // silently cleared).
-function mapDomainRows(rows: FormRows): CreateOrganizationRequest["domains"] {
+function mapDomainRows(rows: FormRows): CreateCompanyRequest["domains"] {
   const domains = mapDomainRowsReplaceSet(rows);
   return domains.length > 0 ? domains : undefined;
 }
 
-type DomainPatch = NonNullable<UpdateOrganizationRequest["domains"]>;
+type DomainPatch = NonNullable<UpdateCompanyRequest["domains"]>;
 
 // The edit-patch form of the repeatable domains field: always the concrete
 // desired set (possibly empty), so a caller can send [] to clear every domain.
@@ -102,10 +100,10 @@ function sameDomainSet(a: DomainPatch, b: DomainPatch): boolean {
 // Builds the create-company request body: `domains[]` rows carry
 // `{domain, is_primary}` keyed off the repeatable rows channel, scalar
 // fields trim to undefined when blank.
-export function mapOrgBody(
+export function mapCompanyBody(
   values: Record<string, string>,
   rows: FormRows,
-): CreateOrganizationRequest {
+): CreateCompanyRequest {
   return {
     display_name: values.display_name.trim(),
     legal_name: values.legal_name?.trim() || undefined,
@@ -116,22 +114,22 @@ export function mapOrgBody(
   };
 }
 
-// Builds the PATCH body: the scalar UpdateOrganizationRequest fields plus the
+// Builds the PATCH body: the scalar UpdateCompanyRequest fields plus the
 // domains replace-set from the edit modal's repeatable rows. Domains are sent
 // only when the set actually changed from `currentDomains` — an untouched edit
 // omits the field (sparse PATCH), and clearing every row sends [] (clear all),
 // the two cases the contract's "absent = untouched" vs "[] = clear" distinguish.
-export function mapOrgUpdate(
+export function mapCompanyUpdate(
   values: Record<string, unknown>,
   rows: FormRows,
-  currentDomains: Organization["domains"] = [],
-): UpdateOrganizationRequest {
+  currentDomains: Company["domains"] = [],
+): UpdateCompanyRequest {
   const desired = mapDomainRowsReplaceSet(rows);
   const current: DomainPatch = (currentDomains ?? []).map((domain) => ({
     domain: domain.domain,
     is_primary: domain.is_primary,
   }));
-  const body: UpdateOrganizationRequest = {
+  const body: UpdateCompanyRequest = {
     display_name: stringField(values.display_name).trim() || undefined,
     legal_name: stringField(values.legal_name).trim() || undefined,
     industry: stringField(values.industry).trim() || undefined,
@@ -144,7 +142,7 @@ export function mapOrgUpdate(
   const lifecycle = stringField(values.lifecycle).trim();
   if (lifecycle) {
     body.lifecycle = lifecycle as NonNullable<
-      UpdateOrganizationRequest["lifecycle"]
+      UpdateCompanyRequest["lifecycle"]
     >;
   }
   // Always sent when the field was rendered, even empty: this is a replace-set,
@@ -154,7 +152,7 @@ export function mapOrgUpdate(
   if (values.relationship_types !== undefined) {
     body.relationship_types = splitMultiselectValue(
       stringField(values.relationship_types),
-    ) as NonNullable<UpdateOrganizationRequest["relationship_types"]>;
+    ) as NonNullable<UpdateCompanyRequest["relationship_types"]>;
   }
   // Nullable rather than trim-to-undefined, and for the same reason the
   // relationship set is: clearing a LinkedIn URL is an edit. `|| undefined`
@@ -185,7 +183,7 @@ const ADDRESS_FIELDS: CreateField[] = [
 
 // addressFrom prefills the six flat fields from the record's nested address.
 export function addressFrom(
-  address: Organization["address"],
+  address: Company["address"],
 ): Record<string, string> {
   return {
     address_line1: address?.line1 ?? "",
@@ -208,7 +206,7 @@ export function addressFrom(
 // all, so a surface that does not offer the address cannot blank one.
 function addressPatch(
   values: Record<string, unknown>,
-): UpdateOrganizationRequest["address"] | undefined {
+): UpdateCompanyRequest["address"] | undefined {
   if (values.address_line1 === undefined) {
     return undefined;
   }
@@ -237,7 +235,7 @@ export const companyCreateFields: CreateField[] = [
   },
   {
     key: "domains",
-    label: "org.domains",
+    label: "company.domains",
     type: "repeatable",
     addLabel: "field.addDomain",
     rowFields: [{ key: "domain", label: "field.domain", required: true }],
@@ -268,7 +266,7 @@ export const RELATIONSHIP_TYPE_OPTIONS = [
 
 // t is threaded in because the option LABELS are catalog keys, not words: the
 // field renderer prints option.label as given, so an untranslated key reaches
-// the reader as "org.lifecycle.customer".
+// the reader as "company.lifecycle.customer".
 export function companyEditFields(
   owners: readonly { id: string; display_name: string }[],
   hasOwner: boolean,
@@ -289,7 +287,7 @@ export function companyEditFields(
     // nothing on this page let them do.
     //
     // Required exactly when the account HAS an owner: an optional select
-    // offers a blank option, and `UpdateOrganizationRequest.owner_id` cannot
+    // offers a blank option, and `UpdateCompanyRequest.owner_id` cannot
     // carry "unassign" — a null is indistinguishable from an omitted field on
     // the wire. Offering the blank would take the answer and drop it. An
     // account with no owner yet keeps the blank, because there it is the
@@ -309,7 +307,7 @@ export function companyEditFields(
     // neither was editable from this page at all.
     {
       key: "lifecycle",
-      label: "org.lifecycle",
+      label: "company.lifecycle",
       type: "select",
       options: LIFECYCLE_OPTIONS.map((value) => ({
         value,
@@ -318,7 +316,7 @@ export function companyEditFields(
     },
     {
       key: "relationship_types",
-      label: "org.relationshipTypes",
+      label: "company.relationshipTypes",
       type: "multiselect",
       options: RELATIONSHIP_TYPE_OPTIONS.map((value) => ({
         value,
@@ -337,7 +335,7 @@ export function companyEditFields(
     ...ADDRESS_FIELDS,
     {
       key: "domains",
-      label: "org.domains",
+      label: "company.domains",
       type: "repeatable",
       addLabel: "field.addDomain",
       rowFields: [{ key: "domain", label: "field.domain", required: true }],
@@ -351,9 +349,9 @@ export async function createCompany(
   rows: FormRows | undefined,
   customFields: Record<string, unknown>,
   t: (key: MessageKey) => string,
-): Promise<Organization> {
-  const { data, error } = await api.POST("/organizations", {
-    body: { ...mapOrgBody(values, rows ?? {}), ...customFields },
+): Promise<Company> {
+  const { data, error } = await api.POST("/companies", {
+    body: { ...mapCompanyBody(values, rows ?? {}), ...customFields },
   });
   if (error) {
     throwProblem(error, t);

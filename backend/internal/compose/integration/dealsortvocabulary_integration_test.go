@@ -16,7 +16,7 @@ package integration
 //
 // Three of them are not columns of `deal` at all. A stage orders by its
 // position in its PIPELINE — alphabetical stages are the funnel shuffled — and
-// the two organizations order by the referenced company's name. Each is held
+// the two companies order by the referenced company's name. Each is held
 // here, and so is the rule that makes a reference sort safe to offer: ordering
 // by a value is reading it, so a company this reader may not open must not
 // order the page by the name it is being refused.
@@ -185,14 +185,14 @@ func TestTheDealsListSortsItsCompanyColumnsByTheCompanyName(t *testing.T) {
 
 	// Named so that ordering by the company disagrees with ordering by the
 	// deal's own name, which is the only way to tell which one answered.
-	zeta := e.SeedOrg(t, "Zeta Holding", &e.Rep1)
-	alma := e.SeedOrg(t, "Alma Werke", &e.Rep1)
+	zeta := e.SeedCompany(t, "Zeta Holding", &e.Rep1)
+	alma := e.SeedCompany(t, "Alma Werke", &e.Rep1)
 	first := seedDealForCompany(t, e, "A deal", pipeline, open, zeta)
 	second := seedDealForCompany(t, e, "B deal", pipeline, open, alma)
 
-	assertIDOrder(t, dealsIn(ctx, t, e, "organization_id"),
+	assertIDOrder(t, dealsIn(ctx, t, e, "company_id"),
 		[]ids.UUID{second, first}, "company ascending — Alma before Zeta")
-	assertIDOrder(t, dealsIn(ctx, t, e, "-organization_id"),
+	assertIDOrder(t, dealsIn(ctx, t, e, "-company_id"),
 		[]ids.UUID{first, second}, "company descending")
 }
 
@@ -211,15 +211,15 @@ func TestAnUnreadableCompanyOrdersTheDealsListByNothing(t *testing.T) {
 
 	// "Alma" sorts first of the three by name. Hidden from this reader, it must
 	// sort last instead — with the deal that names no company at all.
-	hidden := e.SeedOrg(t, "Alma Werke", &e.Rep3)
-	mid := e.SeedOrg(t, "Mercator", &e.Rep1)
-	last := e.SeedOrg(t, "Zeta Holding", &e.Rep1)
+	hidden := e.SeedCompany(t, "Alma Werke", &e.Rep3)
+	mid := e.SeedCompany(t, "Mercator", &e.Rep1)
+	last := e.SeedCompany(t, "Zeta Holding", &e.Rep1)
 
 	secret := seedDealForCompany(t, e, "Deal with the hidden company", pipeline, open, hidden)
 	// Made private AFTER the deal is filed, which is the real sequence: a
 	// company goes capture-private while the deals naming it stay where they
 	// were.
-	e.MakeCapturePrivate(t, "organization", hidden, e.Rep3)
+	e.MakeCapturePrivate(t, "company", hidden, e.Rep3)
 	middle := seedDealForCompany(t, e, "Deal with Mercator", pipeline, open, mid)
 	zeta := seedDealForCompany(t, e, "Deal with Zeta", pipeline, open, last)
 
@@ -229,21 +229,21 @@ func TestAnUnreadableCompanyOrdersTheDealsListByNothing(t *testing.T) {
 		t.Fatalf("the reader sees %d deals, want 3 — this case would prove nothing about the ordering", len(got))
 	}
 
-	ascending := dealsIn(ctx, t, e, "organization_id")
+	ascending := dealsIn(ctx, t, e, "company_id")
 	assertIDOrder(t, ascending, []ids.UUID{middle, zeta, secret},
 		"company ascending — the unreadable one in the tail, not first")
 
 	// And the same position under the other direction. A name that really was
 	// ordering the page would move to the other end.
-	assertIDOrder(t, dealsIn(ctx, t, e, "-organization_id"), []ids.UUID{zeta, middle, secret},
+	assertIDOrder(t, dealsIn(ctx, t, e, "-company_id"), []ids.UUID{zeta, middle, secret},
 		"company descending — still the tail, because there is nothing to order by")
 }
 
-// A caller who may not read organizations at all is ordered by no company.
+// A caller who may not read companies at all is ordered by no company.
 //
 // The row scope answers WHICH companies are visible and never whether this
 // caller may read companies in the first place. A seat holding deal.read and no
-// organization.read would otherwise have its page arranged by names it is
+// company.read would otherwise have its page arranged by names it is
 // refused on every other surface.
 func TestAReaderWithoutTheCompanyGrantOrdersTheDealsListByNothing(t *testing.T) {
 	e := Setup(t)
@@ -251,11 +251,11 @@ func TestAReaderWithoutTheCompanyGrantOrdersTheDealsListByNothing(t *testing.T) 
 
 	// Deal names and company names disagree, so a sort that still reached
 	// display_name returns the page the other way round.
-	zeta := seedDealForCompany(t, e, "Zeta deal", pipeline, open, e.SeedOrg(t, "Alma Werke", &e.Rep1))
-	alma := seedDealForCompany(t, e, "Alma deal", pipeline, open, e.SeedOrg(t, "Zeta Holding", &e.Rep1))
+	zeta := seedDealForCompany(t, e, "Zeta deal", pipeline, open, e.SeedCompany(t, "Alma Werke", &e.Rep1))
+	alma := seedDealForCompany(t, e, "Alma deal", pipeline, open, e.SeedCompany(t, "Zeta Holding", &e.Rep1))
 
 	// Admitted first, as a reader who DOES hold the grant.
-	assertIDOrder(t, dealsIn(e.Admin(), t, e, "organization_id"), []ids.UUID{zeta, alma},
+	assertIDOrder(t, dealsIn(e.Admin(), t, e, "company_id"), []ids.UUID{zeta, alma},
 		"company ascending, for a reader who may read companies")
 
 	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
@@ -265,22 +265,22 @@ func TestAReaderWithoutTheCompanyGrantOrdersTheDealsListByNothing(t *testing.T) 
 	})
 	// Both rows in the tail under BOTH directions: the page falls back to its
 	// tie-breaker and the order carries nothing about the companies.
-	assertIDOrder(t, dealsIn(blind, t, e, "organization_id"), []ids.UUID{alma, zeta},
+	assertIDOrder(t, dealsIn(blind, t, e, "company_id"), []ids.UUID{alma, zeta},
 		"company ascending, for a reader who may not read companies")
-	assertIDOrder(t, dealsIn(blind, t, e, "-organization_id"), []ids.UUID{alma, zeta},
+	assertIDOrder(t, dealsIn(blind, t, e, "-company_id"), []ids.UUID{alma, zeta},
 		"company descending — the same order, because there is nothing to order by")
 }
 
 // seedDealForCompany creates a deal filed under one company, through the real
 // writer.
 func seedDealForCompany(
-	t *testing.T, e *Env, name string, pipeline ids.PipelineID, stage ids.StageID, org ids.UUID,
+	t *testing.T, e *Env, name string, pipeline ids.PipelineID, stage ids.StageID, company ids.UUID,
 ) ids.UUID {
 	t.Helper()
-	orgID := ids.From[ids.OrganizationKind](org)
+	companyID := ids.From[ids.CompanyKind](company)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: name, PipelineID: pipeline, StageID: stage,
-		OrganizationID: &orgID, OwnerID: userIDPtr(&e.Rep1),
+		CompanyID: &companyID, OwnerID: userIDPtr(&e.Rep1),
 	})
 	if err != nil {
 		t.Fatalf("creating %q: %v", name, err)
@@ -300,18 +300,18 @@ func TestAReferenceSortPagesWithoutRepeatingOrSkipping(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
 
-	hidden := e.SeedOrg(t, "Alma Werke", &e.Rep3)
+	hidden := e.SeedCompany(t, "Alma Werke", &e.Rep3)
 	named := []ids.UUID{
 		seedDealForCompany(t, e, "Deal with the hidden company", pipeline, open, hidden),
-		seedDealForCompany(t, e, "Deal with Mercator", pipeline, open, e.SeedOrg(t, "Mercator", &e.Rep1)),
-		seedDealForCompany(t, e, "Deal with Zeta", pipeline, open, e.SeedOrg(t, "Zeta Holding", &e.Rep1)),
+		seedDealForCompany(t, e, "Deal with Mercator", pipeline, open, e.SeedCompany(t, "Mercator", &e.Rep1)),
+		seedDealForCompany(t, e, "Deal with Zeta", pipeline, open, e.SeedCompany(t, "Zeta Holding", &e.Rep1)),
 	}
 	// Two rows in the NULL tail — the hidden company and a deal filed under no
 	// company at all — because the tail is where the continuation changes shape.
 	bare := e.SeedDeal(t, "Deal with nobody", pipeline, open, &e.Rep1)
-	e.MakeCapturePrivate(t, "organization", hidden, e.Rep3)
+	e.MakeCapturePrivate(t, "company", hidden, e.Rep3)
 
-	spec, one := "organization_id", 1
+	spec, one := "company_id", 1
 	var walked []ids.UUID
 	var cursor *string
 	for range len(named) + 2 {

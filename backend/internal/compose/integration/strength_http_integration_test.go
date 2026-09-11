@@ -6,7 +6,7 @@
 package integration
 
 // HTTP-level coverage for GET /people/{id}/strength and
-// GET /organizations/{id}/strength (§4 relationship strength) over the
+// GET /companies/{id}/strength (§4 relationship strength) over the
 // real handler stack: a person with qualifying interactions answers a
 // real score whose factors reconcile to it, and an unreadable/nonexistent
 // person answers 404 rather than disclosing existence.
@@ -114,44 +114,44 @@ func TestPersonStrengthHTTPMissingIs404(t *testing.T) {
 	}
 }
 
-// TestOrganizationStrengthHTTPReconciles: the org roll-up (max over
+// TestCompanyStrengthHTTPReconciles: the company roll-up (max over
 // current employees' strength) surfaces the same employee's score it
 // computed for the person-level endpoint above.
-func TestOrganizationStrengthHTTPReconciles(t *testing.T) {
+func TestCompanyStrengthHTTPReconciles(t *testing.T) {
 	e := apptest.SetupApp(t)
-	apptest.BootstrapWorkspaceSession(t, e, "Org Strength E2E", "admin@orgstrength.test", "Admin")
+	apptest.BootstrapWorkspaceSession(t, e, "Company Strength E2E", "admin@orgstrength.test", "Admin")
 
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
 		"display_name": "Strength Co", "source": "ui",
-	}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create organization → %d", status)
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
 	personID := seedStrengthPersonWithActivities(t, e)
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "employment", "person_id": personID, "organization_id": org.ID,
+		"kind": "employment", "person_id": personID, "company_id": company.ID,
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("create employment relationship → %d", status)
 	}
 
 	var wire strengthWire
-	if status := e.Call(t, "GET", "/v1/organizations/"+org.ID+"/strength", nil, nil, &wire); status != http.StatusOK {
-		t.Fatalf("GET org strength → %d", status)
+	if status := e.Call(t, "GET", "/v1/companies/"+company.ID+"/strength", nil, nil, &wire); status != http.StatusOK {
+		t.Fatalf("GET company strength → %d", status)
 	}
 	if wire.Score <= 0 {
-		t.Errorf("org strength score = %d, want > 0 (rolled up from its employee)", wire.Score)
+		t.Errorf("company strength score = %d, want > 0 (rolled up from its employee)", wire.Score)
 	}
 }
 
-// TestOrganizationStrengthHTTPMissingIs404 mirrors the person-level 404:
-// a nonexistent organization id discloses nothing about it either.
-func TestOrganizationStrengthHTTPMissingIs404(t *testing.T) {
+// TestCompanyStrengthHTTPMissingIs404 mirrors the person-level 404:
+// a nonexistent company id discloses nothing about it either.
+func TestCompanyStrengthHTTPMissingIs404(t *testing.T) {
 	e := apptest.SetupApp(t)
-	apptest.BootstrapWorkspaceSession(t, e, "Org Strength 404", "admin@orgstrength404.test", "Admin")
+	apptest.BootstrapWorkspaceSession(t, e, "Company Strength 404", "admin@orgstrength404.test", "Admin")
 
-	if status := e.Call(t, "GET", "/v1/organizations/"+ids.NewV7().String()+"/strength", nil, nil, nil); status != http.StatusNotFound {
-		t.Errorf("missing organization strength = %d, want 404", status)
+	if status := e.Call(t, "GET", "/v1/companies/"+ids.NewV7().String()+"/strength", nil, nil, nil); status != http.StatusNotFound {
+		t.Errorf("missing company strength = %d, want 404", status)
 	}
 }

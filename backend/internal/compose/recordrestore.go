@@ -119,7 +119,7 @@ func (s RestoreSeam) Restore(ctx context.Context, entityType string, id, auditID
 //
 // The lookup asks the SAME question magicUndoJudge.judgeCorrection asks of
 // the SAME store: a deal-scoped row with a live deal_correction naming it.
-// Anything else — a person, an organization, a deal edit a human made — is
+// Anything else — a person, a company, a deal edit a human made — is
 // answered false here and decided by the generic evaluator below, same as
 // before this branch existed.
 func (s RestoreSeam) reverseCorrection(

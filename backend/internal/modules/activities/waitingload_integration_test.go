@@ -92,7 +92,7 @@ func (e *loadEnv) as() context.Context {
 			RoleKeys: []string{"manager"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Read: true}, "person": {Read: true},
-				"deal": {Read: true}, "organization": {Read: true},
+				"deal": {Read: true}, "company": {Read: true},
 				"lead": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
@@ -172,9 +172,9 @@ func TestAWaitIsAttributedToTheOwnerOfItsRecord(t *testing.T) {
 // conversation the deal owner is answerable for.
 func TestADealOnTheThreadOutranksThePersonOnIt(t *testing.T) {
 	e := setupLoad(t)
-	person, deal, org := ids.NewV7(), ids.NewV7(), ids.NewV7()
-	e.exec(t, `INSERT INTO organization (id, display_name, owner_id, source, captured_by)
-		VALUES ($1, 'Customer GmbH', $2, 'seed', 'system')`, org, e.rep)
+	person, deal, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	e.exec(t, `INSERT INTO company (id, display_name, owner_id, source, captured_by)
+		VALUES ($1, 'Customer GmbH', $2, 'seed', 'system')`, company, e.rep)
 	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
 	pipeline, stage := ids.NewV7(), ids.NewV7()
@@ -184,9 +184,9 @@ func TestADealOnTheThreadOutranksThePersonOnIt(t *testing.T) {
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`,
 		stage, pipeline)
-	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, organization_id, pipeline_id, stage_id, source, captured_by)
+	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, company_id, pipeline_id, stage_id, source, captured_by)
 		VALUES ($1, 'Zeta renewal', 'open', $2, $3, $4, $5, 'seed', 'system')`,
-		deal, e.other, org, pipeline, stage)
+		deal, e.other, company, pipeline, stage)
 
 	activity := e.seedWait(t, "Contract question", "person_id", person)
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)

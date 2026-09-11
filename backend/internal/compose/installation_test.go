@@ -35,7 +35,7 @@ func TestEnsureInstallationRefusesAnAdminWithoutAWorkspace(t *testing.T) {
 
 // An unreadable password file is proven to surface by
 // TestFirstBootStillFailsLoudlyOnAnUnreadableSecret in the integration lane, not
-// here. The secret is now read only on the branch that creates the organization
+// here. The secret is now read only on the branch that creates the company
 // — after the database reports itself empty — so no assertion driven by a nil
 // pool can reach it. The property is unchanged and the coverage is stronger for
 // running against a real database; what moved is where it can be observed.

@@ -82,7 +82,7 @@ func diagnoseCrawlFailure(cause error) (code, detail string) {
 // (ADR-0072 §9). A read nobody asked for should cost a fraction of one somebody
 // did: the setting is on by default and sweeps up to the auto-enrich daily cap
 // (defaultAutoEnrichDailyCap, or AutoEnrichDailyCapEnv where set)
-// organizations a day per workspace, so the deployment-wide crawler budget is
+// companies a day per workspace, so the deployment-wide crawler budget is
 // the wrong unit here.
 const autoEnrichMaxPages = 12
 

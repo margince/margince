@@ -565,8 +565,8 @@ describe("catalog keys against the surfaces that render them", () => {
 });
 
 /*
- * The tenant is called "organization" to a reader (ADR-0061): one
- * installation serves one organization, and "workspace" is the internal
+ * The tenant is called "company" to a reader (ADR-0061): one
+ * installation serves one company, and "workspace" is the internal
  * boundary the schema and the RBAC code use. A second noun for one thing reads
  * as two concepts the product does not have.
  *
@@ -581,12 +581,12 @@ const TENANT_MISNOMER = /workspace|arbeitsbereich|không gian làm việc/i;
 const PRODUCT_NAME = /Google Workspace/g;
 
 describe("the product's word for the tenant", () => {
-  it("no catalog calls the organization a workspace", () => {
+  it("no catalog calls the company a workspace", () => {
     for (const [locale, catalog] of Object.entries(catalogs)) {
       for (const [key, value] of Object.entries(catalog)) {
         expect(
           TENANT_MISNOMER.test(value.replace(PRODUCT_NAME, "")),
-          `${locale}: ${key} — "${value}" says workspace where the product says organization`,
+          `${locale}: ${key} — "${value}" says workspace where the product says company`,
         ).toBe(false);
       }
     }

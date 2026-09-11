@@ -51,7 +51,7 @@ function trimDecimal(value: string): string {
 // a PERMISSION is what denies a price sheet — fx_rate and ai_model_rate grants
 // exist only for admin and ops — so the card keeps its place and says so. Both
 // sheets sit on settings pages other roles open for their other cards (currency
-// rates on Organization, model prices on AI), and a sheet that vanished there
+// rates on Company, model prices on AI), and a sheet that vanished there
 // would read as "this installation has no rates" rather than "not yours to see".
 //
 // It asks the server for NOTHING: each caller keeps `enabled: canRead` on its

@@ -155,51 +155,51 @@ func attachOfferLines(ctx context.Context, tx pgx.Tx, offers []crmcontracts.Offe
 }
 
 const offerColumns = `id, deal_id, offer_number, revision, status, currency,
-	buyer_org_id, buyer_snapshot, issuer_snapshot, valid_until, intro_text, terms_text,
+	buyer_company_id, buyer_snapshot, issuer_snapshot, valid_until, intro_text, terms_text,
 	net_minor, tax_minor, gross_minor, fx_rate_to_base::text, fx_rate_date, pdf_asset_ref,
 	template_id, accepted_at, source, captured_by, version, created_at, updated_at, archived_at`
 
-// withholdUnreadableBuyer removes an offer's buyer organization from the
-// response when the caller could not open that organization.
+// withholdUnreadableBuyer removes an offer's buyer company from the
+// response when the caller could not open that company.
 //
 // An offer is anchored on its DEAL, and every seat of the workspace reads
-// every deal — a deal is customer identity. The organization it points at is
-// not: capture privacy makes an organization private to the colleague who
+// every deal — a deal is customer identity. The company it points at is
+// not: capture privacy makes a company private to the colleague who
 // captured it. So an offer read hands back a reference the reader's own
-// organization read would refuse, which is the existence oracle
+// company read would refuse, which is the existence oracle
 // unreadableReferences closes on the deal itself.
 //
-// TWO fields, and the second is the sharper one. buyer_org_id is an id.
+// TWO fields, and the second is the sharper one. buyer_company_id is an id.
 // buyer_snapshot is the buyer's legal block frozen at send time — display name,
 // and where the record carries one, legal name. Withholding the id and leaving
-// the snapshot would hand back the name of an organization whose id was judged
+// the snapshot would hand back the name of a company whose id was judged
 // too much to disclose.
 //
 // The write path has enforced this rule for the explicit case all along:
-// resolveBuyerOrg gates a client-supplied buyer_org_id with
+// resolveBuyerCompany gates a client-supplied buyer_company_id with
 // auth.EnsureLinkTarget. What it does not gate is the INHERITED one — an offer
-// created without a buyer takes the deal's organization, which is how an
+// created without a buyer takes the deal's company, which is how an
 // unreadable reference gets onto an offer in the first place.
 //
 // ONE statement for the whole page, never a probe per row.
 func withholdUnreadableBuyer(ctx context.Context, tx pgx.Tx, offers []crmcontracts.Offer) error {
-	orgIDs := make([]ids.UUID, 0, len(offers))
+	companyIDs := make([]ids.UUID, 0, len(offers))
 	for _, o := range offers {
-		if o.BuyerOrgId != nil {
-			orgIDs = append(orgIDs, ids.UUID(*o.BuyerOrgId))
+		if o.BuyerCompanyId != nil {
+			companyIDs = append(companyIDs, ids.UUID(*o.BuyerCompanyId))
 		}
 	}
 	// VisibleSubset answers an empty list without a round trip, so a page of
-	// offers that names no organization pays for nothing.
-	visible, err := auth.VisibleSubset(ctx, tx, "organization", orgIDs)
+	// offers that names no company pays for nothing.
+	visible, err := auth.VisibleSubset(ctx, tx, "company", companyIDs)
 	if err != nil {
 		return err
 	}
 	for i := range offers {
-		if offers[i].BuyerOrgId == nil || visible[ids.UUID(*offers[i].BuyerOrgId)] {
+		if offers[i].BuyerCompanyId == nil || visible[ids.UUID(*offers[i].BuyerCompanyId)] {
 			continue
 		}
-		offers[i].BuyerOrgId = nil
+		offers[i].BuyerCompanyId = nil
 		offers[i].BuyerSnapshot = nil
 	}
 	return nil
@@ -260,7 +260,7 @@ func readOfferWithLines(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived
 func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 	var o crmcontracts.Offer
 	var id, dealID ids.UUID
-	var buyerOrgID, templateID *ids.UUID
+	var buyerCompanyID, templateID *ids.UUID
 	var offerNumber string
 	var revision int
 	var status string
@@ -271,7 +271,7 @@ func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 	var version int64
 
 	err := row.Scan(&id, &dealID, &offerNumber, &revision, &status, &o.Currency,
-		&buyerOrgID, &buyerSnapshot, &issuerSnapshot, &validUntil, &o.IntroText, &o.TermsText,
+		&buyerCompanyID, &buyerSnapshot, &issuerSnapshot, &validUntil, &o.IntroText, &o.TermsText,
 		&netMinor, &taxMinor, &grossMinor, &o.FxRateToBase, &fxRateDate, &o.PdfAssetRef,
 		&templateID, &o.AcceptedAt, &o.Source, &capturedBy, &version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt)
 	if err != nil {
@@ -280,7 +280,7 @@ func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 
 	o.Id = openapi_types.UUID(id)
 	o.DealId = openapi_types.UUID(dealID)
-	o.BuyerOrgId = uuidPtr(buyerOrgID)
+	o.BuyerCompanyId = uuidPtr(buyerCompanyID)
 	o.TemplateId = uuidPtr(templateID)
 	o.OfferNumber = &offerNumber
 	o.Revision = &revision

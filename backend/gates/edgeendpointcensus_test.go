@@ -10,8 +10,8 @@ package gates
 // A record's history includes the links made and removed on it, and `relationship`
 // carries FIVE endpoint columns for SEVEN kinds. privacy.edgeEndpoints is the read's
 // whole knowledge of that shape, and the failure mode of forgetting a column is
-// precise rather than diffuse: a co-sell edge sits in organization_id for one company
-// and counterparty_org_id for the other, so a read that knows only the first shows
+// precise rather than diffuse: a co-sell edge sits in company_id for one company
+// and counterparty_company_id for the other, so a read that knows only the first shows
 // the edge on ONE of the two companies. Nothing errors. The company that made the
 // link has no line saying so, and the company that didn't has one.
 //
@@ -48,7 +48,7 @@ const (
 	edgeEndpointsDecl = "edgeEndpoints"
 	// edgeEndpointColumnField is the struct field inside that declaration holding
 	// the column name. The census reads THIS and not the file's text, because
-	// "counterparty_org_id" also appears in the file's prose — a substring match
+	// "counterparty_company_id" also appears in the file's prose — a substring match
 	// would pass a tree whose read had dropped the column and kept the comment.
 	edgeEndpointColumnField = "column"
 	// coreMigrations is where the shape constraints are declared and restated.
@@ -115,7 +115,7 @@ func endpointColumnsFromShapeConstraints(t *testing.T) ([]string, []string) {
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
-		for name, body := range shapeCheckBodies(t, path, string(raw)) {
+		for name, body := range shapeCheckBodies(t, path, withCurrentNames(string(raw))) {
 			bodies[name] = body
 		}
 	}
@@ -369,13 +369,9 @@ func endpointColumnsInTheExport(t *testing.T) map[string]bool {
 				if !isPair || len(pair.Elts) == 0 {
 					continue
 				}
-				first, isLit := pair.Elts[0].(*ast.BasicLit)
-				if !isLit || first.Kind != token.STRING {
+				column, named := endpointColumnName(t, edgeExportSource, pair.Elts[0])
+				if !named {
 					continue
-				}
-				column, unquoteErr := strconv.Unquote(first.Value)
-				if unquoteErr != nil {
-					t.Fatalf("%s: %s is not a readable string: %v", edgeExportSource, first.Value, unquoteErr)
 				}
 				out[column] = true
 			}
@@ -450,19 +446,64 @@ func endpointColumnsInScopeVar(t *testing.T) map[string]bool {
 					if !isPair || len(pair.Elts) == 0 {
 						return true
 					}
-					first, isLit := pair.Elts[0].(*ast.BasicLit)
-					if !isLit || first.Kind != token.STRING {
-						return true
+					if column, named := endpointColumnName(t, edgeScopeSource, pair.Elts[0]); named {
+						out[column] = true
 					}
-					column, unquoteErr := strconv.Unquote(first.Value)
-					if unquoteErr != nil {
-						t.Fatalf("%s: %s is not a readable string: %v", edgeScopeSource, first.Value, unquoteErr)
-					}
-					out[column] = true
 					return true
 				})
 			}
 		}
 	}
 	return out
+}
+
+// endpointColumnName reads the column an endpoint pair names, following an
+// identifier to the constant it stands for. inheritedscope.go spells company_id
+// once as companyIDColumn because three scope clauses narrow by it, and a
+// census that read only literals dropped that endpoint from the corpus and
+// reported the scope list short of what it actually holds.
+func endpointColumnName(t *testing.T, source string, expr ast.Expr) (string, bool) {
+	t.Helper()
+	switch named := expr.(type) {
+	case *ast.BasicLit:
+		if named.Kind != token.STRING {
+			return "", false
+		}
+		column, unquoteErr := strconv.Unquote(named.Value)
+		if unquoteErr != nil {
+			t.Fatalf("%s: %s is not a readable string: %v", source, named.Value, unquoteErr)
+		}
+		return column, true
+	case *ast.Ident:
+		column, declared := dirStringConsts(t, filepath.Dir(source))[named.Name]
+		if !declared {
+			t.Fatalf("%s names endpoint column %s, and the census cannot resolve it to a "+
+				"string constant in that package. Unresolved, the endpoint leaves the corpus "+
+				"without failing anything — spell it as a literal or as a const the census can read.",
+				source, named.Name)
+		}
+		return column, true
+	}
+	return "", false
+}
+
+// dirStringConsts unions every `name = "value"` const across a directory's
+// Go files: the constant an endpoint list names need not sit in the same file
+// as the list, and companyIDColumn does not.
+func dirStringConsts(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading %s: %v", dir, err)
+	}
+	values := map[string]string{}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
+			continue
+		}
+		for name, value := range constValuesIn(t, filepath.Join(dir, entry.Name())) {
+			values[name] = value
+		}
+	}
+	return values
 }

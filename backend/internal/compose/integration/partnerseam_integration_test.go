@@ -8,8 +8,8 @@ package integration
 // The partner extension through the datasource seam — the surface an MCP
 // agent reads partners by.
 //
-// A partner is the 1:1 extension of an organization, so the seam addresses it
-// by the ORGANIZATION's id. That is the detail worth holding: a reader who
+// A partner is the 1:1 extension of a company, so the seam addresses it
+// by the COMPANY's id. That is the detail worth holding: a reader who
 // cannot open the company must not learn its commercial terms through the
 // other name, and the seam must not offer a second way in that skips the gate
 // the HTTP handler applies.
@@ -27,15 +27,15 @@ import (
 
 func partnerSeamProvider(e *Env) *people.Provider { return people.NewProvider(e.DB()) }
 
-// partnerReader is a seat holding the partner and organization grants the
+// partnerReader is a seat holding the partner and company grants the
 // read needs. AdminPerms carries no `partner` object on purpose (see
-// SeedPartnerOrg), so a suite that wants the ADMIT case must say so.
+// SeedPartnerCompany), so a suite that wants the ADMIT case must say so.
 func partnerReader() principal.Permissions {
 	return principal.Permissions{
 		RoleKeys: []string{"admin"},
 		Objects: map[string]principal.ObjectGrant{
-			"partner":      {Read: true},
-			"organization": {Read: true},
+			"partner": {Read: true},
+			"company": {Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}
@@ -43,22 +43,22 @@ func partnerReader() principal.Permissions {
 
 // The admit case first: without it, a refusal test proves only that the
 // authority refuses everyone.
-func TestPartnerReadsThroughTheSeamByItsOrganizationID(t *testing.T) {
+func TestPartnerReadsThroughTheSeamByItsCompanyID(t *testing.T) {
 	e := Setup(t)
 	p := partnerSeamProvider(e)
 	tier := "tier2_20"
-	org := e.SeedPartnerOrg(t, "Seam Partner GmbH", &tier, nil)
+	company := e.SeedPartnerCompany(t, "Seam Partner GmbH", &tier, nil)
 	ctx := e.As(e.AdminUser, nil, partnerReader())
 
-	rec, err := p.Read(ctx, datasource.EntityRef{Type: datasource.EntityPartner, ID: org})
+	rec, err := p.Read(ctx, datasource.EntityRef{Type: datasource.EntityPartner, ID: company})
 	if err != nil {
 		t.Fatalf("reading a partner through the seam: %v", err)
 	}
 	if rec.Ref.Type != datasource.EntityPartner {
 		t.Fatalf("record type = %s, want partner", rec.Ref.Type)
 	}
-	if rec.Ref.ID != org {
-		t.Fatalf("record id = %s, want the organization id %s", rec.Ref.ID, org)
+	if rec.Ref.ID != company {
+		t.Fatalf("record id = %s, want the company id %s", rec.Ref.ID, company)
 	}
 }
 
@@ -68,24 +68,24 @@ func TestPartnerSeamRefusesASeatWithoutThePartnerGrant(t *testing.T) {
 	e := Setup(t)
 	p := partnerSeamProvider(e)
 	tier := "tier1_15"
-	org := e.SeedPartnerOrg(t, "Ungranted GmbH", &tier, nil)
+	company := e.SeedPartnerCompany(t, "Ungranted GmbH", &tier, nil)
 
 	// AdminPerms deliberately holds no `partner` object.
-	_, err := p.Read(e.Admin(), datasource.EntityRef{Type: datasource.EntityPartner, ID: org})
+	_, err := p.Read(e.Admin(), datasource.EntityRef{Type: datasource.EntityPartner, ID: company})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("read without the partner grant = %v, want ErrPermissionDenied", err)
 	}
 }
 
-// An organization that never joined the programme has no partner row, and the
+// A company that never joined the programme has no partner row, and the
 // seam says not-found rather than answering an empty record.
 func TestPartnerSeamIsNotFoundForAPlainCompany(t *testing.T) {
 	e := Setup(t)
 	p := partnerSeamProvider(e)
-	org := e.SeedOrg(t, "Just A Customer GmbH", nil)
+	company := e.SeedCompany(t, "Just A Customer GmbH", nil)
 	ctx := e.As(e.AdminUser, nil, partnerReader())
 
-	_, err := p.Read(ctx, datasource.EntityRef{Type: datasource.EntityPartner, ID: org})
+	_, err := p.Read(ctx, datasource.EntityRef{Type: datasource.EntityPartner, ID: company})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("reading a non-partner company = %v, want ErrNotFound", err)
 	}
@@ -98,7 +98,7 @@ func TestPartnerSeamRefusesATextQuery(t *testing.T) {
 	e := Setup(t)
 	p := partnerSeamProvider(e)
 	tier := "tier3_25"
-	e.SeedPartnerOrg(t, "Findable GmbH", &tier, nil)
+	e.SeedPartnerCompany(t, "Findable GmbH", &tier, nil)
 	ctx := e.As(e.AdminUser, nil, partnerReader())
 
 	term := "Findable"
@@ -113,7 +113,7 @@ func TestPartnerSeamNarrowsByRole(t *testing.T) {
 	e := Setup(t)
 	p := partnerSeamProvider(e)
 	tier := "tier2_20"
-	e.SeedPartnerOrg(t, "Consulting GmbH", &tier, nil)
+	e.SeedPartnerCompany(t, "Consulting GmbH", &tier, nil)
 	ctx := e.As(e.AdminUser, nil, partnerReader())
 
 	records, _, _, err := p.SearchEntity(ctx, datasource.EntityPartner, nil, 10, nil,

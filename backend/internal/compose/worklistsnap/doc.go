@@ -35,7 +35,7 @@
 // resumed into an answer nobody asked for.
 //
 // It owns `worklist_snapshot`, and writes no audit row and no event: this is
-// per-reader derived state, the shape org_brief, person_brief and
+// per-reader derived state, the shape company_brief, person_brief and
 // deal_status_card already have. An assembly generated FOR one person and never
 // served to another has no record history to write, and a trail over it would
 // record reading rather than changing.

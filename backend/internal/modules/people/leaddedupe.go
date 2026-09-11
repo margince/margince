@@ -78,7 +78,7 @@ func (s *Store) recordLeadNearMatch(ctx context.Context, tx pgx.Tx, lead crmcont
 // fuzzyLead is the lead-internal PO-F-1 analogue: name similarity carries the
 // person weight, and the "same employer" term is answered from what a lead
 // has — the free-text company name, or a shared non-consumer mail domain —
-// since a lead holds no organization edge by design.
+// since a lead holds no company edge by design.
 func (s *Store) fuzzyLead(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead) (leadNearMatch, error) {
 	consumerMail, err := s.consumerMailMatcher(ctx, tx)
 	if err != nil {
@@ -141,5 +141,5 @@ func leadConfidence(name, company, domain string, row leadCandidateRow) float64 
 	case domain != "" && normalizeDomain(row.domain) == domain:
 		employer = 0.8
 	}
-	return dedupeNameWeight*nameSimilarity(name, deref(row.fullName)) + dedupeOrgDomainWeight*employer
+	return dedupeNameWeight*nameSimilarity(name, deref(row.fullName)) + dedupeCompanyDomainWeight*employer
 }

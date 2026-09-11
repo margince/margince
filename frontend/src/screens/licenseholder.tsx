@@ -77,10 +77,10 @@ export function LicenseHolderCard({
             row would say something is missing from THIS license rather than from
             the vocabulary it was issued under. */}
         <SettingList>
-          {holder.org && (
+          {holder.company && (
             <SettingRow
-              label={t("license.holder.org")}
-              value={holder.org}
+              label={t("license.holder.company")}
+              value={holder.company}
               control={null}
             />
           )}

@@ -33,7 +33,7 @@ export interface paths {
          * @description Anonymous login-presence metadata. `configured` means the deployment loaded and
          *     constructed its declared bindings at boot; it is not a provider health check and must
          *     never render as online/running/healthy. Provider keys are distinct and sorted, with the
-         *     development fake omitted. This surface discloses no organization data, model ids,
+         *     development fake omitted. This surface discloses no company data, model ids,
          *     routes, tiers, endpoints, keys/key-presence, budgets, usage, errors, or bootstrap state.
          */
         get: operations["getAssistantProfile"];
@@ -54,10 +54,10 @@ export interface paths {
         };
         /**
          * Which authentication methods are operational (drives the login UI).
-         * @description Anonymous, minimal capability probe (A107/ADR-0061). The login UI renders exactly
+         * @description Anonymous, minimal capability probe (ADR-0061). The login UI renders exactly
          *     the methods reported here — a disabled provider button or a dead "Forgot password?"
          *     link is a misleading affordance. `password_reset` is true only when the operator's
-         *     system-email channel (A74/ADR-0056) is configured and healthy. An OIDC provider is
+         *     system-email channel (ADR-0056) is configured and healthy. An OIDC provider is
          *     listed only when its end-to-end flow is wired and healthy. Discloses nothing beyond
          *     what the login UI needs — no secrets, endpoints, allowlists, or bootstrap state.
          *
@@ -86,7 +86,7 @@ export interface paths {
          * Authenticate with email + password and open a session.
          * @description Baseline interactive sign-in (ADR-0043). On success mints an opaque server-side session
          *     and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`). Accepts
-         *     email + password only — no tenant selector (A107/ADR-0061). Failures are neutral (no
+         *     email + password only — no tenant selector (ADR-0061). Failures are neutral (no
          *     account enumeration), rate-limited, and verified at full cost either way. The MFA and
          *     SSO-enforced challenge states return with their complete flows (ADR-0043 Amendment 2).
          *     Every attempt (success/failure/lockout) is audited (`features/04 §7`).
@@ -247,7 +247,7 @@ export interface paths {
         put?: never;
         /**
          * Reset an installation that armed the capability to its first-boot state.
-         * @description Served only where the deployment set `operations.allow_data_reset`; the compiled default is false in every posture. Wipes workspace domain + seeded-config data back to the bootstrapped state, preserving the organization and users so login still works, then re-seeds module defaults. Also clears the job queue, the event bus, the Redis counters and the object bytes — not only table rows. Requires the organization name as a typed confirmation. `GET /me` reports the same value as `data_reset_available`, so a client never offers what this would refuse.
+         * @description Served only where the deployment set `operations.allow_data_reset`; the compiled default is false in every posture. Wipes workspace domain + seeded-config data back to the bootstrapped state, preserving the company and users so login still works, then re-seeds module defaults. Also clears the job queue, the event bus, the Redis counters and the object bytes — not only table rows. Requires the company name as a typed confirmation. `GET /me` reports the same value as `data_reset_available`, so a client never offers what this would refuse.
          */
         post: operations["resetData"];
         delete?: never;
@@ -432,8 +432,8 @@ export interface paths {
          *     a person created without the employment they were captured for is a record nobody
          *     asked for, and two calls leave exactly that behind when the second one fails.
          *
-         *     The company is named, not guessed: `organization_id` attaches an existing record,
-         *     `organization_name` creates one. Neither is required — a person with no employer
+         *     The company is named, not guessed: `company_id` attaches an existing record,
+         *     `company_name` creates one. Neither is required — a person with no employer
          *     is a person.
          *
          *     Provenance is `manual` with the capturing user as `captured_by`, and the profile
@@ -731,7 +731,7 @@ export interface paths {
         put?: never;
         /**
          * Draft an email to this person, grounded in their record.
-         * @description The person-side mirror of `POST /organizations/{id}/draft-email`. That one writes to
+         * @description The person-side mirror of `POST /companies/{id}/draft-email`. That one writes to
          *     an account and has to be told which contact; here the record IS the recipient, so the
          *     request carries nothing but optional steering.
          *
@@ -998,7 +998,7 @@ export interface paths {
         /**
          * Draft the forwardable note a colleague can paste into their own introduction.
          * @description The OTHER half of asking for an introduction, and a different message from
-         *     `POST /organizations/{id}/intro-request-draft` — which writes the internal ask
+         *     `POST /companies/{id}/intro-request-draft` — which writes the internal ask
          *     TO the colleague, and says so in its own prompt.
          *
          *     This writes the note the colleague FORWARDS. It is prospect-facing copy: the
@@ -1260,7 +1260,7 @@ export interface paths {
         /**
          * The evidence sidecar for this person's enriched fields — each value with the verbatim snippet it was read from.
          * @description The person arm of the enrichment evidence ledger (`person_profile_field`): the
-         *     fields capture and site-read derive — title, phone, role, linkedin, org_name,
+         *     fields capture and site-read derive — title, phone, role, linkedin, company_name,
          *     address, website —
          *     each carrying the **verbatim source snippet**, the source reference, confidence,
          *     and who set it (`agent:enrich` until a human edits, `human:*` after).
@@ -1496,28 +1496,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations": {
+    "/companies": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List organizations (live by default; cursor-paginated). */
-        get: operations["listOrganizations"];
+        /** List companies (live by default; cursor-paginated). */
+        get: operations["listCompanies"];
         put?: never;
         /**
-         * Create an organization.
+         * Create a company.
          * @description Domains are normalized/lowercased and unique per workspace (409 on collision).
          */
-        post: operations["createOrganization"];
+        post: operations["createCompany"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}": {
+    "/companies/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1527,19 +1527,19 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get an organization by id (the 360 record). */
-        get: operations["getOrganization"];
+        /** Get a company by id (the 360 record). */
+        get: operations["getCompany"];
         put?: never;
         post?: never;
-        /** Archive (soft-delete) an organization. */
-        delete: operations["archiveOrganization"];
+        /** Archive (soft-delete) a company. */
+        delete: operations["archiveCompany"];
         options?: never;
         head?: never;
-        /** Update an organization (partial). */
-        patch: operations["updateOrganization"];
+        /** Update a company (partial). */
+        patch: operations["updateCompany"];
         trace?: never;
     };
-    "/organizations/{id}/reject": {
+    "/companies/{id}/reject": {
         parameters: {
             query?: never;
             header?: never;
@@ -1571,17 +1571,17 @@ export interface paths {
          *     domain, and only a person may let it back in through the blocked-domain surface. That
          *     is why this is human-only, like the rest of the capture posture.
          *
-         *     Needs both `organization:delete` (the archive) and `organization:update` (the standing
+         *     Needs both `company:delete` (the archive) and `company:update` (the standing
          *     domain decision). A seat holding only one of them is refused before anything is written.
          */
-        post: operations["rejectOrganization"];
+        post: operations["rejectCompany"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/merge": {
+    "/companies/{id}/merge": {
         parameters: {
             query?: never;
             header?: never;
@@ -1594,24 +1594,24 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Merge this organization into a target (non-lossy).
+         * Merge this company into a target (non-lossy).
          * @description Merge A→B relinks A's domains, people-employment, deals, relationships and activity links to
          *     B with zero orphaned FKs, archives A with `merged_into_id = B`. Mirrors person merge
          *     (features/01 §1.3). One audit transaction (action `merge`). This is
-         *     the org half of the `merge_records` MCP verb.
+         *     the company half of the `merge_records` MCP verb.
          *
          *     **Not reversible**, exactly as the person half is not: the audit trail records the merge,
          *     nothing undoes it, a merged dedupe pair answers `not_undoable`, and B keeps what it took
          *     from A. Treat this as destructive and confirm before calling it.
          */
-        post: operations["mergeOrganization"];
+        post: operations["mergeCompany"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/hierarchy-rollup": {
+    "/companies/{id}/hierarchy-rollup": {
         parameters: {
             query?: never;
             header?: never;
@@ -1622,18 +1622,18 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Roll up an organization's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count.
-         * @description `roll-up(node) = self(node) + Σ roll-up(readable child)` over the parent_org_id tree,
+         * Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count.
+         * @description `roll-up(node) = self(node) + Σ roll-up(readable child)` over the parent_company_id tree,
          *     walked with one bounded indexed recursive query. A child the caller cannot read
          *     contributes nothing and is named in `restricted_excluded` — never silently summed.
          *     All money converts to the workspace base currency; a missing stored FX rate fails
          *     the whole read with `422 fx_rate_unavailable` rather than substituting a rate of 1.
          *     Totals are server-computed and reconcile exactly to their parts — never client-summed.
-         *     Requires read on organizations, deals, and activities; figures aggregate every deal
-         *     and activity of each readable organization — per-record row visibility within a
+         *     Requires read on companies, deals, and activities; figures aggregate every deal
+         *     and activity of each readable company — per-record row visibility within a
          *     readable account is deliberately not consulted, so account totals stay whole.
          */
-        get: operations["getOrganizationHierarchyRollup"];
+        get: operations["getCompanyHierarchyRollup"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1642,7 +1642,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/logo": {
+    "/companies/{id}/logo": {
         parameters: {
             query?: never;
             header?: never;
@@ -1653,17 +1653,17 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Stream an organization's logo image.
-         * @description The bytes behind `Organization.logo_url` (A55): the company logo resolved from its
+         * Stream a company's logo image.
+         * @description The bytes behind `Company.logo_url` (A55): the company logo resolved from its
          *     own website during enrichment or uploaded by a person, normalized once at store time
          *     to PNG. Resolved site marks are square; uploaded wordmarks keep their aspect ratio.
          *     The response is always `image/png` — whatever the source format was, what is served
          *     is the server's own re-encode, so no third-party markup is ever served from this origin.
-         *     404 when the organization has no resolved logo, is invisible to the caller, or does
+         *     404 when the company has no resolved logo, is invisible to the caller, or does
          *     not exist — a client renders the deterministic monogram for all three alike. 501 when
          *     the deployment has no object store configured.
          */
-        get: operations["getOrganizationLogo"];
+        get: operations["getCompanyLogo"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1672,7 +1672,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/logo/icon": {
+    "/companies/{id}/logo/icon": {
         parameters: {
             query?: never;
             header?: never;
@@ -1683,20 +1683,20 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Stream an organization's square logo icon.
+         * Stream a company's square logo icon.
          * @description The bytes behind `CompanyProfile.logo_icon_url`: the square badge a collapsed
          *     sidebar draws, normalized once at store time to PNG on exactly the terms
-         *     `getOrganizationLogo` describes for the wide mark.
+         *     `getCompanyLogo` describes for the wide mark.
          *
          *     Only the installation's own company wears an icon today: the cold-start website
          *     read resolves one from the site's declared icons when it also found a wide lockup,
          *     and `uploadCompanyLogoIcon` replaces it — so every other record answers the same
-         *     404 it answers for a mark it does not have. 404 also when the organization is
+         *     404 it answers for a mark it does not have. 404 also when the company is
          *     invisible to the caller or does not exist; a client falls back to the wide mark,
          *     or to the deterministic monogram, for all of them alike. 501 when the deployment
          *     has no object store configured.
          */
-        get: operations["getOrganizationLogoIcon"];
+        get: operations["getCompanyLogoIcon"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1705,7 +1705,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/360": {
+    "/companies/{id}/360": {
         parameters: {
             query?: never;
             header?: never;
@@ -1723,12 +1723,12 @@ export interface paths {
          *     write committed mid-read may land in a later section — the stamp is what makes
          *     that honest rather than hidden.
          *
-         *     **Authorization is per section.** Reading the organization itself is mandatory: a
+         *     **Authorization is per section.** Reading the company itself is mandatory: a
          *     caller who cannot see it gets the usual 403/404. Every other section needs its own
          *     object grant, and a section the caller may not read is *omitted* and named in
          *     `sections_omitted` — never returned empty, because empty and forbidden are
          *     different facts. Aggregates count only rows the viewer can see, the same posture
-         *     `GET /organizations/{id}/hierarchy-rollup` states for its own prune.
+         *     `GET /companies/{id}/hierarchy-rollup` states for its own prune.
          *
          *     **Nested collections are summaries, not paging surfaces.** Each carries at most
          *     25 rows with `page.has_more` saying whether it was cut, and `page.next_cursor` is
@@ -1740,7 +1740,7 @@ export interface paths {
          *     `422 unsupported_in_overlay_mode`, the same refusal entity-scoped activity reads
          *     give, because the mirror holds none of these relationships.
          */
-        get: operations["getOrganization360"];
+        get: operations["getCompany360"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1749,7 +1749,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/graph": {
+    "/companies/{id}/graph": {
         parameters: {
             query?: never;
             header?: never;
@@ -1760,20 +1760,20 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The account's connections one hop out — its contacts, its open deals and their stakeholders, its parent, children and partner orgs.
+         * The account's connections one hop out — its contacts, its open deals and their stakeholders, its parent, children and partner companies.
          * @description The company view's connections card: who and what this account is attached to,
          *     as an explicit node/edge set the client draws rather than a picture the server
          *     renders.
          *
          *     **One hop, and only one.** Every node is reached by a single edge from the
          *     account — an employment, a deal it owns, a stakeholder seat on one of those
-         *     deals, the `parent_org_id` link up or down, or a partner edge. A contact's other
+         *     deals, the `parent_company_id` link up or down, or a partner edge. A contact's other
          *     employers, a deal's other accounts and a partner's own partners are NOT walked:
          *     a second hop is a different read with a different cost, and a card that
          *     sometimes went two hops would have no honest cap.
          *
-         *     **Authorization is per group**, the same posture `GET /organizations/{id}/360`
-         *     takes for its sections. Reading the organization itself is mandatory. Contacts
+         *     **Authorization is per group**, the same posture `GET /companies/{id}/360`
+         *     takes for its sections. Reading the company itself is mandatory. Contacts
          *     need the person grant, deals need the deal grant, and the intro path needs the
          *     signal grant; a group the caller may not read is left out of `nodes`/`edges` and
          *     named in `groups_omitted`, so the card can say "hidden from you" instead of
@@ -1784,7 +1784,7 @@ export interface paths {
          *
          *     **Node selection is deterministic and capped, and the cap is reported.** Each
          *     group has a fixed order — contacts by relationship strength then id, deals by
-         *     amount then id, organizations by name then id — so two reads of an unchanged
+         *     amount then id, companies by name then id — so two reads of an unchanged
          *     account return the same nodes. `dropped_count` says how many nodes the caps left
          *     out, counted over each group's whole membership — a truncated graph with no count
          *     reads as the whole neighbourhood, and a count taken from a bounded read would
@@ -1794,7 +1794,7 @@ export interface paths {
          *
          *     How each group picks its slice, because the three differ in ways a client can
          *     see. Deals are ordered and limited in the database, so their slice is exactly the
-         *     top N. Organizations are limited by COMPANY rather than by row, so a company
+         *     top N. Companies are limited by COMPANY rather than by row, so a company
          *     attached several ways — a parent that is also a reseller — cannot fill the
          *     allowance and leave the others out; a relationship recorded twice is one edge, not
          *     two. Contacts are the one group ordered by something the database does not know
@@ -1812,7 +1812,7 @@ export interface paths {
          *     `422 unsupported_in_overlay_mode`, the same refusal the 360 gives, because the
          *     mirror holds none of these edges.
          */
-        get: operations["getOrganizationGraph"];
+        get: operations["getCompanyGraph"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1821,7 +1821,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/intro-request-draft": {
+    "/companies/{id}/intro-request-draft": {
         parameters: {
             query?: never;
             header?: never;
@@ -1879,7 +1879,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/coverage": {
+    "/companies/{id}/coverage": {
         parameters: {
             query?: never;
             header?: never;
@@ -1891,7 +1891,7 @@ export interface paths {
         };
         /**
          * How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
-         * @description The decision layer of the company People tab. `GET /organizations/{id}/contacts`
+         * @description The decision layer of the company People tab. `GET /companies/{id}/contacts`
          *     is the roster; this is the reading of it a rep opens the page for: is anybody
          *     here talking to us, which buying roles nobody holds, and who is the warmest
          *     route in.
@@ -1910,7 +1910,7 @@ export interface paths {
          *     Native system-of-record only: an overlay workspace gets `422`, the same refusal
          *     the 360 gives.
          */
-        get: operations["getOrganizationCoverage"];
+        get: operations["getCompanyCoverage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1919,7 +1919,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/contacts": {
+    "/companies/{id}/contacts": {
         parameters: {
             query?: never;
             header?: never;
@@ -1931,7 +1931,7 @@ export interface paths {
         };
         /**
          * The account's people, ranked by who is worth writing to next, filtered and paged over the WHOLE account.
-         * @description The company People tab's list. `GET /organizations/{id}/360` carries a people
+         * @description The company People tab's list. `GET /companies/{id}/360` carries a people
          *     SECTION — a 25-row summary with a "there is more" flag — and this is the paging
          *     surface behind it: the same contacts, the same ranking, over every one of them.
          *
@@ -1961,12 +1961,12 @@ export interface paths {
          *
          *     **Row scope, per contact.** The list carries the caller's person scope, so a
          *     contact they may not read is absent rather than named — the same answer
-         *     `GET /people` gives. Reading the organization itself is mandatory.
+         *     `GET /people` gives. Reading the company itself is mandatory.
          *
          *     Native system-of-record only: a workspace reading from an incumbent mirror gets
          *     `422 unsupported_in_overlay_mode`, the same refusal the 360 gives.
          */
-        get: operations["listOrganizationContacts"];
+        get: operations["listCompanyContacts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1975,7 +1975,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/dossier": {
+    "/companies/{id}/dossier": {
         parameters: {
             query?: never;
             header?: never;
@@ -2011,7 +2011,7 @@ export interface paths {
          *     With no model lane configured the dossier still answers, deterministically, from
          *     the same facts; `generated_by` says which produced it (DOSS-AC-7).
          */
-        get: operations["getOrganizationDossier"];
+        get: operations["getCompanyDossier"];
         put?: never;
         /**
          * Reassemble the dossier now, past a fingerprint that still matches.
@@ -2023,14 +2023,14 @@ export interface paths {
          *     rather than an error: a reader who asked for fresher content and cannot have it
          *     is better served by yesterday's dossier, labelled, than by a failure.
          */
-        post: operations["refreshOrganizationDossier"];
+        post: operations["refreshCompanyDossier"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/evidence/{entityType}/{entityId}": {
+    "/companies/{id}/evidence/{entityType}/{entityId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2038,7 +2038,7 @@ export interface paths {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
                 /** @description The kind of record a claim cited. The pair is the reference, not the id alone. */
-                entityType: "organization" | "fact" | "profile_field";
+                entityType: "company" | "fact" | "profile_field";
                 entityId: string;
             };
             cookie?: never;
@@ -2053,7 +2053,7 @@ export interface paths {
          *     — a sentence cites `(entity_type, entity_id)`, which is what the citation chip carries and
          *     what the grounding filter checks. Raised upstream; the payload below is the spec's.
          *
-         *     The organization in the path is not decoration: it is what the read is row-scoped through,
+         *     The company in the path is not decoration: it is what the read is row-scoped through,
          *     and a record that does not belong to it answers `404` exactly as one the reader may not
          *     see does.
          *
@@ -2078,7 +2078,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/scan": {
+    "/companies/{id}/scan": {
         parameters: {
             query?: never;
             header?: never;
@@ -2106,7 +2106,7 @@ export interface paths {
          *     is until `POST` asks. The state names whether the stored findings are current,
          *     whether a read is in flight, and — when the AI budget deferred it — when it resumes.
          */
-        get: operations["getOrganizationScan"];
+        get: operations["getCompanyScan"];
         put?: never;
         /**
          * Make sure this reader's scan of the account is current, reading it again only when the account changed.
@@ -2126,14 +2126,14 @@ export interface paths {
          *     A scan already in flight is returned as it stands rather than started twice.
          *     `force` skips the floor and the fingerprint, never the in-flight check.
          */
-        post: operations["ensureOrganizationScan"];
+        post: operations["ensureCompanyScan"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/growth-fit": {
+    "/companies/{id}/growth-fit": {
         parameters: {
             query?: never;
             header?: never;
@@ -2164,7 +2164,7 @@ export interface paths {
          *     `band_capped_reason` says why — a fit computed against a guess about ourselves is a
          *     guess about them (DOSS-AC-13).
          */
-        get: operations["getOrganizationGrowthFit"];
+        get: operations["getCompanyGrowthFit"];
         put?: never;
         /**
          * Re-assemble the caller's growth fit now, past a fingerprint that still matches.
@@ -2172,14 +2172,14 @@ export interface paths {
          *     a refresh the AI budget refuses returns the cached assembly with its age rather
          *     than an error.
          */
-        post: operations["refreshOrganizationGrowthFit"];
+        post: operations["refreshCompanyGrowthFit"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/brief": {
+    "/companies/{id}/brief": {
         parameters: {
             query?: never;
             header?: never;
@@ -2204,7 +2204,7 @@ export interface paths {
          *
          *     **Cached on the INPUTS, not on the record.** The cache key is a fingerprint over
          *     the assembled input plus the prompt, task and model-routing versions. Facts,
-         *     deals and activities move without touching the organization row, so a key derived
+         *     deals and activities move without touching the company row, so a key derived
          *     from that row would serve a brief describing a pipeline the account no longer
          *     has, indefinitely.
          *
@@ -2217,7 +2217,7 @@ export interface paths {
          *     Human-only: a brief is a reading aid for a person, and an agent reading records
          *     through a passport has the records themselves.
          */
-        get: operations["getOrganizationBrief"];
+        get: operations["getCompanyBrief"];
         put?: never;
         /**
          * Regenerate this account's brief, ignoring the cached one.
@@ -2225,14 +2225,14 @@ export interface paths {
          * @description The explicit refresh behind the brief card's "outdated — refresh". It reads and
          *     writes only the cached brief: no record field changes, and nothing is sent.
          */
-        post: operations["regenerateOrganizationBrief"];
+        post: operations["regenerateCompanyBrief"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/suggestions/dismiss": {
+    "/companies/{id}/suggestions/dismiss": {
         parameters: {
             query?: never;
             header?: never;
@@ -2264,14 +2264,14 @@ export interface paths {
          *
          *     Human-only: an agent has no opinion to record.
          */
-        post: operations["dismissOrganizationSuggestion"];
+        post: operations["dismissCompanySuggestion"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/ask": {
+    "/companies/{id}/ask": {
         parameters: {
             query?: never;
             header?: never;
@@ -2304,14 +2304,14 @@ export interface paths {
          *
          *     Human-only: an agent asking about an account has the records themselves.
          */
-        post: operations["askAboutOrganization"];
+        post: operations["askAboutCompany"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/draft-email": {
+    "/companies/{id}/draft-email": {
         parameters: {
             query?: never;
             header?: never;
@@ -2325,7 +2325,7 @@ export interface paths {
         put?: never;
         /**
          * Draft an email to this account, grounded in its records.
-         * @description The drafting half of the account-started email pair (ADR-0087/A132). `POST /emails`
+         * @description The drafting half of the account-started email pair (ADR-0087). `POST /emails`
          *     sends a new conversation from a company with no anchor activity; this writes the
          *     first draft of one. `POST /activities/{id}/draft-email` is its reply-side twin and
          *     needs an activity to answer — an account-started message has none, and the product
@@ -2366,7 +2366,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/view-ack": {
+    "/companies/{id}/view-ack": {
         parameters: {
             query?: never;
             header?: never;
@@ -2379,7 +2379,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record that the calling human has now seen this organization — the baseline `since_last_visit` counts from.
+         * Record that the calling human has now seen this company — the baseline `since_last_visit` counts from.
          * @description The baseline moves forward only here, never as a side effect of reading the 360:
          *     a GET that silently advanced it would destroy the very "what changed" answer the
          *     caller opened the page to read, and would make a prefetch indistinguishable from
@@ -2389,14 +2389,14 @@ export interface paths {
          *     Human-only: an agent reading a record through a passport is not a visit, and must
          *     not consume the human's unread marker.
          */
-        post: operations["acknowledgeOrganizationView"];
+        post: operations["acknowledgeCompanyView"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/partner": {
+    "/companies/{id}/partner": {
         parameters: {
             query?: never;
             header?: never;
@@ -2406,13 +2406,13 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Read the partner extension on an org (404 if the org is not a partner). */
+        /** Read the partner extension on a company (404 if the company is not a partner). */
         get: operations["getPartner"];
         /**
-         * Create/update the partner extension on an org (adds `partner` to its relationship types).
-         * @description Promotes an org to a first-class partner (A41/ADR-0032) by upserting its `partner` row and
+         * Create/update the partner extension on a company (adds `partner` to its relationship types).
+         * @description Promotes a company to a first-class partner (ADR-0032) by upserting its `partner` row and
          *     adding `partner` to its `relationship_types`. (`classification` is retired and no longer
-         *     set here — ADR-0079/A124 replaced it, because what a company IS to us is multi-valued.)
+         *     set here — ADR-0079 replaced it, because what a company IS to us is multi-valued.)
          *     Company identity is never duplicated. Admin write, and a HUMAN one.
          *
          *     Human-only for the same reason `decideCommissionEntry` is: `margin_tier` is the rate the
@@ -2428,7 +2428,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/enrich": {
+    "/companies/{id}/enrich": {
         parameters: {
             query?: never;
             header?: never;
@@ -2441,13 +2441,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Enrich this organization from its website (evidence-or-omit) — a staged 🟡 proposal.
-         * @description The `enrich` verb applied to an existing organization (EP05 / ADR-0006 scrape seam). Fetches
-         *     the company's website — the `url` override, else the org's own domain — parses it, and returns a
+         * Enrich this company from its website (evidence-or-omit) — a staged 🟡 proposal.
+         * @description The `enrich` verb applied to an existing company (EP05 / ADR-0006 scrape seam). Fetches
+         *     the company's website — the `url` override, else the company's own domain — parses it, and returns a
          *     staged read-back of firmographic / value / Impressum fields. Shares the cold-start read-back's
          *     fetch + evidence gate: EVERY returned field carries a non-empty `evidence_snippet` + `source_url`
-         *     + `confidence`, or it is ABSENT (the no-guess gate). NOTHING is written to the org until a human
-         *     accepts via /approvals — on accept it fills only the org's EMPTY fields, never overwriting a
+         *     + `confidence`, or it is ABSENT (the no-guess gate). NOTHING is written to the company until a human
+         *     accepts via /approvals — on accept it fills only the company's EMPTY fields, never overwriting a
          *     human-set value. A blocked or thin page degrades to 422, zero fabricated fields.
          */
         post: operations["scrapeCompany"];
@@ -2457,7 +2457,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/deep-read": {
+    "/companies/{id}/deep-read": {
         parameters: {
             query?: never;
             header?: never;
@@ -2472,14 +2472,14 @@ export interface paths {
         /**
          * Read the company's WHOLE site in the background — a crawl that ends in staged 🟡 proposals.
          * @description The deep read (founder ratification R2, the A102 crawl seam): discovers up to 12 pages of the
-         *     organization's own site — well-known paths, sitemap, same-registrable-domain nav links, every
+         *     company's own site — well-known paths, sitemap, same-registrable-domain nav links, every
          *     one robots-checked and SSRF-guarded, discovery is deterministic code and NEVER model-chosen —
          *     extracts each page through the shared evidence gate, and stages the merged findings as 🟡
          *     approvals (one `deepread` bundle of company facts; one `site_lead` per person found on team
          *     pages, published details only). NOTHING is written to real records until a human accepts.
          *     Asynchronous: answers 202 with the read to poll; progress and the outcome (including what was
          *     SKIPPED and why — robots, off-domain, page cap, model budget) are on the read report. Re-running
-         *     while a read is in flight answers the SAME read (idempotent per org+url). Budget-guarded: the
+         *     while a read is in flight answers the SAME read (idempotent per company+url). Budget-guarded: the
          *     crawl stops early and reports `partial` when the model lane demotes to queue-or-local.
          */
         post: operations["deepReadCompany"];
@@ -2489,7 +2489,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/technical-enrich": {
+    "/companies/{id}/technical-enrich": {
         parameters: {
             query?: never;
             header?: never;
@@ -2529,7 +2529,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/technical-enrich/latest": {
+    "/companies/{id}/technical-enrich/latest": {
         parameters: {
             query?: never;
             header?: never;
@@ -2558,7 +2558,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/vat-check": {
+    "/companies/{id}/vat-check": {
         parameters: {
             query?: never;
             header?: never;
@@ -2583,7 +2583,7 @@ export interface paths {
          *     404 when the number has never been consulted, which is the honest difference between
          *     "never asked" and "asked and told no".
          */
-        get: operations["getOrganizationVatCheck"];
+        get: operations["getCompanyVatCheck"];
         put?: never;
         /**
          * Ask the register again about the number this company states.
@@ -2606,14 +2606,14 @@ export interface paths {
          *     consults no register at all. `429` when the same number was consulted moments ago:
          *     the floor is a few minutes, and the answer already on the record is the answer.
          */
-        post: operations["requestOrganizationVatCheck"];
+        post: operations["requestCompanyVatCheck"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/site-reads/latest": {
+    "/companies/{id}/site-reads/latest": {
         parameters: {
             query?: never;
             header?: never;
@@ -2641,7 +2641,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/site-reads/{readId}": {
+    "/companies/{id}/site-reads/{readId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2662,7 +2662,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/strength": {
+    "/companies/{id}/strength": {
         parameters: {
             query?: never;
             header?: never;
@@ -2672,8 +2672,8 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Relationship strength for an organization (max over current employees). */
-        get: operations["getOrganizationStrength"];
+        /** Relationship strength for a company (max over current employees). */
+        get: operations["getCompanyStrength"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2682,7 +2682,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/finance-summary": {
+    "/companies/{id}/finance-summary": {
         parameters: {
             query?: never;
             header?: never;
@@ -2694,7 +2694,7 @@ export interface paths {
         };
         /**
          * Does this customer actually pay us, and on time?
-         * @description The finance card's whole read (FIN-WIRE-1, ADR-0083/A128): what we have
+         * @description The finance card's whole read (FIN-WIRE-1, ADR-0083): what we have
          *     invoiced, what is still open, and how they pay — plus the handful of recent
          *     invoices the card shows.
          *
@@ -2707,7 +2707,7 @@ export interface paths {
          *     Read-only, like everything in the mirror. The connection is managed
          *     elsewhere; this endpoint only reads what the last sync brought back.
          */
-        get: operations["getOrganizationFinanceSummary"];
+        get: operations["getCompanyFinanceSummary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2716,7 +2716,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/facts": {
+    "/companies/{id}/facts": {
         parameters: {
             query?: never;
             header?: never;
@@ -2726,8 +2726,8 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** The organization's confirmed facts (organization_fact), grouped by category on the client. Site-read facts carry evidence (snippet, source URL, confidence); human/migration values may omit it. */
-        get: operations["listOrganizationFacts"];
+        /** The company's confirmed facts (company_fact), grouped by category on the client. Site-read facts carry evidence (snippet, source URL, confidence); human/migration values may omit it. */
+        get: operations["listCompanyFacts"];
         put?: never;
         /**
          * State a fact about this company by hand.
@@ -2743,14 +2743,14 @@ export interface paths {
          *     stated, the honest verbs are confirm and correct, and an upsert here would let a hand write
          *     quietly overwrite a machine claim without the correction's audit before-image.
          */
-        post: operations["createOrganizationFact"];
+        post: operations["createCompanyFact"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/profile-fields": {
+    "/companies/{id}/profile-fields": {
         parameters: {
             query?: never;
             header?: never;
@@ -2760,8 +2760,8 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** The organization's confirmed profile fields (organization_profile_field). A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it. */
-        get: operations["listOrganizationProfileFields"];
+        /** The company's confirmed profile fields (company_profile_field). A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it. */
+        get: operations["listCompanyProfileFields"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2777,7 +2777,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List partner organizations (orgs with a partner row), filterable by role/cert status. */
+        /** List partner companies (companies with a partner row), filterable by role/cert status. */
         get: operations["listPartners"];
         put?: never;
         post?: never;
@@ -2887,7 +2887,7 @@ export interface paths {
         /**
          * Create a deal.
          * @description Amount is integer minor-units + ISO-4217 currency (no float money). The stage
-         *     must belong to the deal's pipeline (422 otherwise). Deals attach to person/org,
+         *     must belong to the deal's pipeline (422 otherwise). Deals attach to person/company,
          *     never to a raw lead (ADR-0008 §5).
          */
         post: operations["createDeal"];
@@ -2981,7 +2981,7 @@ export interface paths {
         put?: never;
         /**
          * Create a project on a company.
-         * @description `organization_id` names the project's CUSTOMER — the company the work is for. A project is
+         * @description `company_id` names the project's CUSTOMER — the company the work is for. A project is
          *     work several companies do together, and the others are put on with
          *     `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
          *     The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
@@ -3202,14 +3202,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{id}/companies/{organization_id}": {
+    "/projects/{id}/companies/{company_id}": {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
-                organization_id: string;
+                company_id: string;
             };
             cookie?: never;
         };
@@ -3669,7 +3669,7 @@ export interface paths {
         };
         /**
          * Which messaging transports THIS installation has registered.
-         * @description The resolver for `ProviderRef` (ADR-0107/A158). Because a provider vocabulary is a
+         * @description The resolver for `ProviderRef` (ADR-0107). Because a provider vocabulary is a
          *     deployment fact rather than an installation-independent one, the contract cannot
          *     enumerate it; this operation moves that typing from build time to a runtime
          *     capability document. A client renders `label` wherever it would otherwise print a
@@ -3988,7 +3988,7 @@ export interface paths {
          *     (the relink is a `human:*` or `agent:*` association event, not a re-capture). Writes one `audit_log`
          *     row (`activity_relink`). 🟢 — it is an internal association, not an outbound action.
          *
-         *     A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
+         *     A `meeting` or a `call` cannot be relinked to an `company` — it is with a person, and
          *     the company is reached through that person's employer. The estate refuses it
          *     (migration 1788000100).
          */
@@ -4020,7 +4020,7 @@ export interface paths {
          *     moved. An activity already carrying the link is not counted either (the single
          *     relink's idempotency, per row). All rows commit together or none do.
          *
-         *     A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
+         *     A `meeting` or a `call` cannot be relinked to an `company` — it is with a person, and
          *     the company is reached through that person's employer. The estate refuses it
          *     (migration 1788000100).
          */
@@ -4050,7 +4050,7 @@ export interface paths {
          *     NOTHING moves — the whole set is one transaction. An activity already carrying the link is
          *     left as it is and not counted.
          *
-         *     A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
+         *     A `meeting` or a `call` cannot be relinked to an `company` — it is with a person, and
          *     the company is reached through that person's employer. The estate refuses it
          *     (migration 1788000100).
          */
@@ -4090,8 +4090,8 @@ export interface paths {
          *     detail saying so — never as a failure, because a rep who cannot tell those apart will either
          *     distrust a good answer or trust a broken one.
          *
-         *     Human-only. The `enrich` verb reads an ORGANIZATION from its website and takes an
-         *     organization id, so it cannot express reading one activity; and this operation exists to put
+         *     Human-only. The `enrich` verb reads an COMPANY from its website and takes an
+         *     company id, so it cannot express reading one activity; and this operation exists to put
          *     a question in front of the person who was in the meeting. An agent that wants the same
          *     outcome proposes the task directly through its own governed tool, where the confirm-first
          *     tier already applies — rather than through a second door that stages on its behalf.
@@ -4312,7 +4312,7 @@ export interface paths {
          *     made the agent surface weaker than the person behind it rather than safer. An
          *     installation that wants sends confirmed sets a tier floor on `send_email`, which
          *     stages the call for a human exactly as it always did.
-         *     Consent gate is **default-deny per purpose** (A22/ADR-0011, data-model §3.4): the send is
+         *     Consent gate is **default-deny per purpose** (ADR-0011, data-model §3.4): the send is
          *     suppressed (409, `code: consent_not_granted`) unless an active, proven `granted`
          *     `person_consent` row exists for the *purpose* this send falls under (passed as
          *     `consent_purpose` in the request). A grant for a different purpose does not authorize the
@@ -4336,7 +4336,7 @@ export interface paths {
         put?: never;
         /**
          * Start a new email conversation from a record — runs directly, consent-gated.
-         * @description The account-started twin of `send_email` (ADR-0087/A132). "Write email" from a company,
+         * @description The account-started twin of `send_email` (ADR-0087). "Write email" from a company,
          *     a person or a deal is a NEW conversation: there is no prior message to anchor to, and
          *     the product refuses to fabricate a placeholder activity to obtain one — that would put a
          *     timeline entry on the record for a message nobody has sent yet.
@@ -4382,7 +4382,7 @@ export interface paths {
         };
         /**
          * The caller's own messages waiting to be sent.
-         * @description Scheduled mail is the SENDER's own (ADR-0104/A155). An unsent message's body and its
+         * @description Scheduled mail is the SENDER's own (ADR-0104). An unsent message's body and its
          *     blind-copy list are not workspace-readable the way a sent activity is, so this lists
          *     only what the caller scheduled.
          */
@@ -4467,13 +4467,13 @@ export interface paths {
          *     replies confirmed sets a tier floor on `send_message`.
          *
          *     The `{id}` activity is the conversation being answered, and its `channel_provider` names
-         *     the transport the reply transmits through — NOT its `kind`, which since ADR-0107/A158 says
+         *     the transport the reply transmits through — NOT its `kind`, which since ADR-0107 says
          *     only that the interaction was a message. The RECIPIENT is not named by the caller: it is
          *     the channel identity of the person that conversation is with, so a reply can only reach
          *     the human who opened it. A person with no live channel identity, or one who blocked the
          *     workspace's bot, is refused with 422 before anything is staged.
          *
-         *     Consent gate is **default-deny per purpose** (A22/ADR-0011, data-model §3.4), exactly as
+         *     Consent gate is **default-deny per purpose** (ADR-0011, data-model §3.4), exactly as
          *     for mail: the send is suppressed (409, `code: consent_not_granted`) unless an active,
          *     proven `granted` `person_consent` row exists for the *purpose* this send falls under
          *     (passed as `consent_purpose`). A grant for a different purpose does not authorize the
@@ -4984,7 +4984,7 @@ export interface paths {
         put?: never;
         /**
          * Dry-run an automation's blast radius (🟢 read; no writes, no sends).
-         * @description Powers the designer's live dry-run (A72/ADR-0035 Am.1). Evaluates the recipe's trigger + filter and
+         * @description Powers the designer's live dry-run (ADR-0035 Am.1). Evaluates the recipe's trigger + filter and
          *     returns how many records match **now** and an estimate of how many times it *would have* fired over a
          *     trailing window — **without** performing any action. This is a **🟢 read**, executed under the caller's
          *     Passport: it never mutates a record, never sends, and never stages an approval. Accepts either the stored
@@ -5010,11 +5010,11 @@ export interface paths {
         };
         /**
          * Read-only run history for one automation — successes AND errored/blocked/skipped runs.
-         * @description The designer's run history (A72/ADR-0035 Am.1 — **promoted into V1**, previously fast-follow). Each
+         * @description The designer's run history (ADR-0035 Am.1 — **promoted into V1**, previously fast-follow). Each
          *     `AutomationRun` is reconstructed from `audit_log`/`automation_run` (data-model §12.5) and stamped with
          *     the tier that fired and whether approval was needed. Runs of every outcome are first-class (mapping to
          *     `automation_run.status`) — including `failed` (a provider/action error), `blocked` (a 🟡 step whose
-         *     approval expired or was rejected — **added to the status set by A72/ADR-0035 Am.1**), and `skipped`
+         *     approval expired or was rejected — **added to the status set by ADR-0035 Am.1**), and `skipped`
          *     (e.g. the Passport no longer permits the action) — never only `fired` successes. Read-only: runs are
          *     produced by the engine, not created via the API. 🟡 actions still queue to `/approvals` at run time.
          */
@@ -5094,7 +5094,7 @@ export interface paths {
         /**
          * Create a lead.
          * @description With name + email returns 201 + stable UUID; round-trips on GET (features/01 §6.1).
-         *     `company_name` is FREE TEXT — a lead has NO organization FK. Lead-internal exact-email
+         *     `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
          *     dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
          *     for idempotent re-import.
          */
@@ -5237,7 +5237,7 @@ export interface paths {
          * What promoting this lead would do — merge into an existing person, or create one.
          * @description Runs the same dedupe ladder POST /leads/{id}/promote would run, WITHOUT writing
          *     anything, so the confirm step can name the outcome instead of surprising the rep
-         *     with it (ADR-0119/A170: which happened is the difference between "my prospect is
+         *     with it (ADR-0119: which happened is the difference between "my prospect is
          *     now a contact" and "my prospect was already someone we knew").
          *
          *     **This returns a record, so it is a read and carries the row-scope gate.** When the
@@ -5592,7 +5592,7 @@ export interface paths {
         put?: never;
         /**
          * Create a relationship edge (employment or deal stakeholder).
-         * @description `employment` requires person_id + organization_id; `deal_stakeholder` requires
+         * @description `employment` requires person_id + company_id; `deal_stakeholder` requires
          *     deal_id + person_id. An employment they already hold is refused 409: end the
          *     existing one before recording a new one. At most one current-primary employer
          *     per person; `is_current_primary` is decided here only when you OMIT it — an
@@ -6087,7 +6087,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal";
+                entity_type: "person" | "company" | "deal";
                 entity_id: string;
             };
             cookie?: never;
@@ -6132,7 +6132,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Apply a tag to an entity (person/org/deal/lead/project). */
+        /** Apply a tag to an entity (person/company/deal/lead/project). */
         post: operations["applyTag"];
         /**
          * Take one tag off one entity, leaving the tag itself in place.
@@ -6212,7 +6212,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Cross-object search (people, orgs, deals, activities, leads).
+         * Cross-object search (people, companies, deals, activities, leads).
          * @description Hybrid full-text search. Results are scoped by RBAC; leads are a distinct result type.
          */
         get: operations["search"];
@@ -6345,7 +6345,7 @@ export interface paths {
          *     NOTHING is written to real records — the read-back stages a proposal the user accepts via
          *     /approvals. A `self_description` field is "grounded" in the user's own words
          *     (source_kind=self_description) — that is honest grounding, not fabrication, and it stages
-         *     the same way. HUMAN-ONLY: this call CREATES the organization, so there is no record for a
+         *     the same way. HUMAN-ONLY: this call CREATES the company, so there is no record for a
          *     record-shaped agent verb to target; an agent principal is refused (403 `permission_denied`).
          */
         post: operations["coldStartReadback"];
@@ -6372,11 +6372,11 @@ export interface paths {
          *     and PUT /company is the human's confirmation. That reasoning presupposes someone at the screen,
          *     and on the agent path there is nobody: the EGRESS effect is the same one POST /coldstart performs
          *     — an outbound GET to a caller-chosen host, with the caller's path and query, from the server's
-         *     own address — and the organization does not exist yet, so no record-shaped agent verb has a
+         *     own address — and the company does not exist yet, so no record-shaped agent verb has a
          *     target for it; the fields feed the form whose confirmation creates it. HUMAN-ONLY on both
          *     counts: an agent principal is refused (403 `permission_denied`), with no staging path. An agent
-         *     that needs outward-looking research on an organization that already exists spends the same
-         *     `enrich` cap on POST /organizations/{id}/enrich.
+         *     that needs outward-looking research on a company that already exists spends the same
+         *     `enrich` cap on POST /companies/{id}/enrich.
          *
          *     Exactly one of `url`, `text` or `self_description`, as on /coldstart. Every field still carries a
          *     non-empty `evidence_snippet` + `confidence`, or it is ABSENT — a field the source does not ground
@@ -6473,17 +6473,17 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The installation's own company (the anchor organization).
-         * @description The company this installation belongs to — the spec's anchor organization, marked by
-         *     `organization.is_anchor` (0083; at most one live anchor per workspace). 404 until a human first
+         * The installation's own company (the anchor company).
+         * @description The company this installation belongs to — the spec's anchor company, marked by
+         *     `company.is_anchor` (0083; at most one live anchor per workspace). 404 until a human first
          *     saves the company form: that 404 IS the "this installation has not described itself yet" signal,
-         *     and it is what onboarding gates on. Distinct from GET /organizations/{id}, which reads the
+         *     and it is what onboarding gates on. Distinct from GET /companies/{id}, which reads the
          *     customer records.
          */
-        get: operations["getCompany"];
+        get: operations["getAnchorCompany"];
         /**
          * Save the installation's own company — the human's confirm-first write.
-         * @description Creates the anchor organization on first save (marking it `is_anchor`) and updates it on every
+         * @description Creates the anchor company on first save (marking it `is_anchor`) and updates it on every
          *     later one. This is a HUMAN write: every field is stamped
          *     `captured_by=human:<user id>`, `source=human`, whether it was typed from scratch or accepted
          *     from a /coldstart/preview read-back — once a human has looked at a value and saved it, it is
@@ -6493,7 +6493,7 @@ export interface paths {
          *     own anchor, so a company saved from pasted text or typed by hand works exactly like one read from
          *     a website. Fields omitted from the body are left untouched; fields sent empty are cleared.
          */
-        put: operations["putCompany"];
+        put: operations["putAnchorCompany"];
         post?: never;
         delete?: never;
         options?: never;
@@ -6521,7 +6521,7 @@ export interface paths {
          *     resolving a different mark leaves it alone. `DELETE` gives the field back — the
          *     record returns to its monogram and the next read may resolve a mark again.
          */
-        post: operations["uploadCompanyLogo"];
+        post: operations["uploadAnchorCompanyLogo"];
         /**
          * Take the installation's own company logo off the record.
          * @description The record goes back to its deterministic monogram and the stored object is
@@ -6531,7 +6531,7 @@ export interface paths {
          *     Removing a mark the installation never had is not an error — the outcome the
          *     caller asked for is the outcome they get.
          */
-        delete: operations["deleteCompanyLogo"];
+        delete: operations["deleteAnchorCompanyLogo"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6564,7 +6564,7 @@ export interface paths {
          *     installation did before this endpoint existed. An icon a person uploads outranks
          *     the one a website read resolves, exactly as the wide mark does.
          */
-        post: operations["uploadCompanyLogoIcon"];
+        post: operations["uploadAnchorCompanyLogoIcon"];
         /**
          * Take the installation's own square logo icon off the record.
          * @description The stored object is collected and the collapsed rail falls back to the wide mark,
@@ -6574,7 +6574,7 @@ export interface paths {
          *     Removing an icon the installation never had is not an error — the outcome the
          *     caller asked for is the outcome they get.
          */
-        delete: operations["deleteCompanyLogoIcon"];
+        delete: operations["deleteAnchorCompanyLogoIcon"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6591,7 +6591,7 @@ export interface paths {
          * Get the effective server-side company-context rollout capability.
          * @description The UI follows this authenticated response instead of inferring deployment configuration.
          */
-        get: operations["getCompanyContextCapabilities"];
+        get: operations["getAnchorCompanyContextCapabilities"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6610,12 +6610,12 @@ export interface paths {
         /**
          * The deterministic, typed context assembled from the anchor company.
          * @description Reads confirmed company identity, profile fields and accepted repeatable facts under the
-         *     caller's normal organization row scope. The requested scopes bound the result; raw crawl
+         *     caller's normal company row scope. The requested scopes bound the result; raw crawl
          *     pages and individual people never enter this read model. Ordering and fingerprinting are
          *     deterministic so downstream model calls can bind cache entries and traces to the exact
          *     company knowledge they used.
          */
-        get: operations["getCompanyContext"];
+        get: operations["getAnchorCompanyContext"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6636,10 +6636,10 @@ export interface paths {
         /**
          * Start an optional progressive website read before the anchor company exists.
          * @description Creates only an unbound operational dossier and queues the shared deep-read engine in the
-         *     same transaction. No organization, profile field, fact, lead, or domain row is created.
+         *     same transaction. No company, profile field, fact, lead, or domain row is created.
          *     Repeating the same URL while its read is active joins the existing dossier.
          */
-        post: operations["startCompanySiteRead"];
+        post: operations["startAnchorCompanySiteRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6656,7 +6656,7 @@ export interface paths {
             cookie?: never;
         };
         /** Read the latest progressive onboarding dossier and its grounded draft findings. */
-        get: operations["getCompanySiteRead"];
+        get: operations["getAnchorCompanySiteRead"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6685,7 +6685,7 @@ export interface paths {
          *     and never third-party markup. 404 when the read resolved no mark or does not exist;
          *     501 when the deployment has no object store configured.
          */
-        get: operations["getCompanySiteReadLogo"];
+        get: operations["getAnchorCompanySiteReadLogo"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6713,7 +6713,7 @@ export interface paths {
          *     present in the dossier. The response carries the cumulative, price-on-read AI runtime for
          *     this read so model identity and estimated provider spend stay visible in context.
          */
-        post: operations["messageCompanySiteRead"];
+        post: operations["messageAnchorCompanySiteRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6741,7 +6741,7 @@ export interface paths {
          *     and published people remain separate site-lead proposals rather than becoming contacts or
          *     company-context rows.
          */
-        post: operations["confirmCompanySiteRead"];
+        post: operations["confirmAnchorCompanySiteRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6781,7 +6781,7 @@ export interface paths {
          * The workspace's own email domains.
          * @description The domains this installation treats as its own (capture.md CAP-DDL-1). A message whose
          *     participants are ALL on one of these — subdomains included — produces zero rows
-         *     (ADR-0082/A127, formulas §20).
+         *     (ADR-0082, formulas §20).
          *
          *     Every human role may read the list; only admin/ops may change it.
          *
@@ -8079,7 +8079,7 @@ export interface paths {
         };
         /**
          * The installation's own settings.
-         * @description Reads the installation's identity and reporting basis (ADR-0090/A135): its name, the
+         * @description Reads the installation's identity and reporting basis (ADR-0090): its name, the
          *     IANA timezone every reporting period is computed in, and the ISO-4217 base currency
          *     every money roll-up converts to. Every role may read them — a rep reading amounts
          *     benefits from knowing which currency they are in — and only admin/ops may change them
@@ -8098,7 +8098,7 @@ export interface paths {
         head?: never;
         /**
          * Update the installation's settings (admin/ops).
-         * @description Admin/ops-only, human session only — an agent never renames the organization or
+         * @description Admin/ops-only, human session only — an agent never renames the company or
          *     re-bases its reporting currency. A sparse patch: an omitted field is left unchanged.
          *
          *     The base currency is refused with `422 setting_frozen` once any deal has frozen a
@@ -8240,7 +8240,7 @@ export interface paths {
          *     client that renders a missing value as `0` would tell an admin their license permits
          *     nobody. `seats_used` counts every full seat the installation has not withdrawn —
          *     neither deactivated nor suspended; read seats are unlimited and never metered
-         *     (A62/ADR-0047).
+         *     (ADR-0047).
          *
          *     `over_limit` is the server's own verdict on the pair, so a client cannot arrive at a
          *     different answer than the one the installation acts on. Nobody is ever demoted or
@@ -8287,7 +8287,7 @@ export interface paths {
          *     held to.
          *
          *     `seats_used` counts every full seat the installation has not withdrawn — neither
-         *     deactivated nor suspended. Read seats are unlimited and never metered (A62/ADR-0047),
+         *     deactivated nor suspended. Read seats are unlimited and never metered (ADR-0047),
          *     and agent seats count, because a first-party runner acts on the estate as a human does.
          *
          *     No seat cap is reported here. A cap is entitlement, which is what the other surface is
@@ -8381,8 +8381,8 @@ export interface paths {
         };
         /**
          * The workspace's capture settings.
-         * @description Reads the workspace-shared capture posture (ADR-0072/A118, CAP-PARAM-7). Every role
-         *     may read it — a rep needs to see whether captured-organization auto-enrichment is on;
+         * @description Reads the workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Every role
+         *     may read it — a rep needs to see whether captured-company auto-enrichment is on;
          *     only admin/ops may change it (PATCH). Governed by the `capture_settings` RBAC object.
          */
         get: operations["getCaptureSettings"];
@@ -8393,7 +8393,7 @@ export interface paths {
         head?: never;
         /**
          * Update the workspace's capture settings (admin/ops).
-         * @description Admin/ops-only. Toggles the captured-organization auto-enrich posture (ADR-0072/A118):
+         * @description Admin/ops-only. Toggles the captured-company auto-enrich posture (ADR-0072):
          *     when ON, every company with a primary domain and no dossier gets a governed deep-read
          *     under a daily spend cap — however it was named, since a person creating one is usually
          *     the moment they want it. The installation's own company (the anchor) is excluded: cold
@@ -8578,7 +8578,7 @@ export interface paths {
          *     WHAT decided it — a model verdict, a heuristic, or a person — so an operator can tell an
          *     automatic refusal from somebody's deliberate one.
          *
-         *     Every human role may read the list; changing an entry demands `organization:update`
+         *     Every human role may read the list; changing an entry demands `company:update`
          *     (admin/ops). Human-only: this is capture posture, not record data.
          */
         get: operations["listBlockedDomains"];
@@ -8999,7 +8999,7 @@ export interface paths {
         /**
          * Decide one pair — merge through the owner's verb, or dismiss forever.
          * @description `merge` requires `winner_id` (one of the pair) and executes `mergePerson`/
-         *     `mergeOrganization` server-side — one merge in the system, no second verb.
+         *     `mergeCompany` server-side — one merge in the system, no second verb.
          *     `not_a_duplicate` flips the row and suppresses the pair from every future
          *     sweep (AC-dedupe-7). `409 already_disposed`; `422` when `winner_id` is not
          *     one of the pair. Deciding a pair CHANGES both records, so the caller needs
@@ -9413,7 +9413,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                entity_type: "person" | "company" | "deal" | "lead" | "project" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -9449,7 +9449,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                entity_type: "person" | "company" | "deal" | "lead" | "project" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
                 /** @description The history entry to put back. It must belong to the record named by the path; one that does not answers 404, never 403. */
@@ -9492,7 +9492,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity";
+                entity_type: "person" | "company" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -9511,7 +9511,7 @@ export interface paths {
          *     other record the event resolved to; `unresolved_attendees` carries the addresses on the
          *     event that matched no record, as items whose `ref` is the EVENT — an attendee nobody
          *     here holds a record for has no id of their own — and whose `summary` is the address and
-         *     the part they played. Subject precedence is deal, then project, then organization, then
+         *     the part they played. Subject precedence is deal, then project, then company, then
          *     person, then lead, taking a link before a participant within a tier and the organizer
          *     before the attendees. `also_present` and `unresolved_attendees` are bounded by
          *     `max_items` like every other section and are ordered so the cut keeps the most useful
@@ -10058,7 +10058,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Share a contact your mailbox created with the rest of the organization.
+         * Share a contact your mailbox created with the rest of the company.
          * @description A contact a connector created from a message nothing had judged yet is yours alone until
          *     something judges it. Usually that is the sender classifier. This is the door for when it
          *     never will: the ceiling on open questions refused to ask and the correspondence went quiet,
@@ -10175,7 +10175,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                record_type: "person" | "organization" | "lead" | "deal";
+                record_type: "person" | "company" | "lead" | "deal";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -10208,7 +10208,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List manual per-record grants, filtered by record or by subject (A52/ADR-0039).
+         * List manual per-record grants, filtered by record or by subject (ADR-0039).
          * @description Returns active `record_grant` rows. Filter by a record (`record_type`+`record_id`) to answer
          *     "who has been granted access to this record?", or by a subject (`subject_type`+`subject_id`) to
          *     answer "what has this user/team been granted?". Read-only; tiered base scope (own/team/all) is
@@ -11870,7 +11870,7 @@ export interface paths {
          * @description A signal about a known record carries its subject (`entity_type`+`entity_id`, both or
          *     neither) and enters `resolution_state=resolved`; a raw item (only a `raw_ref` source
          *     pointer) enters `unresolved` until POST /signals/{id}/resolve attributes it to an
-         *     organization or drops it. Signals are COMPANY-LEVEL: there is no mandatory person
+         *     company or drops it. Signals are COMPANY-LEVEL: there is no mandatory person
          *     link, and `resolved_person_id` is only ever set by the resolver under recorded
          *     consent (P12).
          */
@@ -11922,12 +11922,12 @@ export interface paths {
         put?: never;
         /**
          * Run the signal→company resolver over the signal's raw_ref (inspectable match, never silently confident).
-         * @description Maps the raw source pointer to a specific organization via the domain index,
+         * @description Maps the raw source pointer to a specific company via the domain index,
          *     exact name, or a prior-interaction email match (B-E08.2), writing the append-only
          *     `signal_resolution` match-basis row and stamping the signal. Exactly one candidate →
          *     `resolved`; several plausible candidates → `low_confidence` (surfaced, never silently
          *     asserted); none → `dropped` — an unattributable signal retains NO person-level
-         *     dossier. `resolved_person_id` is set only where the org match holds AND the person
+         *     dossier. `resolved_person_id` is set only where the company match holds AND the person
          *     has a recorded consent grant; the resolver never creates person rows. Read+resolve
          *     only, no outbound.
          */
@@ -11950,10 +11950,10 @@ export interface paths {
         };
         /**
          * The warm/cold classification with the full "why warm" evidence (B-E08.3).
-         * @description A signal resolved to an organization where we hold ≥1 live contact edge
+         * @description A signal resolved to a company where we hold ≥1 live contact edge
          *     (employment or deal stakeholder) is WARM and routes to the warm room; a resolved
-         *     organization with no contact is COLD and routes to the cold queue. The answer is
-         *     evidence, not a score: the source signal id, the resolved org id, and the specific
+         *     company with no contact is COLD and routes to the cold queue. The answer is
+         *     evidence, not a score: the source signal id, the resolved company id, and the specific
          *     contact id(s) in our own graph that make it warm, each with its §4 relationship
          *     strength. Reads only our own relational core — never an external profile.
          */
@@ -11979,7 +11979,7 @@ export interface paths {
         /**
          * The proposed warm-intro path for a warm signal (B-E08.4) — an actionable move, not a notification.
          * @description Names the route-in contact (the strongest live relationship at the resolved
-         *     organization), the relationship we have, and a concrete suggested next move with a
+         *     company), the relationship we have, and a concrete suggested next move with a
          *     drafted message carrying the Art. 50 AI-assisted disclosure and evidence back to the
          *     warm signal. PROPOSAL ONLY: nothing is sent and no record mutates — the outbound
          *     send rides the governed send tool (POST /activities/{id}/send-email); the warm
@@ -13460,13 +13460,13 @@ export interface paths {
         /**
          * Which accounts your imported network reaches.
          * @description The account-level payoff of importing an export, and the one answer the ghosts
-         *     exist to give: for each organization on file, how many of your connections work
+         *     exist to give: for each company on file, how many of your connections work
          *     there, and how many of those are already contacts.
          *
          *     Ranked by connection count, then by name, so two reads of an unchanged network
          *     return the same order.
          *
-         *     Only organizations the caller can READ appear, under the ordinary organization
+         *     Only companies the caller can READ appear, under the ordinary company
          *     row scope. A connection whose employer resolved to no account is not reported
          *     here — there is no account to name — which is why the totals on this response and
          *     on the import summary differ and are both true.
@@ -13734,7 +13734,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/contracts": {
+    "/companies/{id}/contracts": {
         parameters: {
             query?: never;
             header?: never;
@@ -13743,7 +13743,7 @@ export interface paths {
         };
         /**
          * The agreements this account holds, newest first (CONTRACT-WIRE-1).
-         * @description Every contract anchored to this organization, whatever its status.
+         * @description Every contract anchored to this company, whatever its status.
          *
          *     `under_contract` on each row is a DERIVED reading computed from the dates
          *     (CONTRACT-FORM-1), and it is deliberately not the same fact as `status`. A
@@ -13751,7 +13751,7 @@ export interface paths {
          *     reads as no longer under contract and still reports its asserted status, so a
          *     queue of unapproved work never renders as an active customer.
          */
-        get: operations["listOrganizationContracts"];
+        get: operations["listCompanyContracts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -13892,7 +13892,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/documents": {
+    "/companies/{id}/documents": {
         parameters: {
             query?: never;
             header?: never;
@@ -13912,7 +13912,7 @@ export interface paths {
          *
          *     Ordered pinned first, then newest.
          */
-        get: operations["listOrganizationDocuments"];
+        get: operations["listCompanyDocuments"];
         put?: never;
         post?: never;
         delete?: never;
@@ -14024,7 +14024,7 @@ export interface paths {
          *
          *     Requires UPDATE on the attachment's own parent record, which is the authority the
          *     attachment surface gates every write behind. Note this is not identical to the
-         *     accept's: the accept writes a DEAL and is deal-only, so a person- or org-scoped
+         *     accept's: the accept writes a DEAL and is deal-only, so a person- or company-scoped
          *     attachment can be read by someone who could never accept the result. That is
          *     deliberate — the read is valid for any entity_type and is worth having on its own —
          *     but it does mean a reading can be paid for and then have nowhere to land.
@@ -14590,7 +14590,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/profile-fields/{field}": {
+    "/companies/{id}/profile-fields/{field}": {
         parameters: {
             query?: never;
             header?: never;
@@ -14610,7 +14610,7 @@ export interface paths {
         head?: never;
         /**
          * State or correct a profile field — the canonical value changes, the machine's proposal survives.
-         * @description DOSS-WIRE-4 / PO-AC-N-1. Where the field maps to a column on `organization`, THE COLUMN IS
+         * @description DOSS-WIRE-4 / PO-AC-N-1. Where the field maps to a column on `company`, THE COLUMN IS
          *     WHAT CHANGES; the sidecar keeps the machine's proposal, excerpt, source URL and confidence in
          *     history rather than overwriting them (PO-AC-N-2). A correction that changed only the sidecar
          *     would be a lie about having been accepted. Provenance flips to `human` with the acting
@@ -14624,13 +14624,13 @@ export interface paths {
          *     `verified_by` with the granting user and that would record a human verification of a value no
          *     human saw. Correcting a claim that already exists stays open to an agent.
          *
-         *     `404` therefore means the organization is unreachable, or — for the confirm operation, or for
+         *     `404` therefore means the company is unreachable, or — for the confirm operation, or for
          *     an agent's first statement — that no such claim exists to answer for.
          */
-        patch: operations["updateOrganizationProfileField"];
+        patch: operations["updateCompanyProfileField"];
         trace?: never;
     };
-    "/organizations/{id}/profile-fields/{field}/confirm": {
+    "/companies/{id}/profile-fields/{field}/confirm": {
         parameters: {
             query?: never;
             header?: never;
@@ -14651,14 +14651,14 @@ export interface paths {
          *     like the correction, so two readers confirming a field one of them has since corrected do not
          *     silently overwrite each other.
          */
-        post: operations["confirmOrganizationProfileField"];
+        post: operations["confirmCompanyProfileField"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/organizations/{id}/facts/{factKey}": {
+    "/companies/{id}/facts/{factKey}": {
         parameters: {
             query?: never;
             header?: never;
@@ -14666,7 +14666,7 @@ export interface paths {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
                 /**
-                 * @description One fact's identity within its organization, spelled `<field>:<value_key>` (e.g.
+                 * @description One fact's identity within its company, spelled `<field>:<value_key>` (e.g.
                  *     `named_customer:acme-inc`). A fact is multi-valued, so `field` alone does not name a row and
                  *     `value_key` alone is only unique within a field.
                  */
@@ -14688,7 +14688,7 @@ export interface paths {
          *     nothing to skip. Removal means "not true today", not "never show this again". The audit
          *     before-image keeps what was removed, so the deletion is answerable either way.
          */
-        delete: operations["deleteOrganizationFact"];
+        delete: operations["deleteCompanyFact"];
         options?: never;
         head?: never;
         /**
@@ -14698,10 +14698,10 @@ export interface paths {
          *     correction: canonical value first, machine proposal preserved in history, provenance flipped
          *     to `human`, one transaction carrying the row, the audit entry and the event.
          */
-        patch: operations["updateOrganizationFact"];
+        patch: operations["updateCompanyFact"];
         trace?: never;
     };
-    "/organizations/{id}/facts/{factKey}/confirm": {
+    "/companies/{id}/facts/{factKey}/confirm": {
         parameters: {
             query?: never;
             header?: never;
@@ -14709,7 +14709,7 @@ export interface paths {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
                 /**
-                 * @description One fact's identity within its organization, spelled `<field>:<value_key>` (e.g.
+                 * @description One fact's identity within its company, spelled `<field>:<value_key>` (e.g.
                  *     `named_customer:acme-inc`). A fact is multi-valued, so `field` alone does not name a row and
                  *     `value_key` alone is only unique within a field.
                  */
@@ -14724,7 +14724,7 @@ export interface paths {
          * @description Stamps `verified_at` + `verified_by` and moves the fact from extracted to confirmed
          *     (PO-AC-N-3). Version-guarded.
          */
-        post: operations["confirmOrganizationFact"];
+        post: operations["confirmCompanyFact"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14843,7 +14843,7 @@ export interface paths {
         put?: never;
         /**
          * Ask this corpus a question, answered only from its documents.
-         * @description Free text, unlike `POST /organizations/{id}/ask` — and what earns the text box
+         * @description Free text, unlike `POST /companies/{id}/ask` — and what earns the text box
          *     is the bound: "everything" here is one finite corpus, so the retrieval can prove
          *     what it did not find.
          *
@@ -14871,16 +14871,16 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** @description A human correction. The canonical store changes; the machine's proposal and its evidence survive in history (PO-AC-N-1/N-2). */
-        UpdateOrganizationProfileFieldRequest: {
-            /** @description The corrected value. Where this field maps to a column on `organization`, the COLUMN is what changes — a correction the header ignores is not a correction (PO-AC-N-1). */
+        UpdateCompanyProfileFieldRequest: {
+            /** @description The corrected value. Where this field maps to a column on `company`, the COLUMN is what changes — a correction the header ignores is not a correction (PO-AC-N-1). */
             value: string;
         };
         /** @description The correction path the fact store never had — without it the page can render a confirmed state nothing is able to produce. */
-        UpdateOrganizationFactRequest: {
+        UpdateCompanyFactRequest: {
             value: string;
         };
-        /** @description A fact a person states about a company. The category and field come from the same closed vocabulary a site read writes (org_fact_field_vocab), so a hand-stated fact and a read one are the same kind of row and the same readers find both. The dedupe key is derived from the value on the server, never supplied: a caller-chosen key could collide with an unrelated fact or slip past the uniqueness the store depends on. */
-        CreateOrganizationFactRequest: {
+        /** @description A fact a person states about a company. The category and field come from the same closed vocabulary a site read writes (company_fact_field_vocab), so a hand-stated fact and a read one are the same kind of row and the same readers find both. The dedupe key is derived from the value on the server, never supplied: a caller-chosen key could collide with an unrelated fact or slip past the uniqueness the store depends on. */
+        CreateCompanyFactRequest: {
             /** @enum {string} */
             category: "company" | "offering" | "market" | "signal";
             /** @description A field belonging to `category`; the pairing is checked, so a market field under `company` is a 422 rather than a row nobody can read back. */
@@ -15049,11 +15049,11 @@ export interface components {
             page: components["schemas"]["PageInfo"];
         };
         /**
-         * @description The installation's identity and reporting basis (ADR-0090/A135). Read by every role,
+         * @description The installation's identity and reporting basis (ADR-0090). Read by every role,
          *     changed only by admin/ops.
          */
         InstallationSettings: {
-            /** @description The organization's display name. */
+            /** @description The company's display name. */
             name: string;
             /**
              * @description IANA zone name every reporting period boundary is computed in (not a user's own
@@ -15156,7 +15156,7 @@ export interface components {
         };
         /** @description A sparse installation-settings patch (admin/ops, human-only). */
         UpdateInstallationSettingsRequest: {
-            /** @description Rename the organization. */
+            /** @description Rename the company. */
             name?: string;
             /** @description The IANA reporting zone. */
             timezone?: string;
@@ -15283,7 +15283,7 @@ export interface components {
         CaptureTraceResolution: {
             /** @enum {string} */
             status: "pending" | "unsure" | "real" | "noise" | "rejected" | "suppressed";
-            /** @description Who wrote, when the verdict said: person | role_mailbox | organization_sender | newsletter | transactional | spam | personal | advisor. The last two belong to the mailbox owner rather than to the business: personal is a private correspondent, advisor a professional they engage personally. */
+            /** @description Who wrote, when the verdict said: person | role_mailbox | company_sender | newsletter | transactional | spam | personal | advisor. The last two belong to the mailbox owner rather than to the business: personal is a private correspondent, advisor a professional they engage personally. */
             kind?: string | null;
             /** Format: date-time */
             resolved_at?: string | null;
@@ -15299,7 +15299,7 @@ export interface components {
             /**
              * @description Full seats in use: every one the installation has not withdrawn — neither
              *     deactivated nor suspended — agent seats included. Read seats are unlimited and
-             *     never counted (A62/ADR-0047). This is the same number the entitlement surface
+             *     never counted (ADR-0047). This is the same number the entitlement surface
              *     reports and the same one a seat creation is refused against; there is one meter.
              */
             seats_used: number;
@@ -15323,7 +15323,7 @@ export interface components {
             /**
              * @description Full seats in use: every one the installation has not withdrawn — neither
              *     deactivated nor suspended — agent seats included. Read seats are unlimited and
-             *     never counted (A62/ADR-0047). This is the number a seat creation is refused
+             *     never counted (ADR-0047). This is the number a seat creation is refused
              *     against, so the meter and the ceiling can never disagree.
              */
             seats_used: number;
@@ -15343,7 +15343,7 @@ export interface components {
          * @description Who holds the license and how long it lasts, as the validation module proved it.
          *     Present only for a verified license.
          *
-         *     `org`, `contact_name` and `contact_email` are ABSENT for a license issued before those
+         *     `company`, `contact_name` and `contact_email` are ABSENT for a license issued before those
          *     claims existed. Such a license verifies exactly like any other, so a client renders the
          *     rows it has rather than placeholders for the ones it does not.
          *
@@ -15366,7 +15366,7 @@ export interface components {
              */
             subject: string;
             /** @description The licensee's company name. Absent when the license carries no such claim. */
-            org?: string;
+            company?: string;
             /** @description The licensee's contact person. Absent when the license carries no such claim. */
             contact_name?: string;
             /**
@@ -15440,7 +15440,7 @@ export interface components {
             subject?: string | null;
         };
         /**
-         * @description The workspace-shared capture posture (ADR-0072/A118, CAP-PARAM-7). Read by every role,
+         * @description The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
          *     changed only by admin/ops.
          */
         CaptureSettings: {
@@ -15473,7 +15473,7 @@ export interface components {
              */
             shared_posture_allowed: boolean;
             /**
-             * @description When true, every organization with a primary domain and no dossier gets a governed
+             * @description When true, every company with a primary domain and no dossier gets a governed
              *     web deep-read under a daily spend cap — however it was named. The anchor is
              *     excluded (cold start reads it). Default is ON (the testing posture).
              */
@@ -15491,7 +15491,7 @@ export interface components {
              *     Default is ON.
              *
              *     "Workspace" here is the storage tenant, not the word the product shows a reader —
-             *     the surface calls it the organization's default.
+             *     the surface calls it the company's default.
              */
             signature_enrich: boolean;
         };
@@ -15522,7 +15522,7 @@ export interface components {
             configured: boolean;
             /** @description The vendor's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses. */
             client_id: string;
-            /** @description The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when the app authorizes any organization — and always omitted for `google`, which has no such concept, where a value would be a field that silently does nothing. A client that expects a string here reads the unpinned case as the wrong shape rather than as absent. */
+            /** @description The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when the app authorizes any company — and always omitted for `google`, which has no such concept, where a value would be a field that silently does nothing. A client that expects a string here reads the unpinned case as the wrong shape rather than as absent. */
             tenant?: string;
             /**
              * @description Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
@@ -15576,7 +15576,7 @@ export interface components {
             client_id: string;
             /** @description The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
             client_secret: string;
-            /** @description The Entra directory (tenant) id to pin a `microsoft` app to, so only that directory's members may authorize. Omit it to authorize any organization, which is what a multi-tenant registration is for. Refused for `google`, and refused for the authority aliases `common`, `organizations` and `consumers` — each of those widens the app to a population nobody vetted, and an empty field says the same thing without an alias a reader has to know to interpret. */
+            /** @description The Entra directory (tenant) id to pin a `microsoft` app to, so only that directory's members may authorize. Omit it to authorize any company, which is what a multi-tenant registration is for. Refused for `google`, and refused for the authority aliases `common`, `companies` and `consumers` — each of those widens the app to a population nobody vetted, and an empty field says the same thing without an alias a reader has to know to interpret. */
             tenant?: string;
         };
         AiProviderKeyList: {
@@ -15704,7 +15704,7 @@ export interface components {
         };
         /** @description A sparse capture-settings patch (admin/ops). */
         UpdateCaptureSettingsRequest: {
-            /** @description Toggle captured-organization auto-enrichment. */
+            /** @description Toggle captured-company auto-enrichment. */
             auto_enrich?: boolean;
             /** @description Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member. */
             mail_sharing?: boolean;
@@ -15739,7 +15739,7 @@ export interface components {
              * Format: uuid
              * @description The company on this domain, when one exists — an admitted domain usually has one.
              */
-            organization_id?: string | null;
+            company_id?: string | null;
         };
         SetBlockedDomainRequest: {
             /** @description A mail domain; normalized to its registrable form before it is stored. */
@@ -15749,7 +15749,7 @@ export interface components {
             /** @description Why. Required, because a refusal nobody can explain is one nobody can review. */
             reason: string;
         };
-        RejectOrganizationRequest: {
+        RejectCompanyRequest: {
             /**
              * @description Why this is not a company. Required: the refusal outlives the record, and the next
              *     operator to find the domain on the blocked list can only review a decision that
@@ -15762,8 +15762,8 @@ export interface components {
          *     archived record would leave the standing domain refusal — the half that stops the
          *     company coming back — invisible to the person who just made it.
          */
-        RejectOrganizationResponse: {
-            organization: components["schemas"]["Organization"];
+        RejectCompanyResponse: {
+            company: components["schemas"]["Company"];
             domain: components["schemas"]["BlockedDomain"];
         };
         BlockedDomainListResponse: {
@@ -16051,7 +16051,7 @@ export interface components {
         CaptureSenderDecision: {
             address: string;
             /**
-             * @description What the classifier concluded — person, role_mailbox, organization_sender, newsletter,
+             * @description What the classifier concluded — person, role_mailbox, company_sender, newsletter,
              *     transactional, spam, personal, advisor — or absent when it has not answered yet.
              */
             kind?: string;
@@ -16601,7 +16601,7 @@ export interface components {
         };
         BackfillPreviewRequest: {
             /**
-             * @description The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106/A157 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+             * @description The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
              * @enum {string}
              */
             window: "none" | "3m" | "6m" | "12m" | "24m" | "60m";
@@ -16648,7 +16648,7 @@ export interface components {
                 captured?: number;
                 skipped?: number;
                 people_created?: number;
-                organizations_created?: number;
+                companies_created?: number;
                 dedupe_candidates?: number;
             };
             /** Format: date-time */
@@ -16724,7 +16724,7 @@ export interface components {
                 messages_synced?: number;
                 activities_created?: number;
                 people_created?: number;
-                organizations_created?: number;
+                companies_created?: number;
             };
             review: {
                 /** @description Open DH-DDL-1 candidate pairs. */
@@ -16802,10 +16802,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
-             * @description A pair is always same-type (ADR-0118/A169 §2): a lead is proposed as a duplicate of a lead or of nothing.
+             * @description A pair is always same-type (ADR-0118 §2): a lead is proposed as a duplicate of a lead or of nothing.
              * @enum {string}
              */
-            entity_type: "person" | "organization" | "lead";
+            entity_type: "person" | "company" | "lead";
             /**
              * Format: uuid
              * @description Canonical ordering: left is the lower id — {A,B} and {B,A} are one row.
@@ -16817,7 +16817,7 @@ export interface components {
             confidence: number;
             /** @description Per-field agree/collide snapshot captured at detection — what the queue renders (AC-dedupe-2/3); never re-derived against since-edited rows. */
             evidence: {
-                /** @description full_name, org, domain, … */
+                /** @description full_name, company, domain, … */
                 field: string;
                 left_value: string | null;
                 right_value: string | null;
@@ -17188,7 +17188,7 @@ export interface components {
         /**
          * @description What the file's rows are, and therefore what the run creates.
          *
-         *     `organization` creates companies.
+         *     `company` creates companies.
          *
          *     `lead` and `person` are two answers to one question about a file of
          *     humans, and the caller picks the one that matches where the file came
@@ -17213,7 +17213,7 @@ export interface components {
          *     merge.
          * @enum {string}
          */
-        ImportObject: "organization" | "lead" | "person";
+        ImportObject: "company" | "lead" | "person";
         /** @description One column of the uploaded file, described well enough to map it without opening the file elsewhere. */
         ImportColumn: {
             /** @description The column name as the file spells it. */
@@ -17358,7 +17358,7 @@ export interface components {
          *     summing to the rows read.
          *
          *     Today the only link a delimited file carries is a person's employer,
-         *     named by a company column the mapping points at `organization`.
+         *     named by a company column the mapping points at `company`.
          */
         ImportRunLinks: {
             /**
@@ -18165,7 +18165,7 @@ export interface components {
             full_name: string;
             /** @description Denormalized current title; authoritative title is on the employment relationship. */
             title?: string | null;
-            /** @description Where this contact works TODAY: their current primary employment edge, resolved to the account it names. History is not here — the full career ribbon is `person_360.employments`, and a past employer never appears in this field. Absent is not "works nowhere": the field is also absent when the caller may not read relationship edges (an edge discloses its endpoints as a PAIR, which the grant on the person does not cover) or when the employer sits outside their organization row scope. A reader is told who somebody works for or nothing at all, never a company they have no grant for. */
+            /** @description Where this contact works TODAY: their current primary employment edge, resolved to the account it names. History is not here — the full career ribbon is `person_360.employments`, and a past employer never appears in this field. Absent is not "works nowhere": the field is also absent when the caller may not read relationship edges (an edge discloses its endpoints as a PAIR, which the grant on the person does not cover) or when the employer sits outside their company row scope. A reader is told who somebody works for or nothing at all, never a company they have no grant for. */
             readonly employer?: components["schemas"]["PersonEmployer"];
             /** Format: uuid */
             owner_id?: string | null;
@@ -18199,7 +18199,7 @@ export interface components {
              */
             readonly reachability?: components["schemas"]["PersonReachability"][];
             /**
-             * @description Per-purpose consent summary (A22/ADR-0011). Read-only derived view of the `person_consent`
+             * @description Per-purpose consent summary (ADR-0011). Read-only derived view of the `person_consent`
              *     rows; one entry per purpose the workspace tracks. The single flat `consent_state` flag was
              *     REMOVED — consent is per-purpose and demonstrable (data-model.md §3.4). Mutate via
              *     `POST /people/{id}/consent`; read the full proof log via `GET /people/{id}/consent`.
@@ -18241,8 +18241,8 @@ export interface components {
         /** @description The account a contact works at today, by their current primary employment edge — the one `uq_rel_current_primary_employer` keeps unique per person, so a contact has at most one. */
         PersonEmployer: {
             /** Format: uuid */
-            organization_id: string;
-            organization_name: string;
+            company_id: string;
+            company_name: string;
         };
         CreatePersonRequest: {
             full_name: string;
@@ -18271,11 +18271,11 @@ export interface components {
             title?: string | null;
             /**
              * Format: uuid
-             * @description An existing employer. Wins over `organization_name` when both arrive.
+             * @description An existing employer. Wins over `company_name` when both arrive.
              */
-            organization_id?: string | null;
+            company_id?: string | null;
             /** @description A new employer to create, when no existing record was picked. */
-            organization_name?: string | null;
+            company_name?: string | null;
             /** @description What they do at that employer, when it differs from `title`. */
             role?: string | null;
             /** @description The public profile this was read from. Stored, never fetched. */
@@ -18291,13 +18291,13 @@ export interface components {
              * Format: uuid
              * @description The employer this person was attached to, when one was named.
              */
-            organization_id?: string | null;
+            company_id?: string | null;
             /**
              * @description True when the employer is a record this call created. The surface says so
              *     rather than letting a typo silently become a second company.
              * @default false
              */
-            organization_created: boolean;
+            company_created: boolean;
         };
         /** @description One entry per card in the file, in the order the file listed them. */
         VCardImportReport: {
@@ -18366,7 +18366,7 @@ export interface components {
             /** Format: uuid */
             owner_id?: string | null;
             /**
-             * @description Who may see this contact: `workspace` for everyone in the organization,
+             * @description Who may see this contact: `workspace` for everyone in the company,
              *     `owner` for the person named by `owner_id` alone.
              *
              *     An ORDINARY field, writable in BOTH directions by anybody the write gate
@@ -18425,11 +18425,11 @@ export interface components {
             data: components["schemas"]["Person"][];
             page: components["schemas"]["PageInfo"];
         };
-        OrganizationDomain: {
+        CompanyDomain: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
-            organization_id?: string;
+            company_id?: string;
             /** @description Lowercased, no scheme, no www. */
             domain: string;
             /** @default false */
@@ -18469,19 +18469,19 @@ export interface components {
             /** @description Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx". */
             reason?: string | null;
         };
-        /** @description A company. Mirrors the `organization` table. */
-        Organization: {
+        /** @description A company. Mirrors the `company` table. */
+        Company: {
             tags?: components["schemas"]["RowTag"][];
             /** @description Canonical LinkedIn company URL (PO-DDL-N-2, ADR-0085). A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows. */
             linkedin_url?: string | null;
-            /** @description The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact organization_domain already owns is the duplication ADR-0085 closes. Not accepted on write. */
+            /** @description The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact company_domain already owns is the duplication ADR-0085 closes. Not accepted on write. */
             readonly website_url?: string | null;
             /** Format: uuid */
             id: string;
             display_name: string;
             /**
-             * @description True only for this installation's OWN company (ADR-0065/A111, amended by ADR-0082/A127).
-             *     It is one ordinary organization, reachable by id everywhere, but the surfaces that answer
+             * @description True only for this installation's OWN company (ADR-0065, amended by ADR-0082).
+             *     It is one ordinary company, reachable by id everywhere, but the surfaces that answer
              *     *which companies are we selling to* exclude it unless `include_anchor` is set, and it
              *     cannot be archived or merged. A caller that offers company actions should tell it apart.
              */
@@ -18496,7 +18496,7 @@ export interface components {
             /** Format: uuid */
             owner_id?: string | null;
             /**
-             * @description Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for an organization: `POST /people/{id}/publish` is a person's.
+             * @description Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for a company: `POST /people/{id}/publish` is a person's.
              * @enum {string}
              */
             readonly visibility?: "workspace" | "owner";
@@ -18506,31 +18506,31 @@ export interface components {
              * Format: uuid
              * @description Single-level hierarchy FK; no cycles.
              */
-            parent_org_id?: string | null;
+            parent_company_id?: string | null;
             /** Format: uuid */
             merged_into_id?: string | null;
             /**
              * @description S-E15.8c formula-field display rows (RD-AC-6/RD-AC-7/RD-AC-N-1). Populated on
-             *     `getOrganization` only; the key is absent entirely (not an empty array) when the
+             *     `getCompany` only; the key is absent entirely (not an empty array) when the
              *     viewer's role lacks computed_field:read visibility (STATE-4).
              */
             readonly computed_fields?: components["schemas"]["ComputedField"][];
-            domains?: components["schemas"]["OrganizationDomain"][];
+            domains?: components["schemas"]["CompanyDomain"][];
             /**
-             * @description WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079/A124). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+             * @description WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
              * @enum {string}
              */
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
-            /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079/A124). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. An org IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
+            /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             /**
              * @deprecated
-             * @description RETIRED (ADR-0079/A124) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
+             * @description RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
              * @enum {string|null}
              */
             classification?: null | "prospect" | "customer" | "agency" | "reseller" | "tech_vendor" | "platform" | "partner" | "competitor" | "other";
             /**
-             * @description Where to fetch the company's logo image (A55) — the `getOrganizationLogo`
+             * @description Where to fetch the company's logo image (A55) — the `getCompanyLogo`
              *     path for this record, cookie-authenticated and same-origin. A revision query changes
              *     with the stored image so a replacement cannot remain hidden behind an older cached
              *     response. The key is ABSENT entirely (not null) when no logo is stored, which is the
@@ -18540,11 +18540,11 @@ export interface components {
              *     client's business is the endpoint that streams the bytes.
              */
             readonly logo_url?: string | null;
-            /** @description Deterministic org-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions. */
+            /** @description Deterministic company-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions. */
             readonly strength?: components["schemas"]["RelationshipStrength"];
-            /** @description How many live people THE CALLER MAY SEE list this account as their current primary employer (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's person row scope, exactly as the person list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listOrganizations` and `getOrganization` — the reads that render the column, and ABSENT entirely for a role without `person:read` OR without `relationship:read` (the object grants come first, as on the person list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied. */
+            /** @description How many live people THE CALLER MAY SEE list this account as their current primary employer (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's person row scope, exactly as the person list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `person:read` OR without `relationship:read` (the object grants come first, as on the person list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied. */
             readonly contact_count?: number;
-            /** @description How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listOrganizations` and `getOrganization`; write responses omit it. */
+            /** @description How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it. */
             readonly open_deal_count?: number;
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
@@ -18570,12 +18570,12 @@ export interface components {
             [key: string]: unknown;
         };
         /** @description A client-supplied domain row on create/update. Closed — server-owned fields (id, source, captured_by) are never accepted from the request body. */
-        OrganizationDomainInput: {
+        CompanyDomainInput: {
             domain: string;
             /** @default false */
             is_primary: boolean;
         };
-        CreateOrganizationRequest: {
+        CreateCompanyRequest: {
             display_name: string;
             legal_name?: string | null;
             /** @description One human-written line saying what the company does. */
@@ -18587,13 +18587,13 @@ export interface components {
             /** Format: uuid */
             owner_id?: string | null;
             /** Format: uuid */
-            parent_org_id?: string | null;
-            domains?: components["schemas"]["OrganizationDomainInput"][];
+            parent_company_id?: string | null;
+            domains?: components["schemas"]["CompanyDomainInput"][];
             source: string;
         } & {
             [key: string]: unknown;
         };
-        UpdateOrganizationRequest: {
+        UpdateCompanyRequest: {
             /** @description Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here. */
             linkedin_url?: string | null;
             display_name?: string;
@@ -18607,29 +18607,29 @@ export interface components {
             /** Format: uuid */
             owner_id?: string | null;
             /** Format: uuid */
-            parent_org_id?: string | null;
-            /** @description Replace-set of the org's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. */
-            domains?: components["schemas"]["OrganizationDomainInput"][];
+            parent_company_id?: string | null;
+            /** @description Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. */
+            domains?: components["schemas"]["CompanyDomainInput"][];
             /**
-             * @description Where the account stands with us (ADR-0079/A124). Absent = untouched.
+             * @description Where the account stands with us (ADR-0079). Absent = untouched.
              * @enum {string}
              */
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
-            /** @description Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the org still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment. */
+            /** @description Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment. */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
         } & {
             [key: string]: unknown;
         };
-        OrganizationListResponse: {
-            data: components["schemas"]["Organization"][];
+        CompanyListResponse: {
+            data: components["schemas"]["Company"][];
             page: components["schemas"]["PageInfo"];
         };
         /**
-         * @description The account-tree roll-up over organization.parent_org_id. A server read only,
+         * @description The account-tree roll-up over company.parent_company_id. A server read only,
          *     never client-summed. Money is base-currency converted — never a raw
          *     cross-currency sum.
          */
-        OrganizationHierarchyRollup: {
+        CompanyHierarchyRollup: {
             /** Format: uuid */
             root_id: string;
             /** @enum {string} */
@@ -18655,7 +18655,7 @@ export interface components {
          *     schema from the person-facing `RelationshipStrength` because those two extra
          *     facts are meaningless on a person.
          */
-        OrganizationStrength: components["schemas"]["RelationshipStrength"] & {
+        CompanyStrength: components["schemas"]["RelationshipStrength"] & {
             /**
              * Format: uuid
              * @description The contact whose score this is. Null when the account has no contact the
@@ -18667,7 +18667,7 @@ export interface components {
             contact_count: number;
         };
         /** @description What an ensure may ask beyond "make it current". */
-        OrganizationScanRequest: {
+        CompanyScanRequest: {
             /**
              * @description Read the account again even though the stored findings' fingerprint matches or
              *     the rescan floor has not passed. A scan already in flight is still returned as
@@ -18691,7 +18691,7 @@ export interface components {
          *     still answers, and `degrade_reason` says what stopped it.
          * @enum {string}
          */
-        OrganizationScanState: "never" | "queued" | "running" | "done" | "degraded" | "failed";
+        CompanyScanState: "never" | "queued" | "running" | "done" | "degraded" | "failed";
         /**
          * @description One reader's scan of one account: the state of the read, and what the account looks
          *     like it needs — the model's stored findings and the 360's live rules as ONE list,
@@ -18700,10 +18700,10 @@ export interface components {
          *     words, quotes them verbatim; a finding that could not be grounded is dropped whole,
          *     never shown with its citation stripped.
          */
-        OrganizationScan: {
+        CompanyScan: {
             /** Format: uuid */
-            organization_id: string;
-            state: components["schemas"]["OrganizationScanState"];
+            company_id: string;
+            state: components["schemas"]["CompanyScanState"];
             /**
              * Format: date-time
              * @description When the stored findings were written. Null until a read has settled.
@@ -18741,7 +18741,7 @@ export interface components {
              *     order, then the model's findings by the order it gave them. Dismissed rows are
              *     gone; the cap is applied here and reported in `findings_dropped`.
              */
-            findings: components["schemas"]["Organization360Suggestion"][];
+            findings: components["schemas"]["Company360Suggestion"][];
             /** @description How many of this reader's undismissed findings the cap left out. */
             findings_dropped: number;
         };
@@ -18750,9 +18750,9 @@ export interface components {
          *     Every sentence carries the records it was written from, so the reader can open the
          *     evidence rather than take the sentence on trust.
          */
-        OrganizationDossier: {
+        CompanyDossier: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
@@ -18767,9 +18767,9 @@ export interface components {
              *     silence reads as a finding of nothing, which is a different claim. The compact
              *     card renders `summary` only.
              */
-            sections: components["schemas"]["OrganizationDossierSection"][];
+            sections: components["schemas"]["CompanyDossierSection"][];
         };
-        OrganizationDossierSection: {
+        CompanyDossierSection: {
             /**
              * @description `summary` — what this company is, in a sentence or three.
              *     `products_services` — what they sell.
@@ -18785,7 +18785,7 @@ export interface components {
              *     vocabulary and one grounding rule across every generated surface, so a reader
              *     learns the distinction once and it holds everywhere.
              */
-            sentences: components["schemas"]["OrganizationBriefSentence"][];
+            sentences: components["schemas"]["CompanyBriefSentence"][];
         };
         /**
          * @description The receipt behind one cited record (DOSS-WIRE-3). Each `source_kind` owes its own
@@ -18794,7 +18794,7 @@ export interface components {
          */
         ClaimEvidence: {
             /** @enum {string} */
-            entity_type: "organization" | "fact" | "profile_field";
+            entity_type: "company" | "fact" | "profile_field";
             /** Format: uuid */
             entity_id: string;
             /**
@@ -18885,9 +18885,9 @@ export interface components {
          *     dropped. Our own profile is not a record this reader can open, and citing it would
          *     invent a citation (DOSS-AC-6).
          */
-        OrganizationGrowthFit: {
+        CompanyGrowthFit: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             band: components["schemas"]["GrowthFitBand"];
             /**
              * @description Why the band could not go higher — our own offering context being unconfirmed
@@ -18906,7 +18906,7 @@ export interface components {
              */
             next_step?: string | null;
             /**
-             * @description The band, taken apart (DOSS-AC-17..20, ADR-0095/A146). Four named dimensions over the
+             * @description The band, taken apart (DOSS-AC-17..20, ADR-0095). Four named dimensions over the
              *     same evidence the band is assessed from, each with a 0-100 score and the reason for
              *     it, so a reader who disagrees with the verdict can see which input carried it.
              *
@@ -18920,15 +18920,15 @@ export interface components {
              */
             sub_scores?: components["schemas"]["GrowthFitSubScore"][];
             /** @description What argues for this company being a fit. */
-            positive_factors?: components["schemas"]["OrganizationBriefSentence"][];
+            positive_factors?: components["schemas"]["CompanyBriefSentence"][];
             /** @description What argues against it. */
-            negative_factors?: components["schemas"]["OrganizationBriefSentence"][];
+            negative_factors?: components["schemas"]["CompanyBriefSentence"][];
             /** @description What we sell that this company does not yet buy. */
-            whitespace?: components["schemas"]["OrganizationBriefSentence"][];
+            whitespace?: components["schemas"]["CompanyBriefSentence"][];
             /** @description The single suggested approach. A recommendation, and labelled as one. */
-            recommended_angle?: components["schemas"]["OrganizationBriefSentence"];
+            recommended_angle?: components["schemas"]["CompanyBriefSentence"];
             /** @description What this company is likely to push back with, each with its evidence. */
-            objections?: components["schemas"]["OrganizationBriefSentence"][];
+            objections?: components["schemas"]["CompanyBriefSentence"][];
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
@@ -18957,9 +18957,9 @@ export interface components {
          *     Every sentence carries the records it was written from, so the reader can open
          *     the evidence rather than take the sentence on trust.
          */
-        OrganizationBrief: {
+        CompanyBrief: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
@@ -18971,9 +18971,9 @@ export interface components {
              *     A section with nothing to say is ABSENT rather than empty — a heading over silence
              *     reads as a finding of nothing, which is a different claim.
              */
-            sections: components["schemas"]["OrganizationBriefSection"][];
+            sections: components["schemas"]["CompanyBriefSection"][];
         };
-        OrganizationBriefSection: {
+        CompanyBriefSection: {
             /**
              * @description `snapshot` — what this company is.
              *     `fit` — why it matters to US, read against our own company profile.
@@ -18983,7 +18983,7 @@ export interface components {
              * @enum {string}
              */
             kind: "snapshot" | "fit" | "health" | "activity" | "next_step";
-            sentences: components["schemas"]["OrganizationBriefSentence"][];
+            sentences: components["schemas"]["CompanyBriefSentence"][];
         };
         /**
          * @description Which writer produced a piece of generated prose. `model` — the configured model
@@ -19004,16 +19004,16 @@ export interface components {
          *     `whats_changed` — what has moved on this account recently.
          * @enum {string}
          */
-        OrganizationQuestion: "whats_open" | "meeting_prep" | "whats_changed";
+        CompanyQuestion: "whats_open" | "meeting_prep" | "whats_changed";
         /**
          * @description An answer to one prepared question, written from what the READER can see. Same
          *     shape as the brief: every sentence carries the records it was written from, so
          *     the reader can open the evidence rather than take the sentence on trust.
          */
-        OrganizationAnswer: {
+        CompanyAnswer: {
             /** Format: uuid */
-            organization_id: string;
-            question: components["schemas"]["OrganizationQuestion"];
+            company_id: string;
+            question: components["schemas"]["CompanyQuestion"];
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
@@ -19024,7 +19024,7 @@ export interface components {
              *     question nothing to answer from — an honest "nothing here I can show you"
              *     rather than a sentence written around the gap.
              */
-            sentences: components["schemas"]["OrganizationBriefSentence"][];
+            sentences: components["schemas"]["CompanyBriefSentence"][];
         };
         /**
          * @description One dimension of the growth-fit assessment, with the reason for its score.
@@ -19043,9 +19043,9 @@ export interface components {
             /** @description One sentence saying what this score was read from. */
             reason: string;
             /** @description The records behind the reason, on the same footing as every other claim. A sub-score citing nothing the assembly knows is dropped by the grounding filter (DOSS-AC-20). */
-            evidence?: components["schemas"]["OrganizationBriefEvidence"][];
+            evidence?: components["schemas"]["CompanyBriefEvidence"][];
         };
-        OrganizationBriefSentence: {
+        CompanyBriefSentence: {
             text: string;
             /**
              * @description What KIND of claim this is, so the reader can tell a record from a reading of it.
@@ -19065,12 +19065,12 @@ export interface components {
              * @description The records this sentence was written from — always records the reader can
              *     already open, because the brief was assembled under their own row scope.
              */
-            evidence: components["schemas"]["OrganizationBriefEvidence"][];
+            evidence: components["schemas"]["CompanyBriefEvidence"][];
         };
         /** @description One record a brief sentence was written from. */
-        OrganizationBriefEvidence: {
+        CompanyBriefEvidence: {
             /** @enum {string} */
-            entity_type: "deal" | "activity" | "person" | "organization" | "fact" | "profile_field";
+            entity_type: "deal" | "activity" | "person" | "company" | "fact" | "profile_field";
             /** Format: uuid */
             entity_id: string;
             /**
@@ -19113,16 +19113,16 @@ export interface components {
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
         };
         /**
-         * @description What the accounting mirror knows about one customer (ADR-0083/A128).
+         * @description What the accounting mirror knows about one customer (ADR-0083).
          *
          *     Every figure is nullable and ABSENT when it cannot be computed, never zero
          *     (FIN-AC-2). "€0 open" says the customer is square with us; "no figure" says
          *     we do not know. A card that renders the second as the first tells a rep an
          *     account is healthy on the strength of a missing connector.
          */
-        OrganizationFinanceSummary: {
+        CompanyFinanceSummary: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             state: components["schemas"]["FinanceSummaryState"];
             /** @description Which accounting source this came from, in the source's own words ("offline_demo"). Rendered as a label beside the figures so a reader knows what they are looking at; absent when nothing is connected. */
             provider?: string | null;
@@ -19163,7 +19163,7 @@ export interface components {
          *
          *     `no_connection` — no accounting source is configured for this installation.
          *     `unmapped` — a source is connected, but nobody has said which of its
-         *     customers this organization is. The figures are absent, and the fix is a
+         *     customers this company is. The figures are absent, and the fix is a
          *     mapping rather than a sync.
          *     `syncing` — the first pass has not finished; figures may be partial.
          *     `connected` — the figures are current.
@@ -19208,7 +19208,7 @@ export interface components {
         /** @description The per-user "I have seen this record" baseline, after an acknowledgment. */
         RecordViewAck: {
             /** @enum {string} */
-            entity_type: "organization" | "person";
+            entity_type: "company" | "person";
             /** Format: uuid */
             entity_id: string;
             /** Format: date-time */
@@ -19240,7 +19240,7 @@ export interface components {
          *     Every part is nullable and absent when it cannot be computed — never zero, which would
          *     be a claim about the account rather than about what was readable.
          */
-        Organization360Health: {
+        Company360Health: {
             /** @description Whether we are in contact and both sides are talking. Read from the strength roll-up and the reply balance below (PO-AC-N-10). */
             relationship?: components["schemas"]["HealthDimension"];
             /** @description Whether work is moving — open pipeline and whether it is stalling. */
@@ -19266,7 +19266,7 @@ export interface components {
          *     half and a null engagement, because a state inferred from data they were not allowed to see
          *     would be a conclusion the page has no basis for — and it is the one a rep would act on.
          */
-        Organization360StateStrip: {
+        Company360StateStrip: {
             account: {
                 /** @enum {string} */
                 lifecycle: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
@@ -19343,7 +19343,7 @@ export interface components {
             } | null;
         };
         /** @description One current employee of the account, as the company view shows them. */
-        Organization360Contact: {
+        Company360Contact: {
             /** Format: uuid */
             person_id: string;
             full_name: string;
@@ -19358,7 +19358,7 @@ export interface components {
             primary_email?: string | null;
             strength: components["schemas"]["RelationshipStrength"];
             /** @description This contact's stakeholder roles on the account's deals (champion, economic_buyer, …). */
-            deal_roles: components["schemas"]["Organization360DealRole"][];
+            deal_roles: components["schemas"]["Company360DealRole"][];
             /**
              * @description Consent state keyed by purpose key — per purpose, never one boolean. A purpose
              *     the person has no row for reads `unknown`, which is default-deny for outbound,
@@ -19367,10 +19367,10 @@ export interface components {
             consent: {
                 [key: string]: "unknown" | "granted" | "withdrawn";
             };
-            routes?: components["schemas"]["Organization360ContactRoutes"];
+            routes?: components["schemas"]["Company360ContactRoutes"];
         };
         /**
-         * @description Who on our side can actually reach this contact, strongest first (ADR-0089/A134).
+         * @description Who on our side can actually reach this contact, strongest first (ADR-0089).
          *
          *     The company page answers this per CONTACT rather than as a contact x
          *     every-colleague matrix: a forty-person sales team makes the matrix unreadable, and
@@ -19382,16 +19382,16 @@ export interface components {
          *     advice nobody can take. Their historical messages still count on the timeline; the
          *     person is gone, what happened is not.
          */
-        Organization360ContactRoutes: {
+        Company360ContactRoutes: {
             /** @description The strongest routes, ordered by the per-colleague relationship projection. */
-            top: components["schemas"]["Organization360Route"][];
+            top: components["schemas"]["Company360Route"][];
             /** @description How many further colleagues have a recorded exchange with this contact, beyond `top`. */
             remainder: number;
             /** @description True when nobody on our side has a recorded exchange with this contact. NOT the same claim as a cold relationship: "untried" says we never reached out, "cold" says we did and it went nowhere, and a page that renders them alike tells a rep an account is unreachable when nobody has tried. */
             untried: boolean;
         };
         /** @description One colleague who has actually exchanged messages with this contact. */
-        Organization360Route: {
+        Company360Route: {
             /** Format: uuid */
             user_id: string;
             display_name: string;
@@ -19404,7 +19404,7 @@ export interface components {
             last_interaction_at?: string | null;
         };
         /** @description One contact's stakeholder role on one of the account's deals. */
-        Organization360DealRole: {
+        Company360DealRole: {
             /** Format: uuid */
             deal_id: string;
             /** @description champion | economic_buyer | blocker | influencer | user; empty when the edge records no role. */
@@ -19422,7 +19422,7 @@ export interface components {
          *     At most one per deal or project, in this order: an overdue task beats an overdue
          *     commitment they made to us, which beats the newest such commitment.
          */
-        Organization360WorkAttention: {
+        Company360WorkAttention: {
             /**
              * @description `overdue_task` — an open task on this work is past its due date.
              *     `commitment_theirs` — they said in a captured conversation that they would do
@@ -19448,9 +19448,9 @@ export interface components {
              * @description The same receipt as `source_activity_id`, in the shape every other cited record on this page has — so the card renders it through the one citation path and an email among them opens as a message.
              *     Both are sent: `source_activity_id` is the durable field, and a client that has one and not the other still draws the older link. Null when the claim was read from nothing, and on a server that predates this field.
              */
-            readonly source_evidence?: components["schemas"]["OrganizationBriefEvidence"] | null;
+            readonly source_evidence?: components["schemas"]["CompanyBriefEvidence"] | null;
         };
-        Organization360Deal: {
+        Company360Deal: {
             /** Format: uuid */
             deal_id: string;
             name: string;
@@ -19469,21 +19469,21 @@ export interface components {
             expected_close_date?: string | null;
             /** @description No linked activity inside the 60-day stall window. */
             stalled: boolean;
-            attention?: components["schemas"]["Organization360WorkAttention"];
+            attention?: components["schemas"]["Company360WorkAttention"];
         };
         /**
          * @description Where a project stands on the record page; the same ladder the project's own `phase` walks.
          * @enum {string}
          */
-        Organization360ProjectPhase: "initiative" | "pursuing" | "delivering" | "closed";
+        Company360ProjectPhase: "initiative" | "pursuing" | "delivering" | "closed";
         /** @description One body of work on the record page: enough to name it, say where it stands and who holds it. The full row is `GET /projects/{id}`. Shared by the company page and the person page, so a project reads the same on both. */
-        Organization360Project: {
+        Company360Project: {
             /** Format: uuid */
             project_id: string;
             name: string;
             /** @description The subject-line handle, when the project has one. */
             key?: string | null;
-            phase: components["schemas"]["Organization360ProjectPhase"];
+            phase: components["schemas"]["Company360ProjectPhase"];
             /** Format: date-time */
             last_activity_at?: string | null;
             /** Format: date */
@@ -19495,18 +19495,18 @@ export interface components {
             /** @description Nothing has been filed against this project for the module's quiet window, counted from its last activity or, when it has none, from the day it was opened. Computed server-side because the payload carries no created_at and the window is one number the product spells in one place. */
             quiet: boolean;
             /** @description Present on the company record page, which decorates the row from the account's own tasks and captured commitments. The person page carries the same project row without it — the question "why does this need a person" is asked of an account, not of a contact. */
-            attention?: components["schemas"]["Organization360WorkAttention"];
+            attention?: components["schemas"]["Company360WorkAttention"];
         };
         /** @description The account's open deals plus the two lifetime figures the header needs. */
-        Organization360Deals: {
-            data: components["schemas"]["Organization360Deal"][];
+        Company360Deals: {
+            data: components["schemas"]["Company360Deal"][];
             page: components["schemas"]["PageInfo"];
             /** @description Every won deal on this account, converted at each deal's frozen close-time rate. Never a live re-conversion. */
             won_lifetime: components["schemas"]["Money"];
             lost_count: number;
         };
         /** @description One open task on the account, ordered overdue → due → undated. */
-        Organization360NextStep: {
+        Company360NextStep: {
             /** Format: uuid */
             activity_id: string;
             subject: string;
@@ -19546,7 +19546,7 @@ export interface components {
          *     Participants carry only the people this caller can already read. A meeting reachable
          *     through a visible contact must not disclose the colleague's other attendees.
          */
-        Organization360NextMeeting: {
+        Company360NextMeeting: {
             /** Format: uuid */
             activity_id: string;
             /** Format: date-time */
@@ -19558,10 +19558,10 @@ export interface components {
              */
             linked_deal_id?: string | null;
             /** @description The attendees on file, row-scoped. Empty is honest — a meeting can be booked before anyone is linked to it. */
-            participants: components["schemas"]["Organization360MeetingParticipant"][];
+            participants: components["schemas"]["Company360MeetingParticipant"][];
         };
         /** @description One attendee of the next meeting, named only when the caller may read them. */
-        Organization360MeetingParticipant: {
+        Company360MeetingParticipant: {
             /** Format: uuid */
             person_id: string;
             display_name: string;
@@ -19573,7 +19573,7 @@ export interface components {
          *     Every suggestion is a READ. Nothing is staged, nothing is sent, and the actions
          *     it offers are the same governed endpoints the rep would have used anyway.
          */
-        Organization360Suggestion: {
+        Company360Suggestion: {
             /**
              * @description The four RULE kinds, computed from the account's records with no model:
              *
@@ -19635,7 +19635,7 @@ export interface components {
             /** @description The rule that fired, in the words the rep reads. Never a score. */
             reason: string;
             /** @enum {string|null} */
-            subject_type?: null | "deal" | "person" | "organization";
+            subject_type?: null | "deal" | "person" | "company";
             /** Format: uuid */
             subject_id?: string | null;
             /**
@@ -19646,7 +19646,7 @@ export interface components {
              */
             written_by?: components["schemas"]["WrittenBy"];
             /** @description The records the rule fired on — always ones this reader can open. */
-            evidence: components["schemas"]["OrganizationBriefEvidence"][];
+            evidence: components["schemas"]["CompanyBriefEvidence"][];
             /**
              * @description What performing this advice means, named by the server rather than inferred by the
              *     client from the evidence order (AC-company-14). A rule that cannot name an action
@@ -19692,9 +19692,9 @@ export interface components {
         };
         /**
          * @description What changed on this account since the caller last acknowledged seeing it. Read-only:
-         *     the 360 never advances the baseline — `POST /organizations/{id}/view-ack` does.
+         *     the 360 never advances the baseline — `POST /companies/{id}/view-ack` does.
          */
-        Organization360SinceLastVisit: {
+        Company360SinceLastVisit: {
             /**
              * Format: date-time
              * @description The caller's last acknowledged visit, or null if they have never acknowledged one (first visit — counts run from the account's whole history).
@@ -19712,16 +19712,16 @@ export interface components {
             pending_proposals?: number | null;
         };
         /**
-         * @description The company record page in one payload. Every section except `organization` is
+         * @description The company record page in one payload. Every section except `company` is
          *     optional: absent means the caller lacks its grant, and `sections_omitted` names it.
          */
-        Organization360: {
+        Company360: {
             /**
              * Format: date-time
              * @description The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
              */
             as_of: string;
-            organization: components["schemas"]["Organization"];
+            company: components["schemas"]["Company"];
             /**
              * @description The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's people — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
              *     The schema is `PersonMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose promise it is.
@@ -19731,7 +19731,7 @@ export interface components {
             scope?: components["schemas"]["ProjectScope"];
             /**
              * Format: date-time
-             * @description When they last wrote to us, over the same three-link walk the timeline uses (the activity's own link, its deal's organization, the employer of the contact it is filed against). Null means nothing inbound was ever captured — which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+             * @description When they last wrote to us, over the same three-link walk the timeline uses (the activity's own link, its deal's company, the employer of the contact it is filed against). Null means nothing inbound was ever captured — which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
              */
             last_inbound_at?: string | null;
             /**
@@ -19739,23 +19739,23 @@ export interface components {
              * @description When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
              */
             last_outbound_at?: string | null;
-            state_strip?: components["schemas"]["Organization360StateStrip"];
-            next_meeting?: components["schemas"]["Organization360NextMeeting"];
-            health?: components["schemas"]["Organization360Health"];
+            state_strip?: components["schemas"]["Company360StateStrip"];
+            next_meeting?: components["schemas"]["Company360NextMeeting"];
+            health?: components["schemas"]["Company360Health"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
             sections_omitted: ("people" | "deals" | "projects" | "strength" | "activities" | "tags" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments")[];
             people?: {
-                data: components["schemas"]["Organization360Contact"][];
+                data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
             };
-            deals?: components["schemas"]["Organization360Deals"];
+            deals?: components["schemas"]["Company360Deals"];
             /** @description The company's unarchived projects, work in motion first (delivering, pursuing, initiative, then closed), under the caller's project row scope. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
-            projects?: components["schemas"]["Organization360Project"][];
+            projects?: components["schemas"]["Company360Project"][];
             /** @description Whether `projects` was cut short. The list is capped, and a card that counted the rows and said "3 in flight" would state a number the account does not have. Absent exactly when `projects` is. */
             projects_page?: components["schemas"]["PageInfo"];
             /** @description The reader may not read this account's activities, so no `attention` was derived on any deal or project row. The rows themselves are still listed and still true — this says the reasons behind them are missing, which a card must show rather than let an unexplained row read as a settled one. */
             attention_withheld?: boolean;
-            strength?: components["schemas"]["OrganizationStrength"];
+            strength?: components["schemas"]["CompanyStrength"];
             activities?: components["schemas"]["ActivityListResponse"];
             tags?: components["schemas"]["Tag"][];
             pending_approvals?: {
@@ -19763,16 +19763,16 @@ export interface components {
                 page: components["schemas"]["PageInfo"];
             };
             next_steps?: {
-                data: components["schemas"]["Organization360NextStep"][];
+                data: components["schemas"]["Company360NextStep"][];
                 page: components["schemas"]["PageInfo"];
             };
-            since_last_visit?: components["schemas"]["Organization360SinceLastVisit"];
+            since_last_visit?: components["schemas"]["Company360SinceLastVisit"];
             /**
              * @description What this account looks like it needs next, computed from its own records —
              *     no model involved. Each carries WHY, so a rep can disagree with the reason
              *     rather than with a verdict.
              */
-            suggestions?: components["schemas"]["Organization360Suggestion"][];
+            suggestions?: components["schemas"]["Company360Suggestion"][];
             /**
              * @description How many further suggestions this caller has that `suggestions` does not
              *     list — the card offers at most a handful, because advice past that is a list
@@ -19792,11 +19792,11 @@ export interface components {
          * @description One record in the account's one-hop neighbourhood. `id` is the record's own id,
          *     so a client routes to it with the same route it uses everywhere else.
          */
-        OrganizationGraphNode: {
+        CompanyGraphNode: {
             /** Format: uuid */
             id: string;
             /**
-             * @description `organization`, `person` and `deal` are the account's own records.
+             * @description `company`, `person` and `deal` are the account's own records.
              *     `user` is a member of THIS workspace — someone on our side who is connected to the
              *     account. A user node carries its display name as the `label` and nothing else:
              *     `detail`, `strength` and `strength_bucket` are null and `intro_path` is ABSENT,
@@ -19805,8 +19805,8 @@ export interface components {
              *     a client reads its absence as "not on the warm-intro path".
              * @enum {string}
              */
-            kind: "organization" | "person" | "deal" | "user";
-            /** @description The record's display name — the organization's, the person's full name, the deal's name, the workspace member's display name. */
+            kind: "company" | "person" | "deal" | "user";
+            /** @description The record's display name — the company's, the person's full name, the deal's name, the workspace member's display name. */
             label: string;
             /**
              * @description This node is the account the graph is centred on. Exactly one node carries
@@ -19817,14 +19817,14 @@ export interface components {
             /**
              * @description One short line of context the node cannot be read without: a contact's title,
              *     or a deal's stage name. Null when the record has none on file, and always null
-             *     on an organization or a user — how a related company is attached, and how a
+             *     on a company or a user — how a related company is attached, and how a
              *     teammate is connected, is the EDGE's kind, and saying it twice would let the two
              *     disagree.
              */
             detail?: string | null;
             /**
              * @description The person's §4 relationship strength, for weighting the node. Null for an
-             *     organization, a deal or a user, none of which have a relationship of their own,
+             *     company, a deal or a user, none of which have a relationship of their own,
              *     and for a contact whose strength this caller's person scope did not resolve.
              */
             strength?: number | null;
@@ -19840,8 +19840,8 @@ export interface components {
              */
             intro_path?: boolean;
             /**
-             * @description The company node's resolved logo (A55), same value `Organization.logo_url` carries.
-             *     Absent on an organization with no resolved logo and on every person or deal node —
+             * @description The company node's resolved logo (A55), same value `Company.logo_url` carries.
+             *     Absent on a company with no resolved logo and on every person or deal node —
              *     a client draws the node's monogram or its token-coloured circle instead.
              */
             logo_url?: string | null;
@@ -19852,7 +19852,7 @@ export interface components {
          */
         PersonProfileField: {
             /** @enum {string} */
-            field: "title" | "phone" | "role" | "linkedin" | "org_name" | "address" | "website";
+            field: "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
             value: string;
             /**
              * @description What this field held before a newer statement replaced it. The contact's own
@@ -19900,8 +19900,8 @@ export interface components {
             /** Format: uuid */
             relationship_id: string;
             /** Format: uuid */
-            organization_id: string;
-            organization_name?: string | null;
+            company_id: string;
+            company_name?: string | null;
             /** @description The title as the edge records it, which may differ from the person's own title field. */
             role?: string | null;
             is_current_primary: boolean;
@@ -19965,7 +19965,7 @@ export interface components {
             sections_omitted: ("employments" | "deal_roles" | "projects" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile" | "dead_addresses")[];
             strength?: components["schemas"]["RelationshipStrength"];
             /** @description The unarchived projects this person is part of: the ones they hold a live stakeholder seat on, plus every project of the company they currently work for, one row per project, work in motion first. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
-            projects?: components["schemas"]["Organization360Project"][];
+            projects?: components["schemas"]["Company360Project"][];
             /** @description The purchased person-data snapshots (PO-EXT-9), one per CONNECTED provider: what each returned about this person, kept beside the canonical record and never silently folded into it. One entry per connection so a reader can see who was paid for which value, and choose which provider to ask next; a provider nobody has run yet is present with state `never_run` rather than absent, because "we have not asked them" is the state the reader acts on. Ordered by provider name so the sections do not reshuffle between reads. Empty when no provider is connected. Absent when the caller lacks the person grant, named in `sections_omitted` as `provider_profile`. */
             provider_profiles?: components["schemas"]["PersonProviderProfile"][];
             /** @description What CHANGED about this relationship, most consequential first — derived at read from the person's own interactions, never stored. `strength` says what the relationship IS; this says what happened to it, which is what a reader acts on. Empty when nothing crossed a threshold. */
@@ -19974,7 +19974,7 @@ export interface components {
             moment?: components["schemas"]["PersonMoment"];
             /** @description The open deal this person sits on, with the money on it and who else is in the room. Absent when the caller has no deal grant (`sections_omitted`: `commercial`); present with `deal` null when they have the grant and there is no open deal — "no open deal" and "you may not see deals" are different facts. */
             commercial?: components["schemas"]["Person360Commercial"];
-            /** @description The soonest booked meeting with this person, or absent. Read through the person's own activity-link predicate — the org's next-meeting read answers a different question and would name a meeting this person is not in. */
+            /** @description The soonest booked meeting with this person, or absent. Read through the person's own activity-link predicate — the company's next-meeting read answers a different question and would name a meeting this person is not in. */
             next_meeting?: components["schemas"]["Person360NextMeeting"];
             /** @description What was promised, asked and decided in captured conversations (ADR-0097 D1) — one store behind the commitments card and the what-matters card, which differ only by kind. Every claim carries the activity it was read from and the verbatim snippet, so a reader can check it rather than trust it. */
             claims?: components["schemas"]["ConversationClaim"][];
@@ -20022,7 +20022,7 @@ export interface components {
             deal?: components["schemas"]["Person360CommercialDeal"];
             /** @description This person's recorded buying role on that deal — champion, economic_buyer, blocker, influencer, user by convention. */
             role?: string | null;
-            /** @description The other stakeholders on the same deal, with their recorded roles. Capped: past a handful this is an org chart, and the question it answers is "who else do I have to convince". Empty means single-threaded, which is itself the finding. */
+            /** @description The other stakeholders on the same deal, with their recorded roles. Capped: past a handful this is a company chart, and the question it answers is "who else do I have to convince". Empty means single-threaded, which is itself the finding. */
             committee: components["schemas"]["Person360CommitteeMember"][];
         };
         /** @description One open deal, with the figures a reader needs before a meeting. */
@@ -20143,7 +20143,7 @@ export interface components {
             channel: "email" | "meeting" | "call" | "note" | "message";
             /**
              * @description Which transport carried the thread — non-null exactly when `channel=message`
-             *     (ADR-0107/A158). A renderer that printed `channel` alone used to get the provider
+             *     (ADR-0107). A renderer that printed `channel` alone used to get the provider
              *     name for free; it must now read both, or a Telegram thread and a Dispact thread
              *     become indistinguishable.
              */
@@ -20240,7 +20240,7 @@ export interface components {
              * @description Which profile field this fills. A closed set, so a claim cannot be stored under a name no reader looks for.
              * @enum {string}
              */
-            field: "title" | "phone" | "role" | "linkedin" | "org_name" | "address" | "website";
+            field: "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
             value: string;
             source_quote: string;
             source_url: string;
@@ -20308,7 +20308,7 @@ export interface components {
             meeting_type: components["schemas"]["MeetingPlanType"];
             objective?: components["schemas"]["MeetingPlanObjective"];
             /** @description The suggested opener. Always a `recommendation`. */
-            opening?: components["schemas"]["OrganizationBriefSentence"];
+            opening?: components["schemas"]["CompanyBriefSentence"];
             top_risk?: components["schemas"]["MeetingPlanRisk"];
             /** @description What the other side is likely to ask, each an assessment with the record behind it. */
             likely_asks: components["schemas"]["MeetingPlanAsk"][];
@@ -20382,14 +20382,14 @@ export interface components {
         /** @description The outcome to earn, and the reminder not to force it. */
         MeetingPlanObjective: {
             /** @description One cited `recommendation`. */
-            sentence: components["schemas"]["OrganizationBriefSentence"];
+            sentence: components["schemas"]["CompanyBriefSentence"];
             /** @description The one-line "do not force this" reminder. Fixed product copy keyed to the meeting type, not read from the records, which is why it carries no evidence of its own. */
             caveat: string;
         };
         /** @description The one thing that can change this conversation, and what to do when it does. */
         MeetingPlanRisk: {
             /** @description The risk, as an `assessment` citing the record it was read from. */
-            text: components["schemas"]["OrganizationBriefSentence"];
+            text: components["schemas"]["CompanyBriefSentence"];
             response_plan: components["schemas"]["MeetingPlanResponse"];
         };
         /** @description What to say, what to show, and what not to promise. Three sentences rather than a paragraph, because a rep reads this while walking. */
@@ -20402,7 +20402,7 @@ export interface components {
             /** @description What they are likely to ask, in their own words where the record has them. */
             question: string;
             /** @description Why we expect it — a `fact` or `assessment` citing the record. */
-            basis: components["schemas"]["OrganizationBriefSentence"];
+            basis: components["schemas"]["CompanyBriefSentence"];
             relevance: components["schemas"]["MeetingPlanTier"];
             /** @description How to answer it. */
             prepare: string;
@@ -20412,13 +20412,13 @@ export interface components {
             ask: string;
             why: string;
             listen_for: string;
-            evidence: components["schemas"]["OrganizationBriefEvidence"][];
+            evidence: components["schemas"]["CompanyBriefEvidence"][];
         };
         /** @description What the meeting may turn into, and what to do if it does. */
         MeetingPlanScenario: {
             label: string;
             play: string;
-            evidence: components["schemas"]["OrganizationBriefEvidence"][];
+            evidence: components["schemas"]["CompanyBriefEvidence"][];
         };
         /** @description One stretch of the relationship that still bears on today. A moment, not a message: it spans the conversations it was built from, and cites them. */
         MeetingPlanArcMoment: {
@@ -20428,13 +20428,13 @@ export interface components {
             to: string;
             title: string;
             /** @description A `fact` citing the conversations the moment is made of. */
-            summary: components["schemas"]["OrganizationBriefSentence"];
+            summary: components["schemas"]["CompanyBriefSentence"];
         };
         /** @description How to close: the least that still counts, the most worth aiming at, and what to fall back to. A meeting that ends with none of the three ended with nothing. */
         MeetingPlanAdvance: {
-            minimum: components["schemas"]["OrganizationBriefSentence"];
-            best: components["schemas"]["OrganizationBriefSentence"];
-            fallback: components["schemas"]["OrganizationBriefSentence"];
+            minimum: components["schemas"]["CompanyBriefSentence"];
+            best: components["schemas"]["CompanyBriefSentence"];
+            fallback: components["schemas"]["CompanyBriefSentence"];
         };
         /**
          * @description Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
@@ -20470,7 +20470,7 @@ export interface components {
              */
             kind: "header" | "goal" | "what_changed" | "attendees" | "commitments" | "deal_state" | "risks" | "talking_points" | "company_context";
             /** @description The section's lines, each citing the records it was written from. A sentence whose citations do not resolve is dropped whole rather than shown uncited. */
-            sentences: components["schemas"]["OrganizationBriefSentence"][];
+            sentences: components["schemas"]["CompanyBriefSentence"][];
         };
         /**
          * @description A written brief over one person, assembled from what the READER can see — the company
@@ -20487,7 +20487,7 @@ export interface components {
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
             /** @description Two to five sentences: who this person is in the current commercial context, what they have explicitly cared about, what recently changed, and the unresolved decision or risk. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited. */
-            sentences: components["schemas"]["OrganizationBriefSentence"][];
+            sentences: components["schemas"]["CompanyBriefSentence"][];
         };
         /**
          * @description Whether an outbound message to this person is allowed right now, per purpose and
@@ -20529,7 +20529,7 @@ export interface components {
         };
         /**
          * @description The deterministic event that makes business correspondence lawful (ADR-0098 D2): an
-         *     inbound message, an inquiry they initiated, an active deal with their organization, or
+         *     inbound message, an inquiry they initiated, an active deal with their company, or
          *     a recorded in-person exchange. Recording WHICH event and when is what makes the Art
          *     6(1)(f) balancing accountable rather than merely asserted.
          */
@@ -20952,7 +20952,7 @@ export interface components {
              */
             surface: "composer" | "meeting_brief" | "research" | "record" | "task" | "activity_log";
             /** @enum {string|null} */
-            entity_type?: "person" | "organization" | "deal" | "activity" | null;
+            entity_type?: "person" | "company" | "deal" | "activity" | null;
             /** Format: uuid */
             entity_id?: string | null;
             /** @description What the surface opens with — a draft intent, a subject, a task title. Strings only: a prefill is what a human is about to edit, never a structure the client must interpret. */
@@ -20966,7 +20966,7 @@ export interface components {
              * @description The record the claim is about. One ledger across all four, so a correction made on one screen binds on the others.
              * @enum {string}
              */
-            subject_type: "organization" | "person" | "deal" | "lead";
+            subject_type: "company" | "person" | "deal" | "lead";
             /** Format: uuid */
             subject_id: string;
             /** @enum {string} */
@@ -21172,7 +21172,7 @@ export interface components {
              * @description Each sentence cites the record it rests on. A sentence whose citations do
              *     not resolve is dropped whole rather than shown uncited.
              */
-            sentences: components["schemas"]["OrganizationBriefSentence"][];
+            sentences: components["schemas"]["CompanyBriefSentence"][];
         };
         /**
          * @description The one thing to do next, and what performing it means. `action` is one of
@@ -21198,7 +21198,7 @@ export interface components {
             occurred_at?: string | null;
             /**
              * @description The canonical email row behind `activity_id`, when that activity is an email this reader may receive a summary of. The move's basis then opens the message it rests on instead of only naming it.
-             *     Carried on this shape as well as on `OrganizationBriefEvidence` because the deal card's basis is its own wire type, and a reader that could open a cited message on the brief but not on the move would be the same citation behaving differently on two pages. Same rules as there: withheld carries no words, absence proves nothing, never stored.
+             *     Carried on this shape as well as on `CompanyBriefEvidence` because the deal card's basis is its own wire type, and a reader that could open a cited message on the brief but not on the move would be the same citation behaving differently on two pages. Same rules as there: withheld carries no words, absence proves nothing, never stored.
              */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
         };
@@ -21382,8 +21382,8 @@ export interface components {
              */
             matched_person_name?: string | null;
             /** Format: uuid */
-            matched_org_id?: string | null;
-            matched_org_name?: string | null;
+            matched_company_id?: string | null;
+            matched_company_name?: string | null;
         };
         LinkedInConnectionListResponse: {
             data: components["schemas"]["LinkedInConnection"][];
@@ -21414,7 +21414,7 @@ export interface components {
         /** @description One account this member's network reaches. */
         LinkedInReachAccount: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             display_name: string;
             /** @description How many of the caller's connections resolved to this account. An account with none is not listed. */
             connections: number;
@@ -21441,7 +21441,7 @@ export interface components {
          *     always nodes in the same payload — an edge naming a record the caller may not
          *     read is dropped with its group, never returned dangling.
          */
-        OrganizationGraphEdge: {
+        CompanyGraphEdge: {
             /** Format: uuid */
             from: string;
             /** Format: uuid */
@@ -21457,10 +21457,10 @@ export interface components {
              *     correspondence itself is not this caller's to read.
              *     `has_deal` — the deal belongs to the account.
              *     `deal_stakeholder` — the person holds a stakeholder seat on the deal.
-             *     `parent_of` — `from` is the parent organization of `to` (the account's parent
+             *     `parent_of` — `from` is the parent company of `to` (the account's parent
              *     points at it; the account points at each child).
              *     `partner_of` / `referred_by` / `co_sell_with` — the A41 partner edges, from
-             *     the organization that records the edge to its counterparty.
+             *     the company that records the edge to its counterparty.
              *     `owns` — `from` is the workspace member who owns the account.
              *     `in_contact_with` — `from` is the workspace member who has been IN recorded
              *     interactions (email, call, meeting) with the contact at `to`. It is drawn from
@@ -21526,7 +21526,7 @@ export interface components {
          *     never names a DIFFERENT person than the warm room: it either shows that contact or
          *     says nothing.
          */
-        OrganizationGraphIntroPath: {
+        CompanyGraphIntroPath: {
             /** Format: uuid */
             signal_id: string;
             /**
@@ -21535,22 +21535,22 @@ export interface components {
              */
             contact_id: string;
         };
-        OrganizationCoverage: {
+        CompanyCoverage: {
             /** Format: date-time */
             as_of: string;
-            summary: components["schemas"]["OrganizationCoverageSummary"];
+            summary: components["schemas"]["CompanyCoverageSummary"];
             /** @description The account's open deals, so the reader can pick which committee to read. */
-            deals: components["schemas"]["OrganizationCoverageDeal"][];
+            deals: components["schemas"]["CompanyCoverageDeal"][];
             /**
              * Format: uuid
              * @description The deal the committee below describes. Null when the account has no visible open deal.
              */
             selected_deal_id?: string | null;
-            best_way_in?: components["schemas"]["OrganizationCoverageRoute"];
-            committee?: components["schemas"]["OrganizationCoverageCommittee"];
-            completeness: components["schemas"]["OrganizationCoverageCompleteness"];
+            best_way_in?: components["schemas"]["CompanyCoverageRoute"];
+            committee?: components["schemas"]["CompanyCoverageCommittee"];
+            completeness: components["schemas"]["CompanyCoverageCompleteness"];
         };
-        OrganizationCoverageSummary: {
+        CompanyCoverageSummary: {
             /** @description Every contact the caller may see at this account, not a page of them. */
             contacts_total: number;
             /** @description Contacts whose latest message we have not replied to. */
@@ -21564,7 +21564,7 @@ export interface components {
             /** @description Contacts whose exchange is real but older than the 90-day window. The five counts partition contacts_total, so a reader that ignores this one is short by exactly the contacts who have gone quiet. */
             lapsed: number;
         };
-        OrganizationCoverageDeal: {
+        CompanyCoverageDeal: {
             /** Format: uuid */
             deal_id: string;
             name: string;
@@ -21573,7 +21573,7 @@ export interface components {
          * @description The warmest way into the account: the contact most worth writing to, by the same
          *     ranking the contact list opens on.
          */
-        OrganizationCoverageRoute: {
+        CompanyCoverageRoute: {
             /** Format: uuid */
             person_id: string;
             full_name: string;
@@ -21582,8 +21582,8 @@ export interface components {
             /** Format: date-time */
             last_inbound_at?: string | null;
         };
-        OrganizationCoverageCommittee: {
-            seats: components["schemas"]["OrganizationCoverageSeat"][];
+        CompanyCoverageCommittee: {
+            seats: components["schemas"]["CompanyCoverageSeat"][];
             /**
              * @description The critical roles nobody holds on the selected deal — champion, then economic
              *     buyer. EMPTY whenever `unlisted_seats` is non-zero: a seat the caller cannot see
@@ -21597,7 +21597,7 @@ export interface components {
              */
             unlisted_seats: number;
         };
-        OrganizationCoverageSeat: {
+        CompanyCoverageSeat: {
             /** Format: uuid */
             person_id: string;
             full_name: string;
@@ -21651,7 +21651,7 @@ export interface components {
              *     is an answer ("nobody can reach them"), and giving that answer to somebody who
              *     was not allowed to ask is the disclosure inverted.
              */
-            routes?: components["schemas"]["Organization360ContactRoutes"];
+            routes?: components["schemas"]["Company360ContactRoutes"];
         };
         DealRoleProposalResult: {
             /**
@@ -21692,7 +21692,7 @@ export interface components {
             source_activity_id: string;
             confidence: number;
         };
-        OrganizationCoverageCompleteness: {
+        CompanyCoverageCompleteness: {
             /**
              * @description Whether the buying committee could be read at all. False when the caller lacks the
              *     deal or relationship grant — the committee and its gaps are then absent rather than
@@ -21724,7 +21724,7 @@ export interface components {
          * @enum {string}
          */
         ContactEngagement: "waiting" | "answered" | "no_reply" | "lapsed" | "untried";
-        OrganizationContact: {
+        CompanyContact: {
             /** Format: uuid */
             person_id: string;
             full_name: string;
@@ -21745,12 +21745,12 @@ export interface components {
              */
             last_outbound_at?: string | null;
         };
-        OrganizationContactListResponse: {
-            data: components["schemas"]["OrganizationContact"][];
+        CompanyContactListResponse: {
+            data: components["schemas"]["CompanyContact"][];
             page: components["schemas"]["PageInfo"];
         };
         /** @description The account's one-hop connection graph, as nodes and edges the client lays out. */
-        OrganizationGraph: {
+        CompanyGraph: {
             /**
              * Format: date-time
              * @description The instant the assembling transaction read. Every group is consistent to this moment under Read Committed.
@@ -21761,8 +21761,8 @@ export interface components {
              * @description The account the graph is centred on — the node carrying `root: true`.
              */
             root_id: string;
-            nodes: components["schemas"]["OrganizationGraphNode"][];
-            edges: components["schemas"]["OrganizationGraphEdge"][];
+            nodes: components["schemas"]["CompanyGraphNode"][];
+            edges: components["schemas"]["CompanyGraphEdge"][];
             /**
              * @description How many nodes the per-group caps left out, summed across the groups that were
              *     read. Zero means the graph is the whole one-hop neighbourhood this caller can
@@ -21779,22 +21779,22 @@ export interface components {
              *     activity grant, because each of its edges names a contact and is derived from a
              *     recorded interaction; either one missing withholds the whole group.
              *
-             *     The parent, child and partner organizations are not a group here: they need no
-             *     grant beyond the organization read this whole endpoint already demands, so they
+             *     The parent, child and partner companies are not a group here: they need no
+             *     grant beyond the company read this whole endpoint already demands, so they
              *     are row-scope pruned like every other node and can never be withheld wholesale.
              */
             groups_omitted: ("contacts" | "deals" | "intro_path" | "our_side")[];
-            intro_path?: components["schemas"]["OrganizationGraphIntroPath"];
+            intro_path?: components["schemas"]["CompanyGraphIntroPath"];
         };
         /**
          * @description The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:
-         *     `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_company`
-         *     (project↔org, READ-ONLY here — it is written through `/projects/{id}/companies`, which
+         *     `employment` (person↔company), `deal_stakeholder` (deal↔person), `project_company`
+         *     (project↔company, READ-ONLY here — it is written through `/projects/{id}/companies`, which
          *     holds the two rules this surface cannot: write authority over the project ROW, and the
          *     refusal that keeps a project's last company on it), `project_stakeholder`
          *     (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
-         *     (A41/ADR-0032, org↔org via `counterparty_org_id`): `partner_of` (org served by a partner
-         *     org), `referred_by` (org referred by a partner org), `co_sell_with` (org co-sold with a partner org).
+         *     (ADR-0032, company↔company via `counterparty_company_id`): `partner_of` (company served by a partner
+         *     company), `referred_by` (company referred by a partner company), `co_sell_with` (company co-sold with a partner company).
          *     `works_with` is the one person↔person kind (person_id ↔ counterparty_person_id): two external
          *     contacts a rep asserts work together. Undirected in fact — the two columns carry no order,
          *     and one live edge exists per pair whichever way it was recorded.
@@ -21807,12 +21807,12 @@ export interface components {
             /** Format: uuid */
             person_id?: string | null;
             /** Format: uuid */
-            organization_id?: string | null;
+            company_id?: string | null;
             /**
              * Format: uuid
-             * @description The other org on a partner edge (partner_of/referred_by/co_sell_with). Null for employment/deal_stakeholder.
+             * @description The other company on a partner edge (partner_of/referred_by/co_sell_with). Null for employment/deal_stakeholder.
              */
-            counterparty_org_id?: string | null;
+            counterparty_company_id?: string | null;
             /**
              * Format: uuid
              * @description The other person on a works_with edge. Null for every other kind.
@@ -21856,9 +21856,9 @@ export interface components {
             /** Format: uuid */
             person_id?: string | null;
             /** Format: uuid */
-            organization_id?: string | null;
+            company_id?: string | null;
             /** Format: uuid */
-            counterparty_org_id?: string | null;
+            counterparty_company_id?: string | null;
             /** Format: uuid */
             counterparty_person_id?: string | null;
             /** Format: uuid */
@@ -21912,16 +21912,16 @@ export interface components {
             stage_id: string | null;
             /**
              * Format: uuid
-             * @description Primary org; never a raw lead. Null when the caller may not read that organization, in which case `masked_fields` names it.
+             * @description Primary company; never a raw lead. Null when the caller may not read that company, in which case `masked_fields` names it.
              */
-            organization_id?: string | null;
+            company_id?: string | null;
             /**
              * Format: uuid
-             * @description Deal registration/attribution to a partner org (A38/A41/ADR-0032). The org must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that organization, in which case `masked_fields` names it.
+             * @description Deal registration/attribution to a partner company (ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
              */
-            partner_org_id?: string | null;
+            partner_company_id?: string | null;
             /**
-             * @description What the partner named by `partner_org_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
+             * @description What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
              * @enum {string|null}
              */
             partner_attribution?: "sourced" | "influenced" | null;
@@ -21997,12 +21997,12 @@ export interface components {
             /** Format: uuid */
             stage_id: string;
             /** Format: uuid */
-            organization_id?: string | null;
+            company_id?: string | null;
             /**
              * Format: uuid
-             * @description The partner this deal is attributed to at birth. The org must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it.
+             * @description The partner this deal is attributed to at birth. The company must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it.
              */
-            partner_org_id?: string | null;
+            partner_company_id?: string | null;
             /**
              * @description `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
              * @enum {string|null}
@@ -22030,12 +22030,12 @@ export interface components {
             amount_minor?: number | null;
             currency?: string | null;
             /** Format: uuid */
-            organization_id?: string | null;
+            company_id?: string | null;
             /**
              * Format: uuid
-             * @description The partner who brought this deal. The org must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it. Null clears the attribution.
+             * @description The partner who brought this deal. The company must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it. Null clears the attribution.
              */
-            partner_org_id?: string | null;
+            partner_company_id?: string | null;
             /**
              * @description `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
              * @enum {string|null}
@@ -22125,7 +22125,7 @@ export interface components {
              * Format: uuid
              * @description The partner who earned it.
              */
-            partner_org_id: string;
+            partner_company_id: string;
             status: components["schemas"]["CommissionStatus"];
             /**
              * Format: uuid
@@ -22171,7 +22171,7 @@ export interface components {
         };
         CommissionSummaryRow: {
             /** Format: uuid */
-            partner_org_id: string;
+            partner_company_id: string;
             status: components["schemas"]["CommissionStatus"];
             currency: string;
             entry_count: number;
@@ -22195,9 +22195,9 @@ export interface components {
             reason?: string | null;
         };
         /**
-         * @description An agreement between the installation and one organization. Mirrors the
+         * @description An agreement between the installation and one company. Mirrors the
          *     `contract` table. Carries no owner: visibility is inherited from the linked
-         *     deal, falling back to the organization (ADR-0109 §8).
+         *     deal, falling back to the company (ADR-0109 §8).
          */
         Contract: {
             /** Format: uuid */
@@ -22206,9 +22206,9 @@ export interface components {
             readonly masked_fields?: string[];
             /**
              * Format: uuid
-             * @description The counterparty. An organization holds many contracts. Every contract has one, so null here always means withheld — a reader admitted through the DEAL may not be able to open the company, and handing the id back would make the agreement an existence oracle over a row their own organization read refuses. `masked_fields` names it.
+             * @description The counterparty. A company holds many contracts. Every contract has one, so null here always means withheld — a reader admitted through the DEAL may not be able to open the company, and handing the id back would make the agreement an existence oracle over a row their own company read refuses. `masked_fields` names it.
              */
-            organization_id?: string | null;
+            company_id?: string | null;
             /**
              * Format: uuid
              * @description The deal this agreement came from, when there was one. Absent on an import or a renewal that never ran through the pipeline, and null ALSO when the reader may not open that deal — the two are told apart by `masked_fields`, which names it only in the second case.
@@ -22302,7 +22302,7 @@ export interface components {
         };
         CreateContractRequest: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             /** Format: uuid */
             deal_id?: string | null;
             /** Format: uuid */
@@ -22416,12 +22416,12 @@ export interface components {
             /** @description The fields of THIS row the caller may not read (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. */
             readonly masked_fields?: string[];
             /** @description The companies working this project, in the order they were attached. A project is work several companies do together — a customer, a partner, a subcontractor — so this is a list rather than one anchor. A company the caller may not read is OMITTED rather than named, so an empty list can mean either "no companies yet" or "none you can see". */
-            readonly organizations?: components["schemas"]["ProjectCompany"][];
+            readonly companies?: components["schemas"]["ProjectCompany"][];
             /**
              * Format: uuid
-             * @description The project's CUSTOMER — the first company attached with that role, or null when the caller may not read it (in which case `masked_fields` names it) or when the project has no customer. It is a view of `organizations`, kept because a project's client is the one company most readers mean; the full picture is the list.
+             * @description The project's CUSTOMER — the first company attached with that role, or null when the caller may not read it (in which case `masked_fields` names it) or when the project has no customer. It is a view of `companies`, kept because a project's client is the one company most readers mean; the full picture is the list.
              */
-            organization_id?: string | null;
+            company_id?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
@@ -22476,7 +22476,7 @@ export interface components {
             project: components["schemas"]["Project"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
             sections_omitted: components["schemas"]["Project360Section"][];
-            organization?: components["schemas"]["Project360Organization"];
+            company?: components["schemas"]["Project360Company"];
             phase_history?: components["schemas"]["Project360PhaseHistory"];
             /** @description The deals rolled up to the project, newest first, every status. */
             deals?: {
@@ -22507,9 +22507,9 @@ export interface components {
          * @description One section of the project page, as `sections_omitted` names it.
          * @enum {string}
          */
-        Project360Section: "organization" | "phase_history" | "deals" | "stakeholders" | "contracts" | "commitments" | "activities" | "coverage" | "rollups";
-        /** @description The company the project is for — the two fields a page header needs, read under the organization grant and row scope. */
-        Project360Organization: {
+        Project360Section: "company" | "phase_history" | "deals" | "stakeholders" | "contracts" | "commitments" | "activities" | "coverage" | "rollups";
+        /** @description The company the project is for — the two fields a page header needs, read under the company grant and row scope. */
+        Project360Company: {
             /** Format: uuid */
             id: string;
             name: string;
@@ -22604,7 +22604,7 @@ export interface components {
         CreateProjectRequest: {
             name: string;
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             /** Format: uuid */
             owner_id?: string | null;
             description?: string | null;
@@ -22618,7 +22618,7 @@ export interface components {
         };
         SetProjectCompanyRequest: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             /** @description What this company is to the project; defaults to `customer` when omitted. */
             role?: string;
         };
@@ -22628,7 +22628,7 @@ export interface components {
         /** @description One company's place on a project. */
         ProjectCompany: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             display_name: string;
             /** @description What this company is to the project — `customer` is its client, and the rest name the other sides of a joint delivery. Free text rather than an enum: an installation whose deliveries have a shape this vocabulary does not carry should not have to rename it. */
             role: string;
@@ -23130,7 +23130,7 @@ export interface components {
             /** Format: uuid */
             activity_id?: string;
             /** @enum {string} */
-            entity_type: "person" | "organization" | "deal" | "lead" | "project";
+            entity_type: "person" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
         };
@@ -23232,12 +23232,12 @@ export interface components {
          * @description The record kinds an activity may be filed under.
          * @enum {string}
          */
-        RelinkDestinationType: "person" | "organization" | "deal" | "lead" | "project";
+        RelinkDestinationType: "person" | "company" | "deal" | "lead" | "project";
         /**
          * @description One record an activity is filed under, as a caller supplies it. The read shape
          *     (ActivityLink) carries the ids the server assigned; this carries only the target.
          *
-         *     **A `meeting` or a `call` cannot be filed against an `organization`** — it is with a
+         *     **A `meeting` or a `call` cannot be filed against an `company`** — it is with a
          *     person, and the company is reached through that person's employer. Supplying one
          *     returns `422 code: company_meeting` against `links`. Every other kind may name a
          *     company: a `note` or a `task` is ABOUT a record, and an `email` can legitimately be
@@ -23245,7 +23245,7 @@ export interface components {
          */
         ActivityLinkInput: {
             /** @enum {string} */
-            entity_type: "person" | "organization" | "deal" | "lead" | "project";
+            entity_type: "person" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
         };
@@ -23258,7 +23258,7 @@ export interface components {
          *     disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
          *     what the DB CHECK would reject, rather than 500-ing at write time).
          *     `channel_provider` is the same kind of constraint in both directions: non-null exactly
-         *     when `kind=message` (ADR-0107/A158).
+         *     when `kind=message` (ADR-0107).
          */
         Activity: {
             /** Format: uuid */
@@ -23308,7 +23308,7 @@ export interface components {
             duration_seconds?: number | null;
             /**
              * Format: uuid
-             * @description Meeting only: the member of this organization who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
+             * @description Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
              */
             readonly host_user_id?: string | null;
             /**
@@ -23368,14 +23368,14 @@ export interface components {
         };
         /**
          * @description A reference to a messaging transport registered in THIS installation
-         *     (ADR-0107/A158). Deliberately a pattern-constrained string rather than an enum:
+         *     (ADR-0107). Deliberately a pattern-constrained string rather than an enum:
          *     which providers exist is a deployment fact — what this binary composed, including
          *     any extension unit present under `extensions/` — so an enum here would assert that
          *     the legal set is identical in every installation, which is false. The contract
          *     states the invariant; `GET /v1/channel-providers` resolves the live set.
          */
         ProviderRef: string;
-        /** @description Every messaging transport this installation has registered (ADR-0107/A158). */
+        /** @description Every messaging transport this installation has registered (ADR-0107). */
         ChannelProviderDirectory: {
             data: components["schemas"]["ChannelProviderEntry"][];
             /**
@@ -23502,7 +23502,7 @@ export interface components {
             /** @description The records the task is about. Omit it and the task appears on no timeline. */
             links?: {
                 /** @enum {string} */
-                entity_type: "person" | "organization" | "deal" | "lead" | "project";
+                entity_type: "person" | "company" | "deal" | "lead" | "project";
                 /** Format: uuid */
                 entity_id: string;
             }[];
@@ -23540,7 +23540,7 @@ export interface components {
             source_id?: string | null;
             links?: {
                 /** @enum {string} */
-                entity_type: "person" | "organization" | "deal" | "lead" | "project";
+                entity_type: "person" | "company" | "deal" | "lead" | "project";
                 /** Format: uuid */
                 entity_id: string;
             }[];
@@ -23691,7 +23691,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            entity_type: "person" | "organization" | "deal" | "activity" | "lead" | "project";
+            entity_type: "person" | "company" | "deal" | "activity" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
             filename: string;
@@ -23733,10 +23733,10 @@ export interface components {
              * Format: uuid
              * @description The account this file rolls up to — a READ PATH, not a second parent. Visibility stays the primary parent's, and this is maintained on relink and merge so a file follows the record it belongs to.
              */
-            readonly organization_id?: string | null;
+            readonly company_id?: string | null;
             /**
              * Format: uuid
-             * @description The agreement this document is about (CONTRACT-DDL-5) — the same kind of roll-up as organization_id above, and just as deliberately not a second parent. Set at upload by the person filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
+             * @description The agreement this document is about (CONTRACT-DDL-5) — the same kind of roll-up as company_id above, and just as deliberately not a second parent. Set at upload by the person filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
             source: string;
@@ -23907,9 +23907,9 @@ export interface components {
          */
         ReplyRecipient: {
             /**
-             * @description Every member of this organization whose OWN mailbox this message was delivered to, in the order the imports were recorded. It says whose conversation a reply would be joining: a thread that reached only a colleague's mailbox is theirs, and a reply still goes out from the caller's own mailbox under the caller's own name.
+             * @description Every member of this company whose OWN mailbox this message was delivered to, in the order the imports were recorded. It says whose conversation a reply would be joining: a thread that reached only a colleague's mailbox is theirs, and a reply still goes out from the caller's own mailbox under the caller's own name.
              *     A label of where the message arrived, never a grant. It is answered only to a caller who may already read the message's content, and a seat named here is named because their credential delivered the row.
-             *     Empty is an answer: a hand-logged activity was typed rather than delivered, and a row whose recorded provenance names no seat this organization still holds resolves to nobody. Always an array, never null.
+             *     Empty is an answer: a hand-logged activity was typed rather than delivered, and a row whose recorded provenance names no seat this company still holds resolves to nobody. Always an array, never null.
              */
             mailbox_user_ids: string[];
             /** @description The name as recorded, empty when no readable person is on the message. */
@@ -23921,7 +23921,7 @@ export interface components {
         };
         /**
          * @description A draft written from an account's records, and what it was written from
-         *     (ADR-0087/A132). Never sent by drafting; send via `POST /emails`.
+         *     (ADR-0087). Never sent by drafting; send via `POST /emails`.
          *
          *     It is `EmailDraft` plus the two things an account-started draft owes that a reply
          *     does not: `reasoning`, because a rep who did not choose the message it answers
@@ -23977,13 +23977,13 @@ export interface components {
             kind: "intent" | "recipient" | "relationship" | "deal" | "commitment" | "conversation" | "dossier";
             /** @description The reason in the reader's words, short enough to render as a chip. */
             label: string;
-            evidence_ref?: components["schemas"]["OrganizationBriefEvidence"];
+            evidence_ref?: components["schemas"]["CompanyBriefEvidence"];
         };
         /**
          * @description Records the caller can name in support of a send, each by id. Evidence is
          *     CHECKED, never trusted: the engine reads the named record and asks whether it
          *     actually supports the category claimed — a deal id that is closed, an invoice
-         *     belonging to another organization, or a record the caller cannot see supports
+         *     belonging to another company, or a record the caller cannot see supports
          *     nothing. Naming a record therefore never widens what a caller may do.
          *
          *     Every field is optional. A caller that can name nothing says nothing, and the
@@ -24035,7 +24035,7 @@ export interface components {
             html_body?: string | null;
             /**
              * @description Files already in the record library to send with this message, named by id
-             *     — never uploaded here. Each is snapshotted at staging (ADR-0086/A131 §4) so
+             *     — never uploaded here. Each is snapshotted at staging (ADR-0086 §4) so
              *     archiving or superseding one later cannot rewrite what the timeline says a
              *     sent message carried.
              *
@@ -24130,7 +24130,7 @@ export interface components {
             consent_purpose?: string;
             /**
              * Format: date-time
-             * @description Send this message at this instant instead of now (ADR-0104/A155). Absolute
+             * @description Send this message at this instant instead of now (ADR-0104). Absolute
              *     and unambiguous; `scheduled_tz` records the zone the human picked it in.
              *
              *     A scheduled message writes NO activity and NO delivery row until it fires —
@@ -24184,7 +24184,7 @@ export interface components {
             also_links?: components["schemas"]["ActivityLinkInput"][];
         };
         /**
-         * @description One message waiting for its moment (ADR-0104/A155). It is not an activity and not a
+         * @description One message waiting for its moment (ADR-0104). It is not an activity and not a
          *     delivery: nothing is on the timeline and nothing has been handed to a provider.
          */
         ScheduledSend: {
@@ -24453,7 +24453,7 @@ export interface components {
             html_body?: string | null;
             /**
              * @description Files already in the record library to send with this message, named by id
-             *     — never uploaded here. Each is snapshotted at staging (ADR-0086/A131 §4) so
+             *     — never uploaded here. Each is snapshotted at staging (ADR-0086 §4) so
              *     archiving or superseding one later cannot rewrite what the timeline says a
              *     sent message carried.
              *
@@ -24549,7 +24549,7 @@ export interface components {
             consent_purpose?: string;
             /**
              * Format: date-time
-             * @description Send this message at this instant instead of now (ADR-0104/A155). Absolute
+             * @description Send this message at this instant instead of now (ADR-0104). Absolute
              *     and unambiguous; `scheduled_tz` records the zone the human picked it in.
              *
              *     A scheduled message writes NO activity and NO delivery row until it fires —
@@ -24644,7 +24644,7 @@ export interface components {
             consent_purpose?: string;
             /**
              * @description Files already in the record library to send with this message, named by id
-             *     — never uploaded here. Each is snapshotted at staging (ADR-0086/A131 §4) so
+             *     — never uploaded here. Each is snapshotted at staging (ADR-0086 §4) so
              *     archiving or superseding one later cannot rewrite what the timeline says a
              *     sent message carried.
              *
@@ -24673,7 +24673,7 @@ export interface components {
              */
             attachment_ids?: string[];
         };
-        /** @description A thin, segregated prospect. Mirrors the `lead` table. NO organization FK. */
+        /** @description A thin, segregated prospect. Mirrors the `lead` table. NO company FK. */
         Lead: {
             /** Format: uuid */
             id: string;
@@ -24686,13 +24686,13 @@ export interface components {
             /** @description Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key. */
             linkedin_url?: string | null;
             title?: string | null;
-            /** @description FREE TEXT — NOT an organization FK. */
+            /** @description FREE TEXT — NOT a company FK. */
             company_name?: string | null;
-            /** @description Loose key for ABM routing without creating an org. */
-            candidate_org_key?: string | null;
+            /** @description Loose key for ABM routing without creating a company. */
+            candidate_company_key?: string | null;
             /**
              * Format: uuid
-             * @description The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm and none can: a lead has no organization_id, only candidate_org_key, so the deal_project_same_org trigger has no lead twin. Promotion is where a mismatch becomes visible.
+             * @description The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm and none can: a lead has no company_id, only candidate_company_key, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
              */
             project_id?: string | null;
             /**
@@ -24723,7 +24723,7 @@ export interface components {
             promoted_person_id?: string | null;
             /**
              * Format: uuid
-             * @description Set when this lead was merged away into another, and null otherwise. It is what separates a merged-away lead from a disqualified one — both are archived and neither carries a `promoted_person_id`, so without this a reader can only see that the lead ended, not which of two very different things happened to it. Disqualified says a human judged the lead not worth pursuing; merged says it was the same lead as another one. The id names the survivor to read instead. `person` and `organization` already carry the same field for the same reason.
+             * @description Set when this lead was merged away into another, and null otherwise. It is what separates a merged-away lead from a disqualified one — both are archived and neither carries a `promoted_person_id`, so without this a reader can only see that the lead ended, not which of two very different things happened to it. Disqualified says a human judged the lead not worth pursuing; merged says it was the same lead as another one. The id names the survivor to read instead. `person` and `company` already carry the same field for the same reason.
              */
             readonly merged_into_id?: string | null;
             /** Format: date-time */
@@ -24744,16 +24744,16 @@ export interface components {
              */
             readonly sla_deadline_at?: string | null;
             /**
-             * @description Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119/A170).
+             * @description Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119).
              * @enum {string|null}
              */
             readonly sla_state?: "within_target" | "at_risk" | "breached" | null;
             /**
              * Format: date-time
-             * @description Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118/A169). Derived from activity_link, not stored on the lead.
+             * @description Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
              */
             readonly last_activity_at?: string | null;
-            /** @description Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118/A169). */
+            /** @description Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118). */
             readonly open_task_count?: number | null;
             /** @description Subject of the earliest open task linked to this lead. */
             readonly next_task_subject?: string | null;
@@ -24810,7 +24810,7 @@ export interface components {
             linkedin_url?: string | null;
             title?: string | null;
             company_name?: string | null;
-            candidate_org_key?: string | null;
+            candidate_company_key?: string | null;
             /** Format: uuid */
             project_id?: string | null;
             /**
@@ -24839,8 +24839,8 @@ export interface components {
             email?: string | null;
             title?: string | null;
             company_name?: string | null;
-            /** @description Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never an organization FK. */
-            candidate_org_key?: string | null;
+            /** @description Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK. */
+            candidate_company_key?: string | null;
             /**
              * Format: uuid
              * @description The body of work this lead belongs to; carries no same-company guard (a lead has no company).
@@ -24893,7 +24893,7 @@ export interface components {
          * @description Open a deal in the same transaction as the promotion. Omit both ids to use the
          *     default pipeline's first open stage; a pipeline alone takes its first open stage; a
          *     stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-         *     and its organization is left unset (a lead has no organization). The deal's id lands
+         *     and its company is left unset (a lead has no company). The deal's id lands
          *     on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
          */
         QualifyDealRequest: {
@@ -24934,7 +24934,7 @@ export interface components {
              */
             deal_id?: string | null;
         };
-        /** @description What POST /leads/{id}/promote would do, computed without writing (ADR-0119/A170). */
+        /** @description What POST /leads/{id}/promote would do, computed without writing (ADR-0119). */
         PromoteLeadPreview: {
             /**
              * @description merge = an existing live person matches this lead's email and promotion would fold into it; create = promotion would make a new person.
@@ -25195,7 +25195,7 @@ export interface components {
         /**
          * @description A surfaced "something changed / worth attention" item. Mirrors the `signal` table:
          *     company-level and consent-gated by construction — the only mandatory attribution is
-         *     organizational (`resolved_org_id` after resolution); `resolved_person_id` is optional
+         *     to a company (`resolved_company_id` after resolution); `resolved_person_id` is optional
          *     and set only under a recorded consent grant (P12). Unattributable signals are
          *     `dropped`, never retained as a person-level dossier.
          */
@@ -25227,7 +25227,7 @@ export interface components {
              * @description The subject record the signal is about; null until a raw signal resolves (both entity fields set together).
              * @enum {string|null}
              */
-            entity_type?: "deal" | "organization" | "person" | "project" | null;
+            entity_type?: "deal" | "company" | "person" | "project" | null;
             /** Format: uuid */
             entity_id?: string | null;
             /**
@@ -25238,9 +25238,9 @@ export interface components {
             resolution_confidence?: number | null;
             /**
              * Format: uuid
-             * @description The organization the raw signal resolved to (the only required attribution level).
+             * @description The company the raw signal resolved to (the only required attribution level).
              */
-            resolved_org_id?: string | null;
+            resolved_company_id?: string | null;
             /**
              * Format: uuid
              * @description Optional person resolution — set only under a recorded consent grant, never inferred.
@@ -25317,7 +25317,7 @@ export interface components {
              * @description Subject record, both entity fields together or neither: with a subject the signal enters `resolved`; without one it enters `unresolved` (a raw item needing a raw_ref for POST /signals/{id}/resolve).
              * @enum {string|null}
              */
-            entity_type?: "deal" | "organization" | "person" | "project" | null;
+            entity_type?: "deal" | "company" | "person" | "project" | null;
             /** Format: uuid */
             entity_id?: string | null;
             /**
@@ -25366,7 +25366,7 @@ export interface components {
             strength_bucket: "none" | "weak" | "moderate" | "strong";
         };
         /**
-         * @description The warm/cold branch with its full evidence: source signal id, resolved org id, and
+         * @description The warm/cold branch with its full evidence: source signal id, resolved company id, and
          *     the specific contact id(s) that make it warm. No mystery score — a numeric-only
          *     answer would be a contract violation (features/07 §9).
          */
@@ -25380,7 +25380,7 @@ export interface components {
             /** Format: uuid */
             source_signal_id: string;
             /** Format: uuid */
-            resolved_org_id: string;
+            resolved_company_id: string;
             /** @description Empty exactly when cold. */
             contact_ids: string[];
             contacts: components["schemas"]["SignalWarmContact"][];
@@ -25394,10 +25394,10 @@ export interface components {
             /** Format: uuid */
             signal_id: string;
             /** Format: uuid */
-            resolved_org_id: string;
+            resolved_company_id: string;
             /**
              * Format: uuid
-             * @description The route-in contact (the strongest live relationship at the resolved organization).
+             * @description The route-in contact (the strongest live relationship at the resolved company).
              */
             contact_id: string;
             contact_name?: string | null;
@@ -25419,7 +25419,7 @@ export interface components {
                 /** Format: uuid */
                 source_signal_id: string;
                 /** Format: uuid */
-                resolved_org_id: string;
+                resolved_company_id: string;
                 contact_ids: string[];
             };
         };
@@ -25429,7 +25429,7 @@ export interface components {
             id: string;
             name: string;
             /** @enum {string} */
-            entity_type: "person" | "organization" | "deal" | "lead" | "project";
+            entity_type: "person" | "company" | "deal" | "lead" | "project";
             /**
              * @default static
              * @enum {string}
@@ -25456,7 +25456,7 @@ export interface components {
             /** Format: uuid */
             list_id: string;
             /** @enum {string} */
-            entity_type: "person" | "organization" | "deal" | "lead" | "project";
+            entity_type: "person" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
             added_by?: string;
@@ -25466,7 +25466,7 @@ export interface components {
         /** @description A candidate filter to evaluate without saving it. */
         FilterPreviewRequest: {
             /** @enum {string} */
-            resource: "person" | "organization" | "deal" | "lead" | "project";
+            resource: "person" | "company" | "deal" | "lead" | "project";
             /**
              * @description The canonical filter tree — the same representation a dynamic list's
              *     `definition` and a saved view's `query` carry, and untyped here for
@@ -25490,7 +25490,7 @@ export interface components {
         /** @description What a candidate filter would select for this caller (LVS-EXT-9). */
         FilterPreview: {
             /** @enum {string} */
-            resource: "person" | "organization" | "deal" | "lead" | "project";
+            resource: "person" | "company" | "deal" | "lead" | "project";
             /**
              * @description Every row the filter selects that this caller may see — not the
              *     length of `rows`. This is the number a builder shows a human while
@@ -25525,7 +25525,7 @@ export interface components {
          */
         FilterVocabulary: {
             /** @enum {string} */
-            resource: "person" | "organization" | "deal" | "lead" | "project";
+            resource: "person" | "company" | "deal" | "lead" | "project";
             /**
              * @description Every offerable field, core and custom together — a filter names them
              *     the same way, so splitting them here would invite a caller to treat
@@ -25599,7 +25599,7 @@ export interface components {
              *     `id`, so only a core field can carry a reference.
              * @enum {string}
              */
-            references?: "tag" | "app_user" | "team" | "organization" | "pipeline" | "stage" | "project";
+            references?: "tag" | "app_user" | "team" | "company" | "pipeline" | "stage" | "project";
         };
         /** @description A tag. Mirrors the `tag` table. */
         Tag: {
@@ -25750,7 +25750,7 @@ export interface components {
             /** Format: uuid */
             tag_id: string;
             /** @enum {string} */
-            entity_type: "person" | "organization" | "deal" | "lead" | "project";
+            entity_type: "person" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
             /** Format: date-time */
@@ -25758,7 +25758,7 @@ export interface components {
         };
         ApplyTagRequest: {
             /** @enum {string} */
-            entity_type: "person" | "organization" | "deal" | "lead" | "project";
+            entity_type: "person" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
         };
@@ -25770,7 +25770,7 @@ export interface components {
          * @description The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
          * @enum {string}
          */
-        SavedViewResource: "people" | "organizations" | "deals" | "activities" | "leads" | "partners" | "projects";
+        SavedViewResource: "people" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
         /** @description A per-user saved view (columns, sort, filter state) over one resource. Mirrors the `saved_view` table. V1 is private (owner-only); shared/team views are a fast-follow. */
         SavedView: {
             /** Format: uuid */
@@ -25825,7 +25825,7 @@ export interface components {
              * @description The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
              * @enum {string}
              */
-            object?: "person" | "organization" | "deal" | "lead" | "project";
+            object?: "person" | "company" | "deal" | "lead" | "project";
             /** @description The canonical §13.5 predicate tree (nested and/or groups over typed leaves). Required with `object`. */
             filter?: {
                 [key: string]: unknown;
@@ -25885,7 +25885,7 @@ export interface components {
             email: string;
             display_name: string;
             /**
-             * @description System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-organization seat that holds no admin power.
+             * @description System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power.
              * @enum {string}
              */
             role: "admin" | "management" | "manager" | "rep" | "read_only" | "ops";
@@ -25904,7 +25904,7 @@ export interface components {
             /** @enum {string} */
             row_scope: "own" | "team" | "all";
             /**
-             * @description Customer identity (person, organization, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+             * @description Customer identity (person, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
              * @enum {string}
              */
             identity_read?: "workspace";
@@ -26026,7 +26026,7 @@ export interface components {
         };
         MeResponse: {
             user: components["schemas"]["User"];
-            /** @description The installation's organization name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates. */
+            /** @description The installation's company name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates. */
             workspace_name: string;
             /**
              * @deprecated
@@ -26799,7 +26799,7 @@ export interface components {
         };
         WeeklyPlanLink: {
             /** @enum {string} */
-            type: "deal" | "lead" | "person" | "organization" | "project";
+            type: "deal" | "lead" | "person" | "company" | "project";
             /** Format: uuid */
             id: string;
         };
@@ -26834,7 +26834,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage";
+        RbacObject: "person" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -26849,7 +26849,7 @@ export interface components {
         };
         /**
          * @description What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
-         *     Two independent axes, both of which must permit an action: the licensing seat ceiling (A62/ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
+         *     Two independent axes, both of which must permit an action: the licensing seat ceiling (ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
          *     This is a snapshot, not an authority. A role change does not revoke live sessions, so a client refetches on window focus and after any 403, and treats the server's answer as the only one that counts. It does not express the human-principal gate, nor the few routes that still key on the literal admin role independently of any grant — a permitted grant here is necessary, never sufficient.
          */
         Authorization: {
@@ -27123,7 +27123,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+            entity_type: "person" | "company" | "deal" | "lead" | "project" | "activity";
             /** Format: uuid */
             entity_id: string;
             field: string;
@@ -27183,7 +27183,7 @@ export interface components {
              * @description The existing core object this field is added to (CUSTOM-FIELDS-PARAM-2).
              * @enum {string}
              */
-            object: "person" | "organization" | "deal" | "lead" | "project";
+            object: "person" | "company" | "deal" | "lead" | "project";
             /** @description Display label; the only thing a rename updates. */
             label: string;
             /** @description Admin-facing key the column_name derives from. */
@@ -27231,7 +27231,7 @@ export interface components {
          */
         CreateCustomFieldRequest: {
             /** @enum {string} */
-            object: "person" | "organization" | "deal" | "lead" | "project";
+            object: "person" | "company" | "deal" | "lead" | "project";
             label: string;
             /** @enum {string} */
             type: "text" | "number" | "date" | "currency" | "picklist" | "boolean";
@@ -27317,7 +27317,7 @@ export interface components {
             /** @description The relationship kind, e.g. `employment`, `co_sell_with`, `deal_stakeholder`. */
             kind: string;
             /** @enum {string} */
-            other_entity_type: "person" | "organization" | "deal" | "project";
+            other_entity_type: "person" | "company" | "deal" | "project";
             /** Format: uuid */
             other_entity_id: string;
             /** @description The other endpoint's display name, resolved by the read. Null when the row no longer resolves — the line then names the link without claiming a name for it. */
@@ -27462,7 +27462,7 @@ export interface components {
         };
         SearchResult: {
             /** @enum {string} */
-            type: "person" | "organization" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag";
+            type: "person" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag";
             /** Format: uuid */
             id: string;
             /** @description Display label (name/subject). */
@@ -27495,7 +27495,7 @@ export interface components {
              *     response echoes the anchor back as one of these refs.
              * @enum {string}
              */
-            type: "person" | "organization" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity" | "user";
+            type: "person" | "company" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity" | "user";
             /** Format: uuid */
             id: string;
         };
@@ -27675,7 +27675,7 @@ export interface components {
             subject_label?: string | null;
             /**
              * @description The kind of record `subject_label` names, as the emitting source spells it:
-             *     `organization`, `person` and `activity` from the kernel's entity kinds, and
+             *     `company`, `person` and `activity` from the kernel's entity kinds, and
              *     `attachment` from the document reading, which has no kernel kind. It is here so
              *     a client can make the name a way to reach the record rather than a word in a
              *     sentence; a client needs both this and `subject_id` before it links.
@@ -27745,7 +27745,7 @@ export interface components {
              * @description The record the operation targets. A confirm-first operation that resolves a concrete {id} must name one, or the approval it stages cannot be row-scoped.
              * @enum {string}
              */
-            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
+            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "company" | "overlay_connection" | "partner" | "person" | "product" | "project" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
             /**
              * @description The autonomy tier, identical on REST and MCP (ADR-0055).
              * @enum {string}
@@ -27908,16 +27908,16 @@ export interface components {
         CompanyProfile: {
             /**
              * Format: uuid
-             * @description The anchor organization this profile belongs to.
+             * @description The anchor company this profile belongs to.
              */
-            organization_id: string;
+            company_id: string;
             /** @description What the company is called day to day. */
             display_name: string;
-            /** @description The company's own domain (acme.com) — stored as its primary domain, the same handle a read-back resolves organizations by. A full URL is accepted on write and reduced to its domain. */
+            /** @description The company's own domain (acme.com) — stored as its primary domain, the same handle a read-back resolves companies by. A full URL is accepted on write and reduced to its domain. */
             website?: string | null;
             /**
-             * @description Where to fetch the installation's own company logo — the same `getOrganizationLogo`
-             *     path `Organization.logo_url` carries for that record, cookie-authenticated and
+             * @description Where to fetch the installation's own company logo — the same `getCompanyLogo`
+             *     path `Company.logo_url` carries for that record, cookie-authenticated and
              *     same-origin. A revision query changes whenever the stored image changes so a browser
              *     never holds a replacement behind an older cached URL. The logo is whichever one the
              *     company is wearing: the one a website
@@ -27927,7 +27927,7 @@ export interface components {
              */
             readonly logo_url?: string | null;
             /**
-             * @description Where to fetch the installation's own SQUARE logo icon — the `getOrganizationLogoIcon`
+             * @description Where to fetch the installation's own SQUARE logo icon — the `getCompanyLogoIcon`
              *     path, cookie-authenticated and same-origin, carrying a revision query on the same terms
              *     as `logo_url`. This is the badge a collapsed sidebar draws, where the wide mark above
              *     would be unreadable; the two are chosen separately. The cold-start website read fills
@@ -27966,7 +27966,7 @@ export interface components {
             /** @description Company background. */
             history?: string | null;
             fields?: components["schemas"]["CompanyProfileField"][];
-            facts?: components["schemas"]["OrganizationFact"][];
+            facts?: components["schemas"]["CompanyFact"][];
             /** @description True when display_name, offer_summary and icp are confirmed. */
             minimum_complete?: boolean;
             /** Format: date-time */
@@ -28013,7 +28013,7 @@ export interface components {
         CompanyProfileField: {
             /**
              * Format: uuid
-             * @description The stored row, so a dossier sentence written from this field can cite something the reader can open. Without it a field-derived claim could only cite the organization, which tells the reader where to look but not at what — and the grounding filter drops a sentence whose citation it cannot resolve.
+             * @description The stored row, so a dossier sentence written from this field can cite something the reader can open. Without it a field-derived claim could only cite the company, which tells the reader where to look but not at what — and the grounding filter drops a sentence whose citation it cannot resolve.
              */
             readonly id?: string;
             /**
@@ -28068,7 +28068,7 @@ export interface components {
          * @enum {string}
          */
         TechnicalOperatedService: "webshop" | "customer_portal" | "careers" | "api" | "vpn" | "mail_infrastructure" | "file_cloud" | "dev_infrastructure" | "status_page" | "support_site";
-        OrganizationFact: {
+        CompanyFact: {
             /**
              * Format: date-time
              * @description When the source was last actually read (PO-DDL-N-2, ADR-0085). Distinct from captured_at, which is when we first recorded the claim.
@@ -28083,7 +28083,7 @@ export interface components {
             readonly verified_by?: string | null;
             /**
              * Format: uuid
-             * @description The stored row, so a brief sentence written from this fact can cite something the reader can open. Without it a fact-derived claim had to cite the organization, which told the reader where to look but not at what.
+             * @description The stored row, so a brief sentence written from this fact can cite something the reader can open. Without it a fact-derived claim had to cite the company, which told the reader where to look but not at what.
              */
             readonly id: string;
             /** @enum {string} */
@@ -28112,11 +28112,11 @@ export interface components {
              */
             readonly version?: number;
         };
-        OrganizationFactListResponse: {
-            data: components["schemas"]["OrganizationFact"][];
+        CompanyFactListResponse: {
+            data: components["schemas"]["CompanyFact"][];
         };
-        /** @description An organization's confirmed profile fields (organization_profile_field). Items reuse CompanyProfileField — the table's field/source vocabulary is identical (migration 0099). */
-        OrganizationProfileFieldListResponse: {
+        /** @description A company's confirmed profile fields (company_profile_field). Items reuse CompanyProfileField — the table's field/source vocabulary is identical (migration 0099). */
+        CompanyProfileFieldListResponse: {
             data: components["schemas"]["CompanyProfileField"][];
         };
         CompanyContextItem: {
@@ -28136,7 +28136,7 @@ export interface components {
         };
         CompanyContext: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             /** @enum {integer} */
             schema_version: 1;
             scopes: components["schemas"]["CompanyContextScope"][];
@@ -28413,7 +28413,7 @@ export interface components {
             /** @enum {string} */
             target_kind: "onboarding";
             /** Format: uuid */
-            organization_id?: string | null;
+            company_id?: string | null;
             /** Format: uri */
             root_url: string;
             /** @enum {string} */
@@ -28425,7 +28425,7 @@ export interface components {
             /** Format: date-time */
             next_attempt_at: string | null;
             /**
-             * @description Why the crawl ended early; null when it exhausted discovery. Same column and vocabulary as SiteReadReport — one deep-read engine serves onboarding and every organization.
+             * @description Why the crawl ended early; null when it exhausted discovery. Same column and vocabulary as SiteReadReport — one deep-read engine serves onboarding and every company.
              * @enum {string|null}
              */
             stopped_reason?: "budget" | "page_cap" | "byte_cap" | "deadline" | null;
@@ -28471,11 +28471,11 @@ export interface components {
             /** @description Exactly one keyed resolution for every human_conflict comparison, plus an optional use_value for any fact the read got wrong. Omitted is equivalent to an empty array for existing clients and succeeds only when no human conflict exists. */
             resolutions?: components["schemas"]["CompanySiteReadResolution"][];
         };
-        /** @description Optional override. With no body the org's own domain is read. */
+        /** @description Optional override. With no body the company's own domain is read. */
         EnrichCompanyRequest: {
             /**
              * Format: uri
-             * @description Company URL to read instead of the org's domain.
+             * @description Company URL to read instead of the company's domain.
              */
             url?: string;
         };
@@ -28523,7 +28523,7 @@ export interface components {
         /** @description The 202 handle for a queued technical lookup. */
         TechnicalEnrichStarted: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             /**
              * @description The lookup this call asked for is on its way. One value, because that is all
              *     the caller can be told honestly: River deduplicates by arguments, so pressing
@@ -28564,9 +28564,9 @@ export interface components {
          * @description One company's current VAT standing, and the evidence for it. The row keeps only the
          *     CURRENT consultation; what a re-check overwrote lives in the audit trail.
          */
-        OrganizationVatCheck: {
+        CompanyVatCheck: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             /**
              * @description The number AS CONSULTED, which is not necessarily the number on the profile today.
              *     A receipt names the number it was issued for, so an edit made afterwards must not
@@ -28619,7 +28619,7 @@ export interface components {
          */
         TechnicalEnrichStatus: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             lanes: components["schemas"]["TechnicalEnrichLane"][];
         };
         /** @description What one public source last did. */
@@ -28674,7 +28674,7 @@ export interface components {
             /** Format: uuid */
             read_id: string;
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
             /** Format: uri */
             seed_url: string;
             /** @enum {string} */
@@ -28708,15 +28708,15 @@ export interface components {
             /** Format: date-time */
             finished_at?: string | null;
         };
-        /** @description A staged enrichment of one organization. Field shape is the read-back's (evidence-or-omit); NOTHING is written until accepted via /approvals, which fills only the org's empty fields. */
+        /** @description A staged enrichment of one company. Field shape is the read-back's (evidence-or-omit); NOTHING is written until accepted via /approvals, which fills only the company's empty fields. */
         EnrichmentProposal: {
             /** Format: uuid */
             proposal_id: string;
             /**
              * Format: uuid
-             * @description The org this proposal enriches — the accept executor writes only here.
+             * @description The company this proposal enriches — the accept executor writes only here.
              */
-            organization_id: string;
+            company_id: string;
             /** Format: uri */
             source_url: string;
             /**
@@ -28736,7 +28736,7 @@ export interface components {
             source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | "contract" | null;
             /** Format: uuid */
             source_id?: string | null;
-            /** @description 1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today, per ADR-0058: line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed. */
+            /** @description 1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today, (ADR-0058): line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed. */
             source_lines?: number[];
         };
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
@@ -28976,20 +28976,20 @@ export interface components {
             single_use: boolean;
         };
         /**
-         * @description First-class partner state as a 1:1 extension of an organization (an org IS a partner iff it
+         * @description First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
          *     has a `partner` row + classification='partner'). Company identity is never duplicated.
-         *     A68/ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
+         *     ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
          *     partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
          *     forward-compatible.
          */
         Partner: {
             /**
              * Format: uuid
-             * @description The org this partner record extends (PK = FK).
+             * @description The company this partner record extends (PK = FK).
              */
-            organization_id: string;
+            company_id: string;
             /**
-             * @description Functional role (A44/ADR-0034); implementation + dev are Margince's turf.
+             * @description Functional role (ADR-0034); implementation + dev are Margince's turf.
              * @enum {string}
              */
             partner_role?: "hosting" | "consulting" | "strategic";
@@ -29163,7 +29163,7 @@ export interface components {
                 id: string;
                 name: string;
             }[];
-            /** @description Which fields the erasure emptied on this record (A167/ADR-0116). A redacted field and an empty one are otherwise the same absence, and only the first is something the controller must be able to state. Names columns, never values. */
+            /** @description Which fields the erasure emptied on this record (ADR-0116). A redacted field and an empty one are otherwise the same absence, and only the first is something the controller must be able to state. Names columns, never values. */
             redacted_fields?: string[];
         };
         /** @description The installation's retention posture (GCS-PARAM-6). */
@@ -29233,7 +29233,7 @@ export interface components {
         };
         RecordClaim: {
             /** @enum {string} */
-            record_type: "person" | "organization" | "lead" | "deal";
+            record_type: "person" | "company" | "lead" | "deal";
             /** Format: uuid */
             record_id: string;
             /**
@@ -29243,12 +29243,12 @@ export interface components {
             owner_id: string;
             version: components["schemas"]["RowVersion"];
         };
-        /** @description A manual per-record share (A52/ADR-0039) — widens own/team/all base scope for one record. */
+        /** @description A manual per-record share (ADR-0039) — widens own/team/all base scope for one record. */
         RecordGrant: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            record_type: "deal" | "person" | "organization" | "lead" | "project";
+            record_type: "deal" | "person" | "company" | "lead" | "project";
             /** Format: uuid */
             record_id: string;
             /** @enum {string} */
@@ -29279,7 +29279,7 @@ export interface components {
         };
         CreateRecordGrantRequest: {
             /** @enum {string} */
-            record_type: "deal" | "person" | "organization" | "lead" | "project";
+            record_type: "deal" | "person" | "company" | "lead" | "project";
             /** Format: uuid */
             record_id: string;
             /** @enum {string} */
@@ -29635,7 +29635,7 @@ export interface components {
         /**
          * @description Optional body for POST /automations/{id}/preview. Omit to preview the stored automation as-is; supply
          *     an inline draft recipe (key + params) to preview a not-yet-created or edited automation from the
-         *     designer before saving (A72/ADR-0035 Am.1). Never causes a write or send — preview is a 🟢 read.
+         *     designer before saving (ADR-0035 Am.1). Never causes a write or send — preview is a 🟢 read.
          */
         AutomationPreviewRequest: {
             /** @description Catalog type for a draft preview (defaults to the stored instance's key). */
@@ -29663,7 +29663,7 @@ export interface components {
         /**
          * @description One firing of an automation, reconstructed from audit_log/automation_run (data-model §12.5). Runs of
          *     EVERY outcome are first-class — including errored/blocked/skipped — so the designer's run history is
-         *     honest, not success-only (A72/ADR-0035 Am.1). Read-only: produced by the engine, never created via API.
+         *     honest, not success-only (ADR-0035 Am.1). Read-only: produced by the engine, never created via API.
          */
         AutomationRun: {
             /** Format: uuid */
@@ -29676,7 +29676,7 @@ export interface components {
              */
             occurred_at: string;
             /**
-             * @description Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by A72/ADR-0035 Am.1.
+             * @description Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
              * @enum {string}
              */
             outcome: "fired" | "failed" | "blocked" | "skipped" | "queued_for_approval";
@@ -30703,7 +30703,7 @@ export interface components {
             status: "draft" | "sent" | "accepted" | "rejected" | "expired" | "superseded";
             currency: string;
             /** Format: uuid */
-            buyer_org_id?: string | null;
+            buyer_company_id?: string | null;
             /** @description Buyer legal block captured at send time. */
             readonly buyer_snapshot?: {
                 [key: string]: unknown;
@@ -30820,9 +30820,9 @@ export interface components {
             currency: string;
             /**
              * Format: uuid
-             * @description Defaults to the deal's organization.
+             * @description Defaults to the deal's company.
              */
-            buyer_org_id?: string | null;
+            buyer_company_id?: string | null;
             /** Format: date */
             valid_until?: string | null;
             intro_text?: string | null;
@@ -30841,7 +30841,7 @@ export interface components {
         UpdateOfferRequest: {
             currency?: string;
             /** Format: uuid */
-            buyer_org_id?: string | null;
+            buyer_company_id?: string | null;
             /** Format: date */
             valid_until?: string | null;
             /** Format: uuid */
@@ -32450,7 +32450,7 @@ export interface components {
         /** @description The record this item is about, named so a reader knows who it concerns before opening anything. */
         AttentionSubject: {
             /** @enum {string} */
-            type: "organization" | "person" | "deal" | "lead" | "activity" | "project";
+            type: "company" | "person" | "deal" | "lead" | "activity" | "project";
             /** Format: uuid */
             id: string;
             /** @description The record's display name. Absent when the caller may not read it, which is not the same as unnamed. */
@@ -32753,7 +32753,7 @@ export interface components {
         TeamBoardCounts: {
             /**
              * @description Customers who wrote and have had no reply, attributed by the record the thread is
-             *     filed under: deal, then lead, then person, then organization, first owner found.
+             *     filed under: deal, then lead, then person, then company, first owner found.
              *     The same eligibility the ranked queue applies, so the board and the day agree.
              */
             waiting: number;
@@ -34085,7 +34085,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description Seat ceiling — a `read` seat (or an agent acting for one) attempted a mutate/send/approve or a write `record_grant`/over-ceiling Passport bind (`code: seat_tier_insufficient`, ErrSeatTierInsufficient; A62/ADR-0047). */
+        /** @description Seat ceiling — a `read` seat (or an agent acting for one) attempted a mutate/send/approve or a write `record_grant`/over-ceiling Passport bind (`code: seat_tier_insufficient`, ErrSeatTierInsufficient; ADR-0047). */
         SeatTierInsufficient: {
             headers: {
                 [name: string]: unknown;
@@ -34094,7 +34094,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description Forced rotation — the account is still using a password an OPERATOR chose (a configured bootstrap per A107/ADR-0061 §2, or a §9.1 operator reset) and reaches nothing but `POST /auth/change-password` until it is replaced (`code: password_change_required`). Reads are refused too. Unlike its 403 siblings this is a property of the ACCOUNT rather than of the operation, so any authenticated operation can answer it, and no grant of role, seat or scope lifts it. */
+        /** @description Forced rotation — the account is still using a password an OPERATOR chose (a configured bootstrap (ADR-0061), or a §9.1 operator reset) and reaches nothing but `POST /auth/change-password` until it is replaced (`code: password_change_required`). Reads are refused too. Unlike its 403 siblings this is a property of the ACCOUNT rather than of the operation, so any authenticated operation can answer it, and no grant of role, seat or scope lifts it. */
         PasswordChangeRequired: {
             headers: {
                 [name: string]: unknown;
@@ -34189,11 +34189,11 @@ export interface components {
         /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
         BriefProjectId: string;
         /** @description The profile field's key — the same closed vocabulary `PersonProfileField.field` carries. */
-        PersonProfileFieldKey: "title" | "phone" | "role" | "linkedin" | "org_name" | "address" | "website";
+        PersonProfileFieldKey: "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
         /** @description The profile field's key — the same closed vocabulary `CompanyProfileField.field` carries. */
         ProfileFieldKey: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
         /**
-         * @description One fact's identity within its organization, spelled `<field>:<value_key>` (e.g.
+         * @description One fact's identity within its company, spelled `<field>:<value_key>` (e.g.
          *     `named_customer:acme-inc`). A fact is multi-valued, so `field` alone does not name a row and
          *     `value_key` alone is only unique within a field.
          */
@@ -34244,7 +34244,7 @@ export interface components {
          *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
          *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
          *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
-         *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+         *     its pipeline or a partner by its company's name, needs a sort the server cannot express
          *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
          *     `422 code: sort_field_not_allowed`.
          */
@@ -34256,7 +34256,7 @@ export interface components {
          *     (`human:<uuid>` | `agent:<id>` | `connector:<name>` | `system:<id>`).
          *
          *     `captured_by_kind=agent` is the **review list for records an AI created**
-         *     (ADR-0075/A121). Every record already carries its creator — the field is
+         *     (ADR-0075). Every record already carries its creator — the field is
          *     server-stamped from the authenticated principal and read-only on every
          *     response — but until this parameter there was no way to *ask* for them,
          *     so "which of these did a model decide existed?" had no answer short of
@@ -34277,11 +34277,11 @@ export interface components {
          * @description `true` returns only records an AI **wrote into**; `false` only records it
          *     did not touch. Omit for both.
          *
-         *     This is the review list for AI-generated content (ADR-0075/A121 §3a),
+         *     This is the review list for AI-generated content (ADR-0075 §3a),
          *     and it is deliberately a different question from `captured_by_kind`.
          *     `captured_by` names who CREATED the row and is never restamped. In the
          *     connector path the AI does not create the record — Gmail capture mints
-         *     the organization as `connector:gmail`, and then the AI renames it from a
+         *     the company as `connector:gmail`, and then the AI renames it from a
          *     signature and writes its profile. Asking "who created it" therefore
          *     misses exactly the records worth reviewing.
          *
@@ -34668,7 +34668,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Must equal the organization name exactly. */
+                    /** @description Must equal the company name exactly. */
                     confirmation: string;
                 };
             };
@@ -34913,7 +34913,7 @@ export interface operations {
                  *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
                  *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
                  *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
-                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     its pipeline or a partner by its company's name, needs a sort the server cannot express
                  *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
                  *     `422 code: sort_field_not_allowed`.
                  */
@@ -34925,7 +34925,7 @@ export interface operations {
                  *     (`human:<uuid>` | `agent:<id>` | `connector:<name>` | `system:<id>`).
                  *
                  *     `captured_by_kind=agent` is the **review list for records an AI created**
-                 *     (ADR-0075/A121). Every record already carries its creator — the field is
+                 *     (ADR-0075). Every record already carries its creator — the field is
                  *     server-stamped from the authenticated principal and read-only on every
                  *     response — but until this parameter there was no way to *ask* for them,
                  *     so "which of these did a model decide existed?" had no answer short of
@@ -34946,11 +34946,11 @@ export interface operations {
                  * @description `true` returns only records an AI **wrote into**; `false` only records it
                  *     did not touch. Omit for both.
                  *
-                 *     This is the review list for AI-generated content (ADR-0075/A121 §3a),
+                 *     This is the review list for AI-generated content (ADR-0075 §3a),
                  *     and it is deliberately a different question from `captured_by_kind`.
                  *     `captured_by` names who CREATED the row and is never restamped. In the
                  *     connector path the AI does not create the record — Gmail capture mints
-                 *     the organization as `connector:gmail`, and then the AI renames it from a
+                 *     the company as `connector:gmail`, and then the AI renames it from a
                  *     signature and writes its profile. Asking "who created it" therefore
                  *     misses exactly the records worth reviewing.
                  *
@@ -34991,7 +34991,7 @@ export interface operations {
                  *     Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
                  */
                 unassigned?: boolean;
-                /** @description Full-text query over name/title (tsvector), plus an exact match on the record's own identifier: a contact's email address, an organization's domain. A query containing "@" also tries the part after it against the domain, so pasting a sender finds their company. Identifier matching is exact, never a prefix. */
+                /** @description Full-text query over name/title (tsvector), plus an exact match on the record's own identifier: a contact's email address, a company's domain. A query containing "@" also tries the part after it against the domain, so pasting a sender finds their company. Identifier matching is exact, never a prefix. */
                 q?: string;
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
@@ -35014,7 +35014,7 @@ export interface operations {
                  *     "who works there" and "who has ever worked there" are different questions, and the
                  *     list answers the first.
                  */
-                organization_id?: string;
+                company_id?: string;
             };
             header?: never;
             path?: never;
@@ -36388,7 +36388,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    listOrganizations: {
+    listCompanies: {
         parameters: {
             query?: {
                 /**
@@ -36414,7 +36414,7 @@ export interface operations {
                  *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
                  *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
                  *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
-                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     its pipeline or a partner by its company's name, needs a sort the server cannot express
                  *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
                  *     `422 code: sort_field_not_allowed`.
                  */
@@ -36424,7 +36424,7 @@ export interface operations {
                 /**
                  * @description Include this installation's own company. It is excluded by default because this list
                  *     answers "which companies are we selling to", and the company running the CRM is not one
-                 *     of them (ADR-0082/A127). Modeled on `include_archived` (API-LIST-4): a class of rows
+                 *     of them (ADR-0082). Modeled on `include_archived` (API-LIST-4): a class of rows
                  *     almost never wanted, never silently unreachable. Surfaces whose subject IS the workspace
                  *     — recording that a person works here, own-company project work — set it.
                  */
@@ -36434,7 +36434,7 @@ export interface operations {
                  *     (`human:<uuid>` | `agent:<id>` | `connector:<name>` | `system:<id>`).
                  *
                  *     `captured_by_kind=agent` is the **review list for records an AI created**
-                 *     (ADR-0075/A121). Every record already carries its creator — the field is
+                 *     (ADR-0075). Every record already carries its creator — the field is
                  *     server-stamped from the authenticated principal and read-only on every
                  *     response — but until this parameter there was no way to *ask* for them,
                  *     so "which of these did a model decide existed?" had no answer short of
@@ -36455,11 +36455,11 @@ export interface operations {
                  * @description `true` returns only records an AI **wrote into**; `false` only records it
                  *     did not touch. Omit for both.
                  *
-                 *     This is the review list for AI-generated content (ADR-0075/A121 §3a),
+                 *     This is the review list for AI-generated content (ADR-0075 §3a),
                  *     and it is deliberately a different question from `captured_by_kind`.
                  *     `captured_by` names who CREATED the row and is never restamped. In the
                  *     connector path the AI does not create the record — Gmail capture mints
-                 *     the organization as `connector:gmail`, and then the AI renames it from a
+                 *     the company as `connector:gmail`, and then the AI renames it from a
                  *     signature and writes its profile. Asking "who created it" therefore
                  *     misses exactly the records worth reviewing.
                  *
@@ -36488,7 +36488,7 @@ export interface operations {
                 owner_id?: string;
                 /** @description Lookup by normalized domain (the employer-inference index). */
                 domain?: string;
-                /** @description Where the account stands with us (DM-VOCAB-2, ADR-0079/A124). */
+                /** @description Where the account stands with us (DM-VOCAB-2, ADR-0079). */
                 lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
@@ -36535,13 +36535,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description A page of organizations. */
+            /** @description A page of companies. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationListResponse"];
+                    "application/json": components["schemas"]["CompanyListResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -36549,7 +36549,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    createOrganization: {
+    createCompany: {
         parameters: {
             query?: never;
             header?: {
@@ -36576,23 +36576,23 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateOrganizationRequest"];
+                "application/json": components["schemas"]["CreateCompanyRequest"];
             };
         };
         responses: {
-            /** @description Created organization. */
+            /** @description Created company. */
             201: {
                 headers: {
                     Location?: string;
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Organization"];
+                    "application/json": components["schemas"]["Company"];
                 };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description A domain already maps to another organization. */
+            /** @description A domain already maps to another company. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -36604,7 +36604,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getOrganization: {
+    getCompany: {
         parameters: {
             query?: never;
             header?: never;
@@ -36616,19 +36616,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The organization. */
+            /** @description The company. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Organization"];
+                    "application/json": components["schemas"]["Company"];
                 };
             };
             404: components["responses"]["NotFound"];
         };
     };
-    archiveOrganization: {
+    archiveCompany: {
         parameters: {
             query?: never;
             header?: {
@@ -36649,20 +36649,20 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Archived organization. */
+            /** @description Archived company. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Organization"];
+                    "application/json": components["schemas"]["Company"];
                 };
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
         };
     };
-    updateOrganization: {
+    updateCompany: {
         parameters: {
             query?: never;
             header?: {
@@ -36700,17 +36700,17 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateOrganizationRequest"];
+                "application/json": components["schemas"]["UpdateCompanyRequest"];
             };
         };
         responses: {
-            /** @description Updated organization. */
+            /** @description Updated company. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Organization"];
+                    "application/json": components["schemas"]["Company"];
                 };
             };
             404: components["responses"]["NotFound"];
@@ -36718,7 +36718,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    rejectOrganization: {
+    rejectCompany: {
         parameters: {
             query?: never;
             header?: {
@@ -36756,7 +36756,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RejectOrganizationRequest"];
+                "application/json": components["schemas"]["RejectCompanyRequest"];
             };
         };
         responses: {
@@ -36766,7 +36766,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RejectOrganizationResponse"];
+                    "application/json": components["schemas"]["RejectCompanyResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -36776,7 +36776,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    mergeOrganization: {
+    mergeCompany: {
         parameters: {
             query?: never;
             header?: {
@@ -36827,20 +36827,20 @@ export interface operations {
                 "application/json": {
                     /**
                      * Format: uuid
-                     * @description The surviving org (B). This row (A) is archived.
+                     * @description The surviving company (B). This row (A) is archived.
                      */
                     target_id: string;
                 };
             };
         };
         responses: {
-            /** @description The surviving (target) organization after merge. */
+            /** @description The surviving (target) company after merge. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Organization"];
+                    "application/json": components["schemas"]["Company"];
                 };
             };
             403: components["responses"]["Forbidden"];
@@ -36848,7 +36848,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getOrganizationHierarchyRollup: {
+    getCompanyHierarchyRollup: {
         parameters: {
             query?: {
                 /** @description tree (default): aggregate the whole subtree. self: the root's own figures alone. */
@@ -36863,13 +36863,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The organization's hierarchy roll-up. */
+            /** @description The company's hierarchy roll-up. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationHierarchyRollup"];
+                    "application/json": components["schemas"]["CompanyHierarchyRollup"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -36878,7 +36878,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getOrganizationLogo: {
+    getCompanyLogo: {
         parameters: {
             query?: never;
             header?: never;
@@ -36913,7 +36913,7 @@ export interface operations {
             };
         };
     };
-    getOrganizationLogoIcon: {
+    getCompanyLogoIcon: {
         parameters: {
             query?: never;
             header?: never;
@@ -36948,7 +36948,7 @@ export interface operations {
             };
         };
     };
-    getOrganization360: {
+    getCompany360: {
         parameters: {
             query?: {
                 /** @description Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out. */
@@ -36963,13 +36963,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The organization's 360 view. */
+            /** @description The company's 360 view. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Organization360"];
+                    "application/json": components["schemas"]["Company360"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -36978,7 +36978,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getOrganizationGraph: {
+    getCompanyGraph: {
         parameters: {
             query?: never;
             header?: never;
@@ -36990,13 +36990,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The organization's one-hop connection graph. */
+            /** @description The company's one-hop connection graph. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationGraph"];
+                    "application/json": components["schemas"]["CompanyGraph"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37052,7 +37052,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getOrganizationCoverage: {
+    getCompanyCoverage: {
         parameters: {
             query?: never;
             header?: never;
@@ -37070,7 +37070,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationCoverage"];
+                    "application/json": components["schemas"]["CompanyCoverage"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37079,7 +37079,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    listOrganizationContacts: {
+    listCompanyContacts: {
         parameters: {
             query?: {
                 /** @description Keep only contacts in this engagement state. Omitted means every state. */
@@ -37134,7 +37134,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationContactListResponse"];
+                    "application/json": components["schemas"]["CompanyContactListResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37143,7 +37143,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getOrganizationDossier: {
+    getCompanyDossier: {
         parameters: {
             query?: never;
             header?: never;
@@ -37161,7 +37161,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationDossier"];
+                    "application/json": components["schemas"]["CompanyDossier"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37170,7 +37170,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    refreshOrganizationDossier: {
+    refreshCompanyDossier: {
         parameters: {
             query?: never;
             header?: never;
@@ -37188,7 +37188,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationDossier"];
+                    "application/json": components["schemas"]["CompanyDossier"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37205,7 +37205,7 @@ export interface operations {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
                 /** @description The kind of record a claim cited. The pair is the reference, not the id alone. */
-                entityType: "organization" | "fact" | "profile_field";
+                entityType: "company" | "fact" | "profile_field";
                 entityId: string;
             };
             cookie?: never;
@@ -37227,7 +37227,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getOrganizationScan: {
+    getCompanyScan: {
         parameters: {
             query?: never;
             header?: never;
@@ -37245,7 +37245,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationScan"];
+                    "application/json": components["schemas"]["CompanyScan"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37254,7 +37254,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    ensureOrganizationScan: {
+    ensureCompanyScan: {
         parameters: {
             query?: never;
             header?: never;
@@ -37266,7 +37266,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["OrganizationScanRequest"];
+                "application/json": components["schemas"]["CompanyScanRequest"];
             };
         };
         responses: {
@@ -37276,7 +37276,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationScan"];
+                    "application/json": components["schemas"]["CompanyScan"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37285,7 +37285,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getOrganizationGrowthFit: {
+    getCompanyGrowthFit: {
         parameters: {
             query?: never;
             header?: never;
@@ -37303,7 +37303,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationGrowthFit"];
+                    "application/json": components["schemas"]["CompanyGrowthFit"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37312,7 +37312,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    refreshOrganizationGrowthFit: {
+    refreshCompanyGrowthFit: {
         parameters: {
             query?: never;
             header?: never;
@@ -37330,7 +37330,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationGrowthFit"];
+                    "application/json": components["schemas"]["CompanyGrowthFit"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37339,7 +37339,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getOrganizationBrief: {
+    getCompanyBrief: {
         parameters: {
             query?: {
                 /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
@@ -37360,7 +37360,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationBrief"];
+                    "application/json": components["schemas"]["CompanyBrief"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37369,7 +37369,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    regenerateOrganizationBrief: {
+    regenerateCompanyBrief: {
         parameters: {
             query?: {
                 /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
@@ -37390,7 +37390,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationBrief"];
+                    "application/json": components["schemas"]["CompanyBrief"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37399,7 +37399,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    dismissOrganizationSuggestion: {
+    dismissCompanySuggestion: {
         parameters: {
             query?: never;
             header?: never;
@@ -37456,7 +37456,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    askAboutOrganization: {
+    askAboutCompany: {
         parameters: {
             query?: never;
             header?: never;
@@ -37469,7 +37469,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    question: components["schemas"]["OrganizationQuestion"];
+                    question: components["schemas"]["CompanyQuestion"];
                     /**
                      * Format: uuid
                      * @description Which body of work the question is about. When set, the answer is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the answer's `scope` says so. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
@@ -37485,7 +37485,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationAnswer"];
+                    "application/json": components["schemas"]["CompanyAnswer"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37543,7 +37543,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    acknowledgeOrganizationView: {
+    acknowledgeCompanyView: {
         parameters: {
             query?: never;
             header?: never;
@@ -37659,7 +37659,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
-            /** @description No URL to read (no override, org has no domain) / page unreadable — honest degradation, zero fabricated fields. */
+            /** @description No URL to read (no override, company has no domain) / page unreadable — honest degradation, zero fabricated fields. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -37697,7 +37697,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
-            /** @description No URL to read (no override, org has no domain). */
+            /** @description No URL to read (no override, company has no domain). */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -37787,7 +37787,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    getOrganizationVatCheck: {
+    getCompanyVatCheck: {
         parameters: {
             query?: never;
             header?: never;
@@ -37805,7 +37805,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationVatCheck"];
+                    "application/json": components["schemas"]["CompanyVatCheck"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37813,7 +37813,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    requestOrganizationVatCheck: {
+    requestCompanyVatCheck: {
         parameters: {
             query?: never;
             header?: never;
@@ -37897,7 +37897,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    getOrganizationStrength: {
+    getCompanyStrength: {
         parameters: {
             query?: never;
             header?: never;
@@ -37909,7 +37909,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The organization's relationship-strength breakdown. */
+            /** @description The company's relationship-strength breakdown. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -37923,7 +37923,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    getOrganizationFinanceSummary: {
+    getCompanyFinanceSummary: {
         parameters: {
             query?: never;
             header?: never;
@@ -37941,7 +37941,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationFinanceSummary"];
+                    "application/json": components["schemas"]["CompanyFinanceSummary"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37949,7 +37949,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    listOrganizationFacts: {
+    listCompanyFacts: {
         parameters: {
             query?: never;
             header?: never;
@@ -37961,13 +37961,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The organization's facts (empty array when none). */
+            /** @description The company's facts (empty array when none). */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationFactListResponse"];
+                    "application/json": components["schemas"]["CompanyFactListResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37975,7 +37975,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    createOrganizationFact: {
+    createCompanyFact: {
         parameters: {
             query?: never;
             header?: {
@@ -38015,7 +38015,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateOrganizationFactRequest"];
+                "application/json": components["schemas"]["CreateCompanyFactRequest"];
             };
         };
         responses: {
@@ -38025,7 +38025,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationFact"];
+                    "application/json": components["schemas"]["CompanyFact"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -38043,7 +38043,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    listOrganizationProfileFields: {
+    listCompanyProfileFields: {
         parameters: {
             query?: never;
             header?: never;
@@ -38055,13 +38055,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The organization's profile fields (empty array when none). */
+            /** @description The company's profile fields (empty array when none). */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationProfileFieldListResponse"];
+                    "application/json": components["schemas"]["CompanyProfileFieldListResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -38095,7 +38095,7 @@ export interface operations {
                  *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
                  *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
                  *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
-                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     its pipeline or a partner by its company's name, needs a sort the server cannot express
                  *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
                  *     `422 code: sort_field_not_allowed`.
                  */
@@ -38140,7 +38140,7 @@ export interface operations {
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
                 /** @description The entries owed to one partner. */
-                partner_org_id?: string;
+                partner_company_id?: string;
                 /** @description The entries accrued on one deal. */
                 deal_id?: string;
                 status?: components["schemas"]["CommissionStatus"];
@@ -38278,7 +38278,7 @@ export interface operations {
                  *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
                  *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
                  *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
-                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     its pipeline or a partner by its company's name, needs a sort the server cannot express
                  *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
                  *     `422 code: sort_field_not_allowed`.
                  */
@@ -38289,7 +38289,7 @@ export interface operations {
                 /** @description Read one Kanban column. */
                 stage_id?: string;
                 owner_id?: string;
-                organization_id?: string;
+                company_id?: string;
                 status?: "open" | "won" | "lost";
                 /**
                  * @description One of the forecast's named buckets. The same `deal.forecast_category` the forecast
@@ -38304,8 +38304,8 @@ export interface operations {
                 stalled?: boolean;
                 /** @description Filter to the deals belonging to one body of work. */
                 project_id?: string;
-                /** @description Filter to deals attributed to a specific partner org (deal.partner_org_id). */
-                partner_org_id?: string;
+                /** @description Filter to deals attributed to a specific partner company (deal.partner_company_id). */
+                partner_company_id?: string;
                 /** @description true ⇒ a partner is named; false ⇒ none is. The partner pipeline slice. */
                 partner_sourced?: boolean;
                 /** @description Deals a partner brought (`sourced`) or merely helped (`influenced`). */
@@ -38638,7 +38638,7 @@ export interface operations {
                  *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
                  *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
                  *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
-                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     its pipeline or a partner by its company's name, needs a sort the server cannot express
                  *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
                  *     `422 code: sort_field_not_allowed`.
                  */
@@ -38646,7 +38646,7 @@ export interface operations {
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
                 /** @description The anchor company. A project has exactly one. */
-                organization_id?: string;
+                company_id?: string;
                 owner_id?: string;
                 /** @description Omit for all phases; `phase != closed` is the open-projects slice the link ladder probes. */
                 phase?: "initiative" | "pursuing" | "delivering" | "closed";
@@ -39196,7 +39196,7 @@ export interface operations {
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
-                organization_id: string;
+                company_id: string;
             };
             cookie?: never;
         };
@@ -40078,7 +40078,7 @@ export interface operations {
                  *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
                  *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
                  *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
-                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     its pipeline or a partner by its company's name, needs a sort the server cannot express
                  *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
                  *     `422 code: sort_field_not_allowed`.
                  */
@@ -40089,11 +40089,11 @@ export interface operations {
                 /**
                  * @description Filter to messages carried by one transport. Since `kind=message` no longer names
                  *     the transport, this is the only way to ask the question `kind=telegram` used to
-                 *     answer (ADR-0107/A158).
+                 *     answer (ADR-0107).
                  */
                 channel_provider?: components["schemas"]["ProviderRef"];
                 /** @description Filter to activities linked to an entity type (with entity_id). */
-                entity_type?: "person" | "organization" | "deal" | "lead" | "project";
+                entity_type?: "person" | "company" | "deal" | "lead" | "project";
                 entity_id?: string;
                 /** @description Open tasks for an assignee. */
                 assignee_id?: string;
@@ -40540,7 +40540,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    entity_type: "person" | "organization" | "deal" | "lead" | "project";
+                    entity_type: "person" | "company" | "deal" | "lead" | "project";
                     /** Format: uuid */
                     entity_id: string;
                     /**
@@ -40982,7 +40982,7 @@ export interface operations {
         };
         responses: {
             /**
-             * @description Scheduled, not sent (ADR-0104/A155). No activity and no delivery row exist yet;
+             * @description Scheduled, not sent (ADR-0104). No activity and no delivery row exist yet;
              *     the timeline stays silent until it fires.
              */
             201: {
@@ -41363,7 +41363,7 @@ export interface operations {
                      */
                     links: {
                         /** @enum {string} */
-                        entity_type: "person" | "organization" | "deal" | "lead" | "project";
+                        entity_type: "person" | "company" | "deal" | "lead" | "project";
                         /** Format: uuid */
                         entity_id: string;
                     }[];
@@ -42359,7 +42359,7 @@ export interface operations {
                  *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
                  *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
                  *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
-                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     its pipeline or a partner by its company's name, needs a sort the server cannot express
                  *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
                  *     `422 code: sort_field_not_allowed`.
                  */
@@ -42371,7 +42371,7 @@ export interface operations {
                  *     (`human:<uuid>` | `agent:<id>` | `connector:<name>` | `system:<id>`).
                  *
                  *     `captured_by_kind=agent` is the **review list for records an AI created**
-                 *     (ADR-0075/A121). Every record already carries its creator — the field is
+                 *     (ADR-0075). Every record already carries its creator — the field is
                  *     server-stamped from the authenticated principal and read-only on every
                  *     response — but until this parameter there was no way to *ask* for them,
                  *     so "which of these did a model decide existed?" had no answer short of
@@ -42392,11 +42392,11 @@ export interface operations {
                  * @description `true` returns only records an AI **wrote into**; `false` only records it
                  *     did not touch. Omit for both.
                  *
-                 *     This is the review list for AI-generated content (ADR-0075/A121 §3a),
+                 *     This is the review list for AI-generated content (ADR-0075 §3a),
                  *     and it is deliberately a different question from `captured_by_kind`.
                  *     `captured_by` names who CREATED the row and is never restamped. In the
                  *     connector path the AI does not create the record — Gmail capture mints
-                 *     the organization as `connector:gmail`, and then the AI renames it from a
+                 *     the company as `connector:gmail`, and then the AI renames it from a
                  *     signature and writes its profile. Asking "who created it" therefore
                  *     misses exactly the records worth reviewing.
                  *
@@ -43408,7 +43408,7 @@ export interface operations {
                 include_archived?: components["parameters"]["IncludeArchived"];
                 kind?: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with" | "works_with";
                 person_id?: string;
-                organization_id?: string;
+                company_id?: string;
                 deal_id?: string;
             };
             header?: never;
@@ -43533,7 +43533,7 @@ export interface operations {
         parameters: {
             query: {
                 /** @description The record type whose vocabulary to read. */
-                resource: "person" | "organization" | "deal" | "lead" | "project";
+                resource: "person" | "company" | "deal" | "lead" | "project";
             };
             header?: never;
             path?: never;
@@ -44379,7 +44379,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal";
+                entity_type: "person" | "company" | "deal";
                 entity_id: string;
             };
             cookie?: never;
@@ -44547,7 +44547,7 @@ export interface operations {
                 /** @description The search query. */
                 q: string;
                 /** @description Restrict to these object types (default all). */
-                types?: ("person" | "organization" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
+                types?: ("person" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -44881,7 +44881,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getCompany: {
+    getAnchorCompany: {
         parameters: {
             query?: never;
             header?: never;
@@ -44890,7 +44890,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The anchor organization's profile. */
+            /** @description The anchor company's profile. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -44911,7 +44911,7 @@ export interface operations {
             };
         };
     };
-    putCompany: {
+    putAnchorCompany: {
         parameters: {
             query?: never;
             header?: never;
@@ -44938,7 +44938,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    uploadCompanyLogo: {
+    uploadAnchorCompanyLogo: {
         parameters: {
             query?: never;
             header?: never;
@@ -44996,7 +44996,7 @@ export interface operations {
             };
         };
     };
-    deleteCompanyLogo: {
+    deleteAnchorCompanyLogo: {
         parameters: {
             query?: never;
             header?: never;
@@ -45027,7 +45027,7 @@ export interface operations {
             };
         };
     };
-    uploadCompanyLogoIcon: {
+    uploadAnchorCompanyLogoIcon: {
         parameters: {
             query?: never;
             header?: never;
@@ -45085,7 +45085,7 @@ export interface operations {
             };
         };
     };
-    deleteCompanyLogoIcon: {
+    deleteAnchorCompanyLogoIcon: {
         parameters: {
             query?: never;
             header?: never;
@@ -45116,7 +45116,7 @@ export interface operations {
             };
         };
     };
-    getCompanyContextCapabilities: {
+    getAnchorCompanyContextCapabilities: {
         parameters: {
             query?: never;
             header?: never;
@@ -45137,7 +45137,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
-    getCompanyContext: {
+    getAnchorCompanyContext: {
         parameters: {
             query?: {
                 /** @description Comma-separated context scopes. Omit for the bounded default set. */
@@ -45164,7 +45164,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    startCompanySiteRead: {
+    startAnchorCompanySiteRead: {
         parameters: {
             query?: never;
             header?: {
@@ -45210,7 +45210,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    getCompanySiteRead: {
+    getAnchorCompanySiteRead: {
         parameters: {
             query?: never;
             header?: never;
@@ -45235,7 +45235,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    getCompanySiteReadLogo: {
+    getAnchorCompanySiteReadLogo: {
         parameters: {
             query?: never;
             header?: never;
@@ -45269,7 +45269,7 @@ export interface operations {
             };
         };
     };
-    messageCompanySiteRead: {
+    messageAnchorCompanySiteRead: {
         parameters: {
             query?: never;
             header?: never;
@@ -45308,7 +45308,7 @@ export interface operations {
             };
         };
     };
-    confirmCompanySiteRead: {
+    confirmAnchorCompanySiteRead: {
         parameters: {
             query?: never;
             header?: {
@@ -46330,7 +46330,7 @@ export interface operations {
                  *
                  *     It carries unanswered mail too, and that is the case it matters most for. A
                  *     message has no assignee, so its owner is the owner of the record it is filed
-                 *     under — deal, then lead, then person, then organization, first owner found. A
+                 *     under — deal, then lead, then person, then company, first owner found. A
                  *     thread no owned record attributes to anybody is the customer nobody is looking
                  *     at, which is exactly what this queue is opened to find. Such a message stays
                  *     reachable from `mine` as well, on the ground that an unowned customer writing
@@ -47609,7 +47609,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: "open" | "merged" | "not_a_duplicate";
-                entity_type?: "person" | "organization" | "lead";
+                entity_type?: "person" | "company" | "lead";
                 /** @description Opaque keyset cursor. */
                 cursor?: string;
                 limit?: number;
@@ -48240,7 +48240,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                entity_type: "person" | "company" | "deal" | "lead" | "project" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -48271,7 +48271,7 @@ export interface operations {
                 "If-Match": string;
             };
             path: {
-                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                entity_type: "person" | "company" | "deal" | "lead" | "project" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
                 /** @description The history entry to put back. It must belong to the record named by the path; one that does not answers 404, never 403. */
@@ -48313,7 +48313,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity";
+                entity_type: "person" | "company" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -48352,7 +48352,7 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
-                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                entity_type: "person" | "company" | "deal" | "lead" | "project" | "activity";
                 entity_id: string;
                 /** @description Narrow to one field name. */
                 field?: string;
@@ -48406,13 +48406,13 @@ export interface operations {
                  *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
                  *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
                  *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
-                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     its pipeline or a partner by its company's name, needs a sort the server cannot express
                  *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
                  *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Target core object (CUSTOM-FIELDS-PARAM-2). */
-                object: "person" | "organization" | "deal" | "lead" | "project";
+                object: "person" | "company" | "deal" | "lead" | "project";
                 /** @description Filter to one lifecycle state. Omitted returns both active and retired — this admin list intentionally does not default-exclude retired rows. */
                 status?: "active" | "retired";
             };
@@ -49303,7 +49303,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The contact is the organization's. */
+            /** @description The contact is the company's. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -49395,7 +49395,7 @@ export interface operations {
                 "If-Match"?: components["parameters"]["IfMatch"];
             };
             path: {
-                record_type: "person" | "organization" | "lead" | "deal";
+                record_type: "person" | "company" | "lead" | "deal";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -49428,7 +49428,7 @@ export interface operations {
     listRecordGrants: {
         parameters: {
             query?: {
-                record_type?: "deal" | "person" | "organization" | "lead" | "project";
+                record_type?: "deal" | "person" | "company" | "lead" | "project";
                 record_id?: string;
                 subject_type?: "user" | "team";
                 subject_id?: string;
@@ -49629,7 +49629,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Not found, with the reason distinguished by the problem `code`: `unknown_role` — this organization defines no role with the requested key. The `role` enum is documentation, not binding validation, so a mistyped key reaches the server and must say which of the two things was not found. */
+            /** @description Not found, with the reason distinguished by the problem `code`: `unknown_role` — this company defines no role with the requested key. The `role` enum is documentation, not binding validation, so a mistyped key reaches the server and must say which of the two things was not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -49729,7 +49729,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description Not found, with the reason distinguished by the problem `code`: `not_found` (no such member) or `unknown_role` (the member exists, but this organization defines no role with that key). Both are 404; a client that tells the operator which one it hit needs the code, not the prose. */
+            /** @description Not found, with the reason distinguished by the problem `code`: `not_found` (no such member) or `unknown_role` (the member exists, but this company defines no role with that key). Both are 404; a client that tells the operator which one it hit needs the code, not the prose. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -49738,7 +49738,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Refused with `code: last_active_admin` — demoting this member would leave the organization with no active admin. */
+            /** @description Refused with `code: last_active_admin` — demoting this member would leave the company with no active admin. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -49778,7 +49778,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Refused with `code: last_active_admin` — this is the last active admin; deactivating them would lock the organization out. */
+            /** @description Refused with `code: last_active_admin` — this is the last active admin; deactivating them would lock the company out. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -50957,7 +50957,7 @@ export interface operations {
                  *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
                  *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
                  *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
-                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     its pipeline or a partner by its company's name, needs a sort the server cannot express
                  *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
                  *     `422 code: sort_field_not_allowed`.
                  */
@@ -51147,7 +51147,7 @@ export interface operations {
                  *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
                  *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
                  *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
-                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     its pipeline or a partner by its company's name, needs a sort the server cannot express
                  *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
                  *     `422 code: sort_field_not_allowed`.
                  */
@@ -51910,7 +51910,7 @@ export interface operations {
                  *     index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
                  *     they can order by: a header that cannot be clicked is a dead control. Some columns are not
                  *     yet offered even so — one that orders by a JOINED value, such as a stage by its position in
-                 *     its pipeline or a partner by its organization's name, needs a sort the server cannot express
+                 *     its pipeline or a partner by its company's name, needs a sort the server cannot express
                  *     yet — and a resource's own list documents which. An out-of-vocabulary field returns
                  *     `422 code: sort_field_not_allowed`.
                  */
@@ -52649,15 +52649,15 @@ export interface operations {
                 kind?: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other" | "contract_ended" | "new_opportunity" | "commitment_made" | "ghosted_thread" | "project_gone_quiet" | "funding" | "leadership_change" | "expansion" | "product_launch" | "technical_change";
                 resolution_state?: "resolved" | "low_confidence" | "unresolved" | "dropped";
                 /**
-                 * @description Signals about one organization, matched two ways because a signal reaches an
-                 *     account two ways: the resolver stamps `resolved_org_id` (a contact-subject
+                 * @description Signals about one company, matched two ways because a signal reaches an
+                 *     account two ways: the resolver stamps `resolved_company_id` (a contact-subject
                  *     signal attributed to the contact's account), and a signal created directly
-                 *     about the organization carries the `entity_type=organization` subject pair.
+                 *     about the company carries the `entity_type=company` subject pair.
                  *     Matching only the first arm hides every hand-created account signal.
                  *     Deal-subject signals are NOT folded in — a signal about a deal is reported on
                  *     that deal, not silently re-attributed to its account.
                  */
-                organization_id?: string;
+                company_id?: string;
             };
             header?: never;
             path?: never;
@@ -52909,7 +52909,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description The signal is not resolved to an organization (unresolved / low-confidence / dropped signals have no warmth). */
+            /** @description The signal is not resolved to a company (unresolved / low-confidence / dropped signals have no warmth). */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -54220,7 +54220,7 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
-                entity_type: "person" | "organization" | "deal" | "activity" | "lead" | "project";
+                entity_type: "person" | "company" | "deal" | "activity" | "lead" | "project";
                 entity_id: string;
             };
             header?: never;
@@ -54259,7 +54259,7 @@ export interface operations {
                      */
                     contract_id?: string;
                     /** @enum {string} */
-                    entity_type: "person" | "organization" | "deal" | "activity" | "lead" | "project";
+                    entity_type: "person" | "company" | "deal" | "activity" | "lead" | "project";
                     /** Format: uuid */
                     entity_id: string;
                     /** Format: binary */
@@ -54834,7 +54834,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    listOrganizationContracts: {
+    listCompanyContracts: {
         parameters: {
             query?: {
                 /**
@@ -55135,7 +55135,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    listOrganizationDocuments: {
+    listCompanyDocuments: {
         parameters: {
             query?: {
                 /**
@@ -56012,7 +56012,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
-    updateOrganizationProfileField: {
+    updateCompanyProfileField: {
         parameters: {
             query?: never;
             header?: {
@@ -56062,7 +56062,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateOrganizationProfileFieldRequest"];
+                "application/json": components["schemas"]["UpdateCompanyProfileFieldRequest"];
             };
         };
         responses: {
@@ -56082,7 +56082,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    confirmOrganizationProfileField: {
+    confirmCompanyProfileField: {
         parameters: {
             query?: never;
             header?: {
@@ -56148,7 +56148,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    deleteOrganizationFact: {
+    deleteCompanyFact: {
         parameters: {
             query?: never;
             header?: {
@@ -56192,7 +56192,7 @@ export interface operations {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
                 /**
-                 * @description One fact's identity within its organization, spelled `<field>:<value_key>` (e.g.
+                 * @description One fact's identity within its company, spelled `<field>:<value_key>` (e.g.
                  *     `named_customer:acme-inc`). A fact is multi-valued, so `field` alone does not name a row and
                  *     `value_key` alone is only unique within a field.
                  */
@@ -56216,7 +56216,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    updateOrganizationFact: {
+    updateCompanyFact: {
         parameters: {
             query?: never;
             header?: {
@@ -56260,7 +56260,7 @@ export interface operations {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
                 /**
-                 * @description One fact's identity within its organization, spelled `<field>:<value_key>` (e.g.
+                 * @description One fact's identity within its company, spelled `<field>:<value_key>` (e.g.
                  *     `named_customer:acme-inc`). A fact is multi-valued, so `field` alone does not name a row and
                  *     `value_key` alone is only unique within a field.
                  */
@@ -56270,7 +56270,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateOrganizationFactRequest"];
+                "application/json": components["schemas"]["UpdateCompanyFactRequest"];
             };
         };
         responses: {
@@ -56280,7 +56280,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationFact"];
+                    "application/json": components["schemas"]["CompanyFact"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -56290,7 +56290,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    confirmOrganizationFact: {
+    confirmCompanyFact: {
         parameters: {
             query?: never;
             header?: {
@@ -56334,7 +56334,7 @@ export interface operations {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
                 /**
-                 * @description One fact's identity within its organization, spelled `<field>:<value_key>` (e.g.
+                 * @description One fact's identity within its company, spelled `<field>:<value_key>` (e.g.
                  *     `named_customer:acme-inc`). A fact is multi-valued, so `field` alone does not name a row and
                  *     `value_key` alone is only unique within a field.
                  */
@@ -56350,7 +56350,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationFact"];
+                    "application/json": components["schemas"]["CompanyFact"];
                 };
             };
             401: components["responses"]["Unauthorized"];

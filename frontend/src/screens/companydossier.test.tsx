@@ -15,12 +15,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-type Dossier = components["schemas"]["OrganizationDossier"];
+type Dossier = components["schemas"]["CompanyDossier"];
 
-// A COMPLETE OrganizationDossier, not a cast one — a fixture asserted into the
+// A COMPLETE CompanyDossier, not a cast one — a fixture asserted into the
 // contract type can drop a required field and still compile.
 const DESCRIBED: Dossier = {
-  organization_id: "o-1",
+  company_id: "o-1",
   generated_at: "2026-08-08T09:00:00Z",
   generated_by: "deterministic",
   sections: [
@@ -68,7 +68,7 @@ function show() {
       }
     >
       <LocaleProvider initial="en">
-        <DossierPanel orgId="o-1" enabled />
+        <DossierPanel companyId="o-1" enabled />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -141,7 +141,7 @@ describe("what this company is", () => {
   it("reports a payload it cannot parse as exactly that", async () => {
     // A schema skew. Rendering it as "nothing recorded" would send the reader
     // off to gather facts that are already there.
-    serving({ organization_id: "o-1" });
+    serving({ company_id: "o-1" });
     show();
 
     expect(
@@ -159,7 +159,7 @@ describe("what this company is", () => {
         }
       >
         <LocaleProvider initial="en">
-          <DossierPanel orgId="o-1" enabled={false} />
+          <DossierPanel companyId="o-1" enabled={false} />
         </LocaleProvider>
       </QueryClientProvider>,
     );

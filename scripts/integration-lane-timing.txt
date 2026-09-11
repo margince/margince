@@ -18,7 +18,7 @@
 ./internal/compose/integration/channels|30.629
 ./internal/compose/integration/overlay|30.114
 ./internal/modules/identity|28.752
-./internal/compose/integration/org360|27.690
+./internal/compose/integration/company360|27.690
 ./internal/modules/overlay|27.639
 ./internal/compose/integration/capture|23.226
 ./internal/compose/integration/jobfanout|20.120

@@ -26,7 +26,7 @@ package integration
 // is live behaviour rather than defence in depth.
 //
 // The third case in this file is not about agents at all: the employment edge
-// returned an employer's name to a caller holding no organization grant, which
+// returned an employer's name to a caller holding no company grant, which
 // the function's own doc comment already claimed it did not.
 
 import (
@@ -124,40 +124,40 @@ func TestRequireHumanIsWhatSeparatesAnAgentFromItsHuman(t *testing.T) {
 	}
 }
 
-// TestAnEmployerNameNeedsTheOrganizationGrant covers the object half of the
+// TestAnEmployerNameNeedsTheCompanyGrant covers the object half of the
 // employment edge's answer, through the assembled page.
 //
-// organizationName's doc says a name the caller cannot read "is simply absent",
+// companyName's doc says a name the caller cannot read "is simply absent",
 // and its statement selected on id and archived_at alone — so a caller holding
-// person and relationship but no organization grant read employer names through
+// person and relationship but no company grant read employer names through
 // the edge. The edge itself still shows: an employment they may see is a true
 // fact, and only the company on the far side of it is a separate question.
-func TestAnEmployerNameNeedsTheOrganizationGrant(t *testing.T) {
+func TestAnEmployerNameNeedsTheCompanyGrant(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Vertraulich GmbH", &e.Rep1)
+	company := e.SeedCompany(t, "Vertraulich GmbH", &e.Rep1)
 	contact := e.SeedPerson(t, "Pia Angestellt", &e.Rep1)
 	e.WsExec(t, `
-		INSERT INTO relationship (id, kind, person_id, organization_id, is_current_primary, source, captured_by)
-		VALUES ($1, 'employment', $2, $3, true, 'manual', 'human:x')`, ids.NewV7(), contact, org)
+		INSERT INTO relationship (id, kind, person_id, company_id, is_current_primary, source, captured_by)
+		VALUES ($1, 'employment', $2, $3, true, 'manual', 'human:x')`, ids.NewV7(), contact, company)
 
-	grants := func(withOrg bool) principal.Permissions {
+	grants := func(withCompany bool) principal.Permissions {
 		objects := map[string]principal.ObjectGrant{
 			"person": {Read: true}, "relationship": {Read: true}, "activity": {Read: true},
 		}
-		if withOrg {
-			objects["organization"] = principal.ObjectGrant{Read: true}
+		if withCompany {
+			objects["company"] = principal.ObjectGrant{Read: true}
 		}
 		return principal.Permissions{
 			RoleKeys: []string{"rep"}, Objects: objects, RowScope: principal.RowScopeAll,
 		}
 	}
 
-	employer := func(withOrg bool) (string, bool) {
+	employer := func(withCompany bool) (string, bool) {
 		t.Helper()
-		ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, grants(withOrg))
+		ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, grants(withCompany))
 		page, err := personRoomService(e).Assemble(ctx, ids.From[ids.PersonKind](contact))
 		if err != nil {
-			t.Fatalf("assembling the page (organization grant=%v): %v", withOrg, err)
+			t.Fatalf("assembling the page (company grant=%v): %v", withCompany, err)
 		}
 		if page.Employments == nil || len(page.Employments.Data) != 1 {
 			t.Fatalf("the page carried %+v employments, want exactly the seeded one — "+
@@ -165,20 +165,20 @@ func TestAnEmployerNameNeedsTheOrganizationGrant(t *testing.T) {
 				"wrong reason", page.Employments)
 		}
 		row := page.Employments.Data[0]
-		if row.OrganizationName == nil {
+		if row.CompanyName == nil {
 			return "", false
 		}
-		return *row.OrganizationName, true
+		return *row.CompanyName, true
 	}
 
 	// The control: with the grant the name is there, so its absence below is
 	// the refusal rather than an empty fixture.
 	if got, ok := employer(true); !ok || got != "Vertraulich GmbH" {
-		t.Fatalf("a caller holding organization.read saw name=%q present=%v, "+
+		t.Fatalf("a caller holding company.read saw name=%q present=%v, "+
 			"want the employer", got, ok)
 	}
 	if got, ok := employer(false); ok {
-		t.Errorf("a caller holding no organization grant read the employer name %q "+
+		t.Errorf("a caller holding no company grant read the employer name %q "+
 			"through the employment edge", got)
 	}
 }
@@ -202,7 +202,7 @@ func TestAnAgentDoesNotConsumeItsHumansDismissal(t *testing.T) {
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"person": {Read: true}, "activity": {Read: true, Create: true},
-			"relationship": {Read: true}, "organization": {Read: true},
+			"relationship": {Read: true}, "company": {Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}

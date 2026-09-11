@@ -171,7 +171,7 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 	// `activity` is deliberately absent: it is a timeline entry, and no screen
 	// answers to it.
 	openable := map[crmcontracts.AttentionSubjectType]bool{
-		"organization": true, "person": true, "deal": true,
+		"company": true, "person": true, "deal": true,
 		"lead": true, "project": true,
 	}
 	// Every lane carries a row, because a lane the fixture leaves empty is a

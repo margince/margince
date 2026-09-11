@@ -261,16 +261,16 @@ func TestUsageCountsOnlyTheAdvertisedRecordTypes(t *testing.T) {
 	tag := createTag(t, e, "Cross Type")
 	createPersonWithTag(t, e, "A Person", tag)
 
-	var org integration.AnyMap
-	if status := e.Call(t, "POST", "/v1/organizations", integration.AnyMap{
+	var company integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/companies", integration.AnyMap{
 		"display_name": "A Company", "source": "ui",
-	}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("creating the company: status=%d body=%v", status, org)
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("creating the company: status=%d body=%v", status, company)
 	}
-	orgID, _ := org["id"].(string)
+	companyID, _ := company["id"].(string)
 	var applied integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/tags/"+tag+"/apply", integration.AnyMap{
-		"entity_type": "organization", "entity_id": orgID,
+		"entity_type": "company", "entity_id": companyID,
 	}, nil, &applied); status != http.StatusCreated {
 		t.Fatalf("tagging the company: status=%d body=%v", status, applied)
 	}

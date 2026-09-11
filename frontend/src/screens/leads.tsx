@@ -1428,7 +1428,7 @@ function isLeadTab(value: string | undefined): value is LeadTab {
 // The lead's tab, addressed rather than held beside the address: a tab that
 // survives a reload and can be linked to, and Back that steps between the tabs
 // a reader opened instead of leaving the lead altogether. Same shape as the
-// account's (screens/organizations.tsx) and the contact's.
+// account's (screens/companies.tsx) and the contact's.
 function useLeadTab(recordId: string): [LeadTab, (next: LeadTab) => void] {
   const route = useRoute();
   const addressed =

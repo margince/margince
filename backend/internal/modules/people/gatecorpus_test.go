@@ -30,7 +30,7 @@ import (
 //
 // So the gates rewritten here share one walk and one set of recognisers, and
 // each says what it is asking rather than how to look for it. Two older gates in
-// this package still walk the directory themselves — dedupeorg_seam_test.go, and
+// this package still walk the directory themselves — dedupecompany_seam_test.go, and
 // projectanchorgate_test.go, which parses one filename. Converting them is worth
 // doing and is not done here; naming them is the difference between a scope and
 // a claim that the next author would grep, find, and stop looking behind.

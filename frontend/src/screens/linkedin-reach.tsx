@@ -189,7 +189,7 @@ function ReachTable({
           render: (account: ReachAccount) => (
             <a
               className="li-reach-cell li-reach-link"
-              href={`#/companies/${account.organization_id}`}
+              href={`#/companies/${account.company_id}`}
             >
               {account.display_name}
             </a>
@@ -222,7 +222,7 @@ function ReachTable({
         },
       ]}
       rows={[...accounts]}
-      rowKey={(account) => account.organization_id}
+      rowKey={(account) => account.company_id}
     />
   );
 }

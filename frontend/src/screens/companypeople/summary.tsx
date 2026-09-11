@@ -38,8 +38,8 @@ import "./companypeople.css";
 // the list themselves: is anybody here talking to us, who is the way in, and
 // which buying role nobody holds.
 
-type Coverage = components["schemas"]["OrganizationCoverage"];
-type Seat = components["schemas"]["OrganizationCoverageSeat"];
+type Coverage = components["schemas"]["CompanyCoverage"];
+type Seat = components["schemas"]["CompanyCoverageSeat"];
 
 /** The roles a committee reads in, and the order it reads them. */
 const ROLES = [
@@ -75,12 +75,12 @@ export function buyingRoleLabel(
   return isCatalogRole(role) ? t(ROLE_LABELS[role]) : role.replace(/_/g, " ");
 }
 
-export function useOrganizationCoverage(orgId: string) {
+export function useCompanyCoverage(companyId: string) {
   return useQuery({
-    queryKey: ["organization-coverage", orgId],
+    queryKey: ["company-coverage", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/coverage", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.GET("/companies/{id}/coverage", {
+        params: { path: { id: companyId } },
       });
       if (error || !data) {
         return throwProblem(error);
@@ -91,18 +91,18 @@ export function useOrganizationCoverage(orgId: string) {
 }
 
 export function CoverageBand({
-  orgId,
+  companyId,
   accountName,
   onNarrow,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   accountName: string;
   /** Each statement is a door: it narrows the list below to what it describes. */
   onNarrow: (status: "waiting" | "answered" | "untried" | null) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const query = useOrganizationCoverage(orgId);
+  const query = useCompanyCoverage(companyId);
   // A band that could not load is absent, not an error banner: the list below
   // it still answers, and a reading nobody can act on is not worth a shout.
   //
@@ -156,7 +156,7 @@ export function CoverageBand({
       <CommitteeBoard
         coverage={coverage}
         accountName={accountName}
-        orgId={orgId}
+        companyId={companyId}
       />
     </>
   );
@@ -288,8 +288,8 @@ function CommitteeReading({ coverage }: Readonly<{ coverage: Coverage }>) {
 function CommitteeBoard({
   coverage,
   accountName,
-  orgId,
-}: Readonly<{ coverage: Coverage; accountName: string; orgId: string }>) {
+  companyId,
+}: Readonly<{ coverage: Coverage; accountName: string; companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const [view, setView] = useState<"board" | "map">("board");
@@ -308,7 +308,7 @@ function CommitteeBoard({
     }
     setParams(out);
   };
-  const writes = useCommitteeWrites(orgId, coverage.selected_deal_id);
+  const writes = useCommitteeWrites(companyId, coverage.selected_deal_id);
   const renderSeat = (seat: Seat) => (
     <SeatCard
       seat={seat}
@@ -421,7 +421,7 @@ function CommitteeBoard({
         {asking && (
           <IntroRequestModal
             key={`${asking.personId}:${asking.viaUserId}`}
-            orgId={orgId}
+            companyId={companyId}
             target={asking}
             dealId={coverage.selected_deal_id}
             onClose={() => setAsking(null)}
@@ -593,13 +593,16 @@ function SeatCard({
  * to be: the question the mark asks is "did a person answer this", and an edit
  * IS that answer.
  */
-function useCommitteeWrites(orgId: string, dealId: string | null | undefined) {
+function useCommitteeWrites(
+  companyId: string,
+  dealId: string | null | undefined,
+) {
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const refresh = () => {
     queryClient.invalidateQueries({
-      queryKey: ["organization-coverage", orgId],
+      queryKey: ["company-coverage", companyId],
     });
   };
 

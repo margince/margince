@@ -37,9 +37,9 @@ func pathID(id crmcontracts.Id) ids.CommissionEntryID {
 // ListCommissionEntries serves the ledger page.
 func (h Handlers) ListCommissionEntries(w http.ResponseWriter, r *http.Request, params crmcontracts.ListCommissionEntriesParams) {
 	in := ListInput{Cursor: params.Cursor, Limit: params.Limit}
-	if params.PartnerOrgId != nil {
-		partner := ids.From[ids.OrganizationKind](ids.UUID(*params.PartnerOrgId))
-		in.PartnerOrgID = &partner
+	if params.PartnerCompanyId != nil {
+		partner := ids.From[ids.CompanyKind](ids.UUID(*params.PartnerCompanyId))
+		in.PartnerCompanyID = &partner
 	}
 	if params.DealId != nil {
 		deal := ids.From[ids.DealKind](ids.UUID(*params.DealId))

@@ -23,9 +23,9 @@ import { describe, expect, it } from "vitest";
 // only in a stale-cache bug report. The swept set (11 ops per
 // overlaywrite.go, minus DELETE /activities/{id}, which no SPA screen
 // calls):
-//   create person/org/deal/lead, log-activity (POST /activities from
+//   create person/company/deal/lead, log-activity (POST /activities from
 //   logactivity.tsx), advance-deal (both its board and reopen callers),
-//   merge-person, merge-org, promote-lead, disqualify-lead.
+//   merge-person, merge-company, promote-lead, disqualify-lead.
 const dir = dirname(fileURLToPath(import.meta.url));
 
 function source(file: string): string {
@@ -166,24 +166,24 @@ describe("overlay refusal copy — translator coverage", () => {
     );
   });
 
-  it("create-org (POST /organizations)", () => {
+  it("create-company (POST /companies)", () => {
     // The create request left the screen with the rest of the form mapping:
     // the header's edit built the same body from the same field list and could
     // only reach it by importing from a 2,900-line screen.
     assertTranslatedRefusal(
       "companyform.ts",
-      'api.POST("/organizations", {',
-      "create-org",
+      'api.POST("/companies", {',
+      "create-company",
     );
   });
 
-  it("merge-org (POST /organizations/{id}/merge)", () => {
+  it("merge-company (POST /companies/{id}/merge)", () => {
     // The merge lives with the rest of the account header's overflow actions,
-    // which moved out of organizations.tsx when that file passed 2,700 lines.
+    // which moved out of companies.tsx when that file passed 2,700 lines.
     assertTranslatedRefusal(
       "companyheader.tsx",
-      '"/organizations/{id}/merge"',
-      "merge-org",
+      '"/companies/{id}/merge"',
+      "merge-company",
     );
   });
 

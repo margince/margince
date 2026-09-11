@@ -28,12 +28,12 @@ import {
 // "typed by 3f2b8c…" is not more information than "typed by a person", it is the
 // same non-answer with a reader-hostile spelling.
 
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 
 // Typed, not asserted. A fixture cast into the contract type can drop a required
 // field and still compile, so the test would go on passing after the wire shape
 // moved under it — which is the one thing a fixture must not do.
-const ORG: Organization = {
+const COMPANY: Company = {
   // Absent reads as NOT writable, which is the fail-closed default a real
   // response never relies on: the server answers this per row.
   writable: true,
@@ -54,11 +54,11 @@ afterEach(() => {
 });
 
 // The grants the reader holds wherever a spec is about something other than
-// the grant: the record verbs ask `organization.update` before they draw, so a
+// the grant: the record verbs ask `company.update` before they draw, so a
 // /me with no authorization at all would refuse every Edit these specs open.
 const READER = {
   authorization: meFixture({
-    allow: { organization: ["read", "update", "delete"] },
+    allow: { company: ["read", "update", "delete"] },
   }).authorization,
 };
 
@@ -200,7 +200,7 @@ function renderInApp(ui: ReactNode) {
 }
 
 function renderLine() {
-  renderInApp(<CompanyIdentityLine org={ORG} />);
+  renderInApp(<CompanyIdentityLine company={COMPANY} />);
 }
 
 // The owner control's mount. It sits in the record's facts box beside the
@@ -208,7 +208,7 @@ function renderLine() {
 // one mount, so the three roster states below are asserted where a reader
 // actually meets them.
 function renderFacts() {
-  renderInApp(<CompanyFacts org={ORG} />);
+  renderInApp(<CompanyFacts company={COMPANY} />);
 }
 
 describe("who wrote this record", () => {
@@ -311,7 +311,7 @@ describe("the owner the edit form prefills", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyActionBadges
-        org={ORG}
+        company={COMPANY}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,
@@ -340,7 +340,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyPrimaryActions
-        org={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -367,7 +367,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     stubGrants({ activity: ["create"] });
     renderInApp(
       <CompanyPrimaryActions
-        org={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -388,7 +388,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const answer = stubMeInFlight();
     renderInApp(
       <CompanyPrimaryActions
-        org={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -426,7 +426,7 @@ describe("an archived account's verbs", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyActionBadges
-        org={{ ...ORG, archived_at: "2026-07-13T00:00:00Z" }}
+        company={{ ...COMPANY, archived_at: "2026-07-13T00:00:00Z" }}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,
@@ -477,22 +477,22 @@ describe("an account whose lifecycle and relationship agree", () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyRelationshipBadges
-        org={{ ...ORG, relationship_types: ["customer", "partner"] }}
+        company={{ ...COMPANY, relationship_types: ["customer", "partner"] }}
       />,
     );
 
     // These badges are what this component draws; the lifecycle badge is the
     // other mount, so a duplicate here is one "Customer" too many on its own.
-    expect(await screen.findByText(en["org.relType.partner"])).toBeTruthy();
-    expect(screen.queryByText(en["org.relType.customer"])).toBeNull();
+    expect(await screen.findByText(en["company.relType.partner"])).toBeTruthy();
+    expect(screen.queryByText(en["company.relType.customer"])).toBeNull();
   });
 
   it("still draws a relationship the lifecycle disagrees with", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyRelationshipBadges
-        org={{
-          ...ORG,
+        company={{
+          ...COMPANY,
           lifecycle: "prospect",
           relationship_types: ["customer"],
         }}
@@ -502,7 +502,9 @@ describe("an account whose lifecycle and relationship agree", () => {
     // An account can be worked as a prospect and be a customer of something
     // else already — dropping the badge because the two words differ would hide
     // a true reading rather than a repeated one.
-    expect(await screen.findByText(en["org.relType.customer"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["company.relType.customer"]),
+    ).toBeTruthy();
   });
 });
 
@@ -521,7 +523,7 @@ describe("the shape of the header's verbs", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyActionBadges
-        org={ORG}
+        company={COMPANY}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,
@@ -542,10 +544,10 @@ describe("the shape of the header's verbs", () => {
       [...panel.querySelectorAll("button")].map((row) => row.textContent),
     ).toEqual([
       en["record.edit"],
-      en["merge.org"],
+      en["merge.company"],
       en["record.share"],
       en["record.fullHistory"],
-      en["org.partnerSetUp"],
+      en["company.partnerSetUp"],
       en["record.archive"],
     ]);
   });
@@ -559,7 +561,7 @@ describe("the shape of the header's verbs", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyActionBadges
-        org={ORG}
+        company={COMPANY}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,
@@ -581,7 +583,7 @@ describe("the shape of the header's verbs", () => {
     stubGrants({ activity: ["create"] });
     renderInApp(
       <CompanyPrimaryActions
-        org={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,

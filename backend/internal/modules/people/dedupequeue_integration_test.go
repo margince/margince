@@ -30,7 +30,7 @@ import (
 // candidate (the PR-12a fold-in under test).
 func seedPersonPair(ctx context.Context, t *testing.T, e *dedupeEnv, incumbentName, incumbentEmail, dupName, dupEmail, domain string) (incumbent ids.UUID, created ids.UUID) {
 	t.Helper()
-	inc, _ := e.seedEmployedPerson(ctx, t, incumbentName, incumbentEmail, "Org "+incumbentName, domain)
+	inc, _ := e.seedEmployedPerson(ctx, t, incumbentName, incumbentEmail, "Company "+incumbentName, domain)
 	dup, err := e.store.CreatePerson(ctx, CreatePersonInput{
 		FullName: dupName, Source: "manual",
 		Emails: []PersonEmailInput{{Email: dupEmail, EmailType: "work", IsPrimary: true}},
@@ -198,31 +198,31 @@ func TestDedupeMergeRunsTheOneMergeVerbAndStandsForever(t *testing.T) {
 	}
 }
 
-func TestDedupeOrgMergeArm(t *testing.T) {
+func TestDedupeCompanyMergeArm(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	incumbent, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	incumbent, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Globex Corporation GmbH", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "globex.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "globex.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Globex Corporation Inc", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "globex-us.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "globex-us.test", IsPrimary: true}},
 	}); err != nil {
-		t.Fatalf("fuzzy org create must not block: %v", err)
+		t.Fatalf("fuzzy company create must not block: %v", err)
 	}
 
-	rows := openCandidates(ctx, t, e, "organization")
+	rows := openCandidates(ctx, t, e, "company")
 	if len(rows) != 1 {
-		t.Fatalf("open org queue holds %d candidates, want 1", len(rows))
+		t.Fatalf("open company queue holds %d candidates, want 1", len(rows))
 	}
 	winner := ids.UUID(incumbent.Id)
 	merged, err := e.store.DisposeDedupeCandidate(ctx, rows[0].ID, "merge", &winner)
 	if err != nil {
-		t.Fatalf("org merge dispose: %v", err)
+		t.Fatalf("company merge dispose: %v", err)
 	}
 	if merged.Disposition != "merged" {
 		t.Fatalf("disposition = %s, want merged", merged.Disposition)
@@ -265,8 +265,8 @@ func (e *dedupeEnv) asAgent() context.Context {
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"person":       {Create: true, Read: true, Update: true},
-				"organization": {Create: true, Read: true, Update: true},
+				"person":  {Create: true, Read: true, Update: true},
+				"company": {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -300,9 +300,9 @@ func (e *dedupeEnv) asOwnScoped(other ids.UUID) context.Context {
 		Type: principal.PrincipalHuman, ID: "human:" + other.String(), UserID: other,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"person":       {Read: true, Update: true},
-				"organization": {Read: true, Update: true},
-				"lead":         {Read: true, Update: true},
+				"person":  {Read: true, Update: true},
+				"company": {Read: true, Update: true},
+				"lead":    {Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeOwn,
 		},
@@ -338,23 +338,23 @@ func TestDedupeQueueHidesPairsOutsideTheCallersRowScope(t *testing.T) {
 	}
 }
 
-// seedOrgPair leaves one open organization candidate: two spellings of one
+// seedCompanyPair leaves one open company candidate: two spellings of one
 // company, no shared exact key.
-func seedOrgPair(ctx context.Context, t *testing.T, e *dedupeEnv) (ids.UUID, ids.UUID) {
+func seedCompanyPair(ctx context.Context, t *testing.T, e *dedupeEnv) (ids.UUID, ids.UUID) {
 	t.Helper()
-	first, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	first, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Globex Corporation GmbH", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "globex.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "globex.test", IsPrimary: true}},
 	})
 	if err != nil {
-		t.Fatalf("seed incumbent org: %v", err)
+		t.Fatalf("seed incumbent company: %v", err)
 	}
-	second, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	second, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Globex Corporation Inc", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "globex-us.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "globex-us.test", IsPrimary: true}},
 	})
 	if err != nil {
-		t.Fatalf("seed near-duplicate org: %v", err)
+		t.Fatalf("seed near-duplicate company: %v", err)
 	}
 	return ids.UUID(first.Id), ids.UUID(second.Id)
 }
@@ -381,7 +381,7 @@ func TestDedupeDispositionRefusesAHalfWritablePair(t *testing.T) {
 				return seedPersonPair(ctx, t, e, "Ola Half", "ola@half.test", "Olah Half", "olah@half.test", "half.test")
 			},
 		},
-		{entityOrganization, `UPDATE organization SET owner_id = $1 WHERE id = $2`, seedOrgPair},
+		{entityCompany, `UPDATE company SET owner_id = $1 WHERE id = $2`, seedCompanyPair},
 	}
 	for _, arm := range arms {
 		for _, give := range []string{"first-created", "second-created"} {
@@ -731,13 +731,13 @@ func TestOpenCandidatesNamingIsSilentForARecordTypeWithNoQueue(t *testing.T) {
 func TestTheMergeCardAgreesWithTheDispositionEndpoint(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	left, right := seedOrgPair(ctx, t, e)
-	c := openCandidates(ctx, t, e, "organization")[0]
+	left, right := seedCompanyPair(ctx, t, e)
+	c := openCandidates(ctx, t, e, "company")[0]
 
 	// The owner of BOTH records: the endpoint admits this seat, so the card
 	// must offer it the verbs.
 	owner := e.asOwnScoped(e.rep)
-	decidable, err := e.store.DecidableForMerge(owner, entityOrganization, []ids.UUID{left, right})
+	decidable, err := e.store.DecidableForMerge(owner, entityCompany, []ids.UUID{left, right})
 	if err != nil {
 		t.Fatalf("asking what the owner may decide: %v", err)
 	}
@@ -750,7 +750,7 @@ func TestTheMergeCardAgreesWithTheDispositionEndpoint(t *testing.T) {
 	// reads the workspace's customer records — and the endpoint refuses them,
 	// so the card must not offer what would refuse.
 	colleague := e.asOwnScoped(e.otherRep)
-	withheld, err := e.store.DecidableForMerge(colleague, entityOrganization, []ids.UUID{left, right})
+	withheld, err := e.store.DecidableForMerge(colleague, entityCompany, []ids.UUID{left, right})
 	if err != nil {
 		t.Fatalf("asking what a colleague may decide: %v", err)
 	}

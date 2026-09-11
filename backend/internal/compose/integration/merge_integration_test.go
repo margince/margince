@@ -8,7 +8,7 @@ package integration
 // The features/01 §1.3 two-record merge acceptance criteria, against the
 // real migrated Postgres: non-lossy relink with zero orphaned references,
 // primary-slot demotion, fill-only survivorship, the restrictive consent
-// rule, org hierarchy reparenting + the 1:1 partner extension, and the
+// rule, company hierarchy reparenting + the 1:1 partner extension, and the
 // self / already-merged / dead-target error paths.
 
 import (
@@ -127,76 +127,76 @@ func TestMergePerson_consentMergesRestrictively(t *testing.T) {
 	}
 }
 
-func TestMergeOrganization_hierarchyReparenting(t *testing.T) {
+func TestMergeCompany_hierarchyReparenting(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	source, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{DisplayName: "Acme Source", Source: "manual"})
+	source, err := e.People.CreateCompany(admin, people.CreateCompanyInput{DisplayName: "Acme Source", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create source: %v", err)
 	}
-	target, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{DisplayName: "Acme Target", Source: "manual"})
+	target, err := e.People.CreateCompany(admin, people.CreateCompanyInput{DisplayName: "Acme Target", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create target: %v", err)
 	}
-	srcID, tgtID := orgIDOf(ids.UUID(source.Id)), orgIDOf(ids.UUID(target.Id))
+	srcID, tgtID := companyIDOf(ids.UUID(source.Id)), companyIDOf(ids.UUID(target.Id))
 	// A child sits under the source.
-	child, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{
-		DisplayName: "Acme Child", ParentOrgID: &srcID, Source: "manual",
+	child, err := e.People.CreateCompany(admin, people.CreateCompanyInput{
+		DisplayName: "Acme Child", ParentCompanyID: &srcID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create child: %v", err)
 	}
 
-	if _, err := e.People.MergeOrganization(admin, srcID, tgtID); err != nil {
+	if _, err := e.People.MergeCompany(admin, srcID, tgtID); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
 	// The child is re-homed under the survivor.
-	got, err := e.People.GetOrganization(admin, orgIDOf(ids.UUID(child.Id)), storekit.LiveOnly)
+	got, err := e.People.GetCompany(admin, companyIDOf(ids.UUID(child.Id)), storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read child: %v", err)
 	}
-	if got.ParentOrgId == nil || orgIDOf(ids.UUID(*got.ParentOrgId)) != tgtID {
-		t.Errorf("child parent = %v, want the survivor %s", got.ParentOrgId, tgtID)
+	if got.ParentCompanyId == nil || companyIDOf(ids.UUID(*got.ParentCompanyId)) != tgtID {
+		t.Errorf("child parent = %v, want the survivor %s", got.ParentCompanyId, tgtID)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM organization WHERE parent_org_id = $1`, srcID); n != 0 {
-		t.Errorf("%d orgs still parented on the merged-away source", n)
+	if n := e.WsCount(t, `SELECT count(*) FROM company WHERE parent_company_id = $1`, srcID); n != 0 {
+		t.Errorf("%d companies still parented on the merged-away source", n)
 	}
 }
 
-func TestMergeOrganization_partnerExtensionMovesIntoVacancy(t *testing.T) {
+func TestMergeCompany_partnerExtensionMovesIntoVacancy(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	source, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{DisplayName: "Partner Source", Source: "manual"})
+	source, err := e.People.CreateCompany(admin, people.CreateCompanyInput{DisplayName: "Partner Source", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create source: %v", err)
 	}
-	target, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{DisplayName: "Plain Target", Source: "manual"})
+	target, err := e.People.CreateCompany(admin, people.CreateCompanyInput{DisplayName: "Plain Target", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create target: %v", err)
 	}
-	srcID, tgtID := orgIDOf(ids.UUID(source.Id)), orgIDOf(ids.UUID(target.Id))
+	srcID, tgtID := companyIDOf(ids.UUID(source.Id)), companyIDOf(ids.UUID(target.Id))
 	// The source carries the partner program; the target has none.
-	e.WsExec(t, `INSERT INTO partner (organization_id, source, captured_by) VALUES ($1, 'manual', 'human:test')`, srcID)
-	e.WsExec(t, `INSERT INTO organization_relationship_type (organization_id, relationship_type, source, captured_by)
+	e.WsExec(t, `INSERT INTO partner (company_id, source, captured_by) VALUES ($1, 'manual', 'human:test')`, srcID)
+	e.WsExec(t, `INSERT INTO company_relationship_type (company_id, relationship_type, source, captured_by)
 		VALUES ($1, 'partner', 'manual', 'human:test')`, srcID)
 
-	if _, err := e.People.MergeOrganization(admin, srcID, tgtID); err != nil {
+	if _, err := e.People.MergeCompany(admin, srcID, tgtID); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
 	// The 1:1 extension moved into the vacancy, and the survivor carries the
 	// partner relationship type — the invariant ADR-0079 moved off
 	// classification and now enforces in both directions.
-	if n := e.WsCount(t, `SELECT count(*) FROM partner WHERE organization_id = $1`, tgtID); n != 1 {
+	if n := e.WsCount(t, `SELECT count(*) FROM partner WHERE company_id = $1`, tgtID); n != 1 {
 		t.Errorf("survivor has %d partner rows, want the moved 1", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM partner WHERE organization_id = $1`, srcID); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM partner WHERE company_id = $1`, srcID); n != 0 {
 		t.Errorf("%d partner rows still point at the merged-away source", n)
 	}
-	got, err := e.People.GetOrganization(admin, tgtID, storekit.LiveOnly)
+	got, err := e.People.GetCompany(admin, tgtID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read survivor: %v", err)
 	}

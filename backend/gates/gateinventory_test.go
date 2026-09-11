@@ -483,7 +483,7 @@ func TestFirstSentenceKeepsACitationWhoseDotIsPartOfAWord(t *testing.T) {
 			"crm.yaml is the contract.",
 		},
 		{
-			"next sentence opens with an identifier", "A rule holds. `writeOrgColumn` does not.",
+			"next sentence opens with an identifier", "A rule holds. `writeCompanyColumn` does not.",
 			"A rule holds.",
 		},
 		{"no terminator", "One clause with no full stop", "One clause with no full stop"},

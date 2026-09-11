@@ -169,7 +169,7 @@ func TestOneRepsAutonomyIsInvisibleToAnother(t *testing.T) {
 	// auto by inheriting the first rep's row. Close-date corrections default to
 	// auto — the sweep applies them and reports itself — so a colleague reading
 	// auto there proves nothing about isolation.
-	const kind = "org_name_promotion"
+	const kind = "company_name_promotion"
 
 	if _, err := svc.SetAutoApply(first, kind, true); err != nil {
 		t.Fatalf("switching the first rep's kind on: %v", err)

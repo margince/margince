@@ -10,7 +10,7 @@ package capture
 // a wrong registry entry is queryable rather than only a log line.
 //
 // This file owns the ledger's SQL and nothing else — capture never touches
-// person/organization tables, and the resolver seam stays the only way records
+// person/company tables, and the resolver seam stays the only way records
 // come into being.
 
 import (
@@ -64,19 +64,19 @@ func PendingStatuses() []string {
 // column (migration 0222).
 //
 // Only KindPerson may become a person record. The old binary vocabulary put "a
-// person or company" on one side of a single line, so an organization writing
+// person or company" on one side of a single line, so a company writing
 // under its own name became a contact named after the company — the real import
 // produced people called "Docsign", "VINASA" and "Expensify".
 const (
 	// KindPerson is a human with an interest in this business.
 	KindPerson = "person"
-	// KindRoleMailbox is an address an organization answers rather than a
+	// KindRoleMailbox is an address a company answers rather than a
 	// person: support@, info@, a shared team mailbox. The correspondence is
 	// real; there is simply no human named to record.
 	KindRoleMailbox = "role_mailbox"
-	// KindOrganizationSender is the organization itself writing under its own
+	// KindCompanySender is the company itself writing under its own
 	// name.
-	KindOrganizationSender = "organization_sender"
+	KindCompanySender = "company_sender"
 	// KindNewsletter is bulk editorial mail. Subscribing to one is not a
 	// business relationship.
 	KindNewsletter = "newsletter"

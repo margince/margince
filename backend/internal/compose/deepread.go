@@ -5,13 +5,13 @@ package compose
 
 // The deep read end-to-end: a
 // human's start queues a durable crawl job and answers 202; the worker
-// role crawls the organization's site under the bounded siteCrawler,
+// role crawls the company's site under the bounded siteCrawler,
 // folds the pages into a labeled corpus, and extracts it in ONE model
 // call (chunked only for outsized sites) through the no-guess evidence
 // gate — company fields, category facts, published people, and the
 // site's legal-entity census. The gated findings LAND directly, in one
 // transaction: profile fields fill-empty exactly like a quick scrape,
-// category facts land in organization_fact. Nobody is asked to confirm a
+// category facts land in company_fact. Nobody is asked to confirm a
 // read they pressed the button for — the write is marked as model-derived
 // and stays reversible instead. Published PEOPLE are the exception and
 // still stage as leads. The dossier (people's site_read row) is the
@@ -50,10 +50,10 @@ import (
 // — so a copy in the args would be an address sitting in a table with no
 // workspace column and no RLS that no code path ever reads.
 type SiteDeepReadArgs struct {
-	Workspace      ids.UUID `json:"workspace_id"`
-	OrganizationID ids.UUID `json:"organization_id"`
-	SiteReadID     ids.UUID `json:"site_read_id"`
-	RequestedBy    string   `json:"requested_by"`
+	Workspace   ids.UUID `json:"workspace_id"`
+	CompanyID   ids.UUID `json:"company_id"`
+	SiteReadID  ids.UUID `json:"site_read_id"`
+	RequestedBy string   `json:"requested_by"`
 	// MaxPages is this run's page ceiling, or 0 for the deployment's own. It
 	// can only ever narrow: the worker clamps it against the configured cap, so
 	// a payload cannot raise what an operator set.
@@ -96,9 +96,9 @@ const DeepReadPriorityLive = river.PriorityDefault
 // itself documents that sustained higher-priority traffic can leave a
 // lower-priority job unfetched indefinitely, and nothing here bounds that —
 // sweepWorkspace's own daily-cap tolerance ("a pass that stops early simply
-// leaves the rest due for tomorrow") covers an org never yet QUEUED, not a
+// leaves the rest due for tomorrow") covers a company never yet QUEUED, not a
 // job already sitting in river_job at this priority. What actually bounds
-// the case that matters — a live caller waiting on the SAME organization a
+// the case that matters — a live caller waiting on the SAME company a
 // sweep already queued — is promoteQueuedSiteReadPriority, not this comment.
 const DeepReadPriorityHousekeeping = 4
 
@@ -111,7 +111,7 @@ func siteDeepReadInsertOpts(priority int) *river.InsertOpts {
 	return &river.InsertOpts{
 		Queue:    deepReadQueue,
 		Priority: priority,
-		// Swept: capture_auto_enrich_sweep re-nominates an organization that is
+		// Swept: capture_auto_enrich_sweep re-nominates a company that is
 		// still due on its next daily pass, so a crawl that cannot finish is
 		// re-read tomorrow rather than re-walked all afternoon.
 		MaxAttempts: sweptJobMaxAttempts,
@@ -126,7 +126,7 @@ func siteDeepReadInsertOpts(priority int) *river.InsertOpts {
 // The gap this closes: createOrJoinSiteRead's join branch (people/siteread.go)
 // never calls the enqueue callback — the job those args would produce already
 // exists, and River's own ByArgs uniqueness would silently drop a re-insert
-// anyway. So a live request arriving for the same organization a boot-time
+// anyway. So a live request arriving for the same company a boot-time
 // sweep already queued (both derive the identical https://<domain> seed URL)
 // joined a HOUSEKEEPING-priority job with no code path that ever touched its
 // priority again — the exact starvation this file exists to prevent, just
@@ -333,7 +333,7 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 
 // routeClaimedRead dispatches a claimed read to the lane that owns it, before
 // any spend: the disabled-auto-enrich close, the domain-triage lane (which
-// decides whether an organization should exist at all, so it cannot share the
+// decides whether a company should exist at all, so it cannot share the
 // enrichment path, which assumes one to enrich), or the honest failure of a
 // worker role with no model path. It reports whether it settled the read; not
 // settled is the ordinary enrichment read, which the caller crawls itself.
@@ -354,14 +354,14 @@ func (w *siteDeepReadWorker) routeClaimedRead(ctx context.Context, args SiteDeep
 			// Recorded, not returned raw: the read is already claimed, so a
 			// bare error would leave it running until the reclaim window
 			// expires. Every other fault on this path records itself, and the
-			// sweep re-enqueues the org on its next pass.
+			// sweep re-enqueues the company on its next pass.
 			return true, w.fail(ctx, args.SiteReadID,
 				fmt.Errorf("site deep read %s: reading the auto-enrich setting: %w", args.SiteReadID, err))
 		}
 		if !enabled {
 			// A triage read may not simply stop here. Its domain is a question
 			// somebody's mail already asked, and abandoning it would leave that
-			// question open forever — no organization for that domain, ever.
+			// question open forever — no company for that domain, ever.
 			// Answering it from what the workspace already knows is the honest
 			// close, and it is what the operator's "don't crawl" actually means.
 			if isDomainTriageRequest(claim.RequestedBy) {
@@ -432,7 +432,7 @@ func siteReadLegalEntities(entities []corpusLegalEntity) []people.SiteReadLegalE
 // GUC from them) with a fresh deadline of its own, NEVER the work context's
 // deadline or cancellation. Closing the dossier must not be starved by the
 // crawl+extract work it reports on — otherwise a read whose model calls
-// exhausted the job budget is left running forever, squatting the org's one
+// exhausted the job budget is left running forever, squatting the company's one
 // in-flight slot. Fifteen seconds bounds the single FinishSiteRead tx.
 func terminalCtx(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)

@@ -41,7 +41,7 @@ const draftOffer = {
   revision: 1,
   status: "draft",
   currency: "EUR",
-  buyer_org_id: null,
+  buyer_company_id: null,
   valid_until: "2026-08-01",
   intro_text: null,
   terms_text: null,

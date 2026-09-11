@@ -539,7 +539,7 @@ function stubBackend(
         authorization: meFixture({ allow: REP_GRANTS }).authorization,
       });
     }
-    if (url.includes("/organizations")) {
+    if (url.includes("/companies")) {
       return jsonResponse({
         data: [{ id: "o1", display_name: "Acme" }],
         page: { next_cursor: null },
@@ -573,8 +573,8 @@ describe("mapDealUpdate", () => {
     amount: "2120",
     currency: "EUR",
     owner_id: "u-me",
-    organization_id: "",
-    partner_org_id: "",
+    company_id: "",
+    partner_company_id: "",
     partner_attribution: "",
     forecast_category: "",
     expected_close_date: "",
@@ -605,7 +605,7 @@ describe("mapDealUpdate", () => {
   });
 
   // The reported defect. The body used to carry every field on every save, so a
-  // deal with no company resubmitted `organization_id: null` — and the API,
+  // deal with no company resubmitted `company_id: null` — and the API,
   // correctly, refused to clear a field the person never touched. On an
   // installation with no partners the refusal named `partner_attribution`, a
   // field the form does not even render.
@@ -621,8 +621,8 @@ describe("mapDealUpdate", () => {
       amount: "",
       currency: "",
       owner_id: "",
-      organization_id: "",
-      partner_org_id: "",
+      company_id: "",
+      partner_company_id: "",
       partner_attribution: "",
       forecast_category: "",
       expected_close_date: "",
@@ -643,15 +643,19 @@ describe("mapDealUpdate", () => {
   // unchanged, which is the only honest patch for a field nobody was shown.
   it("does not clear a partner it was never allowed to see", () => {
     const body = mapDealUpdate(
-      { name: "Fleet retrofit", partner_org_id: "", partner_attribution: "" },
       {
         name: "Fleet retrofit",
-        partner_org_id: "p-1",
+        partner_company_id: "",
+        partner_attribution: "",
+      },
+      {
+        name: "Fleet retrofit",
+        partner_company_id: "p-1",
         partner_attribution: "sourced",
       },
-      ["partner_org_id"],
+      ["partner_company_id"],
     );
-    expect("partner_org_id" in body).toBe(false);
+    expect("partner_company_id" in body).toBe(false);
     // The attribution is withheld WITH its partner, so it goes too — returning
     // half the pair would decide what a partner nobody could see is owed.
     expect("partner_attribution" in body).toBe(false);
@@ -659,10 +663,14 @@ describe("mapDealUpdate", () => {
 
   it("still clears a partner the reader could see and chose to remove", () => {
     const body = mapDealUpdate(
-      { ...untouched, partner_org_id: "" },
-      { ...untouched, partner_org_id: "p-1", partner_attribution: "sourced" },
+      { ...untouched, partner_company_id: "" },
+      {
+        ...untouched,
+        partner_company_id: "p-1",
+        partner_attribution: "sourced",
+      },
     );
-    expect(body.partner_org_id).toBeNull();
+    expect(body.partner_company_id).toBeNull();
     // The claim goes with the partner, server-side, as one fact. Naming its own
     // null here would state a claim with nobody left to attribute it to, which
     // is the one shape the API refuses.
@@ -696,10 +704,14 @@ describe("mapDealUpdate", () => {
     const body = mapDealUpdate(
       {
         ...untouched,
-        partner_org_id: "p-1",
+        partner_company_id: "p-1",
         partner_attribution: "influenced",
       },
-      { ...untouched, partner_org_id: "p-1", partner_attribution: "sourced" },
+      {
+        ...untouched,
+        partner_company_id: "p-1",
+        partner_attribution: "sourced",
+      },
     );
     expect(Object.keys(body)).toEqual(["partner_attribution"]);
     expect(body.partner_attribution).toBe("influenced");
@@ -717,15 +729,15 @@ describe("mapDealCreate", () => {
         stage_id: "s-1",
         amount: "480",
         currency: "EUR",
-        organization_id: "cust-1",
-        partner_org_id: "partner-1",
+        company_id: "cust-1",
+        partner_company_id: "partner-1",
         partner_attribution: "influenced",
       },
       "p-1",
     );
-    expect(body.partner_org_id).toBe("partner-1");
+    expect(body.partner_company_id).toBe("partner-1");
     expect(body.partner_attribution).toBe("influenced");
-    expect(body.organization_id).toBe("cust-1");
+    expect(body.company_id).toBe("cust-1");
     expect(body.pipeline_id).toBe("p-1");
     expect(body.amount_minor).toBe(48_000);
   });
@@ -735,16 +747,16 @@ describe("mapDealCreate", () => {
   // says it does — the form must not invent a different claim here.
   it("sends no attribution when the caller made no claim", () => {
     const body = mapDealCreate(
-      { name: "x", stage_id: "s-1", partner_org_id: "partner-1" },
+      { name: "x", stage_id: "s-1", partner_company_id: "partner-1" },
       "p-1",
     );
-    expect(body.partner_org_id).toBe("partner-1");
+    expect(body.partner_company_id).toBe("partner-1");
     expect(body.partner_attribution).toBeNull();
   });
 
   it("names no partner when none was picked", () => {
     const body = mapDealCreate({ name: "x", stage_id: "s-1" }, "p-1");
-    expect(body.partner_org_id).toBeNull();
+    expect(body.partner_company_id).toBeNull();
     expect(body.partner_attribution).toBeNull();
   });
 });
@@ -1554,7 +1566,7 @@ describe("DealsScreen", () => {
           page: { next_cursor: "cursor-2", has_more: true },
         });
       }
-      // pipelines / agent-tools / organizations / context — all empty here.
+      // pipelines / agent-tools / companies / context — all empty here.
       return jsonResponse({ data: [], page: { next_cursor: null } });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -1802,8 +1814,8 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
   it("names the partner that brought the deal, and links to it", async () => {
     const d = deal({
       id: "x",
-      organization_id: "o1",
-      partner_org_id: "p1",
+      company_id: "o1",
+      partner_company_id: "p1",
       partner_attribution: "sourced",
     });
     vi.stubGlobal(
@@ -1812,7 +1824,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
         const url = request.url;
         // EntityRef resolves each reference by its own id read; a reference it
         // cannot name is deliberately not a link.
-        if (url.includes("/organizations/p1")) {
+        if (url.includes("/companies/p1")) {
           return jsonResponse({ id: "p1", display_name: "VietnamPartner JSC" });
         }
         return stubBackend([d], { single: d })(request);
@@ -1838,11 +1850,11 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
   it("keeps a partner the picker cannot reach, rather than clearing it on save", async () => {
     const user = userEvent.setup();
     const patches: { body: unknown }[] = [];
-    // Neither the org list ("Acme") nor the partner list holds p-offpage.
+    // Neither the company list ("Acme") nor the partner list holds p-offpage.
     const d = deal({
       id: "x",
       version: 4,
-      partner_org_id: "p-offpage",
+      partner_company_id: "p-offpage",
       partner_attribution: "sourced",
     });
     vi.stubGlobal(
@@ -1859,7 +1871,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
 
     await waitFor(() => expect(patches.length).toBe(1));
     const body = patches[0].body as Record<string, unknown>;
-    expect("partner_org_id" in body).toBe(false);
+    expect("partner_company_id" in body).toBe(false);
     expect("partner_attribution" in body).toBe(false);
   });
 
@@ -1871,7 +1883,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     const d = deal({
       id: "x",
       version: 4,
-      partner_org_id: "p-offpage",
+      partner_company_id: "p-offpage",
       partner_attribution: "influenced",
     });
     vi.stubGlobal(
@@ -1893,7 +1905,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
 
     await waitFor(() => expect(patches.length).toBe(1));
     const body = patches[0].body as Record<string, unknown>;
-    expect("partner_org_id" in body).toBe(false);
+    expect("partner_company_id" in body).toBe(false);
     expect("partner_attribution" in body).toBe(false);
   });
 
@@ -1905,18 +1917,18 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
       id: "x",
       amount_minor: 4_800_000,
       currency: "EUR",
-      organization_id: "o1",
-      partner_org_id: "p1",
+      company_id: "o1",
+      partner_company_id: "p1",
       partner_attribution: "sourced",
     });
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
         const url = request.url;
-        if (url.includes("/organizations/p1")) {
+        if (url.includes("/companies/p1")) {
           return jsonResponse({ id: "p1", display_name: "Northgate" });
         }
-        if (url.includes("/organizations/o1")) {
+        if (url.includes("/companies/o1")) {
           return jsonResponse({ id: "o1", display_name: "Acme Corp" });
         }
         return stubBackend([d], { single: d })(request);
@@ -1935,13 +1947,13 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
   it("says a partner only helped when the deal was influenced, not sourced", async () => {
     const d = deal({
       id: "x",
-      partner_org_id: "p1",
+      partner_company_id: "p1",
       partner_attribution: "influenced",
     });
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/organizations/p1")) {
+        if (request.url.includes("/companies/p1")) {
           return jsonResponse({ id: "p1", display_name: "Xentral" });
         }
         return stubBackend([d], { single: d })(request);
@@ -2205,7 +2217,7 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
 
     await openHeaderMenu();
     // Each WAITED for — see the note on the same list in
-    // organizations.header.test.tsx: only the first was, and the rest were
+    // companies.header.test.tsx: only the first was, and the rest were
     // read in the tick it arrived in.
     const refused = [
       await screen.findByTestId("edit-record"),
@@ -2525,7 +2537,7 @@ describe("the partner filter", () => {
       if (request.url.includes("/partners")) {
         return Promise.resolve(
           jsonResponse({
-            data: [{ organization_id: "o1", cert_status: "certified" }],
+            data: [{ company_id: "o1", cert_status: "certified" }],
             page: { next_cursor: null },
           }),
         );
@@ -2542,12 +2554,12 @@ describe("the partner filter", () => {
     await userEvent.click(
       within(menu).getByRole("button", { name: "Partner" }),
     );
-    // The option is the company's NAME, resolved from the organization list —
+    // The option is the company's NAME, resolved from the company list —
     // never the bare id, which names nothing to a reader.
     await userEvent.click(within(menu).getByRole("button", { name: "Acme" }));
 
     await waitFor(() =>
-      expect(urls.some((u) => u.includes("partner_org_id=o1"))).toBe(true),
+      expect(urls.some((u) => u.includes("partner_company_id=o1"))).toBe(true),
     );
   });
 
@@ -2561,7 +2573,7 @@ describe("the partner filter", () => {
     vi.stubGlobal("fetch", async (request: Request) => {
       if (request.url.includes("/partners")) {
         return jsonResponse({
-          data: [{ organization_id: "o1", cert_status: "certified" }],
+          data: [{ company_id: "o1", cert_status: "certified" }],
           page: { next_cursor: null },
         });
       }
@@ -2593,7 +2605,7 @@ describe("the partner filter", () => {
         bodies.some(
           (b) =>
             (b as { filters?: Record<string, unknown> }).filters
-              ?.partner_org_id === "o1",
+              ?.partner_company_id === "o1",
         ),
       ).toBe(true),
     );

@@ -19,7 +19,7 @@ package compose
 // the day it emits its first event. Asking each writer to remember to call the
 // matcher would guarantee that one of them forgets.
 //
-// Organization events matter for the same reason and a sharper one: most
+// Company events matter for the same reason and a sharper one: most
 // unmatched ghosts are waiting on an employer, not on a name, so an account
 // appearing unblocks a batch of them at once.
 //
@@ -54,8 +54,8 @@ import (
 // and borrowing the incumbent-import constants sends a reader to the overlay
 // path looking for why this consumer lives there.
 const (
-	matchEntityPerson       = "person"
-	matchEntityOrganization = "organization"
+	matchEntityPerson  = "person"
+	matchEntityCompany = "company"
 )
 
 // LinkedInMatchGen attaches LinkedIn ghosts as the CRM learns who exists, and
@@ -112,13 +112,13 @@ func (g *LinkedInMatchGen) HandleEvent(ctx context.Context, env events.Envelope)
 		case "person.created", "person.updated", "person.merged", "person.restored":
 			return g.matchPerson(ctx, ws.UUID, env.Entity.ID)
 		}
-	case matchEntityOrganization:
+	case matchEntityCompany:
 		switch env.Type {
 		// An account appearing or being renamed changes which company strings
 		// resolve, and that is what most unmatched ghosts are waiting on. The
 		// pass is workspace-wide because a new account can unblock ghosts
 		// belonging to any member.
-		case "organization.created", "organization.updated", "organization.merged":
+		case "company.created", "company.updated", "company.merged":
 			return g.matchWorkspace(ctx, ws.UUID)
 		}
 	}
@@ -174,7 +174,7 @@ func (g *LinkedInMatchGen) matchWorkspace(ctx context.Context, workspace ids.UUI
 			//
 			// This arm therefore pays the per-event cost the narrow one
 			// refuses: one staging attempt per outstanding suggestion, per
-			// owner, per organization event. It is accepted rather than
+			// owner, per company event. It is accepted rather than
 			// overlooked. A new or renamed account is exactly what unblocks
 			// ghosts belonging to many different contacts at once, so there is
 			// no narrower read that would still be complete — unlike the

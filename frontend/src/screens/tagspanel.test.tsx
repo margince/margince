@@ -23,7 +23,7 @@ import { TagsPanel } from "./tagspanel";
 // the wire cannot tell them apart — only the words on screen can, which is
 // what these assert.
 
-const ORG = "01a06151-0000-7000-8000-000000000001";
+const COMPANY = "01a06151-0000-7000-8000-000000000001";
 
 type PanelTag = {
   tag_id: string;
@@ -36,12 +36,12 @@ type PanelTag = {
 
 function mount(tags: PanelTag[], withheld = false, canEdit = true) {
   installFetchStub({
-    [`GET /records/organization/${ORG}/tags`]: () =>
+    [`GET /records/company/${COMPANY}/tags`]: () =>
       jsonResponse({ data: tags, withheld }),
   });
   render(
     <StoryProviders>
-      <TagsPanel entityType="organization" entityID={ORG} canEdit={canEdit} />
+      <TagsPanel entityType="company" entityID={COMPANY} canEdit={canEdit} />
     </StoryProviders>,
   );
 }
@@ -67,11 +67,11 @@ describe("the tags panel", () => {
   // until the default landed.
   it("survives an answer that carries no list at all", async () => {
     installFetchStub({
-      [`GET /records/organization/${ORG}/tags`]: () => jsonResponse({}),
+      [`GET /records/company/${COMPANY}/tags`]: () => jsonResponse({}),
     });
     render(
       <StoryProviders>
-        <TagsPanel entityType="organization" entityID={ORG} canEdit />
+        <TagsPanel entityType="company" entityID={COMPANY} canEdit />
       </StoryProviders>,
     );
     // The panel draws its empty state rather than throwing.
@@ -171,28 +171,28 @@ describe("the tags panel", () => {
 // gated on permission alone floated above no panel and opened a picker whose
 // apply the server refuses.
 describe("the company mount's add-tag verb", () => {
-  const ORG_ROW = {
-    id: ORG,
+  const COMPANY_ROW = {
+    id: COMPANY,
     name: "Aurora GmbH",
     writable: true,
   };
 
   function mountCompany(
     withheld: boolean,
-    grants: Record<string, string[]> = { organization: ["update"] },
+    grants: Record<string, string[]> = { company: ["update"] },
     row: { writable: boolean } = { writable: true },
     seat: "full" | "read" = "full",
   ) {
     installFetchStub({
       "GET /me": meRoute(grants as never, { seat }),
-      [`GET /records/organization/${ORG}/tags`]: () =>
+      [`GET /records/company/${COMPANY}/tags`]: () =>
         jsonResponse({ data: [], withheld }),
     });
     render(
       <StoryProviders>
         <CompanyTagsSection
-          organization={{ ...ORG_ROW, ...row } as never}
-          orgId={ORG}
+          company={{ ...COMPANY_ROW, ...row } as never}
+          companyId={COMPANY}
         />
       </StoryProviders>,
     );
@@ -213,12 +213,12 @@ describe("the company mount's add-tag verb", () => {
     expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
   });
 
-  // Applying writes to the RECORD, so the server asks for `organization.update`
+  // Applying writes to the RECORD, so the server asks for `company.update`
   // as well. A seat without it would be offered a picker whose apply is refused.
-  // The row axis. A rep holding `organization.update` on the OBJECT still may
+  // The row axis. A rep holding `company.update` on the OBJECT still may
   // not write a colleague's company, and the server stamps that as `writable`.
   it("offers no verb on a company this reader may not write", async () => {
-    mountCompany(false, { organization: ["update"] }, { writable: false });
+    mountCompany(false, { company: ["update"] }, { writable: false });
     expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
   });
@@ -226,12 +226,7 @@ describe("the company mount's add-tag verb", () => {
   // The seat axis. A read seat is refused by the licensing middleware before
   // RBAC is consulted, so a verb offered to one cannot lead to a saved tag.
   it("offers no verb on a company to a read seat", async () => {
-    mountCompany(
-      false,
-      { organization: ["update"] },
-      { writable: true },
-      "read",
-    );
+    mountCompany(false, { company: ["update"] }, { writable: true }, "read");
     expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
   });

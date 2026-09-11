@@ -28,7 +28,7 @@ import (
 func TestTheCompanyMarkIsSetAndTakenOffThroughOneStatement(t *testing.T) {
 	e := newAnchorEnv(t)
 
-	superseded, err := e.store.SetCompanyLogo(e.ctx, LogoWide, "logos/first.png", "first.png")
+	superseded, err := e.store.SetAnchorCompanyLogo(e.ctx, LogoWide, "logos/first.png", "first.png")
 	if err != nil {
 		t.Fatalf("setting the company mark: %v", err)
 	}
@@ -39,7 +39,7 @@ func TestTheCompanyMarkIsSetAndTakenOffThroughOneStatement(t *testing.T) {
 
 	// A second set hands back the first object, which is the only signal the
 	// caller has that its bytes are now unreferenced.
-	superseded, err = e.store.SetCompanyLogo(e.ctx, LogoWide, "logos/second.png", "second.png")
+	superseded, err = e.store.SetAnchorCompanyLogo(e.ctx, LogoWide, "logos/second.png", "second.png")
 	if err != nil {
 		t.Fatalf("replacing the company mark: %v", err)
 	}
@@ -73,10 +73,10 @@ func TestTheCompanyMarkIsSetAndTakenOffThroughOneStatement(t *testing.T) {
 func TestTheTwoCompanyMarksAreWrittenAndClearedIndependently(t *testing.T) {
 	e := newAnchorEnv(t)
 
-	if _, err := e.store.SetCompanyLogo(e.ctx, LogoWide, "logos/wide.png", "wide.png"); err != nil {
+	if _, err := e.store.SetAnchorCompanyLogo(e.ctx, LogoWide, "logos/wide.png", "wide.png"); err != nil {
 		t.Fatalf("setting the wide mark: %v", err)
 	}
-	if _, err := e.store.SetCompanyLogo(e.ctx, LogoIcon, "logos/icon.png", "icon.png"); err != nil {
+	if _, err := e.store.SetAnchorCompanyLogo(e.ctx, LogoIcon, "logos/icon.png", "icon.png"); err != nil {
 		t.Fatalf("setting the icon: %v", err)
 	}
 	assertCompanyMark(t, e, "logos/wide.png", "wide.png")
@@ -89,7 +89,7 @@ func TestTheTwoCompanyMarksAreWrittenAndClearedIndependently(t *testing.T) {
 		slot LogoSlot
 		key  string
 	}{{LogoWide, "logos/wide.png"}, {LogoIcon, "logos/icon.png"}} {
-		got, err := e.store.OrganizationLogoKey(e.ctx, e.anchorID, want.slot)
+		got, err := e.store.CompanyLogoKey(e.ctx, e.anchorID, want.slot)
 		if err != nil {
 			t.Fatalf("reading slot %d back: %v", want.slot, err)
 		}
@@ -132,7 +132,7 @@ func assertMarkColumns(t *testing.T, e *anchorEnv, keyColumn, originColumn, want
 		// of the code under test would agree with it about a column neither of
 		// them names correctly.
 		return tx.QueryRow(context.Background(),
-			fmt.Sprintf(`SELECT %s, %s FROM organization WHERE id = $1`, keyColumn, originColumn),
+			fmt.Sprintf(`SELECT %s, %s FROM company WHERE id = $1`, keyColumn, originColumn),
 			e.anchorID).Scan(&key, &origin)
 	}); err != nil {
 		t.Fatalf("reading the mark back: %v", err)

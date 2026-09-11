@@ -16,16 +16,16 @@ func TestDeferredSiteReadMetadataReachesBothWireShapes(t *testing.T) {
 	nextAttempt := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
 	statusCode := "budget_deferred"
 	statusDetail := "AI budget reached its current limit. This website read will resume automatically."
-	organizationID := ids.New[ids.OrganizationKind]()
+	companyID := ids.New[ids.CompanyKind]()
 	read := people.SiteRead{
-		ID:             ids.NewV7(),
-		OrganizationID: &organizationID,
-		TargetKind:     "organization",
-		SeedURL:        "https://acme.example",
-		Status:         siteReadStatusDeferred,
-		StatusCode:     &statusCode,
-		StatusDetail:   &statusDetail,
-		NextAttemptAt:  &nextAttempt,
+		ID:            ids.NewV7(),
+		CompanyID:     &companyID,
+		TargetKind:    "company",
+		SeedURL:       "https://acme.example",
+		Status:        siteReadStatusDeferred,
+		StatusCode:    &statusCode,
+		StatusDetail:  &statusDetail,
+		NextAttemptAt: &nextAttempt,
 	}
 
 	report := siteReadReport(read)
@@ -33,7 +33,7 @@ func TestDeferredSiteReadMetadataReachesBothWireShapes(t *testing.T) {
 		report.StatusCode == nil || *report.StatusCode != crmcontracts.SiteReadReportStatusCodeBudgetDeferred ||
 		report.StatusDetail == nil || *report.StatusDetail != statusDetail ||
 		report.NextAttemptAt == nil || !report.NextAttemptAt.Equal(nextAttempt) {
-		t.Fatalf("deferred organization report lost scheduling metadata: %+v", report)
+		t.Fatalf("deferred company report lost scheduling metadata: %+v", report)
 	}
 
 	company := companySiteRead(read, nil, nil)

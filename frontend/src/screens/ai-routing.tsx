@@ -237,8 +237,8 @@ function RoutingForm({
   if (tiers.length === 0) {
     // An installation that binds nothing needs a FIRST binding, and it has to
     // be reachable from HERE: `seeds.ai_routing` is consumed once, at
-    // organization creation, so an installation that ALREADY EXISTS can never
-    // take one — the desktop bundles ship a database whose organization was
+    // company creation, so an installation that ALREADY EXISTS can never
+    // take one — the desktop bundles ship a database whose company was
     // created on the build machine, leaving their recipient curl or deleting
     // the demo data they were given.
     //

@@ -20,15 +20,15 @@ import { CompanyPeopleList } from "./contacts";
 // tried" are four different next moves, and a reader who cannot tell them
 // apart at a glance is back to reading the roster line by line.
 
-type OrganizationContact = components["schemas"]["OrganizationContact"];
+type CompanyContact = components["schemas"]["CompanyContact"];
 
 const page = { has_more: false, next_cursor: null };
 
 function contact(
   name: string,
-  engagement: OrganizationContact["engagement"],
-  overrides: Partial<OrganizationContact> = {},
-): OrganizationContact {
+  engagement: CompanyContact["engagement"],
+  overrides: Partial<CompanyContact> = {},
+): CompanyContact {
   return {
     person_id: `p-${name.toLowerCase().replace(/\W/g, "-")}`,
     full_name: name,
@@ -39,11 +39,11 @@ function contact(
       factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
     },
     ...overrides,
-  } as OrganizationContact;
+  } as CompanyContact;
 }
 
 /** The account as a rep usually finds it: one way in, and a long tail. */
-const MIXED: OrganizationContact[] = [
+const MIXED: CompanyContact[] = [
   contact("Sabine Vogel", "waiting", {
     title: "Head of Partnerships",
     last_inbound_at: "2026-08-30T09:00:00Z",
@@ -52,7 +52,7 @@ const MIXED: OrganizationContact[] = [
       bucket: "weak",
       factors: { recency: 0.8, frequency: 0.1, reciprocity: 0, direction: 0 },
     },
-  } as Partial<OrganizationContact>),
+  } as Partial<CompanyContact>),
   contact("Dietmar Rietsch", "answered", {
     title: "Managing Director",
     last_inbound_at: "2026-08-22T09:00:00Z",
@@ -62,7 +62,7 @@ const MIXED: OrganizationContact[] = [
       bucket: "strong",
       factors: { recency: 0.9, frequency: 0.7, reciprocity: 0.8, direction: 1 },
     },
-  } as Partial<OrganizationContact>),
+  } as Partial<CompanyContact>),
   contact("Philipp Königs", "untried", { title: "CFO" }),
   contact("Anne Wiegert", "no_reply", {
     title: "Head of Operations",
@@ -72,14 +72,14 @@ const MIXED: OrganizationContact[] = [
       bucket: "weak",
       factors: { recency: 0.3, frequency: 0.2, reciprocity: 0, direction: 0 },
     },
-  } as Partial<OrganizationContact>),
+  } as Partial<CompanyContact>),
   contact("Jan Roth", "untried", { title: "Workshop lead" }),
 ];
 
-function stub(rows: OrganizationContact[]) {
+function stub(rows: CompanyContact[]) {
   installFetchStub({
-    "GET /me": meRoute({ person: ["read"], organization: ["read"] }),
-    "GET /organizations/o-1/contacts": () => jsonResponse({ data: rows, page }),
+    "GET /me": meRoute({ person: ["read"], company: ["read"] }),
+    "GET /companies/o-1/contacts": () => jsonResponse({ data: rows, page }),
   });
 }
 
@@ -94,7 +94,7 @@ type Story = StoryObj<typeof meta>;
 
 /** All four states at once, which is the comparison the design has to survive. */
 export const Mixed: Story = {
-  args: { orgId: "o-1" },
+  args: { companyId: "o-1" },
   decorators: [
     (Story) => {
       stub(MIXED);
@@ -112,7 +112,7 @@ export const Mixed: Story = {
  * point rather than a problem — so the list must not read as a wall of warnings.
  */
 export const NobodyApproached: Story = {
-  args: { orgId: "o-1" },
+  args: { companyId: "o-1" },
   decorators: [
     (Story) => {
       stub([
@@ -131,7 +131,7 @@ export const NobodyApproached: Story = {
 
 /** A company with nobody on file yet. */
 export const Empty: Story = {
-  args: { orgId: "o-1" },
+  args: { companyId: "o-1" },
   decorators: [
     (Story) => {
       stub([]);

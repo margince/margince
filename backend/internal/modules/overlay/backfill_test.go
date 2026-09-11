@@ -79,16 +79,16 @@ func (s *fakeMirrorSink) SaveBackfillCursor(_ context.Context, objectClass, curs
 	return nil
 }
 
-// seedOrganizations seeds n fake companies records under the incumbent
+// seedCompanies seeds n fake companies records under the incumbent
 // class "companies", each stamped with the CANONICAL ObjectClass
-// "organization" — simulating what a real adapter's mapRecord already
+// "company" — simulating what a real adapter's mapRecord already
 // translated (the SEAM RULE backfill.go's doc comment states: Backfill
 // drives the seam with the incumbent class name, but the Records it
 // gets back already carry the canonical type).
-func seedOrganizations(f *fake.Adapter, n int) {
+func seedCompanies(f *fake.Adapter, n int) {
 	for i := 0; i < n; i++ {
-		rec := fake.Rec(fmt.Sprint(i), map[string]any{"display_name": fmt.Sprintf("Org %d", i)})
-		rec.ObjectClass = "organization"
+		rec := fake.Rec(fmt.Sprint(i), map[string]any{"display_name": fmt.Sprintf("Company %d", i)})
+		rec.ObjectClass = "company"
 		f.Seed("companies", rec)
 	}
 }
@@ -98,7 +98,7 @@ func seedOrganizations(f *fake.Adapter, n int) {
 // fixed 100-record page size) and ingests each one, canonical-keyed.
 func TestBackfillHydratesAllRecords(t *testing.T) {
 	f := fake.New()
-	seedOrganizations(f, 250)
+	seedCompanies(f, 250)
 	sink := newFakeMirrorSink()
 
 	if _, err := overlay.Backfill(context.Background(), f, sink, "companies", testConnectedAt); err != nil {
@@ -113,8 +113,8 @@ func TestBackfillHydratesAllRecords(t *testing.T) {
 		if !ok {
 			t.Fatalf("record %d never ingested", i)
 		}
-		if rec.ObjectClass != "organization" {
-			t.Errorf("record %d ObjectClass = %q, want the canonical %q (the SEAM RULE)", i, rec.ObjectClass, "organization")
+		if rec.ObjectClass != "company" {
+			t.Errorf("record %d ObjectClass = %q, want the canonical %q (the SEAM RULE)", i, rec.ObjectClass, "company")
 		}
 	}
 	if cursor, done := sink.cursors["companies"], sink.done["companies"]; cursor != "" || !done {
@@ -145,7 +145,7 @@ func TestBackfillHydratesAllRecords(t *testing.T) {
 // upsert enforces in Postgres.
 func TestBackfillResumesFromMidPageCrashConvergesWithoutDuplicates(t *testing.T) {
 	f := fake.New()
-	seedOrganizations(f, 250)
+	seedCompanies(f, 250)
 	sink := newFakeMirrorSink()
 	sink.failAfter = 150
 
@@ -180,10 +180,10 @@ func TestBackfillResumesFromMidPageCrashConvergesWithoutDuplicates(t *testing.T)
 		if !ok {
 			t.Fatalf("record %s never ingested", id)
 		}
-		if rec.ObjectClass != "organization" {
-			t.Errorf("record %s ObjectClass = %q, want organization", id, rec.ObjectClass)
+		if rec.ObjectClass != "company" {
+			t.Errorf("record %s ObjectClass = %q, want company", id, rec.ObjectClass)
 		}
-		if want := fmt.Sprintf("Org %d", i); rec.Fields["display_name"] != want {
+		if want := fmt.Sprintf("Company %d", i); rec.Fields["display_name"] != want {
 			t.Errorf("record %s display_name = %v, want %q", id, rec.Fields["display_name"], want)
 		}
 	}
@@ -215,7 +215,7 @@ func TestBackfillResumesFromMidPageCrashConvergesWithoutDuplicates(t *testing.T)
 // nothing — a second call is a cheap no-op, not a redundant full re-sync.
 func TestBackfillIsANoOpOnceConverged(t *testing.T) {
 	f := fake.New()
-	seedOrganizations(f, 250)
+	seedCompanies(f, 250)
 	sink := newFakeMirrorSink()
 
 	if _, err := overlay.Backfill(context.Background(), f, sink, "companies", testConnectedAt); err != nil {
@@ -253,7 +253,7 @@ func (t truncatingIncumbent) Backfill(ctx context.Context, objectClass, cursor s
 // a genuine convergence.
 func TestBackfillPropagatesTruncationFromTheIncumbentPage(t *testing.T) {
 	f := fake.New()
-	seedOrganizations(f, 10)
+	seedCompanies(f, 10)
 	sink := newFakeMirrorSink()
 
 	truncated, err := overlay.Backfill(context.Background(), truncatingIncumbent{f}, sink, "companies", testConnectedAt)
@@ -273,10 +273,10 @@ func TestBackfillPropagatesTruncationFromTheIncumbentPage(t *testing.T) {
 
 // TestBackfillFetchesDealCompanyAssociations proves Backfill fetches and
 // upserts the deals→companies association design.md §9 names
-// ("assoc→company→organization_id") for every ingested deal record, and
+// ("assoc→company→company_id") for every ingested deal record, and
 // does so with the INCUMBENT class names on both sides of the
 // Associations call (the SEAM RULE), not the canonical "deal"/
-// "organization" names the ingested Records themselves carry.
+// "company" names the ingested Records themselves carry.
 func TestBackfillFetchesDealCompanyAssociations(t *testing.T) {
 	f := fake.New()
 	for _, id := range []string{"d1", "d2"} {

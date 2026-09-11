@@ -46,7 +46,7 @@ expect:
     unambiguously uninformative, which is different from the model being unsure.
     "company" is the failure this scenario exists to catch and scores low: a
     login page is exactly where a model that infers a business from a domain name
-    will do so, and it would create an organization record grounded in nothing.
+    will do so, and it would create a company record grounded in nothing.
     "parked" scores low: reading a functioning application as an empty
     placeholder would abandon a crawl that has a real site behind it.
     "personal" and "provider" score low; nothing here names a human or sells

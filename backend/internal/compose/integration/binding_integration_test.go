@@ -318,11 +318,11 @@ func TestPendingAndTokenSumAggregateAcrossWorkspaces(t *testing.T) {
 	}
 
 	const nameOne = "Pending One"
-	const nameOrg = "Pending Org"
+	const nameCompany = "Pending Company"
 	const nameTwo = "Pending Two"
 
 	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, '`+nameOne+`', 'manual', 'human:x')`)
-	e.SeedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, '`+nameOrg+`', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, '`+nameCompany+`', 'manual', 'human:x')`)
 	// A lead with every text-bearing column NULL: concat_ws collapses to
 	// '', so it must NOT count as pending — the non-empty qualifier.
 	e.SeedID(t, `INSERT INTO lead (id, source, captured_by) VALUES ($1, 'manual', 'human:x')`)
@@ -353,17 +353,17 @@ func TestPendingAndTokenSumAggregateAcrossWorkspaces(t *testing.T) {
 	wsKey := ids.From[ids.WorkspaceKind](e.WS)
 	ws2Key := ids.From[ids.WorkspaceKind](ws2)
 
-	// Both people and the organization count under BOTH workspaces, and that is
+	// Both people and the company count under BOTH workspaces, and that is
 	// the honest answer rather than a leak: ADR-0091 §8 phase D took the tenant
-	// column off person and organization alike, so they belong to the
+	// column off person and company alike, so they belong to the
 	// installation and every workspace this rollup enumerates sees them. The
 	// covered person is excluded from both for the same reason — one embedding
 	// at this identity covers an installation-wide row wherever it is counted.
 	// The two numbers converge on one when the re-embed fan-out itself collapses
 	// and there is a single pass to report.
-	const wantPerWorkspace = 3 // two people + the organization
+	const wantPerWorkspace = 3 // two people + the company
 	if counts[wsKey] != wantPerWorkspace {
-		t.Fatalf("counts[e.WS] = %d, want %d (both people + the organization; the null lead and the already-covered person must be excluded)", counts[wsKey], wantPerWorkspace)
+		t.Fatalf("counts[e.WS] = %d, want %d (both people + the company; the null lead and the already-covered person must be excluded)", counts[wsKey], wantPerWorkspace)
 	}
 	if counts[ws2Key] != wantPerWorkspace {
 		t.Fatalf("counts[ws2] = %d, want %d (the same installation-wide rows)", counts[ws2Key], wantPerWorkspace)
@@ -388,7 +388,7 @@ func TestPendingAndTokenSumAggregateAcrossWorkspaces(t *testing.T) {
 
 	// The same text is in both sums, for the same reason the same rows are in
 	// both counts: they belong to the installation, not to either workspace.
-	wantTokens := int64((len(nameOne) + len(nameTwo) + len(nameOrg)) / 4)
+	wantTokens := int64((len(nameOne) + len(nameTwo) + len(nameCompany)) / 4)
 	if tokens[wsKey] != wantTokens {
 		t.Fatalf("tokens[e.WS] = %d, want %d (SUM(length)/4 over the pending set)", tokens[wsKey], wantTokens)
 	}

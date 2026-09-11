@@ -61,16 +61,16 @@ type HandoffFacts struct {
 // HandoffProject is the project row itself, carried across the seam with the
 // fields a handover is judged on.
 type HandoffProject struct {
-	ProjectID      ids.UUID
-	Name           string
-	Key            string
-	Phase          string
-	Description    string
-	OrganizationID *ids.UUID
-	OwnerID        *ids.UUID
-	OwnerName      string
-	StartedAt      *time.Time
-	TargetEndDate  *time.Time
+	ProjectID     ids.UUID
+	Name          string
+	Key           string
+	Phase         string
+	Description   string
+	CompanyID     *ids.UUID
+	OwnerID       *ids.UUID
+	OwnerName     string
+	StartedAt     *time.Time
+	TargetEndDate *time.Time
 }
 
 // HandoffReader serves one project's handover material under the caller's row
@@ -162,7 +162,7 @@ func assembleHandoff(facts HandoffFacts, commitments []CommitmentItem) PreparedH
 	p := facts.Project
 	out := PreparedHandoff{
 		ProjectID: p.ProjectID, Name: p.Name, Key: p.Key, Phase: p.Phase,
-		Description: p.Description, OrganizationID: p.OrganizationID,
+		Description: p.Description, CompanyID: p.CompanyID,
 		OwnerID: p.OwnerID, OwnerName: p.OwnerName,
 		StartedAt: p.StartedAt, TargetEndDate: p.TargetEndDate,
 		// Never null, for the reason every list-shaped answer on this surface
@@ -196,9 +196,9 @@ func handoffGaps(h PreparedHandoff, facts HandoffFacts) []HandoffGap {
 			"Nobody owns this project, so the handover has no receiving side.",
 		})
 	}
-	if h.OrganizationID == nil {
+	if h.CompanyID == nil {
 		gaps = append(gaps, HandoffGap{
-			gapAccountWithheld, "project.organization_id",
+			gapAccountWithheld, "project.company_id",
 			"The account this work is for is not readable by you, so the handover cannot name it.",
 		})
 	}

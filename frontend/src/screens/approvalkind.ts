@@ -56,7 +56,7 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   close_date_correction: "approval.kind.close_date_correction",
   deal_follow_up: "approval.kind.deal_follow_up",
   capture_counterparty: "approval.kind.capture_counterparty",
-  org_name_promotion: "approval.kind.org_name_promotion",
+  company_name_promotion: "approval.kind.company_name_promotion",
   vcard_create: "approval.kind.vcard_create",
   lifecycle_change: "approval.kind.lifecycle_change",
   transcript_proposal: "approval.kind.transcript_proposal",
@@ -86,7 +86,7 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
 // The inline editor's default is every string field of the proposed_change,
 // rendered as a text box. That default is right for a rename — the value IS
 // prose — and wrong for a proposal built out of identifiers and enums. Editing
-// `organization_id` re-aims the proposal at another record, and the server
+// `company_id` re-aims the proposal at another record, and the server
 // refuses that (assertSameEntityRefs); editing `proposed_lifecycle` by typing
 // produces an invalid stage, and the server refuses that too. Both refusals
 // are correct and neither is a thing to show a reader who was only trying to
@@ -137,7 +137,7 @@ export type EditableField =
       readonly optionLabels?: Readonly<Record<string, MessageKey>>;
     };
 
-const ORG_LIFECYCLE_STAGES = [
+const COMPANY_LIFECYCLE_STAGES = [
   "unknown",
   "target",
   "prospect",
@@ -150,16 +150,16 @@ const ORG_LIFECYCLE_STAGES = [
 // The same catalog keys the account page's stage badge reads, so the inbox and
 // the record cannot call one stage two things. Keyed off the list above:
 // a stage added there with no entry here fails the type.
-const ORG_LIFECYCLE_LABELS: Readonly<
-  Record<(typeof ORG_LIFECYCLE_STAGES)[number], MessageKey>
+const COMPANY_LIFECYCLE_LABELS: Readonly<
+  Record<(typeof COMPANY_LIFECYCLE_STAGES)[number], MessageKey>
 > = {
-  unknown: "org.lifecycle.unknown",
-  target: "org.lifecycle.target",
-  prospect: "org.lifecycle.prospect",
-  opportunity: "org.lifecycle.opportunity",
-  customer: "org.lifecycle.customer",
-  former_customer: "org.lifecycle.former_customer",
-  disqualified: "org.lifecycle.disqualified",
+  unknown: "company.lifecycle.unknown",
+  target: "company.lifecycle.target",
+  prospect: "company.lifecycle.prospect",
+  opportunity: "company.lifecycle.opportunity",
+  customer: "company.lifecycle.customer",
+  former_customer: "company.lifecycle.former_customer",
+  disqualified: "company.lifecycle.disqualified",
 };
 
 export const EDITABLE_FIELDS: Readonly<
@@ -173,9 +173,9 @@ export const EDITABLE_FIELDS: Readonly<
     {
       field: "proposed_lifecycle",
       as: "choice",
-      label: "org.lifecycle",
-      options: ORG_LIFECYCLE_STAGES,
-      optionLabels: ORG_LIFECYCLE_LABELS,
+      label: "company.lifecycle",
+      options: COMPANY_LIFECYCLE_STAGES,
+      optionLabels: COMPANY_LIFECYCLE_LABELS,
     },
   ],
   // An automation-composed email waiting for a human to read, correct and
@@ -412,14 +412,14 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     ],
     // A rename read off the company's own site. The old and new names render as
     // an old→new comparison already; the normalization key is internal.
-    org_name_promotion: [],
+    company_name_promotion: [],
     // An imported card the dedupe pass refused to create beside its
     // near-match. Every field the approval would write is captioned: the
     // decider must see the whole create, not its headline.
     vcard_create: [
       { field: "full_name", label: "approval.field.name", as: "text" },
       { field: "emails", label: "approval.field.email", as: "text" },
-      { field: "organization", label: "approval.field.company", as: "text" },
+      { field: "company", label: "approval.field.company", as: "text" },
       { field: "title", label: "approval.field.title", as: "text" },
       { field: "phones", label: "approval.field.phone", as: "text" },
       { field: "url", label: "approval.field.url", as: "text" },

@@ -29,7 +29,7 @@ export const meetingFacts = {
 export const preparedFor = {
   name: "Anna Weber",
   identity: PERSON,
-  organizationName: "Brandt Automotive",
+  companyName: "Brandt Automotive",
 } as const;
 
 function section(
@@ -109,7 +109,7 @@ const NINE: BriefSection[] = [
     {
       text: "Brandt Automotive runs 240 vehicles across four depots.",
       nature: "fact",
-      evidence: [{ entity_type: "organization", entity_id: DEAL }],
+      evidence: [{ entity_type: "company", entity_id: DEAL }],
     },
   ]),
 ];

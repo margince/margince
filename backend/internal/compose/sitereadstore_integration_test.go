@@ -8,7 +8,7 @@ package compose
 // The deep-read dossier: a human's start creates the queued row, a second
 // start while one is in flight JOINS it (uq_site_read_inflight), the
 // worker advances it queued → running → deferred or terminal through guarded CAS
-// updates, and every read of it is scoped to the organization the caller
+// updates, and every read of it is scoped to the company the caller
 // can see.
 
 import (
@@ -27,8 +27,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// siteReadOrg types a harness-seeded untyped org id for the store calls.
-func siteReadOrg(u ids.UUID) ids.OrganizationID { return ids.From[ids.OrganizationKind](u) }
+// siteReadCompany types a harness-seeded untyped company id for the store calls.
+func siteReadCompany(u ids.UUID) ids.CompanyID { return ids.From[ids.CompanyKind](u) }
 
 // siteReadWorkerCtx is the worker's context shape before a claim: the job binds
 // the workspace, and the worker principal names no human — exactly what
@@ -44,9 +44,9 @@ func TestSiteReadStartCreatesAQueuedDossierAndAReClickJoinsIt(t *testing.T) {
 	e := integration.Setup(t)
 	store := people.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	org := siteReadOrg(e.SeedOrg(t, "Acme", &e.Rep1))
+	company := siteReadCompany(e.SeedCompany(t, "Acme", &e.Rep1))
 
-	first, joined, err := store.StartSiteRead(ctx, org, "https://acme.example", "human:"+e.Rep1.String())
+	first, joined, err := store.StartSiteRead(ctx, company, "https://acme.example", "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatalf("StartSiteRead: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestSiteReadStartCreatesAQueuedDossierAndAReClickJoinsIt(t *testing.T) {
 	}
 
 	// The SPA's poll sees the queued row.
-	got, err := store.GetSiteRead(ctx, org, first.ID)
+	got, err := store.GetSiteRead(ctx, company, first.ID)
 	if err != nil {
 		t.Fatalf("GetSiteRead: %v", err)
 	}
@@ -67,14 +67,14 @@ func TestSiteReadStartCreatesAQueuedDossierAndAReClickJoinsIt(t *testing.T) {
 	}
 
 	// Re-clicking while the read is in flight joins it: same id, no rival row.
-	second, joined, err := store.StartSiteRead(ctx, org, "https://acme.example", "human:"+e.Rep2.String())
+	second, joined, err := store.StartSiteRead(ctx, company, "https://acme.example", "human:"+e.Rep2.String())
 	if err != nil {
 		t.Fatalf("second StartSiteRead: %v", err)
 	}
 	if !joined || second.ID != first.ID {
 		t.Fatalf("second start = (id %s, joined %t), want to join %s", second.ID, joined, first.ID)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM site_read WHERE organization_id = $1`, org); n != 1 {
+	if n := e.WsCount(t, `SELECT count(*) FROM site_read WHERE company_id = $1`, company); n != 1 {
 		t.Fatalf("re-clicking created %d dossiers, want the one in flight", n)
 	}
 }
@@ -84,9 +84,9 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 	store := people.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
-	org := siteReadOrg(e.SeedOrg(t, "Acme", &e.Rep1))
+	company := siteReadCompany(e.SeedCompany(t, "Acme", &e.Rep1))
 
-	read, _, err := store.StartSiteRead(human, org, "https://acme.example", "human:"+e.Rep1.String())
+	read, _, err := store.StartSiteRead(human, company, "https://acme.example", "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatalf("StartSiteRead: %v", err)
 	}
@@ -98,13 +98,13 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 	if err != nil {
 		t.Fatalf("BeginSiteRead: %v", err)
 	}
-	if claim.OrganizationID == nil || claim.SeedURL != read.SeedURL || *claim.OrganizationID != org.UUID {
-		t.Fatalf("the claim reports %q/%s, want the dossier's own seed and org", claim.SeedURL, claim.OrganizationID)
+	if claim.CompanyID == nil || claim.SeedURL != read.SeedURL || *claim.CompanyID != company.UUID {
+		t.Fatalf("the claim reports %q/%s, want the dossier's own seed and company", claim.SeedURL, claim.CompanyID)
 	}
 	if _, err := store.BeginSiteRead(worker, read.ID, 10*time.Minute); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("second BeginSiteRead → %v, want ErrNotFound (the read is no longer queued)", err)
 	}
-	running, err := store.GetSiteRead(human, org, read.ID)
+	running, err := store.GetSiteRead(human, company, read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 	if err != nil {
 		t.Fatalf("FinishSiteRead: %v", err)
 	}
-	done, err := store.GetSiteRead(human, org, read.ID)
+	done, err := store.GetSiteRead(human, company, read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 
 	// The in-flight uniqueness covers only queued/running: with the read
 	// finished, a fresh start mints a NEW dossier instead of joining a done one.
-	again, joined, err := store.StartSiteRead(human, org, "https://acme.example", "human:"+e.Rep1.String())
+	again, joined, err := store.StartSiteRead(human, company, "https://acme.example", "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatalf("StartSiteRead after finish: %v", err)
 	}
@@ -168,8 +168,8 @@ func TestSiteReadBudgetDeferralKeepsProgressAndJoinsUntilDue(t *testing.T) {
 	store := people.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
-	org := siteReadOrg(e.SeedOrg(t, "Acme", &e.Rep1))
-	read, _, err := store.StartSiteRead(human, org, "https://acme.example", "human:"+e.Rep1.String())
+	company := siteReadCompany(e.SeedCompany(t, "Acme", &e.Rep1))
+	read, _, err := store.StartSiteRead(human, company, "https://acme.example", "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestSiteReadBudgetDeferralKeepsProgressAndJoinsUntilDue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	deferred, err := store.GetSiteRead(human, org, read.ID)
+	deferred, err := store.GetSiteRead(human, company, read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +196,7 @@ func TestSiteReadBudgetDeferralKeepsProgressAndJoinsUntilDue(t *testing.T) {
 	if deferred.PagesRead != 2 || len(deferred.Pages) != 2 || deferred.Pages[1].URL != "https://acme.example/imprint" || deferred.FinishedAt != nil {
 		t.Fatalf("deferral discarded progress or became terminal: %+v", deferred)
 	}
-	joined, didJoin, err := store.StartSiteRead(human, org, read.SeedURL, "human:"+e.Rep2.String())
+	joined, didJoin, err := store.StartSiteRead(human, company, read.SeedURL, "human:"+e.Rep2.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +215,7 @@ func TestSiteReadBudgetDeferralKeepsProgressAndJoinsUntilDue(t *testing.T) {
 	if _, err := store.BeginSiteRead(worker, read.ID, 10*time.Minute); err != nil {
 		t.Fatalf("claim due deferred read: %v", err)
 	}
-	resumed, err := store.GetSiteRead(human, org, read.ID)
+	resumed, err := store.GetSiteRead(human, company, read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,8 +229,8 @@ func TestSiteReadWorkerReclaimsAStaleRunningDossier(t *testing.T) {
 	store := people.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
-	org := siteReadOrg(e.SeedOrg(t, "Acme", &e.Rep1))
-	read, _, err := store.StartSiteRead(human, org, "https://acme.example", "human:"+e.Rep1.String())
+	company := siteReadCompany(e.SeedCompany(t, "Acme", &e.Rep1))
+	read, _, err := store.StartSiteRead(human, company, "https://acme.example", "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,47 +258,47 @@ func TestSiteReadWorkerReclaimsAStaleRunningDossier(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reclaim stale running dossier: %v", err)
 	}
-	if claim.OrganizationID == nil || *claim.OrganizationID != org.UUID {
-		t.Fatalf("reclaimed target = %v, want %s", claim.OrganizationID, org)
+	if claim.CompanyID == nil || *claim.CompanyID != company.UUID {
+		t.Fatalf("reclaimed target = %v, want %s", claim.CompanyID, company)
 	}
 }
 
-func TestSiteReadIsScopedToTheOrganizationTheCallerCanSee(t *testing.T) {
+func TestSiteReadIsScopedToTheCompanyTheCallerCanSee(t *testing.T) {
 	e := integration.Setup(t)
 	store := people.NewStore(e.DB())
 	admin := e.As(e.Rep1, nil, integration.AdminPerms)
-	orgA := siteReadOrg(e.SeedOrg(t, "Org A", &e.Rep1))
-	orgB := siteReadOrg(e.SeedOrg(t, "Org B", &e.Rep1))
+	companyA := siteReadCompany(e.SeedCompany(t, "Company A", &e.Rep1))
+	companyB := siteReadCompany(e.SeedCompany(t, "Company B", &e.Rep1))
 
-	read, _, err := store.StartSiteRead(admin, orgA, "https://a.example", "human:"+e.Rep1.String())
+	read, _, err := store.StartSiteRead(admin, companyA, "https://a.example", "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatalf("StartSiteRead: %v", err)
 	}
 
-	// A read id fetched under the WRONG organization is a 404: the dossier
-	// is addressed through its org, never as a free-floating id.
-	if _, err := store.GetSiteRead(admin, orgB, read.ID); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("GetSiteRead under another org → %v, want ErrNotFound", err)
+	// A read id fetched under the WRONG company is a 404: the dossier
+	// is addressed through its company, never as a free-floating id.
+	if _, err := store.GetSiteRead(admin, companyB, read.ID); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("GetSiteRead under another company → %v, want ErrNotFound", err)
 	}
 
-	// An org capture-private to another rep is invisible (an organization is
+	// A company capture-private to another rep is invisible (a company is
 	// otherwise readable by every seat): starting a read on it is the
 	// existence-hiding 404, not a permission error.
-	foreignID := e.SeedOrg(t, "Rep3's Org", &e.Rep3)
-	e.MakeCapturePrivate(t, "organization", foreignID, e.Rep3)
-	foreign := siteReadOrg(foreignID)
+	foreignID := e.SeedCompany(t, "Rep3's Company", &e.Rep3)
+	e.MakeCapturePrivate(t, "company", foreignID, e.Rep3)
+	foreign := siteReadCompany(foreignID)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"organization": {Create: true, Read: true, Update: true},
+			"company": {Create: true, Read: true, Update: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	})
 	if _, _, err := store.StartSiteRead(rep, foreign, "https://foreign.example", "human:"+e.Rep1.String()); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("StartSiteRead on an invisible org → %v, want ErrNotFound", err)
+		t.Fatalf("StartSiteRead on an invisible company → %v, want ErrNotFound", err)
 	}
 	if _, err := store.GetSiteRead(rep, foreign, read.ID); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("GetSiteRead on an invisible org → %v, want ErrNotFound", err)
+		t.Fatalf("GetSiteRead on an invisible company → %v, want ErrNotFound", err)
 	}
 }
 
@@ -311,8 +311,8 @@ func TestATransientlyFailedReadIsClaimedAgainWhenItsRetryFallsDue(t *testing.T) 
 	store := people.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
-	org := siteReadOrg(e.SeedOrg(t, "Surfe", &e.Rep1))
-	read, _, err := store.StartSiteRead(human, org, "https://surfe.example", "human:"+e.Rep1.String())
+	company := siteReadCompany(e.SeedCompany(t, "Surfe", &e.Rep1))
+	read, _, err := store.StartSiteRead(human, company, "https://surfe.example", "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -329,7 +329,7 @@ func TestATransientlyFailedReadIsClaimedAgainWhenItsRetryFallsDue(t *testing.T) 
 		t.Fatalf("finish as bot_blocked: %v", err)
 	}
 
-	failed, err := store.GetSiteRead(human, org, read.ID)
+	failed, err := store.GetSiteRead(human, company, read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -354,7 +354,7 @@ func TestATransientlyFailedReadIsClaimedAgainWhenItsRetryFallsDue(t *testing.T) 
 	if _, err := store.BeginSiteRead(worker, read.ID, 10*time.Minute); err != nil {
 		t.Fatalf("claim due failed read: %v", err)
 	}
-	retried, err := store.GetSiteRead(human, org, read.ID)
+	retried, err := store.GetSiteRead(human, company, read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,8 +371,8 @@ func TestAPermanentlyFailedReadIsNeverClaimedAgain(t *testing.T) {
 	store := people.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
-	org := siteReadOrg(e.SeedOrg(t, "Nowhere", &e.Rep1))
-	read, _, err := store.StartSiteRead(human, org, "https://nowhere.example", "human:"+e.Rep1.String())
+	company := siteReadCompany(e.SeedCompany(t, "Nowhere", &e.Rep1))
+	read, _, err := store.StartSiteRead(human, company, "https://nowhere.example", "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -398,8 +398,8 @@ func TestASucceededReadCarriesNoDiagnosis(t *testing.T) {
 	store := people.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
-	org := siteReadOrg(e.SeedOrg(t, "Fine", &e.Rep1))
-	read, _, err := store.StartSiteRead(human, org, "https://fine.example", "human:"+e.Rep1.String())
+	company := siteReadCompany(e.SeedCompany(t, "Fine", &e.Rep1))
+	read, _, err := store.StartSiteRead(human, company, "https://fine.example", "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -429,8 +429,8 @@ func TestAReclaimedReadRefusesTheAbandonedAttemptsTerminalWrite(t *testing.T) {
 	store := people.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
-	org := siteReadOrg(e.SeedOrg(t, "Acme", &e.Rep1))
-	read, _, err := store.StartSiteRead(human, org, "https://acme.example", "human:"+e.Rep1.String())
+	company := siteReadCompany(e.SeedCompany(t, "Acme", &e.Rep1))
+	read, _, err := store.StartSiteRead(human, company, "https://acme.example", "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -460,7 +460,7 @@ func TestAReclaimedReadRefusesTheAbandonedAttemptsTerminalWrite(t *testing.T) {
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("the abandoned attempt finished the read → %v, want ErrNotFound", err)
 	}
-	running, err := store.GetSiteRead(human, org, read.ID)
+	running, err := store.GetSiteRead(human, company, read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -474,7 +474,7 @@ func TestAReclaimedReadRefusesTheAbandonedAttemptsTerminalWrite(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("the holding attempt finished → %v, want it recorded", err)
 	}
-	done, err := store.GetSiteRead(human, org, read.ID)
+	done, err := store.GetSiteRead(human, company, read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

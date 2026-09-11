@@ -54,7 +54,7 @@ const (
 	theWrongMonth = "Oktober"
 	// sharedAccountWord is what the sweep matches all three accounts on.
 	//
-	// It sits in the DISPLAY NAME because that is the only organization text
+	// It sits in the DISPLAY NAME because that is the only company text
 	// the lexical lane reads (search/branches.go's searchBranches), and this
 	// harness binds no embedding lane — so the answer degrades to lexical and
 	// ranks on literal words. A query phrased as a complaint would rank
@@ -69,7 +69,7 @@ const (
 
 // pastCase is one account that lived through an account-manager change.
 type pastCase struct {
-	org        ids.UUID
+	company    ids.UUID
 	complaint  ids.UUID
 	postMortem ids.UUID
 }
@@ -78,17 +78,17 @@ type pastCase struct {
 func (s *scenario) seedContradiction(t *testing.T) pastCase {
 	t.Helper()
 	var c pastCase
-	c.org = s.seedID(t, `INSERT INTO organization
+	c.company = s.seedID(t, `INSERT INTO company
 		(id, owner_id, display_name, industry, source, captured_by)
 		VALUES ($1, $2, $3, 'Managed Services', 'manual', 'human:x')`,
 		s.Colleague, "Reply Deutschland "+sharedAccountWord)
-	person := s.seedPerson(t, "Katrin Sommer", c.org)
+	person := s.seedPerson(t, "Katrin Sommer", c.company)
 
 	// The email, dated. This is the record.
-	c.complaint = s.seedOrgActivity(t, "email", "inbound", person, c.org,
+	c.complaint = s.seedCompanyActivity(t, "email", "inbound", person, c.company,
 		daysAgo(complaintDaysAgo), theRecordSays)
 	// The note, written later, wrong about the month. This is the prose.
-	c.postMortem = s.seedOrgActivity(t, "note", "", person, c.org,
+	c.postMortem = s.seedCompanyActivity(t, "note", "", person, c.company,
 		daysAgo(complaintDaysAgo-90), thePostMortemSays)
 	return c
 }
@@ -102,20 +102,20 @@ func (s *scenario) seedTwoMorePastCases(t *testing.T) []pastCase {
 		{"valantic AG", "Nach dem Wechsel des Ansprechpartners kam fünf Tage lang keine Antwort."},
 		{"Körber Digital GmbH", "Der Tiefpunkt war nicht der Fehler selbst, sondern dass niemand sich meldete."},
 	} {
-		org := s.seedID(t, `INSERT INTO organization
+		company := s.seedID(t, `INSERT INTO company
 			(id, owner_id, display_name, industry, source, captured_by)
 			VALUES ($1, $2, $3, 'Managed Services', 'manual', 'human:x')`,
 			s.Colleague, account.company+" "+sharedAccountWord)
-		person := s.seedPerson(t, "Kontakt "+account.company, org)
+		person := s.seedPerson(t, "Kontakt "+account.company, company)
 		out = append(out, pastCase{
-			org:       org,
-			complaint: s.seedOrgActivity(t, "email", "inbound", person, org, daysAgo(200), account.complaint),
+			company:   company,
+			complaint: s.seedCompanyActivity(t, "email", "inbound", person, company, daysAgo(200), account.complaint),
 		})
 	}
 	return out
 }
 
-// seedOrgActivity logs one dated activity against a company and a person.
+// seedCompanyActivity logs one dated activity against a company and a person.
 //
 // No deal here, unlike case 5's helper: this case is about a company's history
 // rather than about a deal's coverage, and a deal the scenario never asks about
@@ -127,8 +127,8 @@ func (s *scenario) seedTwoMorePastCases(t *testing.T) []pastCase {
 // asserts is retrieval and dates rather than provenance. Case 1 is where the
 // write path itself is under test, and it inserts nothing by hand. Say it here
 // so a later assertion about who captured a record is not built on this.
-func (s *scenario) seedOrgActivity(
-	t *testing.T, kind, direction string, person, org ids.UUID, occurredAt time.Time, body string,
+func (s *scenario) seedCompanyActivity(
+	t *testing.T, kind, direction string, person, company ids.UUID, occurredAt time.Time, body string,
 ) ids.UUID {
 	t.Helper()
 	var id ids.UUID
@@ -142,8 +142,8 @@ func (s *scenario) seedOrgActivity(
 	}
 	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
 		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), id, person)
-	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, organization_id)
-		VALUES ($1, $2, 'organization', $3)`, ids.NewV7(), id, org)
+	s.seed(t, `INSERT INTO activity_link (id, activity_id, entity_type, company_id)
+		VALUES ($1, $2, 'company', $3)`, ids.NewV7(), id, company)
 	if direction != "" {
 		s.seed(t, `INSERT INTO activity_participant (id, activity_id, person_id, role)
 			VALUES ($1, $2, $3, $4)`, ids.NewV7(), id, person, participantRoleFor(direction))
@@ -166,7 +166,7 @@ func TestCase6BothTheRecordAndTheProseReachTheCaller(t *testing.T) {
 
 	// The timeline is how an assistant FINDS the two activities.
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
-		"record_type": "organization", "record_id": c.org.String(),
+		"record_type": "company", "record_id": c.company.String(),
 	})
 	var answer agents.AssembledContextResult
 	got.JSON(t, &answer)
@@ -256,7 +256,7 @@ func TestCase6EveryEventCarriesItsOwnDate(t *testing.T) {
 	c := s.seedContradiction(t)
 
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
-		"record_type": "organization", "record_id": c.org.String(),
+		"record_type": "company", "record_id": c.company.String(),
 	})
 	var answer agents.AssembledContextResult
 	got.JSON(t, &answer)
@@ -281,7 +281,7 @@ func TestCase6EveryEventCarriesItsOwnDate(t *testing.T) {
 // TestCase6EveryPastCaseReachesTheCallerWithItsHistory pins criterion 4.
 //
 // Three accounts lived through this, and all three have to arrive WITH the
-// complaint that makes them relevant. An earlier version searched organization
+// complaint that makes them relevant. An earlier version searched company
 // names for a token the fixture planted there, which proved only that lexical
 // search works: breaking the link between a complaint and its company would not
 // have failed it.
@@ -296,7 +296,7 @@ func TestCase6EveryPastCaseReachesTheCallerWithItsHistory(t *testing.T) {
 
 	got := s.MCP.CallOK(t, "search_context", map[string]any{
 		"query":        sharedAccountWord,
-		"record_types": []string{"organization"},
+		"record_types": []string{"company"},
 		"limit":        20,
 	})
 	var answer agents.SearchContextResult
@@ -307,17 +307,17 @@ func TestCase6EveryPastCaseReachesTheCallerWithItsHistory(t *testing.T) {
 		found[hit.Record.ID] = true
 	}
 	for _, account := range append([]pastCase{first}, more...) {
-		if !found[account.org] {
+		if !found[account.company] {
 			t.Fatalf("case 6 criterion 4: %s lived through this and is missing from the sweep, so "+
 				"an assistant would call a pattern a one-off",
-				s.readString(t, "organization", "display_name", account.org))
+				s.readString(t, "company", "display_name", account.company))
 		}
 		// The complaint itself, through the timeline. A company that arrives
 		// with no history attached is a name, not a past case.
 		if !s.hasComplaintOnTimeline(t, account) {
 			t.Fatalf("case 6 criterion 4: %s came back with no complaint on its timeline — the "+
 				"account is named and the evidence that makes it relevant is not there",
-				s.readString(t, "organization", "display_name", account.org))
+				s.readString(t, "company", "display_name", account.company))
 		}
 	}
 
@@ -336,7 +336,7 @@ func TestCase6EveryPastCaseReachesTheCallerWithItsHistory(t *testing.T) {
 func (s *scenario) hasComplaintOnTimeline(t *testing.T, account pastCase) bool {
 	t.Helper()
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
-		"record_type": "organization", "record_id": account.org.String(),
+		"record_type": "company", "record_id": account.company.String(),
 	})
 	var answer agents.AssembledContextResult
 	got.JSON(t, &answer)

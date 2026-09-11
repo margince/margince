@@ -244,7 +244,7 @@ func dealStageChangedPayload(current crmcontracts.Deal, toStageID ids.StageID, t
 		AmountMinorAtChange: current.AmountMinor,
 		CurrencyAtChange:    current.Currency,
 		WinProbability:      winProbability,
-		PartnerOrgId:        current.PartnerOrgId,
+		PartnerCompanyId:    current.PartnerCompanyId,
 		FxRateToBase:        frozenFx,
 	}
 	if current.PartnerAttribution != nil {

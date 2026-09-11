@@ -305,7 +305,7 @@ describe("RelinkModal", () => {
     const sent = stubRoutes({
       "GET /search": () =>
         jsonResponse({
-          data: [{ type: "organization", id: "o-2", title: "Globex" }],
+          data: [{ type: "company", id: "o-2", title: "Globex" }],
           page: { has_more: false },
         }),
       "POST /activities/act-1/relink": () => jsonResponse(activity202),
@@ -331,7 +331,7 @@ describe("RelinkModal", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const relink = sent.find((r) => r.key === "POST /activities/act-1/relink");
     expect(relink?.body).toEqual({
-      entity_type: "organization",
+      entity_type: "company",
       entity_id: "o-2",
       replace_existing_of_type: true,
     });
@@ -2239,8 +2239,8 @@ describe("ComposeModal started from an account", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={onClose}
       />,
@@ -2259,7 +2259,7 @@ describe("ComposeModal started from an account", () => {
       communication_context: "requested_followup",
       // Without a link the message belongs to no record and nobody finds it
       // again, which is the gap this origin exists to close.
-      links: [{ entity_type: "organization", entity_id: "org-1" }],
+      links: [{ entity_type: "company", entity_id: "company-1" }],
     });
     // ADR-0055 holds on this origin too: the human's click is the approval.
     expect(req?.headers.get("X-Approval-Token")).toBeNull();
@@ -2271,8 +2271,8 @@ describe("ComposeModal started from an account", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2298,8 +2298,8 @@ describe("ComposeModal started from an account", () => {
     const sent = stubRoutes({});
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2318,12 +2318,12 @@ describe("ComposeModal started from an account", () => {
   // not repair it, because the fill never clobbers a non-empty field.
   it("retires the draft when the recipient changes", async () => {
     stubRoutes({
-      "GET /organizations/org-1/360": () =>
+      "GET /companies/company-1/360": () =>
         jsonResponse({
           state: "ready",
           as_of: "2026-08-09T09:00:00Z",
-          organization: {
-            id: "org-1",
+          company: {
+            id: "company-1",
             display_name: "Acme",
             source: "manual",
             captured_by: "human:u1",
@@ -2369,7 +2369,7 @@ describe("ComposeModal started from an account", () => {
             page: { has_more: false, next_cursor: null },
           },
         }),
-      "POST /organizations/org-1/draft-email": () =>
+      "POST /companies/company-1/draft-email": () =>
         jsonResponse({
           subject: "For Sarah",
           body: "Hi Sarah, shall we pick this up?",
@@ -2382,8 +2382,8 @@ describe("ComposeModal started from an account", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2424,12 +2424,12 @@ describe("ComposeModal started from an account", () => {
   // it, so the mail landed unfiled and the ladder asked about it afterwards.
   it("still offers the project when the account has no contact yet", async () => {
     stubRoutes({
-      "GET /organizations/org-1/360": () =>
+      "GET /companies/company-1/360": () =>
         jsonResponse({
           state: "ready",
           as_of: "2026-08-09T09:00:00Z",
-          organization: {
-            id: "org-1",
+          company: {
+            id: "company-1",
             display_name: "Acme",
             source: "manual",
             captured_by: "human:u1",
@@ -2450,8 +2450,8 @@ describe("ComposeModal started from an account", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2489,13 +2489,13 @@ describe("ComposeModal started from an account", () => {
         jsonResponse({
           id: "d-1",
           name: "netcare",
-          organization_id: "o-1",
+          company_id: "o-1",
           project_id: "pr-9",
         }),
-      "GET /organizations/o-1/360": () =>
+      "GET /companies/o-1/360": () =>
         jsonResponse({
           as_of: "2026-08-09T09:00:00Z",
-          organization: {
+          company: {
             id: "o-1",
             display_name: "netcare",
             source: "manual",
@@ -2696,8 +2696,8 @@ describe("what the composer says it is answering", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2735,8 +2735,8 @@ describe("what the composer says it is answering", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2765,8 +2765,8 @@ describe("what the composer says it is answering", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2823,8 +2823,8 @@ describe("what the composer says it is answering", () => {
     );
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2832,8 +2832,8 @@ describe("what the composer says it is answering", () => {
 
     await screen.findByText(/Rechnung GR-2026-0207/);
     // The record still scopes the read; a project only narrows it further.
-    expect(asked.params?.get("entity_type")).toBe("organization");
-    expect(asked.params?.get("entity_id")).toBe("org-1");
+    expect(asked.params?.get("entity_type")).toBe("company");
+    expect(asked.params?.get("entity_id")).toBe("company-1");
     expect(asked.params?.get("kind")).toBe("email");
     // And no project is selected here, so none is asked for.
     expect(asked.params?.get("project_id")).toBeNull();
@@ -2861,8 +2861,8 @@ describe("what the composer says it is answering", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2915,8 +2915,8 @@ describe("what the composer says it is answering", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -3177,7 +3177,7 @@ describe("the composer's conversation pane", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="organization"
+        entityType="company"
         entityId="o-1"
         open
         onClose={vi.fn()}
@@ -3214,7 +3214,7 @@ describe("the composer's conversation pane", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="organization"
+        entityType="company"
         entityId="o-1"
         open
         onClose={vi.fn()}
@@ -3243,7 +3243,7 @@ describe("the composer's conversation pane", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
+        entityType="company"
         entityId="o-1"
         open
         onClose={vi.fn()}
@@ -3282,7 +3282,7 @@ describe("the composer's conversation pane", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="organization"
+        entityType="company"
         entityId="o-1"
         open
         onClose={vi.fn()}
@@ -3314,7 +3314,7 @@ describe("the composer's conversation pane", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="organization"
+        entityType="company"
         entityId="o-1"
         open
         onClose={vi.fn()}

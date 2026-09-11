@@ -151,7 +151,7 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO attachment (id, entity_type, entity_id, filename,
 				content_type, byte_size, storage_key, checksum, source, captured_by,
-				organization_id, contract_id)
+				company_id, contract_id)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 			id, in.EntityType, in.EntityID, in.Filename,
 			nullIfEmpty(in.ContentType), size, key, checksum, attachmentSource, by,

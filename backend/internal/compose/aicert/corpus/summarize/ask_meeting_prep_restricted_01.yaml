@@ -1,6 +1,6 @@
 name: ask_meeting_prep_stays_silent_about_a_withheld_section
 task: summarize
-site: org_ask
+site: company_ask
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 fixture:

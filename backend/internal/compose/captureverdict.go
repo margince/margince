@@ -367,7 +367,7 @@ func (e *CounterpartyVerdictEngine) apply(
 		case capture.KindPerson:
 			triageDomain, err = e.createPersonForVerdict(ctx, tx, row)
 			return err
-		case capture.KindRoleMailbox, capture.KindOrganizationSender:
+		case capture.KindRoleMailbox, capture.KindCompanySender:
 			// Real correspondence with no human to name. The message stays
 			// visible; no contact is invented for a mailbox nobody owns.
 			return nil

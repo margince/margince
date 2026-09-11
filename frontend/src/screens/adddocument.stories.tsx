@@ -38,19 +38,19 @@ const deals = [
   {
     id: "deal-1",
     name: "Pallet Handling Programme — Graz",
-    organization_id: "o-1",
+    company_id: "o-1",
     status: "open",
   },
   {
     id: "deal-2",
     name: "Wash cycle retrofit",
-    organization_id: "o-1",
+    company_id: "o-1",
     status: "open",
   },
   ...Array.from({ length: 60 }, (_unused, index) => ({
     id: `deal-bulk-${index}`,
     name: `Spare parts framework ${2020 + (index % 6)} — lot ${index}`,
-    organization_id: "o-1",
+    company_id: "o-1",
     status: "open",
   })),
 ];
@@ -66,7 +66,7 @@ function Dialog({
 }>) {
   installFetchStub({
     "GET /me": meRoute(
-      { deal: ["update"], organization: ["update"], person: ["update"] },
+      { deal: ["update"], company: ["update"], person: ["update"] },
       { seat },
     ),
     "GET /deals": () =>
@@ -76,7 +76,7 @@ function Dialog({
   });
   const anchor = onPerson
     ? ({ record: "person", id: "p-1" } as const)
-    : ({ record: "organization", id: "o-1" } as const);
+    : ({ record: "company", id: "o-1" } as const);
   return (
     <StoryProviders>
       <AddDocumentDialog anchor={anchor} open onClose={() => {}} />

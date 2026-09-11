@@ -27,7 +27,7 @@ import (
 // say where it stands and who holds it, never the whole row. The contract
 // shape is returned directly because the company page and the person page
 // render the same rows, and one mapping is what keeps them reading alike.
-type ProjectCard = crmcontracts.Organization360Project
+type ProjectCard = crmcontracts.Company360Project
 
 // projectSurfaceCap bounds a record page's project list. A company with more
 // live projects than this is a portfolio, which the projects list answers.
@@ -65,18 +65,18 @@ func phaseRank(alias string) string {
 var projectCardOrder = `ORDER BY ` + phaseRank("p") + `,
 	p.last_activity_at DESC NULLS LAST, p.created_at DESC, p.id`
 
-// ListProjectsForOrganizationTx lists the company's unarchived projects under
+// ListProjectsForCompanyTx lists the company's unarchived projects under
 // the caller's project row scope, work in motion first. The bool is whether
 // the cap cut a project that is still IN FLIGHT — a reader counting the
 // returned rows would otherwise report a portfolio account's live work as
 // exactly the cap, which is a number that account does not have.
-func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) ([]ProjectCard, bool, error) {
+func (s *Store) ListProjectsForCompanyTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]ProjectCard, bool, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
 		return nil, false, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos := arg(orgID)
+	companyPos := arg(companyID)
 	scope, err := projectScopeBound(ctx, arg)
 	if err != nil {
 		return nil, false, err
@@ -103,11 +103,11 @@ func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, or
 		 WHERE EXISTS (
 		           SELECT 1 FROM relationship c
 		            WHERE c.kind = 'project_company' AND c.project_id = p.id
-		              AND c.organization_id = $%d AND c.archived_at IS NULL
+		              AND c.company_id = $%d AND c.archived_at IS NULL
 		              AND (`+edge+`))
 		   AND p.archived_at IS NULL AND (%s)
 		 `+projectCardOrder+`
-		 LIMIT %d`, orgPos, scope, projectSurfaceCap+1), args...)
+		 LIMIT %d`, companyPos, scope, projectSurfaceCap+1), args...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -124,7 +124,7 @@ func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, or
 	// thing in flight — and a caller reporting "1+ in flight" off a bare
 	// overflow flag would overstate the work on the account.
 	dropped := cards[projectSurfaceCap]
-	return cards[:projectSurfaceCap], dropped.Phase != crmcontracts.Organization360ProjectPhaseClosed, nil
+	return cards[:projectSurfaceCap], dropped.Phase != crmcontracts.Company360ProjectPhaseClosed, nil
 }
 
 // ListProjectsForPersonTx lists the unarchived projects a person is part of:
@@ -174,7 +174,7 @@ func (s *Store) ListProjectsForPersonTx(ctx context.Context, tx pgx.Tx, personID
 		               AND EXISTS (
 		                   SELECT 1 FROM relationship c
 		                    WHERE c.kind = 'project_company' AND c.project_id = p.id
-		                      AND c.organization_id = e.organization_id AND c.archived_at IS NULL)
+		                      AND c.company_id = e.company_id AND c.archived_at IS NULL)
 		               AND `+employment.CurrentPrimarySQL("e")+`
 		               AND e.archived_at IS NULL
 		               AND (%[4]s)))
@@ -224,7 +224,7 @@ func scanProjectCard(row pgx.CollectableRow) (ProjectCard, error) {
 		return ProjectCard{}, err
 	}
 	card.ProjectId = openapi_types.UUID(id)
-	card.Phase = crmcontracts.Organization360ProjectPhase(phase)
+	card.Phase = crmcontracts.Company360ProjectPhase(phase)
 	if targetEnd != nil {
 		card.TargetEndDate = &openapi_types.Date{Time: *targetEnd}
 	}

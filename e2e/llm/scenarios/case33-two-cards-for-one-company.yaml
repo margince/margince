@@ -86,8 +86,8 @@ must_call:
 # record survives is therefore judged from the answer, which is also where the
 # user asked for it.
 must_call_with:
-  - merge_records.record_type=organization
-  - archive_record.record_type=organization
+  - merge_records.record_type=company
+  - archive_record.record_type=company
   # CRITERION 3, AND THE HALF THE NAME ALONE CANNOT HOLD. "Lena Fischer" below
   # is satisfied by the sentence that says the handover did NOT happen — "handing
   # it to Lena Fischer, not done, waiting on you" — so the criterion scored an
@@ -98,7 +98,7 @@ must_call_with:
   # Whether the product applies that change or stages it for release is the
   # product's own decision and not this case's question, so nothing here asserts
   # which: an owner change that comes back staged has still been made.
-  - update_record.record_type=organization
+  - update_record.record_type=company
 
 may_call:
   - search_records

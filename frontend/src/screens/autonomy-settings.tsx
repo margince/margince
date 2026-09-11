@@ -147,9 +147,9 @@ const KIND_COPY: Readonly<
     label: "autonomy.kind.close_date_correction.label",
     help: "autonomy.kind.close_date_correction.help",
   },
-  org_name_promotion: {
-    label: "autonomy.kind.org_name_promotion.label",
-    help: "autonomy.kind.org_name_promotion.help",
+  company_name_promotion: {
+    label: "autonomy.kind.company_name_promotion.label",
+    help: "autonomy.kind.company_name_promotion.help",
   },
   lifecycle_change: {
     label: "autonomy.kind.lifecycle_change.label",

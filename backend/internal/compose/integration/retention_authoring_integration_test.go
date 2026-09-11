@@ -325,7 +325,7 @@ func bootstrapWithRetentionPosture(t *testing.T, retention *deployconfig.Retenti
 	}
 	cfg := deployconfig.Config{
 		Version:   1,
-		Workspace: deployconfig.Workspace{Name: "Regulated Org", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
+		Workspace: deployconfig.Workspace{Name: "Regulated Company", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
 			Email: "ops@regulated.test", DisplayName: "Ops", PasswordFile: pwFile,
 		},
@@ -620,7 +620,7 @@ func TestTheClockReachesEveryLinkedInGhostAnErasureWould(t *testing.T) {
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 
-	personID, orgID := ids.NewV7(), ids.NewV7()
+	personID, companyID := ids.NewV7(), ids.NewV7()
 	byURL, bySuffix, stranger := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	const handle = "https://linkedin.com/in/old-contact"
 
@@ -632,10 +632,10 @@ func TestTheClockReachesEveryLinkedInGhostAnErasureWould(t *testing.T) {
 		VALUES ($1, 'linkedin', $2)`, personID, handle)
 	// An employer whose display name is LONGER than the ghost's company text,
 	// which is the shape the equality-only copy could not match.
-	e.WsExec(t, `INSERT INTO organization (id, display_name, source, captured_by)
-		VALUES ($1, 'Acme GmbH', 'manual', 'human:x')`, orgID)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, organization_id, source, captured_by)
-		VALUES ('employment', $1, $2, 'manual', 'human:x')`, personID, orgID)
+	e.WsExec(t, `INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, 'Acme GmbH', 'manual', 'human:x')`, companyID)
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, personID, companyID)
 
 	ghost := `INSERT INTO linkedin_connection
 		  (id, owner_user_id, full_name, normalized_name, company_name, normalized_company,

@@ -48,7 +48,7 @@ func newDomainTriageTrigger(pool *pgxpool.Pool, log *slog.Logger) *domainTriageT
 	}
 }
 
-// domainPending queues the triage read for a domain whose organization question
+// domainPending queues the triage read for a domain whose company question
 // the ensure ladder just opened.
 //
 // It never returns an error, and that is the contract rather than laziness: it
@@ -167,7 +167,7 @@ func startDomainTriageRead(ctx context.Context, peopleStore *people.Store, domai
 }
 
 // triageSweepPageSize bounds one sweep pass over open domain questions. The
-// same order of magnitude as the org sweep's page: a workspace that met a
+// same order of magnitude as the company sweep's page: a workspace that met a
 // hundred new domains in a day gets them all inside a few passes, and one pass
 // never holds a long transaction.
 const triageSweepPageSize = 50

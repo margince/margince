@@ -316,13 +316,13 @@
 }
 /* The company sits ABOVE the stretched link, which is the only reason its
    click can reach it at all. */
-.deal-org-link {
+.deal-company-link {
   position: relative;
   z-index: 1;
   color: inherit;
   text-decoration: none;
 }
-.deal-org-link:hover {
+.deal-company-link:hover {
   text-decoration: underline;
 }
 /* `.deal-card.staged` — the AI tint and the dashed edge — is declared with the
@@ -354,7 +354,7 @@
   color: var(--warnText);
   font-variant-numeric: tabular-nums;
 }
-.deal-card .deal-org {
+.deal-card .deal-company {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -365,10 +365,10 @@
 }
 /* The card is one line of company in a narrow column, so a long name elides
  * rather than wrapping under its own mark. */
-.deal-card .deal-org > .avatar {
+.deal-card .deal-company > .avatar {
   flex: none;
 }
-.deal-card .deal-org-name {
+.deal-card .deal-company-name {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;

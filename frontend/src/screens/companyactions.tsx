@@ -48,17 +48,17 @@ function useDealTarget() {
 /**
  * NewDealAction opens a deal on THIS company.
  *
- * The organization is not a field: the rep is standing on the record, so
+ * The company is not a field: the rep is standing on the record, so
  * asking them to name it again is asking them to confirm where they already
  * are — and it is the one value they could get wrong.
  */
 export function NewDealAction({
-  orgId,
-  orgName,
+  companyId,
+  companyName,
   projectId,
 }: Readonly<{
-  orgId: string;
-  orgName: string;
+  companyId: string;
+  companyName: string;
   // The project the new deal is born into, when the verb is offered from a
   // project page. The deal then names the project at birth, which is the only
   // moment the deal and the project are guaranteed to share a company.
@@ -114,7 +114,7 @@ export function NewDealAction({
           ? toMinorUnits(Number(amount), values.currency || "EUR")
           : null,
         currency: amount ? values.currency || "EUR" : null,
-        organization_id: orgId,
+        company_id: companyId,
         project_id: projectId ?? null,
         expected_close_date: values.expected_close_date || null,
         source: "manual",
@@ -128,13 +128,13 @@ export function NewDealAction({
 
   return (
     <CreateAction
-      label={t("co.deal.new", { name: orgName })}
+      label={t("co.deal.new", { name: companyName })}
       // The page that offered the verb is the page that has to show the deal.
-      invalidate={projectId ? "project" : "organization360"}
+      invalidate={projectId ? "project" : "company360"}
       screen="deals"
       create={createDeal}
       fields={fields}
-      aboutId={orgId}
+      aboutId={companyId}
     />
   );
 }
@@ -151,9 +151,9 @@ export function NewDealAction({
  * is an edit, on the project's own page.
  */
 export function NewProjectAction({
-  orgId,
-  orgName,
-}: Readonly<{ orgId: string; orgName: string }>) {
+  companyId,
+  companyName,
+}: Readonly<{ companyId: string; companyName: string }>) {
   const t = useT();
   const fields: CreateField[] = [
     { key: "name", label: "project.name", required: true },
@@ -165,7 +165,7 @@ export function NewProjectAction({
       // Through the shared mapper, never a body written here: the projects
       // screen creates the same record, and two spellings of one request are
       // how the two come to disagree about an empty date.
-      body: mapProjectCreate({ ...values, organization_id: orgId }),
+      body: mapProjectCreate({ ...values, company_id: companyId }),
     });
     if (error) {
       throwProblem(error, t);
@@ -174,14 +174,14 @@ export function NewProjectAction({
   };
   return (
     <CreateAction
-      label={t("co.project.new", { name: orgName })}
+      label={t("co.project.new", { name: companyName })}
       // The record that offered the verb is the record that has to show the
       // project.
-      invalidate="organization360"
+      invalidate="company360"
       screen="projects"
       create={createProject}
       fields={fields}
-      aboutId={orgId}
+      aboutId={companyId}
     />
   );
 }

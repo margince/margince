@@ -9,10 +9,10 @@ package integration
 // 2a-ii T3): the same fieldcatalog seam wired into the deals store —
 // active cf_* columns ride create/update writes and get/list reads like
 // core fields, with the same drop-on-mismatch and workspace-isolation
-// posture the person/organization suites prove.
+// posture the person/company suites prove.
 //
 // BOTH records this store writes are covered here, deal and project, and
-// the second one is why the pairing matters. Person, organization, lead
+// the second one is why the pairing matters. Person, company, lead
 // and deal each had a create-with-a-custom-field case; project had none,
 // and project was the one whose INSERT numbered its first custom
 // placeholder over its own last fixed bind — so every CreateProject
@@ -35,7 +35,7 @@ import (
 
 // dealCFVPerms adds the grants the two round trips need on top of the
 // catalog-admin posture: deal + pipeline for the deal, and project +
-// organization for the project, which is always hung off a company.
+// company for the project, which is always hung off a company.
 var dealCFVPerms = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
@@ -43,7 +43,7 @@ var dealCFVPerms = principal.Permissions{
 		"deal":                  {Create: true, Read: true, Update: true, Delete: true},
 		"pipeline":              {Create: true, Read: true, Update: true, Delete: true},
 		"project":               {Create: true, Read: true, Update: true, Delete: true},
-		"organization":          {Create: true, Read: true, Update: true, Delete: true},
+		"company":               {Create: true, Read: true, Update: true, Delete: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeAll,
@@ -138,10 +138,10 @@ func TestCustomFieldValues_DealRoundTrip(t *testing.T) {
 func TestCustomFieldValues_ProjectRoundTrip(t *testing.T) {
 	f := setupDealCFV(t)
 	col := f.defineDealField(t, customfields.FieldSpec{Object: "project", Label: "Engagement Model", Type: customfields.TypeText, Source: "ui"})
-	org := f.e.SeedOrg(t, "Northwind", nil)
+	company := f.e.SeedCompany(t, "Northwind", nil)
 
 	created, err := f.projects.CreateProject(f.ctx, projects.CreateProjectInput{
-		Name: "Rollout", OrganizationID: orgIDOf(org), Source: "ui",
+		Name: "Rollout", CompanyID: companyIDOf(company), Source: "ui",
 		CustomFields: map[string]any{col: "retainer"},
 	})
 	if err != nil {
@@ -164,5 +164,5 @@ func TestCustomFieldValues_ProjectRoundTrip(t *testing.T) {
 	assertCF(t, updated.AdditionalProperties, col, "fixed-price")
 }
 
-// dealIDOf mirrors PersonIDOf/orgIDOf for the deal suites.
+// dealIDOf mirrors PersonIDOf/companyIDOf for the deal suites.
 func dealIDOf(u ids.UUID) ids.DealID { return ids.From[ids.DealKind](u) }

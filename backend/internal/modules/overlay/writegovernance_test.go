@@ -21,7 +21,7 @@ import (
 // the same list the code under test reads cannot notice the list changing.
 var writableEntityTypes = []datasource.EntityType{
 	datasource.EntityPerson,
-	datasource.EntityOrganization,
+	datasource.EntityCompany,
 	datasource.EntityDeal,
 	datasource.EntityLead,
 	datasource.EntityActivity,

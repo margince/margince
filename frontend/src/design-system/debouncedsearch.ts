@@ -6,7 +6,7 @@
  * it must never do is show an empty list and let that read as "there are none".
  *
  * Shared because the list toolbar's company filter and the filter builder's
- * organization value are the same question asked on two surfaces, and a second
+ * company value are the same question asked on two surfaces, and a second
  * spelling is one that could quietly stop debouncing, stop cancelling, or start
  * clearing the menu out from under a reader while the next answer is still
  * coming back.

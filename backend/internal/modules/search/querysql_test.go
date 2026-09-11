@@ -19,22 +19,22 @@ import (
 // enough of each record type to ask a real question, and deliberately missing
 // the derived members (`stalled`) no table holds.
 var planTables = map[string][]StoredColumn{
-	"deal": columnsOf("id:uuid", "name", "status", "amount_minor:bigint", "partner_org_id:uuid",
+	"deal": columnsOf("id:uuid", "name", "status", "amount_minor:bigint", "partner_company_id:uuid",
 		"expected_close_date:date", "closed_at:timestamp with time zone",
-		"owner_id:uuid", "organization_id:uuid", "project_id:uuid"),
-	"organization": columnsOf("id:uuid", "display_name", "owner_id:uuid",
+		"owner_id:uuid", "company_id:uuid", "project_id:uuid"),
+	"company": columnsOf("id:uuid", "display_name", "owner_id:uuid",
 		"is_anchor:boolean", "address_city", "visibility"),
-	"project":  columnsOf("id:uuid", "name", "owner_id:uuid", "organization_id:uuid", "visibility"),
+	"project":  columnsOf("id:uuid", "name", "owner_id:uuid", "company_id:uuid", "visibility"),
 	"person":   columnsOf("id:uuid", "full_name", "owner_id:uuid", "address_city", "visibility"),
 	"activity": columnsOf("id:uuid", "subject", "kind", "owner_id:uuid", "visibility"),
 	// The join tables, so a plan that traverses one compiles here rather than
 	// only in the vocabulary. Their columns are the DDL's (core 0007/0131 and
 	// 0008/0038), including the archived_at only one of them has.
-	"relationship": columnsOf("id:uuid", "kind", "person_id:uuid", "organization_id:uuid",
-		"counterparty_org_id:uuid", "deal_id:uuid", "project_id:uuid",
+	"relationship": columnsOf("id:uuid", "kind", "person_id:uuid", "company_id:uuid",
+		"counterparty_company_id:uuid", "deal_id:uuid", "project_id:uuid",
 		"archived_at:timestamp with time zone", "started_at:date", "ended_at:date"),
 	"activity_link": columnsOf("id:uuid", "activity_id:uuid", "entity_type",
-		"person_id:uuid", "organization_id:uuid", "deal_id:uuid", "lead_id:uuid"),
+		"person_id:uuid", "company_id:uuid", "deal_id:uuid", "lead_id:uuid"),
 }
 
 // compilePlanDoc runs a plan document through the REAL decoder and validator
@@ -234,12 +234,12 @@ func assertOperandFault(t *testing.T, refusal *PlanRefusal, path string) {
 // A hop returns the record that admitted the row, so the traversal is legible
 // as a reason rather than as an invisible filter.
 func TestATraversalCompilesToALateralThatCarriesItsEvidence(t *testing.T) {
-	sql, args := compilePlanDoc(readerFor(entityDeal, entityOrganization), t, `{
+	sql, args := compilePlanDoc(readerFor(entityDeal, entityCompany), t, `{
 		"version": "v1", "target": "deal",
-		"traverse": {"relation": "organization",
+		"traverse": {"relation": "company",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]}}`)
 	for _, want := range []string{
-		"JOIN LATERAL", "hop_id", "hop_title", `h.id = t."organization_id"`,
+		"JOIN LATERAL", "hop_id", "hop_title", `h.id = t."company_id"`,
 		"h.archived_at IS NULL", "ORDER BY h.id LIMIT 1",
 		// The nested contract path resolves to the flat column that holds it,
 		// under the HOP's alias.
@@ -257,31 +257,31 @@ func TestATraversalCompilesToALateralThatCarriesItsEvidence(t *testing.T) {
 // The inverse edge is derived from the referring record's column, so the join
 // condition points the other way.
 func TestAnInverseTraversalJoinsOnTheReferringColumn(t *testing.T) {
-	sql, _ := compilePlanDoc(readerFor(entityOrganization, entityDeal), t, `{
-		"version": "v1", "target": "organization",
+	sql, _ := compilePlanDoc(readerFor(entityCompany, entityDeal), t, `{
+		"version": "v1", "target": "company",
 		"traverse": {"relation": "deals",
 		             "where": [{"field": "status", "op": "eq", "value": "open"}]}}`)
-	if !strings.Contains(sql, `h."organization_id" = t.id`) {
+	if !strings.Contains(sql, `h."company_id" = t.id`) {
 		t.Fatalf("statement is %q", sql)
 	}
 }
 
 // A hop is a READ of the record it lands on. A caller who cannot see the
-// Stuttgart organization must not be able to select deals through it either.
+// Stuttgart company must not be able to select deals through it either.
 func TestTheHopCarriesItsOwnRowScopeUnderItsOwnAlias(t *testing.T) {
-	// organization is the traversable record that still narrows a team reader:
+	// company is the traversable record that still narrows a team reader:
 	// it carries capture privacy, so an unpromoted capture answers to its owner
 	// alone. Every other target here is read by every seat (platform/auth
 	// tableclass.go) and renders no owner arm at all — which is what makes the
 	// deal target the witness that the arm lands on the HOP and nowhere else.
-	sql, _ := compilePlanDoc(teamReaderFor(entityDeal, entityOrganization), t, `{
+	sql, _ := compilePlanDoc(teamReaderFor(entityDeal, entityCompany), t, `{
 		"version": "v1", "target": "deal",
-		"traverse": {"relation": "organization"}}`)
+		"traverse": {"relation": "company"}}`)
 	lateral, outer, found := strings.Cut(sql, ") hop ON true")
 	if !found {
 		t.Fatalf("no lateral join in %q", sql)
 	}
-	// The hop's visibility is decided about the ORGANIZATION row, under the
+	// The hop's visibility is decided about the COMPANY row, under the
 	// hop's own alias. Rendered against `t` it would decide about the deal —
 	// a visibility rule answering about a different record.
 	if !strings.Contains(lateral, "h.owner_id") {
@@ -300,7 +300,7 @@ func TestTheHopCarriesItsOwnRowScopeUnderItsOwnAlias(t *testing.T) {
 // Every read on this surface carries the same narrowing: archived rows are out,
 // and the installation's own company is not an account to discover.
 func TestTheStatementCarriesTheDiscoveryNarrowingEveryReadCarries(t *testing.T) {
-	sql, _ := compilePlanDoc(readerFor(entityOrganization), t, `{"version": "v1", "target": "organization"}`)
+	sql, _ := compilePlanDoc(readerFor(entityCompany), t, `{"version": "v1", "target": "company"}`)
 	for _, want := range []string{"t.archived_at IS NULL", "NOT t.is_anchor"} {
 		if !strings.Contains(sql, want) {
 			t.Fatalf("statement lacks %q: %s", want, sql)
@@ -424,14 +424,14 @@ func TestAPlaceOperandNeverBinds(t *testing.T) {
 // The edge is read off Relation.Via, whose two spellings say which side of the
 // reference each direction lives on.
 func TestTheEdgeDirectionIsReadOffTheDerivedReference(t *testing.T) {
-	forward := newHopBinding(Relation{Name: "organization", Target: "organization", Via: "organization_id"},
-		mustBranch(t, entityOrganization), nil)
-	if !forward.forward || forward.column != "organization_id" {
+	forward := newHopBinding(Relation{Name: "company", Target: "company", Via: "company_id"},
+		mustBranch(t, entityCompany), nil)
+	if !forward.forward || forward.column != "company_id" {
 		t.Errorf("forward edge is %+v", forward)
 	}
-	inverse := newHopBinding(Relation{Name: "deals", Target: "deal", Via: "deal.organization_id"},
+	inverse := newHopBinding(Relation{Name: "deals", Target: "deal", Via: "deal.company_id"},
 		mustBranch(t, entityDeal), nil)
-	if inverse.forward || inverse.column != "organization_id" {
+	if inverse.forward || inverse.column != "company_id" {
 		t.Errorf("inverse edge is %+v", inverse)
 	}
 }
@@ -475,9 +475,9 @@ func TestAWholeOperandStillBindsAsAnInteger(t *testing.T) {
 // name — so a traversal must not reach the installation's own company through
 // a door the search arm keeps shut.
 func TestTheHopCarriesTheSameDiscoveryNarrowingTheTargetDoes(t *testing.T) {
-	sql, _ := compilePlanDoc(readerFor(entityDeal, entityOrganization), t, `{
+	sql, _ := compilePlanDoc(readerFor(entityDeal, entityCompany), t, `{
 		"version": "v1", "target": "deal",
-		"traverse": {"relation": "organization"}}`)
+		"traverse": {"relation": "company"}}`)
 	if !strings.Contains(sql, "NOT h.is_anchor") {
 		t.Fatalf("the hop does not carry the branch narrowing: %s", sql)
 	}
@@ -491,7 +491,7 @@ func TestTheHopCarriesTheSameDiscoveryNarrowingTheTargetDoes(t *testing.T) {
 // The narrowing is a template over the alias, so the branch declaration cannot
 // silently narrow whichever table happens to be called `t`.
 func TestABranchNarrowingRendersForTheAliasItIsAskedFor(t *testing.T) {
-	branch := mustBranch(t, entityOrganization)
+	branch := mustBranch(t, entityCompany)
 	if got := branch.narrowing("h"); got != "NOT h.is_anchor" {
 		t.Errorf("narrowing renders as %q", got)
 	}

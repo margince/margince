@@ -56,8 +56,8 @@ func advisoryAnswer(ctx context.Context, t *testing.T, e *integration.Env,
 func TestThePageRefusesALinkBehindAnEndsErasureBoundaryByName(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Selma Subject", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	edge := seedEmploymentEdge(t, e, person, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
 	e.SeedScrubTombstone(t, "person", person, time.Now().Add(time.Hour).UTC())
@@ -84,8 +84,8 @@ func TestThePageRefusesACreateEntryToASeatThatMayNotRemoveALink(t *testing.T) {
 	// Owned by the rep, whose seeded row scope is their own records: a person
 	// they cannot write would be refused for a reason this case is not about.
 	person := e.SeedPerson(t, "Ada Employed", &e.Rep1)
-	org := e.SeedOrg(t, "Employer GmbH", &e.Rep1)
-	edge := seedEmploymentEdge(t, e, person, org)
+	company := e.SeedCompany(t, "Employer GmbH", &e.Rep1)
+	edge := seedEmploymentEdge(t, e, person, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)

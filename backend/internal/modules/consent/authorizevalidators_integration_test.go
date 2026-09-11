@@ -111,7 +111,7 @@ func TestProvenanceIsNotPermission(t *testing.T) {
 // observed — never a deny that leaves finance unable to send an invoice.
 func TestAnInvoiceRecipientWithNoEmploymentRowIsReviewedNotRefused(t *testing.T) {
 	e := setupResolve(t)
-	invoice := e.invoice(t, e.organization(t), false)
+	invoice := e.invoice(t, e.company(t), false)
 
 	got := e.resolve(t, commsauthz.Request{
 		Context:  commsauthz.CategoryInvoiceOrPayment,
@@ -135,9 +135,9 @@ func TestAnInvoiceRecipientWithNoEmploymentRowIsReviewedNotRefused(t *testing.T)
 // customer, or the test above would pass against a validator that never allows.
 func TestAnInvoiceReachesAContactAtTheCustomer(t *testing.T) {
 	e := setupResolve(t)
-	org := e.organization(t)
-	invoice := e.invoice(t, org, false)
-	e.employ(t, org)
+	company := e.company(t)
+	invoice := e.invoice(t, company, false)
+	e.employ(t, company)
 
 	got := e.resolve(t, commsauthz.Request{
 		Context:  commsauthz.CategoryInvoiceOrPayment,
@@ -173,9 +173,9 @@ func TestAnInvoiceReachesAContactAtTheCustomer(t *testing.T) {
 // is the regression.
 func TestAnEvidencedInvoiceSurvivesToTransmit(t *testing.T) {
 	e := setupResolve(t)
-	org := e.organization(t)
-	invoice := e.invoice(t, org, false)
-	e.employ(t, org)
+	company := e.company(t)
+	invoice := e.invoice(t, company, false)
+	e.employ(t, company)
 	e.seedPurpose(t, "transactional", "transactional")
 
 	req := commsauthz.Request{
@@ -248,14 +248,14 @@ func TestAnEvidencedInvoiceSurvivesToTransmit(t *testing.T) {
 // invoice you cannot, and let the worker do the reading.
 //
 // The fixture is exactly that shape: a live deal the recipient is a stakeholder
-// on (so the deal arm answers first), a REAL invoice for an organization that
+// on (so the deal arm answers first), a REAL invoice for a company that
 // employs them (so the invoice arm would allow if it ever ran), and a sender
 // principal holding neither finance nor contract.
 func TestEvidenceTheSenderCannotReadIsNotCarriedPastStaging(t *testing.T) {
 	e := setupResolve(t)
-	org := e.organization(t)
-	invoice := e.invoice(t, org, false)
-	e.employ(t, org)
+	company := e.company(t)
+	invoice := e.invoice(t, company, false)
+	e.employ(t, company)
 	deal := e.openDeal(t, "open", true)
 
 	// A seat that may write mail and read people, and may NOT read finance.
@@ -323,9 +323,9 @@ func TestSomebodyWhoLeftTheCustomerIsNotReachedByItsInvoices(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupResolve(t)
-			org := e.organization(t)
-			invoice := e.invoice(t, org, false)
-			e.employ(t, org)
+			company := e.company(t)
+			invoice := e.invoice(t, company, false)
+			e.employ(t, company)
 			if _, err := e.owner.Exec(context.Background(),
 				`UPDATE relationship SET `+tc.column+` = now() WHERE person_id = $1`, e.person); err != nil {
 				t.Fatal(err)
@@ -354,9 +354,9 @@ func TestSomebodyWhoLeftTheCustomerIsNotReachedByItsInvoices(t *testing.T) {
 // what this validator shipped as until the gate caught it.
 func TestSomebodyServingNoticeStillReceivesTheirEmployersInvoices(t *testing.T) {
 	e := setupResolve(t)
-	org := e.organization(t)
-	invoice := e.invoice(t, org, false)
-	e.employ(t, org)
+	company := e.company(t)
+	invoice := e.invoice(t, company, false)
+	e.employ(t, company)
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE relationship SET ended_at = current_date + 30 WHERE person_id = $1`,
 		e.person); err != nil {
@@ -374,12 +374,12 @@ func TestSomebodyServingNoticeStillReceivesTheirEmployersInvoices(t *testing.T) 
 }
 
 // A CLAIM NAMING SOMEBODY ELSE'S INVOICE SUPPORTS NOTHING. The evidence id is
-// caller-supplied, so naming an invoice belonging to an organization this
+// caller-supplied, so naming an invoice belonging to a company this
 // person has nothing to do with must not admit the message.
 func TestAnInvoiceForAnotherCustomerSupportsNothing(t *testing.T) {
 	e := setupResolve(t)
-	e.employ(t, e.organization(t))
-	elsewhere := e.invoice(t, e.organization(t), false)
+	e.employ(t, e.company(t))
+	elsewhere := e.invoice(t, e.company(t), false)
 
 	got := e.resolve(t, commsauthz.Request{
 		Context:  commsauthz.CategoryInvoiceOrPayment,
@@ -513,32 +513,32 @@ func TestAnUnsupportedResolutionRecordsNoGround(t *testing.T) {
 	}
 }
 
-// organization plants a customer record.
-func (e *resolveEnv) organization(t *testing.T) ids.UUID {
+// company plants a customer record.
+func (e *resolveEnv) company(t *testing.T) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO organization (id, display_name, source, captured_by)
+		INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Acme', 'manual', 'human:x')`, id); err != nil {
-		t.Fatalf("planting the organization: %v", err)
+		t.Fatalf("planting the company: %v", err)
 	}
 	return id
 }
 
-// employ links this env's person to an organization, the way a finance contact
+// employ links this env's person to a company, the way a finance contact
 // reaches the customer whose invoices they receive.
-func (e *resolveEnv) employ(t *testing.T, org ids.UUID) {
+func (e *resolveEnv) employ(t *testing.T, company ids.UUID) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO relationship (kind, organization_id, person_id, source, captured_by)
-		VALUES ('employment', $1, $2, 'manual', 'human:x')`, org, e.person); err != nil {
+		INSERT INTO relationship (kind, company_id, person_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, company, e.person); err != nil {
 		t.Fatalf("planting the employment: %v", err)
 	}
 }
 
-// invoice plants a finance invoice against an organization, with the finance
+// invoice plants a finance invoice against a company, with the finance
 // connection it hangs off.
-func (e *resolveEnv) invoice(t *testing.T, org ids.UUID, _ bool) ids.UUID {
+func (e *resolveEnv) invoice(t *testing.T, company ids.UUID, _ bool) ids.UUID {
 	t.Helper()
 	ctx := context.Background()
 	conn := ids.NewV7()
@@ -550,10 +550,10 @@ func (e *resolveEnv) invoice(t *testing.T, org ids.UUID, _ bool) ids.UUID {
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO finance_invoice
-		  (id, connection_id, organization_id, external_id, issued_at, status,
+		  (id, connection_id, company_id, external_id, issued_at, status,
 		   currency, net_minor, gross_minor, sync_hash, source, captured_by)
 		VALUES ($1, $2, $3, $4, current_date, 'open', 'EUR', 1000, 1190, 'hash', 'lexoffice', 'human:x')`,
-		id, conn, org, "ext-"+id.String()); err != nil {
+		id, conn, company, "ext-"+id.String()); err != nil {
 		t.Fatalf("planting the invoice: %v", err)
 	}
 	return id
@@ -615,9 +615,9 @@ func TestAFiledActivityIsNotSomethingThePersonWrote(t *testing.T) {
 // Mutation: drop the refuseUnreadableEvidence call and this passes.
 func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
 	e := setupResolve(t)
-	org := e.organization(t)
-	invoice := e.invoice(t, org, false)
-	e.employ(t, org)
+	company := e.company(t)
+	invoice := e.invoice(t, company, false)
+	e.employ(t, company)
 	e.dropGrant(t, "finance")
 
 	var err error
@@ -645,7 +645,7 @@ func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
 func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
-		spoil func(t *testing.T, e *resolveEnv, org, invoice ids.UUID)
+		spoil func(t *testing.T, e *resolveEnv, company, invoice ids.UUID)
 	}{
 		{"voided invoice", func(t *testing.T, e *resolveEnv, _, invoice ids.UUID) {
 			if _, err := e.owner.Exec(context.Background(),
@@ -662,10 +662,10 @@ func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupResolve(t)
-			org := e.organization(t)
-			invoice := e.invoice(t, org, false)
-			e.employ(t, org)
-			tc.spoil(t, e, org, invoice)
+			company := e.company(t)
+			invoice := e.invoice(t, company, false)
+			e.employ(t, company)
+			tc.spoil(t, e, company, invoice)
 
 			got := e.resolve(t, commsauthz.Request{
 				Context:  commsauthz.CategoryInvoiceOrPayment,

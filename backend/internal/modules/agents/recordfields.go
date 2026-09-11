@@ -8,9 +8,9 @@ package agents
 //
 // Without them the `fields` argument is an opaque object and the only way to
 // learn a name is to guess and read the error: a real session spent three
-// round-trips discovering name → display_name for an organization and then
+// round-trips discovering name → display_name for a company and then
 // display_name → full_name for a person, and never did find that a person's
-// organization is not a field at all. A tool surface that requires trial and
+// company is not a field at all. A tool surface that requires trial and
 // error to use is a tool surface that will be used wrongly.
 //
 // The names are REFLECTED off the generated contract structs rather than
@@ -43,7 +43,7 @@ import (
 var (
 	createShapes = map[datasource.EntityType]reflect.Type{
 		datasource.EntityPerson:       reflect.TypeFor[crmcontracts.CreatePersonRequest](),
-		datasource.EntityOrganization: reflect.TypeFor[crmcontracts.CreateOrganizationRequest](),
+		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
 		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.CreateDealRequest](),
 		datasource.EntityLead:         reflect.TypeFor[crmcontracts.CreateLeadRequest](),
 		datasource.EntityActivity:     reflect.TypeFor[crmcontracts.CreateActivityRequest](),
@@ -57,7 +57,7 @@ var (
 	// plus a new edge, never an update.
 	updateShapes = map[datasource.EntityType]reflect.Type{
 		datasource.EntityPerson:       reflect.TypeFor[crmcontracts.UpdatePersonRequest](),
-		datasource.EntityOrganization: reflect.TypeFor[crmcontracts.UpdateOrganizationRequest](),
+		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.UpdateCompanyRequest](),
 		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.UpdateDealRequest](),
 		datasource.EntityLead:         reflect.TypeFor[crmcontracts.UpdateLeadRequest](),
 		datasource.EntityActivity:     reflect.TypeFor[crmcontracts.UpdateActivityRequest](),
@@ -136,7 +136,7 @@ const customFieldPrefix = "cf_"
 // drop-on-mismatch. So a SESSION may keep accepting-and-discarding, while a
 // governed call — whose caller cannot see a response body it did not think to
 // re-read — refuses up front instead of reporting success for a write it did
-// not perform. Two sessions lost data to that silence: organization_id on a
+// not perform. Two sessions lost data to that silence: company_id on a
 // person create, and emails on a person UPDATE, which is a real field on
 // create and no field at all on update.
 //
@@ -303,7 +303,7 @@ var (
 //
 // THE SHAPE, not the names. A bare name list answers the question the caller
 // already half-knew and leaves the next two refusals in place: a measured run
-// was told `organization` accepts `domains`, sent `["example.test"]`, was
+// was told `company` accepts `domains`, sent `["example.test"]`, was
 // refused for an array of strings, and then had to be told the item shape; a
 // second was told `relationship` accepts `kind` only after omitting it. Every
 // one of those facts is in gen-recordfields' line, which the tool DESCRIPTION

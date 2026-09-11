@@ -30,7 +30,7 @@ import (
 // object class the write targets and the HubSpot properties to set. Props
 // carries only WRITABLE properties — a canonical field flagged read-only by
 // OVA-MAP-W (full_name, occurred_at, lead email/company_name/status, deal
-// pipeline_id/stage_id, org size_band, activity meeting_status) never
+// pipeline_id/stage_id, company size_band, activity meeting_status) never
 // appears. An empty Props on a CREATE means the write touched only read-only
 // fields (the caller is told); on an UPDATE it means the patch changed
 // nothing writable.
@@ -63,11 +63,11 @@ func mapWrite(canonicalClass string, fields map[string]any, forUpdate bool) (wri
 			ObjectClass: objectClassContacts, Props: props,
 			Dropped: droppedFields(fields, deferredPersonWrites),
 		}, err
-	case organizationTarget:
-		props, err := copyDirect(fields, organizationWriteFields, forUpdate)
+	case companyTarget:
+		props, err := copyDirect(fields, companyWriteFields, forUpdate)
 		return writeMapping{
 			ObjectClass: objectClassCompanies, Props: props,
-			Dropped: droppedFields(fields, deferredOrganizationWrites),
+			Dropped: droppedFields(fields, deferredCompanyWrites),
 		}, err
 	case leadTarget:
 		props, err := copyDirect(fields, leadWriteFields, forUpdate)
@@ -110,7 +110,7 @@ var personWriteFields = []directWriteField{
 	{Canonical: "title", HSProp: "jobtitle"},
 }
 
-// deferredPersonWrites — the same obligation as deferredOrganizationWrites, for
+// deferredPersonWrites — the same obligation as deferredCompanyWrites, for
 // the fields updatePerson lets a caller send.
 var deferredPersonWrites = map[string]string{
 	"full_name": "the assembled display field (OVA-MAP-3): splitting a display string back into " +
@@ -124,14 +124,14 @@ var deferredPersonWrites = map[string]string{
 		"the incumbent has no counterpart and must not be told who may see a row here",
 }
 
-// organizationWriteFields — the inverse of companiesMapping's 1:1 columns.
-var organizationWriteFields = []directWriteField{
+// companyWriteFields — the inverse of companiesMapping's 1:1 columns.
+var companyWriteFields = []directWriteField{
 	{Canonical: "display_name", HSProp: propName},
 	{Canonical: industryField, HSProp: industryField},
 }
 
-// deferredOrganizationWrites is every field a caller may PATCH on an
-// organization that this projection does NOT carry, each with the reason.
+// deferredCompanyWrites is every field a caller may PATCH on an
+// company that this projection does NOT carry, each with the reason.
 //
 // It exists because the alternative is silence, and silence here is the defect:
 // a canonical field absent from the projection is accepted by the door, audited,
@@ -146,7 +146,7 @@ var organizationWriteFields = []directWriteField{
 // (backend/gates/overlaywritecoverage_test.go) — a field the contract lets a
 // caller write is either here or in the projection above, and the same rule
 // answers for person and lead.
-var deferredOrganizationWrites = map[string]string{
+var deferredCompanyWrites = map[string]string{
 	"size_band": "read-only: numberofemployees→size_band is a lossy band bucketing " +
 		"(employees_to_size_band) with no unambiguous inverse — writing back the band's floor would " +
 		"report a headcount nobody stated",
@@ -164,7 +164,7 @@ var deferredOrganizationWrites = map[string]string{
 	"lifecycle": "HubSpot's lifecyclestage names a different axis from our lifecycle and the two " +
 		"vocabularies do not correspond term for term; issue #1028 holds the read half and the transform " +
 		"both directions would need",
-	"parent_org_id":      "a company-to-company association, not a property — it writes through the association API rather than through this projection",
+	"parent_company_id":  "a company-to-company association, not a property — it writes through the association API rather than through this projection",
 	"relationship_types": "a Margince concept with no HubSpot counterpart: the incumbent models no such classification",
 }
 
@@ -202,7 +202,7 @@ var deferredLeadWrites = map[string]string{
 	"score":                 "a Margince-computed figure, and writing it would publish our model's output as though the incumbent had produced it",
 	"score_override_reason": "the human sentence explaining a score override — same reason as score",
 	"project_id":            "a Margince association with no Leads-object counterpart",
-	"candidate_org_key":     "a matching key internal to our own resolution, never an incumbent property",
+	"candidate_company_key": "a matching key internal to our own resolution, never an incumbent property",
 }
 
 // stringProp reads a canonical STRING field's writable value. present reports

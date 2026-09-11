@@ -243,7 +243,7 @@ describe("ProjectLinks", () => {
       attach: async () => {
         throw new ProblemError({
           code: "permission_denied",
-          detail: "organization.link_project: permission denied",
+          detail: "company.link_project: permission denied",
         });
       },
     });
@@ -256,6 +256,6 @@ describe("ProjectLinks", () => {
     await user.click(await screen.findByText("Warehouse rollout"));
 
     expect(await screen.findByText(/do not have permission/)).toBeTruthy();
-    expect(screen.queryByText(/organization\.link_project/)).toBeNull();
+    expect(screen.queryByText(/company\.link_project/)).toBeNull();
   });
 });

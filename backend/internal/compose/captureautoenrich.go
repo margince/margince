@@ -3,17 +3,17 @@
 
 package compose
 
-// The captured-organization auto-enrich sweep (CAP-PARAM-7, ADR-0072/A118):
+// The captured-company auto-enrich sweep (CAP-PARAM-7, ADR-0072):
 // a leader-elected periodic pass (run-on-start + daily) that gives every
 // company with a primary domain and no dossier a governed web one — however it
 // was named, since a person creating one is usually the moment they want it.
 // The anchor is excluded; cold start has already read it. Per workspace, when
 // the capture_auto_enrich flag is on, it enqueues a deep read
-// (system:capture_auto_enrich, auto-applied on completion) for each due org —
+// (system:capture_auto_enrich, auto-applied on completion) for each due company —
 // oldest first, under an atomically-reserved daily cap, so a company behind a
-// day's worth of arrivals is still reached (ListDueOrgs says why). It is the
-// self-healing reconciler: the prompt trigger is the organization-event
-// consumer (orgautoenrich.go), which queues this same workspace pass the
+// day's worth of arrivals is still reached (ListDueCompanies says why). It is the
+// self-healing reconciler: the prompt trigger is the company-event
+// consumer (companyautoenrich.go), which queues this same workspace pass the
 // moment a company appears, and anything that slips through — the worker
 // down, an enqueue lost — is simply picked up next daily pass. The
 // deep-read worker's auto-apply lane (deepread.go) records the terminal
@@ -115,7 +115,7 @@ func autoEnrichDailyCap(log *slog.Logger) int {
 }
 
 // autoEnrichRetryBackoff is how long a triggered read's cursor is armed before
-// the sweep may reconsider the org: long enough that an in-flight or
+// the sweep may reconsider the company: long enough that an in-flight or
 // just-failed read is not re-driven prematurely (ADR-0072: 7 days).
 const autoEnrichRetryBackoff = 7 * 24 * time.Hour
 
@@ -163,7 +163,7 @@ func (w *captureAutoEnrichSweepWorker) Work(ctx context.Context, _ *river.Job[Ca
 	}))
 }
 
-// sweepWorkspace enriches the due orgs of one workspace, respecting the flag
+// sweepWorkspace enriches the due companies of one workspace, respecting the flag
 // and the daily cap. The flag is re-read at the top of every pass, so toggling
 // it off stops new reads on the next sweep even for already-queued work.
 func (w *captureAutoEnrichSweepWorker) sweepWorkspace(ctx context.Context, ws ids.WorkspaceID) error {
@@ -187,11 +187,11 @@ func (w *captureAutoEnrichSweepWorker) sweepWorkspace(ctx context.Context, ws id
 	if err := w.autoEnrich.ExpireExhausted(wsCtx); err != nil {
 		return err
 	}
-	due, err := w.autoEnrich.ListDueOrgs(wsCtx, w.dailyCap)
+	due, err := w.autoEnrich.ListDueCompanies(wsCtx, w.dailyCap)
 	if err != nil {
 		return err
 	}
-	for _, org := range due {
+	for _, company := range due {
 		slot, err := w.autoEnrich.ReserveBudget(wsCtx, w.dailyCap)
 		if err != nil {
 			return err
@@ -200,22 +200,22 @@ func (w *captureAutoEnrichSweepWorker) sweepWorkspace(ctx context.Context, ws id
 			// The day's cap is spent — stop; the rest wait for tomorrow's pass.
 			return nil
 		}
-		if err := w.triggerEnrich(wsCtx, org, slot); err != nil {
-			// A single org's trigger fault must not consume the pass; log it
+		if err := w.triggerEnrich(wsCtx, company, slot); err != nil {
+			// A single company's trigger fault must not consume the pass; log it
 			// and move on. The cursor stays due (nothing was queued), so the
 			// next pass retries, and the slot it reserved has already gone back.
 			w.log.WarnContext(wsCtx, "capture auto-enrich: trigger failed",
-				"org", org.OrganizationID.String(), "err", err)
+				"company", company.CompanyID.String(), "err", err)
 			continue
 		}
 	}
 	return nil
 }
 
-// triggerEnrich starts a system-requested deep read for one org and arms its
+// triggerEnrich starts a system-requested deep read for one company and arms its
 // cursor, returning the reserved slot when no read came of it.
-func (w *captureAutoEnrichSweepWorker) triggerEnrich(ctx context.Context, org capture.DueOrg, slot capture.BudgetSlot) error {
-	return startEnrichOrRefund(ctx, w.people, w.autoEnrich, org.OrganizationID, org.Domain, slot)
+func (w *captureAutoEnrichSweepWorker) triggerEnrich(ctx context.Context, company capture.DueCompany, slot capture.BudgetSlot) error {
+	return startEnrichOrRefund(ctx, w.people, w.autoEnrich, company.CompanyID, company.Domain, slot)
 }
 
 // refundTimeout bounds the compensating write. Short: it is one indexed UPDATE,
@@ -237,9 +237,9 @@ const refundTimeout = 5 * time.Second
 // context leaks the slot exactly when it is most likely to leak. Same
 // detach-and-deadline shape the connector teardown and the AI tracer use.
 func startEnrichOrRefund(ctx context.Context, peopleStore *people.Store,
-	autoEnrich *capture.AutoEnrichStore, orgID ids.OrganizationID, domain string, slot capture.BudgetSlot,
+	autoEnrich *capture.AutoEnrichStore, companyID ids.CompanyID, domain string, slot capture.BudgetSlot,
 ) error {
-	started, err := startAutoEnrichRead(ctx, peopleStore, autoEnrich, orgID, domain)
+	started, err := startAutoEnrichRead(ctx, peopleStore, autoEnrich, companyID, domain)
 	if started {
 		return err
 	}
@@ -252,9 +252,9 @@ func startEnrichOrRefund(ctx context.Context, peopleStore *people.Store,
 	return refundErr
 }
 
-// startAutoEnrichRead queues ONE governed deep read for one organization and
+// startAutoEnrichRead queues ONE governed deep read for one company and
 // arms its sweep cursor. Shared by the periodic sweep and the on-capture
-// trigger, because they differ only in what made the organization interesting —
+// trigger, because they differ only in what made the company interesting —
 // the read they ask for, the ceiling it runs under, the principal it is
 // attributed to, and the cursor that stops it being asked for twice must all be
 // the one spelling.
@@ -269,25 +269,25 @@ func startEnrichOrRefund(ctx context.Context, peopleStore *people.Store,
 // It reports whether a read was actually STARTED, as opposed to joined onto one
 // already in flight. Both callers reserve a budget slot before calling, and a
 // join means that slot bought nothing: without the distinction, a sweep and a
-// capture racing on one organization spend two of the day's reads on a single
-// crawl and charge that organization two of its bounded attempts. The
+// capture racing on one company spend two of the day's reads on a single
+// crawl and charge that company two of its bounded attempts. The
 // cursor is armed only by the caller that started something, for the same
 // reason.
 func startAutoEnrichRead(ctx context.Context, peopleStore *people.Store,
-	autoEnrich *capture.AutoEnrichStore, orgID ids.OrganizationID, domain string,
+	autoEnrich *capture.AutoEnrichStore, companyID ids.CompanyID, domain string,
 ) (bool, error) {
 	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
 	if err != nil {
 		return false, err
 	}
 	seedURL := "https://" + domain
-	_, joined, err := peopleStore.StartSiteReadQueued(ctx, orgID, seedURL, systemAutoEnrichActor,
+	_, joined, err := peopleStore.StartSiteReadQueued(ctx, companyID, seedURL, systemAutoEnrichActor,
 		func(ctx context.Context, tx pgx.Tx, read people.SiteRead) error {
 			_, insErr := client.InsertTx(ctx, tx, SiteDeepReadArgs{
-				Workspace:      storekit.MustWorkspace(ctx),
-				OrganizationID: orgID.UUID,
-				SiteReadID:     read.ID,
-				RequestedBy:    read.RequestedBy,
+				Workspace:   storekit.MustWorkspace(ctx),
+				CompanyID:   companyID.UUID,
+				SiteReadID:  read.ID,
+				RequestedBy: read.RequestedBy,
 				// Declared in the payload as well as enforced at the worker: a
 				// job carries what it was queued to cost, so an operator
 				// reading river_job sees the ceiling without inferring it.
@@ -299,17 +299,17 @@ func startAutoEnrichRead(ctx context.Context, peopleStore *people.Store,
 		return false, err
 	}
 	if joined {
-		// Someone else's read is already in flight for this organization; the
+		// Someone else's read is already in flight for this company; the
 		// uniqueness index arbitrated it. Arming the cursor again would charge a
 		// second attempt for one crawl.
 		return false, nil
 	}
-	return true, autoEnrich.MarkQueued(ctx, orgID, autoEnrichRetryBackoff)
+	return true, autoEnrich.MarkQueued(ctx, companyID, autoEnrichRetryBackoff)
 }
 
 // workspaceCtx binds the sweep's system principal on the given workspace. A
 // PrincipalSystem is unbounded (auth.Unbounded), so it passes the
-// organization-update/visibility gates StartSiteReadQueued and the settings read
+// company-update/visibility gates StartSiteReadQueued and the settings read
 // enforce, without impersonating any human.
 func (w *captureAutoEnrichSweepWorker) workspaceCtx(ctx context.Context, ws ids.WorkspaceID) context.Context {
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)

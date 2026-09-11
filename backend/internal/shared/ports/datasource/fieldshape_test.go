@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-// domainInput mirrors the contract's OrganizationDomainInput: an array element
+// domainInput mirrors the contract's CompanyDomainInput: an array element
 // that is an OBJECT, which is the shape two reported sessions sent as a string.
 type domainInput struct {
 	Domain    string `json:"domain"`
@@ -22,11 +22,11 @@ type addressInput struct {
 	City  *string `json:"city,omitempty"`
 }
 
-// orgPatch stands in for a generated request struct. It carries the catch-all
+// companyPatch stands in for a generated request struct. It carries the catch-all
 // map oapi-codegen emits for `additionalProperties`, because that field is what
 // makes the generator write a custom UnmarshalJSON — and that unmarshaler is why
 // the decoder loses the field path in the first place.
-type orgPatch struct {
+type companyPatch struct {
 	DisplayName          *string        `json:"display_name,omitempty"`
 	Industry             *string        `json:"industry,omitempty"`
 	Domains              *[]domainInput `json:"domains,omitempty"`
@@ -39,7 +39,7 @@ type orgPatch struct {
 // through a FRESH json.Unmarshal, whose error context starts empty. That is the
 // whole mechanism — json.UnmarshalTypeError.Field comes back "" and the path
 // survives only in this wrapper's prose.
-func (o *orgPatch) UnmarshalJSON(b []byte) error {
+func (o *companyPatch) UnmarshalJSON(b []byte) error {
 	object := make(map[string]json.RawMessage)
 	if err := json.Unmarshal(b, &object); err != nil {
 		return err
@@ -107,7 +107,7 @@ func TestStrictDecode_namesTheFieldAndTheShapeItHolds(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var into orgPatch
+			var into companyPatch
 			err := StrictDecode(json.RawMessage(tc.raw), &into)
 			if err == nil {
 				t.Fatalf("%s was accepted", tc.raw)
@@ -126,7 +126,7 @@ func TestStrictDecode_namesTheFieldAndTheShapeItHolds(t *testing.T) {
 // The correct shape still decodes. A refusal that also refuses the fix is worse
 // than the refusal it replaced.
 func TestStrictDecode_acceptsTheShapeTheRefusalAsksFor(t *testing.T) {
-	var into orgPatch
+	var into companyPatch
 	if err := StrictDecode(json.RawMessage(`{"domains":[{"domain":"openrouter.ai","is_primary":true}]}`), &into); err != nil {
 		t.Fatalf("the shape the refusal names was refused: %v", err)
 	}
@@ -158,7 +158,7 @@ type linkItem struct {
 // being right.
 func TestStrictDecode_separatesAWrongShapeFromARefusedValue(t *testing.T) {
 	var into activityBody
-	err := StrictDecode(json.RawMessage(`{"kind":"email","links":[{"organization_id":"019f"}]}`), &into)
+	err := StrictDecode(json.RawMessage(`{"kind":"email","links":[{"company_id":"019f"}]}`), &into)
 	if err == nil {
 		t.Fatal("a key the link item does not declare was accepted")
 	}
@@ -179,7 +179,7 @@ func TestStrictDecode_separatesAWrongShapeFromARefusedValue(t *testing.T) {
 // A payload that is genuinely not an object keeps the sentence that is exactly
 // right for it. Localization fills a gap; it does not take over.
 func TestStrictDecode_leavesAWholePayloadShapeFailureAlone(t *testing.T) {
-	var into orgPatch
+	var into companyPatch
 	err := StrictDecode(json.RawMessage(`"not an object"`), &into)
 	if err == nil {
 		t.Fatal("a string payload was accepted")
@@ -225,7 +225,7 @@ func TestLocalizeFieldFault_namesTheSameFieldEveryTime(t *testing.T) {
 	raw := json.RawMessage(`{"industry":123,"count":"12"}`)
 	first := ""
 	for range 20 {
-		var into orgPatch
+		var into companyPatch
 		err := StrictDecode(raw, &into)
 		var refusal *FieldShapeError
 		if !errors.As(err, &refusal) {

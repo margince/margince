@@ -35,7 +35,7 @@ import (
 // only principal this operation admits.
 func rejectRequest(t *testing.T, body string) (*httptest.ResponseRecorder, *http.Request) {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, "/v1/organizations/"+ids.NewV7().String()+"/reject",
+	req := httptest.NewRequest(http.MethodPost, "/v1/companies/"+ids.NewV7().String()+"/reject",
 		bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(principal.WithActor(req.Context(), principal.Principal{
@@ -91,8 +91,8 @@ func TestRejectingWithoutAReasonCarriesTheStoresRefusalToTheWire(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rec, req := rejectRequest(t, tc.body)
-			Handlers{}.RejectOrganization(rec, req, crmcontracts.Id{},
-				crmcontracts.RejectOrganizationParams{})
+			Handlers{}.RejectCompany(rec, req, crmcontracts.Id{},
+				crmcontracts.RejectCompanyParams{})
 
 			if rec.Code != http.StatusUnprocessableEntity {
 				t.Fatalf("status = %d, want 422: %s", rec.Code, rec.Body.String())
@@ -123,8 +123,8 @@ func TestRejectingWithAnOverlongReasonSaysHowLongIsAllowed(t *testing.T) {
 	}
 	rec, req := rejectRequest(t, string(body))
 
-	Handlers{}.RejectOrganization(rec, req, crmcontracts.Id{},
-		crmcontracts.RejectOrganizationParams{})
+	Handlers{}.RejectCompany(rec, req, crmcontracts.Id{},
+		crmcontracts.RejectCompanyParams{})
 
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want 422: %s", rec.Code, rec.Body.String())
@@ -151,8 +151,8 @@ func TestRejectingIsRefusedToAnAgent(t *testing.T) {
 		Type: principal.PrincipalAgent, ID: "agent:scout",
 	}))
 
-	Handlers{}.RejectOrganization(rec, req, crmcontracts.Id{},
-		crmcontracts.RejectOrganizationParams{})
+	Handlers{}.RejectCompany(rec, req, crmcontracts.Id{},
+		crmcontracts.RejectCompanyParams{})
 
 	if rec.Code == http.StatusUnprocessableEntity || rec.Code < 400 {
 		t.Fatalf("an agent reached the reason checks (status %d) — the human-only refusal must come first", rec.Code)

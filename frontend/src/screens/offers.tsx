@@ -32,7 +32,7 @@ import {
 import { searchProductCandidates } from "./products";
 
 // The offer 360: header, read-only totals, and a draft-only header edit whose
-// surface is its own because buyer_org_id needs the shared RecordPicker and
+// surface is its own because buyer_company_id needs the shared RecordPicker and
 // template_id a server-sourced select — EditAction/CreateField fits neither.
 
 type Offer = components["schemas"]["Offer"];
@@ -42,16 +42,19 @@ type OfferLineItemInput = components["schemas"]["OfferLineItemInput"];
 type UpdateOfferLineItemRequest =
   components["schemas"]["UpdateOfferLineItemRequest"];
 
-async function searchOrganizationCandidates(
+async function searchCompanyCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/organizations", {
+  const { data, error } = await api.GET("/companies", {
     params: { query: { q, limit: 10 } },
   });
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((org) => ({ id: org.id, name: org.display_name }));
+  return data.data.map((company) => ({
+    id: company.id,
+    name: company.display_name,
+  }));
 }
 
 function useOfferTemplates() {
@@ -71,7 +74,7 @@ function useOfferTemplates() {
 
 type HeaderEditValues = {
   currency: string;
-  buyer_org_id: string | null;
+  buyer_company_id: string | null;
   valid_until: string;
   template_id: string | null;
   intro_text: string;
@@ -80,34 +83,34 @@ type HeaderEditValues = {
 
 // RecordPicker only highlights a selection among candidates its OWN search
 // turned up — it has no way to preview a value set outside its session. A
-// freshly reopened header-edit modal only has `offer.buyer_org_id` (a bare
-// id), so the picker would otherwise render empty even though a buyer org
-// IS set. This resolves that id to a name (the same GET /organizations/{id}
+// freshly reopened header-edit modal only has `offer.buyer_company_id` (a bare
+// id), so the picker would otherwise render empty even though a buyer company
+// IS set. This resolves that id to a name (the same GET /companies/{id}
 // lookup entityref.tsx uses for the same bare-id-to-name problem), and
 // prefers the caller's own override — set once the user actively picks a
-// different org — over the resolved incumbent.
-function useBuyerOrgPreview(buyerOrgId: string | null, open: boolean) {
+// different company — over the resolved incumbent.
+function useBuyerCompanyPreview(buyerCompanyId: string | null, open: boolean) {
   const [override, setOverride] = useState<RecordPickerCandidate | null>(null);
   const existingQuery = useQuery({
-    queryKey: ["organization", "ref", buyerOrgId],
+    queryKey: ["company", "ref", buyerCompanyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}", {
-        params: { path: { id: buyerOrgId ?? "" } },
+      const { data, error } = await api.GET("/companies/{id}", {
+        params: { path: { id: buyerCompanyId ?? "" } },
       });
       if (error) {
         throwProblem(error);
       }
       return {
-        id: buyerOrgId ?? "",
+        id: buyerCompanyId ?? "",
         name: data.display_name ?? "",
       } satisfies RecordPickerCandidate;
     },
-    enabled: Boolean(buyerOrgId) && open,
+    enabled: Boolean(buyerCompanyId) && open,
     staleTime: 60_000,
   });
-  const buyerOrg =
-    override ?? (buyerOrgId ? (existingQuery.data ?? null) : null);
-  return { buyerOrg, setBuyerOrgOverride: setOverride };
+  const buyerCompany =
+    override ?? (buyerCompanyId ? (existingQuery.data ?? null) : null);
+  return { buyerCompany, setBuyerCompanyOverride: setOverride };
 }
 
 function EditOfferHeaderModal({
@@ -121,14 +124,14 @@ function EditOfferHeaderModal({
   const templatesQuery = useOfferTemplates();
   const [values, setValues] = useState<HeaderEditValues>({
     currency: offer.currency,
-    buyer_org_id: offer.buyer_org_id ?? null,
+    buyer_company_id: offer.buyer_company_id ?? null,
     valid_until: offer.valid_until ?? "",
     template_id: offer.template_id ?? null,
     intro_text: offer.intro_text ?? "",
     terms_text: offer.terms_text ?? "",
   });
-  const { buyerOrg, setBuyerOrgOverride } = useBuyerOrgPreview(
-    offer.buyer_org_id ?? null,
+  const { buyerCompany, setBuyerCompanyOverride } = useBuyerCompanyPreview(
+    offer.buyer_company_id ?? null,
     open,
   );
   // Only the closed→open transition reprimes the form — a background
@@ -140,16 +143,16 @@ function EditOfferHeaderModal({
     if (open && !wasOpen.current) {
       setValues({
         currency: offer.currency,
-        buyer_org_id: offer.buyer_org_id ?? null,
+        buyer_company_id: offer.buyer_company_id ?? null,
         valid_until: offer.valid_until ?? "",
         template_id: offer.template_id ?? null,
         intro_text: offer.intro_text ?? "",
         terms_text: offer.terms_text ?? "",
       });
-      setBuyerOrgOverride(null);
+      setBuyerCompanyOverride(null);
     }
     wasOpen.current = open;
-  }, [open, offer, setBuyerOrgOverride]);
+  }, [open, offer, setBuyerCompanyOverride]);
 
   const mutation = useMutation({
     mutationFn: async (input: HeaderEditValues) => {
@@ -160,7 +163,7 @@ function EditOfferHeaderModal({
         },
         body: {
           currency: input.currency,
-          buyer_org_id: input.buyer_org_id,
+          buyer_company_id: input.buyer_company_id,
           valid_until: input.valid_until || null,
           template_id: input.template_id,
           intro_text: input.intro_text || null,
@@ -225,19 +228,22 @@ function EditOfferHeaderModal({
           />
         </div>
         <div className="field">
-          <span className="t-label">{t("offer.buyerOrg")}</span>
+          <span className="t-label">{t("offer.buyerCompany")}</span>
           <RecordPicker
-            label={t("offer.buyerOrg")}
-            searchTargets={searchOrganizationCandidates}
-            selected={buyerOrg}
+            label={t("offer.buyerCompany")}
+            searchTargets={searchCompanyCandidates}
+            selected={buyerCompany}
             onPick={(candidate) => {
-              setBuyerOrgOverride(candidate);
-              setValues((prev) => ({ ...prev, buyer_org_id: candidate.id }));
+              setBuyerCompanyOverride(candidate);
+              setValues((prev) => ({
+                ...prev,
+                buyer_company_id: candidate.id,
+              }));
             }}
           />
-          {buyerOrg && (
+          {buyerCompany && (
             <p className="t-caption">
-              {t("offer.buyerOrgConfirm", { name: buyerOrg.name })}
+              {t("offer.buyerCompanyConfirm", { name: buyerCompany.name })}
             </p>
           )}
         </div>

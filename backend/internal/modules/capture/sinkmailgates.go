@@ -216,7 +216,7 @@ func isDecliningReply(text string) bool {
 
 // registrySuppresses runs T2 against the transactional/ESP registry
 // (CAP-PARAM-6): a DocuSign envelope or a SendGrid relay is not a
-// counterparty's company, so person AND org derivation are suppressed while the
+// counterparty's company, so person AND company derivation are suppressed while the
 // activity stands — a signed envelope is a real timeline item — and the reason
 // lands on the ledger so a wrong registry entry is queryable, not only logged.
 //

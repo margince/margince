@@ -12,7 +12,7 @@ package contracts
 //
 // A contract belongs to a company, not a person (ADR-0109 §8). It is visible
 // when the deal it came from is visible, and — for the contracts that never ran
-// through a pipeline — when its organization is visible. Deriving it rather
+// through a pipeline — when its company is visible. Deriving it rather
 // than copying an owner at creation is what makes a deal reassignment carry its
 // contracts in the same query, instead of leaving the agreement behind with the
 // representative who no longer works the account.
@@ -41,11 +41,11 @@ import (
 // That requirement is UNCONDITIONAL, and it is stated here rather than left to
 // hold by accident. This used to return NO CLAUSE when both scopes came back
 // empty — bundling the liveness into the narrowing, so a caller who reads every
-// deal and every organization would have read contracts on archived anchors
+// deal and every company would have read contracts on archived anchors
 // that the document-filing gate refuses.
 //
 // That caller does not exist today, and the reason is unrelated to contracts:
-// `organization` is owner-private (platform/auth), so its scope clause is never
+// `company` is owner-private (platform/auth), so its scope clause is never
 // empty and the early return was unreachable. An invariant that survives on a
 // neighbouring table's privacy setting is one a change to that table quietly
 // ends — so liveness is now a property of the anchor rather than of who is
@@ -53,8 +53,8 @@ import (
 //
 // The two arms are a disjunction because a contract has one anchor or the
 // other: a contract WITH a deal is judged by that deal, and a contract with no
-// deal is judged by its organization. A contract with a deal is deliberately
-// NOT also admitted by its organization — the deal is the narrower claim, and
+// deal is judged by its company. A contract with a deal is deliberately
+// NOT also admitted by its company — the deal is the narrower claim, and
 // widening to the company would hand a caller agreements attached to deals
 // they cannot see.
 func VisibleClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
@@ -62,7 +62,7 @@ func VisibleClause(ctx context.Context, alias string, arg func(any) int) (string
 	if err != nil {
 		return "", err
 	}
-	orgScope, err := auth.ScopeClauseFor(ctx, organizationTable, "o", arg)
+	companyScope, err := auth.ScopeClauseFor(ctx, companyTable, "o", arg)
 	if err != nil {
 		return "", err
 	}
@@ -75,12 +75,12 @@ func VisibleClause(ctx context.Context, alias string, arg func(any) int) (string
 		(%[1]sdeal_id IS NOT NULL AND EXISTS (
 			SELECT 1 FROM deal d WHERE d.id = %[1]sdeal_id AND d.archived_at IS NULL AND %[2]s))
 		OR (%[1]sdeal_id IS NULL AND EXISTS (
-			SELECT 1 FROM organization o WHERE o.id = %[1]sorganization_id AND o.archived_at IS NULL AND %[3]s))
-	)`, qualified, trueWhenEmpty(dealScope), trueWhenEmpty(orgScope)), nil
+			SELECT 1 FROM company o WHERE o.id = %[1]scompany_id AND o.archived_at IS NULL AND %[3]s))
+	)`, qualified, trueWhenEmpty(dealScope), trueWhenEmpty(companyScope)), nil
 }
 
 // trueWhenEmpty renders an absent scope clause as a literal truth. One anchor
-// can be unbounded while the other is not — a role may read every organization
+// can be unbounded while the other is not — a role may read every company
 // and only its own team's deals — and the arm for the unbounded one still has
 // to say something.
 func trueWhenEmpty(clause string) string {

@@ -26,13 +26,13 @@ import "./compose.css";
 // (compose-links.test.tsx's account view, compose.test.tsx's draft) rather
 // than one invented here, so a frame in the catalog shows what a real run does.
 
-const ORG_ID = "org-1";
+const COMPANY_ID = "company-1";
 
 // The account view the grounding pickers are populated from: two contacts and
 // two open deals, so each pick is a real choice rather than the only option.
-// Mirrors compose-links.test.tsx's ORG_VIEW.
-const ORG_VIEW = {
-  organization: { id: ORG_ID, name: "Acme" },
+// Mirrors compose-links.test.tsx's COMPANY_VIEW.
+const COMPANY_VIEW = {
+  company: { id: COMPANY_ID, name: "Acme" },
   people: {
     data: [
       { person_id: "per-1", full_name: "Dieter Klein" },
@@ -49,8 +49,8 @@ const ORG_VIEW = {
 
 // The same account with nobody on it: the DRAFT's honest dead end, which the
 // component says in words instead of offering a picker the rep cannot use.
-const ORG_VIEW_NO_CONTACTS = {
-  ...ORG_VIEW,
+const COMPANY_VIEW_NO_CONTACTS = {
+  ...COMPANY_VIEW,
   people: { data: [] },
   deals: { data: [] },
 };
@@ -92,7 +92,7 @@ function Pickers() {
   return (
     <StoryProviders>
       <AccountDraftContext
-        orgId={ORG_ID}
+        companyId={COMPANY_ID}
         recipientId={recipientId}
         onRecipientChange={setRecipientId}
         dealId={dealId}
@@ -108,7 +108,7 @@ function Pickers() {
 function pickersOver(view: unknown) {
   return () => {
     installFetchStub({
-      [`GET /organizations/${ORG_ID}/360`]: () => jsonResponse(view),
+      [`GET /companies/${COMPANY_ID}/360`]: () => jsonResponse(view),
     });
     return <Pickers />;
   };
@@ -151,7 +151,7 @@ type Story = StoryObj;
 
 /** The account path's two choices: who the draft is to, and which deal it is about. */
 export const AccountPickers: Story = {
-  render: pickersOver(ORG_VIEW),
+  render: pickersOver(COMPANY_VIEW),
 };
 
 /**
@@ -160,7 +160,7 @@ export const AccountPickers: Story = {
  * rep can still type an address into To and write the mail themselves.
  */
 export const NoGroundableRecipient: Story = {
-  render: pickersOver(ORG_VIEW_NO_CONTACTS),
+  render: pickersOver(COMPANY_VIEW_NO_CONTACTS),
 };
 
 /** The pre-draft drawer: what the rep wants said, and the one control that asks for it. */

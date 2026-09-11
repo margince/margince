@@ -78,13 +78,13 @@ func TestOnlyACreationIsLedgered(t *testing.T) {
 		},
 		"a domain queued for a verdict": {
 			EnsureOutcome{CompanyQueued: true, QueuedDomain: "acme.test"},
-			[]createdSubject{{kind: "organization_queued", subject: "acme.test"}},
+			[]createdSubject{{kind: "company_queued", subject: "acme.test"}},
 		},
 		"both, from one message": {
 			EnsureOutcome{PersonCreated: true, PersonID: person, CompanyQueued: true, QueuedDomain: "acme.test"},
 			[]createdSubject{
 				{kind: "person", subject: person.String()},
-				{kind: "organization_queued", subject: "acme.test"},
+				{kind: "company_queued", subject: "acme.test"},
 			},
 		},
 		// The flag without the subject is a resolver that reported a creation

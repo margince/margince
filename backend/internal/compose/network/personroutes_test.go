@@ -230,7 +230,7 @@ func TestEveryRouteIsOfferableBeforeAnythingHasBeenAsked(t *testing.T) {
 	}
 }
 
-// Past a handful nobody is choosing a route, they are reading an org chart —
+// Past a handful nobody is choosing a route, they are reading a company chart —
 // and the tail is always the coldest.
 func TestTheListStopsAtTheCap(t *testing.T) {
 	anchor := personNodeID(uuidFor(9))

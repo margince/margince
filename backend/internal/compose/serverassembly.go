@@ -21,10 +21,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
-	"github.com/margince/margince/backend/internal/compose/org360"
-	"github.com/margince/margince/backend/internal/compose/orgbrief"
-	"github.com/margince/margince/backend/internal/compose/orgdossier"
-	"github.com/margince/margince/backend/internal/compose/orgscan"
+	"github.com/margince/margince/backend/internal/compose/company360"
+	"github.com/margince/margince/backend/internal/compose/companybrief"
+	"github.com/margince/margince/backend/internal/compose/companydossier"
+	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -42,11 +42,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// newPeopleHandlers builds the person/organization/lead transport with the
+// newPeopleHandlers builds the person/company/lead transport with the
 // seams compose owns for it.
 //
 // The fieldcatalog seam: customfields' catalog read makes the
-// workspace's active cf_* columns ride person/organization
+// workspace's active cf_* columns ride person/company
 // payloads (values only — the schema-change engine stays behind
 // WithSchemaPool; ActiveColumns needs none of it).
 // The match stager is injected here because approvals is a sibling of
@@ -273,15 +273,15 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// boot-time SetOverlayIncumbentResolver reaches the same instance this
 	// field serves reads through.
 	s.sorDispatch = NewDispatcher(NewProvider(pool), NewOverlayProvider(pool, s.overlayMeter, nil), pool)
-	// The company view (org360) is assembled from THIS system of record;
+	// The company view (company360) is assembled from THIS system of record;
 	// it asks the same dispatch every other overlay-aware read asks, so a
 	// workspace running on the incumbent mirror gets one honest refusal
 	// instead of a page that quietly omits most of itself. Wired after the
 	// dispatch because it needs it.
 	// The people store carries the SAME fieldcatalog seam peopleHandlers
-	// gets: the 360 serves the organization object, and without it the
+	// gets: the 360 serves the company object, and without it the
 	// company view would silently omit the cf_* columns GET
-	// /organizations/{id} returns for the same record.
+	// /companies/{id} returns for the same record.
 	// The brief reads THROUGH the 360 service, so it inherits every gate the
 	// page itself applies and can only describe what this caller may see.
 	// The model lane is nil here: WithAccountBrief binds the api role's
@@ -306,10 +306,10 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// The importer maps only core columns (see importTargets for why custom
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
-	s.org360Svc = org360.NewService(pool, s.peopleStore, s.dealsStore, ProjectsStore(pool), approvals.NewService(InstallationDB(pool)), time.Now)
-	s.orgBriefSvc = orgbrief.NewService(pool, s.org360Svc, s.peopleStore, nil, "", time.Now).
+	s.company360Svc = company360.NewService(pool, s.peopleStore, s.dealsStore, ProjectsStore(pool), approvals.NewService(InstallationDB(pool)), time.Now)
+	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.peopleStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))
-	s.orgBriefHandlers = orgbrief.NewHandlers(s.orgBriefSvc, s.sorDispatch.isOverlay)
+	s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc, s.sorDispatch.isOverlay)
 	// The dossier reads the SAME people store the 360 and the brief read, so
 	// the three cannot drift about what a company's facts are. No model lane is
 	// wired yet: every assembly is the deterministic floor and says so.
@@ -318,21 +318,21 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// The two floors differ in kind — the dossier's still describes the company,
 	// where growth fit's can only abstain — which is why they are separate
 	// options rather than one.
-	s.orgDossierSvc = orgdossier.NewService(pool, s.peopleStore, nil, "", time.Now).
+	s.companyDossierSvc = companydossier.NewService(pool, s.peopleStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))
-	s.orgGrowthFitSvc = orgdossier.NewGrowthFitService(
+	s.companyGrowthFitSvc = companydossier.NewGrowthFitService(
 		pool, s.peopleStore, offeringConfirmed(s.peopleStore), nil, "", time.Now,
 	).WithEmailSummaries(emailRows(pool))
-	s.orgDossierHandlers = orgdossier.NewHandlers(
-		s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay,
+	s.companyDossierHandlers = companydossier.NewHandlers(
+		s.companyDossierSvc, s.companyGrowthFitSvc, s.sorDispatch.isOverlay,
 	)
 	// The account scan over the same composite read and the same dismissals.
 	// No lane and no job runner here: an ensure on this role settles the
 	// rules' floor in-request, and WithAccountScan binds the api role's.
-	s.orgScanSvc = orgscan.NewService(pool, s.org360Svc, s.org360Svc, nil, nil, nil, time.Now, s.log).
+	s.companyScanSvc = companyscan.NewService(pool, s.company360Svc, s.company360Svc, nil, nil, nil, time.Now, s.log).
 		WithEmailSummaries(emailRows(pool))
-	s.orgScanHandlers = orgscan.NewHandlers(s.orgScanSvc, s.sorDispatch.isOverlay)
-	s.org360Svc.RecogniseScanFindings(s.orgScanSvc)
+	s.companyScanHandlers = companyscan.NewHandlers(s.companyScanSvc, s.sorDispatch.isOverlay)
+	s.company360Svc.RecogniseScanFindings(s.companyScanSvc)
 	// AFTER the dossier service exists: the drafter takes it as a dependency,
 	// and a nil *Service handed through the interface is not the nil INTERFACE
 	// the drafter guards against — it would pass the guard and panic on the
@@ -343,13 +343,13 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// brief's: WithAccountDraft binds the api role's, and without it the
 	// endpoint answers from its deterministic floor rather than 501-ing.
 	s.accountDraftHandlers = accountdraft.NewHandlers(
-		accountdraft.NewService(s.org360Svc, nil).
+		accountdraft.NewService(s.company360Svc, nil).
 			WithEnvelope(draftEnvelope(pool, s.log)).
 			WithEmailSummaries(emailRows(pool)).
-			WithDossier(s.orgDossierSvc), s.sorDispatch.isOverlay,
+			WithDossier(s.companyDossierSvc), s.sorDispatch.isOverlay,
 	)
-	s.org360Handlers = org360.NewHandlers(
-		s.org360Svc,
+	s.company360Handlers = company360.NewHandlers(
+		s.company360Svc,
 		s.sorDispatch.isOverlay,
 	)
 	// The person page is the company page's sibling and rides the same

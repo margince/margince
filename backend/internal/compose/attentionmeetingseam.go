@@ -140,7 +140,7 @@ func meetingStillWorthPreparing(row crmcontracts.Activity) bool {
 // whether that question could be answered at all.
 //
 // The signals are the two the row already carries: a body (the agenda or the
-// notes somebody typed) and a link to a record outside this organization (the
+// notes somebody typed) and a link to a record outside this company (the
 // customer the meeting is with). A meeting with neither is one nobody has
 // prepared.
 //

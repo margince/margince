@@ -99,14 +99,14 @@ func appendKey(keys []string, pair string) []string {
 
 // The shapes exist to answer the two questions a name list could not, so both
 // are pinned against the payloads that were actually refused in the field: an
-// organization's `domains` and an activity's `links` are arrays of OBJECTS, and
+// company's `domains` and an activity's `links` are arrays of OBJECTS, and
 // a caller reading only names sends an array of strings.
 func TestRenderedShapesCarryTheItemShapesThatWereGuessedWrong(t *testing.T) {
 	for _, tc := range []struct {
 		name, rendered, want string
 	}{
-		{"an org's domains on create", createRecordShapes["organization"], "domains?: [{domain: string, is_primary?: boolean}]"},
-		{"an org's domains on update", updateRecordShapes["organization"], "domains?: [{domain: string, is_primary?: boolean}]"},
+		{"a company's domains on create", createRecordShapes["company"], "domains?: [{domain: string, is_primary?: boolean}]"},
+		{"a company's domains on update", updateRecordShapes["company"], "domains?: [{domain: string, is_primary?: boolean}]"},
 		{"an activity's links on create", createRecordShapes["activity"], "links?: [{entity_id: uuid, entity_type:"},
 		{"a person's emails on create", createRecordShapes["person"], "emails?: [{email: email,"},
 	} {
@@ -125,7 +125,7 @@ func TestRenderedShapesCarryEnumValues(t *testing.T) {
 	for _, tc := range []struct {
 		name, rendered, want string
 	}{
-		{"an org's lifecycle", updateRecordShapes["organization"], `lifecycle?: "unknown"|"target"|"prospect"`},
+		{"a company's lifecycle", updateRecordShapes["company"], `lifecycle?: "unknown"|"target"|"prospect"`},
 		{"an activity's kind", createRecordShapes["activity"], `kind: "email"|"call"|"meeting"|"note"|"task"`},
 		{"a relationship's kind", createRecordShapes["relationship"], `kind: "employment"|"deal_stakeholder"`},
 		{"a deal's status", updateRecordShapes["deal"], `status?: "open"|"won"|"lost"`},
@@ -139,11 +139,11 @@ func TestRenderedShapesCarryEnumValues(t *testing.T) {
 }
 
 // Which keys are REQUIRED is the other thing a name list never said. A caller
-// creating an organization had no way to learn that `display_name` is not
+// creating a company had no way to learn that `display_name` is not
 // optional until the write was refused.
 func TestRenderedShapesMarkRequiredKeys(t *testing.T) {
 	for _, tc := range []struct{ name, rendered, required string }{
-		{"an org's display_name", createRecordShapes["organization"], "display_name: string"},
+		{"a company's display_name", createRecordShapes["company"], "display_name: string"},
 		{"a person's full_name", createRecordShapes["person"], "full_name: string"},
 		{"a deal's pipeline_id", createRecordShapes["deal"], "pipeline_id: uuid"},
 		{"an activity's kind", createRecordShapes["activity"], "kind: "},
@@ -182,8 +182,8 @@ func TestRenderedShapesNeverRequireAKeyThisSurfaceStamps(t *testing.T) {
 // datasource cannot import this table (shared is stdlib-only), so the agreement
 // cannot be a shared constant; it is pinned here instead of assumed.
 func TestRenderedShapesUseTheSameNotationAsADecodeRefusal(t *testing.T) {
-	var org crmcontracts.UpdateOrganizationRequest
-	err := datasource.StrictDecode(json.RawMessage(`{"domains":["x"]}`), &org)
+	var company crmcontracts.UpdateCompanyRequest
+	err := datasource.StrictDecode(json.RawMessage(`{"domains":["x"]}`), &company)
 	if err == nil {
 		t.Fatal("an array of strings was accepted")
 	}
@@ -195,8 +195,8 @@ func TestRenderedShapesUseTheSameNotationAsADecodeRefusal(t *testing.T) {
 	if !strings.Contains(refusal.Error(), itemShape) {
 		t.Errorf("the refusal spells the item shape differently:\n%s", refusal.Error())
 	}
-	if !strings.Contains(updateRecordShapes["organization"], itemShape) {
-		t.Errorf("the description spells the item shape differently:\n%s", updateRecordShapes["organization"])
+	if !strings.Contains(updateRecordShapes["company"], itemShape) {
+		t.Errorf("the description spells the item shape differently:\n%s", updateRecordShapes["company"])
 	}
 }
 

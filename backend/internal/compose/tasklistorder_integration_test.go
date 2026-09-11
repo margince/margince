@@ -17,8 +17,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/compose/org360"
 	"github.com/margince/margince/backend/internal/compose/person360"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -32,7 +32,7 @@ import (
 func TestBothPagesRankTwoPromisesTheSameWay(t *testing.T) {
 	e := integration.Setup(t)
 	person := seedLinkedPerson(t, e, "beide@kunde.example")
-	org := seedEmployerOf(t, e, person, "Kunde GmbH")
+	company := seedEmployerOf(t, e, person, "Kunde GmbH")
 	due := time.Now().Add(24 * time.Hour).Truncate(time.Microsecond)
 
 	// Both due the same day, so only the tie-break separates them. The one
@@ -44,28 +44,28 @@ func TestBothPagesRankTwoPromisesTheSameWay(t *testing.T) {
 		consent.NewStore(InstallationDB(e.Pool)),
 		comms.NewStore(InstallationDB(e.Pool), time.Now, activities.NewStore(InstallationDB(e.Pool))),
 		ai.NewFeedbackStore(InstallationDB(e.Pool)), time.Now)
-	orgSvc := org360.NewService(e.Pool, e.People, e.Deals, e.Projects,
+	companySvc := company360.NewService(e.Pool, e.People, e.Deals, e.Projects,
 		approvals.NewService(InstallationDB(e.Pool)), time.Now)
 
 	personPage, err := personSvc.Assemble(e.Admin(), ids.From[ids.PersonKind](person))
 	if err != nil {
 		t.Fatalf("assembling the contact: %v", err)
 	}
-	orgPage, err := orgSvc.Assemble(e.Admin(), ids.From[ids.OrganizationKind](org))
+	companyPage, err := companySvc.Assemble(e.Admin(), ids.From[ids.CompanyKind](company))
 	if err != nil {
 		t.Fatalf("assembling the account: %v", err)
 	}
 	if personPage.NextSteps == nil || len(personPage.NextSteps.Data) != 2 {
 		t.Fatalf("the contact carries %v tasks, want the two just written", personPage.NextSteps)
 	}
-	if orgPage.NextSteps == nil || len(orgPage.NextSteps.Data) != 2 {
-		t.Fatalf("the account carries %v tasks, want the two just written", orgPage.NextSteps)
+	if companyPage.NextSteps == nil || len(companyPage.NextSteps.Data) != 2 {
+		t.Fatalf("the account carries %v tasks, want the two just written", companyPage.NextSteps)
 	}
 
 	if got := personPage.NextSteps.Data[0].Id; ids.UUID(got) != older {
 		t.Errorf("the contact leads with %v, want the promise filed first %v", got, older)
 	}
-	if got := orgPage.NextSteps.Data[0].ActivityId; ids.UUID(got) != older {
+	if got := companyPage.NextSteps.Data[0].ActivityId; ids.UUID(got) != older {
 		t.Errorf("the account leads with %v, want the same promise the contact leads with (%v) — "+
 			"two lists of one task set that disagree teach the reader that neither order means anything",
 			got, older)
@@ -76,25 +76,25 @@ func TestBothPagesRankTwoPromisesTheSameWay(t *testing.T) {
 // read reaches the tasks filed against them.
 func seedEmployerOf(t *testing.T, e *integration.Env, person ids.UUID, name string) ids.UUID {
 	t.Helper()
-	orgID := ids.NewV7()
+	companyID := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO organization (id, owner_id, display_name, name_source, source, captured_by)
+			INSERT INTO company (id, owner_id, display_name, name_source, source, captured_by)
 			VALUES ($1, $2, $3, 'domain', 'connector:gmail', 'connector:gmail')`,
-			orgID, e.Rep1, name); err != nil {
+			companyID, e.Rep1, name); err != nil {
 			return err
 		}
 		// An employment is a relationship row, which is the arm the account's
-		// task read walks (activities.OrgLinkedActivityExists).
+		// task read walks (activities.CompanyLinkedActivityExists).
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO relationship (id, kind, person_id, organization_id, is_current_primary, source, captured_by)
+			INSERT INTO relationship (id, kind, person_id, company_id, is_current_primary, source, captured_by)
 			VALUES ($1, 'employment', $2, $3, true, 'connector:gmail', 'connector:gmail')`,
-			ids.NewV7(), person, orgID)
+			ids.NewV7(), person, companyID)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding an employer: %v", err)
 	}
-	return orgID
+	return companyID
 }
 
 // logTaskDueAt writes one open task through the real writer, filed against a

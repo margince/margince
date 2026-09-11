@@ -804,7 +804,7 @@ describe("the import card", () => {
     });
 
     it("is forgotten when the server will not answer for it", async () => {
-      // The run of another organization or another seat, a deleted one, or one
+      // The run of another company or another seat, a deleted one, or one
       // whose grant this reader has lost: existence is hidden as a 404, and a
       // reference nobody can open is one to drop rather than ask about again.
       localStorage.setItem(REMEMBERED_RUN_KEY, "019ff-not-yours");

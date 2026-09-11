@@ -8,10 +8,10 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * @description The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, person/organization, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
+         * @description The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, person/company, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
          * @enum {string}
          */
-        SubscribableEventType: "deal.created" | "deal.owner_changed" | "deal.stage_changed" | "deal.archived" | "deal.updated" | "deal.restored" | "project.created" | "project.updated" | "project.phase_changed" | "project.archived" | "commission.accrued" | "commission.decided" | "contract.created" | "contract.updated" | "contract.status_changed" | "contract.archived" | "deal_room.opened" | "deal_room.updated" | "deal_room.paused" | "deal_room.resumed" | "deal_room.closed" | "deal_room.archived" | "deal_room.participant_invited" | "deal_room.participant_revoked" | "deal_room.participant_credential_reissued" | "deal_room.comment_posted" | "deal_room.thread_resolved" | "deal_room.decision_recorded" | "offer.created" | "offer.sent" | "offer.accepted" | "offer.rejected" | "offer.superseded" | "pipeline.created" | "pipeline.updated" | "pipeline.archived" | "stage.created" | "stage.updated" | "stage.archived" | "person.created" | "person.archived" | "person.merged" | "person.updated" | "person.restored" | "conversation_claim.captured" | "conversation_claim.changed" | "organization.created" | "organization.archived" | "organization.merged" | "organization.updated" | "lead.created" | "lead.disqualified" | "lead.promoted" | "lead.demoted" | "lead.merged" | "lead.sla_breached" | "lead.updated" | "lead_source.changed" | "lead_disqualify_reason.changed" | "activity.captured" | "activity.archived" | "activity.updated" | "engagement.reply" | "comms.delivery_bounced" | "notice.created" | "user_delivery.changed" | "forecast.created" | "forecast.assurance_created" | "forecast.exception_resolved" | "forecast.snapshot_created" | "forecast.share_issued" | "forecast.share_revoked" | "weekly_plan.updated" | "weekly_plan.help_requested" | "activity.disposition_recorded" | "relationship_nudge.decided" | "notice.read" | "intro_request.created" | "intro_request.decided" | "intro_request.completed" | "intro_request.replied" | "intro_request.closed" | "consent.changed" | "consent.suppressed" | "consent.suppression_lifted" | "email_signature.changed" | "user_locale.changed" | "user_display_name.changed" | "linkedin_account.changed" | "linkedin_network.imported" | "linkedin_match.decided" | "retention.applied" | "retention.restricted" | "signal.detected" | "signal.resolved" | "voice.profile_created" | "voice.profile_updated" | "voice.profile_archived" | "voice.corpus_changed" | "voice.build_changed" | "voice.version_changed" | "voice.draft_outcome_recorded" | "user.invited" | "user.activated" | "user.password_link_issued" | "user.deactivated" | "user.reactivated" | "role.changed" | "team.changed" | "passport.revoked" | "onboarding.state_changed" | "mirror.conflict" | "mirror.budget_degraded" | "mirror.deleted" | "mirror.write_rejected" | "incumbent.connected" | "incumbent.disconnected" | "approval.requested" | "approval.decided" | "coldstart.read_back_proposed" | "coldstart.accepted" | "coldstart.rejected" | "audit.appended";
+        SubscribableEventType: "deal.created" | "deal.owner_changed" | "deal.stage_changed" | "deal.archived" | "deal.updated" | "deal.restored" | "project.created" | "project.updated" | "project.phase_changed" | "project.archived" | "commission.accrued" | "commission.decided" | "contract.created" | "contract.updated" | "contract.status_changed" | "contract.archived" | "deal_room.opened" | "deal_room.updated" | "deal_room.paused" | "deal_room.resumed" | "deal_room.closed" | "deal_room.archived" | "deal_room.participant_invited" | "deal_room.participant_revoked" | "deal_room.participant_credential_reissued" | "deal_room.comment_posted" | "deal_room.thread_resolved" | "deal_room.decision_recorded" | "offer.created" | "offer.sent" | "offer.accepted" | "offer.rejected" | "offer.superseded" | "pipeline.created" | "pipeline.updated" | "pipeline.archived" | "stage.created" | "stage.updated" | "stage.archived" | "person.created" | "person.archived" | "person.merged" | "person.updated" | "person.restored" | "conversation_claim.captured" | "conversation_claim.changed" | "company.created" | "company.archived" | "company.merged" | "company.updated" | "lead.created" | "lead.disqualified" | "lead.promoted" | "lead.demoted" | "lead.merged" | "lead.sla_breached" | "lead.updated" | "lead_source.changed" | "lead_disqualify_reason.changed" | "activity.captured" | "activity.archived" | "activity.updated" | "engagement.reply" | "comms.delivery_bounced" | "notice.created" | "user_delivery.changed" | "forecast.created" | "forecast.assurance_created" | "forecast.exception_resolved" | "forecast.snapshot_created" | "forecast.share_issued" | "forecast.share_revoked" | "weekly_plan.updated" | "weekly_plan.help_requested" | "activity.disposition_recorded" | "relationship_nudge.decided" | "notice.read" | "intro_request.created" | "intro_request.decided" | "intro_request.completed" | "intro_request.replied" | "intro_request.closed" | "consent.changed" | "consent.suppressed" | "consent.suppression_lifted" | "email_signature.changed" | "user_locale.changed" | "user_display_name.changed" | "linkedin_account.changed" | "linkedin_network.imported" | "linkedin_match.decided" | "retention.applied" | "retention.restricted" | "signal.detected" | "signal.resolved" | "voice.profile_created" | "voice.profile_updated" | "voice.profile_archived" | "voice.corpus_changed" | "voice.build_changed" | "voice.version_changed" | "voice.draft_outcome_recorded" | "user.invited" | "user.activated" | "user.password_link_issued" | "user.deactivated" | "user.reactivated" | "role.changed" | "team.changed" | "passport.revoked" | "onboarding.state_changed" | "mirror.conflict" | "mirror.budget_degraded" | "mirror.deleted" | "mirror.write_rejected" | "incumbent.connected" | "incumbent.disconnected" | "approval.requested" | "approval.decided" | "coldstart.read_back_proposed" | "coldstart.accepted" | "coldstart.rejected" | "audit.appended";
         /** @description Who or what caused the event, as exposed publicly. */
         PublicEventActor: {
             /** @description Actor kind (e.g. human, agent, connector). */
@@ -19,7 +19,7 @@ export interface components {
         };
         /** @description The primary entity the event concerns. */
         PublicEventEntityRef: {
-            /** @description Entity kind (e.g. deal, person, organization). */
+            /** @description Entity kind (e.g. deal, person, company). */
             type: string;
             /**
              * Format: uuid
@@ -71,7 +71,7 @@ export interface components {
              * Format: uuid
              * @description The partner who earned it.
              */
-            partner_org_id: string;
+            partner_company_id: string;
             /**
              * Format: int64
              * @description What the rate produced, in minor units of `currency`.
@@ -278,9 +278,9 @@ export interface components {
             contract_number?: string;
             /**
              * Format: uuid
-             * @description The counterparty. An organization holds many contracts.
+             * @description The counterparty. A company holds many contracts.
              */
-            organization_id: string;
+            company_id: string;
             /**
              * Format: uuid
              * @description The deal this agreement came from, when it came from one.
@@ -303,7 +303,7 @@ export interface components {
             from_status: string;
             to_status: string;
             /** Format: uuid */
-            organization_id?: string;
+            company_id?: string;
             /**
              * Format: uuid
              * @description The successor, when the transition was a renewal.
@@ -313,7 +313,7 @@ export interface components {
         /** @description Payload for contract.archived — the agreement left the surfaces that count it. */
         PublicEventContractArchived: {
             /** Format: uuid */
-            organization_id: string;
+            company_id: string;
         };
         /** @description Payload for project.created — a body of work was opened on a company. */
         PublicEventProjectCreated: {
@@ -325,7 +325,7 @@ export interface components {
              * Format: uuid
              * @description The anchor company. A project has exactly one.
              */
-            organization_id: string;
+            company_id: string;
             /** Format: uuid */
             owner_id?: string;
             /** @description Always `initiative` — a project is born at the head of the ladder. */
@@ -391,7 +391,7 @@ export interface components {
              * Format: uuid
              * @description The partner the deal named at the moment of the move, when it named one. Frozen here for the same reason the amount is: the commission a win earns is priced on what was true that day, and re-reading the deal later would price it on an attribution somebody edited afterwards.
              */
-            partner_org_id?: string;
+            partner_company_id?: string;
             /** @description What that partner did — sourced or influenced — at the moment of the move. Commission accrues on sourced only. */
             partner_attribution?: string;
             /** @description The native→base rate frozen at close, carried because REOPENING a deal clears it: a consumer reading the deal back after a reopen could not recover the rate the win was priced at. */
@@ -642,47 +642,47 @@ export interface components {
             /** @description The claim's status after the correction — open, done or dismissed. A plain string for the same reason as `kind` above. */
             status: string;
         };
-        /** @description Payload for organization.created — a UNION across five emit sites (a direct create, the capture auto-create engine, the anchor company save, the site-read confirmation, and the cold-start profile apply), each of which sets only its own subset; every field is therefore optional. */
-        PublicEventOrganizationCreated: {
-            /** @description The organization's display name at creation (absent when the site never set one). */
+        /** @description Payload for company.created — a UNION across five emit sites (a direct create, the capture auto-create engine, the anchor company save, the site-read confirmation, and the cold-start profile apply), each of which sets only its own subset; every field is therefore optional. */
+        PublicEventCompanyCreated: {
+            /** @description The company's display name at creation (absent when the site never set one). */
             display_name?: string;
-            /** @description The organization's primary domain (cold-start apply only). */
+            /** @description The company's primary domain (cold-start apply only). */
             primary_domain?: string;
             /** @description The fields the creating site applied (company save / site-read confirmation only). */
             delta?: {
                 [key: string]: unknown;
             };
-            /** @description Where this organization originated (e.g. human, site_read). */
+            /** @description Where this company originated (e.g. human, site_read). */
             source?: string;
-            /** @description The source page this organization was read from (site-read confirmation only). */
+            /** @description The source page this company was read from (site-read confirmation only). */
             source_url?: string;
             /**
              * Format: uuid
-             * @description The site-read that produced this organization (site-read confirmation only).
+             * @description The site-read that produced this company (site-read confirmation only).
              */
             site_read_id?: string;
-            /** @description Whether this is the installation's own anchor organization (company save only). */
+            /** @description Whether this is the installation's own anchor company (company save only). */
             anchor?: boolean;
-            /** @description The principal that created this organization. */
+            /** @description The principal that created this company. */
             captured_by?: string;
         };
-        /** @description Payload for organization.archived — an organization was archived. Carries no data. */
-        PublicEventOrganizationArchived: Record<string, never>;
-        /** @description Payload for organization.merged — two organization records collapsed into one (the §1.3 merge); neither organization.updated nor organization.archived can say this, so it is its own verb. */
-        PublicEventOrganizationMerged: {
+        /** @description Payload for company.archived — a company was archived. Carries no data. */
+        PublicEventCompanyArchived: Record<string, never>;
+        /** @description Payload for company.merged — two company records collapsed into one (the §1.3 merge); neither company.updated nor company.archived can say this, so it is its own verb. */
+        PublicEventCompanyMerged: {
             /**
              * Format: uuid
-             * @description The merged-away (source) organization, retired but still fetchable by id.
+             * @description The merged-away (source) company, retired but still fetchable by id.
              */
             merged_from_id: string;
             /**
              * Format: uuid
-             * @description The survivor (target) organization.
+             * @description The survivor (target) company.
              */
             merged_into_id: string;
         };
-        /** @description Payload for organization.updated — an OPEN envelope: eight emit sites carry divergent shapes (a flat column patch, the anchor company save's field delta, the partner extension's nested delta, enrichment/deep-read applies, a relationship delta), so the honest shape is a change-set map rather than a fixed field list. */
-        PublicEventOrganizationUpdated: {
+        /** @description Payload for company.updated — an OPEN envelope: eight emit sites carry divergent shapes (a flat column patch, the anchor company save's field delta, the partner extension's nested delta, enrichment/deep-read applies, a relationship delta), so the honest shape is a change-set map rather than a fixed field list. */
+        PublicEventCompanyUpdated: {
             /** @description What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form. */
             changed_fields: {
                 [key: string]: unknown;
@@ -803,7 +803,7 @@ export interface components {
         PublicEventActivityArchived: Record<string, never>;
         /** @description The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb. */
         PublicEventActivityRelinkedRef: {
-            /** @description The relink target's kind (person | organization | deal | lead). */
+            /** @description The relink target's kind (person | company | deal | lead). */
             entity_type: string;
             /**
              * Format: uuid
@@ -811,7 +811,7 @@ export interface components {
              */
             entity_id: string;
         };
-        /** @description activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/organization/deal/lead.updated's genuinely open patch), so it is typed rather than an open map. */
+        /** @description activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map. */
         PublicEventActivityChangedFields: {
             /** @description The activity's new subject (absent when this update did not touch it). */
             subject?: string;
@@ -851,7 +851,7 @@ export interface components {
              */
             audience?: "workspace" | "participants" | "selected";
         };
-        /** @description Payload for activity.updated — a BOUNDED delta (unlike the person/organization/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map. */
+        /** @description Payload for activity.updated — a BOUNDED delta (unlike the person/company/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map. */
         PublicEventActivityUpdated: {
             changed_fields: components["schemas"]["PublicEventActivityChangedFields"];
         };
@@ -1225,7 +1225,7 @@ export interface components {
             /** @description Why this action ran (Art. 17 erasure only — e.g. dsr_request; absent for both retention-sweep sites). */
             reason?: string;
         };
-        /** @description Payload for signal.detected — a signal was created (signals/signal.go's CreateSignal). entity_type/entity_id are DATA fields naming the signal's subject (deal | organization | person) when one is already known at creation time — not the envelope's own entity ref, which is the signal itself (this event's entity type is the static "signal"). Both are absent on a raw signal (only a raw_ref), which enters unresolved and waits for the resolver; resolution_confidence is set only when the signal was created already resolved. */
+        /** @description Payload for signal.detected — a signal was created (signals/signal.go's CreateSignal). entity_type/entity_id are DATA fields naming the signal's subject (deal | company | person) when one is already known at creation time — not the envelope's own entity ref, which is the signal itself (this event's entity type is the static "signal"). Both are absent on a raw signal (only a raw_ref), which enters unresolved and waits for the resolver; resolution_confidence is set only when the signal was created already resolved. */
         PublicEventSignalDetected: {
             /**
              * Format: uuid
@@ -1240,7 +1240,7 @@ export interface components {
             resolution_state: string;
             /** @description The signal's severity (info | warn | urgent). */
             severity: string;
-            /** @description The subject record's type (deal | organization | person) — a payload data field, absent until a raw signal resolves (both entity fields set together). x-go-name avoids colliding with the generated EntityType() method, which names the ENVELOPE'S entity (always "signal"), not this data field. */
+            /** @description The subject record's type (deal | company | person) — a payload data field, absent until a raw signal resolves (both entity fields set together). x-go-name avoids colliding with the generated EntityType() method, which names the ENVELOPE'S entity (always "signal"), not this data field. */
             entity_type?: string;
             /**
              * Format: uuid
@@ -1250,7 +1250,7 @@ export interface components {
             /** @description The match confidence (0–1), set only when created already resolved. */
             resolution_confidence?: number;
         };
-        /** @description Payload for signal.resolved — the resolver ran over a signal (signals/resolver.go's Resolve). The verdict IS the candidate count (P12): zero candidates drops the signal (resolved_org_id, resolved_person_id, matched_on, match_confidence all absent); exactly one resolves it to that org (resolved_org_id set, resolved_person_id set only under a recorded consent grant); several flags it low_confidence for review (matched_on/ match_confidence describe the top candidate, resolved_org_id stays absent). */
+        /** @description Payload for signal.resolved — the resolver ran over a signal (signals/resolver.go's Resolve). The verdict IS the candidate count (P12): zero candidates drops the signal (resolved_company_id, resolved_person_id, matched_on, match_confidence all absent); exactly one resolves it to that company (resolved_company_id set, resolved_person_id set only under a recorded consent grant); several flags it low_confidence for review (matched_on/ match_confidence describe the top candidate, resolved_company_id stays absent). */
         PublicEventSignalResolved: {
             /**
              * Format: uuid
@@ -1261,9 +1261,9 @@ export interface components {
             resolution_state: string;
             /**
              * Format: uuid
-             * @description The organization the signal resolved to (absent when dropped or ambiguous).
+             * @description The company the signal resolved to (absent when dropped or ambiguous).
              */
-            resolved_org_id?: string;
+            resolved_company_id?: string;
             /**
              * Format: uuid
              * @description The consent-gated person the signal resolved to (absent unless an existing person under a recorded consent grant matched).
@@ -1724,7 +1724,7 @@ type ReadonlyArray<T> = [
 ] extends [
     unknown[]
 ] ? Readonly<Exclude<T, undefined>> : Readonly<Exclude<T, undefined>[]>;
-export const subscribableEventTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["SubscribableEventType"]> = ["deal.created", "deal.owner_changed", "deal.stage_changed", "deal.archived", "deal.updated", "deal.restored", "project.created", "project.updated", "project.phase_changed", "project.archived", "commission.accrued", "commission.decided", "contract.created", "contract.updated", "contract.status_changed", "contract.archived", "deal_room.opened", "deal_room.updated", "deal_room.paused", "deal_room.resumed", "deal_room.closed", "deal_room.archived", "deal_room.participant_invited", "deal_room.participant_revoked", "deal_room.participant_credential_reissued", "deal_room.comment_posted", "deal_room.thread_resolved", "deal_room.decision_recorded", "offer.created", "offer.sent", "offer.accepted", "offer.rejected", "offer.superseded", "pipeline.created", "pipeline.updated", "pipeline.archived", "stage.created", "stage.updated", "stage.archived", "person.created", "person.archived", "person.merged", "person.updated", "person.restored", "conversation_claim.captured", "conversation_claim.changed", "organization.created", "organization.archived", "organization.merged", "organization.updated", "lead.created", "lead.disqualified", "lead.promoted", "lead.demoted", "lead.merged", "lead.sla_breached", "lead.updated", "lead_source.changed", "lead_disqualify_reason.changed", "activity.captured", "activity.archived", "activity.updated", "engagement.reply", "comms.delivery_bounced", "notice.created", "user_delivery.changed", "forecast.created", "forecast.assurance_created", "forecast.exception_resolved", "forecast.snapshot_created", "forecast.share_issued", "forecast.share_revoked", "weekly_plan.updated", "weekly_plan.help_requested", "activity.disposition_recorded", "relationship_nudge.decided", "notice.read", "intro_request.created", "intro_request.decided", "intro_request.completed", "intro_request.replied", "intro_request.closed", "consent.changed", "consent.suppressed", "consent.suppression_lifted", "email_signature.changed", "user_locale.changed", "user_display_name.changed", "linkedin_account.changed", "linkedin_network.imported", "linkedin_match.decided", "retention.applied", "retention.restricted", "signal.detected", "signal.resolved", "voice.profile_created", "voice.profile_updated", "voice.profile_archived", "voice.corpus_changed", "voice.build_changed", "voice.version_changed", "voice.draft_outcome_recorded", "user.invited", "user.activated", "user.password_link_issued", "user.deactivated", "user.reactivated", "role.changed", "team.changed", "passport.revoked", "onboarding.state_changed", "mirror.conflict", "mirror.budget_degraded", "mirror.deleted", "mirror.write_rejected", "incumbent.connected", "incumbent.disconnected", "approval.requested", "approval.decided", "coldstart.read_back_proposed", "coldstart.accepted", "coldstart.rejected", "audit.appended"];
+export const subscribableEventTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["SubscribableEventType"]> = ["deal.created", "deal.owner_changed", "deal.stage_changed", "deal.archived", "deal.updated", "deal.restored", "project.created", "project.updated", "project.phase_changed", "project.archived", "commission.accrued", "commission.decided", "contract.created", "contract.updated", "contract.status_changed", "contract.archived", "deal_room.opened", "deal_room.updated", "deal_room.paused", "deal_room.resumed", "deal_room.closed", "deal_room.archived", "deal_room.participant_invited", "deal_room.participant_revoked", "deal_room.participant_credential_reissued", "deal_room.comment_posted", "deal_room.thread_resolved", "deal_room.decision_recorded", "offer.created", "offer.sent", "offer.accepted", "offer.rejected", "offer.superseded", "pipeline.created", "pipeline.updated", "pipeline.archived", "stage.created", "stage.updated", "stage.archived", "person.created", "person.archived", "person.merged", "person.updated", "person.restored", "conversation_claim.captured", "conversation_claim.changed", "company.created", "company.archived", "company.merged", "company.updated", "lead.created", "lead.disqualified", "lead.promoted", "lead.demoted", "lead.merged", "lead.sla_breached", "lead.updated", "lead_source.changed", "lead_disqualify_reason.changed", "activity.captured", "activity.archived", "activity.updated", "engagement.reply", "comms.delivery_bounced", "notice.created", "user_delivery.changed", "forecast.created", "forecast.assurance_created", "forecast.exception_resolved", "forecast.snapshot_created", "forecast.share_issued", "forecast.share_revoked", "weekly_plan.updated", "weekly_plan.help_requested", "activity.disposition_recorded", "relationship_nudge.decided", "notice.read", "intro_request.created", "intro_request.decided", "intro_request.completed", "intro_request.replied", "intro_request.closed", "consent.changed", "consent.suppressed", "consent.suppression_lifted", "email_signature.changed", "user_locale.changed", "user_display_name.changed", "linkedin_account.changed", "linkedin_network.imported", "linkedin_match.decided", "retention.applied", "retention.restricted", "signal.detected", "signal.resolved", "voice.profile_created", "voice.profile_updated", "voice.profile_archived", "voice.corpus_changed", "voice.build_changed", "voice.version_changed", "voice.draft_outcome_recorded", "user.invited", "user.activated", "user.password_link_issued", "user.deactivated", "user.reactivated", "role.changed", "team.changed", "passport.revoked", "onboarding.state_changed", "mirror.conflict", "mirror.budget_degraded", "mirror.deleted", "mirror.write_rejected", "incumbent.connected", "incumbent.disconnected", "approval.requested", "approval.decided", "coldstart.read_back_proposed", "coldstart.accepted", "coldstart.rejected", "audit.appended"];
 export const publicEventLeadSourceChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventLeadSourceChanged"]["change"]> = ["created", "updated", "deleted"];
 export const publicEventLeadDisqualifyReasonChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventLeadDisqualifyReasonChanged"]["change"]> = ["created", "updated", "deleted"];
 export const publicEventActivityChangedFieldsMeeting_statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["meeting_status"]> = ["booked", "held", "no_show", "canceled"];

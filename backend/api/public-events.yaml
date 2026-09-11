@@ -23,7 +23,7 @@ components:
       description: >-
         The closed set of domain event types a webhook subscription may
         select — every subscribable event across the deal, offer,
-        pipeline/stage, person/organization, lead, activities,
+        pipeline/stage, person/company, lead, activities,
         consent/privacy, signals, ai voice, identity, and overlay families.
         A subscription's event-type filter is validated against this set;
         an unlisted type cannot be subscribed to.
@@ -74,10 +74,10 @@ components:
         - person.restored
         - conversation_claim.captured
         - conversation_claim.changed
-        - organization.created
-        - organization.archived
-        - organization.merged
-        - organization.updated
+        - company.created
+        - company.archived
+        - company.merged
+        - company.updated
         - lead.created
         - lead.disqualified
         - lead.promoted
@@ -169,7 +169,7 @@ components:
       properties:
         type:
           type: string
-          description: Entity kind (e.g. deal, person, organization).
+          description: Entity kind (e.g. deal, person, company).
         id:
           type: string
           format: uuid
@@ -251,7 +251,7 @@ components:
       description: Payload for commission.accrued — a won deal earned its partner a commission.
       required:
         - deal_id
-        - partner_org_id
+        - partner_company_id
         - amount_minor
         - currency
         - rate_bps
@@ -260,7 +260,7 @@ components:
           type: string
           format: uuid
           description: The won deal the entry was accrued on.
-        partner_org_id:
+        partner_company_id:
           type: string
           format: uuid
           description: The partner who earned it.
@@ -624,7 +624,7 @@ components:
       description: Payload for contract.created — an agreement was recorded against a company.
       required:
         - title
-        - organization_id
+        - company_id
         - status
         - value_basis
       properties:
@@ -633,10 +633,10 @@ components:
         contract_number:
           type: string
           description: The counterparty's own number for the agreement, when one was given.
-        organization_id:
+        company_id:
           type: string
           format: uuid
-          description: The counterparty. An organization holds many contracts.
+          description: The counterparty. A company holds many contracts.
         deal_id:
           type: string
           format: uuid
@@ -684,7 +684,7 @@ components:
           type: string
         to_status:
           type: string
-        organization_id:
+        company_id:
           type: string
           format: uuid
         superseded_by_id:
@@ -700,9 +700,9 @@ components:
       x-version: 1
       description: Payload for contract.archived — the agreement left the surfaces that count it.
       required:
-        - organization_id
+        - company_id
       properties:
-        organization_id:
+        company_id:
           type: string
           format: uuid
       additionalProperties: false
@@ -715,7 +715,7 @@ components:
       description: Payload for project.created — a body of work was opened on a company.
       required:
         - name
-        - organization_id
+        - company_id
         - phase
       properties:
         name:
@@ -724,7 +724,7 @@ components:
         key:
           type: string
           description: The short handle inbound mail is matched against, when one was given.
-        organization_id:
+        company_id:
           type: string
           format: uuid
           description: The anchor company. A project has exactly one.
@@ -852,7 +852,7 @@ components:
         win_probability:
           type: integer
           description: The target stage's win probability, frozen at the moment of the move.
-        partner_org_id:
+        partner_company_id:
           type: string
           format: uuid
           description: >-
@@ -1416,13 +1416,13 @@ components:
             A plain string for the same reason as `kind` above.
       additionalProperties: false
 
-    PublicEventOrganizationCreated:
+    PublicEventCompanyCreated:
       type: object
-      x-event-type: organization.created
-      x-entity-type: organization
+      x-event-type: company.created
+      x-entity-type: company
       x-version: 1
       description: >-
-        Payload for organization.created — a UNION across five emit sites
+        Payload for company.created — a UNION across five emit sites
         (a direct create, the capture auto-create engine, the anchor
         company save, the site-read confirmation, and the cold-start
         profile apply), each of which sets only its own subset; every
@@ -1430,49 +1430,49 @@ components:
       properties:
         display_name:
           type: string
-          description: The organization's display name at creation (absent when the site never set one).
+          description: The company's display name at creation (absent when the site never set one).
         primary_domain:
           type: string
-          description: The organization's primary domain (cold-start apply only).
+          description: The company's primary domain (cold-start apply only).
         delta:
           type: object
           additionalProperties: true
           description: The fields the creating site applied (company save / site-read confirmation only).
         source:
           type: string
-          description: Where this organization originated (e.g. human, site_read).
+          description: Where this company originated (e.g. human, site_read).
         source_url:
           type: string
-          description: The source page this organization was read from (site-read confirmation only).
+          description: The source page this company was read from (site-read confirmation only).
         site_read_id:
           type: string
           format: uuid
-          description: The site-read that produced this organization (site-read confirmation only).
+          description: The site-read that produced this company (site-read confirmation only).
         anchor:
           type: boolean
-          description: Whether this is the installation's own anchor organization (company save only).
+          description: Whether this is the installation's own anchor company (company save only).
         captured_by:
           type: string
-          description: The principal that created this organization.
+          description: The principal that created this company.
       additionalProperties: false
 
-    PublicEventOrganizationArchived:
+    PublicEventCompanyArchived:
       type: object
-      x-event-type: organization.archived
-      x-entity-type: organization
+      x-event-type: company.archived
+      x-entity-type: company
       x-version: 1
-      description: Payload for organization.archived — an organization was archived. Carries no data.
+      description: Payload for company.archived — a company was archived. Carries no data.
       additionalProperties: false
 
-    PublicEventOrganizationMerged:
+    PublicEventCompanyMerged:
       type: object
-      x-event-type: organization.merged
-      x-entity-type: organization
+      x-event-type: company.merged
+      x-entity-type: company
       x-version: 1
       description: >-
-        Payload for organization.merged — two organization records
-        collapsed into one (the §1.3 merge); neither organization.updated
-        nor organization.archived can say this, so it is its own verb.
+        Payload for company.merged — two company records
+        collapsed into one (the §1.3 merge); neither company.updated
+        nor company.archived can say this, so it is its own verb.
       required:
         - merged_from_id
         - merged_into_id
@@ -1480,20 +1480,20 @@ components:
         merged_from_id:
           type: string
           format: uuid
-          description: The merged-away (source) organization, retired but still fetchable by id.
+          description: The merged-away (source) company, retired but still fetchable by id.
         merged_into_id:
           type: string
           format: uuid
-          description: The survivor (target) organization.
+          description: The survivor (target) company.
       additionalProperties: false
 
-    PublicEventOrganizationUpdated:
+    PublicEventCompanyUpdated:
       type: object
-      x-event-type: organization.updated
-      x-entity-type: organization
+      x-event-type: company.updated
+      x-entity-type: company
       x-version: 1
       description: >-
-        Payload for organization.updated — an OPEN envelope: eight emit
+        Payload for company.updated — an OPEN envelope: eight emit
         sites carry divergent shapes (a flat column patch, the anchor
         company save's field delta, the partner extension's nested
         delta, enrichment/deep-read applies, a relationship delta), so
@@ -1811,7 +1811,7 @@ components:
       properties:
         entity_type:
           type: string
-          description: The relink target's kind (person | organization | deal | lead).
+          description: The relink target's kind (person | company | deal | lead).
         entity_id:
           type: string
           format: uuid
@@ -1826,7 +1826,7 @@ components:
         assignee_id, is_done, meeting_status) each carried only when this update touched
         them, plus RelinkActivity's relinked target and SetActivityAudience's
         audience — a fixed, KNOWN key
-        set (unlike person/organization/deal/lead.updated's genuinely
+        set (unlike person/company/deal/lead.updated's genuinely
         open patch), so it is typed rather than an open map.
       properties:
         subject:
@@ -1891,7 +1891,7 @@ components:
       x-version: 1
       description: >-
         Payload for activity.updated — a BOUNDED delta (unlike the
-        person/organization/deal/lead family's genuinely open patch):
+        person/company/deal/lead family's genuinely open patch):
         UpdateActivity and RelinkActivity together cover a fixed, KNOWN
         set of inner keys, so changed_fields is a typed struct here, not
         an open map.
@@ -2932,7 +2932,7 @@ components:
       description: >-
         Payload for signal.detected — a signal was created (signals/signal.go's
         CreateSignal). entity_type/entity_id are DATA fields naming the
-        signal's subject (deal | organization | person) when one is already
+        signal's subject (deal | company | person) when one is already
         known at creation time — not the envelope's own entity ref, which is
         the signal itself (this event's entity type is the static "signal").
         Both are absent on a raw signal (only a raw_ref), which enters
@@ -2969,7 +2969,7 @@ components:
           type: string
           x-go-name: SubjectEntityType
           description: >-
-            The subject record's type (deal | organization | person) — a
+            The subject record's type (deal | company | person) — a
             payload data field, absent until a raw signal resolves (both
             entity fields set together). x-go-name avoids colliding with the
             generated EntityType() method, which names the ENVELOPE'S entity
@@ -2992,12 +2992,12 @@ components:
       description: >-
         Payload for signal.resolved — the resolver ran over a signal
         (signals/resolver.go's Resolve). The verdict IS the candidate count
-        (P12): zero candidates drops the signal (resolved_org_id,
+        (P12): zero candidates drops the signal (resolved_company_id,
         resolved_person_id, matched_on, match_confidence all absent);
-        exactly one resolves it to that org (resolved_org_id set,
+        exactly one resolves it to that company (resolved_company_id set,
         resolved_person_id set only under a recorded consent grant);
         several flags it low_confidence for review (matched_on/
-        match_confidence describe the top candidate, resolved_org_id stays
+        match_confidence describe the top candidate, resolved_company_id stays
         absent).
       required:
         - signal_id
@@ -3010,10 +3010,10 @@ components:
         resolution_state:
           type: string
           description: The state after resolving (resolved | low_confidence | dropped).
-        resolved_org_id:
+        resolved_company_id:
           type: string
           format: uuid
-          description: The organization the signal resolved to (absent when dropped or ambiguous).
+          description: The company the signal resolved to (absent when dropped or ambiguous).
         resolved_person_id:
           type: string
           format: uuid

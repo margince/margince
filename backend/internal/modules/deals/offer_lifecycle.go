@@ -136,22 +136,22 @@ func offerSentPayload(current crmcontracts.Offer, rate string) crmcontracts.Publ
 }
 
 // sendSnapshots captures the buyer and issuer legal blocks at send time:
-// the sent document stays truthful even when the org or workspace is
+// the sent document stays truthful even when the company or workspace is
 // later renamed.
 func (s *Store) sendSnapshots(ctx context.Context, tx pgx.Tx, baseCurrency string,
 	offer crmcontracts.Offer,
 ) (buyer, issuer map[string]any, err error) {
-	if offer.BuyerOrgId != nil {
+	if offer.BuyerCompanyId != nil {
 		var displayName string
 		var legalName *string
 		err := tx.QueryRow(ctx,
-			`SELECT display_name, legal_name FROM organization WHERE id = $1`, offer.BuyerOrgId).
+			`SELECT display_name, legal_name FROM company WHERE id = $1`, offer.BuyerCompanyId).
 			Scan(&displayName, &legalName)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil, fmt.Errorf("snapshot buyer organization: %w", err)
+			return nil, nil, fmt.Errorf("snapshot buyer company: %w", err)
 		}
 		if err == nil {
-			buyer = map[string]any{"organization_id": offer.BuyerOrgId, "display_name": displayName}
+			buyer = map[string]any{filterCompanyID: offer.BuyerCompanyId, "display_name": displayName}
 			if legalName != nil {
 				buyer["legal_name"] = *legalName
 			}
@@ -392,10 +392,10 @@ func nextOfferRevision(ctx context.Context, tx pgx.Tx, wsID ids.UUID, offerNumbe
 func copyOfferIntoRevision(ctx context.Context, tx pgx.Tx, fromID, newID ids.OfferID, nextRevision int, by string) error {
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
-		                    buyer_org_id, valid_until, intro_text, terms_text,
+		                    buyer_company_id, valid_until, intro_text, terms_text,
 		                    net_minor, tax_minor, gross_minor, source, captured_by)
 		 SELECT $1, deal_id, offer_number, $3, 'draft', currency,
-		        buyer_org_id, valid_until, intro_text, terms_text,
+		        buyer_company_id, valid_until, intro_text, terms_text,
 		        net_minor, tax_minor, gross_minor, source, $4
 		 FROM offer WHERE id = $2`,
 		newID, fromID, nextRevision, by); err != nil {

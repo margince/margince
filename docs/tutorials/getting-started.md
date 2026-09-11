@@ -1,7 +1,7 @@
 # Getting started
 
 This tutorial takes you from a fresh clone to a running Margince
-instance with a bootstrapped organization, using only the repository's
+instance with a bootstrapped company, using only the repository's
 Makefile targets.
 
 ## Prerequisites
@@ -46,8 +46,8 @@ the outbox relay runs inline in the api process, so this one command is a
 complete install; it returns when ready and the servers run in the
 background — stop them with `make dev-stop`.
 
-One installation serves one organization: on its first boot
-against the empty database, the api bootstraps the organization and admin
+One installation serves one company: on its first boot
+against the empty database, the api bootstraps the company and admin
 user from the deployment config `config/margince.yaml`. `make dev` seeds
 that file (and the admin password file) from
 [`config/margince.example.yaml`](../../config/margince.example.yaml) on first
@@ -73,7 +73,7 @@ is what a first customer sees. Run `make seed-dev` against the running stack
 when you want demo records (idempotent, re-runnable).
 
 Prefer the API? Log in and reuse the session. The `crm_session` cookie is `Secure`, so pull it out of
-the login response rather than relying on curl's jar; the server resolves its singleton organization
+the login response rather than relying on curl's jar; the server resolves its singleton company
 itself — no header selects a tenant:
 
 ```sh

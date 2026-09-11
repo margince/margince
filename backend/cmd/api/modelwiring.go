@@ -166,7 +166,7 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 	if modelPath == nil {
 		return nil
 	}
-	// The read-back and per-org enrichment share the fetch + extraction
+	// The read-back and per-company enrichment share the fetch + extraction
 	// seam, so both light up together on the one resolved model path;
 	// the Morning-Brief L2 re-order rides its own routed lane.
 	fetch := compose.NewWebFetcher()
@@ -308,7 +308,7 @@ func geocodeEnqueueOptions(inserter *jobs.Runner, baseURL string) []compose.Opti
 // vatcheck.Configured says this installation consults a register — the same
 // predicate cmd/worker's vatCheckerFor gates its own client on. Unset, this
 // is answered by the existing people.ErrNoVatRegisterConfigured refusal
-// (organization_vat_check.go) instead of a queued consultation no worker
+// (company_vat_check.go) instead of a queued consultation no worker
 // will ever service.
 func vatCheckEnqueueOptions(inserter *jobs.Runner, baseURL string) []compose.Option {
 	if !vatcheck.Configured(baseURL) {

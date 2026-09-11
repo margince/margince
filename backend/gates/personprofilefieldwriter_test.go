@@ -181,7 +181,7 @@ var personProfileFieldProbes = []struct {
 	// sweep clear this table deliberately, and every render of it is a read.
 	{"a read of the table", false, "\nfunc read() string {\n\treturn `SELECT value FROM person_profile_field WHERE person_id = $1`\n}"},
 	{"the erasure delete", false, "\nfunc erase() string {\n\treturn `DELETE FROM person_profile_field WHERE person_id = $1`\n}"},
-	{"a join naming the table", false, "\nfunc read() string {\n\treturn `SELECT 1 FROM person p JOIN person_profile_field f ON f.person_id = p.id AND f.field = 'org_name'`\n}"},
+	{"a join naming the table", false, "\nfunc read() string {\n\treturn `SELECT 1 FROM person p JOIN person_profile_field f ON f.person_id = p.id AND f.field = 'company_name'`\n}"},
 
 	// Two shapes that escaped the first detector, each verified green against
 	// it before this one was widened.

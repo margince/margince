@@ -37,8 +37,8 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 // company that never appeared — was it refused, and by whom? So `source` is a
 // first-class column, not a detail: a bulk-sender verdict and somebody's
 // deliberate call look identical in the outcome and are completely different
-// facts. Every human role reads the list (`organization:read`); changing an
-// entry demands `organization:update`, so the verb is refused rather than
+// facts. Every human role reads the list (`company:read`); changing an
+// entry demands `company:update`, so the verb is refused rather than
 // hidden, like the capture cards beside it.
 //
 // The write is a PUT that is idempotent on the normalized domain: there is no
@@ -133,7 +133,7 @@ export function BlockedDomainsCard() {
   // fixed installation zone would put the moment they are correlating against
   // an hour they were not working.
   const zone = viewerZone();
-  const canManage = useCanWrite("organization", "update");
+  const canManage = useCanWrite("company", "update");
   const query = useBlockedDomains();
   const set = useSetBlockedDomain();
   // The decision being written, and the dialog's own open state: one piece of
@@ -307,10 +307,10 @@ function decisionColumns({
               link rather than the id it is built from: the payload carries no
               name, and printing a UUID at an operator is not a fact they can
               use. */}
-          {row.organization_id != null && (
+          {row.company_id != null && (
             <>
               {" "}
-              <a href={`#/companies/${row.organization_id}`}>
+              <a href={`#/companies/${row.company_id}`}>
                 {t("blockedDomains.openCompany")}
               </a>
             </>
@@ -377,7 +377,7 @@ function decisionColumns({
 /**
  * The write, in a dialog.
  *
- * It is only ever opened by a seat holding `organization:update` — both verbs
+ * It is only ever opened by a seat holding `company:update` — both verbs
  * that open it are refused without the grant — so nothing in here restates the
  * denial. The mutation belongs to the CARD rather than to this component,
  * because what landed is reported after the dialog has closed.

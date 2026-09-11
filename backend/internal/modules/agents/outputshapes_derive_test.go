@@ -151,7 +151,7 @@ func TestEveryResultTypeSatisfiesTheSchemaDerivedFromIt(t *testing.T) {
 		"PassthroughEntity":    PassthroughEntityResult{ID: id},
 		"listPipelinesAnswer":  listPipelinesAnswer{Pipelines: []Pipeline{{ID: id, Name: "Sales", IsDefault: true, Stages: []Stage{{ID: id, Name: "Open", Semantic: "open"}}}}},
 		"WhoKnowsAnswer":       WhoKnowsAnswer{PersonID: id, Colleagues: []KnownColleague{{UserID: id, DisplayName: "Ada", StrengthBucket: "moderate"}}},
-		"IntroPathAnswer":      IntroPathAnswer{OrganizationID: id, Routes: []IntroRoute{}},
+		"IntroPathAnswer":      IntroPathAnswer{CompanyID: id, Routes: []IntroRoute{}},
 		"AtRiskReport":         AtRiskReport{Deals: []AtRiskDeal{}, DealsScanned: 4},
 		"DealCoverageAnswer":   DealCoverageAnswer{DealID: id, Stakeholders: []CoverageSeat{}, OurSide: []KnownColleague{}, Risks: []CoverageRisk{}, SectionsOmitted: []string{}},
 		// The withheld shape as its own case. It is the answer whose three

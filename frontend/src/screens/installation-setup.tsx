@@ -89,7 +89,7 @@ export function useInstallationSetup() {
 
 /**
  * The steps this screen has a panel for, in the order the server reports
- * them: the model binding, which blocks, and the organisation's OAuth app,
+ * them: the model binding, which blocks, and the company's OAuth app,
  * which does not — held by TestOnlyTheModelBindingBlocksFirstRun.
  *
  * It is read by `outstandingStep` rather than only by the render, and that is
@@ -112,7 +112,7 @@ const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models", "oauth_app"];
  * the installation it was about: a machine that had run one cold start carried
  * that answer into the next, and the second installation's setup skipped the
  * platform question with nothing on screen to say why — the one step that asks
- * for the organization's OAuth app, silently gone, on the run that most needed
+ * for the company's OAuth app, silently gone, on the run that most needed
  * it. A re-claimed installation mints its own administrator, so its cold start
  * asks again; the same person on the same installation is still asked once.
  */
@@ -577,10 +577,10 @@ function AiStep({
 }
 
 /**
- * What the organization runs on — ONE answer covering mail and sign-in.
+ * What the company runs on — ONE answer covering mail and sign-in.
  *
  * They are separate mechanisms in the server and the same fact about a
- * company: an organization on Workspace reads mail through a Google app and
+ * company: a company on Workspace reads mail through a Google app and
  * signs its people in with Google accounts, through that same app and the same
  * console entry. Two questions would ask somebody to state one fact twice and
  * then keep the two answers agreeing.

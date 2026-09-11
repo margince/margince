@@ -51,7 +51,7 @@ func (s *Store) GetProject(ctx context.Context, id ids.ProjectID, archived store
 // opens the transaction itself reads the catalog BEFORE opening it, then
 // threads the answer in — the same order every store-opened entry point keeps,
 // because the catalog read takes a connection of its own. It takes
-// project:read, as people's ActiveOrganizationColumns takes organization:read:
+// project:read, as people's ActiveCompanyColumns takes company:read:
 // which columns a record type carries is a fact about that record type.
 func (s *Store) ActiveProjectColumns(ctx context.Context) (CustomColumns, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
@@ -86,7 +86,7 @@ type ListProjectsInput struct {
 	Cursor          *string
 	Limit           *int
 	Query           *string
-	OrganizationID  *ids.OrganizationID
+	CompanyID       *ids.CompanyID
 	OwnerID         *ids.UserID
 	Phase           *string
 	Key             *string
@@ -112,8 +112,8 @@ const projectNameField = "name"
 
 // The two columns the list draws that it did not sort by.
 const (
-	projectPhaseColumn = "phase"
-	projectOrgColumn   = "organization_id"
+	projectPhaseColumn   = "phase"
+	projectCompanyColumn = "company_id"
 )
 
 // projectListFields is the project list's core sortable vocabulary.
@@ -136,11 +136,11 @@ var projectListFields = map[string]storekit.SortField{
 	// see every account, so the same rule the deals list applies holds here:
 	// ordering by a name is reading it, and a company outside this caller's
 	// scope orders the page by nothing.
-	projectOrgColumn: {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompany},
+	projectCompanyColumn: {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompany},
 }
 
 // companyGrantVisible answers whether this caller holds the OBJECT half of
-// organization.read. A system principal holds every object grant by
+// company.read. A system principal holds every object grant by
 // construction; a seat holds what its role was given.
 func companyGrantVisible(ctx context.Context) bool {
 	actor, ok := principal.Actor(ctx)
@@ -150,7 +150,7 @@ func companyGrantVisible(ctx context.Context) bool {
 	if actor.Type == principal.PrincipalSystem {
 		return true
 	}
-	return actor.Permissions.Allows("organization", principal.ActionRead)
+	return actor.Permissions.Allows("company", principal.ActionRead)
 }
 
 // orderByPhase arranges projects the way the account page already arranges
@@ -164,8 +164,8 @@ func orderByPhase(context.Context, func(any) int) (string, error) {
 //
 // Ordering by a value is reading it, so BOTH halves of RBAC bound it. The
 // object grant first: auth.ScopeClauseFor answers row visibility and never
-// asks whether this caller may read organizations at all, so a seat holding
-// project.read and no organization.read would otherwise have its page arranged
+// asks whether this caller may read companies at all, so a seat holding
+// project.read and no company.read would otherwise have its page arranged
 // by company names it is refused on every other surface.
 //
 // Then the row scope, INSIDE the subquery: a company outside it answers NULL,
@@ -178,15 +178,15 @@ func orderByReadableCompany(ctx context.Context, arg func(any) int) (string, err
 		// back to its tie-breaker.
 		return "NULL::text", nil
 	}
-	scope, err := auth.ScopeClauseFor(ctx, "organization", "org_sort", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "company", "company_sort", arg)
 	if err != nil {
 		return "", err
 	}
 	if scope != "" {
 		scope = " AND " + scope
 	}
-	return `(SELECT org_sort.display_name FROM organization org_sort
-	          WHERE org_sort.id = project.` + projectOrgColumn + scope + `)`, nil
+	return `(SELECT company_sort.display_name FROM company company_sort
+	          WHERE company_sort.id = project.` + projectCompanyColumn + scope + `)`, nil
 }
 
 // ListProjects answers one page under the caller's row scope.
@@ -243,14 +243,14 @@ func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) in
 	if in.Query != nil && *in.Query != "" {
 		where = append(where, storekit.QuickFindClause(arg(*in.Query), projectQuickFindExpr))
 	}
-	if in.OrganizationID != nil {
+	if in.CompanyID != nil {
 		// ANY of the project's live companies, not the legacy anchor column: a
 		// project is work several companies do together, so narrowing the list
 		// to a partner must show the deliveries that partner is on.
 		where = append(where, storekit.SQLf(
 			`EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'`+
-				` AND c.project_id = project.id AND c.organization_id = $%d AND c.archived_at IS NULL)`,
-			arg(*in.OrganizationID)))
+				` AND c.project_id = project.id AND c.company_id = $%d AND c.archived_at IS NULL)`,
+			arg(*in.CompanyID)))
 	}
 	if in.OwnerID != nil {
 		where = append(where, storekit.SQLf("owner_id = $%d", arg(*in.OwnerID)))
@@ -267,7 +267,7 @@ func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) in
 	return where
 }
 
-const projectColumns = `id, name, key, organization_id, owner_id, phase, closed_reason,
+const projectColumns = `id, name, key, company_id, owner_id, phase, closed_reason,
 	description, started_at, target_end_date, ended_at, last_activity_at,
 	source, captured_by, version, created_at, updated_at, archived_at`
 
@@ -290,14 +290,14 @@ func readProject(ctx context.Context, tx pgx.Tx, id ids.ProjectID, archived stor
 // trailing expressions the caller's SELECT appended.
 func scanProject(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontracts.Project, error) {
 	var p crmcontracts.Project
-	var id, orgID ids.UUID
+	var id, companyID ids.UUID
 	var ownerID *ids.UUID
 	var phase string
 	var startedAt, targetEnd, endedAt *time.Time
 	var version int64
 
 	dests := []any{
-		&id, &p.Name, &p.Key, &orgID, &ownerID, &phase, &p.ClosedReason,
+		&id, &p.Name, &p.Key, &companyID, &ownerID, &phase, &p.ClosedReason,
 		&p.Description, &startedAt, &targetEnd, &endedAt, &p.LastActivityAt,
 		&p.Source, &p.CapturedBy, &version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
 	}
@@ -310,8 +310,8 @@ func scanProject(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	}
 
 	p.Id = openapi_types.UUID(id)
-	anchor := openapi_types.UUID(orgID)
-	p.OrganizationId = &anchor
+	anchor := openapi_types.UUID(companyID)
+	p.CompanyId = &anchor
 	p.OwnerId = uuidPtr(ownerID)
 	projectPhase := crmcontracts.ProjectPhase(phase)
 	p.Phase = &projectPhase

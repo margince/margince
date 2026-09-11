@@ -386,15 +386,15 @@ func TestARecordsTermsAreRestatedOnlyByACallerWhoCouldChangeIt(t *testing.T) {
 
 	pipeline := e.SeedID(t, `INSERT INTO pipeline (id, name) VALUES ($1, 'Terms')`)
 	stage := e.SeedID(t, `INSERT INTO stage (id, pipeline_id, name, position) VALUES ($1, $2, 'Open', 1)`, pipeline)
-	org := e.SeedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Terms GmbH', 'manual', 'human:x')`)
+	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Terms GmbH', 'manual', 'human:x')`)
 
 	// Both owned by rep3 in team2. rep1 in team1 holds no owner or team claim
 	// on either, and on the deal that is the ONLY thing standing between them
 	// and the row — the read is workspace-wide.
 	deal := e.SeedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, source, captured_by)
 	                     VALUES ($1, 'Terms Deal', $2, $3, $4, 'manual', 'human:x')`, pipeline, stage, e.Rep3)
-	project := e.SeedID(t, `INSERT INTO project (id, name, organization_id, owner_id, source, captured_by)
-	                        VALUES ($1, 'Terms Project', $2, $3, 'manual', 'human:x')`, org, e.Rep3)
+	project := e.SeedID(t, `INSERT INTO project (id, name, company_id, owner_id, source, captured_by)
+	                        VALUES ($1, 'Terms Project', $2, $3, 'manual', 'human:x')`, company, e.Rep3)
 
 	// The same seat shape grantingPrincipal mints, widened to the two record
 	// types under test: read and update on each, and nothing else, so a refusal

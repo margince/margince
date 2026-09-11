@@ -453,7 +453,7 @@ func asksTheFlag(term string) bool {
 
 var (
 	// slotOr ends a conjunction; slotAnd separates the terms inside one. Both
-	// are bounded so `or` does not match inside `organization_id`.
+	// are bounded so `or` does not match inside `company_id`.
 	slotOr  = regexp.MustCompile(`\bor\b`)
 	slotAnd = regexp.MustCompile(`\band\b`)
 

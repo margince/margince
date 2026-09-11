@@ -19,7 +19,7 @@ The semantic is the only fixed vocabulary. The names are entirely yours.
 
 ### The pipeline you start with
 
-A new organization gets one pipeline, called **Sales**, with six stages:
+A new company gets one pipeline, called **Sales**, with six stages:
 
 | Stage | Semantic | Win probability |
 |---|---|---|

@@ -117,7 +117,7 @@ function render(ui: ReactNode) {
   );
 }
 
-// The two sheets are on different settings pages now (FX under Organization,
+// The two sheets are on different settings pages now (FX under Company,
 // model prices under AI). They are rendered as a pair here because one fixture
 // backend answers both, and every case below asserts on one of them alone.
 function RateSheets() {
@@ -315,7 +315,7 @@ describe("the rate sheets", () => {
     expect(screen.queryByText(/only an admin or ops can see/i)).toBeNull();
   });
 
-  // Withheld, not absent. Currency rates sits on the Organization page a
+  // Withheld, not absent. Currency rates sits on the Company page a
   // read_only seat now opens for its other cards, so a sheet that vanished
   // would read as "this installation converts nothing" — and a sheet that
   // fetched its list in order to render the 403 would read as a broken page

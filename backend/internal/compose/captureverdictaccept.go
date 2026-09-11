@@ -143,7 +143,7 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *people.Store,
 // applyCounterpartyAccept creates the counterparty and closes its disposition.
 // Both on the redemption's transaction, so the ledger can never read `real`
 // without the records, nor the records exist under a still-open question.
-// It reports the domain still owed an organization verdict, for the caller to
+// It reports the domain still owed a company verdict, for the caller to
 // queue once the redemption has committed.
 func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *people.Store,
 	filer *connectorTagFiler, pending *capture.PendingStore, proposal counterpartyProposal,

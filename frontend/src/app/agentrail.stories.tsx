@@ -255,7 +255,7 @@ const A_DAYS_WORK = [
   settled(12, {
     kind: "site_read",
     subject_label: "Acme GmbH",
-    subject_type: "organization",
+    subject_type: "company",
     subject_id: "019f7e65-0000-7000-8000-0000000000b2",
   }),
   settled(47, {

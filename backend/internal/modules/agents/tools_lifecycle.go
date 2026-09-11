@@ -90,11 +90,11 @@ type ProjectPhaseAdvancer interface {
 // relinkTargets is the link-target vocabulary, mirroring the contract enum so a
 // target the store would refuse is refused before it reaches the store.
 var relinkTargets = map[string]bool{
-	string(datasource.EntityPerson):       true,
-	string(datasource.EntityOrganization): true,
-	string(datasource.EntityDeal):         true,
-	string(datasource.EntityLead):         true,
-	string(datasource.EntityProject):      true,
+	string(datasource.EntityPerson):  true,
+	string(datasource.EntityCompany): true,
+	string(datasource.EntityDeal):    true,
+	string(datasource.EntityLead):    true,
+	string(datasource.EntityProject): true,
 }
 
 type relinkActivityArgs struct {
@@ -126,7 +126,7 @@ func (t relinkActivity) Spec() mcp.ToolSpec {
 		OpenAPIOp:    "relinkActivity",
 		InputSchema: schema(`{"type":"object","required":["activity_id","entity_type","entity_id"],"properties":{
 			"activity_id":{"type":"string","format":"uuid","description":"The captured activity to re-associate"},
-			"entity_type":{"type":"string","enum":["person","organization","deal","lead","project"]},
+			"entity_type":{"type":"string","enum":["person","company","deal","lead","project"]},
 			"entity_id":{"type":"string","format":"uuid","description":"The record to link it to"},
 			"replace_existing_of_type":{"type":"boolean","default":false,
 				"description":"Replace the existing link of the same entity_type (move) rather than adding one (associate)"},

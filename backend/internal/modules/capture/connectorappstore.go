@@ -74,7 +74,7 @@ type ConnectorAppStatus struct {
 	// their installation is using to check it against the vendor's console.
 	ClientID string
 	// Tenant is the Entra directory a Microsoft app is pinned to, empty for an
-	// app that authorizes any organization and for every Google app.
+	// app that authorizes any company and for every Google app.
 	Tenant string
 }
 

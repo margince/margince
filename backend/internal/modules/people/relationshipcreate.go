@@ -26,10 +26,10 @@ import (
 // CreateRelationshipInput is one edge to write: its kind, the endpoints that
 // kind anchors, and the optional facts an employment carries.
 type CreateRelationshipInput struct {
-	Kind              string
-	PersonID          *ids.PersonID
-	OrganizationID    *ids.OrganizationID
-	CounterpartyOrgID *ids.OrganizationID
+	Kind                  string
+	PersonID              *ids.PersonID
+	CompanyID             *ids.CompanyID
+	CounterpartyCompanyID *ids.CompanyID
 	// CounterpartyPersonID is the far end of the one person↔person kind
 	// (works_with); nil for every other kind, whose shapes refuse it.
 	CounterpartyPersonID *ids.PersonID
@@ -197,7 +197,7 @@ func writeRelationshipInTx(
 	// somebody works today. That is the same rule the UPDATE below applies,
 	// and both read it off the row rather than off the request.
 	row := tx.QueryRow(ctx, `
-			INSERT INTO relationship (kind, person_id, organization_id, counterparty_org_id, counterparty_person_id,
+			INSERT INTO relationship (kind, person_id, company_id, counterparty_company_id, counterparty_person_id,
 			                          deal_id, project_id, role, is_current_primary, started_at, ended_at, source, captured_by)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
 			        coalesce($9, $1 = 'employment' AND NOT EXISTS (
@@ -207,7 +207,7 @@ func writeRelationshipInTx(
 			          AND ($1 <> 'employment' OR `+employment.IsCurrentSQL("$11::date")+`),
 			        $10, $11, $12, $13)
 			RETURNING `+relationshipColumns,
-		in.Kind, in.PersonID, in.OrganizationID, in.CounterpartyOrgID, in.CounterpartyPersonID, in.DealID, in.ProjectID,
+		in.Kind, in.PersonID, in.CompanyID, in.CounterpartyCompanyID, in.CounterpartyPersonID, in.DealID, in.ProjectID,
 		in.Role, in.IsCurrentPrimary, in.StartedAt, in.EndedAt, in.Source, capturedBy)
 	var err error
 	if out, err = scanRelationship(row); err != nil {
@@ -226,8 +226,8 @@ func ensureRelationshipEndpoints(ctx context.Context, tx pgx.Tx, in CreateRelati
 	}{
 		{anchorPerson, untypedPtr(in.PersonID)},
 		{anchorPerson, untypedPtr(in.CounterpartyPersonID)},
-		{"organization", untypedPtr(in.OrganizationID)},
-		{"organization", untypedPtr(in.CounterpartyOrgID)},
+		{companyEntity, untypedPtr(in.CompanyID)},
+		{companyEntity, untypedPtr(in.CounterpartyCompanyID)},
 		{anchorDeal, untypedPtr(in.DealID)},
 		{projectObjectName, untypedPtr(in.ProjectID)},
 	} {

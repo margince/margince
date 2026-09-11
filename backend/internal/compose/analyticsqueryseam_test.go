@@ -31,7 +31,7 @@ func seatWith(objects ...string) context.Context {
 
 func TestTheDerivedSchemaNarrowsWithTheCallersGrants(t *testing.T) {
 	t.Parallel()
-	wide := AnalyticsSchemaFor(seatWith("deal", "activity", "person", "organization", "project", "partner"))
+	wide := AnalyticsSchemaFor(seatWith("deal", "activity", "person", "company", "project", "partner"))
 	narrow := AnalyticsSchemaFor(seatWith("deal"))
 
 	if len(wide.Entities) == 0 {
@@ -59,7 +59,7 @@ func TestAFieldACallerMayNotReadIsAbsentRatherThanRefused(t *testing.T) {
 	// The disclosure this prevents: "you may not read that" says the column
 	// exists. Absent means the refusal is "no such field", which says nothing.
 	narrow := AnalyticsSchemaFor(seatWith("deal"))
-	wide := AnalyticsSchemaFor(seatWith("deal", "activity", "person", "organization", "project", "partner"))
+	wide := AnalyticsSchemaFor(seatWith("deal", "activity", "person", "company", "project", "partner"))
 
 	removed := 0
 	for name, wideEntity := range wide.Entities {
@@ -116,7 +116,7 @@ func TestTheSchemaVersionMovesWhenTheVocabularyDoes(t *testing.T) {
 	// A compiled plan carries this version and is refused once it moves. If it
 	// did NOT move when a seat lost a grant, that seat's outstanding plans
 	// would go on running against a vocabulary they no longer hold.
-	wide := AnalyticsSchemaFor(seatWith("deal", "activity", "person", "organization", "project", "partner"))
+	wide := AnalyticsSchemaFor(seatWith("deal", "activity", "person", "company", "project", "partner"))
 	narrow := AnalyticsSchemaFor(seatWith("deal"))
 	if wide.Version == narrow.Version {
 		t.Error("two seats with different vocabularies share a schema version, so a plan survives a grant being removed")
@@ -133,7 +133,7 @@ func TestTheSchemaVersionMovesWhenTheVocabularyDoes(t *testing.T) {
 // second rendering cannot arrive under either door without failing here.
 func TestTheAnalyticsResourceAndTheToolReaderServeOneDocument(t *testing.T) {
 	t.Parallel()
-	ctx := seatWith("deal", "activity", "person", "organization", "project", "partner")
+	ctx := seatWith("deal", "activity", "person", "company", "project", "partner")
 	contents, err := analyticsSchemaResource{}.ReadResource(ctx, AnalyticsSchemaURI)
 	if err != nil {
 		t.Fatalf("the resource: %v", err)
@@ -159,8 +159,8 @@ func TestTheAnalyticsResourceAndTheToolReaderServeOneDocument(t *testing.T) {
 // what keeps them from naming populations ahead of the object gate.
 func TestAPopulationWhoseEntityTheSeatCannotReadIsAbsent(t *testing.T) {
 	t.Parallel()
-	sansDeal := AnalyticsSchemaFor(seatWith("activity", "person", "organization", "project", "partner"))
-	wide := AnalyticsSchemaFor(seatWith("deal", "activity", "person", "organization", "project", "partner"))
+	sansDeal := AnalyticsSchemaFor(seatWith("activity", "person", "company", "project", "partner"))
+	wide := AnalyticsSchemaFor(seatWith("deal", "activity", "person", "company", "project", "partner"))
 
 	// Judged against the WHOLE catalog, so a new deal population cannot land
 	// outside the assertion.

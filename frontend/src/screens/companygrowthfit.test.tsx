@@ -16,13 +16,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-type GrowthFit = components["schemas"]["OrganizationGrowthFit"];
+type GrowthFit = components["schemas"]["CompanyGrowthFit"];
 
-// A COMPLETE OrganizationGrowthFit, not a cast one. A fixture asserted into
+// A COMPLETE CompanyGrowthFit, not a cast one. A fixture asserted into
 // the contract type can drop a required field and still compile, so the test
 // would go on passing after the wire shape moved under it.
 const ABSTAINED: GrowthFit = {
-  organization_id: "o-1",
+  company_id: "o-1",
   band: "unknown",
   data_completeness: {
     present: 2,
@@ -56,7 +56,7 @@ async function show(fit: GrowthFit) {
       }
     >
       <LocaleProvider initial="en">
-        <GrowthFitPanel orgId="o-1" enabled />
+        <GrowthFitPanel companyId="o-1" enabled />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -87,7 +87,7 @@ describe("the wait before the first assessment", () => {
         }
       >
         <LocaleProvider initial="en">
-          <GrowthFitPanel orgId="o-1" enabled />
+          <GrowthFitPanel companyId="o-1" enabled />
         </LocaleProvider>
       </QueryClientProvider>,
     );
@@ -164,7 +164,7 @@ describe("how well this company fits what we sell", () => {
         {
           text: "Their stack matches who we sell to.",
           nature: "assessment",
-          evidence: [{ entity_type: "organization", entity_id: "o-1" }],
+          evidence: [{ entity_type: "company", entity_id: "o-1" }],
         },
       ],
     });
@@ -186,7 +186,7 @@ describe("how well this company fits what we sell", () => {
       "fetch",
       vi.fn(
         async () =>
-          new Response(JSON.stringify({ organization_id: "o-1" }), {
+          new Response(JSON.stringify({ company_id: "o-1" }), {
             status: 200,
             headers: { "content-type": "application/json" },
           }),
@@ -199,7 +199,7 @@ describe("how well this company fits what we sell", () => {
         }
       >
         <LocaleProvider initial="en">
-          <GrowthFitPanel orgId="o-1" enabled />
+          <GrowthFitPanel companyId="o-1" enabled />
         </LocaleProvider>
       </QueryClientProvider>,
     );
@@ -219,7 +219,7 @@ describe("how well this company fits what we sell", () => {
         }
       >
         <LocaleProvider initial="en">
-          <GrowthFitPanel orgId="o-1" enabled={false} />
+          <GrowthFitPanel companyId="o-1" enabled={false} />
         </LocaleProvider>
       </QueryClientProvider>,
     );

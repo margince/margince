@@ -40,8 +40,8 @@ import (
 )
 
 // EnsureInstallation applies the boot state machine before the API
-// serves: 0 active workspaces → bootstrap organization + first admin +
-// seeds atomically from cfg (requires organization + bootstrap_admin);
+// serves: 0 active workspaces → bootstrap company + first admin +
+// seeds atomically from cfg (requires company + bootstrap_admin);
 // 1 → bind; >1 → refuse with the operator-facing invariant error.
 // Restarts are idempotent — bootstrap values never reconcile into an
 // existing workspace.
@@ -54,7 +54,7 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 		// The password secret is read inside this closure, which bootstrap
 		// calls only when it is actually creating the workspace. Reading it
 		// here would read it on every boot, and ADR-0061 §2 permits deleting
-		// the secret once the organization exists — so an installation that
+		// the secret once the company exists — so an installation that
 		// followed the ADR would stop booting.
 		create = func() (identity.InstallationBootstrap, error) {
 			pw, err := b.ResolvePassword(config.FromOS)
@@ -62,13 +62,13 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 				return identity.InstallationBootstrap{}, err
 			}
 			return identity.InstallationBootstrap{
-				OrganizationName: cfg.Workspace.Name,
-				BaseCurrency:     cfg.Workspace.BaseCurrency,
-				BaseLanguage:     cfg.Workspace.BaseLanguage,
-				Timezone:         cfg.Workspace.Timezone,
-				AdminEmail:       b.Email,
-				AdminName:        b.DisplayName,
-				AdminPassword:    pw,
+				CompanyName:   cfg.Workspace.Name,
+				BaseCurrency:  cfg.Workspace.BaseCurrency,
+				BaseLanguage:  cfg.Workspace.BaseLanguage,
+				Timezone:      cfg.Workspace.Timezone,
+				AdminEmail:    b.Email,
+				AdminName:     b.DisplayName,
+				AdminPassword: pw,
 			}, nil
 		}
 	}
@@ -93,7 +93,7 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 	if created {
 		log.Info("installation bootstrapped", "workspace_id", wsID.String(), "workspace", cfg.Workspace.Name)
 	} else {
-		log.Info("installation bound to existing organization", "workspace_id", wsID.String())
+		log.Info("installation bound to existing company", "workspace_id", wsID.String())
 	}
 	// `setting` is not tenant-scoped, so a bootstrap over a database that still
 	// holds a previous installation's rows creates a new workspace beside them
@@ -379,7 +379,7 @@ func seedRetentionPosture(ctx context.Context, tx pgx.Tx, seeds deployconfig.See
 //
 // It runs INSIDE the bootstrap transaction, beside the rest of the seeds: an
 // installation that declared a binding must not be reachable in a state where
-// the organization exists and the binding does not, even briefly, or the first
+// the company exists and the binding does not, even briefly, or the first
 // request through an AI surface answers as unconfigured.
 //
 // "Bootstrap" is not the only caller — the data reset runs the same seeds over

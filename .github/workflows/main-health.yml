@@ -17,7 +17,7 @@
 # already landed.
 #
 # The cadence is the one knob. Every two hours costs ~15 jobs a run against a
-# 20-concurrent org ceiling that the pull-request lanes also queue in, and narrows
+# 20-concurrent runner ceiling that the pull-request lanes also queue in, and narrows
 # the suspect range to roughly a dozen commits. Tighten the cron if a dozen is too
 # many to bisect; it is one line.
 name: main-health
@@ -280,7 +280,7 @@ jobs:
         # download, which fetches SonarSource's key from a public keyserver. On
         # run 32687876395 keyserver.ubuntu.com simply stopped answering, and the
         # step sat silent for 30 minutes until the JOB timeout killed it — a
-        # runner slot spent for nothing inside a 20-concurrent org ceiling every
+        # runner slot spent for nothing inside the 20-concurrent runner ceiling every
         # pull-request lane also queues in. A rerun of the same commit finished
         # in 95 seconds. margince/margince#2543.
         #

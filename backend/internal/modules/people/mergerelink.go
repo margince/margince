@@ -155,8 +155,8 @@ func relinkPersonReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 
 // readPersonMergeState loads one end of a person merge: a live row
 // returns itself; an archived one returns its redirect pointer (nil when
-// it was plain-archived, not merged). readOrgMergeState (merge_organization.go)
-// is its organization twin.
+// it was plain-archived, not merged). readCompanyMergeState (merge_company.go)
+// is its company twin.
 func readPersonMergeState(ctx context.Context, tx pgx.Tx, id ids.PersonID) (crmcontracts.Person, *ids.UUID, error) {
 	// A merge-state read feeds the resolution decision, never the wire —
 	// core columns suffice.

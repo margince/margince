@@ -34,7 +34,7 @@ type Completer interface {
 // state: a draft that invents a price is the one mistake that goes out over a
 // human's signature.
 const draftSystem = `You draft the first email of a new conversation, for a salesperson to send under their own name, from a JSON summary of one account in their CRM.
-Return ONLY a JSON object: {"subject":"...","body":"...","reasoning":[{"kind":"intent|recipient|relationship|deal|commitment|conversation|dossier","label":"...","entity_type":"deal|activity|person|organization|fact","entity_id":"..."}]}.
+Return ONLY a JSON object: {"subject":"...","body":"...","reasoning":[{"kind":"intent|recipient|relationship|deal|commitment|conversation|dossier","label":"...","entity_type":"deal|activity|person|company|fact","entity_id":"..."}]}.
 Open by name using the name the shared greeting rule selects, exactly as given; never invent, shorten or complete it.
 Do NOT write a sign-off or a sender name. The composer adds the sender's own; a name you guessed would go out over the wrong signature.
 Say one thing and ask for one thing. Three short paragraphs at most.
@@ -203,9 +203,9 @@ func knownRecords(in Input) map[string]string {
 // matching a type the wire no longer carries — a citation that silently stops
 // grounding.
 var (
-	citeDeal     = string(crmcontracts.OrganizationBriefEvidenceEntityTypeDeal)
-	citeActivity = string(crmcontracts.OrganizationBriefEvidenceEntityTypeActivity)
-	citePerson   = string(crmcontracts.OrganizationBriefEvidenceEntityTypePerson)
+	citeDeal     = string(crmcontracts.CompanyBriefEvidenceEntityTypeDeal)
+	citeActivity = string(crmcontracts.CompanyBriefEvidenceEntityTypeActivity)
+	citePerson   = string(crmcontracts.CompanyBriefEvidenceEntityTypePerson)
 )
 
 // SystemPromptFor is the assembled system turn, for the compose-level parity

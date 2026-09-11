@@ -20,7 +20,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must not
 // store at all. Two scopes on one card, because a reader sees both kinds of
-// rule that bind their mailbox: the organization's (admin/ops change those) and
+// rule that bind their mailbox: the company's (admin/ops change those) and
 // their own (anyone may keep their own correspondent out of a shared CRM).
 
 type CaptureExclusion = components["schemas"]["CaptureExclusion"];
@@ -36,7 +36,7 @@ const SCOPES: readonly Scope[] = ["user", "workspace"];
 // that already exists still renders, labelled like any other.
 const KINDS: readonly Kind[] = ["address", "domain"];
 
-/** The organization-wide rules, which are the ones a plain seat may not touch. */
+/** The company-wide rules, which are the ones a plain seat may not touch. */
 function bindsEveryone(rule: CaptureExclusion): boolean {
   return rule.scope === "workspace";
 }
@@ -115,7 +115,7 @@ export function CaptureExclusionsCard() {
   const query = useExclusions();
   const remove = useRemoveExclusion();
   const [excluding, setExcluding] = useState(false);
-  // Said once and pointed at (see own-domains.tsx): an organization-wide rule
+  // Said once and pointed at (see own-domains.tsx): a company-wide rule
   // is admin/ops work, and `Button`'s `reasonId` refuses the verb AND names
   // the sentence, so every refused row points at one line rather than
   // printing it per row. The id is minted unconditionally, because a hook may
@@ -223,7 +223,7 @@ function ExclusionRows({
 }: Readonly<{
   list: CaptureExclusion[];
   canManageWorkspace: boolean;
-  /** The one sentence saying why an organization-wide rule is not this reader's. */
+  /** The one sentence saying why a company-wide rule is not this reader's. */
   denialId: string;
   pending: boolean;
   onRemove: (id: string) => void;

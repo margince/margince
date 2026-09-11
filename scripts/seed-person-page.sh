@@ -56,14 +56,14 @@ capture_session
 # ---------------------------------------------------------------------------
 
 echo "== seed-person-page: the account =="
-org_id=""
-status="$(api GET '/organizations?q=Glazed%20Frog&limit=10')"
-[[ "$status" = "200" ]] || fail "GET /v1/organizations returned HTTP $status"
-org_id="$(jq -r '.data[] | select(.display_name == "Glazed Frog") | .id' "$workdir/body" | head -1)"
-if [[ -z "$org_id" ]]; then
-  status="$(api POST /organizations '{"display_name":"Glazed Frog","domains":[{"domain":"glazedfrog.com","is_primary":true}],"source":"seed"}')"
-  [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "create organization returned HTTP $status"; }
-  org_id="$(jq -r .id "$workdir/body")"
+company_id=""
+status="$(api GET '/companies?q=Glazed%20Frog&limit=10')"
+[[ "$status" = "200" ]] || fail "GET /v1/companies returned HTTP $status"
+company_id="$(jq -r '.data[] | select(.display_name == "Glazed Frog") | .id' "$workdir/body" | head -1)"
+if [[ -z "$company_id" ]]; then
+  status="$(api POST /companies '{"display_name":"Glazed Frog","domains":[{"domain":"glazedfrog.com","is_primary":true}],"source":"seed"}')"
+  [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "create company returned HTTP $status"; }
+  company_id="$(jq -r .id "$workdir/body")"
   echo "  OK: created Glazed Frog"
 else
   echo "  OK: Glazed Frog already present"
@@ -107,8 +107,8 @@ echo "  Mark Hughes: $mark_id"
 echo "== seed-person-page: employment =="
 employ() { # employ <person-id> <role>
   local person="$1" role="$2" status
-  status="$(api POST /relationships "$(jq -n --arg p "$person" --arg o "$org_id" --arg r "$role" \
-    '{kind:"employment",person_id:$p,organization_id:$o,role:$r,is_current_primary:true,source:"seed"}')")"
+  status="$(api POST /relationships "$(jq -n --arg p "$person" --arg o "$company_id" --arg r "$role" \
+    '{kind:"employment",person_id:$p,company_id:$o,role:$r,is_current_primary:true,source:"seed"}')")"
   case "$status" in
     201) echo "  OK: employed $role" ;;
     409) echo "  OK: employment already present" ;;
@@ -145,8 +145,8 @@ status="$(api GET '/deals?limit=100')"
 [[ "$status" = "200" ]] || fail "GET /v1/deals returned HTTP $status"
 deal_id="$(jq -r '.data[] | select(.name == "Expansion — Phase 2") | .id' "$workdir/body" | head -1)"
 if [[ -z "$deal_id" ]]; then
-  status="$(api POST /deals "$(jq -n --arg p "$pipeline_id" --arg s "$stage_proposal" --arg o "$org_id" --arg c "$close_date" \
-    '{name:"Expansion — Phase 2",pipeline_id:$p,stage_id:$s,organization_id:$o,
+  status="$(api POST /deals "$(jq -n --arg p "$pipeline_id" --arg s "$stage_proposal" --arg o "$company_id" --arg c "$close_date" \
+    '{name:"Expansion — Phase 2",pipeline_id:$p,stage_id:$s,company_id:$o,
       amount_minor:9500000,currency:"EUR",expected_close_date:$c,source:"seed"}')")"
   [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "create deal returned HTTP $status"; }
   deal_id="$(jq -r .id "$workdir/body")"

@@ -28,9 +28,9 @@ describe("Avatar", () => {
   });
 
   it("draws the logo over the monogram, never instead of it", () => {
-    render(<Avatar name="Voltaq Systems" src="/v1/organizations/abc/logo" />);
+    render(<Avatar name="Voltaq Systems" src="/v1/companies/abc/logo" />);
     const img = document.querySelector("img");
-    expect(img?.getAttribute("src")).toBe("/v1/organizations/abc/logo");
+    expect(img?.getAttribute("src")).toBe("/v1/companies/abc/logo");
     // The image is decorative: the record's name is already beside it, so a
     // screen reader announcing the mark again would only repeat the row.
     expect(img?.getAttribute("alt")).toBe("");
@@ -40,7 +40,7 @@ describe("Avatar", () => {
   });
 
   it("falls back to the monogram when the logo fails to load", () => {
-    render(<Avatar name="Voltaq Systems" src="/v1/organizations/abc/logo" />);
+    render(<Avatar name="Voltaq Systems" src="/v1/companies/abc/logo" />);
     const img = document.querySelector("img");
     expect(img).toBeTruthy();
     if (img) fireEvent.error(img);
@@ -91,12 +91,12 @@ describe("Avatar", () => {
     // moves it to a different colour on every screen at once.
     it("follows the identity key across a rename", () => {
       const { container: before } = render(
-        <Avatar identity="org_7f3" name="Voltaq Systems" />,
+        <Avatar identity="company_7f3" name="Voltaq Systems" />,
       );
       const toneBefore = toneOf(before);
       cleanup();
       const { container: after } = render(
-        <Avatar identity="org_7f3" name="Voltaq Systems GmbH" />,
+        <Avatar identity="company_7f3" name="Voltaq Systems GmbH" />,
       );
       expect(toneOf(after)).toBe(toneBefore);
     });

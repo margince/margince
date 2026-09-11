@@ -39,7 +39,7 @@ func TestEveryObservedRoleAddressIsRefused(t *testing.T) {
 // `hello@thesentry.com.vn` signs itself with a company name — both became
 // "contacts" in the incident this package answers. Neither carries a role WORD:
 // one is a city, the other a business. Recognising them needs to know what the
-// organization is, which is the AI verdict's question, and a list that guessed
+// company is, which is the AI verdict's question, and a list that guessed
 // at city and company names would refuse people called Paris and Mercer.
 //
 // So this package answers no here, deliberately, and the verdict lane owns the

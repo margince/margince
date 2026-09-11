@@ -116,7 +116,7 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 	if !ok {
 		return "", errors.New("compose: no actor bound to export context")
 	}
-	if auth.UnboundedFor(actor, "person", "organization", "deal", "project") {
+	if auth.UnboundedFor(actor, "person", "company", "deal", "project") {
 		return "", nil
 	}
 	// Every endpoint column the table HAS, not the ones an author remembered.
@@ -131,8 +131,8 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 	for _, endpoint := range []struct{ column, table string }{
 		{"person_id", "person"},
 		{"counterparty_person_id", "person"},
-		{"organization_id", "organization"},
-		{"counterparty_org_id", "organization"},
+		{"company_id", "company"},
+		{"counterparty_company_id", "company"},
 		{"deal_id", "deal"},
 		{"project_id", "project"},
 	} {
@@ -158,14 +158,23 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 // row_scope=all (auth.ActivityContentClause). An attachment's filename and an
 // audit image's before-and-after are that message's content.
 //
-// Today no HUMAN reaches the unbounded branch: person and organization are
+// Today no HUMAN reaches the unbounded branch: person and company are
 // owner-private (auth.ownerPrivateTables), so UnboundedFor is false for every
 // seat including an admin, and an admin export has always faced the audience
 // through the bounded arms below. The branch is the system principal's, and
 // composing the arm here rather than returning an empty clause is what keeps
 // that true if the owner-private set ever changes — the alternative is a
 // silent widening at a distance, in a file nobody would think to re-read.
+// legacyTypes, when set, widens one kind's arm to the extra values a column
+// may still hold. Only the audit trail needs it, and only for the company —
+// see auditlegacytype.go for why those rows cannot be rewritten.
 func polymorphicVisible(ctx context.Context, typeCol, idCol string, arg func(any) int) (string, error) {
+	return polymorphicVisibleWith(ctx, typeCol, idCol, arg, nil)
+}
+
+func polymorphicVisibleWith(ctx context.Context, typeCol, idCol string, arg func(any) int,
+	legacyTypes map[string][]string,
+) (string, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return "", errors.New("compose: no actor bound to export context")
@@ -174,21 +183,29 @@ func polymorphicVisible(ctx context.Context, typeCol, idCol string, arg func(any
 	if err != nil {
 		return "", err
 	}
-	if auth.UnboundedFor(actor, "person", "organization", "deal", "lead") {
+	if auth.UnboundedFor(actor, "person", "company", "deal", "lead") {
 		// Every non-activity row passes; an activity row faces the audience.
 		return fmt.Sprintf("(%s <> 'activity' OR %s)", typeCol, activityArm), nil
 	}
 	var parts []string
 	for _, e := range []struct{ kind, table string }{
 		{"person", "person"},
-		{"organization", "organization"},
+		{"company", "company"},
 		{"deal", "deal"},
 		{"lead", "lead"},
 	} {
 		predicate := auth.VisiblePredicate(actor, e.table, arg)
+		match := fmt.Sprintf("%s = '%s'", typeCol, e.kind)
+		if extra := legacyTypes[e.kind]; len(extra) > 0 {
+			quoted := make([]string, 0, len(extra))
+			for _, v := range extra {
+				quoted = append(quoted, "'"+v+"'")
+			}
+			match = fmt.Sprintf("%s IN (%s)", typeCol, strings.Join(quoted, ", "))
+		}
 		parts = append(parts, fmt.Sprintf(
-			`(%s = '%s' AND EXISTS (SELECT 1 FROM %s ep WHERE ep.id = %s AND %s))`,
-			typeCol, e.kind, e.table, idCol, predicate("ep"),
+			`(%s AND EXISTS (SELECT 1 FROM %s ep WHERE ep.id = %s AND %s))`,
+			match, e.table, idCol, predicate("ep"),
 		))
 	}
 	parts = append(parts, activityArm)
@@ -223,7 +240,8 @@ func auditExportScope(ctx context.Context, alias string, arg func(any) int) (str
 	if !ok {
 		return "", errors.New("compose: no actor bound to export context")
 	}
-	entity, err := polymorphicVisible(ctx, alias+".entity_type", alias+".entity_id", arg)
+	entity, err := polymorphicVisibleWith(ctx, alias+".entity_type", alias+".entity_id", arg,
+		map[string][]string{string(recordTypeCompany): auditCompanyTypes()})
 	if err != nil {
 		return "", err
 	}
@@ -236,8 +254,8 @@ func auditExportScope(ctx context.Context, alias string, arg func(any) int) (str
 	if err != nil {
 		return "", err
 	}
-	if auth.UnboundedFor(actor, "person", "organization", "deal", "lead") {
-		// The system principal's branch, and only its: person and organization
+	if auth.UnboundedFor(actor, "person", "company", "deal", "lead") {
+		// The system principal's branch, and only its: person and company
 		// are owner-private (auth.ownerPrivateTables), so UnboundedFor is false
 		// for every human including one with row_scope=all, and an admin export
 		// takes the bounded path below.

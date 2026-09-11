@@ -26,12 +26,12 @@ func TestRouteInEdgesRefusesBeforeItReachesAStatement(t *testing.T) {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Read: true}, "organization": {Read: true}, "signal": {Read: true},
+				"person": {Read: true}, "company": {Read: true}, "signal": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	if _, err := RouteInEdges(ctx, nil, ids.From[ids.OrganizationKind](ids.NewV7())); !errors.Is(
+	if _, err := RouteInEdges(ctx, nil, ids.From[ids.CompanyKind](ids.NewV7())); !errors.Is(
 		err, apperrors.ErrPermissionDenied,
 	) {
 		t.Errorf("RouteInEdges(no edge grant) = %v, want ErrPermissionDenied — reporting cold instead "+

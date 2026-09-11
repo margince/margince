@@ -616,7 +616,7 @@ describe("WebhooksCard — deliveries panel (Task 10)", () => {
     id: "del-1",
     subscription_id: "sub-1",
     event_id: "evt-1",
-    event_type: "organization.updated",
+    event_type: "company.updated",
     status: "dead_lettered",
     attempts: 6,
     last_status_code: 500,
@@ -693,7 +693,7 @@ describe("WebhooksCard — deliveries panel (Task 10)", () => {
     await waitFor(() =>
       expect(screen.getByText("offer.accepted")).toBeTruthy(),
     );
-    expect(screen.getByText("organization.updated")).toBeTruthy();
+    expect(screen.getByText("company.updated")).toBeTruthy();
     expect(screen.getByText("500")).toBeTruthy();
     expect(screen.getByText("connection refused")).toBeTruthy();
     expect(screen.getByText("Delivered")).toBeTruthy();
@@ -782,7 +782,7 @@ describe("WebhooksCard — deliveries panel (Task 10)", () => {
 
     await user.click(await screen.findByTestId("view-deliveries"));
     await waitFor(() =>
-      expect(screen.getByText("organization.updated")).toBeTruthy(),
+      expect(screen.getByText("company.updated")).toBeTruthy(),
     );
 
     await user.click(await screen.findByTestId("replay-delivery"));
@@ -834,7 +834,7 @@ describe("WebhooksCard — deliveries panel (Task 10)", () => {
 
     await user.click(await screen.findByTestId("view-deliveries"));
     await waitFor(() =>
-      expect(screen.getByText("organization.updated")).toBeTruthy(),
+      expect(screen.getByText("company.updated")).toBeTruthy(),
     );
     expect(screen.queryByTestId("replay-delivery")).toBeNull();
   });

@@ -1,0 +1,132 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package companydossier
+
+// What the dossier is written FROM, and the set of records it may cite.
+//
+// Both halves are here because they are the same claim seen twice: a sentence
+// may cite a record exactly when the assembler put that record in front of the
+// writer, and the grounding filter checks the second against the first. Keeping
+// them apart is how a filter ends up trusting a set nobody built.
+
+import (
+	"context"
+
+	"github.com/margince/margince/backend/internal/compose/claims"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// Facts is the read seam over the company's factual sidecars. It is an
+// interface so the writer can be proven without a database, and it is narrow on
+// purpose: the dossier may see the sidecars and nothing else (DOSS-AC-4).
+//
+// Both reads run AS THE CALLER, through the same store methods
+// GET /companies/{id}/profile-fields and .../facts serve, inside the same
+// object and row-scope gates. So an assembly can only be written from records
+// this reader could already fetch for themselves, and synthesis discloses
+// nothing new.
+//
+// What that does NOT yet give is DOSS-AC-N-1's field masking. This platform has
+// no per-reader field mask on a company's values — the only masks in the tree
+// are over field HISTORY, and that map is empty — so there is no mask here to
+// launder and none to honour. Row scope is enforced; field scope does not exist
+// yet. See margince/margince#4.
+type Facts interface {
+	ListCompanyProfileFields(ctx context.Context, id ids.CompanyID) ([]crmcontracts.CompanyProfileField, error)
+	ListCompanyFacts(ctx context.Context, id ids.CompanyID) ([]crmcontracts.CompanyFact, error)
+	// GetCompany is read for the company's NAME and nothing else: the
+	// dossier is written from the sidecars above, but the rail that narrates
+	// the writing has to say which company, and neither sidecar carries that.
+	GetCompany(ctx context.Context, id ids.CompanyID, archived storekit.ArchivedFilter) (crmcontracts.Company, error)
+}
+
+// Input is the assembled factual picture of one company.
+//
+// CompanyID is withheld from the JSON the model sees. It is the one id
+// every assembly holds, so it cannot ground anything — and a writer handed an
+// id it is forbidden to cite would spend sentences on it that the filter then
+// drops whole, taking their other, valid citations with them.
+type Input struct {
+	CompanyID string `json:"-"`
+	// Name is withheld from the model for the id's reason — it grounds
+	// nothing — and from the fingerprint because a rename is not a change in
+	// what the company IS. It exists so the rail can say whose dossier this is.
+	Name          string `json:"-"`
+	ProfileFields []crmcontracts.CompanyProfileField
+	Facts         []crmcontracts.CompanyFact
+}
+
+// The citable record kinds, DERIVED from the contract's own enum rather than
+// re-spelled. A literal copy would let a contract rename leave the filter
+// matching a type the wire no longer carries — a citation that silently stops
+// grounding.
+var (
+	citeCompany      = string(crmcontracts.CompanyBriefEvidenceEntityTypeCompany)
+	citeProfileField = string(crmcontracts.CompanyBriefEvidenceEntityTypeProfileField)
+	citeFact         = string(crmcontracts.CompanyBriefEvidenceEntityTypeFact)
+)
+
+// BuildInput reads the sidecars under the caller's own scope.
+func BuildInput(ctx context.Context, facts Facts, id ids.CompanyID) (Input, error) {
+	fields, err := facts.ListCompanyProfileFields(ctx, id)
+	if err != nil {
+		return Input{}, err
+	}
+	extracted, err := facts.ListCompanyFacts(ctx, id)
+	if err != nil {
+		return Input{}, err
+	}
+	// IncludeArchived, because the sidecars above answered for this company
+	// whether or not it is archived, and the name read must not be the one
+	// read that refuses: a dossier a reader could open yesterday would go
+	// missing the day the company was archived.
+	company, err := facts.GetCompany(ctx, id, storekit.IncludeArchived)
+	if err != nil {
+		return Input{}, err
+	}
+	return Input{
+		CompanyID:     id.String(),
+		Name:          company.DisplayName,
+		ProfileFields: fields,
+		Facts:         extracted,
+	}, nil
+}
+
+// KnownRecords is what this dossier was assembled from, keyed by TYPE AND ID.
+//
+// Keying on the id alone would accept a real fact id cited as a profile field:
+// the id passes, and the chip then routes the reader to the wrong place — or to
+// a record of a kind they were never shown. The pair is the reference, so the
+// pair is what is checked.
+//
+// A profile field with no row id contributes NOTHING to this set. That is not a
+// gap to paper over: a sentence citing a field the assembler cannot name is a
+// sentence the reader cannot open, and the filter is supposed to drop it.
+//
+// The COMPANY is not in the set either, for the same reason stated once
+// more. It is the one id every assembly holds, so admitting it would ground any
+// sentence at all — a model with nothing to say could cite the company and pass
+// — and the receipt endpoint has nothing to answer with, because the row
+// carries no provenance of its own. A citation that resolves to nothing teaches
+// the reader that citations do not work.
+// The VALUE is what that row said, as the model was shown it, so a sentence can
+// be held to the rows it points at rather than only to their existence.
+func KnownRecords(in Input) map[claims.Evidence]string {
+	known := map[claims.Evidence]string{}
+	for _, field := range in.ProfileFields {
+		if field.Id == nil {
+			continue
+		}
+		known[claims.Evidence{EntityType: citeProfileField, EntityID: field.Id.String()}] = claims.Source(field)
+	}
+	for _, fact := range in.Facts {
+		if fact.Id == nil {
+			continue
+		}
+		known[claims.Evidence{EntityType: citeFact, EntityID: fact.Id.String()}] = claims.Source(fact)
+	}
+	return known
+}

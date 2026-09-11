@@ -38,8 +38,8 @@ export type DealIdentity = Pick<
   | "currency"
   | "stage_id"
   | "owner_id"
-  | "organization_id"
-  | "partner_org_id"
+  | "company_id"
+  | "partner_company_id"
   | "partner_attribution"
   | "masked_fields"
 > &
@@ -94,14 +94,14 @@ export function DealIdentityLine({
   return (
     <IdentityMeta>
       <IdentityLine>
-        {masked.includes("organization_id") ? (
+        {masked.includes("company_id") ? (
           <IdentityFact>
-            {t("create.organization")} <FieldGuard mode="masked" />
+            {t("create.relatedCompany")} <FieldGuard mode="masked" />
           </IdentityFact>
         ) : (
-          deal.organization_id && (
+          deal.company_id && (
             <IdentityFact>
-              <EntityRef kind="organization" id={deal.organization_id} />
+              <EntityRef kind="company" id={deal.company_id} />
             </IdentityFact>
           )
         )}
@@ -129,15 +129,15 @@ export function DealIdentityLine({
             t("co.pulse.unowned"),
           )}
         </IdentityFact>
-        {masked.includes("partner_org_id") ? (
+        {masked.includes("partner_company_id") ? (
           // No attribution word here: what the partner did is withheld WITH
           // the partner, so naming one would decide what a partner nobody
           // could see is owed.
           <IdentityFact>
-            {t("deal.partnerOrg")} <FieldGuard mode="masked" />
+            {t("deal.partnerCompany")} <FieldGuard mode="masked" />
           </IdentityFact>
         ) : (
-          deal.partner_org_id && (
+          deal.partner_company_id && (
             <IdentityFact>
               {/* Sourced and influenced are paid differently, so the line says
                   which one rather than a neutral "partner: X" that hides the
@@ -147,7 +147,7 @@ export function DealIdentityLine({
                   ? "deal.partnerInfluenced"
                   : "deal.partnerSourced",
               )}{" "}
-              <EntityRef kind="organization" id={deal.partner_org_id} />
+              <EntityRef kind="company" id={deal.partner_company_id} />
             </IdentityFact>
           )
         )}

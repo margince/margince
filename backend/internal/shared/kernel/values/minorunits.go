@@ -14,8 +14,8 @@ package values
 //
 // It lives HERE, beside Money, because both callers of the table are on
 // different sides of a dependency edge: the offer-draft price check is in
-// package compose, and the account brief is in compose/orgbrief, which compose
-// imports — so orgbrief cannot import compose and the table cannot live there.
+// package compose, and the account brief is in compose/companybrief, which compose
+// imports — so companybrief cannot import compose and the table cannot live there.
 // This package is Tier-0 and importable from both.
 
 import (

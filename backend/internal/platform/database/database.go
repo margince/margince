@@ -60,7 +60,7 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	}
 	// JIT is off for this workload, and the row-scope predicates are why.
 	// Every list, search and timeline query composes the caller's
-	// visibility clause — nested EXISTS over person, organization, deal,
+	// visibility clause — nested EXISTS over person, company, deal,
 	// activity_link and record_grant — which inflates the plan's ESTIMATED
 	// cost past jit_above_cost while the query itself stays an indexed
 	// OLTP read. Postgres then spends longer in LLVM than in the query:

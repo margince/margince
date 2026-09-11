@@ -5,15 +5,15 @@ describe("ENTITY registry", () => {
   it("covers exactly the five record kinds (no activity)", () => {
     expect([...ENTITY_KINDS]).toEqual([
       "person",
-      "organization",
+      "company",
       "deal",
       "lead",
       "project",
     ]);
     expect(Object.keys(ENTITY).sort()).toEqual([
+      "company",
       "deal",
       "lead",
-      "organization",
       "person",
       "project",
     ]);
@@ -24,7 +24,7 @@ describe("ENTITY registry", () => {
       screen: "contacts",
       id: "p-1",
     });
-    expect(ENTITY.organization.route("o-1")).toEqual({
+    expect(ENTITY.company.route("o-1")).toEqual({
       screen: "companies",
       id: "o-1",
     });
@@ -39,7 +39,7 @@ describe("ENTITY registry", () => {
   it("reverses every route into SCREEN_ENTITY, with nothing left over", () => {
     expect(SCREEN_ENTITY).toEqual({
       contacts: "person",
-      companies: "organization",
+      companies: "company",
       deals: "deal",
       leads: "lead",
       projects: "project",

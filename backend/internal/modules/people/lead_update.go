@@ -25,13 +25,13 @@ type UpdateLeadInput struct {
 	// reversal path names them here instead.
 	Clear []string
 	// Trail names what the audit trail calls this write; zero is an update.
-	Trail           storekit.AuditTrail
-	FullName        *string
-	Email           *string
-	Title           *string
-	CompanyName     *string
-	CandidateOrgKey *string
-	Status          *string // only new ↔ working here; terminal states have their own paths
+	Trail               storekit.AuditTrail
+	FullName            *string
+	Email               *string
+	Title               *string
+	CompanyName         *string
+	CandidateCompanyKey *string
+	Status              *string // only new ↔ working here; terminal states have their own paths
 	// Source corrects where the lead came from; the score follows it.
 	Source *string
 	Score  *int
@@ -347,8 +347,8 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 	if in.CompanyName != nil {
 		p.Set("company_name", current.CompanyName, *in.CompanyName)
 	}
-	if in.CandidateOrgKey != nil {
-		p.Set("candidate_org_key", current.CandidateOrgKey, *in.CandidateOrgKey)
+	if in.CandidateCompanyKey != nil {
+		p.Set("candidate_company_key", current.CandidateCompanyKey, *in.CandidateCompanyKey)
 	}
 	if in.ProjectID != nil {
 		p.Set("project_id", current.ProjectId, *in.ProjectID)

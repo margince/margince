@@ -171,33 +171,33 @@ func TestARolledBackLandingCachesNothing(t *testing.T) {
 	}
 }
 
-func TestFlipLandsAnOrganizationAndItsIdentityInOneTransaction(t *testing.T) {
+func TestFlipLandsACompanyAndItsIdentityInOneTransaction(t *testing.T) {
 	f := setupLanding(t)
 
-	res, err := f.w.Ensure(f.ctx, flipObjectOrganization, landingRow("hs-org-1", map[string]any{"display_name": "Analytical Engines"}))
+	res, err := f.w.Ensure(f.ctx, flipObjectCompany, landingRow("hs-company-1", map[string]any{"display_name": "Analytical Engines"}))
 	if err != nil {
-		t.Fatalf("landing the organization: %v", err)
+		t.Fatalf("landing the company: %v", err)
 	}
 	if !res.Created {
-		t.Fatalf("result = %+v, want a created organization", res)
+		t.Fatalf("result = %+v, want a created company", res)
 	}
 	// The map row is joined back to the record it names: import_record_map
 	// carries no FK to the native tables, so counting it alone would pass over
 	// a map row pointing at nothing.
-	if n := f.e.WsCount(t, `SELECT count(*) FROM import_record_map m JOIN organization o ON o.id = m.native_id
-		WHERE m.object = 'organization' AND m.external_id = 'hs-org-1' AND o.display_name = 'Analytical Engines'`); n != 1 {
-		t.Errorf("mapped organizations = %d, want 1 — the identity row and the record it names must both be there", n)
+	if n := f.e.WsCount(t, `SELECT count(*) FROM import_record_map m JOIN company o ON o.id = m.native_id
+		WHERE m.object = 'company' AND m.external_id = 'hs-company-1' AND o.display_name = 'Analytical Engines'`); n != 1 {
+		t.Errorf("mapped companies = %d, want 1 — the identity row and the record it names must both be there", n)
 	}
 }
 
-func TestAFailedIdentityWriteLeavesNoOrganizationBehind(t *testing.T) {
+func TestAFailedIdentityWriteLeavesNoCompanyBehind(t *testing.T) {
 	f := setupLanding(t)
 
-	if _, err := f.brokenRun().Ensure(f.ctx, flipObjectOrganization, landingRow("hs-org-2", map[string]any{"display_name": "Difference Engines"})); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := f.brokenRun().Ensure(f.ctx, flipObjectCompany, landingRow("hs-company-2", map[string]any{"display_name": "Difference Engines"})); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want the identity write's refusal — any other error means the landing failed before it, and this arm proved nothing about the rollback", err)
 	}
-	if n := f.e.WsCount(t, `SELECT count(*) FROM organization WHERE display_name = 'Difference Engines'`); n != 0 {
-		t.Errorf("organization rows = %d, want 0 — an orphan the resume cannot name", n)
+	if n := f.e.WsCount(t, `SELECT count(*) FROM company WHERE display_name = 'Difference Engines'`); n != 0 {
+		t.Errorf("company rows = %d, want 0 — an orphan the resume cannot name", n)
 	}
 }
 
@@ -473,13 +473,13 @@ func TestAReplayedEmploymentAssociationConvergesRatherThanFailing(t *testing.T) 
 		landingRow("hs-person-emp", map[string]any{"full_name": "Ada Lovelace"})); err != nil {
 		t.Fatalf("landing the person: %v", err)
 	}
-	if _, err := f.w.Ensure(f.ctx, flipObjectOrganization,
-		landingRow("hs-org-emp", map[string]any{"display_name": "Analytical Engines Ltd"})); err != nil {
-		t.Fatalf("landing the organization: %v", err)
+	if _, err := f.w.Ensure(f.ctx, flipObjectCompany,
+		landingRow("hs-company-emp", map[string]any{"display_name": "Analytical Engines Ltd"})); err != nil {
+		t.Fatalf("landing the company: %v", err)
 	}
 	edge := migration.Assoc{
 		FromType: flipObjectPerson, FromID: "hs-person-emp",
-		ToType: flipObjectOrganization, ToID: "hs-org-emp", Label: "primary",
+		ToType: flipObjectCompany, ToID: "hs-company-emp", Label: "primary",
 	}
 
 	first, err := f.w.Associate(f.ctx, edge)

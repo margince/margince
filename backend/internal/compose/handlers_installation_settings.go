@@ -3,7 +3,7 @@
 
 package compose
 
-// The installation-settings surface (ADR-0090/A135): read the organization's
+// The installation-settings surface (ADR-0090): read the company's
 // name, reporting zone and base currency (every role), change them (admin/ops,
 // human-only). Thin transport — the identity store owns the RBAC gate, the
 // per-setting validation, the base-currency freeze and the audit-only write.
@@ -85,7 +85,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		httperr.NotImplemented(w, r, "UpdateInstallationSettings")
 		return
 	}
-	// Human-only (x-agent-access): an agent never renames the organization or
+	// Human-only (x-agent-access): an agent never renames the company or
 	// re-bases its reporting currency. The store re-checks the admin/ops grant.
 	if err := auth.RequireHuman(r.Context()); err != nil {
 		httperr.Write(w, r, err)

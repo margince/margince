@@ -212,7 +212,7 @@ kinds:
     registration: {when: [AccountScanBrain], absent: registers_anyway}
     args:
       Workspace: id
-      OrganizationID: id
+      CompanyID: id
       ScanID: id
       ViewerID: id
     reason: >-
@@ -288,7 +288,7 @@ kinds:
       only ever bounded an enumeration and an insert.
 
       Database-only: the pass reserves a budget slot and queues a deep read per
-      due org, and never crawls anything itself. autoEnrichDailyCap bounds it at
+      due company, and never crawls anything itself. autoEnrichDailyCap bounds it at
       500 trigger transactions, and a pass that stops early simply leaves the
       rest due for tomorrow.
 
@@ -1102,10 +1102,10 @@ kinds:
       the morning should not wait until tomorrow to see it on an account.
 
 
-  org_name_promotion:
+  company_name_promotion:
     role: worker
     fleet: true
-    go_type: OrgNamePromotionArgs
+    go_type: CompanyNamePromotionArgs
     queue: default
     timeout: 5m
     opts_owner: caller
@@ -1301,7 +1301,7 @@ kinds:
     registration: {when: [DeepReadBrain], absent: registers_anyway}
     args:
       Workspace: id
-      OrganizationID: id
+      CompanyID: id
       SiteReadID: id
       RequestedBy: id
       MaxPages:
@@ -1318,23 +1318,23 @@ kinds:
       terminal writes. Not knowable here: it is computed from CrawlCaps at
       registration.
 
-  check_organization_vat:
+  check_company_vat:
     role: worker
-    go_type: CheckOrganizationVatArgs
+    go_type: CheckCompanyVatArgs
     queue: vat_check
     timeout: 2m
     opts_owner: caller
     registration: {when: [VatChecker], absent: registers_anyway}
     args:
       Workspace: id
-      OrganizationID: id
+      CompanyID: id
       Requested:
         scalar: true
         reason: >-
           whether a person asked for this consultation, rather than a write
           having earned it. It decides whether the worker asks about a number
           the register has already answered, so it cannot be resolved from the
-          organization the job names — the row says what the number is, never
+          company the job names — the row says what the number is, never
           who wanted it re-checked. A bare true/false carrying no subject data:
           it names no person, and erasing the contact who pressed the button
           leaves nothing here to erase.
@@ -1343,16 +1343,16 @@ kinds:
       what the job can WAIT for. The pacer may hold it for the full interval
       before the request is built, the HTTP client allows 20s, and the write
       follows. Two minutes is that with room to spare.
-  geocode_organization:
+  geocode_company:
     role: worker
-    go_type: GeocodeOrganizationArgs
+    go_type: GeocodeCompanyArgs
     queue: geocode
     timeout: 3m
     opts_owner: caller
     registration: {when: [Geocoder], absent: registers_anyway}
     args:
       Workspace: id
-      OrganizationID: id
+      CompanyID: id
     reason: >-
       One address, one lookup, plus the write — but the ceiling is set by what
       the job can WAIT for, not by what it does. The pacer may hold it for the
@@ -1375,7 +1375,7 @@ kinds:
   # would never be located at all.
   #
   # It NOMINATES; it does not decide. Each candidate is handed to
-  # geocode_organization, which re-asks AddressForGeocode, so the retry ledger
+  # geocode_company, which re-asks AddressForGeocode, so the retry ledger
   # and the settled-address rules stay in exactly one place.
   #
   # NO WORKSPACE ARG, like webhook_retry and for the same reason: a periodic
@@ -1399,16 +1399,16 @@ kinds:
       queues, each paced by the installation-wide requester. Two minutes is
       generous for that and bounded by the batch.
 
-  technical_enrich_organization:
+  technical_enrich_company:
     role: worker
-    go_type: TechnicalEnrichOrganizationArgs
+    go_type: TechnicalEnrichCompanyArgs
     queue: technical_lookup
     timeout: 4m
     opts_owner: caller
     registration: {when: [TechnicalEnricher], absent: registers_anyway}
     args:
       Workspace: id
-      OrganizationID: id
+      CompanyID: id
     reason: >-
       Three lanes for one company, and the ceiling is set by what the job can
       WAIT for rather than by what it does. The certificate log is the long

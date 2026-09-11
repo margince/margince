@@ -12,7 +12,7 @@ package gates
 // The class this closes is the reference held across time. A read model, a link
 // row and a graph edge all store somebody else's record id, and the scope was
 // checked when the id was WRITTEN — by which point the deal can be reassigned,
-// the person merged, the org's owner moved teams. The read that hands the id
+// the person merged, the company's owner moved teams. The read that hands the id
 // back inherits nothing from that write, and the failure is quiet: the caller
 // gets a well-formed answer naming a record whose own read path refuses them.
 //
@@ -88,40 +88,40 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// pointing at somebody else's answers "may you still see the thing I am
 	// naming". Every entry below is the first kind, and each says how its own
 	// admission was already made.
-	"internal/modules/commissions:summaryTx":                  "the partner totals, grouped under the COMMISSION's own visibility clause (VisibleClause, applied in this statement). A caller admitted to an entry is admitted to what the entry is about, and the partner is what it is about — no organization content is read, only the id it groups by. The cost is that a total confirms a partner organization exists on a commission the caller may already open",
-	"internal/modules/contracts:ensureLinksShareOrganization": "the cross-company guard on a contract WRITE, and scoping it would defeat it. Its own doc says why: the predicate deciding who may READ a contract judges a deal-anchored one by its deal alone, so pairing company A's contract with company B's deal publishes A's agreement to everyone who can see B. The organization this cannot see is exactly the one the rule protects, and what leaves the function is a refusal rather than an id",
-	"internal/modules/projects:lockedDealProject":             "the project pointer read off a deal row the caller's transaction ALREADY HOLDS — the win path calls it only after its patch applied, and applying is what took the lock. The caller is past the deal's own write gate to be here, and the pointer is used to attach, never served. The cost is that a deal write learns which project the deal names",
-	"internal/modules/forecasting:SnapshotSide":               "one snapshot's frozen per-deal rows, behind the snapshot's own read gate — reading a snapshot IS reading the forecast, which is what that gate governs. The deal ids are the record of what the workspace expected when it was taken, not a live pointer: scoping them to today's visibility would rewrite history to match the reader. The cost is that a snapshot reader learns which deals were in it, including ones they could not open now",
-	"internal/modules/dealrooms:liveRoomForBuyerWrite":        "a BUYER session's write precondition. Row scope over deals is the seller side's model — it narrows to a seat's own rows — and a buyer holds no seat for it to narrow to. The authority here is the room being live and the capability admitting the write, which this function is entirely about; the deal it names is the room's own subject",
-	"internal/modules/dealrooms:reissueFor":                   "the resend, whose authority its own doc states: the participant row IS the authority, and it was found by the address the mail will go to. The deal is that participant's room, so a scope clause would ask whether the SELLER may see a deal on a path that has no seller session at all",
-	"internal/modules/signals:matchCandidates":                "the resolver matching an inbound signal to an organization, on the capture path under the system principal — the same ground the edge census ratifies signals/resolver.go on. The organization is what the signal is ABOUT, it goes to RecordDerived, and no reader sees it until the signal is served under their own signal row scope. The cost is that resolution reads organizations with no per-caller gate",
+	"internal/modules/commissions:summaryTx":             "the partner totals, grouped under the COMMISSION's own visibility clause (VisibleClause, applied in this statement). A caller admitted to an entry is admitted to what the entry is about, and the partner is what it is about — no company content is read, only the id it groups by. The cost is that a total confirms a partner company exists on a commission the caller may already open",
+	"internal/modules/contracts:ensureLinksShareCompany": "the cross-company guard on a contract WRITE, and scoping it would defeat it. Its own doc says why: the predicate deciding who may READ a contract judges a deal-anchored one by its deal alone, so pairing company A's contract with company B's deal publishes A's agreement to everyone who can see B. The company this cannot see is exactly the one the rule protects, and what leaves the function is a refusal rather than an id",
+	"internal/modules/projects:lockedDealProject":        "the project pointer read off a deal row the caller's transaction ALREADY HOLDS — the win path calls it only after its patch applied, and applying is what took the lock. The caller is past the deal's own write gate to be here, and the pointer is used to attach, never served. The cost is that a deal write learns which project the deal names",
+	"internal/modules/forecasting:SnapshotSide":          "one snapshot's frozen per-deal rows, behind the snapshot's own read gate — reading a snapshot IS reading the forecast, which is what that gate governs. The deal ids are the record of what the workspace expected when it was taken, not a live pointer: scoping them to today's visibility would rewrite history to match the reader. The cost is that a snapshot reader learns which deals were in it, including ones they could not open now",
+	"internal/modules/dealrooms:liveRoomForBuyerWrite":   "a BUYER session's write precondition. Row scope over deals is the seller side's model — it narrows to a seat's own rows — and a buyer holds no seat for it to narrow to. The authority here is the room being live and the capability admitting the write, which this function is entirely about; the deal it names is the room's own subject",
+	"internal/modules/dealrooms:reissueFor":              "the resend, whose authority its own doc states: the participant row IS the authority, and it was found by the address the mail will go to. The deal is that participant's room, so a scope clause would ask whether the SELLER may see a deal on a path that has no seller session at all",
+	"internal/modules/signals:matchCandidates":           "the resolver matching an inbound signal to a company, on the capture path under the system principal — the same ground the edge census ratifies signals/resolver.go on. The company is what the signal is ABOUT, it goes to RecordDerived, and no reader sees it until the signal is served under their own signal row scope. The cost is that resolution reads companies with no per-caller gate",
 
 	// Signal producers. Both run inside signalScanWorkspaceWorker, which binds
 	// PrincipalSystem "agent:signal-scan" before either read (jobs_signals.go),
-	// so there is no human actor for a row scope to narrow to and the org id
+	// so there is no human actor for a row scope to narrow to and the company id
 	// goes to the signal being written rather than to any caller. What a REP may
 	// then see of those signals is decided on the read side, by
 	// auth.SignalScopeClause.
-	"internal/compose:scanGhostedThreads": "the ghosted-thread rule's account scan, under the signal-scan sweep's system principal: the organization it names is what the signal is ABOUT, and it is handed to signals.RecordDerived, never to a reader",
-	"internal/compose:scanQuietProjects":  "the quiet-project rule's scan, under the same sweep and the same system principal: the organization it names is the account the project's signal is attributed to, handed to signals.RecordDerived and never to a reader",
-	"internal/compose:dueThreads":         "the signal extractor's settled-conversation backlog, under the same sweep and the same system principal: the single organization a thread resolves to is what the extraction is filed against, and the rows go to the model lane rather than to a caller",
+	"internal/compose:scanGhostedThreads": "the ghosted-thread rule's account scan, under the signal-scan sweep's system principal: the company it names is what the signal is ABOUT, and it is handed to signals.RecordDerived, never to a reader",
+	"internal/compose:scanQuietProjects":  "the quiet-project rule's scan, under the same sweep and the same system principal: the company it names is the account the project's signal is attributed to, handed to signals.RecordDerived and never to a reader",
+	"internal/compose:dueThreads":         "the signal extractor's settled-conversation backlog, under the same sweep and the same system principal: the single company a thread resolves to is what the extraction is filed against, and the rows go to the model lane rather than to a caller",
 
-	// The organization rollup's tree walk, found by the aliased-column pass:
-	// `parent_org_id` is an FK to organization named for its role, so the
+	// The company rollup's tree walk, found by the aliased-column pass:
+	// `parent_company_id` is an FK to company named for its role, so the
 	// name-derived extractor could not see it at all.
 	//
-	// The reference IS scoped, one call up rather than inside this one. OrgRollup
+	// The reference IS scoped, one call up rather than inside this one. CompanyRollup
 	// takes auth.EnsureVisible on the root in the same transaction, and every
-	// node this walk returns then passes through orgReadablePredicate's
-	// auth.ScopeClauseFor over organization — a node the caller cannot read is
+	// node this walk returns then passes through companyReadablePredicate's
+	// auth.ScopeClauseFor over company — a node the caller cannot read is
 	// pruned before a figure is summed, and a root that fails it answers
 	// ErrNotFound. Scoping the walk itself would ask the same question twice and
 	// lose the tree's shape, which the pruning needs whole.
-	"internal/compose:loadOrgTree": "the rollup's recursive tree walk, whose parent_org_id reference is bounded by the caller: EnsureVisible on the root in this transaction, then orgReadablePredicate's ScopeClauseFor over every node before any figure is summed",
+	"internal/compose:loadCompanyTree": "the rollup's recursive tree walk, whose parent_company_id reference is bounded by the caller: EnsureVisible on the root in this transaction, then companyReadablePredicate's ScopeClauseFor over every node before any figure is summed",
 
 	// The weekly retrospective's frozen deal lines. The id is served beside a
 	// label written when the review was, and NOTHING live is read: the query
-	// joins no deal, no stage and no organization, so there is no current row
+	// joins no deal, no stage and no company, so there is no current row
 	// for a scope to narrow. Freezing is the point — a past week that changed
 	// when a deal was renamed, archived or deleted would not be a record of
 	// that week. The review itself is already the acting rep's own
@@ -150,23 +150,23 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// reading overwrite exactly the seats its author was not allowed to know
 	// about. Nothing leaves the function: no person id, no role, only the
 	// decision not to write.
-	"internal/compose/org360:seatedNow": "the pre-write committee re-read: an unseen seat is still a human's answer, so scoping this would let a reading overwrite the seats it may not see; no id or role escapes the function, only the decision not to write",
+	"internal/compose/company360:seatedNow": "the pre-write committee re-read: an unseen seat is still a human's answer, so scoping this would let a reading overwrite the seats it may not see; no id or role escapes the function, only the decision not to write",
 
 	"internal/compose:employerOf": "the person auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/personautoenrich.go): it answers which company's published site may describe this person, and the id is spent inside the same transaction choosing that site — a caller never sees it",
 
 	// The project reports' company columns. The scope IS applied — by
 	// referenceScopeClauses (reportsql.go), which renders
-	// auth.ScopeClauseFor("organization") around every expression the spec
+	// auth.ScopeClauseFor("company") around every expression the spec
 	// declares in referenceScopes, and both of these are declared there. This
 	// gate reads SQL text and cannot follow a clause built from a map at query
 	// time; reportreferencescope_test.go is what holds the declaration honest,
 	// by failing when a company-bearing dimension has no entry.
-	"internal/compose:projectRowDimensions":   "the project report's dimension set: its company expressions are declared in referenceScopes, and referenceScopeClauses wraps each in the organization row scope before the query runs",
+	"internal/compose:projectRowDimensions":   "the project report's dimension set: its company expressions are declared in referenceScopes, and referenceScopeClauses wraps each in the company row scope before the query runs",
 	"internal/compose:projectsByPhaseSpec":    "the same declaration on the projects-by-phase spec, applied the same way at query time",
 	"internal/compose:projectCommitmentsSpec": "the same declaration on the project-commitments spec, applied the same way at query time",
 	"internal/compose:projectsGoneQuietSpec":  "the same declaration on the projects-gone-quiet spec, applied the same way at query time",
 
-	"internal/compose/network:readDealFacts": "the coverage view's deal row: the organization id it reads is spent one function later on readDeparted's employment test and is absent from DealCoverage, so it reaches no caller. The DEAL is gated where the reference enters — network.Reads.GetDealCoverage takes auth.Require plus auth.EnsureVisibleLive on it before opening this assembly",
+	"internal/compose/network:readDealFacts": "the coverage view's deal row: the company id it reads is spent one function later on readDeparted's employment test and is absent from DealCoverage, so it reaches no caller. The DEAL is gated where the reference enters — network.Reads.GetDealCoverage takes auth.Require plus auth.EnsureVisibleLive on it before opening this assembly",
 
 	// The reply consumer's sender lookup. Scoping it would be the defect, not
 	// the fix: an introduction is between two colleagues, and the contact who
@@ -415,7 +415,7 @@ func stringConst(expr ast.Expr) (string, bool) {
 type rowScopeFnInfo struct {
 	// scopes are the tables this function bounds directly, anyTable among them
 	// when a spelling names none. A SET rather than a flag: a function that
-	// probes a deal has not bounded the organization it also projects, and
+	// probes a deal has not bounded the company it also projects, and
 	// counting probes instead of matching them is what would have read green
 	// over #1876.
 	scopes map[string]bool
@@ -462,7 +462,7 @@ func (p rowScopePkg) visibleTo(recv string) map[string]*rowScopeFnInfo {
 // reachesRowScope resolves the obligation transitively over same-package calls;
 // seen breaks recursion cycles.
 //
-// The obligation is PER TABLE. A read that projects an organization satisfies
+// The obligation is PER TABLE. A read that projects a company satisfies
 // nothing by probing a deal — that is #1876 exactly, and a gate that counted
 // probes would have gone green over it and then certified it, because the
 // obvious way to quiet such a gate is to add a probe over whatever table the
@@ -836,7 +836,7 @@ func projectedBytes(sql string) []bool {
 // Such a read answers a subset of the ids it was handed, so it discloses no
 // reference the caller did not already hold; the row scope belongs on the read
 // that produced that list, one level up, and probing again here would be a
-// second enforcement of one rule with its own way of being wrong. org360's
+// second enforcement of one rule with its own way of being wrong. company360's
 // contact sections and network's departure test are both written that way and
 // say so in their own comments.
 //

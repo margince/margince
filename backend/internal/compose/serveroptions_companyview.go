@@ -23,10 +23,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
+	"github.com/margince/margince/backend/internal/compose/companybrief"
+	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
-	"github.com/margince/margince/backend/internal/compose/orgbrief"
-	"github.com/margince/margince/backend/internal/compose/orgdossier"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -44,10 +44,10 @@ import (
 // guarantee stays a dependency rather than a rule somebody remembers.
 func WithAccountDraft(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		svc := accountdraft.NewService(s.org360Svc, brain).
+		svc := accountdraft.NewService(s.company360Svc, brain).
 			WithEnvelope(draftEnvelope(pool, s.log)).
 			WithEmailSummaries(emailRows(pool)).
-			WithDossier(s.orgDossierSvc).
+			WithDossier(s.companyDossierSvc).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
 		s.accountDraftHandlers = accountdraft.NewHandlers(svc, s.sorDispatch.isOverlay)
 	}
@@ -65,9 +65,9 @@ func WithAccountDraft(brain completer) Option {
 // leaving text attributed to a model that no longer writes it.
 func WithAccountBrief(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.orgBriefSvc = orgbrief.NewService(pool, s.org360Svc, s.peopleStore, brain, routingVersion, time.Now).
+		s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.peopleStore, brain, routingVersion, time.Now).
 			WithEmailSummaries(emailRows(pool))
-		s.orgBriefHandlers = orgbrief.NewHandlers(s.orgBriefSvc, s.sorDispatch.isOverlay)
+		s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc, s.sorDispatch.isOverlay)
 	}
 }
 
@@ -86,10 +86,10 @@ func WithAccountBrief(brain completer, routingVersion string) Option {
 // holds. Either option may run first.
 func WithCompanyDossier(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.orgDossierSvc = orgdossier.NewService(pool, s.peopleStore, brain, routingVersion, time.Now).
+		s.companyDossierSvc = companydossier.NewService(pool, s.peopleStore, brain, routingVersion, time.Now).
 			WithEmailSummaries(emailRows(pool))
-		s.orgDossierHandlers = orgdossier.NewHandlers(
-			s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay)
+		s.companyDossierHandlers = companydossier.NewHandlers(
+			s.companyDossierSvc, s.companyGrowthFitSvc, s.sorDispatch.isOverlay)
 	}
 }
 
@@ -109,11 +109,11 @@ func WithCompanyDossier(brain completer, routingVersion string) Option {
 // longer holds.
 func WithGrowthFit(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.orgGrowthFitSvc = orgdossier.NewGrowthFitService(
+		s.companyGrowthFitSvc = companydossier.NewGrowthFitService(
 			pool, s.peopleStore, offeringConfirmed(s.peopleStore), brain, routingVersion, time.Now).
 			WithEmailSummaries(emailRows(pool))
-		s.orgDossierHandlers = orgdossier.NewHandlers(
-			s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay)
+		s.companyDossierHandlers = companydossier.NewHandlers(
+			s.companyDossierSvc, s.companyGrowthFitSvc, s.sorDispatch.isOverlay)
 	}
 }
 
@@ -166,10 +166,10 @@ func WithDealStatusWriter(brain completer, routingVersion string) Option {
 // absent instead of guessing.
 func WithRoleProposals(brain completer) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
-		if s.org360Svc == nil {
+		if s.company360Svc == nil {
 			return
 		}
-		s.org360Handlers = s.WithRoleLane(brain)
+		s.company360Handlers = s.WithRoleLane(brain)
 	}
 }
 
@@ -182,10 +182,10 @@ func WithRoleProposals(brain completer) Option {
 // floor, because the only thing left to read one from is the job title.
 func WithIntroRequestDraft(brain completer) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
-		if s.org360Svc == nil {
+		if s.company360Svc == nil {
 			return
 		}
-		s.org360Handlers = s.WithIntroLane(brain)
+		s.company360Handlers = s.WithIntroLane(brain)
 	}
 }
 

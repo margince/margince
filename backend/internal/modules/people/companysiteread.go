@@ -65,7 +65,7 @@ type ConfirmCompanySiteReadInput struct {
 
 // StageSiteReadPeople stages the dossier's published people after the anchor
 // exists. The callback runs inside the company confirmation transaction.
-type StageSiteReadPeople func(context.Context, pgx.Tx, ids.OrganizationID, SiteRead, []SiteReadPerson) ([]ids.UUID, error)
+type StageSiteReadPeople func(context.Context, pgx.Tx, ids.CompanyID, SiteRead, []SiteReadPerson) ([]ids.UUID, error)
 
 // SiteReadFactKey is the stable selection key exposed by the dossier wire.
 // It includes category and field because singleton facts legitimately carry
@@ -83,7 +83,7 @@ func SiteReadFactKey(f DeepReadFact) string {
 // because a person's own mark already holds that slot, so the caller collects
 // bytes no record wears. Empty is the ordinary answer: the read parked no mark,
 // the anchor adopted what it parked, or the caller declared no object store to
-// collect with. Same contract as SetOrganizationLogo and RecordSiteReadLogo — a
+// collect with. Same contract as SetCompanyLogo and RecordSiteReadLogo — a
 // store reports a collection, it never performs one.
 func (s *Store) ConfirmCompanySiteRead(ctx context.Context, in ConfirmCompanySiteReadInput, stagePeople StageSiteReadPeople) (Company, []string, error) {
 	by, err := storekit.CapturedBy(ctx)
@@ -151,10 +151,10 @@ func (s *Store) confirmCompanySiteReadTx(
 		return Company{}, nil, err
 	}
 	// The marks land AFTER the confirmation's own event, never before it. Their
-	// writes publish organization.updated, and the confirmation that mints the
-	// anchor publishes organization.created; the outbox ships a single entity's
+	// writes publish company.updated, and the confirmation that mints the
+	// anchor publishes company.created; the outbox ships a single entity's
 	// rows in insert order, so binding first would hand a consumer an update for
-	// an organization it has not been told about yet.
+	// a company it has not been told about yet.
 	// Bound from here, slot by slot: the write-authority gate credits a writer
 	// with its DIRECT caller's probe, and a helper between the two would put the
 	// bind one hop past the guard it runs under.
@@ -168,7 +168,7 @@ func (s *Store) confirmCompanySiteReadTx(
 			unadoptedLogos = append(unadoptedLogos, *unadopted)
 		}
 	}
-	company, err := readCompany(ctx, tx, confirmation.target.id)
+	company, err := readAnchorCompany(ctx, tx, confirmation.target.id)
 	if err != nil {
 		return Company{}, nil, err
 	}
@@ -199,27 +199,27 @@ func applySiteReadConfirmation(
 	if err != nil {
 		return siteReadConfirmation{}, err
 	}
-	orgID := target.id
+	companyID := target.id
 	siteFields, humanFields := splitConfirmedProfile(read.ProfileFields, read.LegalEntities, in)
-	appliedSite, err := applyEvidenceFieldsWithOverwrite(ctx, tx, workspaceID(ctx), orgID,
+	appliedSite, err := applyEvidenceFieldsWithOverwrite(ctx, tx, workspaceID(ctx), companyID,
 		companySourceSiteRead, companySiteReadCapturedBy, siteFields, in.overwriteProfileFields)
 	if err != nil {
 		return siteReadConfirmation{}, err
 	}
-	appliedHuman, err := writeCompanyFields(ctx, tx, orgID, by, humanFields)
+	appliedHuman, err := writeCompanyFields(ctx, tx, companyID, by, humanFields)
 	if err != nil {
 		return siteReadConfirmation{}, err
 	}
 	if in.Website != nil {
-		if err := setCompanyDomain(ctx, tx, orgID, *in.Website, by); err != nil {
+		if err := setCompanyDomain(ctx, tx, companyID, *in.Website, by); err != nil {
 			return siteReadConfirmation{}, err
 		}
 	}
-	appliedFacts, err := applySelectedSiteReadFacts(ctx, tx, orgID, read, in.SelectedFactKeys, in.overwriteFactKeys)
+	appliedFacts, err := applySelectedSiteReadFacts(ctx, tx, companyID, read, in.SelectedFactKeys, in.overwriteFactKeys)
 	if err != nil {
 		return siteReadConfirmation{}, err
 	}
-	humanFacts, err := applyResolvedHumanFacts(ctx, tx, orgID, by, in.humanFactEdits)
+	humanFacts, err := applyResolvedHumanFacts(ctx, tx, companyID, by, in.humanFactEdits)
 	if err != nil {
 		return siteReadConfirmation{}, err
 	}
@@ -235,7 +235,7 @@ func applySiteReadConfirmation(
 func applySelectedSiteReadFacts(
 	ctx context.Context,
 	tx pgx.Tx,
-	orgID ids.OrganizationID,
+	companyID ids.CompanyID,
 	read SiteRead,
 	selectedKeys []string,
 	overwriteKeys map[string]bool,
@@ -248,33 +248,33 @@ func applySelectedSiteReadFacts(
 		if !overwriteKeys[SiteReadFactKey(fact)] {
 			continue
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM organization_fact
-			WHERE organization_id = $1 AND category = $2
+		if _, err := tx.Exec(ctx, `DELETE FROM company_fact
+			WHERE company_id = $1 AND category = $2
 			  AND field = $3 AND value_key = $4 AND source = $5`,
-			orgID, fact.Category, fact.Field, fact.ValueKey, companySourceHuman); err != nil {
-			return nil, fmt.Errorf("replace accepted human organization fact %s.%s: %w",
+			companyID, fact.Category, fact.Field, fact.ValueKey, companySourceHuman); err != nil {
+			return nil, fmt.Errorf("replace accepted human company fact %s.%s: %w",
 				fact.Category, fact.Field, err)
 		}
 	}
-	return upsertOrganizationFacts(ctx, tx, workspaceID(ctx), DeepReadProposal{
-		OrganizationID: orgID,
-		SourceURL:      read.SeedURL,
-		SiteReadID:     read.ID,
-		Facts:          selectedFacts,
+	return upsertCompanyFacts(ctx, tx, DeepReadProposal{
+		CompanyID:  companyID,
+		SourceURL:  read.SeedURL,
+		SiteReadID: read.ID,
+		Facts:      selectedFacts,
 	}, companySiteReadCapturedBy)
 }
 
 func stageConfirmedSiteReadPeople(
 	ctx context.Context,
 	tx pgx.Tx,
-	orgID ids.OrganizationID,
+	companyID ids.CompanyID,
 	read SiteRead,
 	stagePeople StageSiteReadPeople,
 ) ([]ids.UUID, error) {
 	if stagePeople == nil || len(read.People) == 0 {
 		return nil, nil
 	}
-	proposalIDs, err := stagePeople(ctx, tx, orgID, read, read.People)
+	proposalIDs, err := stagePeople(ctx, tx, companyID, read, read.People)
 	if err != nil {
 		return nil, fmt.Errorf("stage website people: %w", err)
 	}
@@ -295,7 +295,7 @@ func recordSiteReadConfirmation(ctx context.Context, tx pgx.Tx, read SiteRead, c
 	// are context ABOUT the confirmation and ride audit_log.evidence, because
 	// anything placed in the images is projected by field history as a change
 	// to a field of that name (storekit.AuditWithEvidence).
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "organization", confirmation.target.id.UUID, before, after, map[string]any{
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "company", confirmation.target.id.UUID, before, after, map[string]any{
 		auditKeySource: companySourceSiteRead, auditKeySourceURL: read.SeedURL,
 		auditKeyFields: confirmation.appliedSite, "human_fields": confirmation.appliedHuman,
 		auditKeyFacts: confirmation.appliedFacts, "site_read_id": read.ID, "draft_version": read.DraftVersion,
@@ -313,7 +313,7 @@ func recordSiteReadConfirmation(ctx context.Context, tx pgx.Tx, read SiteRead, c
 	// column — so confirming an ordinary company page failed outright, at the
 	// last step of onboarding, with nothing but a 500 to show for it.
 	if _, err := tx.Exec(ctx, `UPDATE site_read
-		SET organization_id = $2, proposal_ids = coalesce($3, '{}'::uuid[]),
+		SET company_id = $2, proposal_ids = coalesce($3, '{}'::uuid[]),
 		    confirmed_at = now(), updated_at = now()
 		WHERE id = $1`, read.ID, confirmation.target.id, confirmation.proposalIDs); err != nil {
 		return fmt.Errorf("mark website read confirmed: %w", err)
@@ -321,16 +321,16 @@ func recordSiteReadConfirmation(ctx context.Context, tx pgx.Tx, read SiteRead, c
 	return nil
 }
 
-// siteReadConfirmationPayload builds the organization-side event a
-// confirmed site-read emits — organization.created (the union struct)
-// when the confirmation minted a fresh organization, or an
-// organization.updated changed_fields note when it filled an existing
+// siteReadConfirmationPayload builds the company-side event a
+// confirmed site-read emits — company.created (the union struct)
+// when the confirmation minted a fresh company, or an
+// company.updated changed_fields note when it filled an existing
 // one — the ONE place that maps the applied site/human/fact deltas onto
 // the published schema. The two shapes are different published events,
 // not variants of one, so the return type is the shared events.Payload
 // seam.
 //
-//nolint:ireturn // dispatches to PublicEventOrganizationCreated vs Updated by confirmation.created; tested directly via the interface in person_organization_payload_test.go
+//nolint:ireturn // dispatches to PublicEventCompanyCreated vs Updated by confirmation.created; tested directly via the interface in person_company_payload_test.go
 func siteReadConfirmationPayload(read SiteRead, confirmation siteReadConfirmation) events.Payload {
 	delta := map[string]any{
 		auditKeyFields: confirmation.appliedSite,
@@ -342,7 +342,7 @@ func siteReadConfirmationPayload(read SiteRead, confirmation siteReadConfirmatio
 		sourceURL := read.SeedURL
 		siteReadID := openapi_types.UUID(read.ID)
 		capturedBy := companySiteReadCapturedBy
-		return crmcontracts.PublicEventOrganizationCreated{
+		return crmcontracts.PublicEventCompanyCreated{
 			Delta:      &delta,
 			Source:     &source,
 			SourceUrl:  &sourceURL,
@@ -350,7 +350,7 @@ func siteReadConfirmationPayload(read SiteRead, confirmation siteReadConfirmatio
 			CapturedBy: &capturedBy,
 		}
 	}
-	return crmcontracts.PublicEventOrganizationUpdated{
+	return crmcontracts.PublicEventCompanyUpdated{
 		ChangedFields: map[string]any{
 			eventKeyDelta:  delta,
 			auditKeySource: companySourceSiteRead, auditKeySourceURL: read.SeedURL,

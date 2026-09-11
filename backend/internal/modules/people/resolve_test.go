@@ -39,16 +39,16 @@ func TestNoMatchResolvesToNothing(t *testing.T) {
 	}
 }
 
-// Every rival the organization ladder ranked comes back, not just the best one.
+// Every rival the company ladder ranked comes back, not just the best one.
 // A single winner would let one dismissed pair hide a genuine duplicate behind
-// it — the same reason OrganizationMatch carries a list at all.
-func TestEveryRankedOrganizationRivalSurvivesTranslation(t *testing.T) {
-	first, second := ids.OrganizationID{UUID: ids.NewV7()}, ids.OrganizationID{UUID: ids.NewV7()}
-	got := organizationOutcome(OrganizationMatch{
+// it — the same reason CompanyMatch carries a list at all.
+func TestEveryRankedCompanyRivalSurvivesTranslation(t *testing.T) {
+	first, second := ids.CompanyID{UUID: ids.NewV7()}, ids.CompanyID{UUID: ids.NewV7()}
+	got := companyOutcome(CompanyMatch{
 		Decision: DecisionFuzzyReview,
-		Ranked: []OrganizationCandidateScore{
-			{OrganizationID: first, Confidence: 0.91, MatchedField: "display_name"},
-			{OrganizationID: second, Confidence: 0.78, MatchedField: "legal_name"},
+		Ranked: []CompanyCandidateScore{
+			{CompanyID: first, Confidence: 0.91, MatchedField: "display_name"},
+			{CompanyID: second, Confidence: 0.78, MatchedField: "legal_name"},
 		},
 	})
 
@@ -65,21 +65,21 @@ func TestEveryRankedOrganizationRivalSurvivesTranslation(t *testing.T) {
 	}
 }
 
-func TestTheOrganizationFuzzyTranslationIgnoresANonFuzzyDecision(t *testing.T) {
-	// The exact tier is answered before this is reached (exactOrganizationOwners),
+func TestTheCompanyFuzzyTranslationIgnoresANonFuzzyDecision(t *testing.T) {
+	// The exact tier is answered before this is reached (exactCompanyOwners),
 	// so a collision arriving here would be a second, quieter exact path.
-	org := ids.OrganizationID{UUID: ids.NewV7()}
-	if got := organizationOutcome(OrganizationMatch{Decision: DecisionExactCollision, OrganizationID: org}); len(got.Refs) != 0 {
+	company := ids.CompanyID{UUID: ids.NewV7()}
+	if got := companyOutcome(CompanyMatch{Decision: DecisionExactCollision, CompanyID: company}); len(got.Refs) != 0 {
 		t.Errorf("got %+v, want nothing: the exact tier does not come through here", got)
 	}
-	if got := organizationOutcome(OrganizationMatch{Decision: DecisionNoMatch}); len(got.Refs) != 0 {
+	if got := companyOutcome(CompanyMatch{Decision: DecisionNoMatch}); len(got.Refs) != 0 {
 		t.Errorf("got %+v, want nothing", got)
 	}
 }
 
 // The object grant is taken for EVERY kind the batch asks about, and it is taken
 // before any of it runs — a batch that resolved the person half and then refused
-// on the organization half would already have told the caller which addresses
+// on the company half would already have told the caller which addresses
 // exist.
 func TestResolveRequiresTheGrantForEveryKindInTheBatch(t *testing.T) {
 	peopleOnly := principal.WithActor(context.Background(), principal.Principal{
@@ -94,7 +94,7 @@ func TestResolveRequiresTheGrantForEveryKindInTheBatch(t *testing.T) {
 		t.Fatalf("a person-only batch was refused for a caller who may read people: %v", err)
 	}
 	err := requireResolveAuthority(peopleOnly, []ResolveCandidate{
-		{Kind: ResolvePerson}, {Kind: ResolveOrganization},
+		{Kind: ResolvePerson}, {Kind: ResolveCompany},
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("err = %v, want a permission denial for the kind the caller may not read", err)
@@ -116,7 +116,7 @@ func TestCompanyDomainsDerivesFromEmailsAndDropsConsumerMail(t *testing.T) {
 }
 
 // A CLAIMED DOMAIN IS WHATEVER THE CARD SAYS, and each form has to reduce to the
-// key the organization_domain index is stored under.
+// key the company_domain index is stored under.
 //
 // Each case stands alone, with nothing else in the candidate to supply the
 // answer. An earlier version of this test passed a URL alongside the bare name

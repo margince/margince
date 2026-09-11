@@ -110,7 +110,7 @@ function NewDeal({
   });
   return (
     <StoryProviders>
-      <NewDealAction orgId="o-1" orgName="Brandt Automotive GmbH" />
+      <NewDealAction companyId="o-1" companyName="Brandt Automotive GmbH" />
     </StoryProviders>
   );
 }

@@ -81,8 +81,8 @@ func (h technicalHandlers) TechnicalEnrichCompany(w http.ResponseWriter, r *http
 func (h technicalHandlers) startTechnicalEnrich(
 	ctx context.Context, id ids.UUID,
 ) (crmcontracts.TechnicalEnrichStarted, error) {
-	orgID := ids.From[ids.OrganizationKind](id)
-	_, ok, err := h.people.TechnicalDomain(ctx, orgID)
+	companyID := ids.From[ids.CompanyKind](id)
+	_, ok, err := h.people.TechnicalDomain(ctx, companyID)
 	if err != nil {
 		return crmcontracts.TechnicalEnrichStarted{}, err
 	}
@@ -101,16 +101,16 @@ func (h technicalHandlers) startTechnicalEnrich(
 		return crmcontracts.TechnicalEnrichStarted{}, database.ErrNoWorkspace
 	}
 	err = database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
-		return h.enqueue.EnqueueTx(ctx, tx, TechnicalEnrichOrganizationArgs{
-			Workspace:      ws,
-			OrganizationID: id,
+		return h.enqueue.EnqueueTx(ctx, tx, TechnicalEnrichCompanyArgs{
+			Workspace: ws,
+			CompanyID: id,
 		}, technicalInsertOpts())
 	})
 	if err != nil {
 		return crmcontracts.TechnicalEnrichStarted{}, err
 	}
 	return crmcontracts.TechnicalEnrichStarted{
-		OrganizationId: openapi_types.UUID(id),
+		CompanyId: openapi_types.UUID(id),
 		// Queued is what this call did. River's uniqueness makes a second press
 		// join the first rather than queue again, so the honest word for both
 		// is the same: the lookup this rep asked for is on its way.
@@ -124,7 +124,7 @@ func (h technicalHandlers) GetLatestTechnicalEnrich(w http.ResponseWriter, r *ht
 		httperr.NotImplemented(w, r, "getLatestTechnicalEnrich (no job runner configured)")
 		return
 	}
-	lanes, err := h.people.TechnicalLaneState(r.Context(), ids.From[ids.OrganizationKind](ids.UUID(id)))
+	lanes, err := h.people.TechnicalLaneState(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -136,8 +136,8 @@ func (h technicalHandlers) GetLatestTechnicalEnrich(w http.ResponseWriter, r *ht
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.TechnicalEnrichStatus{
-		OrganizationId: openapi_types.UUID(id),
-		Lanes:          technicalLanesWire(lanes),
+		CompanyId: openapi_types.UUID(id),
+		Lanes:     technicalLanesWire(lanes),
 	})
 }
 

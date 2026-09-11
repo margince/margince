@@ -55,7 +55,7 @@ type message struct {
 	ToAddr      string    `json:"to"`
 	ToName      string    `json:"to_name"`
 	CCAddr      string    `json:"cc,omitempty"`
-	OrgID       string    `json:"organization_id"`
+	CompanyID   string    `json:"company_id"`
 	DealID      string    `json:"deal_id,omitempty"`
 	PersonEmail string    `json:"person_email,omitempty"`
 }
@@ -94,8 +94,8 @@ func (m message) record() connector.NormalizedRecord {
 	// directory produced it from the database, so a bad one is a bug worth
 	// seeing as a missing link rather than a lost thread.
 	var links []datasource.EntityRef
-	if orgID, err := ids.Parse(m.OrgID); err == nil && m.Kind != "meeting" {
-		links = append(links, datasource.EntityRef{Type: datasource.EntityOrganization, ID: orgID})
+	if companyID, err := ids.Parse(m.CompanyID); err == nil && m.Kind != "meeting" {
+		links = append(links, datasource.EntityRef{Type: datasource.EntityCompany, ID: companyID})
 	}
 	if m.DealID != "" {
 		if dealID, err := ids.Parse(m.DealID); err == nil {
@@ -161,7 +161,7 @@ func domainOf(addr string) string {
 
 // historyDays is how far back an account's correspondence reaches.
 //
-// The anchor is NOT the organization's created_at, which is when the seeder
+// The anchor is NOT the company's created_at, which is when the seeder
 // wrote the row — today, for every company in a fresh installation. Anchoring
 // there put every message in the FUTURE (created + 20 days), and a captured
 // message that has not happened yet is refused: the generator produced six
@@ -341,7 +341,7 @@ func newMessage(mailbox Mailbox, account Account, contact Person,
 		Subject: subject, Body: greeting + body + "\n\n" + words.SignOff,
 		OccurredAt: occurred.UTC(), Direction: direction, Kind: kind,
 		FromAddr: from, FromName: fromName, ToAddr: to, ToName: toName, CCAddr: cc,
-		OrgID: account.OrganizationID, DealID: dealID, PersonEmail: contact.Email,
+		CompanyID: account.CompanyID, DealID: dealID, PersonEmail: contact.Email,
 	}
 }
 

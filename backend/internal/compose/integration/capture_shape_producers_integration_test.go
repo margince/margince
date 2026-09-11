@@ -10,7 +10,7 @@ package integration
 // This is a fitness test, not a feature test: it owns no behaviour of its own
 // and asserts nothing about what any producer concludes. It seeds ONE workspace
 // the way a connector does — mail filed against a PERSON, the account reachable
-// only through that person's employment, and no direct organization link
+// only through that person's employment, and no direct company link
 // anywhere — and requires that each producer still finds the account.
 //
 // A fixture that hand-writes a link no connector emits proves the producer
@@ -46,9 +46,9 @@ var captureShapeClock = time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 // against that contact and nobody else.
 func seedAccountAsCaptureWould(t *testing.T, e *Env) ids.UUID {
 	t.Helper()
-	org := e.SeedOrg(t, "Capture Shape Co", &e.Rep1)
-	e.WsExec(t, `UPDATE organization SET lifecycle = 'opportunity' WHERE id = $1`, org)
-	contact := employeeOf(t, e, org, "Ada at Capture Shape Co")
+	company := e.SeedCompany(t, "Capture Shape Co", &e.Rep1)
+	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	contact := employeeOf(t, e, company, "Ada at Capture Shape Co")
 	// Old enough for the ghosted rule's fortnight and settled for the
 	// extractor's six hours, so one fixture serves every producer.
 	seedMessage(t, e, contact, "thread-capture-shape", "Proposal",
@@ -58,15 +58,15 @@ func seedAccountAsCaptureWould(t *testing.T, e *Env) ids.UUID {
 	ctx := e.Admin()
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT count(*) FROM activity_link
-			 WHERE entity_type = 'organization'`).Scan(&direct)
+			 WHERE entity_type = 'company'`).Scan(&direct)
 	}); err != nil {
 		t.Fatalf("count the direct account links: %v", err)
 	}
 	if direct != 0 {
-		t.Fatalf("the fixture wrote %d direct organization links; capture writes none, "+
+		t.Fatalf("the fixture wrote %d direct company links; capture writes none, "+
 			"and a producer proved against one is proved against nothing", direct)
 	}
-	return org
+	return company
 }
 
 // The deterministic producer reaches an account it can only see through
@@ -74,7 +74,7 @@ func seedAccountAsCaptureWould(t *testing.T, e *Env) ids.UUID {
 // that bought none.
 func TestTheGhostedRuleReachesAnAccountCaptureLinkedThroughAPerson(t *testing.T) {
 	e := Setup(t)
-	org := seedAccountAsCaptureWould(t, e)
+	company := seedAccountAsCaptureWould(t, e)
 
 	pass := ghostedPass(t, e, captureShapeClock)
 	if pass.Considered == 0 {
@@ -84,7 +84,7 @@ func TestTheGhostedRuleReachesAnAccountCaptureLinkedThroughAPerson(t *testing.T)
 	if pass.Raised != 1 {
 		t.Fatalf("the rule wrote %d signals, want the one unanswered tail", pass.Raised)
 	}
-	if kinds := openSignalKinds(t, e, org); len(kinds) != 1 || kinds[0] != "ghosted_thread" {
+	if kinds := openSignalKinds(t, e, company); len(kinds) != 1 || kinds[0] != "ghosted_thread" {
 		t.Fatalf("the account carries %v, want the ghosted_thread the comparison found", kinds)
 	}
 }
@@ -116,20 +116,20 @@ func TestTheExtractorIsOfferedAConversationCaptureLinkedThroughAPerson(t *testin
 // account's page shows must agree about which messages belong to it: a signal
 // about correspondence the reader cannot find on the page is unanswerable.
 //
-// It asks activities.OrgLinkedActivityExists rather than a copy of the three
+// It asks activities.CompanyLinkedActivityExists rather than a copy of the three
 // arms. A hand-spelled walk here would keep passing against whatever the arms
 // used to be, which is the failure this whole file exists to prevent, wearing
 // a test's clothes.
 func TestTheAccountTimelineCountsMailCaptureLinkedThroughAPerson(t *testing.T) {
 	e := Setup(t)
-	org := seedAccountAsCaptureWould(t, e)
+	company := seedAccountAsCaptureWould(t, e)
 
 	var reached int
 	ctx := e.Admin()
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT count(*) FROM activity a
-			 WHERE a.archived_at IS NULL AND `+activities.OrgLinkedActivityExists(1),
-			org).Scan(&reached)
+			 WHERE a.archived_at IS NULL AND `+activities.CompanyLinkedActivityExists(1),
+			company).Scan(&reached)
 	}); err != nil {
 		t.Fatalf("count the account's reachable mail: %v", err)
 	}
@@ -149,11 +149,11 @@ func TestTheAccountTimelineCountsMailCaptureLinkedThroughAPerson(t *testing.T) {
 // yield to row_scope=all, so the summary must not either.
 func TestAModelReadOfPrivateMailIsPrivateEvenOnASharedAccount(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Promoted Co", &e.Rep1)
+	company := e.SeedCompany(t, "Promoted Co", &e.Rep1)
 	// The account is the workspace's; the contact is not yet.
-	e.WsExec(t, `UPDATE organization SET visibility = 'workspace', lifecycle = 'opportunity'
-		 WHERE id = $1`, org)
-	contact := employeeOf(t, e, org, "Ada Unpromoted")
+	e.WsExec(t, `UPDATE company SET visibility = 'workspace', lifecycle = 'opportunity'
+		 WHERE id = $1`, company)
+	contact := employeeOf(t, e, company, "Ada Unpromoted")
 	e.WsExec(t, `UPDATE person SET visibility = 'owner', owner_id = $2 WHERE id = $1`,
 		contact, e.Rep1)
 	notice := seedMessage(t, e, contact, "thread-private", "Renewal for 2027",
@@ -172,7 +172,7 @@ func TestAModelReadOfPrivateMailIsPrivateEvenOnASharedAccount(t *testing.T) {
 	ctx := e.Admin()
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT visibility, owner_id FROM signal
-			 WHERE resolved_org_id = $1 AND kind = 'contract_ended'`, org).Scan(&visibility, &owner)
+			 WHERE resolved_company_id = $1 AND kind = 'contract_ended'`, company).Scan(&visibility, &owner)
 	}); err != nil {
 		t.Fatalf("read the signal's visibility: %v", err)
 	}
@@ -187,11 +187,11 @@ func TestAModelReadOfPrivateMailIsPrivateEvenOnASharedAccount(t *testing.T) {
 
 	// And the gate holds on the way out: a colleague who can see the account
 	// cannot read a finding drawn from mail that is not theirs.
-	if kinds := openSignalKindsAs(t, e, e.Rep2, org); len(kinds) != 0 {
+	if kinds := openSignalKindsAs(t, e, e.Rep2, company); len(kinds) != 0 {
 		t.Fatalf("a colleague reads %v on the shared account, want nothing drawn "+
 			"from another person's private mail", kinds)
 	}
-	if kinds := openSignalKindsAs(t, e, e.Rep1, org); len(kinds) != 1 {
+	if kinds := openSignalKindsAs(t, e, e.Rep1, company); len(kinds) != 1 {
 		t.Fatalf("the owner reads %v, want the finding from their own correspondence", kinds)
 	}
 }
@@ -204,8 +204,8 @@ func TestAModelReadOfPrivateMailIsPrivateEvenOnASharedAccount(t *testing.T) {
 // content is what the owner-private half exists to hold back.
 func TestTheGhostedRuleIsSharedAndQuotesNothing(t *testing.T) {
 	e := Setup(t)
-	org := seedAccountAsCaptureWould(t, e)
-	e.WsExec(t, `UPDATE organization SET visibility = 'workspace' WHERE id = $1`, org)
+	company := seedAccountAsCaptureWould(t, e)
+	e.WsExec(t, `UPDATE company SET visibility = 'workspace' WHERE id = $1`, company)
 
 	if pass := ghostedPass(t, e, captureShapeClock); pass.Raised != 1 {
 		t.Fatalf("the rule wrote %d signals, want the one unanswered tail", pass.Raised)
@@ -215,8 +215,8 @@ func TestTheGhostedRuleIsSharedAndQuotesNothing(t *testing.T) {
 	ctx := e.Admin()
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT visibility, coalesce(evidence->0->>'snippet', '')
-			 FROM signal WHERE resolved_org_id = $1 AND kind = 'ghosted_thread'`,
-			org).Scan(&visibility, &snippet)
+			 FROM signal WHERE resolved_company_id = $1 AND kind = 'ghosted_thread'`,
+			company).Scan(&visibility, &snippet)
 	}); err != nil {
 		t.Fatalf("read the ghosted signal: %v", err)
 	}
@@ -239,7 +239,7 @@ func TestTheGhostedRuleIsSharedAndQuotesNothing(t *testing.T) {
 // signal, letting the gap fall through resolved it to the widest audience
 // available.
 //
-// The gap is closed at the estate now: organization_owner_private_names_its_owner
+// The gap is closed at the estate now: company_owner_private_names_its_owner
 // refuses an owner-private account with no owner, so the producer can never be
 // handed one (#2137). This test used to seed that row and assert the producer
 // declined it. It asserts the refusal instead, because the seed is the thing
@@ -252,16 +252,16 @@ func TestTheGhostedRuleIsSharedAndQuotesNothing(t *testing.T) {
 // not read this.
 func TestAnAccountPrivateToNobodyInParticularCannotBeBuilt(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Unattributable Co", &e.Rep1)
+	company := e.SeedCompany(t, "Unattributable Co", &e.Rep1)
 
-	err := e.WsExecErr(t, `UPDATE organization SET visibility = 'owner', owner_id = NULL,
-		 lifecycle = 'opportunity' WHERE id = $1`, org)
+	err := e.WsExecErr(t, `UPDATE company SET visibility = 'owner', owner_id = NULL,
+		 lifecycle = 'opportunity' WHERE id = $1`, company)
 	if err == nil {
 		t.Fatal("an owner-private account with no owner was accepted — a finding on it would have " +
 			"no owner to answer to, and a finding with no owner is a SHARED finding, which is the " +
 			"widest possible answer to a question the producer cannot answer at all")
 	}
-	if !strings.Contains(err.Error(), "organization_owner_private_names_its_owner") {
+	if !strings.Contains(err.Error(), "company_owner_private_names_its_owner") {
 		t.Fatalf("the row was refused by something else: %v", err)
 	}
 }
@@ -274,13 +274,13 @@ func TestAnAccountPrivateToNobodyInParticularCannotBeBuilt(t *testing.T) {
 // which the row then rendered as shared.
 func TestAPrivateAccountSuppliesTheReaderItsOwnMailAnswersTo(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Private Co", &e.Rep1)
-	e.WsExec(t, `UPDATE organization SET visibility = 'owner', owner_id = $2,
-		 lifecycle = 'opportunity' WHERE id = $1`, org, e.Rep1)
+	company := e.SeedCompany(t, "Private Co", &e.Rep1)
+	e.WsExec(t, `UPDATE company SET visibility = 'owner', owner_id = $2,
+		 lifecycle = 'opportunity' WHERE id = $1`, company, e.Rep1)
 	notice := seedUnlinkedMessage(t, e, "thread-private-account", "Renewal for 2027",
 		"We have decided not to renew.", "inbound", captureShapeClock.Add(-48*time.Hour))
-	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, organization_id)
-		VALUES ($1, 'organization', $2)`, notice, org)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id)
+		VALUES ($1, 'company', $2)`, notice, company)
 
 	brain := &scriptedBrain{reply: reply(t, "contract_ended", notice,
 		"They wrote that they will not renew.", 0.95)}
@@ -295,7 +295,7 @@ func TestAPrivateAccountSuppliesTheReaderItsOwnMailAnswersTo(t *testing.T) {
 	ctx := e.Admin()
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT visibility, owner_id FROM signal
-			 WHERE resolved_org_id = $1 AND kind = 'contract_ended'`, org).Scan(&visibility, &owner)
+			 WHERE resolved_company_id = $1 AND kind = 'contract_ended'`, company).Scan(&visibility, &owner)
 	}); err != nil {
 		t.Fatalf("read the signal's visibility: %v", err)
 	}

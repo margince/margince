@@ -93,7 +93,7 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 	// A second workspace's member used to be seeded here, holding a uniquely
 	// keyed role, so the assertions below could prove neither escaped into this
 	// roster. ADR-0091 §8 phase D took the tenant column off app_user, role and
-	// role_assignment, and an installation serves one organization (ADR-0061):
+	// role_assignment, and an installation serves one company (ADR-0061):
 	// there is no second workspace's member to leak, so the arms that looked for
 	// one are gone rather than weakened. What the page still owes — every member
 	// listed once, the agent seat marked, role keys withheld from a non-admin —

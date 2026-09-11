@@ -5,7 +5,7 @@
 
 package integration
 
-// Custom-field VALUES riding person/organization records (CF-T05, arc
+// Custom-field VALUES riding person/company records (CF-T05, arc
 // 2a-ii T2): the fieldcatalog seam wired into the people store makes a
 // workspace's active cf_* columns participate in create/update writes
 // and get/list reads like core fields. Store-level suites prove the
@@ -32,14 +32,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// cfvPerms is CustomFieldAdminPerms plus the organization grants this suite's
-// org round trip needs.
+// cfvPerms is CustomFieldAdminPerms plus the company grants this suite's
+// company round trip needs.
 var cfvPerms = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
 		"custom_field":          {Create: true, Read: true, Update: true, Delete: true},
 		"person":                {Create: true, Read: true, Update: true, Delete: true},
-		"organization":          {Create: true, Read: true, Update: true, Delete: true},
+		"company":               {Create: true, Read: true, Update: true, Delete: true},
 		"lead":                  {Create: true, Read: true, Update: true, Delete: true},
 		"installation_settings": {Read: true},
 	},
@@ -138,39 +138,39 @@ func TestCustomFieldValues_PersonRoundTrip(t *testing.T) {
 	assertCF(t, list[0].AdditionalProperties, col, "silver")
 }
 
-func TestCustomFieldValues_OrganizationRoundTrip(t *testing.T) {
+func TestCustomFieldValues_CompanyRoundTrip(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "organization", Label: "Region", Type: customfields.TypeText, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "company", Label: "Region", Type: customfields.TypeText, Source: "ui"})
 
-	created, err := f.store.CreateOrganization(f.ctx, people.CreateOrganizationInput{
+	created, err := f.store.CreateCompany(f.ctx, people.CreateCompanyInput{
 		DisplayName: "Acme GmbH", Source: "ui",
 		CustomFields: map[string]any{col: "emea"},
 	})
 	if err != nil {
-		t.Fatalf("CreateOrganization: %v", err)
+		t.Fatalf("CreateCompany: %v", err)
 	}
 	assertCF(t, created.AdditionalProperties, col, "emea")
 
-	got, err := f.store.GetOrganization(f.ctx, orgIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
+	got, err := f.store.GetCompany(f.ctx, companyIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
 	if err != nil {
-		t.Fatalf("GetOrganization: %v", err)
+		t.Fatalf("GetCompany: %v", err)
 	}
 	assertCF(t, got.AdditionalProperties, col, "emea")
 
-	updated, err := f.store.UpdateOrganization(f.ctx, orgIDOf(ids.UUID(created.Id)), people.UpdateOrganizationInput{
+	updated, err := f.store.UpdateCompany(f.ctx, companyIDOf(ids.UUID(created.Id)), people.UpdateCompanyInput{
 		CustomFields: map[string]any{col: "apac"},
 	})
 	if err != nil {
-		t.Fatalf("UpdateOrganization: %v", err)
+		t.Fatalf("UpdateCompany: %v", err)
 	}
 	assertCF(t, updated.AdditionalProperties, col, "apac")
 
-	list, _, err := f.store.ListOrganizations(f.ctx, people.ListOrganizationsInput{})
+	list, _, err := f.store.ListCompanies(f.ctx, people.ListCompaniesInput{})
 	if err != nil {
-		t.Fatalf("ListOrganizations: %v", err)
+		t.Fatalf("ListCompanies: %v", err)
 	}
 	if len(list) != 1 {
-		t.Fatalf("ListOrganizations returned %d rows, want 1", len(list))
+		t.Fatalf("ListCompanies returned %d rows, want 1", len(list))
 	}
 	assertCF(t, list[0].AdditionalProperties, col, "apac")
 }

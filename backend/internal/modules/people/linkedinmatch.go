@@ -20,7 +20,7 @@ package people
 //	                   are two Andreas Müllers at every large German firm.
 //
 // Nothing here ever CREATES a person. A ghost that matches nothing stays a
-// ghost, and its only contribution is the org-level count — "someone here is
+// ghost, and its only contribution is the company-level count — "someone here is
 // connected to 3 people at this account" — which needs no identity at all.
 
 import (
@@ -71,9 +71,9 @@ func (s *Store) MatchLinkedInConnections(ctx context.Context, owner ids.UUID) (L
 		}
 		out.Confirmed = confirmed
 		// Accounts first: the name+employer suggestion below reads
-		// matched_org_id, so resolving employers afterwards would leave every
+		// matched_company_id, so resolving employers afterwards would leave every
 		// first-pass suggestion unmade until the next run.
-		if err := matchGhostOrganizations(ctx, tx); err != nil {
+		if err := matchGhostCompanies(ctx, tx); err != nil {
 			return err
 		}
 		suggested, err := suggestGhostsByNameAndEmployer(ctx, tx, owner, ids.Nil)
@@ -133,7 +133,7 @@ func (s *Store) MatchLinkedInConnectionsForPerson(ctx context.Context, owner, pe
 			return err
 		}
 		out.Confirmed = confirmed
-		if err := matchGhostOrganizations(ctx, tx); err != nil {
+		if err := matchGhostCompanies(ctx, tx); err != nil {
 			return err
 		}
 		suggested, err := suggestGhostsByNameAndEmployer(ctx, tx, owner, person)
@@ -238,8 +238,8 @@ var suggestNameEmployerMatchSQL = `
 		       AND ` + employment.IsCurrentSQL("r.ended_at") + `
 		     WHERE g.match_status = 'unmatched'
 		       AND g.tombstoned_at IS NULL
-		       -- The employer is matched through matched_org_id, which the
-		       -- Go-side resolver set using the ONE org-name normalizer. Doing
+		       -- The employer is matched through matched_company_id, which the
+		       -- Go-side resolver set using the ONE company-name normalizer. Doing
 		       -- it here in SQL would mean a second spelling of the
 		       -- legal-suffix strip, and two spellings of a normalizer drift.
 		       AND ($%[1]d::uuid IS NULL OR g.owner_user_id = $%[1]d)
@@ -249,8 +249,8 @@ var suggestNameEmployerMatchSQL = `
 		       -- refused as ambiguous. It filters the RESULT, not the pairs.
 		       AND (%[2]s)
 		       AND ` + ghostOwnerCapturePrivacy + `
-		       AND g.matched_org_id IS NOT NULL
-		       AND r.organization_id = g.matched_org_id
+		       AND g.matched_company_id IS NOT NULL
+		       AND r.company_id = g.matched_company_id
 		       AND NOT EXISTS (
 		           SELECT 1 FROM linkedin_connection other
 		            WHERE other.matched_person_id = p.id
@@ -321,14 +321,14 @@ func suggestGhostsByNameAndEmployer(ctx context.Context, tx pgx.Tx, owner, onlyP
 	return int(tag.RowsAffected()), nil
 }
 
-// matchGhostOrganizations attaches ghosts to an ACCOUNT by employer name even
+// CompanyLinkedInReach attaches ghosts to an ACCOUNT by employer name even
 // when the person never matches.
 //
 // This is where most of the value is, and it needs no identity at all. "Three
 // people here are LinkedIn-connected to someone at Acme" is actionable on its
 // own — it tells a rep the door is not cold — and it is true whether or not
 // any of those three is a contact in the CRM.
-// OrganizationLinkedInReach counts, per colleague, how many of their LinkedIn
+// CompanyLinkedInReach counts, per colleague, how many of their LinkedIn
 // connections work at one account — the weaker, clearly-labelled evidence tier
 // beside real interaction history.
 //
@@ -337,8 +337,8 @@ func suggestGhostsByNameAndEmployer(ctx context.Context, tx pgx.Tx, owner, onlyP
 // consented to appearing in this CRM; saying "Lars knows 3 people at Acme"
 // discloses nothing about them, while naming them would publish a private
 // address book to the colleague's whole team.
-func OrganizationLinkedInReach(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (map[ids.UUID]int, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+func CompanyLinkedInReach(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (map[ids.UUID]int, error) {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	// The row gate, not just the object grant. A reach count is a statement
@@ -346,7 +346,7 @@ func OrganizationLinkedInReach(ctx context.Context, tx pgx.Tx, orgID ids.Organiz
 	// discloses that the account exists, and does so through a side door that
 	// the account's own read path closes. 404-hiding, like every other
 	// single-record read.
-	if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
+	if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 		return nil, err
 	}
 	// Both halves of "still works here", not just archived_at. A reach count is
@@ -361,10 +361,10 @@ func OrganizationLinkedInReach(ctx context.Context, tx pgx.Tx, orgID ids.Organiz
 		  FROM linkedin_connection g
 		  JOIN app_user u ON u.id = g.owner_user_id
 		                 AND u.status = 'active' AND u.archived_at IS NULL
-		 WHERE g.matched_org_id = $1
+		 WHERE g.matched_company_id = $1
 		   AND g.tombstoned_at IS NULL
 		   AND g.match_status <> 'rejected'
-		 GROUP BY g.owner_user_id`, orgID)
+		 GROUP BY g.owner_user_id`, companyID)
 	if err != nil {
 		return nil, fmt.Errorf("people: counting LinkedIn reach into an account: %w", err)
 	}

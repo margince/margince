@@ -38,7 +38,7 @@ func TestStagedCreateWithNoTargetIDIsListedAndDecidable(t *testing.T) {
 	// createWebhookSubscription is confirm-first, so the agent's call stages
 	// instead of writing. The identical body is the redemption key, so it is
 	// sent twice.
-	body := AnyMap{"target_url": "https://example.test/hook", "event_types": []string{"organization.created"}}
+	body := AnyMap{"target_url": "https://example.test/hook", "event_types": []string{"company.created"}}
 	var problem struct {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`

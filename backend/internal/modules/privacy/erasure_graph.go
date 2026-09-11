@@ -141,7 +141,7 @@ func deleteSubjectLinkedInGhosts(
 		    -- read an empty table and miss every ghost identified only by URL.
 		    OR (g.profile_url IS NOT NULL AND g.profile_url = ANY($4))
 		    -- Name + employer, matched on the NAME the ghost carries rather
-		    -- than on its derived matched_org_id. That column is set by a
+		    -- than on its derived matched_company_id. That column is set by a
 		    -- matcher that runs on upload: a ghost imported before its account
 		    -- existed, or one whose matcher pass failed, has it NULL and would
 		    -- survive an erasure it plainly belongs in. The employer is
@@ -150,10 +150,10 @@ func deleteSubjectLinkedInGhosts(
 		        AND lower(f_unaccent($3)) = g.normalized_name
 		        AND EXISTS (
 		            SELECT 1 FROM relationship r
-		              JOIN organization o ON o.id = r.organization_id
+		              JOIN company o ON o.id = r.company_id
 		             WHERE r.person_id = $1 AND r.kind = 'employment'
 		               AND r.archived_at IS NULL
-		               AND (r.organization_id = g.matched_org_id
+		               AND (r.company_id = g.matched_company_id
 		                    OR lower(f_unaccent(o.display_name)) = g.normalized_company
 		                    OR lower(f_unaccent(o.display_name)) LIKE g.normalized_company || ' %')))`,
 		personID, emails, subjectName, linkedInHandles)

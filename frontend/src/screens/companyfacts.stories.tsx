@@ -19,12 +19,12 @@ import {
 // "hidden" says the reader may not see them. A box that drew those alike
 // would tell a rep with no deal grant that a live account is empty.
 
-type View = components["schemas"]["Organization360"];
-type Organization = components["schemas"]["Organization"];
+type View = components["schemas"]["Company360"];
+type Company = components["schemas"]["Company"];
 
 const page = { has_more: false, next_cursor: null };
 
-const org = {
+const company = {
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
   captured_by: "human:u1",
@@ -32,11 +32,11 @@ const org = {
   version: 1,
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-08-01T08:00:00Z",
-} as unknown as Organization;
+} as unknown as Company;
 
 const base = {
   as_of: "2026-08-25T09:00:00Z",
-  organization: org,
+  company: company,
   sections_omitted: [],
   deals: {
     data: [],
@@ -68,7 +68,7 @@ const roster = [
 
 function Box({ view }: Readonly<{ view?: View }>) {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read", "update"] }),
+    "GET /me": meRoute({ company: ["read", "update"] }),
     "GET /users": () => jsonResponse({ data: roster, page }),
   });
   return (
@@ -76,7 +76,7 @@ function Box({ view }: Readonly<{ view?: View }>) {
       {/* Narrow on purpose: the box lives in a record head's right-hand slot,
           and a fact that wraps there is a fact nobody reads. */}
       <div style={{ maxWidth: 360 }}>
-        <CompanyFacts org={org} view={view} />
+        <CompanyFacts company={company} view={view} />
       </div>
     </StoryProviders>
   );

@@ -71,15 +71,15 @@ type peopleEnsurer struct {
 
 func (p peopleEnsurer) EnsureCounterparty(ctx context.Context, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
 	res, err := p.store.EnsureCounterparty(ctx, people.EnsureCounterpartyInput{
-		Email:       in.Email,
-		DisplayName: in.DisplayName,
-		Domain:      in.Domain,
-		OwnerID:     in.OwnerID,
-		ActivityID:  ids.From[ids.ActivityKind](in.ActivityID),
-		Source:      in.Source,
-		CapturedBy:  in.CapturedBy,
-		SuppressOrg: in.SuppressOrg,
-		Replied:     in.Replied,
+		Email:           in.Email,
+		DisplayName:     in.DisplayName,
+		Domain:          in.Domain,
+		OwnerID:         in.OwnerID,
+		ActivityID:      ids.From[ids.ActivityKind](in.ActivityID),
+		Source:          in.Source,
+		CapturedBy:      in.CapturedBy,
+		SuppressCompany: in.SuppressCompany,
+		Replied:         in.Replied,
 		// The SINK's ensure, which runs while the sender is still unjudged.
 		// Owner-scoped until something says otherwise; the verdict path is the
 		// only caller that asks for the workspace.
@@ -93,7 +93,7 @@ func (p peopleEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensure
 	if err != nil {
 		return capture.EnsureOutcome{}, err
 	}
-	// The ensure left this domain's organization question open. Nothing is
+	// The ensure left this domain's company question open. Nothing is
 	// created until it is answered, so queueing the read that answers it is not
 	// an optimization here — it is the rest of the work.
 	if res.TriagePending {

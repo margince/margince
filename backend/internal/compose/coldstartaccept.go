@@ -4,7 +4,7 @@
 package compose
 
 // The coldstart ACCEPT executor (features/07 §1): a human approval of a
-// staged read-back now WRITES the accepted fields onto the organization
+// staged read-back now WRITES the accepted fields onto the company
 // the source URL names — the follow-on effect that closes the
 // stage→approve loop. Redeem-then-execute like every 🟡 executor: the
 // single-use redemption is the exactly-once claim, so a replayed or
@@ -59,7 +59,7 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	svc.WithEffect(deepReadProposalKind, deepReadAcceptEffect(svc, store))
 	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(pool, CaptureConfig{})))
 	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default())))
-	svc.WithEffect(orgNameProposalKind, orgNameAcceptEffect(svc, store))
+	svc.WithEffect(companyNameProposalKind, companyNameAcceptEffect(svc, store))
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
 	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc, store))
 	// Both halves, like the held message above and for the same reason: the

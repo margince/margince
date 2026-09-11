@@ -413,7 +413,7 @@ func TestAReceiptOffersNoDecision(t *testing.T) {
 func TestADuplicateCarriesNoServerWrittenSentence(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
-		stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "organization", Confidence: 0.92}}, open: 1},
+		stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "company", Confidence: 0.92}}, open: 1},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
@@ -426,7 +426,7 @@ func TestADuplicateCarriesNoServerWrittenSentence(t *testing.T) {
 	if item.Title != nil {
 		t.Errorf("the server wrote %q for a duplicate; that sentence has no translation", *item.Title)
 	}
-	if item.Kind == nil || *item.Kind != "organization" {
+	if item.Kind == nil || *item.Kind != "company" {
 		t.Error("the client needs the record type to write the line")
 	}
 	if item.Confidence == nil {
@@ -441,7 +441,7 @@ func TestAFloodOfDuplicatesDoesNotBuryTheStagedDecisions(t *testing.T) {
 	// reach it — while the count beside the lane went on reporting all of them.
 	pairs := make([]DuplicatePair, needsYouPage+1)
 	for i := range pairs {
-		pairs[i] = DuplicatePair{ID: ids.NewV7(), EntityType: "organization", Confidence: 0.9}
+		pairs[i] = DuplicatePair{ID: ids.NewV7(), EntityType: "company", Confidence: 0.9}
 	}
 	staged := make([]crmcontracts.Approval, needsYouPage)
 	for i := range staged {
@@ -474,7 +474,7 @@ func TestADuplicateCardNamesBothRecords(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{open: 1, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "organization", Confidence: 0.93,
+			ID: ids.NewV7(), EntityType: "company", Confidence: 0.93,
 			LeftID: left, RightID: right,
 			Evidence: []FieldComparison{{Field: "display_name", Signal: "collide"}},
 		}}},
@@ -556,7 +556,7 @@ func TestOwningOneSideOfAPairDoesNotOfferTheVerb(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{open: 1, undecidable: theirs, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "organization", Confidence: 1,
+			ID: ids.NewV7(), EntityType: "company", Confidence: 1,
 			LeftID: mine, RightID: theirs,
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
@@ -597,7 +597,7 @@ func TestAPairTheReaderCanChangeStillOffersTheVerb(t *testing.T) {
 
 func TestEvidenceNeverReachesAReaderAsAColumnName(t *testing.T) {
 	// The queue stores whatever the detector wrote. A key the client has no
-	// word for would print as itself — which is how `full_name` and `org`
+	// word for would print as itself — which is how `full_name` and `company`
 	// reached the screen from the queue this lane replaces.
 	svc := NewService(
 		stubApprovals{},
@@ -608,7 +608,7 @@ func TestEvidenceNeverReachesAReaderAsAColumnName(t *testing.T) {
 				{Field: "full_name", Signal: "collide"},
 				{Field: "some_internal_column", Signal: "collide"},
 				{Field: "email", Signal: "unheard_of_verdict"},
-				{Field: "org", Signal: "collide"},
+				{Field: "company", Signal: "collide"},
 			},
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
@@ -846,7 +846,7 @@ func TestAPairTheMergeWouldRefuseOffersNoVerb(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{open: 1, unsettleable: pairID, pairs: []DuplicatePair{{
-			ID: pairID, EntityType: "organization", Confidence: 0.9,
+			ID: pairID, EntityType: "company", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
@@ -873,7 +873,7 @@ func TestAnUnblockedPairStillOffersTheVerb(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{open: 1, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "organization", Confidence: 0.9,
+			ID: ids.NewV7(), EntityType: "company", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)

@@ -753,7 +753,7 @@ function PersonSubtitle({ view }: Readonly<{ view: Person360 }>): ReactNode {
   return (
     <div>
       {person.title}
-      {employment?.organization_name && (
+      {employment?.company_name && (
         <>
           {person.title ? " · " : ""}
           <button
@@ -762,11 +762,11 @@ function PersonSubtitle({ view }: Readonly<{ view: Person360 }>): ReactNode {
             onClick={() =>
               navigate({
                 screen: "companies",
-                id: employment.organization_id,
+                id: employment.company_id,
               })
             }
           >
-            {employment.organization_name}
+            {employment.company_name}
           </button>
         </>
       )}

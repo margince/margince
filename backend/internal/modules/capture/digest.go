@@ -38,10 +38,10 @@ type DigestPayload struct {
 
 // DigestCapture is what landed in the window.
 type DigestCapture struct {
-	MessagesSynced       int `json:"messages_synced"`
-	ActivitiesCreated    int `json:"activities_created"`
-	PeopleCreated        int `json:"people_created"`
-	OrganizationsCreated int `json:"organizations_created"`
+	MessagesSynced    int `json:"messages_synced"`
+	ActivitiesCreated int `json:"activities_created"`
+	PeopleCreated     int `json:"people_created"`
+	CompaniesCreated  int `json:"companies_created"`
 }
 
 // DigestReview is what awaits the human.
@@ -147,11 +147,11 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 		    WHERE a.captured_by LIKE 'connector:%' AND a.kind = 'email' AND a.created_at >= $1`+auth.AudienceWorkspaceOnly("a")+`),
 		  (SELECT count(*) FROM person WHERE captured_by LIKE 'connector:%' AND created_at >= $1),
 		  -- Companies now arrive from the domain-triage verdict, not from the
-		  -- connector: capture withholds the organization until a site read
+		  -- connector: capture withholds the company until a site read
 		  -- says the domain deserves one, so the row is stamped by the system
 		  -- actor that ran that read. Counting only 'connector:%' would report
 		  -- zero companies for ever.
-		  (SELECT count(*) FROM organization
+		  (SELECT count(*) FROM company
 		    WHERE (captured_by LIKE 'connector:%' OR source LIKE 'domain\_triage:%')
 		      AND created_at >= $1),
 		  (SELECT count(*) FROM activity a
@@ -160,7 +160,7 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 		    WHERE a.capture_label = 'meeting' AND a.capture_labeled_at >= $1`+auth.AudienceWorkspaceOnly("a")+`),
 		  (SELECT count(*) FROM activity WHERE capture_label = 'noise' AND capture_labeled_at >= $1)`,
 		since).Scan(
-		&p.Capture.ActivitiesCreated, &p.Capture.PeopleCreated, &p.Capture.OrganizationsCreated,
+		&p.Capture.ActivitiesCreated, &p.Capture.PeopleCreated, &p.Capture.CompaniesCreated,
 		&p.Review.Classify.Commitments, &p.Review.Classify.Meetings, &p.Review.Classify.Noise,
 	)
 	if err != nil {

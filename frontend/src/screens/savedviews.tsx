@@ -37,7 +37,7 @@ type SavedView = components["schemas"]["SavedView"];
  */
 export type ViewResource =
   | "people"
-  | "organizations"
+  | "companies"
   | "deals"
   | "leads"
   | "projects";

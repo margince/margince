@@ -142,7 +142,7 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 // one this caller may read, and the reference is one they may not.
 //
 // It mirrors what an ordinary read of the same record already does
-// (deals/fieldmask.go blanks partner_org_id and keeps the deal), so a reader
+// (deals/fieldmask.go blanks partner_company_id and keeps the deal), so a reader
 // who follows the link sees the same rows with the same holes.
 //
 // The aggregate recompute does NOT take this treatment and must not: it counts
@@ -155,7 +155,7 @@ func maskedDerivationSelects(
 		return plan.selects, nil
 	}
 	// Only the references this plan actually RETURNS. A spec may scope a column
-	// it exposes as a filter alone (deals-by-stage scopes organization_id for
+	// it exposes as a filter alone (deals-by-stage scopes company_id for
 	// that reason), and no select mentions it — while ScopeClauseFor registers a
 	// bind parameter for every column it is asked about. A parameter the
 	// finished statement never names is a Postgres error, not a no-op.

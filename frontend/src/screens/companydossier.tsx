@@ -10,7 +10,7 @@ import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 import { SentenceList, WrittenBy } from "./record360";
 
-type Dossier = components["schemas"]["OrganizationDossier"];
+type Dossier = components["schemas"]["CompanyDossier"];
 type SectionKind = Dossier["sections"][number]["kind"];
 
 // Typed against the contract's own enum, so a section kind added upstream fails
@@ -37,13 +37,13 @@ const SECTION_LABELS: Record<SectionKind, MessageKey> = {
  * open the evidence rather than take the sentence on trust.
  */
 export function DossierPanel({
-  orgId,
+  companyId,
   enabled,
   onOpenRecord,
   onOpenEmail,
   nameOf,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   // Opens a cited message in the page's email drawer; see `Citations`.
@@ -58,11 +58,11 @@ export function DossierPanel({
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const dossier = useQuery({
-    queryKey: ["org-dossier", orgId],
+    queryKey: ["company-dossier", companyId],
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/dossier", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.GET("/companies/{id}/dossier", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -72,15 +72,16 @@ export function DossierPanel({
   });
   const rewrite = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/organizations/{id}/dossier", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.POST("/companies/{id}/dossier", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
       }
       return data;
     },
-    onSuccess: (data) => queryClient.setQueryData(["org-dossier", orgId], data),
+    onSuccess: (data) =>
+      queryClient.setQueryData(["company-dossier", companyId], data),
   });
 
   // A workspace reading from an incumbent mirror holds none of the facts this

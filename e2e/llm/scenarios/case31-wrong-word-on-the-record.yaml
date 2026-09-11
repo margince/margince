@@ -4,7 +4,7 @@
 # goal that required apply_tag and remove_tag at once would be asking for a
 # tagging and its undo in the same breath.
 #
-#   get_record_tags — THE RECORD ROW LIES BY OMISSION. An organization row
+#   get_record_tags — THE RECORD ROW LIES BY OMISSION. A company row
 #                     carries its live tags and drops the archived ones ("a
 #                     retired word is not drawn on a list"), so an answer built
 #                     from read_record or a list row reports the retired word as
@@ -53,8 +53,8 @@ must_call:
 # removal aimed at a PERSON of the same name — get_record_tags serves three
 # record types and remove_tag five, and this errand is about a company.
 must_call_with:
-  - get_record_tags.record_type=organization
-  - remove_tag.record_type=organization
+  - get_record_tags.record_type=company
+  - remove_tag.record_type=company
 
 may_call:
   - search_records

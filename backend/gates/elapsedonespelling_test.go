@@ -37,7 +37,7 @@ package gates
 // justified the scope by pointing only at the float curves — while
 // meetingbrief/sections.go was printing "Last touch was %d days ago" with the
 // very arithmetic this change exists to remove. Both are fixed: the count is
-// measured rather than remembered, and meetingbrief, person360 and org360 are
+// measured rather than remembered, and meetingbrief, person360 and company360 are
 // governed here.
 //
 // The cost that remains: a NEW reader-facing count in an ungoverned package
@@ -67,7 +67,7 @@ var governedSurfaces = []string{
 	"internal/compose/network",
 	"internal/compose/meetingbrief",
 	"internal/compose/person360",
-	"internal/compose/org360",
+	"internal/compose/company360",
 }
 
 func TestOnlyElapsedCountsDaysOfSilence(t *testing.T) {

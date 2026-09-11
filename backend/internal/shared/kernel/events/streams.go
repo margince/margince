@@ -19,17 +19,17 @@ import (
 const StreamPrefix = "gw:events:crm:"
 
 const (
-	personStreamEntity       = "person"
-	organizationStreamEntity = "organization"
-	dealStreamEntity         = "deal"
-	leadStreamEntity         = "lead"
-	activityStreamEntity     = "activity"
-	approvalStreamEntity     = "approval"
-	captureStreamEntity      = "capture"
-	coldstartStreamEntity    = "coldstart"
-	auditStreamEntity        = "audit"
-	identityStreamEntity     = "identity"
-	voiceStreamEntity        = "voice"
+	personStreamEntity    = "person"
+	companyStreamEntity   = "company"
+	dealStreamEntity      = "deal"
+	leadStreamEntity      = "lead"
+	activityStreamEntity  = "activity"
+	approvalStreamEntity  = "approval"
+	captureStreamEntity   = "capture"
+	coldstartStreamEntity = "coldstart"
+	auditStreamEntity     = "audit"
+	identityStreamEntity  = "identity"
+	voiceStreamEntity     = "voice"
 )
 
 // streamOverlay is the §5.10 overlay-mirror stream's entity segment — named
@@ -113,7 +113,7 @@ func IsExtensionType(eventType string) bool {
 // Workspace is a field inside the envelope, never a stream —
 // per-tenant streams would explode key count at multi-tenant scale.
 var streamEntities = []string{
-	personStreamEntity, organizationStreamEntity, dealStreamEntity, leadStreamEntity, activityStreamEntity,
+	personStreamEntity, companyStreamEntity, dealStreamEntity, leadStreamEntity, activityStreamEntity,
 	approvalStreamEntity, captureStreamEntity, coldstartStreamEntity, auditStreamEntity, identityStreamEntity, voiceStreamEntity,
 	streamOverlay,
 }

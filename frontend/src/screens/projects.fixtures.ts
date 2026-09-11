@@ -10,14 +10,14 @@ import type { components } from "../api/schema";
 type Project = components["schemas"]["Project"];
 type Project360 = components["schemas"]["Project360"];
 
-export const ORG = { id: "o-1", display_name: "Brandt Automotive" };
+export const COMPANY = { id: "o-1", display_name: "Brandt Automotive" };
 
 export function project(overrides: Partial<Project> = {}): Project {
   return {
     id: "pr-1",
     name: "CRM rollout",
     key: "ACME-CRM",
-    organization_id: ORG.id,
+    company_id: COMPANY.id,
     owner_id: "u-me",
     // The caller owns this project, so the server sends writable: true. Stated
     // rather than left out: absent means NOT writable per the contract, so a
@@ -49,7 +49,7 @@ export function project360(overrides: Partial<Project360> = {}): Project360 {
     as_of: "2026-07-02T10:00:00Z",
     project: project(),
     sections_omitted: [],
-    organization: { id: ORG.id, name: ORG.display_name },
+    company: { id: COMPANY.id, name: COMPANY.display_name },
     phase_history: {
       data: [
         {

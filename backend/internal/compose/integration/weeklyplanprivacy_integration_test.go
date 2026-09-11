@@ -42,7 +42,7 @@ import (
 // clause auth.EnsureVisibleLive renders — so a refusal test written against it
 // cannot fail, whatever the guard does. Rather than widening
 // integration.RepPerms, which several suites read as "a rep who cannot see an
-// organization", this mirrors the seeded rep row for the one object under test.
+// company", this mirrors the seeded rep row for the one object under test.
 var planRepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
@@ -180,7 +180,7 @@ func TestErasureLeavesTheCommitmentsThatNameSomebodyElse(t *testing.T) {
 // A commitment may only link a record the rep can already open.
 //
 // The case that makes this real is CAPTURE PRIVACY, not row scope. Person,
-// organization, lead, deal and project are identity tables: workspace-readable
+// company, lead, deal and project are identity tables: workspace-readable
 // by design, so their owner arm renders TRUE for every seat and a colleague's
 // contact is not hidden from anybody. What IS hidden is an unpromoted row a
 // connector invented — visibility='owner' until a human promotes it — and that

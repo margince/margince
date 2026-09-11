@@ -98,13 +98,13 @@ func (w *vcardIngestWorker) recordStagingFailure(ctx context.Context, activity i
 }
 
 // vcardStagingFailureKey is a card's stable identity across retries — the
-// same full_name/emails/organization triple vcardCreateStager's own proposal
+// same full_name/emails/company triple vcardCreateStager's own proposal
 // identity keys on (vcardcreateproposal.go), so two cards that would collide
 // as one proposal also collide as one notice, and a card that merely moved
 // position in a re-read batch does not raise a second line for itself.
 func vcardStagingFailureKey(entry people.VCardEntry) string {
 	sum := sha256.Sum256([]byte(people.NormalizePersonName(entry.FullName) + "\x00" +
-		loweredCardEmails(entry) + "\x00" + strings.TrimSpace(entry.Organization)))
+		loweredCardEmails(entry) + "\x00" + strings.TrimSpace(entry.Company)))
 	return hex.EncodeToString(sum[:8])
 }
 

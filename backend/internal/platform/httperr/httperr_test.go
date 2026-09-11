@@ -225,16 +225,16 @@ func TestClassify_anUntranslatedConstraintIsTheCallersMistakeNotAServerFault(t *
 	}{
 		{
 			name:     "a foreign key names the column that pointed nowhere",
-			sqlstate: "23503", table: "organization", constraint: "organization_owner_id_fkey",
-			pgMessage: `insert or update on table "organization" violates foreign key constraint`,
+			sqlstate: "23503", table: "company", constraint: "company_owner_id_fkey",
+			pgMessage: `insert or update on table "company" violates foreign key constraint`,
 			wantCode:  "reference_not_found",
 			wantDetail: "`owner_id` names no record of the kind it references (an owner is a user, a parent " +
-				"an organization). Send an id of the right kind; do not retry unchanged.",
+				"a company). Send an id of the right kind; do not retry unchanged.",
 		},
 		{
 			name:     "a CHECK refuses the value",
-			sqlstate: "23514", table: "organization", constraint: "organization_size_band_check",
-			pgMessage: `new row for relation "organization" violates check constraint`,
+			sqlstate: "23514", table: "company", constraint: "company_size_band_check",
+			pgMessage: `new row for relation "company" violates check constraint`,
 			wantCode:  "value_not_allowed",
 			wantDetail: "a value in this request is outside what its field accepts. Check each value against " +
 				"this operation's schema; do not retry unchanged.",
@@ -307,7 +307,7 @@ func TestClassify_anUntranslatedConstraintIsTheCallersMistakeNotAServerFault(t *
 			// Each row's OWN metadata, so a leak of this SQLSTATE's constraint or
 			// message cannot ride out under another row's assertions.
 			//
-			// The TABLE is not swept: `organization` is both a table name and an
+			// The TABLE is not swept: `company` is both a table name and an
 			// ordinary word this refusal legitimately uses. The exact-detail
 			// assertion above is the stronger guard anyway — it pins the whole
 			// sentence, so anything riding along fails there first.
@@ -347,13 +347,13 @@ func TestClassify_theReferenceRefusalNamesTheFieldWhenTheConstraintYieldsIt(t *t
 		name, constraint, wantField string
 		wantNamed                   bool
 	}{
-		{"a default-named foreign key yields its column", "organization_owner_id_fkey", "owner_id", true},
-		{"a multi-word column survives whole", "organization_parent_org_id_fkey", "parent_org_id", true},
-		{"a constraint that is not a foreign key names nothing", "organization_display_name_key", "", false},
+		{"a default-named foreign key yields its column", "company_owner_id_fkey", "owner_id", true},
+		{"a multi-word column survives whole", "company_parent_company_id_fkey", "parent_company_id", true},
+		{"a constraint that is not a foreign key names nothing", "company_display_name_key", "", false},
 		{"a hand-named constraint names nothing rather than guessing", "one_primary_domain", "", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := fmt.Errorf("writing: %w", &pgconn.PgError{Code: "23503", TableName: "organization", ConstraintName: tc.constraint})
+			err := fmt.Errorf("writing: %w", &pgconn.PgError{Code: "23503", TableName: "company", ConstraintName: tc.constraint})
 			fault, ok := Classify(err)
 			if !ok || fault.Status != http.StatusUnprocessableEntity {
 				t.Fatalf("fault = %+v, ok = %v, want a 422", fault, ok)
@@ -427,7 +427,7 @@ func TestRetentionHoldIsLockedNotValueNotAllowed(t *testing.T) {
 		t.Error("the constraint name goes to the operator's log, not the client — InfraCause must carry it")
 	}
 	// Any other CHECK is still the caller's value to fix.
-	other, _ := Classify(&pgconn.PgError{Code: "23514", ConstraintName: "organization_size_band_check"})
+	other, _ := Classify(&pgconn.PgError{Code: "23514", ConstraintName: "company_size_band_check"})
 	if other.Status != http.StatusUnprocessableEntity {
 		t.Errorf("an ordinary CHECK became %d", other.Status)
 	}

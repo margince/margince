@@ -52,7 +52,7 @@ import (
 // rather than derived so adding a branch to Archive is a deliberate edit in
 // both places.
 var archivableRecordTypes = []string{
-	string(datasource.EntityPerson), string(datasource.EntityOrganization),
+	string(datasource.EntityPerson), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityProject),
 	string(datasource.EntityRelationship), string(datasource.EntityActivity),
 }
@@ -62,7 +62,7 @@ var archivableRecordTypes = []string{
 //
 // The list above is what the NATIVE provider archives, and for an installation
 // running in overlay mode that is three types too wide: overlay archives
-// person, organization and deal, and refuses project, relationship and
+// person, company and deal, and refuses project, relationship and
 // activity. A stage-time check reading the native list therefore admitted an
 // archive the executor was always going to refuse — the one failure this
 // tool's confirm-first shape exists to prevent, and the failure the comment on
@@ -108,9 +108,9 @@ func (t archiveRecord) Spec() mcp.ToolSpec {
 		Name: "archive_record", Title: "Archive a record", Version: toolVersionV1,
 		Description:   archiveRecordCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "archivePerson/archiveOrganization/archiveDeal/archiveProject/archiveRelationship/archiveActivity",
+		OpenAPIOp: "archivePerson/archiveCompany/archiveDeal/archiveProject/archiveRelationship/archiveActivity",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["person","organization","deal","project","relationship","activity"]},
+			"record_type":{"type":"string","enum":["person","company","deal","project","relationship","activity"]},
 			"id":{"type":"string","format":"uuid"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
@@ -281,9 +281,9 @@ type mergeArgs struct {
 	TargetID   ids.UUID `json:"target_id"`
 }
 
-// mergeableTypes: only person and organization have a merge verb (deals and
+// mergeableTypes: only person and company have a merge verb (deals and
 // leads leave through their own lifecycle).
-var mergeableTypes = map[string]bool{"person": true, "organization": true}
+var mergeableTypes = map[string]bool{importObjectPerson: true, importObjectCompany: true}
 
 // mergeableTypeNames renders the vocabulary above for a refusal, sorted so the
 // message is byte-stable across processes rather than following map order.
@@ -305,9 +305,9 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 		Name: "merge_records", Title: "Merge two records", Version: toolVersionV1,
 		Description:   mergeRecordsCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "mergePerson/mergeOrganization",
+		OpenAPIOp: "mergePerson/mergeCompany",
 		InputSchema: schema(`{"type":"object","required":["record_type","source_id","target_id"],"properties":{
-			"record_type":{"type":"string","enum":["person","organization"]},
+			"record_type":{"type":"string","enum":["person","company"]},
 			"source_id":{"type":"string","format":"uuid","description":"The record merged away (archived, redirected to the survivor)"},
 			"target_id":{"type":"string","format":"uuid","description":"The surviving record everything relinks to"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},

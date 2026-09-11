@@ -24,26 +24,26 @@ package compose
 //     semantics rather than to the reversal path.
 //   - a deal's amount_minor and currency are absent because money is read as one
 //     field, and a half-cleared pair states an amount in no currency.
-//   - a deal's partner_org_id and partner_attribution are BOTH present and mean
+//   - a deal's partner_company_id and partner_attribution are BOTH present and mean
 //     one instruction. deal_partner_attribution_pairing admits no row where one
 //     half survived the other, so forgetting either forgets both, and a reversal
 //     of a partner-add names both halves as null.
 //   - a lead's status and score override are absent because they are lifecycle
 //     positions and a sticky decision, not values.
-//   - a person's full_name and an organization's display_name are absent because
+//   - a person's full_name and a company's display_name are absent because
 //     a record with no name is not a record anybody can find again.
 //
 //nolint:goconst // the rows are wire FIELD names and record types read as data; the constants goconst points at are other concepts that spell the same word — a report field, a filter param — and hiding these behind them would assert a correspondence this table exists to state on its own
 var clearableFields = map[string][]string{
 	"person": {"first_name", "last_name", "title", "owner_id"},
-	"organization": {
+	"company": {
 		"legal_name", "description", "industry", "size_band",
-		"linkedin_url", "owner_id", "parent_org_id",
+		"linkedin_url", "owner_id", "parent_company_id",
 	},
-	"lead": {"title", "company_name", "candidate_org_key", "project_id", "owner_id"},
+	"lead": {"title", "company_name", "candidate_company_key", "project_id", "owner_id"},
 	"deal": {
 		"expected_close_date", "forecast_category", "wait_until", "owner_id",
-		"organization_id", "project_id", "partner_org_id", "partner_attribution",
+		"company_id", "project_id", "partner_company_id", "partner_attribution",
 	},
 	"project": {
 		"description", "owner_id", "started_at", "target_end_date", "ended_at",

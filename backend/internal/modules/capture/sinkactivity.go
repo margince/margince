@@ -117,7 +117,7 @@ func (s *Sink) finishNewActivity(
 		return counterpartyDecision{}, err
 	}
 	// The files, after the links: the account roll-up a captured file carries is
-	// read from the activity's own organization link, which does not exist until
+	// read from the activity's own company link, which does not exist until
 	// the line above has run.
 	//
 	// Staged HERE, inside the transaction and only once the message is known to
@@ -350,9 +350,9 @@ func (s *Sink) upsertActivity(
 func (s *Sink) linkActivity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, links []datasource.EntityRef) error {
 	for _, link := range links {
 		column, ok := map[datasource.EntityType]string{
-			datasource.EntityPerson:       "person_id",
-			datasource.EntityOrganization: "organization_id",
-			datasource.EntityDeal:         "deal_id",
+			datasource.EntityPerson:  "person_id",
+			datasource.EntityCompany: "company_id",
+			datasource.EntityDeal:    "deal_id",
 		}[link.Type]
 		if !ok {
 			return fmt.Errorf("capture: activities cannot link a %s", link.Type)

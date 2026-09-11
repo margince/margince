@@ -48,7 +48,7 @@ var countsTheSharedUnit = "count(DISTINCT " + unitSentinel + ")"
 // not counting interactions at all. Each says what it counts instead, because
 // "it is not an interaction count" is the only reason that can be right here.
 var deliberateOtherCounts = gatekit.Waive(map[string]string{
-	"internal/compose/org360/graphourside.go :: count(*) FROM colleagues)": "counts the colleagues an account has, not the interactions with any of them — it is the total the capped list is a page of",
+	"internal/compose/company360/graphourside.go :: count(*) FROM colleagues)": "counts the colleagues an account has, not the interactions with any of them — it is the total the capped list is a page of",
 })
 
 // TestEveryInteractionCountReadsTheSharedUnit is the census.

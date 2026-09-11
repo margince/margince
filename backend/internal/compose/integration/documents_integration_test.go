@@ -30,7 +30,7 @@ import (
 // account. The roll-up column is a read path the writers maintain; here it is
 // set directly because the subject is the READ.
 func seedDocument(
-	t *testing.T, e *Env, org ids.UUID, parentType string, parent ids.UUID, name, category string, pinned bool,
+	t *testing.T, e *Env, company ids.UUID, parentType string, parent ids.UUID, name, category string, pinned bool,
 ) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
@@ -39,35 +39,35 @@ func seedDocument(
 	// with two.
 	e.WsExec(t, `
 		INSERT INTO attachment (id, entity_type, entity_id, filename, storage_key,
-		                        source, captured_by, category, organization_id, pinned)
+		                        source, captured_by, category, company_id, pinned)
 		VALUES ($1, $2, $3, $4, $5, 'upload', 'human:test', $6, $7, $8)`,
-		id, parentType, parent, name, "k/"+id.String(), category, org, pinned)
+		id, parentType, parent, name, "k/"+id.String(), category, company, pinned)
 	return id
 }
 
 // A deal is readable by every seat, so a file on another team's deal IS in the
 // library; the parent the caller cannot read is a capture-private contact of
 // the other team's rep, and the file on it is neither listed nor counted.
-func TestOrganizationDocumentsHideAFileWhoseParentIsOutOfScope(t *testing.T) {
+func TestCompanyDocumentsHideAFileWhoseParentIsOutOfScope(t *testing.T) {
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
 	pipeline, stage, _ := DealFixture(t, e)
 
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	mine := e.SeedDeal(t, "My deal", pipeline, stage, &e.Rep1)
 	theirs := e.SeedDeal(t, "Another team's deal", pipeline, stage, &e.Rep3)
-	e.WsExec(t, `UPDATE deal SET organization_id = $2 WHERE id = $1`, mine, org)
-	e.WsExec(t, `UPDATE deal SET organization_id = $2 WHERE id = $1`, theirs, org)
+	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, mine, company)
+	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, theirs, company)
 	private := e.SeedPerson(t, "Their private contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "person", private, e.Rep3)
 
-	seedDocument(t, e, org, "deal", mine, "our-contract.pdf", "contract", false)
-	seedDocument(t, e, org, "deal", theirs, "their-contract.pdf", "contract", false)
-	seedDocument(t, e, org, "person", private, "their-private-note.pdf", "legal", false)
-	seedDocument(t, e, org, "organization", org, "nda.pdf", "legal", false)
+	seedDocument(t, e, company, "deal", mine, "our-contract.pdf", "contract", false)
+	seedDocument(t, e, company, "deal", theirs, "their-contract.pdf", "contract", false)
+	seedDocument(t, e, company, "person", private, "their-private-note.pdf", "legal", false)
+	seedDocument(t, e, company, "company", company, "nda.pdf", "legal", false)
 
-	docs, _, err := store.ListOrganizationDocuments(
-		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), org, activities.DocumentFilters{})
+	docs, _, err := store.ListCompanyDocuments(
+		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), company, activities.DocumentFilters{})
 	if err != nil {
 		t.Fatalf("list documents: %v", err)
 	}
@@ -87,17 +87,17 @@ func TestOrganizationDocumentsHideAFileWhoseParentIsOutOfScope(t *testing.T) {
 	}
 }
 
-func TestOrganizationDocumentsPutPinnedFirstAndFilterByCategory(t *testing.T) {
+func TestCompanyDocumentsPutPinnedFirstAndFilterByCategory(t *testing.T) {
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
-	seedDocument(t, e, org, "organization", org, "old-offer.pdf", "offer", false)
-	seedDocument(t, e, org, "organization", org, "signed-contract.pdf", "contract", true)
-	seedDocument(t, e, org, "organization", org, "nda.pdf", "legal", false)
+	seedDocument(t, e, company, "company", company, "old-offer.pdf", "offer", false)
+	seedDocument(t, e, company, "company", company, "signed-contract.pdf", "contract", true)
+	seedDocument(t, e, company, "company", company, "nda.pdf", "legal", false)
 
-	docs, _, err := store.ListOrganizationDocuments(ctx, org, activities.DocumentFilters{})
+	docs, _, err := store.ListCompanyDocuments(ctx, company, activities.DocumentFilters{})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestOrganizationDocumentsPutPinnedFirstAndFilterByCategory(t *testing.T) {
 	}
 
 	contract := "contract"
-	only, _, err := store.ListOrganizationDocuments(ctx, org,
+	only, _, err := store.ListCompanyDocuments(ctx, company,
 		activities.DocumentFilters{Category: &contract})
 	if err != nil {
 		t.Fatalf("filtered list: %v", err)
@@ -121,11 +121,11 @@ func TestOrganizationDocumentsPutPinnedFirstAndFilterByCategory(t *testing.T) {
 func TestAttachmentMetadataRefusesASupersedesCycle(t *testing.T) {
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, docWritePerms)
 
-	first := seedDocument(t, e, org, "organization", org, "v1.pdf", "contract", false)
-	second := seedDocument(t, e, org, "organization", org, "v2.pdf", "contract", false)
+	first := seedDocument(t, e, company, "company", company, "v1.pdf", "contract", false)
+	second := seedDocument(t, e, company, "company", company, "v2.pdf", "contract", false)
 
 	// v2 replaces v1 — fine.
 	if _, err := store.UpdateAttachmentMetadata(ctx, second,
@@ -146,7 +146,7 @@ func TestAttachmentMetadataRefusesASupersedesCycle(t *testing.T) {
 var docWritePerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"organization":          {Read: true, Update: true},
+		"company":               {Read: true, Update: true},
 		"deal":                  {Read: true},
 		"person":                {Read: true},
 		"installation_settings": {Read: true},
@@ -155,7 +155,7 @@ var docWritePerms = principal.Permissions{
 }
 
 // The library is fed by the UPLOAD path, not by a hand-written column. A test
-// that seeds organization_id itself proves only that the read filters on it;
+// that seeds company_id itself proves only that the read filters on it;
 // it passes just as happily when nothing in the product ever writes it, which
 // is exactly how a file uploaded through the UI can be invisible to the account
 // view while every gate stays green.
@@ -163,18 +163,18 @@ func TestAnUploadedDocumentReachesTheAccountLibrary(t *testing.T) {
 	e := Setup(t)
 	store := activities.NewStore(e.DB()).WithBlobstore(blobstore.NewMemory())
 	pipeline, stage, _ := DealFixture(t, e)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	deal := e.SeedDeal(t, "Renewal", pipeline, stage, &e.Rep1)
-	e.WsExec(t, `UPDATE deal SET organization_id = $2 WHERE id = $1`, deal, org)
+	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company)
 	// Filing a document is an update of the record it hangs off, so this
 	// uploader holds update on both parents it files against.
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, docUploadPerms)
 
-	onOrg, err := store.UploadAttachment(ctx, activities.AttachmentInput{
-		EntityType: "organization", EntityID: org, Filename: "nda.pdf", Content: bytes.NewReader([]byte("bytes")),
+	onCompany, err := store.UploadAttachment(ctx, activities.AttachmentInput{
+		EntityType: "company", EntityID: company, Filename: "nda.pdf", Content: bytes.NewReader([]byte("bytes")),
 	})
 	if err != nil {
-		t.Fatalf("uploading against the organization: %v", err)
+		t.Fatalf("uploading against the company: %v", err)
 	}
 	onDeal, err := store.UploadAttachment(ctx, activities.AttachmentInput{
 		EntityType: "deal", EntityID: deal, Filename: "quote.pdf", Content: bytes.NewReader([]byte("bytes")),
@@ -183,20 +183,20 @@ func TestAnUploadedDocumentReachesTheAccountLibrary(t *testing.T) {
 		t.Fatalf("uploading against the deal: %v", err)
 	}
 
-	docs, _, err := store.ListOrganizationDocuments(
-		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), org, activities.DocumentFilters{})
+	docs, _, err := store.ListCompanyDocuments(
+		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), company, activities.DocumentFilters{})
 	if err != nil {
-		t.Fatalf("ListOrganizationDocuments: %v", err)
+		t.Fatalf("ListCompanyDocuments: %v", err)
 	}
 	found := map[string]bool{}
 	for _, d := range docs {
 		found[d.Filename] = true
 	}
-	// The deal's file rolls up to the deal's account; the organization's own
+	// The deal's file rolls up to the deal's account; the company's own
 	// file rolls up to itself.
 	if !found["nda.pdf"] || !found["quote.pdf"] {
-		t.Fatalf("the account library holds %v, want both uploaded files (org=%s deal=%s)",
-			found, onOrg.Id, onDeal.Id)
+		t.Fatalf("the account library holds %v, want both uploaded files (company=%s deal=%s)",
+			found, onCompany.Id, onDeal.Id)
 	}
 }
 
@@ -204,7 +204,7 @@ func TestAnUploadedDocumentReachesTheAccountLibrary(t *testing.T) {
 var docUploadPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"organization":          {Read: true, Update: true},
+		"company":               {Read: true, Update: true},
 		"deal":                  {Read: true, Update: true},
 		"person":                {Read: true},
 		"installation_settings": {Read: true},
@@ -218,14 +218,14 @@ var docUploadPerms = principal.Permissions{
 func TestAttachmentMetadataRefusesASupersedesTargetTheCallerCannotSee(t *testing.T) {
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	// The unreadable parent is a capture-private contact: a deal would be
 	// readable by every seat.
 	private := e.SeedPerson(t, "Their private contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "person", private, e.Rep3)
 
-	mine := seedDocument(t, e, org, "organization", org, "v2.pdf", "contract", false)
-	hidden := seedDocument(t, e, org, "person", private, "their-v1.pdf", "contract", false)
+	mine := seedDocument(t, e, company, "company", company, "v2.pdf", "contract", false)
+	hidden := seedDocument(t, e, company, "person", private, "their-v1.pdf", "contract", false)
 
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, docWritePerms)
 	_, err := store.UpdateAttachmentMetadata(ctx, mine,
@@ -247,14 +247,14 @@ func TestAttachmentMetadataRefusesASupersedesTargetTheCallerCannotSee(t *testing
 func TestTheAccountLibraryPagesPastThePinnedGroup(t *testing.T) {
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
 	// Two pinned and two unpinned. Pinned sort ahead of every unpinned row, so
 	// a limit of 2 ends the first page exactly on the pinned/unpinned boundary.
 	want := map[string]bool{}
 	seed := func(name string, pinned bool) {
-		seedDocument(t, e, org, "organization", org, name, "contract", pinned)
+		seedDocument(t, e, company, "company", company, name, "contract", pinned)
 		want[name] = true
 	}
 	seed("pinned-a.pdf", true)
@@ -266,7 +266,7 @@ func TestTheAccountLibraryPagesPastThePinnedGroup(t *testing.T) {
 	got := map[string]bool{}
 	var cursor *string
 	for range 4 { // bounded: four documents at two per page cannot need more
-		docs, page, err := store.ListOrganizationDocuments(ctx, org,
+		docs, page, err := store.ListCompanyDocuments(ctx, company,
 			activities.DocumentFilters{Limit: &limit, Cursor: cursor})
 		if err != nil {
 			t.Fatalf("listing a page: %v", err)
@@ -303,9 +303,9 @@ func TestAnActivityBorneFileReachesTheLibraryAndStaysGated(t *testing.T) {
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
 	pipeline, stage, _ := DealFixture(t, e)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	mine := e.SeedDeal(t, "My deal", pipeline, stage, &e.Rep1)
-	e.WsExec(t, `UPDATE deal SET organization_id = $2 WHERE id = $1`, mine, org)
+	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, mine, company)
 	private := e.SeedPerson(t, "Their private contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "person", private, e.Rep3)
 
@@ -313,13 +313,13 @@ func TestAnActivityBorneFileReachesTheLibraryAndStaysGated(t *testing.T) {
 	// linked only to a contact they cannot read.
 	visibleEmail := seedActivityWithDeal(t, e, mine)
 	hiddenEmail := seedActivityWithPerson(t, e, private)
-	seedDocument(t, e, org, "activity", visibleEmail, "signed-msa.pdf", "contract", false)
-	seedDocument(t, e, org, "activity", hiddenEmail, "their-msa.pdf", "contract", false)
+	seedDocument(t, e, company, "activity", visibleEmail, "signed-msa.pdf", "contract", false)
+	seedDocument(t, e, company, "activity", hiddenEmail, "their-msa.pdf", "contract", false)
 
-	docs, _, err := store.ListOrganizationDocuments(
-		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), org, activities.DocumentFilters{})
+	docs, _, err := store.ListCompanyDocuments(
+		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), company, activities.DocumentFilters{})
 	if err != nil {
-		t.Fatalf("ListOrganizationDocuments: %v", err)
+		t.Fatalf("ListCompanyDocuments: %v", err)
 	}
 	found := map[string]bool{}
 	for _, d := range docs {
@@ -364,30 +364,30 @@ func seedActivityWithDeal(t *testing.T, e *Env, deal ids.UUID) ids.UUID {
 }
 
 // When two companies turn out to be one, the survivor's library has to hold
-// both sides' files. organization_id is a denormalized read path, so nothing
+// both sides' files. company_id is a denormalized read path, so nothing
 // moves it on its own — a file left pointing at the dissolved company is filed
 // under a record that no longer exists, and to a user the contract has simply
 // vanished.
-func TestAnOrganizationMergeCarriesTheDocumentsAcross(t *testing.T) {
+func TestACompanyMergeCarriesTheDocumentsAcross(t *testing.T) {
 	e := Setup(t)
 	files := activities.NewStore(e.DB())
-	orgs := people.NewStore(e.DB())
-	survivor := e.SeedOrg(t, "Acme", &e.Rep1)
-	dissolved := e.SeedOrg(t, "Acme Holdings", &e.Rep1)
+	companies := people.NewStore(e.DB())
+	survivor := e.SeedCompany(t, "Acme", &e.Rep1)
+	dissolved := e.SeedCompany(t, "Acme Holdings", &e.Rep1)
 
-	seedDocument(t, e, dissolved, "organization", dissolved, "old-msa.pdf", "contract", false)
-	seedDocument(t, e, survivor, "organization", survivor, "new-msa.pdf", "contract", false)
+	seedDocument(t, e, dissolved, "company", dissolved, "old-msa.pdf", "contract", false)
+	seedDocument(t, e, survivor, "company", survivor, "new-msa.pdf", "contract", false)
 
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, docUploadPerms)
-	if _, err := orgs.MergeOrganization(ctx,
-		ids.From[ids.OrganizationKind](dissolved), ids.From[ids.OrganizationKind](survivor)); err != nil {
+	if _, err := companies.MergeCompany(ctx,
+		ids.From[ids.CompanyKind](dissolved), ids.From[ids.CompanyKind](survivor)); err != nil {
 		t.Fatalf("merging the duplicate company: %v", err)
 	}
 
-	docs, _, err := files.ListOrganizationDocuments(
+	docs, _, err := files.ListCompanyDocuments(
 		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), survivor, activities.DocumentFilters{})
 	if err != nil {
-		t.Fatalf("ListOrganizationDocuments: %v", err)
+		t.Fatalf("ListCompanyDocuments: %v", err)
 	}
 	found := map[string]bool{}
 	for _, d := range docs {

@@ -307,9 +307,9 @@ function MarkPreview({
 }>) {
   const monogram = (
     <Avatar
-      identity={profile.organization_id}
+      identity={profile.company_id}
       name={profile.display_name}
-      shape="organization"
+      shape="company"
       size="xl"
     />
   );

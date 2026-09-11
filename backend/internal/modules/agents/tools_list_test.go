@@ -178,7 +178,7 @@ func TestATypeWithNoBindableFilterSaysItListsWhole(t *testing.T) {
 
 // probeVocabulary answers the store half of the vocabulary the way the
 // composite provider does: everything the contract declares EXCEPT the three
-// parameters no store binds today (person.tag, organization.domain,
+// parameters no store binds today (person.tag, company.domain,
 // lead.min_score).
 type probeVocabulary struct{}
 

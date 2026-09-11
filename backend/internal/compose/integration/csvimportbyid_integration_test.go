@@ -28,22 +28,22 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// createOrgReturningID makes one company and answers its id.
-func createOrgReturningID(t *testing.T, e *apptest.AppEnv, body map[string]any) string {
+// createCompanyReturningID makes one company and answers its id.
+func createCompanyReturningID(t *testing.T, e *apptest.AppEnv, body map[string]any) string {
 	t.Helper()
 	var created struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/organizations", body, nil, &created); status != http.StatusCreated {
+	if status := e.Call(t, http.MethodPost, "/v1/companies", body, nil, &created); status != http.StatusCreated {
 		t.Fatalf("creating a company → %d, want 201", status)
 	}
 	return created.ID
 }
 
-// orgByName reads one company back, by the name it is listed under.
-func orgByName(t *testing.T, e *apptest.AppEnv, want string) (string, string, string) {
+// companyByName reads one company back, by the name it is listed under.
+func companyByName(t *testing.T, e *apptest.AppEnv, want string) (string, string, string) {
 	t.Helper()
-	var orgs struct {
+	var companies struct {
 		Data []struct {
 			ID          string `json:"id"`
 			DisplayName string `json:"display_name"`
@@ -53,10 +53,10 @@ func orgByName(t *testing.T, e *apptest.AppEnv, want string) (string, string, st
 			} `json:"address"`
 		} `json:"data"`
 	}
-	if status := e.Call(t, http.MethodGet, "/v1/organizations?limit=100", nil, nil, &orgs); status != http.StatusOK {
+	if status := e.Call(t, http.MethodGet, "/v1/companies?limit=100", nil, nil, &companies); status != http.StatusOK {
 		t.Fatalf("reading the companies → %d, want 200", status)
 	}
-	for _, o := range orgs.Data {
+	for _, o := range companies.Data {
 		if o.DisplayName == want {
 			return o.ID, o.Address.City, o.LegalName
 		}
@@ -66,11 +66,11 @@ func orgByName(t *testing.T, e *apptest.AppEnv, want string) (string, string, st
 
 func TestCSVImportByIDUpdatesTheNamedCompany(t *testing.T) {
 	e := setupImportApp(t)
-	id := createOrgReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
+	id := createCompanyReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
 
 	file := "Id,Company,City\n" + id + ",Kestrel Data,Bremen\n"
-	profile, _ := uploadCSV(t, e, "organization", file)
-	run, status := createRunWithMapping(t, e, "organization", profile.SourceRef,
+	profile, _ := uploadCSV(t, e, "company", file)
+	run, status := createRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
@@ -88,7 +88,7 @@ func TestCSVImportByIDUpdatesTheNamedCompany(t *testing.T) {
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
-	gotID, city, _ := orgByName(t, e, "Kestrel Data")
+	gotID, city, _ := companyByName(t, e, "Kestrel Data")
 	if gotID != id {
 		t.Fatalf("the company named Kestrel Data has id %q, want the one the file named (%q)", gotID, id)
 	}
@@ -106,12 +106,12 @@ func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T
 	// name — a different ambiguity from the one it is named for.
 	t.Run("two companies sharing a name", func(t *testing.T) {
 		e := setupImportApp(t)
-		wanted := createOrgReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
-		other := createOrgReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
+		wanted := createCompanyReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
+		other := createCompanyReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
 
 		file := "Id,Company,City\n" + wanted + ",Kestrel Data,Bremen\n"
-		profile, _ := uploadCSV(t, e, "organization", file)
-		run, _ := createRunWithMapping(t, e, "organization", profile.SourceRef,
+		profile, _ := uploadCSV(t, e, "company", file)
+		run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
 			map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
 		if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 			t.Fatalf("approve → %d, want 202", status)
@@ -130,12 +130,12 @@ func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T
 
 	t.Run("different legal forms", func(t *testing.T) {
 		e := setupImportApp(t)
-		gmbh := createOrgReturningID(t, e, map[string]any{"display_name": "Falkenberg Maschinenbau GmbH"})
-		ag := createOrgReturningID(t, e, map[string]any{"display_name": "Falkenberg Maschinenbau AG"})
+		gmbh := createCompanyReturningID(t, e, map[string]any{"display_name": "Falkenberg Maschinenbau GmbH"})
+		ag := createCompanyReturningID(t, e, map[string]any{"display_name": "Falkenberg Maschinenbau AG"})
 
 		file := "Id,Company,City\n" + ag + ",Falkenberg Maschinenbau AG,Stuttgart\n"
-		profile, _ := uploadCSV(t, e, "organization", file)
-		run, _ := createRunWithMapping(t, e, "organization", profile.SourceRef,
+		profile, _ := uploadCSV(t, e, "company", file)
+		run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
 			map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
 		if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 			t.Fatalf("approve → %d, want 202", status)
@@ -151,14 +151,14 @@ func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T
 
 	t.Run("a trading name that is somebody else's registered name", func(t *testing.T) {
 		e := setupImportApp(t)
-		trading := createOrgReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
-		registered := createOrgReturningID(t, e, map[string]any{
+		trading := createCompanyReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
+		registered := createCompanyReturningID(t, e, map[string]any{
 			"display_name": "Nordwind Holding", "legal_name": "Kestrel Data",
 		})
 
 		file := "Id,Company,City\n" + trading + ",Kestrel Data,Bremen\n"
-		profile, _ := uploadCSV(t, e, "organization", file)
-		run, _ := createRunWithMapping(t, e, "organization", profile.SourceRef,
+		profile, _ := uploadCSV(t, e, "company", file)
+		run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
 			map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
 		if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 			t.Fatalf("approve → %d, want 202", status)
@@ -170,7 +170,7 @@ func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T
 			t.Errorf("the company holding that string as its REGISTERED name has city %q, want none",
 				city)
 		}
-		if _, _, legal := orgByName(t, e, "Nordwind Holding"); legal != "Kestrel Data" {
+		if _, _, legal := companyByName(t, e, "Nordwind Holding"); legal != "Kestrel Data" {
 			t.Errorf("its registered name is now %q; nothing should have touched it", legal)
 		}
 	})
@@ -179,15 +179,15 @@ func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T
 // cityOf reads one company's city by id, "" when it has none.
 func cityOf(t *testing.T, e *apptest.AppEnv, id string) string {
 	t.Helper()
-	var org struct {
+	var company struct {
 		Address struct {
 			City string `json:"city"`
 		} `json:"address"`
 	}
-	if status := e.Call(t, http.MethodGet, "/v1/organizations/"+id, nil, nil, &org); status != http.StatusOK {
+	if status := e.Call(t, http.MethodGet, "/v1/companies/"+id, nil, nil, &company); status != http.StatusOK {
 		t.Fatalf("reading company %s → %d, want 200", id, status)
 	}
-	return org.Address.City
+	return company.Address.City
 }
 
 // A row naming an id nothing answers to is REFUSED, not quietly created.
@@ -204,11 +204,11 @@ func TestCSVImportByIDRefusesAnIDNothingAnswersTo(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupImportApp(t)
-			before := len(organizations(t, e).Data)
+			before := len(companyList(t, e).Data)
 
 			file := "Id,Company,City\n" + tc.id + ",Kestrel Data,Bremen\n"
-			profile, _ := uploadCSV(t, e, "organization", file)
-			run, status := createRunWithMapping(t, e, "organization", profile.SourceRef,
+			profile, _ := uploadCSV(t, e, "company", file)
+			run, status := createRunWithMapping(t, e, "company", profile.SourceRef,
 				map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
 			if status != http.StatusAccepted {
 				t.Fatalf("create run → %d, want 202", status)
@@ -235,7 +235,7 @@ func TestCSVImportByIDRefusesAnIDNothingAnswersTo(t *testing.T) {
 			if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 				t.Fatalf("approve → %d, want 202", status)
 			}
-			if after := len(organizations(t, e).Data); after != before {
+			if after := len(companyList(t, e).Data); after != before {
 				t.Errorf("companies went from %d to %d; a refused row must land nothing", before, after)
 			}
 		})
@@ -250,15 +250,15 @@ func TestCSVImportByIDRefusesAnIDNothingAnswersTo(t *testing.T) {
 // a row with no id is simply a row naming no record: an ordinary create.
 func TestCSVImportByIDTreatsAnEmptyIDAsANewCompany(t *testing.T) {
 	e := setupImportApp(t)
-	existing := createOrgReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
+	existing := createCompanyReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
 
 	file := "Id,Company,City\n" +
 		existing + ",Kestrel Data,Bremen\n" +
 		",Nordwind Logistik,Kiel\n"
-	profile, _ := uploadCSV(t, e, "organization", file)
+	profile, _ := uploadCSV(t, e, "company", file)
 	// Identified by the company column, which every row carries — so the id
 	// column is free to be empty on the rows that name no record.
-	run, status := createRunWithSourceKey(t, e, "organization", profile.SourceRef,
+	run, status := createRunWithSourceKey(t, e, "company", profile.SourceRef,
 		map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"}, "Company")
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
@@ -281,13 +281,13 @@ func TestCSVImportByIDTreatsAnEmptyIDAsANewCompany(t *testing.T) {
 // Re-importing an unchanged file changes nothing and says so.
 func TestCSVImportByIDOfIdenticalValuesIsUnchanged(t *testing.T) {
 	e := setupImportApp(t)
-	id := createOrgReturningID(t, e, map[string]any{
+	id := createCompanyReturningID(t, e, map[string]any{
 		"display_name": "Kestrel Data", "address": map[string]any{"city": "Bremen"},
 	})
 
 	file := "Id,Company,City\n" + id + ",Kestrel Data,Bremen\n"
-	profile, _ := uploadCSV(t, e, "organization", file)
-	run, _ := createRunWithMapping(t, e, "organization", profile.SourceRef,
+	profile, _ := uploadCSV(t, e, "company", file)
+	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
 
 	var report importReportDTO
@@ -303,7 +303,7 @@ func TestCSVImportByIDOfIdenticalValuesIsUnchanged(t *testing.T) {
 // One address column named alongside an id leaves the rest of the address alone.
 func TestCSVImportByIDOfOneAddressColumnKeepsTheRest(t *testing.T) {
 	e := setupImportApp(t)
-	id := createOrgReturningID(t, e, map[string]any{
+	id := createCompanyReturningID(t, e, map[string]any{
 		"display_name": "Kestrel Data",
 		"address": map[string]any{
 			"line1": "Hafenstr. 4", "city": "Hamburg", "postal_code": "20359", "country": "DE",
@@ -311,14 +311,14 @@ func TestCSVImportByIDOfOneAddressColumnKeepsTheRest(t *testing.T) {
 	})
 
 	file := "Id,City\n" + id + ",Bremen\n"
-	profile, _ := uploadCSV(t, e, "organization", file)
-	run, _ := createRunWithMapping(t, e, "organization", profile.SourceRef,
+	profile, _ := uploadCSV(t, e, "company", file)
+	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Id": "id", "City": "address.city"})
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 
-	var org struct {
+	var company struct {
 		Address struct {
 			Line1      string `json:"line1"`
 			City       string `json:"city"`
@@ -326,15 +326,15 @@ func TestCSVImportByIDOfOneAddressColumnKeepsTheRest(t *testing.T) {
 			Country    string `json:"country"`
 		} `json:"address"`
 	}
-	if status := e.Call(t, http.MethodGet, "/v1/organizations/"+id, nil, nil, &org); status != http.StatusOK {
+	if status := e.Call(t, http.MethodGet, "/v1/companies/"+id, nil, nil, &company); status != http.StatusOK {
 		t.Fatalf("reading the company → %d, want 200", status)
 	}
-	if org.Address.City != "Bremen" {
-		t.Errorf("city = %q, want Bremen", org.Address.City)
+	if company.Address.City != "Bremen" {
+		t.Errorf("city = %q, want Bremen", company.Address.City)
 	}
-	if org.Address.Line1 != "Hafenstr. 4" || org.Address.PostalCode != "20359" || org.Address.Country != "DE" {
+	if company.Address.Line1 != "Hafenstr. 4" || company.Address.PostalCode != "20359" || company.Address.Country != "DE" {
 		t.Errorf("the rest of the address is %+v; a column the file did not carry must not be erased",
-			org.Address)
+			company.Address)
 	}
 }
 
@@ -372,8 +372,8 @@ func TestCSVImportSkippedRowsAreCountedIndividually(t *testing.T) {
 	const file = "Company,Id,City\n" +
 		"Aurora Metallbau,01a02ed1-0000-7000-8000-000000000001,Bremen\n" +
 		"Boreas Logistik,01a02ed1-0000-7000-8000-000000000002,Kiel\n"
-	profile, _ := uploadCSV(t, e, "organization", file)
-	run, status := createRunWithSourceKey(t, e, "organization", profile.SourceRef,
+	profile, _ := uploadCSV(t, e, "company", file)
+	run, status := createRunWithSourceKey(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name", "Id": "id", "City": "address.city"}, "Company")
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
@@ -414,14 +414,14 @@ func TestThePreviewPromisesWhatTheCommitPerformsForACollision(t *testing.T) {
 	for _, policy := range []string{"create", "skip"} {
 		t.Run(policy, func(t *testing.T) {
 			e := setupImportApp(t)
-			if status := e.Call(t, http.MethodPost, "/v1/organizations",
+			if status := e.Call(t, http.MethodPost, "/v1/companies",
 				map[string]any{"display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
 				t.Fatalf("creating the incumbent → %d, want 201", status)
 			}
 
 			const file = "Company,City\nKestrel Data,Bremen\nNordwind Logistik,Kiel\n"
-			profile, _ := uploadCSV(t, e, "organization", file)
-			run, status := createRunOnDuplicate(t, e, "organization", profile.SourceRef,
+			profile, _ := uploadCSV(t, e, "company", file)
+			run, status := createRunOnDuplicate(t, e, "company", profile.SourceRef,
 				map[string]string{"Company": "display_name", "City": "address.city"}, policy)
 			if status != http.StatusAccepted {
 				t.Fatalf("create run → %d, want 202", status)
@@ -432,7 +432,7 @@ func TestThePreviewPromisesWhatTheCommitPerformsForACollision(t *testing.T) {
 				nil, nil, &predicted); status != http.StatusOK {
 				t.Fatalf("report → %d, want 200", status)
 			}
-			before := len(organizations(t, e).Data)
+			before := len(companyList(t, e).Data)
 
 			if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve",
 				nil, nil, nil); status != http.StatusAccepted {
@@ -440,7 +440,7 @@ func TestThePreviewPromisesWhatTheCommitPerformsForACollision(t *testing.T) {
 			}
 
 			// What the preview PROMISED, measured against what the estate did.
-			if landed := len(organizations(t, e).Data) - before; landed != predicted.Disposition.Created {
+			if landed := len(companyList(t, e).Data) - before; landed != predicted.Disposition.Created {
 				t.Errorf("the preview promised %d create(s) and %d company/companies landed — a row "+
 					"previewing as one outcome and committing as another is what makes an approval "+
 					"a decision about something else", predicted.Disposition.Created, landed)

@@ -76,7 +76,7 @@ type EntityBinding struct {
 
 // FieldBindings is the registry. Every gate derives from this one slice.
 func FieldBindings() []EntityBinding {
-	return []EntityBinding{personBindings, organizationBindings, dealBindings, leadBindings, activityBindings}
+	return []EntityBinding{personBindings, companyBindings, dealBindings, leadBindings, activityBindings}
 }
 
 // BindingsFor resolves one canonical entity's bindings. An entity the
@@ -202,7 +202,7 @@ var personBindings = EntityBinding{
 	}, mirrorStructuralBindings()...),
 }
 
-// organizationBindings disposition every contract Organization field. Armed,
+// companyBindings disposition every contract Company field. Armed,
 // on the same terms personBindings is.
 //
 // Five fields the incumbent could fill are deferred rather than mapped, and
@@ -213,8 +213,8 @@ var personBindings = EntityBinding{
 // axes).
 //
 //nolint:goconst // the rows are read as data, and each column is its own vocabulary: a wire slot, the mirror's jsonb key and an incumbent property spell "address" and "industry" alike here by coincidence, so hiding any of them behind one shared name would assert a correspondence the table exists to keep separate
-var organizationBindings = EntityBinding{
-	Entity: "organization",
+var companyBindings = EntityBinding{
+	Entity: "company",
 	Armed:  true,
 	Bindings: append([]FieldBinding{
 		{
@@ -233,13 +233,13 @@ var organizationBindings = EntityBinding{
 		{WireSlot: "industry", CanonicalKey: "industry", Incumbent: []string{"industry"}, Disposition: DispositionMapped},
 		{WireSlot: "size_band", CanonicalKey: "size_band", Incumbent: []string{"numberofemployees"}, Transform: "employees_to_size_band", Disposition: DispositionMapped},
 		{WireSlot: "address", CanonicalKey: "address", Incumbent: []string{"address", "city", "state", "zip", "country"}, Transform: "address_json", Disposition: DispositionMapped},
-		{WireSlot: "domains", CanonicalKey: "organization_domain", Incumbent: []string{"domain"}, Transform: "lowercase", Disposition: DispositionMapped},
+		{WireSlot: "domains", CanonicalKey: "company_domain", Incumbent: []string{"domain"}, Transform: "lowercase", Disposition: DispositionMapped},
 		{WireSlot: "created_at", CanonicalKey: "created_at", Incumbent: []string{"createdate"}, Disposition: DispositionMapped},
 		{WireSlot: "updated_at", CanonicalKey: "last_synced_at", Incumbent: []string{"hs_lastmodifieddate"}, Disposition: DispositionMapped},
 
 		{WireSlot: "website_url", Disposition: DispositionDerived, DerivedFrom: []string{"domains"}},
 
-		{WireSlot: "parent_org_id", Disposition: DispositionDeferred, IssueURL: "https://github.com/margince/margince/issues/1023"},
+		{WireSlot: "parent_company_id", Disposition: DispositionDeferred, IssueURL: "https://github.com/margince/margince/issues/1023"},
 		{
 			WireSlot: "archived_at", Disposition: DispositionUnmappable,
 			Reason: "An archived record is never IN the mirror to carry the flag. The deletion sweep purges an incumbent-archived record outright rather than tombstoning it, and a local archive purges through the same path after the incumbent accepts it — so the only value the sync feed could ever read for a record the mirror still holds is absent.",
@@ -276,7 +276,7 @@ var organizationBindings = EntityBinding{
 		},
 		{
 			WireSlot: "logo_url", Disposition: DispositionNativeOnly,
-			Reason: "The getOrganizationLogo path for this record, which streams a resolved asset out of this installation's own object storage; the mirror holds no asset there.",
+			Reason: "The getCompanyLogo path for this record, which streams a resolved asset out of this installation's own object storage; the mirror holds no asset there.",
 		},
 		{
 			WireSlot: "partner", Disposition: DispositionNativeOnly,

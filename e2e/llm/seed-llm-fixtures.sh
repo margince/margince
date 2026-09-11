@@ -14,7 +14,7 @@
 # runs on any checkout.
 #
 # Idempotent by GUARD, not by the API's refusals. Every create sits behind a
-# lookup for the record it would write — org_id_by_name, person_id_by_email,
+# lookup for the record it would write — company_id_by_name, person_id_by_email,
 # tag_id_by_name, lead_id_by_email — because create_or_die STOPS on a response
 # carrying no id, and a 409 on a natural key is exactly that shape. So a missed
 # guard is fatal on the second run by design: the seed names the record it could
@@ -229,7 +229,7 @@ if ! login_as "$ADMIN_PASSWORD"; then
   if ! login_as "$BOOTSTRAP_PASSWORD"; then
     echo "could not sign in as $ADMIN_EMAIL with either the chosen password or" >&2
     echo "the bootstrap one ($BOOTSTRAP_PASSWORD_FILE). The api bootstraps the demo" >&2
-    echo "organization at boot from config/margince.yaml; if those credentials" >&2
+    echo "company at boot from config/margince.yaml; if those credentials" >&2
     echo "changed, reset the dev database and restart the stack." >&2
     exit 1
   fi
@@ -277,9 +277,9 @@ fi
 # 409 is the one answer that is allowed through: the employment is already
 # recorded, which is what a re-run whose guard let it through finds.
 link_employment() {
-  local person="$1" organization="$2" what="$3" body code
-  body="$(printf '{"kind":"employment","person_id":"%s","organization_id":"%s"}' \
-    "$person" "$organization")"
+  local person="$1" company="$2" what="$3" body code
+  body="$(printf '{"kind":"employment","person_id":"%s","company_id":"%s"}' \
+    "$person" "$company")"
   code="$(status_of POST /relationships "$body")"
   [[ "$code" = "201" || "$code" = "409" ]] || {
     echo "employing $what answered HTTP $code" >&2; exit 1; }
@@ -307,7 +307,7 @@ activate_seat "$colleague" "Sofia Meier"
 # --- CASE 4: companies in and around Köln, owned by the colleague ------------
 #
 # THESE ROWS CARRY AN ADDRESS AND NO COORDINATES, and the difference decides
-# what case 4 can measure. `POST /organizations` has no field for a point —
+# what case 4 can measure. `POST /companies` has no field for a point —
 # there is none anywhere in backend/api/crm.yaml — and placing an address is a
 # job that runs only where a Geocoder is configured, which this stack has not
 # got. So `geocode_status` stands at 'stale' on all three and a `within_radius`
@@ -330,8 +330,8 @@ activate_seat "$colleague" "Sofia Meier"
 # splits on its newlines, and the server answers 422 malformed_json. The `|| true`
 # on these calls then hid it, so the seed printed success having created
 # nothing. Keep the bodies in variables.
-org_id_by_name() {
-  api GET "/organizations?q=$(url_encode "$1")&limit=50" | python3 -c 'import json,sys
+company_id_by_name() {
+  api GET "/companies?q=$(url_encode "$1")&limit=50" | python3 -c 'import json,sys
 want = sys.argv[1]
 for row in json.load(sys.stdin).get("data", []):
     if row.get("display_name") == want:
@@ -342,24 +342,24 @@ else:
 
 seed_cologne() {
   local name="$1" line1="$2" postal="$3" body existing
-  existing="$(org_id_by_name "$name")"
+  existing="$(company_id_by_name "$name")"
   if [[ -n "$existing" ]]; then
     echo "  $name already present"
     return 0
   fi
   body="$(printf '{"display_name":"%s","owner_id":"%s",' "$name" "$colleague")"
   body="$body$(printf '"address":{"line1":"%s","postal_code":"%s","city":"Köln","country":"DE"}}' "$line1" "$postal")"
-  create_or_die "/organizations" "$body" "$name" >/dev/null
+  create_or_die "/companies" "$body" "$name" >/dev/null
 }
 seed_cologne "Dom Digital GmbH"    "Unter Sachsenhausen 21" 50667
 seed_cologne "Rheinufer AG"        "Konrad-Adenauer-Ufer 41" 50668
 seed_cologne "Vorort Systeme KG"   "Neusser Landstraße 384" 50769
 
 # --- CASE 5: the Vietnam partner, with a promise nobody kept -----------------
-vietnam="$(org_id_by_name "Vietnam Partner JSC")"
+vietnam="$(company_id_by_name "Vietnam Partner JSC")"
 if [[ -z "$vietnam" ]]; then
   body="$(printf '{"display_name":"Vietnam Partner JSC","owner_id":"%s"}' "$colleague")"
-  vietnam="$(create_or_die "/organizations" "$body" "Vietnam Partner JSC")"
+  vietnam="$(create_or_die "/companies" "$body" "Vietnam Partner JSC")"
 fi
 
 mai="$(person_id_by_email "Mai Nguyen" "mai.nguyen@vietnampartner.test")"
@@ -375,10 +375,10 @@ if [[ -z "$mai" ]]; then
   # reading it as delivered reads it correctly and the gap the case rests on is
   # not in the data at all. A deadline makes it a promise, and the silence after
   # it measurable.
-  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","body":"Die Aufstellung schicke ich Ihnen bis Ende der Woche nach.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"organization","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","body":"Die Aufstellung schicke ich Ihnen bis Ende der Woche nach.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"company","entity_id":"%s"}]}' \
     "$(days_ago 18)" "$mai" "$vietnam")"
   create_or_die "/activities" "$body" "the unkept promise" >/dev/null
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","body":"Cảm ơn — we will review the appendix this week.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"organization","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","body":"Cảm ơn — we will review the appendix this week.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"company","entity_id":"%s"}]}' \
     "$(days_ago 20)" "$mai" "$vietnam")"
   create_or_die "/activities" "$body" "the inbound reply" >/dev/null
 fi
@@ -388,10 +388,10 @@ fi
 # An email dated in September, and a note written later whose prose says the
 # complaint was raised "im Oktober". The record is right; the prose is wrong.
 # This is the fixture the sharpest assertion in the lane rests on.
-reply="$(org_id_by_name "Reply Deutschland Betreuerwechsel")"
+reply="$(company_id_by_name "Reply Deutschland Betreuerwechsel")"
 if [[ -z "$reply" ]]; then
   body="$(printf '{"display_name":"Reply Deutschland Betreuerwechsel","owner_id":"%s","industry":"Managed Services"}' "$colleague")"
-  reply="$(create_or_die "/organizations" "$body" "Reply Deutschland")"
+  reply="$(create_or_die "/companies" "$body" "Reply Deutschland")"
 fi
 
 katrin="$(person_id_by_email "Katrin Sommer" "katrin.sommer@reply.test")"
@@ -401,12 +401,12 @@ if [[ -z "$katrin" ]]; then
   link_employment "$katrin" "$reply" "Katrin Sommer at Reply Deutschland"
 
   # The record. September. This date is the assertion case 6 rests on.
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"2025-09-18T09:12:00Z","subject":"Wechsel der Ansprechpartner","body":"Der ständige Wechsel der Ansprechpartner ist für uns ein echtes Problem.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"organization","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"2025-09-18T09:12:00Z","subject":"Wechsel der Ansprechpartner","body":"Der ständige Wechsel der Ansprechpartner ist für uns ein echtes Problem.","links":[{"entity_type":"person","entity_id":"%s"},{"entity_type":"company","entity_id":"%s"}]}' \
     "$katrin" "$reply")"
   create_or_die "/activities" "$body" "the September complaint" >/dev/null
 
   # The prose. Wrong about the month, exactly as a real post-mortem was.
-  body="$(printf '{"kind":"note","occurred_at":"2025-12-03T10:00:00Z","subject":"Post-mortem Betreuerwechsel","body":"Der Kunde hat das im Oktober klar angesprochen; wir haben zu spät reagiert.","links":[{"entity_type":"organization","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"note","occurred_at":"2025-12-03T10:00:00Z","subject":"Post-mortem Betreuerwechsel","body":"Der Kunde hat das im Oktober klar angesprochen; wir haben zu spät reagiert.","links":[{"entity_type":"company","entity_id":"%s"}]}' \
     "$reply")"
   create_or_die "/activities" "$body" "the Oktober post-mortem" >/dev/null
 fi
@@ -414,11 +414,11 @@ fi
 # Two more accounts that lived through the same thing, so "did we have this in
 # the past" has a pattern to find rather than a single case.
 for company in "valantic AG Betreuerwechsel" "Körber Digital Betreuerwechsel"; do
-  org="$(org_id_by_name "$company")"
-  [[ -n "$org" ]] && continue
+  company="$(company_id_by_name "$company")"
+  [[ -n "$company" ]] && continue
   body="$(printf '{"display_name":"%s","owner_id":"%s","industry":"Managed Services"}' "$company" "$colleague")"
-  org="$(create_or_die "/organizations" "$body" "$company")"
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"2025-11-04T08:00:00Z","body":"Nach dem Wechsel des Ansprechpartners kam fünf Tage lang keine Antwort.","links":[{"entity_type":"organization","entity_id":"%s"}]}' "$org")"
+  company="$(create_or_die "/companies" "$body" "$company")"
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"2025-11-04T08:00:00Z","body":"Nach dem Wechsel des Ansprechpartners kam fünf Tage lang keine Antwort.","links":[{"entity_type":"company","entity_id":"%s"}]}' "$company")"
   create_or_die "/activities" "$body" "$company's silence" >/dev/null
 done
 
@@ -505,10 +505,10 @@ FIXTURE_SOURCE="seed:llm-fixtures"
 # holds a value. So description and owner_id are set here, through the admin's
 # own session, before the agent proposes a change to them. Patch a field nobody
 # filled and the agent's write lands silently, staging nothing.
-herzog="$(org_id_by_name "Herzog Fertigung GmbH")"
+herzog="$(company_id_by_name "Herzog Fertigung GmbH")"
 if [[ -z "$herzog" ]]; then
   body="$(printf '{"display_name":"Herzog Fertigung GmbH","owner_id":"%s","industry":"Fertigung","description":"Fertigungsbetrieb im Bergischen Land."}' "$colleague")"
-  herzog="$(create_or_die "/organizations" "$body" "Herzog Fertigung GmbH")"
+  herzog="$(create_or_die "/companies" "$body" "Herzog Fertigung GmbH")"
 fi
 
 # NO ADDRESS, here and on every company below: case 4's answer is averaged from
@@ -519,10 +519,10 @@ fi
 # something was promised about Verpackung, and this company is pending in case
 # 1's world too — an ownership proposal on an "Ostsee Verpackungen" would put
 # that word in front of an assistant answering a different question entirely.
-taunus="$(org_id_by_name "Taunus Gerätebau GmbH")"
+taunus="$(company_id_by_name "Taunus Gerätebau GmbH")"
 if [[ -z "$taunus" ]]; then
   body="$(printf '{"display_name":"Taunus Gerätebau GmbH","owner_id":"%s","industry":"Gerätebau"}' "$colleague")"
-  taunus="$(create_or_die "/organizations" "$body" "Taunus Gerätebau GmbH")"
+  taunus="$(create_or_die "/companies" "$body" "Taunus Gerätebau GmbH")"
 fi
 
 # The proposing credential. read+write and nothing else: staging spends write.
@@ -538,7 +538,7 @@ except Exception: print("")')"
 
 # pending_on counts what is already waiting against one company.
 pending_on() {
-  api GET "/approvals?status=pending&target_entity_type=organization&target_entity_id=$1&limit=50" \
+  api GET "/approvals?status=pending&target_entity_type=company&target_entity_id=$1&limit=50" \
     | python3 -c 'import json,sys
 print(len(json.load(sys.stdin).get("data", [])))'
 }
@@ -568,10 +568,10 @@ stage_as_nightly() {
 # that. If this sentence is ever reworded, keep a distinctive word past the 48th
 # BYTE (ü is two of them) or the case stops testing that the item was opened.
 staged_description='{"description":"Fertigungsdienstleister mit eigenem Prüflabor in Solingen; Schwerpunkt Werkzeugbau."}'
-stage_as_nightly "/organizations/$herzog" "$staged_description" "the description rewrite" "$herzog"
+stage_as_nightly "/companies/$herzog" "$staged_description" "the description rewrite" "$herzog"
 
 owner_move="$(printf '{"owner_id":"%s"}' "$me")"
-stage_as_nightly "/organizations/$taunus" "$owner_move" "the ownership move" "$taunus"
+stage_as_nightly "/companies/$taunus" "$owner_move" "the ownership move" "$taunus"
 
 # A CENSUS THAT CAN FAIL SHORT HAS ALREADY FAILED. Two staged rows are the whole
 # fixture, and a seed that produced one would leave case 8 failing as though the
@@ -586,9 +586,9 @@ print(len(json.load(sys.stdin).get("data", [])))')"
 # Systeme KG that are Aachener Metallwerke's. Three rather than two
 # because the person asks for them to move as ONE act, and a number is what an
 # all-or-nothing answer reports.
-domdigital="$(org_id_by_name "Dom Digital GmbH")"
-rheinufer="$(org_id_by_name "Rheinufer AG")"
-vorort="$(org_id_by_name "Vorort Systeme KG")"
+domdigital="$(company_id_by_name "Dom Digital GmbH")"
+rheinufer="$(company_id_by_name "Rheinufer AG")"
+vorort="$(company_id_by_name "Vorort Systeme KG")"
 [[ -n "$domdigital" && -n "$rheinufer" && -n "$vorort" ]] || {
   echo "case 9 relinks between the Köln companies and they are not all seeded" >&2; exit 1; }
 
@@ -605,20 +605,20 @@ vorort="$(org_id_by_name "Vorort Systeme KG")"
 # CREATE time, so what case 9 asks the assistant to do is still a move.
 file_mail_on_company() {
   local subject="$1" said="$2" when="$3" company="$4" body
-  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","subject":"%s","body":"%s","links":[{"entity_type":"organization","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","subject":"%s","body":"%s","links":[{"entity_type":"company","entity_id":"%s"}]}' \
     "$when" "$subject" "$said" "$company")"
   create_or_die "/activities" "$body" "$subject" >/dev/null
 }
 
-aachen="$(org_id_by_name "Aachener Metallwerke GmbH")"
+aachen="$(company_id_by_name "Aachener Metallwerke GmbH")"
 if [[ -z "$aachen" ]]; then
   body="$(printf '{"display_name":"Aachener Metallwerke GmbH","owner_id":"%s","industry":"Metallverarbeitung"}' "$colleague")"
-  aachen="$(create_or_die "/organizations" "$body" "Aachener Metallwerke GmbH")"
+  aachen="$(create_or_die "/companies" "$body" "Aachener Metallwerke GmbH")"
 
   # THE MISFILED MAIL. Linked to Rheinufer and to nothing else, and its own text
   # says whose it is — the assistant has to find it from the word the person
   # used ("Wartungsvertrag") and read who it is actually about.
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","subject":"Wartungsvertrag – Verlängerung","body":"Wir würden den Wartungsvertrag für Dom Digital gern um zwei Jahre verlängern.","links":[{"entity_type":"organization","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","subject":"Wartungsvertrag – Verlängerung","body":"Wir würden den Wartungsvertrag für Dom Digital gern um zwei Jahre verlängern.","links":[{"entity_type":"company","entity_id":"%s"}]}' \
     "$(days_ago 4)" "$rheinufer")"
   create_or_die "/activities" "$body" "the misfiled Wartungsvertrag mail" >/dev/null
 
@@ -682,10 +682,10 @@ print(stages[0]["id"] if stages else "")')"
 
 seed_deal() {
   local name="$1" amount="$2" close_date="$3" body existing
-  # /deals takes no `q`: its filters are pipeline, stage, owner, organization,
+  # /deals takes no `q`: its filters are pipeline, stage, owner, company,
   # status, forecast category, stalled, project and the two partner keys. So the
   # re-run check reads this stage's page and matches the name from the rows,
-  # which is the shape org_id_by_name uses over the filter that exists.
+  # which is the shape company_id_by_name uses over the filter that exists.
   existing="$(api GET "/deals?stage_id=$stage&limit=100" | python3 -c 'import json,sys
 want = sys.argv[1]
 for row in json.load(sys.stdin).get("data", []):
@@ -932,13 +932,13 @@ print("  the seeded pipeline is intact")
 # has no field for it. So these are booked, not logged.
 #
 # Booked against a PERSON, and against a company nothing else asks about. A
-# meeting cannot be filed against an organization at all (the create door
+# meeting cannot be filed against a company at all (the create door
 # refuses it, see case 9), and a block landing on Vietnam Partner or on Reply
 # would put a meeting in front of case 5's briefing and case 6's search.
-nordholz="$(org_id_by_name "Nordholz Anlagenbau GmbH")"
+nordholz="$(company_id_by_name "Nordholz Anlagenbau GmbH")"
 if [[ -z "$nordholz" ]]; then
   body="$(printf '{"display_name":"Nordholz Anlagenbau GmbH","owner_id":"%s","industry":"Anlagenbau","address":{"line1":"Deichstraße 8","city":"Cuxhaven","country":"DE"}}' "$me")"
-  nordholz="$(create_or_die "/organizations" "$body" "Nordholz Anlagenbau GmbH")"
+  nordholz="$(create_or_die "/companies" "$body" "Nordholz Anlagenbau GmbH")"
 fi
 
 henning="$(person_id_by_email "Henning Voss" "henning.voss@nordholz-anlagenbau.test")"
@@ -970,7 +970,7 @@ book_block "Kundentermin Nordholz"    "$((monday + 1))" 10
 
 # --- CASE 30: a coined word nobody has applied yet --------------------------
 #
-# APPLIED TO NOTHING, deliberately. An organization row carries its live tags,
+# APPLIED TO NOTHING, deliberately. A company row carries its live tags,
 # so a K5 word already on an account would hand the exact spelling to an
 # assistant that never opened the vocabulary — and reading the vocabulary is the
 # case. "Revisit Q1" is deliberately NOT seeded: create_tag would answer 409 and
@@ -985,7 +985,7 @@ seed_tag "K5 Conference 2026" teal >/dev/null
 # disagreement is the case. The word case 31 TAKES OFF is seeded in the case 32
 # block below, for the reason stated there.
 k5_2025="$(seed_tag "K5 Conference 2025" slate)"
-tag_record "$k5_2025" organization "$vorort"
+tag_record "$k5_2025" company "$vorort"
 # Retired AFTER it is applied: archiving stops a word being applied again, it
 # does not un-tag what already carries it.
 if [[ -z "$(api GET "/tags/$k5_2025" | python3 -c 'import json,sys
@@ -1017,11 +1017,11 @@ fi
 strategic="$(seed_tag "Strategic Account" amber)"
 strategic_short="$(seed_tag "Strategic Accts" amber)"
 for company in "Reply Deutschland Betreuerwechsel" "valantic AG Betreuerwechsel" "Körber Digital Betreuerwechsel"; do
-  org="$(org_id_by_name "$company")"
-  [[ -n "$org" ]] || { echo "$company is not seeded" >&2; exit 1; }
-  tag_record "$strategic" organization "$org"
+  company="$(company_id_by_name "$company")"
+  [[ -n "$company" ]] || { echo "$company is not seeded" >&2; exit 1; }
+  tag_record "$strategic" company "$company"
 done
-tag_record "$strategic_short" organization "$vorort"
+tag_record "$strategic_short" company "$vorort"
 
 # --- CASE 33: a duplicate with history, and a company that shut down --------
 #
@@ -1046,31 +1046,31 @@ tag_record "$strategic_short" organization "$vorort"
 # It carries correspondence and nothing else, which is what makes merge_records
 # the right verb and archive_record the wrong one: archiving would leave both
 # mails on a record nobody opens.
-ostfriesen="$(org_id_by_name "Ostfriesen Kranbau GmbH")"
+ostfriesen="$(company_id_by_name "Ostfriesen Kranbau GmbH")"
 if [[ -z "$ostfriesen" ]]; then
   body="$(printf '{"display_name":"Ostfriesen Kranbau GmbH","owner_id":"%s","industry":"Logistik"}' "$colleague")"
-  ostfriesen="$(create_or_die "/organizations" "$body" "Ostfriesen Kranbau GmbH")"
+  ostfriesen="$(create_or_die "/companies" "$body" "Ostfriesen Kranbau GmbH")"
 fi
 
-ostfriesen_dup="$(org_id_by_name "Ostfriesen Kranbau Gesellschaft mbH")"
+ostfriesen_dup="$(company_id_by_name "Ostfriesen Kranbau Gesellschaft mbH")"
 if [[ -z "$ostfriesen_dup" ]]; then
   body="$(printf '{"display_name":"Ostfriesen Kranbau Gesellschaft mbH","owner_id":"%s"}' "$colleague")"
-  ostfriesen_dup="$(create_or_die "/organizations" "$body" "the Ostfriesen duplicate")"
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","subject":"Re: Rahmenvertrag","body":"Danke — die unterschriebene Fassung kommt Montag.","links":[{"entity_type":"organization","entity_id":"%s"}]}' \
+  ostfriesen_dup="$(create_or_die "/companies" "$body" "the Ostfriesen duplicate")"
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","subject":"Re: Rahmenvertrag","body":"Danke — die unterschriebene Fassung kommt Montag.","links":[{"entity_type":"company","entity_id":"%s"}]}' \
     "$(days_ago 9)" "$ostfriesen_dup")"
   create_or_die "/activities" "$body" "the duplicate's inbound mail" >/dev/null
-  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","body":"Vielen Dank — eine offene Frage zu Ziffer 4.","links":[{"entity_type":"organization","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","body":"Vielen Dank — eine offene Frage zu Ziffer 4.","links":[{"entity_type":"company","entity_id":"%s"}]}' \
     "$(days_ago 7)" "$ostfriesen_dup")"
   create_or_die "/activities" "$body" "the duplicate's outbound mail" >/dev/null
 fi
 
 # THE COMPANY THAT SHUT DOWN. No twin, nothing worth keeping, one note saying so
 # — archive_record's own subject, and merge_records has no survivor to offer.
-sauerland="$(org_id_by_name "Sauerland Kunststoff GmbH")"
+sauerland="$(company_id_by_name "Sauerland Kunststoff GmbH")"
 if [[ -z "$sauerland" ]]; then
   body="$(printf '{"display_name":"Sauerland Kunststoff GmbH","owner_id":"%s","industry":"Kunststoffverarbeitung"}' "$colleague")"
-  sauerland="$(create_or_die "/organizations" "$body" "Sauerland Kunststoff GmbH")"
-  body="$(printf '{"kind":"note","occurred_at":"%s","subject":"Insolvenz","body":"Insolvenzverfahren eröffnet, Betrieb eingestellt. Kein Ansprechpartner mehr.","links":[{"entity_type":"organization","entity_id":"%s"}]}' \
+  sauerland="$(create_or_die "/companies" "$body" "Sauerland Kunststoff GmbH")"
+  body="$(printf '{"kind":"note","occurred_at":"%s","subject":"Insolvenz","body":"Insolvenzverfahren eröffnet, Betrieb eingestellt. Kein Ansprechpartner mehr.","links":[{"entity_type":"company","entity_id":"%s"}]}' \
     "$(days_ago 400)" "$sauerland")"
   create_or_die "/activities" "$body" "the insolvency note" >/dev/null
 fi
@@ -1144,10 +1144,10 @@ if [[ -z "$bruno" ]]; then
 fi
 
 # --- CASE 41: the project that is finished but not closed -------------------
-elbwerk="$(org_id_by_name "Elbwerk Kälte GmbH")"
+elbwerk="$(company_id_by_name "Elbwerk Kälte GmbH")"
 if [[ -z "$elbwerk" ]]; then
   body="$(printf '{"display_name":"Elbwerk Kälte GmbH","owner_id":"%s","industry":"Kältetechnik","address":{"line1":"Billstraße 12","city":"Hamburg","country":"DE"}}' "$me")"
-  elbwerk="$(create_or_die "/organizations" "$body" "Elbwerk Kälte GmbH")"
+  elbwerk="$(create_or_die "/companies" "$body" "Elbwerk Kälte GmbH")"
 fi
 
 project="$(api GET "/projects?q=$(url_encode "Elbwerk Rollout")&limit=50" | python3 -c 'import json,sys
@@ -1157,7 +1157,7 @@ for row in json.load(sys.stdin).get("data", []):
 else:
     print("")')"
 if [[ -z "$project" ]]; then
-  body="$(printf '{"name":"Elbwerk Rollout","organization_id":"%s","owner_id":"%s","source":"%s","description":"Austausch der Kälteregelung an zwei Standorten."}' \
+  body="$(printf '{"name":"Elbwerk Rollout","company_id":"%s","owner_id":"%s","source":"%s","description":"Austausch der Kälteregelung an zwei Standorten."}' \
     "$elbwerk" "$me" "$FIXTURE_SOURCE")"
   project="$(create_or_die "/projects" "$body" "the Elbwerk project")"
 
@@ -1202,10 +1202,10 @@ fi
 #
 # No activity is seeded: the message is what the ASSISTANT logs, and the
 # provider value it carries is what the case pins.
-levante="$(org_id_by_name "Levante Cold Chain SL")"
+levante="$(company_id_by_name "Levante Cold Chain SL")"
 if [[ -z "$levante" ]]; then
   body='{"display_name":"Levante Cold Chain SL","industry":"Logistik","address":{"line1":"Carrer de Sagunt 44","city":"Valencia","country":"ES"}}'
-  levante="$(create_or_die "/organizations" "$body" "Levante Cold Chain SL")"
+  levante="$(create_or_die "/companies" "$body" "Levante Cold Chain SL")"
 fi
 
 nuria="$(person_id_by_email "Nuria Sanz" "nuria.sanz@levantecoldchain.test")"

@@ -4,14 +4,14 @@
 package people
 
 // The contract Address and the six columns behind it, in both directions.
-// Person and organization store the same six and share this seam: two
+// Person and company store the same six and share this seam: two
 // spellings of "is this address empty" would disagree the first time one
 // of them gained a field.
 
 import crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
 // addressColumns destructures the contract's Address into the six
-// person/organization columns; a nil address is six NULLs.
+// person/company columns; a nil address is six NULLs.
 func addressColumns(a *crmcontracts.Address) crmcontracts.Address {
 	if a == nil {
 		return crmcontracts.Address{}

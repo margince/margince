@@ -29,7 +29,7 @@ import (
 )
 
 // IntroPath proposes the warm-intro path for a warm signal: the strongest
-// visible contact at the resolved organization is the route in.
+// visible contact at the resolved company is the route in.
 func (s *Store) IntroPath(ctx context.Context, signalID ids.SignalID, now time.Time) (crmcontracts.SignalIntroPath, error) {
 	warmth, err := s.Warmth(ctx, signalID, now)
 	if err != nil {
@@ -37,23 +37,24 @@ func (s *Store) IntroPath(ctx context.Context, signalID ids.SignalID, now time.T
 	}
 	if !warmth.Warm {
 		return crmcontracts.SignalIntroPath{}, &NoWarmthError{
-			Reason: "signal is cold: no live contact at the resolved organization, so there is no warm path to propose"}
+			Reason: "signal is cold: no live contact at the resolved company, so there is no warm path to propose",
+		}
 	}
 
 	var sig crmcontracts.Signal
-	var orgName string
+	var companyName string
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		if sig, err = readSignal(ctx, tx, signalID, storekit.LiveOnly); err != nil {
 			return err
 		}
-		// The proposal names the organization — that is a read of the org
+		// The proposal names the company — that is a read of the company
 		// record, so it carries the row-scope gate like any other read.
-		if err := auth.EnsureLinkTarget(ctx, tx, "organization", ids.UUID(warmth.ResolvedOrgId)); err != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, "company", ids.UUID(warmth.ResolvedCompanyId)); err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, `SELECT display_name FROM organization WHERE id = $1`,
-			ids.UUID(warmth.ResolvedOrgId)).Scan(&orgName)
+		return tx.QueryRow(ctx, `SELECT display_name FROM company WHERE id = $1`,
+			ids.UUID(warmth.ResolvedCompanyId)).Scan(&companyName)
 	})
 	if err != nil {
 		return crmcontracts.SignalIntroPath{}, fmt.Errorf("intro-path context: %w", err)
@@ -61,14 +62,14 @@ func (s *Store) IntroPath(ctx context.Context, signalID ids.SignalID, now time.T
 
 	route := warmth.Contacts[0] // Warmth orders strongest-first
 	out := crmcontracts.SignalIntroPath{
-		SignalId:      sig.Id,
-		ResolvedOrgId: warmth.ResolvedOrgId,
-		ContactId:     route.PersonId,
-		ContactName:   route.FullName,
-		Relationship:  route,
+		SignalId:          sig.Id,
+		ResolvedCompanyId: warmth.ResolvedCompanyId,
+		ContactId:         route.PersonId,
+		ContactName:       route.FullName,
+		Relationship:      route,
 	}
 	out.Evidence.SourceSignalId = sig.Id
-	out.Evidence.ResolvedOrgId = warmth.ResolvedOrgId
+	out.Evidence.ResolvedCompanyId = warmth.ResolvedCompanyId
 	out.Evidence.ContactIds = warmth.ContactIds
 
 	// The move is a real branch: when the signal resolved (under consent)
@@ -80,8 +81,7 @@ func (s *Store) IntroPath(ctx context.Context, signalID ids.SignalID, now time.T
 	}
 	out.NextMove.Kind = kind
 	var disclosure string
-	out.NextMove.DraftSubject, out.NextMove.DraftBody, disclosure =
-		renderIntroDraft(kind, route, orgName, sig.Summary)
+	out.NextMove.DraftSubject, out.NextMove.DraftBody, disclosure = renderIntroDraft(kind, route, companyName, sig.Summary)
 	// The machine-readable field carries the SAME sentence the body does, in
 	// the same language. Two spellings of one disclosure is a reader being told
 	// one thing and an auditor another.
@@ -167,7 +167,7 @@ var introTable = map[textlang.Lang]introPhrases{
 // resolution ladder (DRAFT-AC-E-2). Neither subject may be a follow-up line:
 // both moves are a first approach on this topic, and "Following up with X" to
 // somebody who has heard nothing is the invented history DRAFT-AC-E-3 forbids.
-func renderIntroDraft(kind crmcontracts.SignalIntroPathNextMoveKind, route crmcontracts.SignalWarmContact, orgName, signalSummary string) (subject, body, disclosure string) {
+func renderIntroDraft(kind crmcontracts.SignalIntroPathNextMoveKind, route crmcontracts.SignalWarmContact, companyName, signalSummary string) (subject, body, disclosure string) {
 	lang := textlang.Detect(signalSummary)
 	phrases, ok := introTable[lang]
 	if !ok {
@@ -180,12 +180,12 @@ func renderIntroDraft(kind crmcontracts.SignalIntroPathNextMoveKind, route crmco
 	}
 
 	if kind == "intro_request" {
-		return fmt.Sprintf(phrases.IntroSubject, orgName),
-			fmt.Sprintf(phrases.IntroBody, name, orgName, signalSummary, phrases.Disclosure),
+		return fmt.Sprintf(phrases.IntroSubject, companyName),
+			fmt.Sprintf(phrases.IntroBody, name, companyName, signalSummary, phrases.Disclosure),
 			phrases.Disclosure
 	}
-	return fmt.Sprintf(phrases.DirectSubject, orgName),
-		fmt.Sprintf(phrases.DirectBody, name, orgName, signalSummary,
+	return fmt.Sprintf(phrases.DirectSubject, companyName),
+		fmt.Sprintf(phrases.DirectBody, name, companyName, signalSummary,
 			phrases.relationship(route.RelationshipKind), phrases.Disclosure),
 		phrases.Disclosure
 }

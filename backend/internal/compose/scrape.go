@@ -4,11 +4,11 @@
 package compose
 
 // scrapeCompany (EP05 / ADR-0006): the `enrich` verb applied to an EXISTING
-// organization. It reads the company's website — an explicit `url` override,
-// else the org's own domain — through the SAME fetch + evidence gate as the
+// company. It reads the company's website — an explicit `url` override,
+// else the company's own domain — through the SAME fetch + evidence gate as the
 // cold-start read-back (evidenceExtractor), and stages a 🟡 proposal bound to
-// that org. Nothing is written until a human accepts via /approvals, which
-// fills only the org's empty fields. Distinct from onboarding: it targets a
+// that company. Nothing is written until a human accepts via /approvals, which
+// fills only the company's empty fields. Distinct from onboarding: it targets a
 // known record and never creates one.
 
 import (
@@ -36,34 +36,34 @@ import (
 // (scrapeCompany and the deep read) and the one accept executor.
 const (
 	enrichProposalKind = "enrich"
-	enrichTargetType   = "organization"
+	enrichTargetType   = "company"
 	companyUnreadable  = "company_unreadable"
 )
 
-// scrapeEngine stages a per-org enrichment over the shared extractor.
+// scrapeEngine stages a per-company enrichment over the shared extractor.
 type scrapeEngine struct {
 	extract   evidenceExtractor
 	people    *people.Store
 	approvals *approvals.Service
 }
 
-// Propose resolves the URL to read (override, else the org's domain — both
-// row-scoped: an org the caller cannot see is ErrNotFound), extracts
-// evidence-grounded fields, and stages an "enrich" approval bound to the org.
-func (e *scrapeEngine) Propose(ctx context.Context, orgID ids.UUID, override string) (crmcontracts.EnrichmentProposal, error) {
+// Propose resolves the URL to read (override, else the company's domain — both
+// row-scoped: a company the caller cannot see is ErrNotFound), extracts
+// evidence-grounded fields, and stages an "enrich" approval bound to the company.
+func (e *scrapeEngine) Propose(ctx context.Context, companyID ids.UUID, override string) (crmcontracts.EnrichmentProposal, error) {
 	rawURL := override
 	if rawURL == "" {
 		var err error
 		// EnrichTargetURL enforces visibility AND yields the domain.
-		rawURL, err = e.people.EnrichTargetURL(ctx, ids.From[ids.OrganizationKind](orgID))
+		rawURL, err = e.people.EnrichTargetURL(ctx, ids.From[ids.CompanyKind](companyID))
 		if err != nil {
 			return crmcontracts.EnrichmentProposal{}, err
 		}
 	} else {
 		// An override skips the domain lookup, so visibility must be proven
-		// on its own — reading the org row-scoped 404s a hidden id before any
+		// on its own — reading the company row-scoped 404s a hidden id before any
 		// egress happens on the caller's behalf.
-		if _, err := e.people.GetOrganization(ctx, ids.From[ids.OrganizationKind](orgID), storekit.LiveOnly); err != nil {
+		if _, err := e.people.GetCompany(ctx, ids.From[ids.CompanyKind](companyID), storekit.LiveOnly); err != nil {
 			return crmcontracts.EnrichmentProposal{}, err
 		}
 	}
@@ -86,10 +86,10 @@ func (e *scrapeEngine) Propose(ctx context.Context, orgID ids.UUID, override str
 	}
 
 	proposal := crmcontracts.EnrichmentProposal{
-		OrganizationId: openapi_types.UUID(orgID),
-		SourceUrl:      rawURL,
-		Status:         crmcontracts.EnrichmentProposalStatusStaged,
-		Fields:         fields,
+		CompanyId: openapi_types.UUID(companyID),
+		SourceUrl: rawURL,
+		Status:    crmcontracts.EnrichmentProposalStatusStaged,
+		Fields:    fields,
 	}
 	proposedChange, err := json.Marshal(proposal)
 	if err != nil {
@@ -97,7 +97,7 @@ func (e *scrapeEngine) Propose(ctx context.Context, orgID ids.UUID, override str
 	}
 	digest := sha256.Sum256(proposedChange)
 	// No kind-specific announce event: the generic approval.requested marks
-	// the staging and organization.updated fires on accept — both catalogued.
+	// the staging and company.updated fires on accept — both catalogued.
 	// There is no enrichment_proposed event in the events.md §5 catalog, and
 	// this build does not invent one (the spec owns the catalog).
 	approvalID, err := e.approvals.Stage(ctx, approvals.StageInput{
@@ -105,7 +105,7 @@ func (e *scrapeEngine) Propose(ctx context.Context, orgID ids.UUID, override str
 		ProposedChange: proposedChange,
 		DiffHash:       hex.EncodeToString(digest[:]),
 		TargetType:     enrichTargetType,
-		TargetID:       orgID,
+		TargetID:       companyID,
 		Summary:        "Enrichment of " + rawURL,
 	})
 	if err != nil {
@@ -127,7 +127,7 @@ func (h scrapeHandlers) ScrapeCompany(w http.ResponseWriter, r *http.Request, id
 		httperr.NotImplemented(w, r, "scrapeCompany (no model path configured)")
 		return
 	}
-	// The body is optional (no override reads the org's own domain).
+	// The body is optional (no override reads the company's own domain).
 	var override string
 	if r.ContentLength != 0 {
 		var req crmcontracts.EnrichCompanyRequest
@@ -153,7 +153,7 @@ func (h scrapeHandlers) ScrapeCompany(w http.ResponseWriter, r *http.Request, id
 		case errors.As(err, &unreadable):
 			// The client sees a generic 422; the real cause (SSRF refusal,
 			// timeout, thin page, empty gate) stays server-side.
-			slog.ErrorContext(r.Context(), "company enrichment unreadable", "org", ids.UUID(id), "err", unreadable.cause)
+			slog.ErrorContext(r.Context(), "company enrichment unreadable", "company", ids.UUID(id), "err", unreadable.cause)
 			httperr.Write(w, r, &httperr.DetailedError{
 				Status: http.StatusUnprocessableEntity,
 				Code:   companyUnreadable,

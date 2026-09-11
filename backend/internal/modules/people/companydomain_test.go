@@ -5,11 +5,11 @@ package people
 
 import "testing"
 
-// companyHost is the ONE reducer the organization_domain index is keyed on: the
+// companyHost is the ONE reducer the company_domain index is keyed on: the
 // write path stores what it returns, and the resolve read looks up what it
 // returns. Every spelling of one company therefore has to come out the same, or
 // a read and a write disagree about which row they are holding — and two
-// spellings on the write side alone are two organizations for one company,
+// spellings on the write side alone are two companies for one company,
 // which is the duplicate this module exists to prevent.
 func TestCompanyHostReducesEverySpellingOfOneCompanyToOneKey(t *testing.T) {
 	for _, website := range []string{

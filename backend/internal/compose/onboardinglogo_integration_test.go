@@ -7,7 +7,7 @@ package compose
 
 // The anchor company's face (A55, PO-AC-25). It is the one company created BY a
 // website read rather than enriched after one: the read runs while the
-// organization still does not exist, so the mark it resolves waits on the
+// company still does not exist, so the mark it resolves waits on the
 // dossier and the confirmation adopts it as it creates the row. Nothing else
 // ever offers this company a logo — no sweep revisits it — so what these cases
 // pin is the difference between the company every user meets first having a
@@ -150,7 +150,7 @@ func confirmTheAnchor(t *testing.T, e *integration.Env, args SiteDeepReadArgs) p
 // confirmation. The store can only REPORT the mark its anchor declined; the
 // collection is this side's half of that contract, so a case about bytes has to
 // come through here rather than call the store on its own.
-func confirmTheAnchorAsTheAPIDoes(t *testing.T, e *integration.Env, engine *deepReadEngine, args SiteDeepReadArgs) ids.OrganizationID {
+func confirmTheAnchorAsTheAPIDoes(t *testing.T, e *integration.Env, engine *deepReadEngine, args SiteDeepReadArgs) ids.CompanyID {
 	t.Helper()
 	ready := readyDossier(t, e, args)
 	offer, icp, website := "Employee onboarding software", "Growing RevOps teams", seedURL
@@ -171,7 +171,7 @@ func confirmTheAnchorAsTheAPIDoes(t *testing.T, e *integration.Env, engine *deep
 	if err := json.Unmarshal(recorder.Body.Bytes(), &confirmed); err != nil {
 		t.Fatalf("decoding the confirmed company: %v", err)
 	}
-	return ids.From[ids.OrganizationKind](ids.UUID(confirmed.OrganizationId))
+	return ids.From[ids.CompanyKind](ids.UUID(confirmed.CompanyId))
 }
 
 // parkedLogo answers what the dossier is holding for the confirmation in the
@@ -221,27 +221,27 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 
 	company := confirmTheAnchor(t, e, args)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	boundKey, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide)
+	boundKey, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the confirmed anchor has no logo: %v", err)
 	}
 	if boundKey != *key {
 		t.Fatalf("the anchor names %q, want the object the read stored at %q", boundKey, *key)
 	}
-	org, err := e.People.GetOrganization(ctx, company.OrganizationID, storekit.LiveOnly)
+	record, err := e.People.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read the anchor: %v", err)
 	}
-	wantURL := *people.LogoURL(company.OrganizationID.UUID, &boundKey, people.LogoWide)
-	if org.LogoUrl == nil || *org.LogoUrl != wantURL {
-		t.Fatalf("logo_url = %v, want %q — the face the SPA renders", org.LogoUrl, wantURL)
+	wantURL := *people.LogoURL(company.CompanyID.UUID, &boundKey, people.LogoWide)
+	if record.LogoUrl == nil || *record.LogoUrl != wantURL {
+		t.Fatalf("logo_url = %v, want %q — the face the SPA renders", record.LogoUrl, wantURL)
 	}
 
 	// The same face on the profile the app shell reads. The record screens draw
-	// the mark from the organization and the chrome draws it from the company
+	// the mark from the company and the chrome draws it from the company
 	// profile, so a company that wore the mark on one and not the other would be
 	// two companies to the person looking at it.
-	profile, err := e.People.GetCompany(ctx)
+	profile, err := e.People.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("read the company profile: %v", err)
 	}
@@ -257,40 +257,40 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 	var capturedBy string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT captured_by FROM field_provenance
-			WHERE object_type = 'organization' AND object_id = $1 AND field_name = 'logo'
-			ORDER BY captured_at DESC, id DESC LIMIT 1`, company.OrganizationID).Scan(&capturedBy)
+			WHERE object_type = 'company' AND object_id = $1 AND field_name = 'logo'
+			ORDER BY captured_at DESC, id DESC LIMIT 1`, company.CompanyID).Scan(&capturedBy)
 	}); err != nil {
 		t.Fatalf("reading the logo's provenance: %v", err)
 	}
 	if capturedBy != "agent:site-read" {
 		t.Fatalf("logo captured_by = %q, want the site read", capturedBy)
 	}
-	// The mark is a column on the organization, so the image names it directly.
+	// The mark is a column on the company, so the image names it directly.
 	// The source vocabulary is context about the write and rides evidence, where
 	// field history will not read it as a field of the record.
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log
-		WHERE entity_type = 'organization' AND entity_id = $1 AND after ? 'logo'`,
-		company.OrganizationID); n != 1 {
+		WHERE entity_type = 'company' AND entity_id = $1 AND after ? 'logo'`,
+		company.CompanyID); n != 1 {
 		t.Fatalf("the logo write left %d audit rows naming the mark, want exactly 1", n)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log
-		WHERE entity_type = 'organization' AND entity_id = $1
+		WHERE entity_type = 'company' AND entity_id = $1
 		  AND after ? 'logo' AND before ? 'logo'`,
-		company.OrganizationID); n != 1 {
+		company.CompanyID); n != 1 {
 		t.Fatalf("%d logo audit rows say what the record wore before, want 1", n)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM event_outbox
-		WHERE envelope->>'type' = 'organization.updated'
+		WHERE envelope->>'type' = 'company.updated'
 		  AND envelope->'entity'->>'id' = $1
 		  AND envelope->'payload'->'changed_fields'->>'source_url' = $2`,
-		company.OrganizationID.String(), touchIconURL); n != 1 {
-		t.Fatalf("the logo write published %d organization.updated events for the mark, want 1", n)
+		company.CompanyID.String(), touchIconURL); n != 1 {
+		t.Fatalf("the logo write published %d company.updated events for the mark, want 1", n)
 	}
 }
 
 func TestAdoptingTheParkedMarkLeavesTheCompanyItsOnlyReference(t *testing.T) {
 	// The confirmation HANDS the object over; it does not share it. Two rows
-	// naming one key would let the next resolve of this organization supersede
+	// naming one key would let the next resolve of this company supersede
 	// that key and collect the bytes, while the confirmed dossier still pointed
 	// at an object nothing could serve.
 	e := integration.Setup(t)
@@ -310,7 +310,7 @@ func TestAdoptingTheParkedMarkLeavesTheCompanyItsOnlyReference(t *testing.T) {
 		t.Fatalf("the confirmed dossier still names the asset URL %q it handed over", *leftOrigin)
 	}
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	boundKey, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide)
+	boundKey, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the confirmed anchor has no logo: %v", err)
 	}
@@ -321,9 +321,9 @@ func TestAdoptingTheParkedMarkLeavesTheCompanyItsOnlyReference(t *testing.T) {
 	// A later resolve of the same company supersedes the adopted object and
 	// hands its key back for collection. Nothing may still be pointing at those
 	// bytes by the time the lane deletes them.
-	next := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), "organization_logo",
-		company.OrganizationID.String()+"/"+ids.NewV7().String())
-	written, superseded, err := e.People.SetOrganizationLogo(ctx, company.OrganizationID, next, seedURL+"/newer.png")
+	next := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), "company_logo",
+		company.CompanyID.String()+"/"+ids.NewV7().String())
+	written, superseded, err := e.People.SetCompanyLogo(ctx, company.CompanyID, next, seedURL+"/newer.png")
 	if err != nil {
 		t.Fatalf("re-resolve the anchor's logo: %v", err)
 	}
@@ -338,22 +338,22 @@ func TestAdoptingTheParkedMarkLeavesTheCompanyItsOnlyReference(t *testing.T) {
 	}
 }
 
-// publishedSeq answers the insert order the outbox will ship one organization's
+// publishedSeq answers the insert order the outbox will ship one company's
 // two confirmation events in — the anchor's own creation, and the update the
 // adopted mark publishes.
-func publishedSeq(t *testing.T, e *integration.Env, orgID ids.OrganizationID) (created, mark int64) {
+func publishedSeq(t *testing.T, e *integration.Env, companyID ids.CompanyID) (created, mark int64) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `SELECT seq FROM event_outbox
-			WHERE envelope->>'type' = 'organization.created'
-			  AND envelope->'entity'->>'id' = $1`, orgID.String()).Scan(&created); err != nil {
+			WHERE envelope->>'type' = 'company.created'
+			  AND envelope->'entity'->>'id' = $1`, companyID.String()).Scan(&created); err != nil {
 			return err
 		}
 		return tx.QueryRow(context.Background(), `SELECT seq FROM event_outbox
-			WHERE envelope->>'type' = 'organization.updated'
+			WHERE envelope->>'type' = 'company.updated'
 			  AND envelope->'entity'->>'id' = $1
 			  AND envelope->'payload'->'changed_fields'->>'source_url' = $2`,
-			orgID.String(), touchIconURL).Scan(&mark)
+			companyID.String(), touchIconURL).Scan(&mark)
 	}); err != nil {
 		t.Fatalf("reading the confirmation's published events: %v", err)
 	}
@@ -361,7 +361,7 @@ func publishedSeq(t *testing.T, e *integration.Env, orgID ids.OrganizationID) (c
 }
 
 func TestConfirmingAnOnboardingReadPublishesTheAnchorBeforeItsMark(t *testing.T) {
-	// One confirmation publishes two events about one organization: the
+	// One confirmation publishes two events about one company: the
 	// creation that mints the anchor, and the update the adopted logo writes.
 	// The relay ships an entity's rows in insert order, so the creation has to
 	// be the earlier one — an update arriving first describes a record the
@@ -372,9 +372,9 @@ func TestConfirmingAnOnboardingReadPublishesTheAnchorBeforeItsMark(t *testing.T)
 	args := readTheOnboardingSite(t, e, onboardingLogoWorker(e, site, blobstore.NewMemory()))
 	company := confirmTheAnchor(t, e, args)
 
-	created, mark := publishedSeq(t, e, company.OrganizationID)
+	created, mark := publishedSeq(t, e, company.CompanyID)
 	if created >= mark {
-		t.Fatalf("organization.created published at seq %d, the logo's organization.updated at %d — the anchor must come first", created, mark)
+		t.Fatalf("company.created published at seq %d, the logo's company.updated at %d — the anchor must come first", created, mark)
 	}
 }
 
@@ -391,17 +391,17 @@ func TestConfirmingAnOnboardingReadSurvivesALogoThatNeverResolved(t *testing.T) 
 	}
 	company := confirmTheAnchor(t, e, args)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	if _, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an anchor with no resolved logo answers %v, want not-found so the monogram renders", err)
 	}
-	org, err := e.People.GetOrganization(ctx, company.OrganizationID, storekit.LiveOnly)
+	record, err := e.People.GetCompany(ctx, company.CompanyID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read the anchor: %v", err)
 	}
-	if org.LogoUrl != nil {
-		t.Fatalf("logo_url = %q, want none", *org.LogoUrl)
+	if record.LogoUrl != nil {
+		t.Fatalf("logo_url = %q, want none", *record.LogoUrl)
 	}
-	profile, err := e.People.GetCompany(ctx)
+	profile, err := e.People.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("read the company profile: %v", err)
 	}
@@ -460,7 +460,7 @@ func TestAFailedReadKeepsTheBytesACompanyIsAlreadyWearing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("describe the company: %v", err)
 	}
-	if _, _, err := e.People.SetOrganizationLogo(human, saved.OrganizationID, *key, touchIconURL); err != nil {
+	if _, _, err := e.People.SetCompanyLogo(human, saved.CompanyID, *key, touchIconURL); err != nil {
 		t.Fatalf("give the company the resolved mark: %v", err)
 	}
 
@@ -731,14 +731,14 @@ func anchorWearingAPersonsMark(t *testing.T, e *integration.Env, blob blobstore.
 	if err != nil {
 		t.Fatalf("describe the company by hand: %v", err)
 	}
-	uploaded := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), organizationLogoKind,
-		saved.OrganizationID.String()+"/uploaded")
+	uploaded := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), companyLogoKind,
+		saved.CompanyID.String()+"/uploaded")
 	chosen := logoFixture(t, 64, 64)
 	if err := blob.Put(context.Background(), uploaded, bytes.NewReader(chosen),
 		int64(len(chosen)), imagenorm.ContentType); err != nil {
 		t.Fatalf("store the person's own mark: %v", err)
 	}
-	if _, _, err := e.People.SetOrganizationLogo(human, saved.OrganizationID, uploaded,
+	if _, _, err := e.People.SetCompanyLogo(human, saved.CompanyID, uploaded,
 		seedURL+"/chosen-by-a-person.png"); err != nil {
 		t.Fatalf("record the person's own logo: %v", err)
 	}
@@ -752,7 +752,7 @@ func rowsNaming(t *testing.T, e *integration.Env, key string) int {
 	t.Helper()
 	return e.WsCount(t, `SELECT count(*) FROM site_read
 			WHERE logo_object_key = $1 OR logo_icon_object_key = $1`, key) +
-		e.WsCount(t, `SELECT count(*) FROM organization
+		e.WsCount(t, `SELECT count(*) FROM company
 			WHERE logo_object_key = $1 OR logo_icon_object_key = $1`, key)
 }
 
@@ -782,9 +782,9 @@ func TestConfirmingAnOnboardingReadKeepsTheLogoAPersonGaveTheAnchor(t *testing.T
 	args, parked := readTheAnchorsSiteFor(t, e, blob)
 
 	engine := &deepReadEngine{people: e.People, blob: blob, log: slog.New(slog.DiscardHandler)}
-	orgID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
+	companyID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 
-	boundKey, err := e.People.OrganizationLogoKey(human, orgID, people.LogoWide)
+	boundKey, err := e.People.CompanyLogoKey(human, companyID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the anchor lost its logo: %v", err)
 	}
@@ -815,9 +815,9 @@ func TestConfirmingAnOnboardingReadCollectsNothingWhenTheAnchorAdoptsTheMark(t *
 	args, parked := readTheAnchorsSiteFor(t, e, blob)
 
 	engine := &deepReadEngine{people: e.People, blob: blob, log: slog.New(slog.DiscardHandler)}
-	orgID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
+	companyID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 
-	boundKey, err := e.People.OrganizationLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), orgID, people.LogoWide)
+	boundKey, err := e.People.CompanyLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), companyID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the confirmed anchor has no logo: %v", err)
 	}
@@ -846,9 +846,9 @@ func TestAConfirmationSurvivesAnObjectStoreThatWillNotCollect(t *testing.T) {
 	engine := &deepReadEngine{
 		people: e.People, blob: blob, log: slog.New(slog.NewTextHandler(&logs, nil)),
 	}
-	orgID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
+	companyID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 
-	boundKey, err := e.People.OrganizationLogoKey(human, orgID, people.LogoWide)
+	boundKey, err := e.People.CompanyLogoKey(human, companyID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the anchor lost its logo: %v", err)
 	}

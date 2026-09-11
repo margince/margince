@@ -111,7 +111,7 @@ type archivesWhatNativeDoes struct{}
 
 func (archivesWhatNativeDoes) ArchivableTypes(context.Context) ([]datasource.EntityType, error) {
 	return []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityDeal,
+		datasource.EntityPerson, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityProject, datasource.EntityRelationship, datasource.EntityActivity,
 	}, nil
 }

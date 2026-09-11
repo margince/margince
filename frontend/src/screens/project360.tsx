@@ -156,7 +156,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <>
             <ProjectCompanies
               projectId={project.id}
-              companies={project.organizations}
+              companies={project.companies}
               readOnly={readOnly}
             />
             <StakeholdersCard
@@ -234,10 +234,10 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
               // but not write it can still work deals — just not born into it.
               !overlay &&
               !readOnly &&
-              project.organization_id && (
+              project.company_id && (
                 <NewDealAction
-                  orgId={project.organization_id}
-                  orgName={project.name}
+                  companyId={project.company_id}
+                  companyName={project.name}
                   projectId={project.id}
                 />
               )
@@ -272,10 +272,10 @@ function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const project = view.project;
-  const company = view.organization;
+  const company = view.company;
   const companyState = sectionState(
     view,
-    "organization",
+    "company",
     Boolean(company),
     company ? 1 : 0,
   );
@@ -289,8 +289,8 @@ function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
         </span>
       ) : (
         <EntityRef
-          kind="organization"
-          id={project.organization_id}
+          kind="company"
+          id={project.company_id}
           name={company?.name}
         />
       )}

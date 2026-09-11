@@ -23,14 +23,14 @@ import (
 // employPerson records an employment edge through the writer production uses,
 // ended when a date is given. A hand-inserted row would prove nothing about the
 // rows the product makes — the current-primary flag among them.
-func employPerson(t *testing.T, e *Env, person, org ids.UUID, ended *time.Time) {
+func employPerson(t *testing.T, e *Env, person, company ids.UUID, ended *time.Time) {
 	t.Helper()
 	personID := ids.From[ids.PersonKind](person)
-	orgID := ids.From[ids.OrganizationKind](org)
+	companyID := ids.From[ids.CompanyKind](company)
 	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
 		Kind:             "employment",
 		PersonID:         &personID,
-		OrganizationID:   &orgID,
+		CompanyID:        &companyID,
 		IsCurrentPrimary: boolPtr(ended == nil),
 		EndedAt:          ended,
 		Source:           "manual",
@@ -60,8 +60,8 @@ func listedPerson(ctx context.Context, t *testing.T, e *Env, person ids.UUID) cr
 // work" gets the same answer wherever they ask.
 func TestAContactNamesTheEmployerTheyHoldToday(t *testing.T) {
 	e := Setup(t)
-	acme := e.SeedOrg(t, "Acme", nil)
-	former := e.SeedOrg(t, "Former Employer", nil)
+	acme := e.SeedCompany(t, "Acme", nil)
+	former := e.SeedCompany(t, "Former Employer", nil)
 	person := e.SeedPerson(t, "Anna Weber", nil)
 	left := time.Date(2021, 6, 30, 0, 0, 0, 0, time.UTC)
 	employPerson(t, e, person, former, &left)
@@ -83,8 +83,8 @@ func TestAContactNamesTheEmployerTheyHoldToday(t *testing.T) {
 		}
 		// The account they work at today. A read that answered with the job
 		// they left names a company this contact cannot be reached at.
-		if ids.UUID(got.OrganizationId) != acme || got.OrganizationName != "Acme" {
-			t.Errorf("%s names %s (%v), want Acme (%v)", name, got.OrganizationName, got.OrganizationId, acme)
+		if ids.UUID(got.CompanyId) != acme || got.CompanyName != "Acme" {
+			t.Errorf("%s names %s (%v), want Acme (%v)", name, got.CompanyName, got.CompanyId, acme)
 		}
 	}
 }
@@ -94,13 +94,13 @@ func TestAContactNamesTheEmployerTheyHoldToday(t *testing.T) {
 // they work.
 func TestAContactWhoseOnlyEmploymentEndedNamesNoEmployer(t *testing.T) {
 	e := Setup(t)
-	former := e.SeedOrg(t, "Former Employer", nil)
+	former := e.SeedCompany(t, "Former Employer", nil)
 	person := e.SeedPerson(t, "Left Last Year", nil)
 	left := time.Date(2021, 6, 30, 0, 0, 0, 0, time.UTC)
 	employPerson(t, e, person, former, &left)
 
 	if got := listedPerson(e.Admin(), t, e, person).Employer; got != nil {
-		t.Errorf("a leaver still names %s as their employer", got.OrganizationName)
+		t.Errorf("a leaver still names %s as their employer", got.CompanyName)
 	}
 }
 
@@ -112,13 +112,13 @@ func TestAContactWhoseOnlyEmploymentEndedNamesNoEmployer(t *testing.T) {
 // being read as an answer.
 func TestTheEmployerNeedsBothTheEdgeAndTheCompanyGrant(t *testing.T) {
 	e := Setup(t)
-	acme := e.SeedOrg(t, "Acme", nil)
+	acme := e.SeedCompany(t, "Acme", nil)
 	person := e.SeedPerson(t, "Anna Weber", nil)
 	employPerson(t, e, person, acme, nil)
 
 	for missing, grants := range map[string]map[string]principal.ObjectGrant{
-		"relationship": {objPerson: {Read: true}, objOrg: {Read: true}},
-		"organization": {objPerson: {Read: true}, objRelationship: {Read: true}},
+		"relationship": {objPerson: {Read: true}, objCompany: {Read: true}},
+		"company":      {objPerson: {Read: true}, objRelationship: {Read: true}},
 	} {
 		partial := e.As(e.AdminUser, nil, principal.Permissions{
 			RoleKeys: []string{roleReadOnly},
@@ -126,7 +126,7 @@ func TestTheEmployerNeedsBothTheEdgeAndTheCompanyGrant(t *testing.T) {
 			RowScope: principal.RowScopeAll,
 		})
 		if got := listedPerson(partial, t, e, person).Employer; got != nil {
-			t.Errorf("without the %s grant the row still names %s", missing, got.OrganizationName)
+			t.Errorf("without the %s grant the row still names %s", missing, got.CompanyName)
 		}
 	}
 }

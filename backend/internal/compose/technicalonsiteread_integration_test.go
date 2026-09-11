@@ -46,9 +46,9 @@ func workClient(t *testing.T, e *integration.Env) *river.Client[pgx.Tx] {
 func TestASiteReadAsksWhatTheCompanyPubliclyRuns(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
-	_, args := startDeepRead(t, e, org)
+	_, args := startDeepRead(t, e, company)
 
 	ctx := rivertest.WorkContext(context.Background(), workClient(t, e))
 	if err := worker.run(ctx, args); err != nil {
@@ -59,10 +59,10 @@ func TestASiteReadAsksWhatTheCompanyPubliclyRuns(t *testing.T) {
 	// read was about — a lookup pointed at another record would enrich the
 	// wrong account while looking exactly like this one.
 	job := rivertest.RequireInserted(ctx, t, riverpgxv5.New(e.Pool),
-		TechnicalEnrichOrganizationArgs{}, nil)
-	if job.Args.OrganizationID != org || job.Args.Workspace != e.WS {
+		TechnicalEnrichCompanyArgs{}, nil)
+	if job.Args.CompanyID != company || job.Args.Workspace != e.WS {
 		t.Fatalf("queued lookup = %+v, want the company this read was about (%s in %s)",
-			job.Args, org, e.WS)
+			job.Args, company, e.WS)
 	}
 	if job.Queue != technicalLookupQueue {
 		t.Fatalf("queued on %q, want %q — the lookup's pacing is the queue's, not the crawl's",
@@ -83,11 +83,11 @@ func TestASiteReadWithNoCompanyQueuesNoLookup(t *testing.T) {
 	// The triage lane's shape: a claim whose read is about a DOMAIN, with no
 	// account resolved behind it yet.
 	worker.askWhatTheCompanyRuns(ctx, people.SiteReadClaim{
-		OrganizationID: nil,
-		TargetKind:     "domain",
-		SeedURL:        "https://acme.example",
+		CompanyID:  nil,
+		TargetKind: "domain",
+		SeedURL:    "https://acme.example",
 	})
 
 	rivertest.RequireNotInserted(ctx, t, riverpgxv5.New(e.Pool),
-		TechnicalEnrichOrganizationArgs{}, nil)
+		TechnicalEnrichCompanyArgs{}, nil)
 }

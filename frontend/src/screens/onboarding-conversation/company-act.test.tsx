@@ -209,7 +209,7 @@ function toColdField(fixture: FieldFixture): ColdField {
 const REVIEW_READ: CompanySiteRead = {
   id: REVIEW_READ_ID,
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: "https://gradion.com",
   status: "ready",
   status_code: null,

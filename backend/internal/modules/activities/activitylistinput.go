@@ -9,7 +9,7 @@ package activities
 // Apart from the readers that execute it because it is the surface callers
 // write against — a reader adding a filter needs this file and not the SQL, and
 // the SQL's own file stays about how a page is fetched. What each dial renders
-// to lives in orgscope.go, beside the other scope clauses.
+// to lives in companyscope.go, beside the other scope clauses.
 
 import (
 	"time"

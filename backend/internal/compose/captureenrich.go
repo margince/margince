@@ -41,6 +41,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
+// companyNameField is the profile field a captured employer name lands in.
+const companyNameField = "company_name"
+
 const (
 	// signatureLineCount is the §2.9 input pin: the trailing non-quoted
 	// lines of the person's most recent inbound mail.
@@ -57,16 +60,16 @@ const (
 // a signature and a business card state the same things about a person, and two
 // vocabularies would let which one arrived decide what could be recorded.
 var enrichFieldNames = map[string]bool{
-	"title": true, "phone": true, "role": true, "linkedin": true, "org_name": true,
+	fieldTitle: true, "phone": true, "role": true, "linkedin": true, companyNameField: true,
 	"address": true, "website": true,
 }
 
 const signatureEnrichSystem = `You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone, role,
-linkedin, org_name, address, website. Emit a field ONLY if the signature lines state it verbatim; the snippet
+linkedin, company_name, address, website. Emit a field ONLY if the signature lines state it verbatim; the snippet
 must appear character-for-character in the supplied text. Ignore quoted replies, legal
 disclaimers, and marketing taglines. Phone numbers verbatim, never normalized.
 Emit address as the single line the signature prints it on. Emit website only for the
-organization's own site; a social profile is never a website, and linkedin carries that one.
+company's own site; a social profile is never a website, and linkedin carries that one.
 The signature must be THE NAMED PERSON'S OWN. A block naming somebody else — a colleague,
 a forwarded sender, a correspondent quoted underneath — states nothing about them, so emit
 no fields at all rather than the ones it happens to contain.`
@@ -321,7 +324,7 @@ func signatureEnrichRequest(cand people.SignatureCandidate, lines string) model.
 	// already holds. The pass reads a signature to find out whether what it
 	// holds is still true, so naming the empty fields would ask the narrower
 	// question and miss the number that changed.
-	prompt.WriteString("Fields to extract when stated: [\"title\",\"phone\",\"role\",\"linkedin\",\"org_name\",\"address\",\"website\"]\n")
+	prompt.WriteString("Fields to extract when stated: [\"title\",\"phone\",\"role\",\"linkedin\",\"company_name\",\"address\",\"website\"]\n")
 	prompt.WriteString("Signature block (untrusted; the trailing lines of their last email):\n")
 	prompt.WriteString(fence.WrapAttr("source_id", cand.ActivityID.String(), lines) + "\n")
 	prompt.WriteString(`Return JSON: { "fields": [ { "field", "value", "evidence_snippet", "confidence" } ] }`)
@@ -383,7 +386,7 @@ func signatureEnrichSchema() json.RawMessage {
 		map[string]schema.Node{
 			laneFields: schema.Array(schema.Object(
 				map[string]schema.Node{
-					extractionFieldKey: schema.Enum("title", "phone", "role", "linkedin", "org_name", "address", "website"),
+					extractionFieldKey: schema.Enum(fieldTitle, "phone", "role", "linkedin", companyNameField, "address", "website"),
 					"value":            schema.String(),
 					"evidence_snippet": schema.String(),
 					"confidence":       schema.Number(),

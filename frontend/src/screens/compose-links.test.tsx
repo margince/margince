@@ -50,8 +50,8 @@ const PURPOSES = {
 // The account view the grounding selects are populated from: two contacts,
 // two open deals and two live projects, so every pick is a real choice rather
 // than the only option — and the sole-project default stays out of the way.
-const ORG_VIEW = {
-  organization: { id: "org-1", name: "Acme" },
+const COMPANY_VIEW = {
+  company: { id: "company-1", name: "Acme" },
   people: {
     data: [
       { person_id: "per-1", full_name: "Dieter Klein" },
@@ -121,7 +121,8 @@ function stubRoutes(
       if (override) return override();
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse({ data: [] });
-      if (key === "GET /organizations/org-1/360") return jsonResponse(ORG_VIEW);
+      if (key === "GET /companies/company-1/360")
+        return jsonResponse(COMPANY_VIEW);
       if (isPreviewDoor(url.pathname)) {
         return jsonResponse(allowedPreview(previewedAddresses(body)));
       }
@@ -175,8 +176,8 @@ describe("what a sent message files under", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         personId="per-1"
         open
         onClose={vi.fn()}
@@ -191,10 +192,10 @@ describe("what a sent message files under", () => {
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     // The deal is the assertion that fails without the fix: before it, the
-    // send carried the organization alone and the deal's timeline never saw
+    // send carried the company alone and the deal's timeline never saw
     // the message the rep wrote about it.
     expect(linksOf(sent)).toEqual([
-      { entity_type: "organization", entity_id: "org-1" },
+      { entity_type: "company", entity_id: "company-1" },
       { entity_type: "person", entity_id: "per-1" },
       { entity_type: "deal", entity_id: "deal-1" },
     ]);
@@ -206,8 +207,8 @@ describe("what a sent message files under", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         personId="per-1"
         open
         onClose={vi.fn()}
@@ -227,7 +228,7 @@ describe("what a sent message files under", () => {
     // One choice, two effects: the same project id that scoped the draft
     // files the sent message, so the project's timeline sees it.
     expect(linksOf(sent)).toEqual([
-      { entity_type: "organization", entity_id: "org-1" },
+      { entity_type: "company", entity_id: "company-1" },
       { entity_type: "person", entity_id: "per-1" },
       { entity_type: "deal", entity_id: "deal-1" },
       { entity_type: "project", entity_id: "proj-1" },
@@ -236,7 +237,7 @@ describe("what a sent message files under", () => {
 
   it("sends the chosen project on the draft request, so the draft is grounded in that project alone", async () => {
     const sent = stubRoutes({
-      "POST /organizations/org-1/draft-email": () =>
+      "POST /companies/company-1/draft-email": () =>
         jsonResponse({
           subject: "ERP-27 cutover",
           body: "About the cutover.",
@@ -246,8 +247,8 @@ describe("what a sent message files under", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         personId="per-1"
         open
         onClose={vi.fn()}
@@ -262,11 +263,11 @@ describe("what a sent message files under", () => {
 
     await waitFor(() =>
       expect(
-        sent.some((r) => r.key === "POST /organizations/org-1/draft-email"),
+        sent.some((r) => r.key === "POST /companies/company-1/draft-email"),
       ).toBe(true),
     );
     const request = sent.find(
-      (r) => r.key === "POST /organizations/org-1/draft-email",
+      (r) => r.key === "POST /companies/company-1/draft-email",
     );
     expect(request?.body).toEqual({ person_id: "per-1", project_id: "proj-1" });
   });
@@ -277,9 +278,9 @@ describe("what a sent message files under", () => {
     // rendered selection, never a silent addition to the request.
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
-      "GET /organizations/org-1/360": () =>
+      "GET /companies/company-1/360": () =>
         jsonResponse({
-          ...ORG_VIEW,
+          ...COMPANY_VIEW,
           projects: [
             {
               project_id: "proj-1",
@@ -298,8 +299,8 @@ describe("what a sent message files under", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         personId="per-1"
         open
         onClose={vi.fn()}
@@ -313,7 +314,7 @@ describe("what a sent message files under", () => {
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
-      { entity_type: "organization", entity_id: "org-1" },
+      { entity_type: "company", entity_id: "company-1" },
       { entity_type: "person", entity_id: "per-1" },
       { entity_type: "project", entity_id: "proj-1" },
     ]);
@@ -325,8 +326,8 @@ describe("what a sent message files under", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         personId="per-1"
         open
         onClose={vi.fn()}
@@ -342,7 +343,7 @@ describe("what a sent message files under", () => {
     // An unchosen deal is absent, not an empty entry: "no deal" is a real
     // answer and must not file the message under a blank id.
     expect(linksOf(sent)).toEqual([
-      { entity_type: "organization", entity_id: "org-1" },
+      { entity_type: "company", entity_id: "company-1" },
       { entity_type: "person", entity_id: "per-1" },
     ]);
   });
@@ -355,16 +356,16 @@ describe("what a sent message files under", () => {
     // with nothing to say why. The shared id is the whole point of the case.
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
-      "GET /organizations/shared-id/360": () =>
+      "GET /companies/shared-id/360": () =>
         jsonResponse({
-          organization: { id: "shared-id", name: "Acme" },
+          company: { id: "shared-id", name: "Acme" },
           people: { data: [{ person_id: "per-1", full_name: "Dieter Klein" }] },
           deals: { data: [{ deal_id: "shared-id", name: "Acme Renewal" }] },
         }),
     });
     render(
       <ComposeModal
-        entityType="organization"
+        entityType="company"
         entityId="shared-id"
         personId="per-1"
         open
@@ -380,7 +381,7 @@ describe("what a sent message files under", () => {
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
-      { entity_type: "organization", entity_id: "shared-id" },
+      { entity_type: "company", entity_id: "shared-id" },
       { entity_type: "person", entity_id: "per-1" },
       { entity_type: "deal", entity_id: "shared-id" },
     ]);
@@ -505,8 +506,8 @@ describe("what a channel reply says it will be filed under", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         personId="per-1"
         open
         onClose={vi.fn()}

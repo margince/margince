@@ -30,21 +30,21 @@ const BASE_URL = process.env.BASE_URL;
 // dossier, and one that arrived by import with nothing on it yet. Both must
 // look right, and they fail differently — the populated one by missing
 // regions, the sparse one by showing regions that should be absent.
-const POPULATED_ORG = process.env.E2E_ORG_POPULATED;
-const SPARSE_ORG = process.env.E2E_ORG_SPARSE;
+const POPULATED_COMPANY = process.env.E2E_COMPANY_POPULATED;
+const SPARSE_COMPANY = process.env.E2E_COMPANY_SPARSE;
 
 // A live run is opt-in, but a HALF-configured one is a mistake rather than a
 // choice: skipping silently there is exactly the failure this suite was built
 // to stop, so it fails instead and says which variable is missing.
-if (BASE_URL && !(POPULATED_ORG && SPARSE_ORG)) {
+if (BASE_URL && !(POPULATED_COMPANY && SPARSE_COMPANY)) {
   throw new Error(
-    "BASE_URL is set, so this suite runs live — it also needs E2E_ORG_POPULATED and E2E_ORG_SPARSE (company uuids on that stack).",
+    "BASE_URL is set, so this suite runs live — it also needs E2E_COMPANY_POPULATED and E2E_COMPANY_SPARSE (company uuids on that stack).",
   );
 }
 
 test.skip(
   !BASE_URL,
-  "company-record runs against a live stack: set BASE_URL, E2E_ORG_POPULATED and E2E_ORG_SPARSE (see make e2e-company).",
+  "company-record runs against a live stack: set BASE_URL, E2E_COMPANY_POPULATED and E2E_COMPANY_SPARSE (see make e2e-company).",
 );
 
 const SHOTS = process.env.E2E_SHOT_DIR ?? "/tmp/e2e-company";
@@ -63,8 +63,8 @@ const STRIP = '[data-testid="company-strip"]';
  * while cards are still empty. Anchoring on the heading means the assertions
  * below describe a rendered page rather than a racing one.
  */
-async function openCompany(page: Page, orgId: string) {
-  await page.goto(`/#/companies/${orgId}`, { waitUntil: "networkidle" });
+async function openCompany(page: Page, companyId: string) {
+  await page.goto(`/#/companies/${companyId}`, { waitUntil: "networkidle" });
   // The RECORD's own identity block. On a record route the shell's page head
   // shows only the trail back and no heading, and that trail renders from the
   // router before any company read returns — so anchoring there would say the
@@ -94,7 +94,7 @@ test.describe("company record — the glance's page shape", () => {
   test("the readings row sits under the tab strip, on the overview alone", async ({
     page,
   }) => {
-    await openCompany(page, POPULATED_ORG as string);
+    await openCompany(page, POPULATED_COMPANY as string);
     expect(await topOf(page.locator(".co-tabs"))).toBeLessThan(
       await topOf(page.locator(STRIP)),
     );
@@ -116,7 +116,7 @@ test.describe("company record — the glance's page shape", () => {
   test("every reading carries a label and a value, all at one size", async ({
     page,
   }) => {
-    await openCompany(page, POPULATED_ORG as string);
+    await openCompany(page, POPULATED_COMPANY as string);
     const slots = page.locator(`${STRIP} > *`);
     // Waited for, not counted straight away: a bare count() resolves against
     // whatever is mounted at that instant, which on a composite read is an
@@ -140,21 +140,21 @@ test.describe("company record — the glance's page shape", () => {
 
   // Overview · History · Contacts · Deals · Tasks · Finance · Documents · Profile,
   // plus Partner for an account that has a partner programme (companyTabsFor
-  // in organizations.tsx gates it on relationship_types, not on a fixed
+  // in companies.tsx gates it on relationship_types, not on a fixed
   // count) — so the expectation follows the fixture's own data rather than
   // assuming either shape. The details control stands at the END of the row
   // and is not a tab: it is the one pressed button among them.
   test("the tab strip offers every tab, plus partner only where the account has one, and ends in the details control", async ({
     page,
   }) => {
-    await openCompany(page, POPULATED_ORG as string);
+    await openCompany(page, POPULATED_COMPANY as string);
     const isPartnerAccount = await page.evaluate(async () => {
       const id = location.hash.split("/").pop();
-      const response = await fetch(`/v1/organizations/${id}`, {
+      const response = await fetch(`/v1/companies/${id}`, {
         headers: { accept: "application/json" },
       });
-      const org = await response.json();
-      return Boolean(org?.relationship_types?.includes("partner"));
+      const company = await response.json();
+      return Boolean(company?.relationship_types?.includes("partner"));
     });
     await expect(page.locator(".co-tabs .recordtabs-tab")).toHaveCount(
       isPartnerAccount ? 8 : 7,
@@ -175,7 +175,7 @@ test.describe("company record — the glance's page shape", () => {
   test("the overview leads with the 360, then the needs list and the money on the left, Ask on the right", async ({
     page,
   }) => {
-    await openCompany(page, POPULATED_ORG as string);
+    await openCompany(page, POPULATED_COMPANY as string);
     const call = page.getByText(/· 360$/);
     await expect(call).toHaveCount(1);
     const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
@@ -207,7 +207,7 @@ test.describe("company record — the glance's page shape", () => {
   test("the needs list leads the overview, and is not drawn on the other tabs", async ({
     page,
   }) => {
-    await openCompany(page, POPULATED_ORG as string);
+    await openCompany(page, POPULATED_COMPANY as string);
     const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
     await expect(needs).toBeVisible();
 
@@ -229,7 +229,7 @@ test.describe("company record — the glance's page shape", () => {
   test("the details pane opens from the tab row as one pane of named sections, on the right", async ({
     page,
   }) => {
-    await openCompany(page, POPULATED_ORG as string);
+    await openCompany(page, POPULATED_COMPANY as string);
     const rail = page.locator(".co-rail");
     await expect(rail).toBeHidden();
 
@@ -264,7 +264,7 @@ test.describe("company record — the glance's page shape", () => {
   // empty states, and a sparse account that drops whole regions is the
   // second way this page stops looking like the design.
   test("an imported company keeps the page's shape", async ({ page }) => {
-    await openCompany(page, SPARSE_ORG as string);
+    await openCompany(page, SPARSE_COMPANY as string);
     await expect(page.locator(".co-tabs")).toBeVisible();
     await expect(page.locator(STRIP)).toBeVisible();
     expect(await topOf(page.locator(".co-tabs"))).toBeLessThan(
@@ -281,11 +281,11 @@ test.describe("company record — the glance's page shape", () => {
   // written outside the repo (E2E_SHOT_DIR) because a screenshot is session
   // debris, not product.
   test("capture both states for eyeball comparison", async ({ page }) => {
-    for (const [name, org] of [
-      ["populated", POPULATED_ORG],
-      ["sparse", SPARSE_ORG],
+    for (const [name, company] of [
+      ["populated", POPULATED_COMPANY],
+      ["sparse", SPARSE_COMPANY],
     ] as const) {
-      await openCompany(page, org as string);
+      await openCompany(page, company as string);
       // openCompany waits for the h1, which the router paints before the
       // composite read returns. The strip's second slot comes from that read,
       // so its arrival is the proxy for a settled page.
@@ -314,7 +314,7 @@ test.describe("company record — the glance's page shape", () => {
 test.describe("company record — the mockup's visual weight", () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page);
-    await openCompany(page, POPULATED_ORG as string);
+    await openCompany(page, POPULATED_COMPANY as string);
   });
 
   const px = async (locator: Locator, prop: string): Promise<number> => {
@@ -396,12 +396,12 @@ test.describe("company record — the mockup's visual weight", () => {
   test("the header carries the company's attribute chips", async ({ page }) => {
     const recorded = await page.evaluate(async () => {
       const id = location.hash.split("/").pop();
-      const response = await fetch(`/v1/organizations/${id}`, {
+      const response = await fetch(`/v1/companies/${id}`, {
         headers: { accept: "application/json" },
       });
-      const org = await response.json();
+      const company = await response.json();
       return ["industry", "address_city", "linkedin_url"].filter((field) =>
-        Boolean(org?.[field]),
+        Boolean(company?.[field]),
       ).length;
     });
     await expect

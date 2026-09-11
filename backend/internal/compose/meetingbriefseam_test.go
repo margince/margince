@@ -30,7 +30,7 @@ func meetingID() openapi_types.UUID { return openapi_types.UUID(ids.NewV7()) }
 // thing the crossing has to preserve: a plain fact, a labelled judgment, and a
 // line citing two records.
 func wireBrief() crmcontracts.MeetingBrief {
-	assessment := crmcontracts.OrganizationBriefSentenceNatureAssessment
+	assessment := crmcontracts.CompanyBriefSentenceNatureAssessment
 	deal, activity := meetingID(), meetingID()
 	return crmcontracts.MeetingBrief{
 		ActivityId:  meetingID(),
@@ -38,16 +38,16 @@ func wireBrief() crmcontracts.MeetingBrief {
 		GeneratedBy: crmcontracts.WrittenByDeterministic,
 		Sections: []crmcontracts.MeetingBriefSection{{
 			Kind: crmcontracts.MeetingBriefSectionKindHeader,
-			Sentences: []crmcontracts.OrganizationBriefSentence{{
+			Sentences: []crmcontracts.CompanyBriefSentence{{
 				Text:     "Cutover review with Northwind, Mon 24 Aug 09:00 UTC.",
-				Evidence: []crmcontracts.OrganizationBriefEvidence{{EntityType: "activity", EntityId: activity}},
+				Evidence: []crmcontracts.CompanyBriefEvidence{{EntityType: "activity", EntityId: activity}},
 			}},
 		}, {
 			Kind: crmcontracts.MeetingBriefSectionKindRisks,
-			Sentences: []crmcontracts.OrganizationBriefSentence{{
+			Sentences: []crmcontracts.CompanyBriefSentence{{
 				Text:     "The security pack is four days past its promise.",
 				Nature:   &assessment,
-				Evidence: []crmcontracts.OrganizationBriefEvidence{{EntityType: "deal", EntityId: deal}, {EntityType: "activity", EntityId: activity}},
+				Evidence: []crmcontracts.CompanyBriefEvidence{{EntityType: "deal", EntityId: deal}, {EntityType: "activity", EntityId: activity}},
 			}},
 		}},
 	}
@@ -116,7 +116,7 @@ func TestAJudgmentReachesTheAgentLabelledAsOne(t *testing.T) {
 		t.Errorf("a plain fact was labelled %q; empty is the contract's default and means fact",
 			got.Sections[0].Sentences[0].Nature)
 	}
-	if got.Sections[1].Sentences[0].Nature != string(crmcontracts.OrganizationBriefSentenceNatureAssessment) {
-		t.Errorf("nature = %q, want %q", got.Sections[1].Sentences[0].Nature, crmcontracts.OrganizationBriefSentenceNatureAssessment)
+	if got.Sections[1].Sentences[0].Nature != string(crmcontracts.CompanyBriefSentenceNatureAssessment) {
+		t.Errorf("nature = %q, want %q", got.Sections[1].Sentences[0].Nature, crmcontracts.CompanyBriefSentenceNatureAssessment)
 	}
 }

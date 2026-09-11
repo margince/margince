@@ -8,7 +8,7 @@ package collections
 // Both leaves here reach a child table through a correlated EXISTS, and both
 // are multi-valued for the same reason: a company is more than one thing at
 // once. It can be a customer and a partner; it can hold the domain it was
-// founded under and the one it rebranded to. A column on `organization` could
+// founded under and the one it rebranded to. A column on `company` could
 // hold neither honestly, so the fact lives beside the account and the leaf
 // selects accounts that carry AT LEAST the named value.
 //
@@ -36,8 +36,8 @@ var relationshipTypeField = storekit.Field{
 	Expr:    "rt.relationship_type",
 	Type:    storekit.FieldPicklist,
 	Options: relationshipTypeValues,
-	Link: "EXISTS (SELECT 1 FROM organization_relationship_type rt" +
-		" WHERE rt.organization_id = t.id AND rt.archived_at IS NULL AND %s)",
+	Link: "EXISTS (SELECT 1 FROM company_relationship_type rt" +
+		" WHERE rt.company_id = t.id AND rt.archived_at IS NULL AND %s)",
 }
 
 // domainField is the account's web domain, which is MULTI-VALUED for the same
@@ -56,7 +56,7 @@ var relationshipTypeField = storekit.Field{
 // FieldDomain rather than text, and that is the difference between this leaf
 // answering the question and merely accepting it. The column stores a host, and
 // a caller pasting `https://www.acme.example/careers` out of an email signature
-// is asking about `acme.example` — the organization LIST has folded its own
+// is asking about `acme.example` — the company LIST has folded its own
 // `domain` parameter that way all along, so a text leaf here made one product
 // fact answer two different questions depending on which surface asked.
 //
@@ -73,11 +73,11 @@ var relationshipTypeField = storekit.Field{
 var domainField = storekit.Field{
 	Expr: "od.domain",
 	Type: storekit.FieldDomain,
-	Link: "EXISTS (SELECT 1 FROM organization_domain od" +
-		" WHERE od.organization_id = t.id AND od.archived_at IS NULL AND %s)",
+	Link: "EXISTS (SELECT 1 FROM company_domain od" +
+		" WHERE od.company_id = t.id AND od.archived_at IS NULL AND %s)",
 }
 
-// The technical facts, which live in `organization_fact` beside every other
+// The technical facts, which live in `company_fact` beside every other
 // fact the record holds.
 //
 // Three leaves rather than one, because a reader asks three different
@@ -93,11 +93,11 @@ var domainField = storekit.Field{
 // out of these segments rather than silently widening them.
 //
 // SOURCE is deliberately not pinned. A person correcting a machine-read value
-// rewrites the row's source to `human` (organization_evidence_write.go), so a
+// rewrites the row's source to `human` (company_evidence_write.go), so a
 // source-constrained leaf would drop exactly the accounts somebody cared enough
 // to fix — the opposite of what a segment naming that value means.
 //
-// No archived predicate, unlike the two leaves above: `organization_fact` has
+// No archived predicate, unlike the two leaves above: `company_fact` has
 // no archived_at. A fact the lookup no longer observes is DELETED by its lane's
 // reconcile rather than withdrawn, so the rows this sees are the current ones
 // by construction.
@@ -109,8 +109,8 @@ const technicalFactValue = "tf.value_key"
 // technicalFactLink selects accounts holding at least one signal fact of one
 // field. The %s is the caller's comparison against value_key.
 func technicalFactLink(field string) string {
-	return "EXISTS (SELECT 1 FROM organization_fact tf" +
-		" WHERE tf.organization_id = t.id AND tf.category = 'signal'" +
+	return "EXISTS (SELECT 1 FROM company_fact tf" +
+		" WHERE tf.company_id = t.id AND tf.category = 'signal'" +
 		" AND tf.field = '" + field + "' AND %s)"
 }
 

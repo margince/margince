@@ -25,9 +25,9 @@ import (
 // TestTheAdHocVocabularyScopesEveryReferenceTheCatalogDoes holds the two
 // together, so a reference the catalog learns about cannot stay unknown here.
 var adHocReferenceTables = map[string]string{
-	fieldOrganizationID: tableOrganization,
-	fieldPartnerOrgID:   tableOrganization,
-	fieldProjectID:      tableProject,
+	fieldCompanyID:        tableCompany,
+	fieldPartnerCompanyID: tableCompany,
+	fieldProjectID:        tableProject,
 }
 
 // runAdHocPlan serves the datasource seam's RunReport: the plan's

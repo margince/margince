@@ -5,10 +5,10 @@
 
 package capture
 
-// The captured-organization auto-enrich sweep over the REAL River runner
+// The captured-company auto-enrich sweep over the REAL River runner
 // (ADR-0072/A118): compose.NewJobRunner registers the sweep RunOnStart exactly
 // as cmd/worker wires it, so Start fires one pass. Against a domain-named
-// captured org with the flag on, that pass must create a system-requested
+// captured company with the flag on, that pass must create a system-requested
 // dossier, enqueue its deep read, arm the cursor, and reserve a daily-cap slot —
 // the whole trigger path end to end, observed on River's own completion channel
 // (no sleep, no poll). The brain is nil on purpose: the deep read the sweep
@@ -31,25 +31,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedOrg(t *testing.T) {
+func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany(t *testing.T) {
 	e := integration.Setup(t)
-	orgID := ids.NewV7()
-	// A captured, domain-named org (name_source='domain') with a live primary
+	companyID := ids.NewV7()
+	// A captured, domain-named company (name_source='domain') with a live primary
 	// domain — the shape the sweep enriches. The capture_auto_enrich flag is ON
 	// by default (migration 0121), so no toggle is needed.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO organization (id, owner_id, display_name, name_source, source, captured_by)
+			INSERT INTO company (id, owner_id, display_name, name_source, source, captured_by)
 			VALUES ($1, $2, 'Gitex', 'domain', 'connector:gmail', 'connector:gmail')`,
-			orgID, e.Rep1); err != nil {
+			companyID, e.Rep1); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO organization_domain (organization_id, domain, is_primary, source, captured_by)
-			VALUES ($1, 'gitex.com', true, 'connector:gmail', 'connector:gmail')`, orgID)
+			INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
+			VALUES ($1, 'gitex.com', true, 'connector:gmail', 'connector:gmail')`, companyID)
 		return err
 	}); err != nil {
-		t.Fatalf("seeding the captured org: %v", err)
+		t.Fatalf("seeding the captured company: %v", err)
 	}
 
 	integration.ApplyRiverSchema(t)
@@ -86,15 +86,15 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedOrg(t *testing.T) {
 	// and the thing that does the work are the same row.
 	integration.AwaitKindCompleted(waitCtx, t, sub, compose.CaptureAutoEnrichSweepArgs{}.Kind())
 
-	// The sweep created a system-requested dossier for the org...
+	// The sweep created a system-requested dossier for the company...
 	var readCount int
 	var requestedBy string
 	var readID string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*), coalesce(max(requested_by), ''), coalesce(max(id::text), '')
-			 FROM site_read WHERE organization_id = $1`,
-			orgID).Scan(&readCount, &requestedBy, &readID)
+			 FROM site_read WHERE company_id = $1`,
+			companyID).Scan(&readCount, &requestedBy, &readID)
 	}); err != nil {
 		t.Fatalf("reading the dossier: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedOrg(t *testing.T) {
 	}
 
 	// ...at the housekeeping priority (River's lowest tier) — a boot-time fan-out
-	// across every due org must never queue ahead of a live, human-started read
+	// across every due company must never queue ahead of a live, human-started read
 	// sharing deep_read's two workers. Scoped to THIS dossier's own job by
 	// site_read_id: sweepWorkspace also runs sweepDomainTriage unconditionally
 	// before the auto-enrich loop, which can enqueue its own site_deep_read row
@@ -127,8 +127,8 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedOrg(t *testing.T) {
 	var outcome string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT attempts, last_outcome FROM capture_auto_enrich_state WHERE organization_id = $1`,
-			orgID).Scan(&attempts, &outcome)
+			`SELECT attempts, last_outcome FROM capture_auto_enrich_state WHERE company_id = $1`,
+			companyID).Scan(&attempts, &outcome)
 	}); err != nil {
 		t.Fatalf("reading the cursor: %v", err)
 	}
@@ -154,7 +154,7 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedOrg(t *testing.T) {
 // siteDeepReadInsertOpts, over the same real River runner this file's sibling
 // test uses. sweepWorkspace runs sweepDomainTriage unconditionally before the
 // auto-enrich loop (captureautoenrich.go), so an open domain question with no
-// captured org queues through startDomainTriageRead, not startAutoEnrichRead —
+// captured company queues through startDomainTriageRead, not startAutoEnrichRead —
 // the call site capturedomaintriage_integration_test.go's own header comment
 // names as untestable without an ambient River client this runner now supplies.
 func TestCaptureAutoEnrichSweepQueuesDomainTriageAtHousekeepingPriorityToo(t *testing.T) {
@@ -162,7 +162,7 @@ func TestCaptureAutoEnrichSweepQueuesDomainTriageAtHousekeepingPriorityToo(t *te
 	const domain = "unjudged.example"
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO organization_domain_disposition (domain, status, owner_id)
+			INSERT INTO company_domain_disposition (domain, status, owner_id)
 			VALUES ($1, 'pending', $2)`, domain, e.Rep1)
 		return err
 	}); err != nil {

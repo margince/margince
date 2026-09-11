@@ -33,14 +33,14 @@ import (
 func TestTheProjectsListSortsPhasesByHowLiveTheWorkIs(t *testing.T) {
 	e := Setup(t)
 	ctx := e.Admin()
-	org := e.SeedOrg(t, "Acme Systems", &e.Rep1)
+	company := e.SeedCompany(t, "Acme Systems", &e.Rep1)
 
 	// Seeded in the arrangement's own order, so a pass cannot come from
 	// insertion order either: the assertion below is the reverse of it.
-	closed := seedProjectInPhase(t, e, org, "Finished work", "closed")
-	initiative := seedProjectInPhase(t, e, org, "An idea", projectPhaseInitiative)
-	pursuing := seedProjectInPhase(t, e, org, "Chasing it", "pursuing")
-	delivering := seedProjectInPhase(t, e, org, "Under way", "delivering")
+	closed := seedProjectInPhase(t, e, company, "Finished work", "closed")
+	initiative := seedProjectInPhase(t, e, company, "An idea", projectPhaseInitiative)
+	pursuing := seedProjectInPhase(t, e, company, "Chasing it", "pursuing")
+	delivering := seedProjectInPhase(t, e, company, "Under way", "delivering")
 
 	assertIDOrder(t, projectIDsIn(ctx, t, e, "phase"),
 		[]ids.UUID{delivering, pursuing, initiative, closed},
@@ -54,10 +54,10 @@ func TestTheProjectsListSortsByTheCompanyItDraws(t *testing.T) {
 
 	// Project names and company names deliberately disagree, so the answer
 	// cannot come from the sort this list already had.
-	zeta := seedProjectInPhase(t, e, e.SeedOrg(t, "Alma Werke", &e.Rep1), "Zeta rollout", "delivering")
-	alma := seedProjectInPhase(t, e, e.SeedOrg(t, "Zeta Holding", &e.Rep1), "Alma rollout", "delivering")
+	zeta := seedProjectInPhase(t, e, e.SeedCompany(t, "Alma Werke", &e.Rep1), "Zeta rollout", "delivering")
+	alma := seedProjectInPhase(t, e, e.SeedCompany(t, "Zeta Holding", &e.Rep1), "Alma rollout", "delivering")
 
-	assertIDOrder(t, projectIDsIn(ctx, t, e, "organization_id"), []ids.UUID{zeta, alma},
+	assertIDOrder(t, projectIDsIn(ctx, t, e, "company_id"), []ids.UUID{zeta, alma},
 		"company ascending — Alma Werke before Zeta Holding")
 }
 
@@ -86,8 +86,8 @@ func TestTheContactsListSortsByTheEmployerItDraws(t *testing.T) {
 
 	zeta := e.SeedPerson(t, "Zeta Person", &e.Rep1)
 	alma := e.SeedPerson(t, "Alma Person", &e.Rep1)
-	employPerson(t, e, zeta, e.SeedOrg(t, "Alma Werke", &e.Rep1), nil)
-	employPerson(t, e, alma, e.SeedOrg(t, "Zeta Holding", &e.Rep1), nil)
+	employPerson(t, e, zeta, e.SeedCompany(t, "Alma Werke", &e.Rep1), nil)
+	employPerson(t, e, alma, e.SeedCompany(t, "Zeta Holding", &e.Rep1), nil)
 	// A person with no employer at all shows nothing and orders by nothing.
 	unattached := e.SeedPerson(t, "Nobody's Person", &e.Rep1)
 
@@ -104,7 +104,7 @@ func TestTheContactsListSortsByTheEmployerItDraws(t *testing.T) {
 
 	// The order agrees with what the rows print, which is the claim that makes
 	// the expression the same derivation rather than a second one.
-	if rows[0].Employer == nil || rows[0].Employer.OrganizationName != "Alma Werke" {
+	if rows[0].Employer == nil || rows[0].Employer.CompanyName != "Alma Werke" {
 		t.Errorf("the first row prints %v, and the page was ordered by the employer it comes from",
 			rows[0].Employer)
 	}
@@ -117,7 +117,7 @@ func TestTheContactsListSortsByTheEmployerItDraws(t *testing.T) {
 // ascending and descending and the hidden company sits at whichever end.
 //
 // TWO guards hold this and either alone is enough — the employment edge's own
-// read scope and the organization's row scope, both of which the sort inherits
+// read scope and the company's row scope, both of which the sort inherits
 // from the read it shares its statement with. So neutralising one changes
 // nothing and only removing both moves the row, which is what this case was
 // checked against. Worth saying, because a reader who deleted one of them and
@@ -128,13 +128,13 @@ func TestAnUnreadableEmployerOrdersTheContactsListByNothing(t *testing.T) {
 
 	// "Alma" sorts first of the two by name. Hidden from this reader, it must
 	// sort last instead.
-	hidden := e.SeedOrg(t, "Alma Werke", &e.Rep3)
+	hidden := e.SeedCompany(t, "Alma Werke", &e.Rep3)
 	secret := e.SeedPerson(t, "Zeta Person", &e.Rep1)
 	visible := e.SeedPerson(t, "Alma Person", &e.Rep1)
 	employPerson(t, e, secret, hidden, nil)
-	employPerson(t, e, visible, e.SeedOrg(t, "Mercator", &e.Rep1), nil)
+	employPerson(t, e, visible, e.SeedCompany(t, "Mercator", &e.Rep1), nil)
 	// Made private AFTER the edge is filed, which is the real sequence.
-	e.MakeCapturePrivate(t, "organization", hidden, e.Rep3)
+	e.MakeCapturePrivate(t, "company", hidden, e.Rep3)
 
 	listed := func(spec string) []ids.UUID {
 		t.Helper()
@@ -166,7 +166,7 @@ func TestAnUnreadableEmployerOrdersTheContactsListByNothing(t *testing.T) {
 // A reader who may see NO employer at all is ordered by none.
 //
 // The employer is bounded three ways and a caller can lose it entirely — no
-// relationship grant, or no organization grant. The column is then absent on
+// relationship grant, or no company grant. The column is then absent on
 // every row, so the sort must be too: a page arranged by a company nobody on
 // screen names would order the list by something the reader cannot check.
 func TestAReaderWhoSeesNoEmployerIsOrderedByNone(t *testing.T) {
@@ -174,15 +174,15 @@ func TestAReaderWhoSeesNoEmployerIsOrderedByNone(t *testing.T) {
 
 	zeta := e.SeedPerson(t, "Zeta Person", &e.Rep1)
 	alma := e.SeedPerson(t, "Alma Person", &e.Rep1)
-	employPerson(t, e, zeta, e.SeedOrg(t, "Alma Werke", &e.Rep1), nil)
-	employPerson(t, e, alma, e.SeedOrg(t, "Zeta Holding", &e.Rep1), nil)
+	employPerson(t, e, zeta, e.SeedCompany(t, "Alma Werke", &e.Rep1), nil)
+	employPerson(t, e, alma, e.SeedCompany(t, "Zeta Holding", &e.Rep1), nil)
 
 	// No `relationship` grant: the edge is what an employer is read through.
 	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"person":       {Read: true},
-			"organization": {Read: true},
+			"person":  {Read: true},
+			"company": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	})
@@ -263,11 +263,11 @@ func replyTo(t *testing.T, e *Env, lead ids.UUID, at time.Time) {
 	}
 }
 
-// A caller who may not read organizations at all is ordered by no company.
+// A caller who may not read companies at all is ordered by no company.
 //
-// The row scope answers WHICH organizations are visible and never whether this
-// caller may read organizations in the first place. A seat holding project.read
-// and no organization.read would otherwise have its page arranged by company
+// The row scope answers WHICH companies are visible and never whether this
+// caller may read companies in the first place. A seat holding project.read
+// and no company.read would otherwise have its page arranged by company
 // names it is refused on every other surface — and read it both ways and the
 // alphabet is recoverable from the order alone.
 func TestAReaderWithoutTheCompanyGrantIsOrderedByNoCompany(t *testing.T) {
@@ -275,12 +275,12 @@ func TestAReaderWithoutTheCompanyGrantIsOrderedByNoCompany(t *testing.T) {
 
 	// Named so the company order and the project order disagree: if the sort
 	// still reached display_name the page would come back the other way round.
-	zeta := seedProjectInPhase(t, e, e.SeedOrg(t, "Alma Werke", &e.Rep1), "Zeta rollout", "delivering")
-	alma := seedProjectInPhase(t, e, e.SeedOrg(t, "Zeta Holding", &e.Rep1), "Alma rollout", "delivering")
+	zeta := seedProjectInPhase(t, e, e.SeedCompany(t, "Alma Werke", &e.Rep1), "Zeta rollout", "delivering")
+	alma := seedProjectInPhase(t, e, e.SeedCompany(t, "Zeta Holding", &e.Rep1), "Alma rollout", "delivering")
 
 	// Admitted first, as a reader who DOES hold the grant: the silence below is
 	// the grant's doing and not a sort that never worked.
-	assertIDOrder(t, projectIDsIn(e.Admin(), t, e, "organization_id"), []ids.UUID{zeta, alma},
+	assertIDOrder(t, projectIDsIn(e.Admin(), t, e, "company_id"), []ids.UUID{zeta, alma},
 		"company ascending, for a reader who may read companies")
 
 	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
@@ -291,9 +291,9 @@ func TestAReaderWithoutTheCompanyGrantIsOrderedByNoCompany(t *testing.T) {
 	// Both rows in the tail under BOTH directions, so the page falls back to
 	// its tie-breaker and the order carries nothing about the companies. Newest
 	// first is what that gives, and the Alma rollout was seeded last.
-	assertIDOrder(t, projectIDsIn(blind, t, e, "organization_id"), []ids.UUID{alma, zeta},
+	assertIDOrder(t, projectIDsIn(blind, t, e, "company_id"), []ids.UUID{alma, zeta},
 		"company ascending, for a reader who may not read companies")
-	assertIDOrder(t, projectIDsIn(blind, t, e, "-organization_id"), []ids.UUID{alma, zeta},
+	assertIDOrder(t, projectIDsIn(blind, t, e, "-company_id"), []ids.UUID{alma, zeta},
 		"company descending — the same order, because there is nothing to order by")
 }
 
@@ -303,11 +303,11 @@ const projectPhaseInitiative = "initiative"
 
 // seedProjectInPhase creates one project and moves it to a phase through the
 // real writer.
-func seedProjectInPhase(t *testing.T, e *Env, org ids.UUID, name, phase string) ids.UUID {
+func seedProjectInPhase(t *testing.T, e *Env, company ids.UUID, name, phase string) ids.UUID {
 	t.Helper()
-	orgID := ids.From[ids.OrganizationKind](org)
+	companyID := ids.From[ids.CompanyKind](company)
 	p, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
-		Name: name, OrganizationID: orgID, OwnerID: userIDPtr(&e.Rep1), Source: "manual",
+		Name: name, CompanyID: companyID, OwnerID: userIDPtr(&e.Rep1), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating %q: %v", name, err)

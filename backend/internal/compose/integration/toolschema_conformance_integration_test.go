@@ -70,8 +70,8 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	// write tool shares.
 	person := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"person","fields":{"full_name":"Schema Conformance"}}`)
-	org := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"organization","fields":{"display_name":"Conformance GmbH"}}`)
+	company := createThroughTheToolSurface(ctx, t, registry,
+		`{"record_type":"company","fields":{"display_name":"Conformance GmbH"}}`)
 	lead := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"lead","fields":{"email":"lead@conformance.example"}}`)
 	deal := createThroughTheToolSurface(ctx, t, registry,
@@ -90,8 +90,8 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	duplicate := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"person","fields":{"full_name":"Schema Conformance (dup)"}}`)
 	project := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"project","fields":{"name":"Conformance project","organization_id":"`+
-			org.String()+`"}}`)
+		`{"record_type":"project","fields":{"name":"Conformance project","company_id":"`+
+			company.String()+`"}}`)
 
 	// The two producers the forecast tools read. The lane's seat already holds
 	// what the real admin role holds over a forecast — create + read, plus read
@@ -195,7 +195,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// the answer a caller acts on by CREATING a record, so its shape is the
 		// one a mis-read costs the most.
 		{"resolve_entities", `{"candidates":[{"kind":"person","ref":"a","name":"Conformance"}]}`},
-		{"resolve_entities", `{"candidates":[{"kind":"organization","emails":["nobody@nowhere.example"]}]}`},
+		{"resolve_entities", `{"candidates":[{"kind":"company","emails":["nobody@nowhere.example"]}]}`},
 		{"catch_me_up_on", `{"record_type":"deal","record_id":"` + deal.String() + `"}`},
 		{"prep_for_meeting", `{"record_type":"deal","record_id":"` + deal.String() + `"}`},
 		// An ACTIVITY anchor takes the other road through the walk — the event
@@ -223,7 +223,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"at_risk_relationships", `{}`},
 		{"who_knows", `{"person_id":"` + person.String() + `"}`},
 		{"account_coverage", `{"deal_id":"` + deal.String() + `"}`},
-		{"intro_path_to", `{"organization_id":"` + org.String() + `"}`},
+		{"intro_path_to", `{"company_id":"` + company.String() + `"}`},
 		{"qualify_lead", `{"lead_id":"` + lead.String() + `"}`},
 		// The passthrough shapes, whose declared schema is a GUARANTEED SUBSET
 		// rather than a type this module marshals. They are the ones a unit test
@@ -234,11 +234,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 			person.String() + `"}`},
 		// The batch forms answer a count-and-ids shape of their own. The thread
 		// one names a key no activity carries, which is a well-formed empty
-		// answer; the set one names the activity above, onto an organization.
+		// answer; the set one names the activity above, onto a company.
 		{"relink_thread", `{"thread_key":"thread:conformance","entity_type":"person","entity_id":"` +
 			person.String() + `"}`},
-		{"relink_activities", `{"activity_ids":["` + activity.String() + `"],"entity_type":"organization","entity_id":"` +
-			org.String() + `"}`},
+		{"relink_activities", `{"activity_ids":["` + activity.String() + `"],"entity_type":"company","entity_id":"` +
+			company.String() + `"}`},
 		{"disqualify_lead", `{"lead_id":"` + lead.String() + `"}`},
 		{"log_activity", `{"kind":"note","body":"conformance","links":[{"entity_type":"deal","entity_id":"` +
 			deal.String() + `"}]}`},

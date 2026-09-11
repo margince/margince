@@ -10,16 +10,16 @@
   "totals": {
     "tools": 76,
     "resources": 12,
-    "tool_catalog_bytes": 223266,
+    "tool_catalog_bytes": 222983,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 56962,
-    "largest_tool_bytes": 8980,
+    "approx_wire_tokens_total": 56891,
+    "largest_tool_bytes": 8975,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 59017,
-      "input_schema_bytes": 45818,
-      "output_schema_bytes": 101994,
-      "description_plus_input_schema_bytes": 104835
+      "description_bytes": 58970,
+      "input_schema_bytes": 45629,
+      "output_schema_bytes": 101959,
+      "description_plus_input_schema_bytes": 104599
     }
   },
   "tools": {
@@ -753,7 +753,7 @@
             "record_type": {
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "lead",
                 "project"
@@ -911,7 +911,7 @@
             "record_type": {
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "project",
                 "relationship",
@@ -1259,7 +1259,7 @@
                   "entity_type": {
                     "enum": [
                       "person",
-                      "organization",
+                      "company",
                       "deal",
                       "lead",
                       "project"
@@ -1415,7 +1415,7 @@
             "record_type": {
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "lead",
                 "project",
@@ -2177,7 +2177,7 @@
           "readOnlyHint": false,
           "title": "Create a record"
         },
-        "description": "Create a person, organization, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A PERSON created here is visible to the human you are acting for and to nobody else, until they publish it or correspondence with that address earns a widening verdict — attending a meeting together does not earn one. Do not tell anyone a contact you just created is on their colleagues' screens. Search first when the record might already exist — a second copy of a person or account is a problem that then needs merge_records to undo. The new record's id comes back in the result; keep it for anything that links to it. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Create a person, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A PERSON created here is visible to the human you are acting for and to nobody else, until they publish it or correspondence with that address earns a widening verdict — attending a meeting together does not earn one. Do not tell anyone a contact you just created is on their colleagues' screens. Search first when the record might already exist — a second copy of a person or account is a problem that then needs merge_records to undo. The new record's id comes back in the result; keep it for anything that links to it. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2198,7 +2198,7 @@
             "record_type": {
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "lead",
                 "activity",
@@ -2551,7 +2551,7 @@
                   "entity_type": {
                     "enum": [
                       "person",
-                      "organization",
+                      "company",
                       "deal",
                       "lead",
                       "project"
@@ -4056,7 +4056,7 @@
                   "entity_type": {
                     "enum": [
                       "person",
-                      "organization",
+                      "company",
                       "deal",
                       "lead",
                       "project"
@@ -4374,14 +4374,19 @@
         "annotations": {
           "openWorldHint": true,
           "readOnlyHint": false,
-          "title": "Enrich an organization from its website"
+          "title": "Enrich a company from its website"
         },
-        "description": "Learn about an organization by reading its public website, and propose what was found for a person to accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing lands on the record until someone accepts it, which is the review that guards this, not an approval on the call. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the organization_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a person approves every call before it runs; requires passport scope \"enrich\".)",
+        "description": "Learn about a company by reading its public website, and propose what was found for a person to accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing lands on the record until someone accepts it, which is the review that guards this, not an approval on the call. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the company_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a person approves every call before it runs; requires passport scope \"enrich\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "approval_id": {
               "description": "Set on approved retry",
+              "format": "uuid",
+              "type": "string"
+            },
+            "company_id": {
+              "description": "The company to enrich",
               "format": "uuid",
               "type": "string"
             },
@@ -4400,19 +4405,14 @@
               "maxLength": 255,
               "type": "string"
             },
-            "organization_id": {
-              "description": "The organization to enrich",
-              "format": "uuid",
-              "type": "string"
-            },
             "url": {
-              "description": "Absolute http(s) URL to read instead of the organization's own domain",
+              "description": "Absolute http(s) URL to read instead of the company's own domain",
               "format": "uri",
               "type": "string"
             }
           },
           "required": [
-            "organization_id"
+            "company_id"
           ],
           "type": "object"
         },
@@ -4500,7 +4500,7 @@
           ],
           "type": "object"
         },
-        "title": "Enrich an organization from its website"
+        "title": "Enrich a company from its website"
       },
       {
         "annotations": {
@@ -5065,7 +5065,7 @@
             "record_type": {
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal"
               ],
               "type": "string"
@@ -5351,14 +5351,14 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "organization_id": {
+            "company_id": {
               "description": "The account to find a warm route into",
               "format": "uuid",
               "type": "string"
             }
           },
           "required": [
-            "organization_id"
+            "company_id"
           ],
           "type": "object"
         },
@@ -5370,7 +5370,7 @@
                 "candidates_truncated": {
                   "type": "boolean"
                 },
-                "organization_id": {
+                "company_id": {
                   "format": "uuid",
                   "type": "string"
                 },
@@ -5416,7 +5416,7 @@
               },
               "required": [
                 "candidates_truncated",
-                "organization_id",
+                "company_id",
                 "routes"
               ],
               "type": "object"
@@ -6340,7 +6340,7 @@
           "readOnlyHint": true,
           "title": "List records"
         },
-        "description": "Enumerate the people, organizations, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one person owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Enumerate the people, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one person owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -6352,7 +6352,7 @@
               "additionalProperties": {
                 "type": "string"
               },
-              "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag_id (a), tag_mode (any|all|none) organization — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — forecast_category (commit|best_case|pipeline|omitted), organization_id, owner_id, partner_attribution (sourced|influenced), partner_org_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — key, organization_id, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+              "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
               "type": "object"
             },
             "limit": {
@@ -6363,7 +6363,7 @@
             "record_type": {
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "lead",
                 "project"
@@ -6693,7 +6693,7 @@
                   "entity_type": {
                     "enum": [
                       "person",
-                      "organization",
+                      "company",
                       "deal",
                       "lead",
                       "project"
@@ -6845,7 +6845,7 @@
           "readOnlyHint": false,
           "title": "Merge two records"
         },
-        "description": "Collapse two records for the same real person or company into one, moving the source's activities, deals and links onto the record that survives. People merge with people and organizations with organizations; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing: the fold cannot be called back, and by default nothing holds it. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Collapse two records for the same real person or company into one, moving the source's activities, deals and links onto the record that survives. People merge with people and companies with companies; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing: the fold cannot be called back, and by default nothing holds it. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -6862,7 +6862,7 @@
             "record_type": {
               "enum": [
                 "person",
-                "organization"
+                "company"
               ],
               "type": "string"
             },
@@ -7149,7 +7149,7 @@
             "record_type": {
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "lead",
                 "project",
@@ -8008,6 +8008,10 @@
                 "as_of": {
                   "type": "string"
                 },
+                "company_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
                 "deals": {
                   "items": {
                     "properties": {
@@ -8140,10 +8144,6 @@
                     "type": "object"
                   },
                   "type": "array"
-                },
-                "organization_id": {
-                  "format": "uuid",
-                  "type": "string"
                 },
                 "owner_id": {
                   "format": "uuid",
@@ -8285,7 +8285,7 @@
           "readOnlyHint": false,
           "title": "Preview an import"
         },
-        "description": "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. A column header is matched to a field NAME and never guessed, so an ordinary header row — `name`, `company`, `city` — places nothing without a mapping and is refused with the field list to map onto. `object` is organization, person or lead. Use `person` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a person whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link people to their employers, map the company column to `organization_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the person weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. A column header is matched to a field NAME and never guessed, so an ordinary header row — `name`, `company`, `city` — places nothing without a mapping and is refused with the field list to map onto. `object` is company, person or lead. Use `person` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a person whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link people to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the person weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -8302,12 +8302,12 @@
               "additionalProperties": {
                 "type": "string"
               },
-              "description": "Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a PERSON run, map the company column to \"organization_name\" to link each person to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the person still lands.",
+              "description": "Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a PERSON run, map the company column to \"company_name\" to link each person to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the person still lands.",
               "type": "object"
             },
             "object": {
               "enum": [
-                "organization",
+                "company",
                 "lead",
                 "person"
               ],
@@ -10213,6 +10213,22 @@
                   ],
                   "type": "object"
                 },
+                "company": {
+                  "properties": {
+                    "company_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "company_id",
+                    "name"
+                  ],
+                  "type": "object"
+                },
                 "contracts": {
                   "properties": {
                     "items": {
@@ -10372,22 +10388,6 @@
                   ],
                   "type": "object"
                 },
-                "organization": {
-                  "properties": {
-                    "name": {
-                      "type": "string"
-                    },
-                    "organization_id": {
-                      "format": "uuid",
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "name",
-                    "organization_id"
-                  ],
-                  "type": "object"
-                },
                 "phase_history": {
                   "properties": {
                     "phase_durations": {
@@ -10458,6 +10458,10 @@
                     "closed_reason": {
                       "type": "string"
                     },
+                    "company_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
                     "description": {
                       "type": "string"
                     },
@@ -10468,10 +10472,6 @@
                       "type": "string"
                     },
                     "name": {
-                      "type": "string"
-                    },
-                    "organization_id": {
-                      "format": "uuid",
                       "type": "string"
                     },
                     "owner_id": {
@@ -10674,10 +10674,10 @@
               "type": "string"
             },
             "record_type": {
-              "description": "partner is addressed by its ORGANIZATION's id: the row is that company's partner terms, not a separate record.",
+              "description": "partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record.",
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "lead",
                 "activity",
@@ -10833,7 +10833,7 @@
             "entity_type": {
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "lead",
                 "project"
@@ -10980,7 +10980,7 @@
             "entity_type": {
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "lead",
                 "project"
@@ -11122,7 +11122,7 @@
             "entity_type": {
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "lead",
                 "project"
@@ -11267,7 +11267,7 @@
             "record_type": {
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "lead",
                 "project"
@@ -11404,7 +11404,7 @@
           "readOnlyHint": true,
           "title": "Resolve people and companies"
         },
-        "description": "Find out whether the people and companies named in something you are holding already exist here, matched on addresses, phone numbers and company domains rather than on text. It reads only. Nothing is created, changed or merged, and it answers person and organization, never leads. A near match comes back `ambiguous` however close it is. Use search_records to find a record you know exists, and merge_records once a person has decided that two records are one. Call this BEFORE creating a person or company from anything you did not type. Act on `matched`; on `ambiguous` ask which is meant; on `unresolved` say what you will create — a miss is not proof nothing exists. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Find out whether the people and companies named in something you are holding already exist here, matched on addresses, phone numbers and company domains rather than on text. It reads only. Nothing is created, changed or merged, and it answers person and company, never leads. A near match comes back `ambiguous` however close it is. Use search_records to find a record you know exists, and merge_records once a person has decided that two records are one. Call this BEFORE creating a person or company from anything you did not type. Act on `matched`; on `ambiguous` ask which is meant; on `unresolved` say what you will create — a miss is not proof nothing exists. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -11413,7 +11413,7 @@
                 "additionalProperties": false,
                 "properties": {
                   "domains": {
-                    "description": "Company domains claimed by the payload. Read for an organization only.",
+                    "description": "Company domains claimed by the payload. Read for a company only.",
                     "items": {
                       "type": "string"
                     },
@@ -11421,7 +11421,7 @@
                     "type": "array"
                   },
                   "emails": {
-                    "description": "Every address on the payload, not just the primary one. For an organization each address also contributes its domain, unless it is a consumer mail domain.",
+                    "description": "Every address on the payload, not just the primary one. For a company each address also contributes its domain, unless it is a consumer mail domain.",
                     "items": {
                       "type": "string"
                     },
@@ -11432,12 +11432,12 @@
                     "description": "Which record type this payload is asking about. Leads are not resolved.",
                     "enum": [
                       "person",
-                      "organization"
+                      "company"
                     ],
                     "type": "string"
                   },
                   "legal_name": {
-                    "description": "The registered company name, when it differs from the trading name. Read for an organization only.",
+                    "description": "The registered company name, when it differs from the trading name. Read for a company only.",
                     "type": "string"
                   },
                   "name": {
@@ -12112,7 +12112,7 @@
               "type": "array"
             },
             "report": {
-              "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by organization_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
+              "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by company_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
               "enum": [
                 "activities-by-kind",
                 "deals-by-stage",
@@ -12287,7 +12287,7 @@
               "items": {
                 "enum": [
                   "person",
-                  "organization",
+                  "company",
                   "deal",
                   "lead",
                   "project"
@@ -12485,7 +12485,7 @@
           "readOnlyHint": true,
           "title": "Search records"
         },
-        "description": "Find people, organizations, deals, leads and projects when you know roughly what they are called but not which record they are. It matches text stored ON the record. It does not read a timeline: message bodies, call notes and meeting content are not searched, so a query describing what someone said or did will not find them. Use list_records when the question is which records meet a condition rather than what one is called, read_record when you already hold the record's id, and run_report when the question is a count, a total or a breakdown rather than a set of records. Keep each result's record_type and id together: every other tool identifies a record by both, and an id alone does not say which type it belongs to. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Find people, companies, deals, leads and projects when you know roughly what they are called but not which record they are. It matches text stored ON the record. It does not read a timeline: message bodies, call notes and meeting content are not searched, so a query describing what someone said or did will not find them. Use list_records when the question is which records meet a condition rather than what one is called, read_record when you already hold the record's id, and run_report when the question is a count, a total or a breakdown rather than a set of records. Keep each result's record_type and id together: every other tool identifies a record by both, and an id alone does not say which type it belongs to. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -12506,7 +12506,7 @@
               "description": "Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one.",
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "lead",
                 "project",
@@ -12720,7 +12720,7 @@
                   "entity_type": {
                     "enum": [
                       "person",
-                      "organization",
+                      "company",
                       "deal",
                       "lead",
                       "project"
@@ -13316,7 +13316,7 @@
             "record_type": {
               "enum": [
                 "person",
-                "organization",
+                "company",
                 "deal",
                 "lead",
                 "activity",
@@ -14242,9 +14242,9 @@
     "margince://capabilities": "{\"version\":\"1\",\"governance\":{\"scopes_held\":[\"draft\",\"enrich\",\"read\",\"send\",\"write\"],\"model\":\"A call either executes under this passport's authority or stages an approval a human decides. An agent can never exceed the human who granted the passport, and every call is re-authorised at the moment it runs, so a revoked grant binds mid-session.\",\"host_confirmation\":\"A confirmation your own client shows the user is NOT one of these approvals. A staged call is decided in Margince and returns its outcome here.\"},\"verbs\":{\"offered\":76,\"execute_directly\":[\"account_coverage\",\"advance_project_phase\",\"annotate_brief\",\"apply_tag\",\"archive_record\",\"at_risk_relationships\",\"book_meeting\",\"catch_me_up_on\",\"check_availability\",\"check_location_support\",\"commit_import\",\"compose_analytics_report\",\"create_record\",\"create_tag\",\"create_task\",\"data_coverage\",\"decide_approval\",\"decide_approval_bundle\",\"demote_lead\",\"describe_analytics_vocabulary\",\"describe_query_vocabulary\",\"describe_record_fields\",\"describe_report_blocks\",\"describe_report_vocabulary\",\"disqualify_lead\",\"draft_email\",\"draft_follow_ups_for\",\"forecast_input_checks\",\"forecast_movement\",\"forecast_readings\",\"get_record_tags\",\"get_tag\",\"intro_path_to\",\"list_approvals\",\"list_channel_providers\",\"list_colleagues\",\"list_input_checks\",\"list_pipelines\",\"list_records\",\"list_tags\",\"log_activity\",\"merge_records\",\"prep_for_meeting\",\"prepare_handoff\",\"preview_import\",\"promote_lead\",\"qualify_lead\",\"query_workspace\",\"read_approval\",\"read_brief\",\"read_import_report\",\"read_import_run\",\"read_project_360\",\"read_record\",\"remove_tag\",\"resolve_entities\",\"review_commitments\",\"run_analytics_query\",\"run_report\",\"search_context\",\"search_records\",\"send_account_email\",\"send_email\",\"send_message\",\"update_record\",\"update_tag\",\"whats_slipping_this_week\",\"who_knows\",\"whoami\"],\"stage_for_approval\":[\"enrich\",\"merge_tags\"],\"decided_per_call\":[\"advance_deal\",\"progress_deal\",\"relink_activities\",\"relink_activity\",\"relink_thread\"],\"decided_per_call_reason\":\"The tier depends on the arguments — the same verb can execute or stage depending on what it is asked to do.\"}}",
     "margince://schema/analytics": "schema version e3b0c44298fc1c14\naggregates: avg, count, count_distinct, max, median, min, p75, sum\nfilter ops: eq, gt, gte, is_not_null, is_null, lt, lte, ne\n\n",
     "margince://schema/query": "{\"version\":\"v1\",\"grammar\":{\"predicates\":\"{\\\"field\\\": \\u003cname below\\u003e, \\\"op\\\": \\u003cop the field admits\\u003e, \\\"value\\\": \\u003coperand\\u003e} — or \\\"values\\\": [...] for \\\"in\\\". Clauses are combined with AND.\",\"semantic_target\":\"\\\"similar_to\\\": \\u003cfree text\\u003e — one similarity clause, ranked by the hybrid retriever.\",\"traversal\":\"\\\"traverse\\\": {\\\"relation\\\": \\u003crelation below\\u003e, \\\"where\\\": [...]} — exactly one hop. A second hop is refused; ask it as its own query.\",\"limit\":\"\\\"limit\\\": 1..200; omit for the default page.\",\"refusal\":\"Anything outside this vocabulary is refused with a typed clarification naming what was not understood. Nothing is coerced, and no plan is narrowed to the part that was recognised.\"},\"targets\":[],\"unavailable\":[]}",
-    "margince://schema/record-fields": "{\"version\":\"1\",\"notation\":\"A key with no `?` is REQUIRED by the contract; `?` marks one the body may omit. A name not listed is not a field: it is refused by name, never stored silently.\",\"create_record\":{\"fields\":{\"activity\":\"{assignee_id?: uuid, body?: string, channel_provider?: string, direction?: \\\"inbound\\\"|\\\"outbound\\\", due_at?: rfc3339, duration_seconds?: integer, kind: \\\"email\\\"|\\\"call\\\"|\\\"meeting\\\"|\\\"note\\\"|\\\"task\\\"|\\\"message\\\", links?: [{entity_id: uuid, entity_type: \\\"person\\\"|\\\"organization\\\"|\\\"deal\\\"|\\\"lead\\\"|\\\"project\\\"}], meeting_status?: \\\"booked\\\"|\\\"held\\\"|\\\"no_show\\\"|\\\"canceled\\\", occurred_at?: rfc3339, raw?: object, remind_at?: rfc3339, source?: string, source_id?: string, source_system?: string, subject?: string}\",\"deal\":\"{amount_minor?: integer, currency?: string, expected_close_date?: YYYY-MM-DD, name: string, organization_id?: uuid, owner_id?: uuid, partner_attribution?: \\\"sourced\\\"|\\\"influenced\\\", partner_org_id?: uuid, pipeline_id: uuid, project_id?: uuid, source?: string, stage_id: uuid}\",\"lead\":\"{candidate_org_key?: string, company_name?: string, email?: email, full_name?: string, linkedin_url?: string, owner_id?: uuid, project_id?: uuid, source?: string, source_id?: string, source_system?: string, status?: \\\"new\\\"|\\\"contacted\\\"|\\\"engaged\\\"|\\\"promoted\\\"|\\\"disqualified\\\", title?: string}\",\"organization\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, owner_id?: uuid, parent_org_id?: uuid, size_band?: \\\"1-10\\\"|\\\"11-50\\\"|\\\"51-200\\\"|\\\"201-500\\\"|\\\"501-1000\\\"|\\\"1001-5000\\\"|\\\"5000+\\\", source?: string}\",\"person\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \\\"work\\\"|\\\"personal\\\"|\\\"other\\\", is_primary?: boolean, position?: integer}], first_name?: string, full_name: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \\\"work\\\"|\\\"mobile\\\"|\\\"home\\\"|\\\"other\\\", position?: integer}], social?: object, source?: string, title?: string}\",\"project\":\"{description?: string, name: string, organization_id: uuid, owner_id?: uuid, source?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}\",\"relationship\":\"{counterparty_org_id?: uuid, counterparty_person_id?: uuid, deal_id?: uuid, ended_at?: YYYY-MM-DD, is_current_primary?: boolean, kind: \\\"employment\\\"|\\\"deal_stakeholder\\\"|\\\"project_stakeholder\\\"|\\\"partner_of\\\"|\\\"referred_by\\\"|\\\"co_sell_with\\\"|\\\"works_with\\\", organization_id?: uuid, person_id?: uuid, project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD}\"},\"notes\":[\"A task is record_type=activity with kind=task.\",\"`source` is accepted but overwritten — this surface stamps its own provenance.\",\"A deal's `pipeline_id` and `stage_id` come from list_pipelines — nothing else on this surface yields them, and neither is defaultable.\",\"A person's employer is a relationship, not a field on the person: record_type=relationship with kind=employment, person_id and organization_id. Each kind REQUIRES its own endpoint pair, and a wrong pair is refused by name — employment: person + organization; deal_stakeholder: deal + person; project_stakeholder: project + person; partner_of, referred_by and co_sell_with: organization + counterparty_org_id. An edge is not searchable, so keep the id a relationship write returns.\",\"An activity is not searchable — search_records does not serve it — so keep the id an activity write returns; read_record answers it by that id.\",\"`assignee_id` and `owner_id` take a COLLEAGUE's id — list_colleagues answers those, whoami answers your own. A person id is a contact and is refused.\",\"A recording of a conversation is logged with `source_system: \\\"transcript\\\"` — that value is what has it read for next steps and commitments; any other value stores the text and reads nothing.\",\"An organization's `description` is the header's standing answer to what the company SELLS, and a site read fills it from the company's own website. Omit it rather than summarising a meeting or a document into it; what one conversation covered belongs on that activity.\",\"Extra keys must be named cf_\\u003cslug\\u003e and are read as custom-field values; any other key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom field is not ACTIVE in this workspace is the one that is: the write reports success and drops the value, so re-read the record if you are unsure a cf_ value landed.\",\"No custom fields on activity or relationship: those types carry no cf_ values at all, so a cf_ key there is refused rather than stored.\"]},\"update_record\":{\"fields\":{\"activity\":\"{assignee_id?: uuid, body?: string, due_at?: rfc3339, is_done?: boolean, meeting_status?: \\\"booked\\\"|\\\"held\\\"|\\\"no_show\\\"|\\\"canceled\\\", occurred_at?: rfc3339, remind_at?: rfc3339, subject?: string}\",\"deal\":\"{amount_minor?: integer, currency?: string, expected_close_date?: YYYY-MM-DD, forecast_category?: \\\"commit\\\"|\\\"best_case\\\"|\\\"pipeline\\\"|\\\"omitted\\\", fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, organization_id?: uuid, owner_id?: uuid, partner_attribution?: \\\"sourced\\\"|\\\"influenced\\\", partner_org_id?: uuid, project_id?: uuid, status?: \\\"open\\\"|\\\"won\\\"|\\\"lost\\\", wait_until?: YYYY-MM-DD}\",\"lead\":\"{candidate_org_key?: string, company_name?: string, email?: email, full_name?: string, owner_id?: uuid, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \\\"new\\\"|\\\"contacted\\\"|\\\"engaged\\\", title?: string}\",\"organization\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name?: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, lifecycle?: \\\"unknown\\\"|\\\"target\\\"|\\\"prospect\\\"|\\\"opportunity\\\"|\\\"customer\\\"|\\\"former_customer\\\"|\\\"disqualified\\\", linkedin_url?: string, owner_id?: uuid, parent_org_id?: uuid, relationship_types?: [\\\"customer\\\"|\\\"partner\\\"|\\\"supplier\\\"|\\\"investor\\\"|\\\"portfolio_company\\\"|\\\"competitor\\\"|\\\"other\\\"], size_band?: \\\"1-10\\\"|\\\"11-50\\\"|\\\"51-200\\\"|\\\"201-500\\\"|\\\"501-1000\\\"|\\\"1001-5000\\\"|\\\"5000+\\\"}\",\"person\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \\\"work\\\"|\\\"personal\\\"|\\\"other\\\", is_primary?: boolean, position?: integer}], first_name?: string, full_name?: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \\\"work\\\"|\\\"mobile\\\"|\\\"home\\\"|\\\"other\\\", position?: integer}], social?: object, title?: string, visibility?: \\\"workspace\\\"|\\\"owner\\\"}\",\"project\":\"{description?: string, ended_at?: YYYY-MM-DD, name?: string, owner_id?: uuid, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}\",\"relationship\":\"{ended_at?: YYYY-MM-DD, is_current_primary?: boolean, role?: string, started_at?: YYYY-MM-DD}\"},\"notes\":[\"A task is record_type=activity with kind=task.\",\"`source` on a lead is the administered lead-source key (see Settings › Data model); a patch corrects it, and the score follows.\",\"A person's employer is NOT a field here: employment is a relationship, created and archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched.\",\"An activity's links are NOT patchable, here or by any tool on this surface: this write changes what an activity says, never who it is about.\",\"`assignee_id` and `owner_id` take a COLLEAGUE's id — list_colleagues answers those, whoami answers your own. A person id is a contact and is refused.\",\"An organization's `description` is the header's standing answer to what the company SELLS, and a site read fills it from the company's own website. Omit it rather than summarising a meeting or a document into it; what one conversation covered belongs on that activity.\",\"Extra keys must be named cf_\\u003cslug\\u003e and are read as custom-field values; any other key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom field is not ACTIVE in this workspace is the one that is: the write reports success and drops the value, so re-read the record if you are unsure a cf_ value landed.\",\"No custom fields on activity or relationship: those types carry no cf_ values at all, so a cf_ key there is refused rather than stored.\"]}}",
+    "margince://schema/record-fields": "{\"version\":\"1\",\"notation\":\"A key with no `?` is REQUIRED by the contract; `?` marks one the body may omit. A name not listed is not a field: it is refused by name, never stored silently.\",\"create_record\":{\"fields\":{\"activity\":\"{assignee_id?: uuid, body?: string, channel_provider?: string, direction?: \\\"inbound\\\"|\\\"outbound\\\", due_at?: rfc3339, duration_seconds?: integer, kind: \\\"email\\\"|\\\"call\\\"|\\\"meeting\\\"|\\\"note\\\"|\\\"task\\\"|\\\"message\\\", links?: [{entity_id: uuid, entity_type: \\\"person\\\"|\\\"company\\\"|\\\"deal\\\"|\\\"lead\\\"|\\\"project\\\"}], meeting_status?: \\\"booked\\\"|\\\"held\\\"|\\\"no_show\\\"|\\\"canceled\\\", occurred_at?: rfc3339, raw?: object, remind_at?: rfc3339, source?: string, source_id?: string, source_system?: string, subject?: string}\",\"company\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, owner_id?: uuid, parent_company_id?: uuid, size_band?: \\\"1-10\\\"|\\\"11-50\\\"|\\\"51-200\\\"|\\\"201-500\\\"|\\\"501-1000\\\"|\\\"1001-5000\\\"|\\\"5000+\\\", source?: string}\",\"deal\":\"{amount_minor?: integer, company_id?: uuid, currency?: string, expected_close_date?: YYYY-MM-DD, name: string, owner_id?: uuid, partner_attribution?: \\\"sourced\\\"|\\\"influenced\\\", partner_company_id?: uuid, pipeline_id: uuid, project_id?: uuid, source?: string, stage_id: uuid}\",\"lead\":\"{candidate_company_key?: string, company_name?: string, email?: email, full_name?: string, linkedin_url?: string, owner_id?: uuid, project_id?: uuid, source?: string, source_id?: string, source_system?: string, status?: \\\"new\\\"|\\\"contacted\\\"|\\\"engaged\\\"|\\\"promoted\\\"|\\\"disqualified\\\", title?: string}\",\"person\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \\\"work\\\"|\\\"personal\\\"|\\\"other\\\", is_primary?: boolean, position?: integer}], first_name?: string, full_name: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \\\"work\\\"|\\\"mobile\\\"|\\\"home\\\"|\\\"other\\\", position?: integer}], social?: object, source?: string, title?: string}\",\"project\":\"{company_id: uuid, description?: string, name: string, owner_id?: uuid, source?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}\",\"relationship\":\"{company_id?: uuid, counterparty_company_id?: uuid, counterparty_person_id?: uuid, deal_id?: uuid, ended_at?: YYYY-MM-DD, is_current_primary?: boolean, kind: \\\"employment\\\"|\\\"deal_stakeholder\\\"|\\\"project_stakeholder\\\"|\\\"partner_of\\\"|\\\"referred_by\\\"|\\\"co_sell_with\\\"|\\\"works_with\\\", person_id?: uuid, project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD}\"},\"notes\":[\"A task is record_type=activity with kind=task.\",\"`source` is accepted but overwritten — this surface stamps its own provenance.\",\"A deal's `pipeline_id` and `stage_id` come from list_pipelines — nothing else on this surface yields them, and neither is defaultable.\",\"A person's employer is a relationship, not a field on the person: record_type=relationship with kind=employment, person_id and company_id. Each kind REQUIRES its own endpoint pair, and a wrong pair is refused by name — employment: person + company; deal_stakeholder: deal + person; project_stakeholder: project + person; partner_of, referred_by and co_sell_with: company + counterparty_company_id. An edge is not searchable, so keep the id a relationship write returns.\",\"An activity is not searchable — search_records does not serve it — so keep the id an activity write returns; read_record answers it by that id.\",\"`assignee_id` and `owner_id` take a COLLEAGUE's id — list_colleagues answers those, whoami answers your own. A person id is a contact and is refused.\",\"A recording of a conversation is logged with `source_system: \\\"transcript\\\"` — that value is what has it read for next steps and commitments; any other value stores the text and reads nothing.\",\"A company's `description` is the header's standing answer to what the company SELLS, and a site read fills it from the company's own website. Omit it rather than summarising a meeting or a document into it; what one conversation covered belongs on that activity.\",\"Extra keys must be named cf_\\u003cslug\\u003e and are read as custom-field values; any other key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom field is not ACTIVE in this workspace is the one that is: the write reports success and drops the value, so re-read the record if you are unsure a cf_ value landed.\",\"No custom fields on activity or relationship: those types carry no cf_ values at all, so a cf_ key there is refused rather than stored.\"]},\"update_record\":{\"fields\":{\"activity\":\"{assignee_id?: uuid, body?: string, due_at?: rfc3339, is_done?: boolean, meeting_status?: \\\"booked\\\"|\\\"held\\\"|\\\"no_show\\\"|\\\"canceled\\\", occurred_at?: rfc3339, remind_at?: rfc3339, subject?: string}\",\"company\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name?: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, lifecycle?: \\\"unknown\\\"|\\\"target\\\"|\\\"prospect\\\"|\\\"opportunity\\\"|\\\"customer\\\"|\\\"former_customer\\\"|\\\"disqualified\\\", linkedin_url?: string, owner_id?: uuid, parent_company_id?: uuid, relationship_types?: [\\\"customer\\\"|\\\"partner\\\"|\\\"supplier\\\"|\\\"investor\\\"|\\\"portfolio_company\\\"|\\\"competitor\\\"|\\\"other\\\"], size_band?: \\\"1-10\\\"|\\\"11-50\\\"|\\\"51-200\\\"|\\\"201-500\\\"|\\\"501-1000\\\"|\\\"1001-5000\\\"|\\\"5000+\\\"}\",\"deal\":\"{amount_minor?: integer, company_id?: uuid, currency?: string, expected_close_date?: YYYY-MM-DD, forecast_category?: \\\"commit\\\"|\\\"best_case\\\"|\\\"pipeline\\\"|\\\"omitted\\\", fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, owner_id?: uuid, partner_attribution?: \\\"sourced\\\"|\\\"influenced\\\", partner_company_id?: uuid, project_id?: uuid, status?: \\\"open\\\"|\\\"won\\\"|\\\"lost\\\", wait_until?: YYYY-MM-DD}\",\"lead\":\"{candidate_company_key?: string, company_name?: string, email?: email, full_name?: string, owner_id?: uuid, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \\\"new\\\"|\\\"contacted\\\"|\\\"engaged\\\", title?: string}\",\"person\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \\\"work\\\"|\\\"personal\\\"|\\\"other\\\", is_primary?: boolean, position?: integer}], first_name?: string, full_name?: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \\\"work\\\"|\\\"mobile\\\"|\\\"home\\\"|\\\"other\\\", position?: integer}], social?: object, title?: string, visibility?: \\\"workspace\\\"|\\\"owner\\\"}\",\"project\":\"{description?: string, ended_at?: YYYY-MM-DD, name?: string, owner_id?: uuid, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}\",\"relationship\":\"{ended_at?: YYYY-MM-DD, is_current_primary?: boolean, role?: string, started_at?: YYYY-MM-DD}\"},\"notes\":[\"A task is record_type=activity with kind=task.\",\"`source` on a lead is the administered lead-source key (see Settings › Data model); a patch corrects it, and the score follows.\",\"A person's employer is NOT a field here: employment is a relationship, created and archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched.\",\"An activity's links are NOT patchable, here or by any tool on this surface: this write changes what an activity says, never who it is about.\",\"`assignee_id` and `owner_id` take a COLLEAGUE's id — list_colleagues answers those, whoami answers your own. A person id is a contact and is refused.\",\"A company's `description` is the header's standing answer to what the company SELLS, and a site read fills it from the company's own website. Omit it rather than summarising a meeting or a document into it; what one conversation covered belongs on that activity.\",\"Extra keys must be named cf_\\u003cslug\\u003e and are read as custom-field values; any other key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom field is not ACTIVE in this workspace is the one that is: the write reports success and drops the value, so re-read the record if you are unsure a cf_ value landed.\",\"No custom fields on activity or relationship: those types carry no cf_ values at all, so a cf_ key there is refused rather than stored.\"]}}",
     "margince://schema/report-blocks": "{\"version\":\"1\",\"notation\":\"A block carries STRUCTURE and WORDS; a figure is named, never written. Every number cites a saved run and a cell inside it, and the server resolves that citation under the reading caller's own authority. A block carrying a literal number is refused EVEN WHEN a valid citation sits beside it: the literal is what would render, the two can disagree, and no reader could tell the page shows a figure the database never computed.\",\"blocks\":[{\"kind\":\"title\",\"takes_cells\":false,\"takes_text\":true,\"takes_severity\":false},{\"kind\":\"subtitle\",\"takes_cells\":false,\"takes_text\":true,\"takes_severity\":false},{\"kind\":\"scope\",\"takes_cells\":false,\"takes_text\":true,\"takes_severity\":false},{\"kind\":\"generated_at\",\"takes_cells\":false,\"takes_text\":true,\"takes_severity\":false},{\"kind\":\"summary\",\"takes_cells\":true,\"takes_text\":true,\"takes_severity\":false},{\"kind\":\"methodology\",\"takes_cells\":false,\"takes_text\":true,\"takes_severity\":false},{\"kind\":\"follow_ups\",\"takes_cells\":false,\"takes_text\":true,\"takes_severity\":false},{\"kind\":\"stat_strip\",\"takes_cells\":true,\"takes_text\":false,\"takes_severity\":false},{\"kind\":\"bar\",\"takes_cells\":true,\"takes_text\":false,\"takes_severity\":false},{\"kind\":\"waterfall\",\"takes_cells\":true,\"takes_text\":false,\"takes_severity\":false},{\"kind\":\"ranked_list\",\"takes_cells\":true,\"takes_text\":false,\"takes_severity\":false},{\"kind\":\"record_table\",\"takes_cells\":true,\"takes_text\":false,\"takes_severity\":false},{\"kind\":\"callout\",\"takes_cells\":false,\"takes_text\":true,\"takes_severity\":true},{\"kind\":\"evidence_drawer\",\"takes_cells\":true,\"takes_text\":true,\"takes_severity\":false}],\"severities\":[\"note\",\"warning\",\"partial\",\"unknown\",\"unsupported\"]}",
-    "margince://schema/reports": "{\"version\":\"1\",\"notation\":\"Each report accepts ONLY the names listed under it. `group_by` and `aggregates` take names from their own lists; `filters` is one object whose keys come from the `filters` list, which holds both equality predicates and numeric thresholds. A name outside a report's list is refused by name, with that list, rather than approximated.\",\"reports\":[{\"report\":\"activities-by-kind\",\"group_by\":[\"direction\",\"kind\",\"meeting_status\",\"project\",\"project_id\"],\"filters\":[\"direction\",\"host_user_id\",\"kind\",\"meeting_status\",\"project_id\"],\"aggregates\":[],\"defaults\":\"count as activities grouped by kind\",\"notes\":\"project_id admits exactly the activities filed under that project (an activity_link row naming it); an activity filed nowhere, or under another project, is excluded\"},{\"report\":\"deals-by-stage\",\"group_by\":[\"currency\",\"partner_org_id\",\"pipeline_id\",\"stage_id\",\"status\",\"win_probability\"],\"filters\":[\"currency\",\"organization_id\",\"owner_id\",\"partner_org_id\",\"partner_sourced\",\"pipeline_id\",\"project_id\",\"stalled\",\"status\"],\"aggregates\":[\"amount_minor\",\"weighted_amount_minor\"],\"defaults\":\"count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency\"},{\"report\":\"forecast\",\"group_by\":[\"currency\",\"forecast_category\",\"owner_id\",\"partner_org_id\",\"pipeline_id\",\"stage_id\",\"win_probability\"],\"filters\":[\"currency\",\"forecast_category\",\"owner_id\",\"partner_org_id\",\"pipeline_id\",\"project_id\",\"stage_id\"],\"aggregates\":[\"amount_base_minor\",\"amount_minor\",\"weighted_amount_minor\",\"weighted_base_minor\"],\"defaults\":\"count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency\"},{\"report\":\"leads-by-status\",\"group_by\":[\"owner_id\",\"source\",\"status\"],\"filters\":[\"owner_id\",\"source\",\"status\"],\"aggregates\":[],\"defaults\":\"count as leads grouped by status\",\"notes\":\"counts every lead whatever its status: promoted and disqualified leads are archived, and this is the one lead key that still counts them\"},{\"report\":\"meeting-conversion\",\"group_by\":[\"became_opportunity\",\"host_user_id\"],\"filters\":[\"became_opportunity\",\"host_user_id\"],\"aggregates\":[],\"defaults\":\"count as meetings grouped by became_opportunity\"},{\"report\":\"open-deals-per-company\",\"group_by\":[\"currency\",\"organization_id\",\"owner_id\"],\"filters\":[\"currency\",\"owner_id\",\"pipeline_id\",\"project_id\"],\"aggregates\":[\"amount_minor\"],\"defaults\":\"count as open_deals grouped by organization_id\"},{\"report\":\"pipeline-current\",\"group_by\":[\"currency\",\"owner_id\",\"partner_org_id\",\"pipeline_id\",\"stage_id\"],\"filters\":[\"currency\",\"organization_id\",\"owner_id\",\"partner_org_id\",\"pipeline_id\",\"project_id\"],\"aggregates\":[\"amount_base_minor\",\"weighted_base_minor\"],\"defaults\":\"count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id\"},{\"report\":\"project-commitments\",\"group_by\":[\"key\",\"name\",\"organization_id\",\"owner_id\",\"phase\",\"project_id\"],\"filters\":[\"organization_id\",\"owner_id\",\"phase\"],\"aggregates\":[\"open_commitments\",\"overdue_commitments\"],\"defaults\":\"sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id\",\"notes\":\"rows are ordered most overdue first\"},{\"report\":\"projects-by-phase\",\"group_by\":[\"organization_id\",\"owner_id\",\"phase\"],\"filters\":[\"organization_id\",\"owner_id\",\"phase\"],\"aggregates\":[\"open_deal_value_minor\",\"won_deal_value_minor\"],\"defaults\":\"count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase\",\"notes\":\"deal values are in the installation's base currency; an open deal in another currency counts nothing until it closes\"},{\"report\":\"projects-gone-quiet\",\"group_by\":[\"key\",\"last_activity_at\",\"name\",\"organization_id\",\"owner_id\",\"phase\",\"project_id\",\"quiet_since\"],\"filters\":[\"days\",\"organization_id\",\"owner_id\",\"phase\"],\"aggregates\":[],\"defaults\":\"count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since\",\"notes\":\"`days` is a whole number of days of silence, default 30; quiet_since is when the silence began\"},{\"report\":\"stage-age\",\"group_by\":[\"owner_id\",\"pipeline_id\",\"stage_id\"],\"filters\":[\"owner_id\",\"pipeline_id\"],\"aggregates\":[\"days_in_stage\"],\"defaults\":\"count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id\"},{\"report\":\"win-loss\",\"group_by\":[\"currency\",\"lost_reason\",\"organization_id\",\"owner_id\",\"period_month\",\"period_quarter\",\"period_year\",\"pipeline_id\",\"size_band\",\"source\",\"status\"],\"filters\":[\"currency\",\"lost_reason\",\"organization_id\",\"owner_id\",\"period_month\",\"period_quarter\",\"period_year\",\"pipeline_id\",\"project_id\",\"size_band\",\"source\",\"status\"],\"aggregates\":[\"amount_base_minor\",\"amount_minor\",\"days_to_close\"],\"defaults\":\"count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency\"}],\"notes\":[\"A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.\"]}",
+    "margince://schema/reports": "{\"version\":\"1\",\"notation\":\"Each report accepts ONLY the names listed under it. `group_by` and `aggregates` take names from their own lists; `filters` is one object whose keys come from the `filters` list, which holds both equality predicates and numeric thresholds. A name outside a report's list is refused by name, with that list, rather than approximated.\",\"reports\":[{\"report\":\"activities-by-kind\",\"group_by\":[\"direction\",\"kind\",\"meeting_status\",\"project\",\"project_id\"],\"filters\":[\"direction\",\"host_user_id\",\"kind\",\"meeting_status\",\"project_id\"],\"aggregates\":[],\"defaults\":\"count as activities grouped by kind\",\"notes\":\"project_id admits exactly the activities filed under that project (an activity_link row naming it); an activity filed nowhere, or under another project, is excluded\"},{\"report\":\"deals-by-stage\",\"group_by\":[\"currency\",\"partner_company_id\",\"pipeline_id\",\"stage_id\",\"status\",\"win_probability\"],\"filters\":[\"company_id\",\"currency\",\"owner_id\",\"partner_company_id\",\"partner_sourced\",\"pipeline_id\",\"project_id\",\"stalled\",\"status\"],\"aggregates\":[\"amount_minor\",\"weighted_amount_minor\"],\"defaults\":\"count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency\"},{\"report\":\"forecast\",\"group_by\":[\"currency\",\"forecast_category\",\"owner_id\",\"partner_company_id\",\"pipeline_id\",\"stage_id\",\"win_probability\"],\"filters\":[\"currency\",\"forecast_category\",\"owner_id\",\"partner_company_id\",\"pipeline_id\",\"project_id\",\"stage_id\"],\"aggregates\":[\"amount_base_minor\",\"amount_minor\",\"weighted_amount_minor\",\"weighted_base_minor\"],\"defaults\":\"count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency\"},{\"report\":\"leads-by-status\",\"group_by\":[\"owner_id\",\"source\",\"status\"],\"filters\":[\"owner_id\",\"source\",\"status\"],\"aggregates\":[],\"defaults\":\"count as leads grouped by status\",\"notes\":\"counts every lead whatever its status: promoted and disqualified leads are archived, and this is the one lead key that still counts them\"},{\"report\":\"meeting-conversion\",\"group_by\":[\"became_opportunity\",\"host_user_id\"],\"filters\":[\"became_opportunity\",\"host_user_id\"],\"aggregates\":[],\"defaults\":\"count as meetings grouped by became_opportunity\"},{\"report\":\"open-deals-per-company\",\"group_by\":[\"company_id\",\"currency\",\"owner_id\"],\"filters\":[\"currency\",\"owner_id\",\"pipeline_id\",\"project_id\"],\"aggregates\":[\"amount_minor\"],\"defaults\":\"count as open_deals grouped by company_id\"},{\"report\":\"pipeline-current\",\"group_by\":[\"currency\",\"owner_id\",\"partner_company_id\",\"pipeline_id\",\"stage_id\"],\"filters\":[\"company_id\",\"currency\",\"owner_id\",\"partner_company_id\",\"pipeline_id\",\"project_id\"],\"aggregates\":[\"amount_base_minor\",\"weighted_base_minor\"],\"defaults\":\"count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id\"},{\"report\":\"project-commitments\",\"group_by\":[\"company_id\",\"key\",\"name\",\"owner_id\",\"phase\",\"project_id\"],\"filters\":[\"company_id\",\"owner_id\",\"phase\"],\"aggregates\":[\"open_commitments\",\"overdue_commitments\"],\"defaults\":\"sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id\",\"notes\":\"rows are ordered most overdue first\"},{\"report\":\"projects-by-phase\",\"group_by\":[\"company_id\",\"owner_id\",\"phase\"],\"filters\":[\"company_id\",\"owner_id\",\"phase\"],\"aggregates\":[\"open_deal_value_minor\",\"won_deal_value_minor\"],\"defaults\":\"count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase\",\"notes\":\"deal values are in the installation's base currency; an open deal in another currency counts nothing until it closes\"},{\"report\":\"projects-gone-quiet\",\"group_by\":[\"company_id\",\"key\",\"last_activity_at\",\"name\",\"owner_id\",\"phase\",\"project_id\",\"quiet_since\"],\"filters\":[\"company_id\",\"days\",\"owner_id\",\"phase\"],\"aggregates\":[],\"defaults\":\"count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since\",\"notes\":\"`days` is a whole number of days of silence, default 30; quiet_since is when the silence began\"},{\"report\":\"stage-age\",\"group_by\":[\"owner_id\",\"pipeline_id\",\"stage_id\"],\"filters\":[\"owner_id\",\"pipeline_id\"],\"aggregates\":[\"days_in_stage\"],\"defaults\":\"count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id\"},{\"report\":\"win-loss\",\"group_by\":[\"company_id\",\"currency\",\"lost_reason\",\"owner_id\",\"period_month\",\"period_quarter\",\"period_year\",\"pipeline_id\",\"size_band\",\"source\",\"status\"],\"filters\":[\"company_id\",\"currency\",\"lost_reason\",\"owner_id\",\"period_month\",\"period_quarter\",\"period_year\",\"pipeline_id\",\"project_id\",\"size_band\",\"source\",\"status\"],\"aggregates\":[\"amount_base_minor\",\"amount_minor\",\"days_to_close\"],\"defaults\":\"count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency\"}],\"notes\":[\"A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.\"]}",
     "ui://margince/account-brief.html": "(not published here: a ui:// document is fetched from a web origin at boot, so its bytes are a property of the deployment rather than of this build)",
     "ui://margince/commitments.html": "(not published here: a ui:// document is fetched from a web origin at boot, so its bytes are a property of the deployment rather than of this build)",
     "ui://margince/geo-probe.html": "(not published here: a ui:// document is fetched from a web origin at boot, so its bytes are a property of the deployment rather than of this build)",

@@ -183,13 +183,13 @@ func TestTheVocabularyTellsACallerWhatAnIDFieldReferences(t *testing.T) {
 		byName[f.Name] = f
 	}
 	for name, want := range map[string]storekit.Reference{
-		"stage_id":        storekit.RefStage,
-		"pipeline_id":     storekit.RefPipeline,
-		"owner_id":        storekit.RefAppUser,
-		"owner_team_id":   storekit.RefTeam,
-		"organization_id": storekit.RefOrganization,
-		"project_id":      storekit.RefProject,
-		"tag":             storekit.RefTag,
+		"stage_id":      storekit.RefStage,
+		"pipeline_id":   storekit.RefPipeline,
+		"owner_id":      storekit.RefAppUser,
+		"owner_team_id": storekit.RefTeam,
+		"company_id":    storekit.RefCompany,
+		"project_id":    storekit.RefProject,
+		"tag":           storekit.RefTag,
 	} {
 		if got := byName[name].References; got != want {
 			t.Errorf("%s references %q, want %q", name, got, want)
@@ -380,13 +380,13 @@ func TestARetiredCustomColumnIsStillCompilableAndNoLongerOffered(t *testing.T) {
 
 // The same gap in the core half, which has no catalogue row behind it at all.
 //
-// organization.classification was retired by ADR-0079/A124 and has no
+// company.classification was retired by ADR-0079 and has no
 // `custom_field` row, so no client-side join could ever discover that it is
 // retired — the exclusion has to happen here or not at all.
 func TestARetiredCoreFieldIsStillCompilableAndNoLongerOffered(t *testing.T) {
 	const retired = "classification"
 	store := &Store{}
-	fields, _, err := store.FilterVocabulary(readerCtx(), "organization")
+	fields, _, err := store.FilterVocabulary(readerCtx(), "company")
 	if err != nil {
 		t.Fatalf("filterVocabulary: %v", err)
 	}
@@ -395,7 +395,7 @@ func TestARetiredCoreFieldIsStillCompilableAndNoLongerOffered(t *testing.T) {
 			t.Errorf("%s was retired by ADR-0079 and is still offered for a new clause", retired)
 		}
 	}
-	engine, _, err := store.SegmentEngine(context.Background(), "organization")
+	engine, _, err := store.SegmentEngine(context.Background(), "company")
 	if err != nil {
 		t.Fatalf("segmentEngine: %v", err)
 	}
@@ -534,7 +534,7 @@ func TestAResourceWithNoEngineIsNotAnEmptyVocabulary(t *testing.T) {
 func TestEveryResourceTheContractAdmitsHasAnEngine(t *testing.T) {
 	for _, admitted := range []crmcontracts.GetFilterVocabularyParamsResource{
 		crmcontracts.GetFilterVocabularyParamsResourcePerson,
-		crmcontracts.GetFilterVocabularyParamsResourceOrganization,
+		crmcontracts.GetFilterVocabularyParamsResourceCompany,
 		crmcontracts.GetFilterVocabularyParamsResourceDeal,
 		crmcontracts.GetFilterVocabularyParamsResourceLead,
 		crmcontracts.GetFilterVocabularyParamsResourceProject,

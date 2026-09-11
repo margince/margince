@@ -42,7 +42,7 @@ type onboardingCompanyReaderStub struct {
 	err     error
 }
 
-func (s onboardingCompanyReaderStub) GetCompany(context.Context) (people.Company, error) {
+func (s onboardingCompanyReaderStub) GetAnchorCompany(context.Context) (people.Company, error) {
 	return s.company, s.err
 }
 

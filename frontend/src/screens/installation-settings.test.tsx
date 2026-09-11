@@ -14,7 +14,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { InstallationSettingsCard } from "./installation-settings";
 
-// Settings → Installation: the organization's name, reporting zone and base
+// Settings → Installation: the company's name, reporting zone and base
 // currency. Every role READS them as three rows showing what is set; only
 // installation_settings:update opens the dialog that changes them, so the verb
 // is refused with a reason (never hidden) for everyone else.
@@ -141,7 +141,7 @@ describe("InstallationSettingsCard", () => {
     );
     expect(reason.id).not.toBe("");
     for (const fact of [
-      /edit organization name/i,
+      /edit company name/i,
       /edit reporting timezone/i,
       /edit base currency/i,
     ]) {
@@ -162,8 +162,8 @@ describe("InstallationSettingsCard", () => {
 
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit organization name/i);
-    const name = within(dialog).getByLabelText(/organization name/i);
+    const dialog = await openFrom(user, /edit company name/i);
+    const name = within(dialog).getByLabelText(/company name/i);
     await user.clear(name);
     await user.type(name, "Brandt Group");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
@@ -255,7 +255,7 @@ describe("InstallationSettingsCard", () => {
     expect(within(dialog).getByText(reason)).not.toBeNull();
     // The editor can still change everything else.
     const name = within(dialog).getByLabelText(
-      /organization name/i,
+      /company name/i,
     ) as HTMLInputElement;
     expect(name.disabled).toBe(false);
   });
@@ -272,8 +272,8 @@ describe("InstallationSettingsCard", () => {
 
     render(<InstallationSettingsCard />);
 
-    // "Installation", not "Organization": this surface sits under a nav group
-    // heading that already reads Organization, and a card repeating its own
+    // "Installation", not "Company": this surface sits under a nav group
+    // heading that already reads Company, and a card repeating its own
     // heading names nothing.
     const panel = (
       await screen.findByRole("heading", { name: /^installation$/i })
@@ -288,8 +288,8 @@ describe("InstallationSettingsCard", () => {
       expect(within(panel).getByText(value)).toBeTruthy();
     }
 
-    const dialog = await openFrom(user, /edit organization name/i);
-    expect(within(dialog).getByLabelText(/organization name/i)).toBeTruthy();
+    const dialog = await openFrom(user, /edit company name/i);
+    expect(within(dialog).getByLabelText(/company name/i)).toBeTruthy();
     expect(within(dialog).getByLabelText(/reporting timezone/i)).toBeTruthy();
     expect(within(dialog).getByLabelText(/base currency/i)).toBeTruthy();
 
@@ -305,7 +305,7 @@ describe("InstallationSettingsCard", () => {
     expect(saves).toHaveLength(1);
     expect(dialog.contains(saves[0])).toBe(true);
 
-    const name = within(dialog).getByLabelText(/organization name/i);
+    const name = within(dialog).getByLabelText(/company name/i);
     await user.clear(name);
     await user.type(name, "Brandt Group");
     const zone = within(dialog).getByLabelText(/reporting timezone/i);
@@ -338,9 +338,9 @@ describe("InstallationSettingsCard", () => {
 
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit organization name/i);
+    const dialog = await openFrom(user, /edit company name/i);
     for (const label of [
-      /organization name/i,
+      /company name/i,
       /reporting timezone/i,
       /base currency/i,
     ]) {
@@ -395,8 +395,8 @@ describe("InstallationSettingsCard", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit organization name/i);
-    const name = within(dialog).getByLabelText(/organization name/i);
+    const dialog = await openFrom(user, /edit company name/i);
+    const name = within(dialog).getByLabelText(/company name/i);
     await user.type(name, " GmbH");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 

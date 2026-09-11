@@ -17,14 +17,14 @@ import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { CompanyRail } from "./companyrail";
 
-type Organization360 = components["schemas"]["Organization360"];
+type Company360 = components["schemas"]["Company360"];
 
 // The rail's own honesty rules: a section the caller's role withheld says so
 // rather than drawing the empty state that would read as "there is none",
 // and a field the record does not carry still draws its row — an unfilled
 // field is a fact worth showing, not one this grid hides.
 
-const org = {
+const company = {
   // Absent reads as NOT writable, which is the fail-closed default a real
   // response never relies on: the server answers this per row.
   writable: true,
@@ -49,7 +49,7 @@ const org = {
 const emptyPage = { has_more: false, next_cursor: null };
 
 // No test in this file asserts on where a header link sends the reader —
-// that is organizations.test.tsx's own claim, since the callback only makes
+// that is companies.test.tsx's own claim, since the callback only makes
 // sense wired to the real tab strip it switches.
 const onTab = () => {};
 
@@ -57,10 +57,10 @@ const onTab = () => {};
 // fixture: a hand-typed 360 payload restates the generated schema by hand,
 // and the two would silently drift the moment the contract grows a field
 // this suite never needed.
-function view(overrides: Record<string, unknown> = {}): Organization360 {
+function view(overrides: Record<string, unknown> = {}): Company360 {
   return {
     as_of: "2026-06-01T09:00:00Z",
-    organization: org,
+    company: company,
     sections_omitted: [],
     people: { data: [], page: emptyPage },
     deals: {
@@ -71,7 +71,7 @@ function view(overrides: Record<string, unknown> = {}): Organization360 {
     },
     tags: [],
     ...overrides,
-  } as unknown as Organization360;
+  } as unknown as Company360;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -105,7 +105,7 @@ type RailProps = ComponentProps<typeof CompanyRail>;
 function renderRail(overrides: Partial<RailProps> = {}) {
   return render(
     <CompanyRail
-      orgId="o-1"
+      companyId="o-1"
       view={view()}
       loading={false}
       composerOpen={false}
@@ -135,7 +135,7 @@ function stub(
         }
       }
       if (pathname.endsWith("/finance-summary")) {
-        return jsonResponse({ organization_id: "o-1", state: "no_connection" });
+        return jsonResponse({ company_id: "o-1", state: "no_connection" });
       }
       if (pathname.endsWith("/users")) {
         return jsonResponse({
@@ -149,7 +149,7 @@ function stub(
       // about the controls it names.
       if (pathname.endsWith("/me")) {
         return jsonResponse(
-          meFixture({ allow: { organization: ["read", "update"] } }),
+          meFixture({ allow: { company: ["read", "update"] } }),
         );
       }
       if (pathname.endsWith("/signals")) {
@@ -188,7 +188,7 @@ describe("CompanyRail", () => {
   it("still draws every known row when the record carries no value for it", () => {
     stub();
     const bare = {
-      ...org,
+      ...company,
       legal_name: null,
       industry: null,
       size_band: null,
@@ -197,7 +197,7 @@ describe("CompanyRail", () => {
       domains: [],
       owner_id: null,
     };
-    renderRail({ view: view({ organization: bare }) });
+    renderRail({ view: view({ company: bare }) });
     // Every row's LABEL still draws: an absent field is a fact about the
     // record, not a reason to hide the row that would say so. Both Industry
     // (InlineText, which draws no label of its own) and Company size
@@ -223,18 +223,18 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
           },
         }),
-      "/organizations/o-1": async (request) => {
+      "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
-          return jsonResponse({ ...org, version: 2 });
+          return jsonResponse({ ...company, version: 2 });
         }
-        return jsonResponse(org);
+        return jsonResponse(company);
       },
     });
     renderRail();
@@ -266,7 +266,7 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
@@ -280,12 +280,12 @@ describe("CompanyRail", () => {
           ],
           page: emptyPage,
         }),
-      "/organizations/o-1": async (request) => {
+      "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
-          return jsonResponse({ ...org, version: 2 });
+          return jsonResponse({ ...company, version: 2 });
         }
-        return jsonResponse(org);
+        return jsonResponse(company);
       },
     });
     renderRail();
@@ -302,7 +302,7 @@ describe("CompanyRail", () => {
   it("surfaces the server's refusal on the owner control rather than swallowing it", async () => {
     // A stale roster entry (a user removed between page load and save) is the
     // one way an accepted-looking choice still fails: the wire FK on
-    // organization.owner_id (core 0019) rejects it as a reference the server
+    // company.owner_id (core 0019) rejects it as a reference the server
     // cannot resolve, and the rail's owner control must show that sentence
     // next to itself — the same generic refusal path InlineChoice already
     // proves in design-system/inlinechoice.test.tsx, exercised here through
@@ -312,7 +312,7 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
@@ -326,7 +326,7 @@ describe("CompanyRail", () => {
           ],
           page: emptyPage,
         }),
-      "/organizations/o-1": (request) => {
+      "/companies/o-1": (request) => {
         if (request.method === "PATCH") {
           return jsonResponse(
             {
@@ -339,7 +339,7 @@ describe("CompanyRail", () => {
             422,
           );
         }
-        return jsonResponse(org);
+        return jsonResponse(company);
       },
     });
     renderRail();
@@ -369,18 +369,18 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
           },
         }),
-      "/organizations/o-1": async (request) => {
+      "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
-          return jsonResponse({ ...org, version: 2 });
+          return jsonResponse({ ...company, version: 2 });
         }
-        return jsonResponse(org);
+        return jsonResponse(company);
       },
     });
     renderRail();
@@ -398,7 +398,7 @@ describe("CompanyRail", () => {
   it("renames the primary domain while preserving every other domain on the account", async () => {
     let patchBody: unknown;
     const threeDomains = {
-      ...org,
+      ...company,
       domains: [
         { domain: "brandt.example", is_primary: true, source: "manual" },
         { domain: "brandt.de", is_primary: false, source: "manual" },
@@ -414,13 +414,13 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
           },
         }),
-      "/organizations/o-1": async (request) => {
+      "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
           return jsonResponse({ ...threeDomains, version: 2 });
@@ -428,7 +428,7 @@ describe("CompanyRail", () => {
         return jsonResponse(threeDomains);
       },
     });
-    renderRail({ view: view({ organization: threeDomains }) });
+    renderRail({ view: view({ company: threeDomains }) });
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Domain" }),
     );
@@ -462,17 +462,17 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
           },
         }),
-      "/organizations/o-1": async (request) => {
+      "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           onSave(await request.json());
         }
-        return jsonResponse(org);
+        return jsonResponse(company);
       },
     });
     renderRail();
@@ -497,18 +497,18 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
           },
         }),
-      "/organizations/o-1": async (request) => {
+      "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
-          return jsonResponse({ ...org, version: 2 });
+          return jsonResponse({ ...company, version: 2 });
         }
-        return jsonResponse(org);
+        return jsonResponse(company);
       },
     });
     renderRail();
@@ -1088,7 +1088,7 @@ describe("CompanyRail", () => {
     stub();
     renderRail({
       view: view({
-        organization: { ...org, archived_at: "2026-06-02T00:00:00Z" },
+        company: { ...company, archived_at: "2026-06-02T00:00:00Z" },
       }),
     });
     // The values themselves still draw (this suite's own empty-badges test

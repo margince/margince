@@ -30,7 +30,7 @@ import (
 // string" — this validator is that surface for the object vocabulary.
 var renewalReminderObjects = []string{
 	string(datasource.EntityPerson),
-	string(datasource.EntityOrganization),
+	string(datasource.EntityCompany),
 	string(datasource.EntityDeal),
 	string(datasource.EntityLead),
 	string(datasource.EntityProject),

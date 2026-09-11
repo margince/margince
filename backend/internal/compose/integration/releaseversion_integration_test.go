@@ -110,7 +110,7 @@ func TestReleaseGuardStopsATornSetAndLetsAnUpgradeThrough(t *testing.T) {
 }
 
 // TestReleaseGuardIsInertOnAnUnbootstrappedInstallation: the arm the guard takes
-// before an installation has an organization at all.
+// before an installation has a company at all.
 //
 // It is the arm worth a test of its own precisely because nothing would report it
 // wrong. A first boot has no workspace to record against, so there is nothing to

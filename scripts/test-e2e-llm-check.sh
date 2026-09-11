@@ -210,7 +210,7 @@ prompt: |
 must_call:
   - list_records|search_records
 must_call_with:
-  - list_records.record_type=organization|search_records.record_type=organization
+  - list_records.record_type=company|search_records.record_type=company
 YAML
 
 # anyof_is <name> <expected-exit> <substring the output must carry> <<<transcript
@@ -234,19 +234,19 @@ anyof_is() {
 }
 
 anyof_is "the first door satisfies the group" 0 "" <<'JSONL'
-{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{"record_type":"organization"}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{"record_type":"company"}}]}}
 {"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
 JSONL
 
 anyof_is "the second door satisfies the group" 0 "" <<'JSONL'
-{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__search_records","input":{"record_type":"organization"}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__search_records","input":{"record_type":"company"}}]}}
 {"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
 JSONL
 
 # The argument is still the assertion. A door reached with the wrong value is the
 # failure an any-of must not excuse — otherwise widening the tool half would
 # quietly take the argument half with it.
-anyof_is "a door reached with the wrong value still fails" 1 "record_type=organization" <<'JSONL'
+anyof_is "a door reached with the wrong value still fails" 1 "record_type=company" <<'JSONL'
 {"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__search_records","input":{"record_type":"person"}}]}}
 {"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
 JSONL
@@ -750,13 +750,13 @@ judges case10-finish-the-import.yaml case10 reports-the-skips-in-german 0 "!forb
 judges case10-finish-the-import.yaml case10 german-report-that-skipped-a-row 1 "never said anything matching" "!forbids"
 # And criterion 1 had nothing that could fail: the two counts read the same
 # before the commit and after it, so a run that stopped at the dry run and
-# reported "4 organizations, 0 skipped" passed every assertion this case had.
+# reported "4 companies, 0 skipped" passed every assertion this case had.
 # The commit is now required to be reported as done, and the table that only
 # says what the import WOULD do reaches none of it.
 judges case10-finish-the-import.yaml case10 stops-at-the-dry-run 1 "never said anything matching" "!forbids"
 # And the mapping the run had to invent. `name,city,size,country` places nothing
 # on its own, so every run chooses where those columns go — and a run that chose
-# `size`→description and reported "4 organizations created, 0 skipped" satisfied
+# `size`→description and reported "4 companies created, 0 skipped" satisfied
 # every other assertion this case had. This fixture is that run: the counts are
 # right, the commit is reported, and what the spreadsheet actually became is
 # never said.

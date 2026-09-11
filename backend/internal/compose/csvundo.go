@@ -49,16 +49,16 @@ func (w *csvWriters) Reverse(
 			return fmt.Errorf("import undo: reversing lead %s: %w", nativeID, err)
 		}
 		return nil
-	case migration.ObjectOrganization:
-		org, err := w.people.GetOrganization(ctx, ids.From[ids.OrganizationKind](nativeID), storekit.IncludeArchived)
+	case migration.ObjectCompany:
+		company, err := w.people.GetCompany(ctx, ids.From[ids.CompanyKind](nativeID), storekit.IncludeArchived)
 		if err != nil {
-			return fmt.Errorf("import undo: reading organization %s: %w", nativeID, err)
+			return fmt.Errorf("import undo: reading company %s: %w", nativeID, err)
 		}
-		if org.ArchivedAt != nil {
+		if company.ArchivedAt != nil {
 			return nil
 		}
-		if _, err := w.people.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](nativeID), nil, untouched); err != nil {
-			return fmt.Errorf("import undo: reversing organization %s: %w", nativeID, err)
+		if _, err := w.people.ArchiveCompany(ctx, ids.From[ids.CompanyKind](nativeID), nil, untouched); err != nil {
+			return fmt.Errorf("import undo: reversing company %s: %w", nativeID, err)
 		}
 		return nil
 	case migration.ObjectPerson:

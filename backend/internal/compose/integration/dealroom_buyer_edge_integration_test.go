@@ -223,7 +223,7 @@ func TestEveryDeadCredentialReadsAlikeAndARoomSessionHoldsNoCRMAuthority(t *test
 	}
 
 	// The room session is not a passport: every seat route refuses it.
-	for _, path := range []string{"/v1/deals", "/v1/people", "/v1/organizations", "/v1/deal-rooms", "/v1/me"} {
+	for _, path := range []string{"/v1/deals", "/v1/people", "/v1/companies", "/v1/deal-rooms", "/v1/me"} {
 		if status := publicCall(t, e, "GET", path, nil, bearer(token), nil); status != http.StatusUnauthorized {
 			t.Fatalf("GET %s with a room session = %d, want 401", path, status)
 		}

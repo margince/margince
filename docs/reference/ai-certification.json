@@ -214,8 +214,8 @@
   "sites": [
     {
       "task": "account_scan",
-      "site": "org_scan",
-      "key": "account_scan/org_scan",
+      "site": "company_scan",
+      "key": "account_scan/company_scan",
       "scope": "full_invocation",
       "missing_context_scopes": [
         "identity"
@@ -452,7 +452,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "24 scenarios it scored have changed since (the case and the prompt this build sends): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
+          "stale_reason": "24 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
           "stale_cause": {
             "case_changed": [
               "a_description_is_not_a_name",
@@ -502,6 +502,15 @@
               "the_calendar_event_is_the_anchor",
               "the_record_is_found_before_it_is_changed",
               "the_stage_id_comes_from_the_pipeline",
+              "who_knows_needs_the_person"
+            ],
+            "grader_changed": [
+              "a_structured_question_is_not_a_text_search",
+              "a_warm_path_is_not_a_search",
+              "ambiguity_ends_the_turn",
+              "catchup_over_raw_reads",
+              "enrichment_is_not_search",
+              "meeting_prep_is_not_a_catchup",
               "who_knows_needs_the_person"
             ]
           }
@@ -550,7 +559,7 @@
             "invalid": 11,
             "abstained": 0
           },
-          "stale_reason": "24 scenarios it scored have changed since (the case and the prompt this build sends): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
+          "stale_reason": "24 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
           "stale_cause": {
             "case_changed": [
               "a_description_is_not_a_name",
@@ -600,6 +609,15 @@
               "the_calendar_event_is_the_anchor",
               "the_record_is_found_before_it_is_changed",
               "the_stage_id_comes_from_the_pipeline",
+              "who_knows_needs_the_person"
+            ],
+            "grader_changed": [
+              "a_structured_question_is_not_a_text_search",
+              "a_warm_path_is_not_a_search",
+              "ambiguity_ends_the_turn",
+              "catchup_over_raw_reads",
+              "enrichment_is_not_search",
+              "meeting_prep_is_not_a_catchup",
               "who_knows_needs_the_person"
             ]
           }
@@ -1006,7 +1024,7 @@
         {
           "name": "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
           "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/organization_sender_01.yaml"
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_sender_01.yaml"
         },
         {
           "name": "a_department_display_name_is_not_somebodys_name",
@@ -1041,7 +1059,7 @@
         {
           "name": "a_trade_offices_city_mailbox_names_a_place_not_a_person",
           "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/organization_city_mailbox_01.yaml"
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_city_mailbox_01.yaml"
         },
         {
           "name": "a_two_sided_thread_is_a_conversation",
@@ -3092,12 +3110,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case and the prompt this build sends changed under scenario contact_fields_from_a_mail_signature since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and the grader changed under scenario contact_fields_from_a_mail_signature since the record scored it",
           "stale_cause": {
             "case_changed": [
               "contact_fields_from_a_mail_signature"
             ],
             "prompt_changed": [
+              "contact_fields_from_a_mail_signature"
+            ],
+            "grader_changed": [
               "contact_fields_from_a_mail_signature"
             ]
           }
@@ -3146,12 +3167,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case and the prompt this build sends changed under scenario contact_fields_from_a_mail_signature since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and the grader changed under scenario contact_fields_from_a_mail_signature since the record scored it",
           "stale_cause": {
             "case_changed": [
               "contact_fields_from_a_mail_signature"
             ],
             "prompt_changed": [
+              "contact_fields_from_a_mail_signature"
+            ],
+            "grader_changed": [
               "contact_fields_from_a_mail_signature"
             ]
           }
@@ -3199,9 +3223,12 @@
             "invalid": 0,
             "abstained": 1
           },
-          "stale_reason": "the case changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
+          "stale_reason": "the case and the prompt this build sends changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
           "stale_cause": {
             "case_changed": [
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "prompt_changed": [
               "growth_fit_reads_their_facts_against_our_offering"
             ]
           }
@@ -3227,9 +3254,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
+          "stale_reason": "the case and the prompt this build sends changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it",
           "stale_cause": {
             "case_changed": [
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "prompt_changed": [
               "growth_fit_reads_their_facts_against_our_offering"
             ]
           }
@@ -4231,7 +4261,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_person_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_person_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
           "stale_cause": {
             "case_changed": [
               "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
@@ -4239,6 +4269,18 @@
               "a_one_person_consultancy_is_still_a_company",
               "a_parked_domain_identifies_nobody",
               "a_personal_domain_is_not_a_company"
+            ],
+            "prompt_changed": [
+              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+              "a_mailbox_vendor_is_not_the_senders_employer",
+              "a_one_person_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody",
+              "a_personal_domain_is_not_a_company"
+            ],
+            "grader_changed": [
+              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+              "a_one_person_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody"
             ]
           }
         },
@@ -4263,7 +4305,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_person_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_person_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
           "stale_cause": {
             "case_changed": [
               "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
@@ -4271,6 +4313,18 @@
               "a_one_person_consultancy_is_still_a_company",
               "a_parked_domain_identifies_nobody",
               "a_personal_domain_is_not_a_company"
+            ],
+            "prompt_changed": [
+              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+              "a_mailbox_vendor_is_not_the_senders_employer",
+              "a_one_person_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody",
+              "a_personal_domain_is_not_a_company"
+            ],
+            "grader_changed": [
+              "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+              "a_one_person_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody"
             ]
           }
         }
@@ -4335,84 +4389,8 @@
     },
     {
       "task": "summarize",
-      "site": "meeting_plan",
-      "key": "summarize/meeting_plan",
-      "scope": "full_invocation",
-      "missing_context_scopes": [
-        "identity"
-      ],
-      "best_state": "stale",
-      "recommended": null,
-      "scenarios": [
-        {
-          "name": "meeting_plan_reads_the_thread_that_matters",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/summarize/meeting_plan_reads_the_thread_that_matters_01.yaml"
-        }
-      ],
-      "records": [
-        {
-          "binding": {
-            "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 1889,
-          "latency_p95_ms": 3181,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "the case changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
-            ]
-          }
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 1318,
-          "latency_p95_ms": 2158,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "the case changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "meeting_plan_reads_the_thread_that_matters"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "task": "summarize",
-      "site": "org_ask",
-      "key": "summarize/org_ask",
+      "site": "company_ask",
+      "key": "summarize/company_ask",
       "scope": "full_invocation",
       "missing_context_scopes": [
         "identity"
@@ -4453,9 +4431,13 @@
             "invalid": 0,
             "abstained": 1
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "case_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
+              "ask_whats_open_answers_the_pipeline_not_the_history"
+            ],
+            "prompt_changed": [
               "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
@@ -4482,9 +4464,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "case_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
+              "ask_whats_open_answers_the_pipeline_not_the_history"
+            ],
+            "prompt_changed": [
               "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
@@ -4494,8 +4480,8 @@
     },
     {
       "task": "summarize",
-      "site": "org_brief",
-      "key": "summarize/org_brief",
+      "site": "company_brief",
+      "key": "summarize/company_brief",
       "scope": "full_invocation",
       "missing_context_scopes": [
         "identity"
@@ -4585,8 +4571,8 @@
     },
     {
       "task": "summarize",
-      "site": "org_dossier",
-      "key": "summarize/org_dossier",
+      "site": "company_dossier",
+      "key": "summarize/company_dossier",
       "scope": "full_invocation",
       "missing_context_scopes": [
         "identity"
@@ -4622,9 +4608,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
+          "stale_reason": "the case and the prompt this build sends changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
           "stale_cause": {
             "case_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ],
+            "prompt_changed": [
               "dossier_describes_the_company_not_the_relationship"
             ]
           }
@@ -4650,10 +4639,89 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
+          "stale_reason": "the case and the prompt this build sends changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
           "stale_cause": {
             "case_changed": [
               "dossier_describes_the_company_not_the_relationship"
+            ],
+            "prompt_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task": "summarize",
+      "site": "meeting_plan",
+      "key": "summarize/meeting_plan",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "identity"
+      ],
+      "best_state": "stale",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "meeting_plan_reads_the_thread_that_matters",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/meeting_plan_reads_the_thread_that_matters_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1889,
+          "latency_p95_ms": 3181,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "the case changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "meeting_plan_reads_the_thread_that_matters"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1318,
+          "latency_p95_ms": 2158,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "the case changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "meeting_plan_reads_the_thread_that_matters"
             ]
           }
         }

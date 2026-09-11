@@ -51,7 +51,7 @@ const ACTOR_ICON: Record<AuditLogEntry["actor_type"], LucideIcon> = {
   connector: Plug,
   // A person, not a machine: a buyer decided this. The icon differs from a
   // member's so a reader can tell at a glance that the actor sits outside the
-  // organization and will not be found in the member directory.
+  // company and will not be found in the member directory.
   buyer: UserRoundCheck,
 };
 
@@ -219,8 +219,8 @@ export function AuditEntryLine({
       <ActorTag entry={entry} meUserId={meUserId} />
       <Badge tone="accent">{humanizeToken(entry.action)}</Badge>
       <span className="audit-entity">{humanizeToken(entry.entity_type)}</span>
-      {/* An audit entry is a fact in the organization's book, like the change
-          history beside it, so it reads on the organization's clock. On the
+      {/* An audit entry is a fact in the company's book, like the change
+          history beside it, so it reads on the company's clock. On the
           viewer's clock an entry at 18:00Z is 21 August to a reader in Berlin
           and 22 August to one in Ho Chi Minh City: two investigators quoting
           the same line quote different days, which is the failure a shared

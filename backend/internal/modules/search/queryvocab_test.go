@@ -231,7 +231,7 @@ func TestACustomFieldEntersAndLeavesTheVocabularyWithTheCatalog(t *testing.T) {
 func TestARecordTypeTheCallerCannotReadIsAbsentFromTheirVocabulary(t *testing.T) {
 	resolver := NewVocabularyResolver()
 
-	wide, err := resolver.Resolve(readerFor("deal", "organization"))
+	wide, err := resolver.Resolve(readerFor("deal", "company"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +239,7 @@ func TestARecordTypeTheCallerCannotReadIsAbsentFromTheirVocabulary(t *testing.T)
 		t.Fatal("a readable record type is missing from the vocabulary")
 	}
 
-	narrow, err := resolver.Resolve(readerFor("organization"))
+	narrow, err := resolver.Resolve(readerFor("company"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,13 +257,13 @@ func TestARecordTypeTheCallerCannotReadIsAbsentFromTheirVocabulary(t *testing.T)
 func TestAHopIntoADeniedRecordTypeIsNotOffered(t *testing.T) {
 	resolver := NewVocabularyResolver()
 
-	both, err := resolver.Resolve(readerFor("deal", "organization"))
+	both, err := resolver.Resolve(readerFor("deal", "company"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	deal, _ := both.Target("deal")
-	if _, ok := deal.Relation("organization"); !ok {
-		t.Fatal("deal declares organization_id but the hop is not offered to a caller who reads both")
+	if _, ok := deal.Relation("company"); !ok {
+		t.Fatal("deal declares company_id but the hop is not offered to a caller who reads both")
 	}
 
 	dealOnly, err := resolver.Resolve(readerFor("deal"))
@@ -271,25 +271,25 @@ func TestAHopIntoADeniedRecordTypeIsNotOffered(t *testing.T) {
 		t.Fatal(err)
 	}
 	deal, _ = dealOnly.Target("deal")
-	if _, ok := deal.Relation("organization"); ok {
+	if _, ok := deal.Relation("company"); ok {
 		t.Error("a hop into a record type the caller cannot read is offered")
 	}
 }
 
-// The inverse edge is derived too: organization never declares a deal
+// The inverse edge is derived too: company never declares a deal
 // reference, but deal declares one to it.
 func TestTheInverseOfADeclaredReferenceIsTraversable(t *testing.T) {
-	vocab, err := NewVocabularyResolver().Resolve(readerFor("deal", "organization"))
+	vocab, err := NewVocabularyResolver().Resolve(readerFor("deal", "company"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	org, _ := vocab.Target("organization")
-	relation, ok := org.Relation("deals")
+	company, _ := vocab.Target("company")
+	relation, ok := company.Relation("deals")
 	if !ok {
-		t.Fatal("organization has no inverse hop for deal.organization_id")
+		t.Fatal("company has no inverse hop for deal.company_id")
 	}
-	if relation.Target != "deal" || relation.Via != "deal.organization_id" {
-		t.Errorf("inverse hop resolved to %+v; want a deal hop via deal.organization_id", relation)
+	if relation.Target != "deal" || relation.Via != "deal.company_id" {
+		t.Errorf("inverse hop resolved to %+v; want a deal hop via deal.company_id", relation)
 	}
 }
 
@@ -372,16 +372,16 @@ func TestCollectionsAndBlobsAreNotAskable(t *testing.T) {
 // A nested contract object contributes its leaves under a dotted path, and
 // the object itself contributes the place a radius would be measured from.
 func TestANestedAddressContributesLeavesAndAPlace(t *testing.T) {
-	vocab, err := NewVocabularyResolver().Resolve(readerFor("organization"), "organization")
+	vocab, err := NewVocabularyResolver().Resolve(readerFor("company"), "company")
 	if err != nil {
 		t.Fatal(err)
 	}
-	org, _ := vocab.Target("organization")
-	city, ok := org.Field("address.city")
+	company, _ := vocab.Target("company")
+	city, ok := company.Field("address.city")
 	if !ok || city.Kind != KindText {
 		t.Fatalf("address.city resolved to %+v, %v; want an exact text predicate", city, ok)
 	}
-	place, ok := org.Field("address")
+	place, ok := company.Field("address")
 	if !ok || place.Kind != KindGeo || !slices.Contains(place.Ops, OpWithinRadius) {
 		t.Fatalf("address resolved to %+v, %v; want a place admitting %q", place, ok, OpWithinRadius)
 	}

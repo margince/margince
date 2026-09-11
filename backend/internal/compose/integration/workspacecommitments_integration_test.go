@@ -28,9 +28,9 @@ import (
 
 var sweepClock = time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC)
 
-func workspacePromises(t *testing.T, e *integration.Env, limit int) ([]people.OrgCommitment, bool) {
+func workspacePromises(t *testing.T, e *integration.Env, limit int) ([]people.CompanyCommitment, bool) {
 	t.Helper()
-	var rows []people.OrgCommitment
+	var rows []people.CompanyCommitment
 	var more bool
 	store := people.NewStore(e.DB())
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

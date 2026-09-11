@@ -154,7 +154,7 @@ func TestALimitedMessagesSubjectIsWithheldFromTheBatchToo(t *testing.T) {
 
 // The other shapes, each over the store that owns it.
 //
-// The organization arm carries the discriminating proof — capture-private is
+// The company arm carries the discriminating proof — capture-private is
 // a posture this reader demonstrably cannot see through, and neutering the
 // scope clause fails it. The deal arm asserts something weaker on purpose:
 // that the batch and the single get AGREE. A deal owned by another team's rep
@@ -169,12 +169,12 @@ func TestEveryShapesLabelsAgreeWithTheirOwnSingleRead(t *testing.T) {
 	owner := integration.OwnerConn(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
-	t.Run("organization", func(t *testing.T) {
-		mine := e.SeedOrg(t, "Weber GmbH", nil)
-		theirs := e.SeedOrg(t, "Zeta Holding", &e.Rep3)
-		e.MakeCapturePrivate(t, "organization", theirs, e.Rep3)
+	t.Run("company", func(t *testing.T) {
+		mine := e.SeedCompany(t, "Weber GmbH", nil)
+		theirs := e.SeedCompany(t, "Zeta Holding", &e.Rep3)
+		e.MakeCapturePrivate(t, "company", theirs, e.Rep3)
 
-		labels, err := names.Labels(reader, "organization", []ids.UUID{mine, theirs})
+		labels, err := names.Labels(reader, "company", []ids.UUID{mine, theirs})
 		if err != nil {
 			t.Fatalf("naming companies: %v", err)
 		}
@@ -252,10 +252,10 @@ func TestEveryShapesLabelsAgreeWithTheirOwnSingleRead(t *testing.T) {
 	})
 
 	t.Run("project", func(t *testing.T) {
-		org := e.SeedOrg(t, "Weber Projekte", nil)
+		company := e.SeedCompany(t, "Weber Projekte", nil)
 		project := integration.SeedIDRow(t, owner,
-			`INSERT INTO project (id, name, organization_id, source, captured_by)
-			 VALUES ($1, 'Depot rollout', '`+org.String()+`', 'manual', 'human:x')`)
+			`INSERT INTO project (id, name, company_id, source, captured_by)
+			 VALUES ($1, 'Depot rollout', '`+company.String()+`', 'manual', 'human:x')`)
 
 		projectReader := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 			RoleKeys: []string{"rep"},
@@ -294,7 +294,7 @@ func TestATypeWithNothingToNameAsksNothing(t *testing.T) {
 	names := namesOver(e)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
-	for _, kind := range []string{"person", "organization", "deal", "activity", "lead", "project"} {
+	for _, kind := range []string{"person", "company", "deal", "activity", "lead", "project"} {
 		labels, err := names.Labels(reader, kind, nil)
 		if err != nil {
 			t.Fatalf("naming an empty set of %s: %v", kind, err)

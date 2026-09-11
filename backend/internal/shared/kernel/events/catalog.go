@@ -87,10 +87,10 @@ var catalog = map[string]struct {
 	// opted into it.
 	"retention.restricted": {personStreamEntity, 1},
 
-	"organization.created":  {organizationStreamEntity, 1},
-	"organization.updated":  {organizationStreamEntity, 1},
-	"organization.archived": {organizationStreamEntity, 1},
-	"organization.merged":   {organizationStreamEntity, 1},
+	"company.created":  {companyStreamEntity, 1},
+	"company.updated":  {companyStreamEntity, 1},
+	"company.archived": {companyStreamEntity, 1},
+	"company.merged":   {companyStreamEntity, 1},
 
 	"deal.created":       {dealStreamEntity, 1},
 	"pipeline.created":   {dealStreamEntity, 1},

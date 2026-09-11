@@ -27,7 +27,7 @@ import (
 // absent by design: an agreement is born a draft and leaves that state only
 // through an asserted transition.
 type CreateContractInput struct {
-	OrganizationID   ids.OrganizationID
+	CompanyID        ids.CompanyID
 	DealID           *ids.DealID
 	ProjectID        *ids.ProjectID
 	ContractNumber   *string
@@ -67,24 +67,24 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	// Naming the counterparty is a read of it, and naming a deal is a read of
 	// that deal — both are client-supplied references to row-scoped records, so
 	// a caller may not hang an agreement off something it cannot see.
-	if err := auth.EnsureLinkTarget(ctx, tx, organizationTable, in.OrganizationID.UUID); err != nil {
+	if err := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	if err := ensureLinksVisible(ctx, tx, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
 		return crmcontracts.Contract{}, err
 	}
-	if err := ensureLinksShareOrganization(ctx, tx, in.OrganizationID.UUID,
+	if err := ensureLinksShareCompany(ctx, tx, in.CompanyID.UUID,
 		dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 
 	id := ids.New[ids.ContractKind]()
 	_, err := tx.Exec(ctx,
-		`INSERT INTO contract (id, organization_id, deal_id, project_id, contract_number, title,
+		`INSERT INTO contract (id, company_id, deal_id, project_id, contract_number, title,
 		                       value_minor, currency, value_basis, starts_on, ends_on, renewal_on,
 		                       auto_renew, notice_period_days, signed_on, source, captured_by)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
-		id, in.OrganizationID, in.DealID, in.ProjectID, in.ContractNumber, in.Title,
+		id, in.CompanyID, in.DealID, in.ProjectID, in.ContractNumber, in.Title,
 		in.ValueMinor, in.Currency, in.ValueBasis, in.StartsOn, in.EndsOn, in.RenewalOn,
 		in.AutoRenew, in.NoticePeriodDays, in.SignedOn, in.Source, by)
 	if err != nil {
@@ -98,13 +98,13 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	}
 
 	auditID, err := storekit.Audit(ctx, tx, "create", contractObject, id.UUID, nil,
-		map[string]any{"title": in.Title, "organization_id": in.OrganizationID.UUID})
+		map[string]any{"title": in.Title, "company_id": in.CompanyID.UUID})
 	if err != nil {
 		return crmcontracts.Contract{}, fmt.Errorf("audit contract create: %w", err)
 	}
 	created := crmcontracts.PublicEventContractCreated{
 		Title:          in.Title,
-		OrganizationId: openapi_types.UUID(in.OrganizationID.UUID),
+		CompanyId:      openapi_types.UUID(in.CompanyID.UUID),
 		Status:         StatusDraft,
 		ValueBasis:     in.ValueBasis,
 		ContractNumber: in.ContractNumber,
@@ -137,7 +137,7 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		}
 		// Naming a deal or a project is a read of it, on a PATCH exactly as on a
 		// create. Without this a caller re-points a contract at a record it
-		// cannot see — and because the organization arm of the visibility
+		// cannot see — and because the company arm of the visibility
 		// predicate enforces capture privacy while the deal arm does not,
 		// moving the anchor would strip that boundary from the row for good.
 		if err := ensureLinksVisible(ctx, tx, uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
@@ -147,7 +147,7 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		if err != nil {
 			return err
 		}
-		if err := ensureLinksShareOrganization(ctx, tx, anchor,
+		if err := ensureLinksShareCompany(ctx, tx, anchor,
 			uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
 			return err
 		}
@@ -240,7 +240,7 @@ func (s *Store) ArchiveContract(ctx context.Context, id ids.ContractID) error {
 			return err
 		}
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-			crmcontracts.PublicEventContractArchived{OrganizationId: openapi_types.UUID(anchor)}); err != nil {
+			crmcontracts.PublicEventContractArchived{CompanyId: openapi_types.UUID(anchor)}); err != nil {
 			return fmt.Errorf("emit contract.archived: %w", err)
 		}
 		return nil
@@ -370,15 +370,15 @@ func ensureLinksVisible(ctx context.Context, tx pgx.Tx, refs ...linkRef) error {
 	return nil
 }
 
-// CrossOrganizationLinkError reports a deal or project that belongs to a
+// CrossCompanyLinkError reports a deal or project that belongs to a
 // different company than the contract does.
-type CrossOrganizationLinkError struct{ Field string }
+type CrossCompanyLinkError struct{ Field string }
 
-func (e *CrossOrganizationLinkError) Error() string {
+func (e *CrossCompanyLinkError) Error() string {
 	return "the " + strings.TrimSuffix(e.Field, "_id") + " belongs to a different company than this contract"
 }
 
-// ensureLinksShareOrganization refuses a contract whose deal or project belongs
+// ensureLinksShareCompany refuses a contract whose deal or project belongs
 // to another company.
 //
 // This is a VISIBILITY rule as much as a data-integrity one. The predicate that
@@ -387,36 +387,36 @@ func (e *CrossOrganizationLinkError) Error() string {
 // A's agreement to everyone who can see B — including through the events it
 // emits. Two independent "can you see it" checks cannot catch that; only asking
 // whether the two name the same company can.
-func ensureLinksShareOrganization(ctx context.Context, tx pgx.Tx, orgID ids.UUID, refs ...linkRef) error {
+func ensureLinksShareCompany(ctx context.Context, tx pgx.Tx, companyID ids.UUID, refs ...linkRef) error {
 	for _, ref := range refs {
 		if ref.id == nil {
 			continue
 		}
-		// Nullable, because deal.organization_id is — a deal may be worked
+		// Nullable, because deal.company_id is — a deal may be worked
 		// before anyone knows whose it is, and the create form leaves Company
-		// optional. project.organization_id is NOT NULL, so only the deal arm
+		// optional. project.company_id is NOT NULL, so only the deal arm
 		// ever reads absent.
-		var linkedOrg *ids.UUID
+		var linkedCompany *ids.UUID
 		//nolint:gosec // the table name is a package literal from dealRef/projectRef, never client input
-		query := "SELECT organization_id FROM " + ref.table + " WHERE id = $1"
-		err := tx.QueryRow(ctx, query, *ref.id).Scan(&linkedOrg)
+		query := "SELECT company_id FROM " + ref.table + " WHERE id = $1"
+		err := tx.QueryRow(ctx, query, *ref.id).Scan(&linkedCompany)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// EnsureLinkTarget already ran, so an absent row here means it was
 			// archived or deleted in between; answer as it does.
 			return apperrors.ErrNotFound
 		}
 		if err != nil {
-			return fmt.Errorf("read %s organization: %w", ref.table, err)
+			return fmt.Errorf("read %s company: %w", ref.table, err)
 		}
 		// A deal naming no company is not a company this contract disagrees
 		// with. The leak this check exists against is A's agreement reaching
 		// everyone who can see B's deal; with no B there is nobody it reaches
 		// that the deal itself does not already admit.
-		if linkedOrg == nil {
+		if linkedCompany == nil {
 			continue
 		}
-		if *linkedOrg != orgID {
-			return &CrossOrganizationLinkError{Field: ref.table + "_id"}
+		if *linkedCompany != companyID {
+			return &CrossCompanyLinkError{Field: ref.table + "_id"}
 		}
 	}
 	return nil

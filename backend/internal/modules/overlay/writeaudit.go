@@ -109,8 +109,8 @@ func emitWriteBackArchived(ctx context.Context, tx pgx.Tx, auditID ids.UUID, ref
 	switch ref.Type {
 	case datasource.EntityPerson:
 		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventPersonArchived{})
-	case datasource.EntityOrganization:
-		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventOrganizationArchived{})
+	case datasource.EntityCompany:
+		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventCompanyArchived{})
 	case datasource.EntityDeal:
 		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventDealArchived{})
 	default:
@@ -126,8 +126,8 @@ func emitWriteBackUpdated(ctx context.Context, tx pgx.Tx, auditID ids.UUID,
 	switch ref.Type {
 	case datasource.EntityPerson:
 		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventPersonUpdated{ChangedFields: after})
-	case datasource.EntityOrganization:
-		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventOrganizationUpdated{ChangedFields: after})
+	case datasource.EntityCompany:
+		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventCompanyUpdated{ChangedFields: after})
 	case datasource.EntityDeal:
 		return storekit.EmitEvent(ctx, tx, auditID, ref.ID, crmcontracts.PublicEventDealUpdated{ChangedFields: after})
 	case datasource.EntityLead:
@@ -144,7 +144,7 @@ func emitWriteBackUpdated(ctx context.Context, tx pgx.Tx, auditID ids.UUID,
 }
 
 // activityChangedFields projects an activity patch onto activity.updated's
-// BOUNDED delta. Unlike person/organization/deal/lead.updated — whose
+// BOUNDED delta. Unlike person/company/deal/lead.updated — whose
 // changed_fields is a genuinely open map — this event's key set is fixed and
 // typed, so the patch has to be narrowed rather than passed through.
 //

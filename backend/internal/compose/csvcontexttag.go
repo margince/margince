@@ -62,7 +62,7 @@ func (w *csvWriters) fileUnderContextTag(ctx context.Context, tx pgx.Tx, id ids.
 // taggableObjectOf maps an import object onto the tag surface's own name for
 // it, and says when there is none.
 func taggableObjectOf(object string) (string, bool) {
-	// The importer's objects are `organization`, `person` and `lead`, and the
+	// The importer's objects are `company`, `person` and `lead`, and the
 	// taggable set is derived from the canonical record vocabulary, which holds
 	// all three under those same names. Asked rather than restated, so an
 	// object added to either side does not need this switch remembered.

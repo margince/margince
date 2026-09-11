@@ -47,7 +47,7 @@ func TestARearmableReadingDedupesItsJobOnlyWhileOneIsStillActive(t *testing.T) {
 func TestAScanJobWithoutAWorkspaceIsAFault(t *testing.T) {
 	w := &accountScanWorker{log: slog.Default()}
 	err := w.Work(context.Background(), &river.Job[AccountScanArgs]{Args: AccountScanArgs{
-		OrganizationID: ids.NewV7(), ScanID: ids.NewV7(), ViewerID: ids.NewV7(),
+		CompanyID: ids.NewV7(), ScanID: ids.NewV7(), ViewerID: ids.NewV7(),
 	}})
 	if err == nil {
 		t.Fatal("a scan job with no workspace was worked")

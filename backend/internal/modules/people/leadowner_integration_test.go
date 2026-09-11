@@ -7,7 +7,7 @@ package people
 
 // A lead's owner is exactly what the create names — no actor fallback. The
 // funnel's queue state is real: an omitted owner stays NULL for routing or a
-// claim, and a named owner is stored as named. Persons/orgs/deals keep the
+// claim, and a named owner is stored as named. Persons/companies/deals keep the
 // storekit.OwnerOrActor default; this pair pins the lead exception so a
 // refactor "unifying" the creates cannot quietly bring the fallback back.
 

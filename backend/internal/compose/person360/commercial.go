@@ -28,7 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// committeeCap bounds who else is shown. Past a handful this is an org chart,
+// committeeCap bounds who else is shown. Past a handful this is a company chart,
 // and the question the card answers is "who else do I have to convince".
 const committeeCap = 8
 

@@ -30,7 +30,7 @@ consequences are load-bearing:
   other is `screens/connected-agents.tsx` reading
   `/.well-known/oauth-protected-resource`, which is **not a `/v1` route at all**
   and so was never the typed client's to carry.
-- **No tenant selector on the wire.** One installation serves one organization
+- **No tenant selector on the wire.** One installation serves one company
   (A107/ADR-0061) and the server resolves it itself. The client sends the
   session cookie and nothing else — `auth.test.tsx` and `preferences.test.tsx`
   assert the absence of a workspace header, so re-introducing one fails the
@@ -86,7 +86,7 @@ it, so a `?utm=…` never leaks into a screen name.
   only when it is a state machine rather than a page, and exactly one has:
   `screens/onboarding-conversation/`, where the conversation machine, its acts,
   its scenes and its restore logic each need their own file. Everything else —
-  including surfaces as large as `organizations.tsx` and `deals.tsx` — stays a
+  including surfaces as large as `companies.tsx` and `deals.tsx` — stays a
   file with co-located `*.test.tsx` and `*.stories.tsx`. A route with no screen
   behind it renders the honest pending state (`App.tsx`'s `PendingScreen`),
   never a blank page.

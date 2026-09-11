@@ -54,7 +54,7 @@ func TestMicrosoftSignInConfigEnabled(t *testing.T) {
 // stored app's pin (TestAStoredMicrosoftAppSignsInOnItsOwnDirectory), and the
 // environment's pair then cannot sign anyone in on its own.
 func TestMicrosoftSignInRefusesAMultiTenantAuthority(t *testing.T) {
-	for _, tenant := range []string{"common", "organizations", "consumers", "contoso.onmicrosoft.com"} {
+	for _, tenant := range []string{"common", "companies", "consumers", "contoso.onmicrosoft.com"} {
 		t.Run(tenant, func(t *testing.T) {
 			cfg := completeMicrosoftConfig()
 			cfg.Tenant = tenant
@@ -395,7 +395,7 @@ func TestTheRoutingAuthorityWidensNoFurtherThanTheListDoes(t *testing.T) {
 }
 
 // A stored Microsoft app signs people in on the directory it is pinned to —
-// the admin who pinned it said whose organization this is — and the endpoints,
+// the admin who pinned it said whose company this is — and the endpoints,
 // the token binding and the exchanger all follow that directory. Pinned to
 // nothing, it names no directory and is withheld rather than run on `common`.
 // The deployment's own list, when an operator set one, wins over the pin.

@@ -100,7 +100,7 @@ func (g *CommissionGen) HandleEvent(ctx context.Context, env events.Envelope) er
 
 // accrue prices one win and records it.
 func (g *CommissionGen) accrue(ctx context.Context, env events.Envelope, moved deals.StageChanged) error {
-	if moved.PartnerOrgID == nil || moved.PartnerAttribution == nil {
+	if moved.PartnerCompanyID == nil || moved.PartnerAttribution == nil {
 		return nil
 	}
 	if moved.AmountMinor == nil || moved.Currency == nil {
@@ -112,20 +112,20 @@ func (g *CommissionGen) accrue(ctx context.Context, env events.Envelope, moved d
 		return nil
 	}
 
-	tier, err := g.partner.MarginTierOf(ctx, ids.From[ids.OrganizationKind](*moved.PartnerOrgID))
+	tier, err := g.partner.MarginTierOf(ctx, ids.From[ids.CompanyKind](*moved.PartnerCompanyID))
 	if err != nil {
 		return err
 	}
 	_, err = g.ledger.Accrue(ctx, commissions.AccrueInput{
-		DealID:         ids.From[ids.DealKind](env.Entity.ID),
-		PartnerOrgID:   ids.From[ids.OrganizationKind](*moved.PartnerOrgID),
-		TriggerEventID: &env.EventID,
-		Attribution:    *moved.PartnerAttribution,
-		MarginTier:     tier,
-		RateBps:        commissions.RateBpsForTier(tier),
-		BasisMinor:     *moved.AmountMinor,
-		Currency:       *moved.Currency,
-		FxRateToBase:   moved.FxRateToBase,
+		DealID:           ids.From[ids.DealKind](env.Entity.ID),
+		PartnerCompanyID: ids.From[ids.CompanyKind](*moved.PartnerCompanyID),
+		TriggerEventID:   &env.EventID,
+		Attribution:      *moved.PartnerAttribution,
+		MarginTier:       tier,
+		RateBps:          commissions.RateBpsForTier(tier),
+		BasisMinor:       *moved.AmountMinor,
+		Currency:         *moved.Currency,
+		FxRateToBase:     moved.FxRateToBase,
 	})
 	switch {
 	case errors.Is(err, commissions.ErrAlreadyAccrued):

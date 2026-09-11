@@ -698,10 +698,10 @@ marker, not the marker itself.
 One drawing primitive, the product's `RelationshipMap`, on three pages, with
 its own geometry: three columns of 184 / 200 / 184px with 72px gutters and
 16px padding (744px, scrolling sideways rather than shrinking), node heights
-by kind (a colleague 40, a person 60, an organization 48, a deal 44, a gap
+by kind (a colleague 40, a person 60, a company 48, a deal 44, a gap
 60), 8px between nodes, 20px between lanes, a lane heading in 10.5px
 uppercase. Nodes are rounded boxes on `--pane` with the name at 13px 600 and
-a sublabel; a colleague on `--bg`, an organization with a 2px `--ink3` edge,
+a sublabel; a colleague on `--bg`, a company with a 2px `--ink3` edge,
 a deal with an accent edge, and **a gap as a dashed amber box** naming the
 missing role with "Assign" under it — the only drawing of an absence a
 reader can count. Edges are cubic curves: a route is a way in and carries a

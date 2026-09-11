@@ -11,7 +11,7 @@ import { FALLBACK_RECORD_ZONE } from "./timezone";
 
 // A screen that names a zone has decided something, and the decision is the
 // part that has to be reviewable: whose calendar does this date belong to, the
-// organization's or the reader's? Spelled at the call site, that question gets
+// company's or the reader's? Spelled at the call site, that question gets
 // answered once per screen by whoever is passing through, and the two answers
 // drift apart — `timezone.ts` exists because the same product carried a fixed
 // `Europe/Berlin` on a credential expiry (a personal deadline, wrong for every
@@ -243,7 +243,7 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "app/mefixture.ts",
-    why: "The offline `me` fixture stands in for a real installation's stored settings, and its organization timezone is one of those settings — a value on the wire, not a zone this code picks.",
+    why: "The offline `me` fixture stands in for a real installation's stored settings, and its company timezone is one of those settings — a value on the wire, not a zone this code picks.",
   },
   {
     file: "design-system/composed.stories.tsx",
@@ -291,11 +291,11 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "screens/adddocument.test.tsx",
-    why: "Installation-settings fixture: the organization timezone the document form reads back.",
+    why: "Installation-settings fixture: the company timezone the document form reads back.",
   },
   {
     file: "screens/audit.test.tsx",
-    why: "Pins an audit line to the organization's clock by reading it from a zone whose calendar day is already the next one — a claim that needs both the zone pretended in and the day compared against.",
+    why: "Pins an audit line to the company's clock by reading it from a zone whose calendar day is already the next one — a claim that needs both the zone pretended in and the day compared against.",
   },
   {
     file: "screens/company-context.test.tsx",
@@ -311,7 +311,7 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "screens/contractform.currency.test.tsx",
-    why: "Installation-settings fixture: the organization timezone the contract form reads back.",
+    why: "Installation-settings fixture: the company timezone the contract form reads back.",
   },
   {
     file: "screens/dealbulk.stories.tsx",
@@ -331,7 +331,7 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "screens/installation-settings.stories.tsx",
-    why: "The Admin settings card DISPLAYS the configured organization timezone; the story needs a configured value.",
+    why: "The Admin settings card DISPLAYS the configured company timezone; the story needs a configured value.",
   },
   {
     file: "screens/installation-settings.test.tsx",

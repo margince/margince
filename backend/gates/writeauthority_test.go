@@ -39,7 +39,7 @@ package gates
 //
 // One probe family is deliberately outside the census, and the absence is not
 // an oversight: auth.EnsureLinkTarget. It asks whether the caller may REFERENCE
-// a record — attach an activity, name a parent org, add a list member — and
+// a record — attach an activity, name a parent company, add a list member — and
 // whether "add" needs write authority on the thing added TO is a product
 // question UC-E11-08 E2 raises rather than settles. It is tracked as its own
 // issue rather than decided inside a security sweep.
@@ -101,9 +101,9 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// change it", and the record actually being written is gated on its own way
 	// in. Widening one would withhold from a caller the id of a record they can
 	// perfectly well open — a worse answer, not a safer one.
-	"internal/modules/people:claimedDomainOwner":  "the domain-collision probe every door shares: whether the 409 may NAME the organization already holding the domain. That organization is a different row from the one being written, and the write it refuses takes its own gate first — organization:create on the create path, auth.EnsureWritable on the edit and profile paths",
-	"internal/modules/people:refusedOrgCreate":    "the duplicate-domain 409's disclosure decision: it names the incumbent organization only when the caller could have READ it, and writes nothing to that row. The create it is refusing is gated by organization:create",
-	"internal/modules/people:refusedPersonCreate": "the person twin of refusedOrgCreate, and the same decision: whether the conflict may carry the incumbent's id, never whether the caller may change that person",
+	"internal/modules/people:claimedDomainOwner":   "the domain-collision probe every door shares: whether the 409 may NAME the company already holding the domain. That company is a different row from the one being written, and the write it refuses takes its own gate first — company:create on the create path, auth.EnsureWritable on the edit and profile paths",
+	"internal/modules/people:refusedCompanyCreate": "the duplicate-domain 409's disclosure decision: it names the incumbent company only when the caller could have READ it, and writes nothing to that row. The create it is refusing is gated by company:create",
+	"internal/modules/people:refusedPersonCreate":  "the person twin of refusedCompanyCreate, and the same decision: whether the conflict may carry the incumbent's id, never whether the caller may change that person",
 
 	"internal/modules/people:DismissRelationshipNudge": "the contact a nudge is ABOUT. That row is written NOTHING — the mutation is a relationship_nudge_dismissal keyed on the CALLER, so it can only ever change the caller's own lane — and the probe decides one thing: whether this rep may be told that contact has gone quiet. Setting somebody aside is a judgement about the rep's own morning, and requiring write authority over a person before a rep may stop being reminded of them would mean they could only quiet reminders about records they own, which is the opposite of what the lane is for. The liveness half is load-bearing: a dismissal must not name a contact erasure anonymized in place",
 	"internal/modules/people:RestoreRelationshipNudge": "the undo of the above, and the same decision: the person is written nothing, the row deleted is the caller's own, and the probe asks whether this rep may be told about that contact at all",
@@ -125,7 +125,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/dealrooms:dealScopeClause":         "the READ spelling of a Deal Room's deal-derived row scope, shared by the single read, the list page and the release page — a room carries no owner of its own, so its visibility IS its deal's. Every path that changes a room resolves it through this read and then calls one of the two deal probes on the same deal — ensureDealWritable (auth.EnsureWritableLive) for anything that hands access out, ensureDealRetractable (auth.EnsureRetractable) for revoking a seat, pausing, closing or ending the room — before writing anything",
 	"internal/modules/commissions:entriesOfVisibleDeals": "the READ spelling of a commission entry's deal-derived row scope, rendered for the ledger page, the summary and the single read through VisibleClause and for the void through RetractableClause. It decides only whether a row may be SEEN: both paths that change one — Decide and ReverseForDeal — resolve the row through one of those two and then take WritableEntriesForDeal (auth.EnsureWritableLive) to approve or pay, or RetractableEntriesForDeal (auth.EnsureRetractable) to void, before writing anything",
 	"internal/modules/projects:transferableProjectIDs":   "the READ half of the bulk owner handover, listing the from-owner's live projects under the same visibility clause the project list renders. Every id it returns has ALREADY passed auth.WritableBy in the same function, and transferProjectOwner then locks and writes only those — a `read` share is enumerated here and dropped before anything is written",
-	"internal/modules/people:currentEmployerFrom":        "the employer stamped on every person a read returns, and the expression the contacts list orders by, flagged only because a mutation hands back the record it wrote. The organization is written NOTHING — the probe decides whether this caller may be SHOWN the account their contact works at — and the person row that IS being changed takes its own authority at the entry: person:create on the create path, auth.EnsureWritable on the update. Narrowing it to write authority would blank the employer for a reader entitled to see the company but not to change it, which is most readers",
+	"internal/modules/people:currentEmployerFrom":        "the employer stamped on every person a read returns, and the expression the contacts list orders by, flagged only because a mutation hands back the record it wrote. The company is written NOTHING — the probe decides whether this caller may be SHOWN the account their contact works at — and the person row that IS being changed takes its own authority at the entry: person:create on the create path, auth.EnsureWritable on the update. Narrowing it to write authority would blank the employer for a reader entitled to see the company but not to change it, which is most readers",
 	"internal/modules/people:CompaniesOnProjectTx":       "a READ: it lists the companies on a project and returns them, and every path that CHANGES the edges — SetProjectCompany, RemoveProjectCompany — takes auth.EnsureWritableLive on the project before it writes anything. This clause decides only which companies a reader may be SHOWN, so narrowing it to write authority would hide companies from a reader entitled to see them",
 	"internal/modules/privacy:AssembleSAR":               "an Art. 15 export is a READ, and read authority is the whole of what a read needs. It is flagged only because assembling a SAR records the request it answers; its Art. 17 sibling, which destroys rather than reads, uses auth.EnsureWritableForSubjectRights",
 
@@ -169,7 +169,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 
 	// Read predicates whose mutating callers take the write probe elsewhere.
 	"internal/modules/contracts:VisibleClause":        "the contracts module's READ predicate, shared by the list, the single read and the company-value rollup. A contract owns no owner_id and inherits its whole row scope from its anchor, so this one clause used to stand in front of every mutation too; the patch, archive, status change, cancellation and renewal now go through writableContract, which takes auth.EnsureWritable on that same anchor",
-	"internal/modules/people:applySitePersonFieldsTx": "the probe this gate sees is on the ORGANIZATION whose published site was read, and reading it is all this does: the company is the page's subject, never the record that changes. What changes is the PERSON, and it now takes auth.EnsureWritableLive on its own id immediately after the employment-edge match resolves it — the Live spelling because both callers are system principals, for whom the plain probe returns nil on an empty clause and would gate nothing",
+	"internal/modules/people:applySitePersonFieldsTx": "the probe this gate sees is on the COMPANY whose published site was read, and reading it is all this does: the company is the page's subject, never the record that changes. What changes is the PERSON, and it now takes auth.EnsureWritableLive on its own id immediately after the employment-edge match resolves it — the Live spelling because both callers are system principals, for whom the plain probe returns nil on an empty clause and would gate nothing",
 })
 
 // writeAuthorityProbes are the platform/auth spellings that ask the narrower
@@ -392,7 +392,7 @@ func writeAuthorityIndex(t *testing.T, tables map[string]bool) map[string]map[st
 	// The statements each package holds in its package-level vars and consts,
 	// read once per package. A statement hoisted out of a function body is
 	// executed by whoever NAMES it, and the write is that function's — reading
-	// only body literals left the organization column writers, the company
+	// only body literals left the company column writers, the company
 	// form's and the cold-start fill's alike, outside this census entirely.
 	// Not reported as a gap: silently absent, which is the one way a census must
 	// not fail. updateguard folded the same shape in for the same reason.
@@ -491,7 +491,7 @@ func indexWriteAuthorityBody(fn *ast.FuncDecl, info *writeAuthorityFn, tables ma
 
 // indexHeldStatements folds the statements a function NAMES but does not spell —
 // a package-level table of UPDATEs it indexes by column, which is how three of
-// the organization writers send theirs. Read exactly as a body literal is, so a
+// the company writers send theirs. Read exactly as a body literal is, so a
 // statement moved out of a body does not change what this census believes about
 // the function that runs it.
 func indexHeldStatements(statements []string, info *writeAuthorityFn) {
@@ -619,7 +619,7 @@ func patchTargetTable(spelling string, call *ast.CallExpr, consts map[string]str
 // any mutation whose target it could not name.
 //
 // The table name is matched as a WHOLE identifier, never a prefix. This tree
-// holds person_email, person_consent, person_profile_field, organization_domain
+// holds person_email, person_consent, person_profile_field, company_domain
 // and some twenty more children that all begin with one of the five shareable
 // names, and a prefix match would drag every one of them into the census — the
 // "add a row that hangs off the record" paths that are deliberately outside it.

@@ -32,12 +32,12 @@ func TestEveryVerdictKindIsJudgedByTheReconnectLane(t *testing.T) {
 	}
 
 	// The kinds a reconnect lane may show: a real person, and the two shapes of
-	// organization that correspond under their own name. Everything else is
+	// company that correspond under their own name. Everything else is
 	// private life or noise.
 	business := map[string]bool{
-		KindPerson:             true,
-		KindRoleMailbox:        true,
-		KindOrganizationSender: true,
+		KindPerson:        true,
+		KindRoleMailbox:   true,
+		KindCompanySender: true,
 	}
 	clause := PrivateSenderClause("e", "$1")
 	for _, kind := range all {

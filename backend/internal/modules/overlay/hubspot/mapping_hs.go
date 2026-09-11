@@ -37,11 +37,11 @@ const (
 // drifts across the read/write/signal call sites. activityTarget is the type
 // all five engagement classes map onto.
 const (
-	personTarget       = "person"
-	organizationTarget = "organization"
-	dealTarget         = "deal"
-	leadTarget         = "lead"
-	activityTarget     = "activity"
+	personTarget   = "person"
+	companyTarget  = "company"
+	dealTarget     = "deal"
+	leadTarget     = "lead"
+	activityTarget = "activity"
 )
 
 // baselineHSLastModifiedDate is the watermark property every object
@@ -265,11 +265,11 @@ var contactsMapping = overlay.ObjectMapping{
 	},
 }
 
-// companiesMapping is the design.md §9 companies→organization subset.
-// `domain` maps into a row of the organization_domain child collection — the
+// companiesMapping is the design.md §9 companies→company subset.
+// `domain` maps into a row of the company_domain child collection — the
 // same 1:N child shape contacts' email → person_email uses — lowercased to
 // the canonical domain spelling (HubSpot's `domain` property is already a bare
-// host: no scheme, no www). The overlay org wire lifts it onto the contract's
+// host: no scheme, no www). The overlay company wire lifts it onto the contract's
 // domains[] so a mirrored company shows its domain like a native one.
 //
 // createdate carries the incumbent's own create instant, for the same reason
@@ -282,7 +282,7 @@ var contactsMapping = overlay.ObjectMapping{
 // capture; issue #1032 tracks capturing a company to confirm it.
 var companiesMapping = overlay.ObjectMapping{
 	Source:         objectClassCompanies,
-	Target:         organizationTarget,
+	Target:         companyTarget,
 	ExternalKey:    propHSObjectID,
 	Baseline:       baselineHSLastModifiedDate,
 	UnmappedPolicy: unmappedPolicyFlag,
@@ -298,7 +298,7 @@ var companiesMapping = overlay.ObjectMapping{
 		{From: []string{"createdate"}, To: "created_at", Kind: overlay.TargetColumn},
 		{
 			From:      []string{propDomain},
-			To:        "organization_domain.domain",
+			To:        "company_domain.domain",
 			Kind:      overlay.TargetChild,
 			Transform: "lowercase",
 			Child:     &overlay.ChildRow{Attrs: map[string]any{attrIsPrimary: true}, Position: 0},
@@ -323,7 +323,7 @@ var companiesMapping = overlay.ObjectMapping{
 //     metadata source), never a field-mapping transform. dealstage is
 //     still consumed, mapped to stage_id — it is not left unmapped, only
 //     the second, semantic-derived target is absent.
-//   - organization_id: §9's "assoc→company→organization_id" is derived
+//   - company_id: §9's "assoc→company→company_id" is derived
 //     from the v4 associations edge, not a deal property — Backfill
 //     (overlay/backfill.go's backfillAssocTargets) fetches and upserts
 //     deals→companies associations directly; there is no properties-map
@@ -464,7 +464,7 @@ var tasksMapping = overlay.ObjectMapping{
 // property names do not exist on the Leads object and were the prior mapping's
 // invention. A lead's email and company_name are NOT lead properties: they are
 // derived from the lead's REQUIRED contact association (adapter.enrichLeads),
-// with company_name staying free text (never an org FK, per the Lead schema).
+// with company_name staying free text (never a company FK, per the Lead schema).
 //
 // Two deliberate deferrals, never invented:
 //   - `hs_lead_label` → lead.status: the raw label is REQUESTED and preserved

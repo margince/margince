@@ -25,39 +25,39 @@ import (
 
 // attachToSettledVerdict handles a domain answered WHILE this ensure was
 // running. Taking the disposition lock is what ordered the two, and the dedupe
-// that said "no organization" ran before it — so a verdict that committed in
+// that said "no company" ran before it — so a verdict that committed in
 // between created a company this path has not seen. Attaching here is the
 // difference between the person getting their employer now and waiting for
 // their next message.
 //
 // A refusal attaches nothing, and neither does a company that has since been
-// archived: the ledger names an organization, it does not promise one is still
+// archived: the ledger names a company, it does not promise one is still
 // there to join.
 func attachToSettledVerdict(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, prior DomainDisposition, res *EnsureCounterpartyResult) error {
-	if prior.OrganizationID == nil {
+	if prior.CompanyID == nil {
 		return nil
 	}
-	live, err := organizationIsLive(ctx, tx, *prior.OrganizationID)
+	live, err := companyIsLive(ctx, tx, *prior.CompanyID)
 	if err != nil || !live {
 		return err
 	}
-	res.OrganizationID = prior.OrganizationID
-	return plantEmploymentEdge(ctx, tx, in, res.PersonID, *prior.OrganizationID)
+	res.CompanyID = prior.CompanyID
+	return plantEmploymentEdge(ctx, tx, in, res.PersonID, *prior.CompanyID)
 }
 
-// organizationIsLive reports whether an organization is still one records may be
+// companyIsLive reports whether a company is still one records may be
 // attached to — neither archived nor merged away — locking the row so the answer
 // cannot change under the insert that follows it.
-func organizationIsLive(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (bool, error) {
+func companyIsLive(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (bool, error) {
 	var live bool
 	err := tx.QueryRow(ctx, `
 		SELECT archived_at IS NULL AND merged_into_id IS NULL
-		  FROM organization WHERE id = $1 FOR UPDATE`, orgID).Scan(&live)
+		  FROM company WHERE id = $1 FOR UPDATE`, companyID).Scan(&live)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("people: checking whether organization %s is still live: %w", orgID, err)
+		return false, fmt.Errorf("people: checking whether company %s is still live: %w", companyID, err)
 	}
 	return live, nil
 }
@@ -70,7 +70,7 @@ func organizationIsLive(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID
 // a no-op here rather than a failure: capture has nothing to add to an
 // employment that already exists. The NOT EXISTS keeps a concurrent race with
 // the first from surfacing as a 500.
-func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, personID ids.PersonID, orgID ids.OrganizationID) error {
+func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, personID ids.PersonID, companyID ids.CompanyID) error {
 	// The employment edge hangs off the person, so an archive in flight must
 	// not be outrun — see lockPersonForAttach.
 	if err := lockPersonForAttach(ctx, tx, personID); err != nil {
@@ -91,14 +91,14 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	}
 	var edgeID ids.UUID
 	err := tx.QueryRow(ctx, `
-		INSERT INTO relationship (kind, person_id, organization_id, is_current_primary, source, captured_by)
+		INSERT INTO relationship (kind, person_id, company_id, is_current_primary, source, captured_by)
 		SELECT 'employment', $1, $2, true, $3, $4
 		WHERE NOT EXISTS (
 			SELECT 1 FROM relationship
 			WHERE person_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
-		personID, orgID, in.Source, in.CapturedBy).Scan(&edgeID)
+		personID, companyID, in.Source, in.CapturedBy).Scan(&edgeID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Either guard skipped it: the person already has a current primary
 		// employer, or this exact edge already exists. Nothing was written, so
@@ -109,44 +109,44 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	if err != nil {
 		return fmt.Errorf("people: insert employment edge: %w", err)
 	}
-	return auditCapturedEmployment(ctx, tx, edgeID, personID, orgID, relationshipOriginCapture)
+	return auditCapturedEmployment(ctx, tx, edgeID, personID, companyID, relationshipOriginCapture)
 }
 
-// adoptDispositionForOrg settles a domain onto the organization that already
+// adoptDispositionForCompany settles a domain onto the company that already
 // exists for it. It is the one thing that reverses a triage refusal: a wrong
 // `personal` verdict is otherwise permanent, and the only correction available
 // to a human is to create the company themselves — which this makes stick.
 //
 // A no-op for a domain nobody ever asked about, so the ordinary case of mail
 // arriving at a long-known company writes nothing.
-func adoptDispositionForOrg(ctx context.Context, tx pgx.Tx, domain string, orgID ids.OrganizationID) error {
+func adoptDispositionForCompany(ctx context.Context, tx pgx.Tx, domain string, companyID ids.CompanyID) error {
 	if _, err := tx.Exec(ctx, `
-		UPDATE organization_domain_disposition
-		   SET status = $2, source = $3, organization_id = $4,
+		UPDATE company_domain_disposition
+		   SET status = $2, source = $3, company_id = $4,
 		       evidence = 'a human put a company on this domain',
 		       next_attempt_at = NULL, updated_at = now()
 		 WHERE domain = $1
-		   AND (status <> $2 OR organization_id IS DISTINCT FROM $4)
+		   AND (status <> $2 OR company_id IS DISTINCT FROM $4)
 		   -- Only a REFUSAL is a human's to overturn. A no_site row already
-		   -- carrying the organization triage itself created is not: claiming
+		   -- carrying the company triage itself created is not: claiming
 		   -- that as "a human put a company on this domain" would rewrite the
 		   -- provenance of a machine decision nobody overruled, and the
 		   -- evidence field exists to say why a company was refused.
-		   AND NOT (source = $5 AND organization_id IS NOT DISTINCT FROM $4)`,
-		domain, DomainCompany, DomainSourceHuman, orgID, DomainSourceHeuristic); err != nil {
+		   AND NOT (source = $5 AND company_id IS NOT DISTINCT FROM $4)`,
+		domain, DomainCompany, DomainSourceHuman, companyID, DomainSourceHeuristic); err != nil {
 		return fmt.Errorf("people: recording that a human settled %s: %w", domain, err)
 	}
 	return nil
 }
 
-// deferOrgToTriage handles a domain with no organization behind it yet: decide
+// deferCompanyToTriage handles a domain with no company behind it yet: decide
 // whether the question is even worth asking, and if it is, open it.
 //
 // Nothing is created here on purpose. The person is already committed and the
 // message is already on their timeline; what is withheld is a company row that
 // nothing yet justifies. ADR-0063's create-on-sight is what manufactured
 // "Kestner" from a man's own domain, and no later evidence removed it.
-func (s *Store) deferOrgToTriage(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, base string, res *EnsureCounterpartyResult) error {
+func (s *Store) deferCompanyToTriage(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, base string, res *EnsureCounterpartyResult) error {
 	// Consumer mail is answered by the domain itself and needs no crawl to
 	// settle. The sink's tier ladder usually catches it first; this repeats the
 	// check because the verdict engine and the review-queue accept reach this
@@ -193,7 +193,7 @@ func (s *Store) deferOrgToTriage(ctx context.Context, tx pgx.Tx, in EnsureCounte
 // treats an employer as a fact somebody asserted can then tell an inference
 // from a statement, which is the whole difference between the two paths — and
 // it can do so without every existing consumer of person.updated changing.
-func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, personID ids.PersonID, orgID ids.OrganizationID, origin string) error {
+func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, personID ids.PersonID, companyID ids.CompanyID, origin string) error {
 	auditID, err := storekit.Audit(ctx, tx, actionCreate, "relationship", edgeID, nil, map[string]any{
 		relationshipKindField: employmentKind, "origin": origin,
 	})
@@ -203,7 +203,7 @@ func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, pe
 	delta := map[string]any{
 		eventKeyDelta: map[string]any{"relationship": map[string]any{
 			"id": edgeID, relationshipKindField: employmentKind, "action": actionCreate,
-			"organization_id": orgID, "origin": origin,
+			"company_id": companyID, "origin": origin,
 		}},
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, personID.UUID,

@@ -128,9 +128,9 @@ func TestABatchedMergeFaceRefusesWithoutTheObjectGrant(t *testing.T) {
 	}
 }
 
-// asOrgReader binds a caller holding the object grants named and nothing else,
+// asCompanyReader binds a caller holding the object grants named and nothing else,
 // at full row scope, so what decides the count is the GRANT rather than the scope.
-func (e *privacyEnv) asOrgReader(objects ...string) context.Context {
+func (e *privacyEnv) asCompanyReader(objects ...string) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	grants := map[string]principal.ObjectGrant{}
@@ -145,16 +145,16 @@ func (e *privacyEnv) asOrgReader(objects ...string) context.Context {
 	})
 }
 
-// seedOrganization writes one account with an employed contact, so the count has
+// seedCompany writes one account with an employed contact, so the count has
 // something to find and its absence means a refusal rather than an empty company.
-func (e *privacyEnv) seedOrganization(t *testing.T) ids.UUID {
+func (e *privacyEnv) seedCompany(t *testing.T) ids.UUID {
 	t.Helper()
-	orgID, personID := ids.NewV7(), ids.NewV7()
+	companyID, personID := ids.NewV7(), ids.NewV7()
 	ctx := e.as(e.owner, principal.RowScopeAll)
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO organization (id, display_name, source, captured_by)
-			VALUES ($1, 'Weber GmbH', 'seed', 'test')`, orgID); err != nil {
+			INSERT INTO company (id, display_name, source, captured_by)
+			VALUES ($1, 'Weber GmbH', 'seed', 'test')`, companyID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
@@ -163,13 +163,13 @@ func (e *privacyEnv) seedOrganization(t *testing.T) ids.UUID {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO relationship (id, person_id, organization_id, kind, is_current_primary, source, captured_by)
-			VALUES ($1, $2, $3, 'employment', true, 'seed', 'test')`, ids.NewV7(), personID, orgID)
+			INSERT INTO relationship (id, person_id, company_id, kind, is_current_primary, source, captured_by)
+			VALUES ($1, $2, $3, 'employment', true, 'seed', 'test')`, ids.NewV7(), personID, companyID)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding an account with a contact: %v", err)
 	}
-	return orgID
+	return companyID
 }
 
 // THE CONTACT COUNT CARRIES THE SAME TWO GRANTS THE COMPANY LIST APPLIES.
@@ -181,23 +181,23 @@ func (e *privacyEnv) seedOrganization(t *testing.T) ids.UUID {
 // role is refused on every other surface.
 func TestAMergeFacesContactCountCarriesBothObjectGrants(t *testing.T) {
 	e := setupCapturePrivacy(t)
-	orgID := e.seedOrganization(t)
+	companyID := e.seedCompany(t)
 
 	for name, tc := range map[string]struct {
 		grants []string
 		want   bool
 	}{
-		"both grants":         {[]string{"organization", "person", "relationship"}, true},
-		"no person grant":     {[]string{"organization", "relationship"}, false},
-		"no edge grant":       {[]string{"organization", "person"}, false},
-		"neither, only names": {[]string{"organization"}, false},
+		"both grants":         {[]string{"company", "person", "relationship"}, true},
+		"no person grant":     {[]string{"company", "relationship"}, false},
+		"no edge grant":       {[]string{"company", "person"}, false},
+		"neither, only names": {[]string{"company"}, false},
 	} {
 		t.Run(name, func(t *testing.T) {
-			faces, err := e.store.DescribeForMerge(e.asOrgReader(tc.grants...), "organization", []ids.UUID{orgID})
+			faces, err := e.store.DescribeForMerge(e.asCompanyReader(tc.grants...), "company", []ids.UUID{companyID})
 			if err != nil {
 				t.Fatalf("DescribeForMerge: %v", err)
 			}
-			face, named := faces[orgID]
+			face, named := faces[companyID]
 			if !named {
 				t.Fatal("the account was not named at all, so the count below proves nothing")
 			}
@@ -241,7 +241,7 @@ func TestALeadIsNamedByWhateverItCarries(t *testing.T) {
 		t.Fatalf("seeding leads: %v", err)
 	}
 
-	faces, err := e.store.DescribeForMerge(e.asOrgReader("lead"), "lead", []ids.UUID{withEmail, companyOnly})
+	faces, err := e.store.DescribeForMerge(e.asCompanyReader("lead"), "lead", []ids.UUID{withEmail, companyOnly})
 	if err != nil {
 		t.Fatalf("DescribeForMerge: %v", err)
 	}

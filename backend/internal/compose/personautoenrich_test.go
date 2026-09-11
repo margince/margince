@@ -29,7 +29,7 @@ func TestPersonAutoEnrichIgnoresWhatItCannotActOn(t *testing.T) {
 
 	for name, env := range map[string]events.Envelope{
 		"an archived person needs no match — the match requires a live row": personEvent("person.archived", ids.NewV7()),
-		"an unrelated entity type":                                      {Type: "person.created", Entity: events.EntityRef{Type: "organization", ID: ids.NewV7()}},
+		"an unrelated entity type":                                      {Type: "person.created", Entity: events.EntityRef{Type: "company", ID: ids.NewV7()}},
 		"an event about no entity at all":                               personEvent("person.created", ids.Nil),
 		"a verb outside the set that can make a person newly matchable": personEvent("person.disqualified", ids.NewV7()),
 	} {

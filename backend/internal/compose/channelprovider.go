@@ -110,7 +110,7 @@ func sendableCarriage(sendable []string, core map[string]connector.Carriage) map
 // activity_kind and channel_provider carry no workspace_id, so binding a
 // tenant GUC would ask a question these tables have no answer to — and
 // database.DB.Tx's workspace resolution fails outright on a fresh install
-// with no organization bootstrapped yet, which is exactly when a process
+// with no company bootstrapped yet, which is exactly when a process
 // first constructs this registry.
 //
 // A provider name has to satisfy channel_provider's own grammar constraint,

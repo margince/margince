@@ -62,7 +62,7 @@ func setupQuery(t *testing.T) *queryEnv {
 // the RBAC object governing the EDGE a join-table hop reads, and without it
 // TestEveryPublishedRelationExecutes would quietly stop covering the
 // employment and stakeholder hops rather than fail.
-var queryObjects = []string{"person", "organization", "deal", "lead", "project", "activity", "relationship"}
+var queryObjects = []string{"person", "company", "deal", "lead", "project", "activity", "relationship"}
 
 func queryGrants() map[string]principal.ObjectGrant {
 	grants := map[string]principal.ObjectGrant{}
@@ -117,13 +117,13 @@ func (q *queryEnv) answer(ctx context.Context, doc string) (search.QueryResult, 
 }
 
 // queryFixture is one corpus split across two teams: each rep owns a deal at
-// an organization they own, so a rep sees exactly their own half through
+// a company they own, so a rep sees exactly their own half through
 // either the target or the hop.
 type queryFixture struct {
-	rep1Org, rep3Org   ids.UUID
-	rep1Deal, rep3Deal ids.UUID
-	sharedDeal         ids.UUID
-	project            ids.UUID
+	rep1Company, rep3Company ids.UUID
+	rep1Deal, rep3Deal       ids.UUID
+	sharedDeal               ids.UUID
+	project                  ids.UUID
 }
 
 // seedLocatedCompany inserts a company that has already been geocoded: an
@@ -134,7 +134,7 @@ type queryFixture struct {
 // QUERY reads the columns correctly, not whether Nominatim answers.
 func (q *queryEnv) seedLocatedCompany(t *testing.T, name string, lat, lon float64) ids.UUID {
 	t.Helper()
-	return q.SeedID(t, `INSERT INTO organization
+	return q.SeedID(t, `INSERT INTO company
 		(id, owner_id, display_name, address_line1, address_city,
 		 geocode_lat, geocode_lon, geocode_status, geocode_provider, geocode_input_hash,
 		 source, captured_by)
@@ -147,7 +147,7 @@ func (q *queryEnv) seedLocatedCompany(t *testing.T, name string, lat, lon float6
 // from a radius answer rather than placed at the origin.
 func (q *queryEnv) seedUnlocatedCompany(t *testing.T, name string) ids.UUID {
 	t.Helper()
-	return q.SeedID(t, `INSERT INTO organization
+	return q.SeedID(t, `INSERT INTO company
 		(id, owner_id, display_name, address_line1, address_city, source, captured_by)
 		VALUES ($1, $2, $3, 'Unbekannt 1', 'Teststadt', 'manual', 'human:x')`, q.Rep1, name)
 }
@@ -155,10 +155,10 @@ func (q *queryEnv) seedUnlocatedCompany(t *testing.T, name string) ids.UUID {
 // moveCompany changes a company's address the way any writer does, and lets
 // the SCHEMA do the invalidating — no test-only status update, because what is
 // under test is that the trigger fires for an ordinary write.
-func (q *queryEnv) moveCompany(t *testing.T, org ids.UUID, line1 string) {
+func (q *queryEnv) moveCompany(t *testing.T, company ids.UUID, line1 string) {
 	t.Helper()
 	if _, err := q.Owner.Exec(context.Background(),
-		`UPDATE organization SET address_line1 = $2 WHERE id = $1`, org, line1); err != nil {
+		`UPDATE company SET address_line1 = $2 WHERE id = $1`, company, line1); err != nil {
 		t.Fatalf("moving the company: %v", err)
 	}
 }
@@ -170,26 +170,26 @@ func (q *queryEnv) seedFixture(t *testing.T) queryFixture {
 		VALUES ($1, $2, 'Qualify', 0, 'open', 10)`, pipeline)
 
 	var f queryFixture
-	f.rep1Org = q.SeedID(t, `INSERT INTO organization (id, owner_id, display_name, address_city, source, captured_by)
+	f.rep1Company = q.SeedID(t, `INSERT INTO company (id, owner_id, display_name, address_city, source, captured_by)
 		VALUES ($1, $2, 'Stuttgart Werke', 'Stuttgart', 'manual', 'human:x')`, q.Rep1)
-	f.rep3Org = q.SeedID(t, `INSERT INTO organization (id, owner_id, display_name, address_city, source, captured_by)
+	f.rep3Company = q.SeedID(t, `INSERT INTO company (id, owner_id, display_name, address_city, source, captured_by)
 		VALUES ($1, $2, 'Stuttgart Logistik', 'Stuttgart', 'manual', 'human:x')`, q.Rep3)
 	// A project named like a deal, so the traversal proves that two tables
 	// sharing a column name resolve to the right one.
-	f.project = q.SeedID(t, `INSERT INTO project (id, owner_id, name, organization_id, source, captured_by)
-		VALUES ($1, $2, 'Rollout', $3, 'manual', 'human:x')`, q.Rep1, f.rep1Org)
+	f.project = q.SeedID(t, `INSERT INTO project (id, owner_id, name, company_id, source, captured_by)
+		VALUES ($1, $2, 'Rollout', $3, 'manual', 'human:x')`, q.Rep1, f.rep1Company)
 	// The company edge the real writer always creates. A deal may only name a
 	// project one of whose companies it shares, and the trigger reads the edge:
 	// a hand-inserted project with no edge is a project no deal can point at.
-	q.SeedID(t, `INSERT INTO relationship (id, kind, project_id, organization_id, role, source, captured_by)
-		VALUES ($1, 'project_company', $2, $3, 'customer', 'manual', 'human:x')`, f.project, f.rep1Org)
+	q.SeedID(t, `INSERT INTO relationship (id, kind, project_id, company_id, role, source, captured_by)
+		VALUES ($1, 'project_company', $2, $3, 'customer', 'manual', 'human:x')`, f.project, f.rep1Company)
 
-	f.rep1Deal = q.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, organization_id, project_id, amount_minor, currency, status, expected_close_date, source, captured_by)
+	f.rep1Deal = q.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, company_id, project_id, amount_minor, currency, status, expected_close_date, source, captured_by)
 		VALUES ($1, $2, 'Rollout', $3, $4, $5, $6, 100000, 'EUR', 'open', '2026-12-01', 'manual', 'human:x')`,
-		q.Rep1, pipeline, stage, f.rep1Org, f.project)
-	f.rep3Deal = q.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, organization_id, amount_minor, currency, status, expected_close_date, source, captured_by)
+		q.Rep1, pipeline, stage, f.rep1Company, f.project)
+	f.rep3Deal = q.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, company_id, amount_minor, currency, status, expected_close_date, source, captured_by)
 		VALUES ($1, $2, 'Logistik Rahmenvertrag', $3, $4, $5, 250000, 'EUR', 'open', '2026-11-01', 'manual', 'human:x')`,
-		q.Rep3, pipeline, stage, f.rep3Org)
+		q.Rep3, pipeline, stage, f.rep3Company)
 	// An ownerless deal is workspace-shared and visible at every tier — the
 	// control that keeps "the rep sees fewer rows" from being read as "the rep
 	// sees only their own".
@@ -229,7 +229,7 @@ func TestQueryPlanAnswersExactPredicatesCompletely(t *testing.T) {
 // subset of the admin's, and nothing in the rep's answer — not the rows, not
 // the count, not the coverage verdict — is computed over a row they cannot see.
 //
-// The target is `organization`, the record type that still narrows a reader:
+// The target is `company`, the record type that still narrows a reader:
 // every shareable record type is read by every seat holding the object grant
 // (platform/auth tableclass.go), so capture privacy is the one narrowing left
 // and two principals asking about anything else get the same answer by design.
@@ -239,16 +239,16 @@ func TestQueryPlanAnswersTwoPrincipalsFromOneCorpusWithoutLeaking(t *testing.T) 
 	// capture privacy does not yield to row_scope=all — so the two principals
 	// compared here are the capture's OWNER and a colleague, not an admin and
 	// a rep.
-	rep1Capture := q.SeedID(t, `INSERT INTO organization (id, owner_id, display_name, visibility, source, captured_by)
+	rep1Capture := q.SeedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Rollout', 'owner', 'manual', 'human:x')`, q.Rep1)
 	// An ownerless workspace-visible company is visible at every tier — the
 	// control that keeps "the colleague sees fewer rows" from being read as
 	// "the colleague sees nothing".
-	sharedOrg := q.SeedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
+	sharedCompany := q.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Rollout', 'manual', 'human:x')`)
-	rep3Org := q.SeedID(t, `INSERT INTO organization (id, owner_id, display_name, source, captured_by)
+	rep3Company := q.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
 		VALUES ($1, $2, 'Rollout', 'manual', 'human:x')`, q.Rep3)
-	const plan = `{"version": "v1", "target": "organization",
+	const plan = `{"version": "v1", "target": "company",
 		"where": [{"field": "display_name", "op": "eq", "value": "Rollout"}]}`
 
 	owner := idSet(q.run(q.teamRep(q.Rep1, q.Team1), t, plan))
@@ -259,7 +259,7 @@ func TestQueryPlanAnswersTwoPrincipalsFromOneCorpusWithoutLeaking(t *testing.T) 
 			"narrowed arm is measured against", len(owner))
 	}
 	// A workspace-visible company is read by every seat, whoever owns it.
-	if !colleague[sharedOrg] || !colleague[rep3Org] {
+	if !colleague[sharedCompany] || !colleague[rep3Company] {
 		t.Fatalf("the colleague cannot see the rows they are entitled to: %v", colleague)
 	}
 	if colleague[rep1Capture] {
@@ -272,34 +272,34 @@ func TestQueryPlanAnswersTwoPrincipalsFromOneCorpusWithoutLeaking(t *testing.T) 
 	}
 }
 
-// A hop is a READ of the record it lands on. Filtering by an organization the
+// A hop is a READ of the record it lands on. Filtering by a company the
 // caller cannot see must not admit rows through it — otherwise the answer's
 // membership discloses a record the row scope hides.
 func TestQueryPlanTraversalCarriesTheHopsOwnRowScope(t *testing.T) {
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	const plan = `{"version": "v1", "target": "deal",
-		"traverse": {"relation": "organization",
+		"traverse": {"relation": "company",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]}}`
 
 	admin := idSet(q.run(q.admin(), t, plan))
 	if !admin[f.rep1Deal] || !admin[f.rep3Deal] {
 		t.Fatalf("the unbounded reader does not reach both Stuttgart deals: %v", admin)
 	}
-	// rep3 captured the other organization privately, which is what keeps
-	// an organization out of a colleague's row scope. Their deal — readable
-	// in itself — is reachable through this hop only via an organization
+	// rep3 captured the other company privately, which is what keeps
+	// a company out of a colleague's row scope. Their deal — readable
+	// in itself — is reachable through this hop only via a company
 	// rep1 cannot read.
 	if _, err := q.Owner.Exec(context.Background(),
-		`UPDATE organization SET visibility = 'owner' WHERE id = $1`, f.rep3Org); err != nil {
-		t.Fatalf("capturing the organization privately: %v", err)
+		`UPDATE company SET visibility = 'owner' WHERE id = $1`, f.rep3Company); err != nil {
+		t.Fatalf("capturing the company privately: %v", err)
 	}
 	rep := idSet(q.run(q.teamRep(q.Rep1, q.Team1), t, plan))
 	if rep[f.rep3Deal] {
-		t.Fatal("a hop through an organization the caller cannot read admitted a row")
+		t.Fatal("a hop through a company the caller cannot read admitted a row")
 	}
 	if !rep[f.rep1Deal] {
-		t.Fatalf("the rep cannot reach their own deal through their own organization: %v", rep)
+		t.Fatalf("the rep cannot reach their own deal through their own company: %v", rep)
 	}
 }
 
@@ -311,7 +311,7 @@ func TestQueryPlanTraversalReturnsTheRecordThatAdmittedTheRow(t *testing.T) {
 	result := q.run(q.admin(), t, `{
 		"version": "v1", "target": "deal",
 		"where": [{"field": "amount_minor", "op": "eq", "value": 100000}],
-		"traverse": {"relation": "organization",
+		"traverse": {"relation": "company",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]}}`)
 	if len(result.Rows) != 1 {
 		t.Fatalf("rows are %v", rowNames(result))
@@ -320,7 +320,7 @@ func TestQueryPlanTraversalReturnsTheRecordThatAdmittedTheRow(t *testing.T) {
 	if len(evidence) != 1 {
 		t.Fatalf("the row carries %d pieces of evidence", len(evidence))
 	}
-	if evidence[0].ID != f.rep1Org || evidence[0].Type != "organization" || evidence[0].Relation != "organization" {
+	if evidence[0].ID != f.rep1Company || evidence[0].Type != "company" || evidence[0].Relation != "company" {
 		t.Fatalf("evidence is %+v", evidence[0])
 	}
 	if evidence[0].Title != "Stuttgart Werke" {
@@ -351,10 +351,10 @@ func TestQueryPlanTraversalFollowsAnInverseEdge(t *testing.T) {
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	result := q.run(q.admin(), t, `{
-		"version": "v1", "target": "organization",
+		"version": "v1", "target": "company",
 		"traverse": {"relation": "deals",
 		             "where": [{"field": "amount_minor", "op": "gte", "value": 200000}]}}`)
-	if len(result.Rows) != 1 || result.Rows[0].ID != f.rep3Org {
+	if len(result.Rows) != 1 || result.Rows[0].ID != f.rep3Company {
 		t.Fatalf("rows are %v", rowNames(result))
 	}
 }
@@ -435,7 +435,7 @@ func TestQueryPlanARadiusOverAnUnplacedWorkspaceSaysSoRatherThanAnsweringEmpty(t
 	q.seedUnlocatedCompany(t, "Radius Ohne Koordinaten GmbH")
 
 	result := q.run(q.admin(), t, `{
-		"version": "v1", "target": "organization",
+		"version": "v1", "target": "company",
 		"where": [{"field": "address", "op": "within_radius",
 		           "value": {"lat": 48.7758, "lon": 9.1829, "radius_km": 50}}],
 		"limit": 20}`)
@@ -476,7 +476,7 @@ func TestQueryPlanARadiusAnswersNearestFirstWithDistances(t *testing.T) {
 	q.seedUnlocatedCompany(t, "Radius Ungeocodiert GmbH")
 
 	result := q.run(q.admin(), t, `{
-		"version": "v1", "target": "organization",
+		"version": "v1", "target": "company",
 		"where": [{"field": "address", "op": "within_radius",
 		           "value": {"lat": 48.7758, "lon": 9.1829, "radius_km": 50}}],
 		"limit": 20}`)
@@ -521,7 +521,7 @@ func TestQueryPlanACompanyThatMovedIsNotAnsweredFromItsOldAddress(t *testing.T) 
 	moved := q.seedLocatedCompany(t, "Radius Umgezogen GmbH", 48.7758, 9.1829)
 
 	before := q.run(q.admin(), t, `{
-		"version": "v1", "target": "organization",
+		"version": "v1", "target": "company",
 		"where": [{"field": "address", "op": "within_radius",
 		           "value": {"lat": 48.7758, "lon": 9.1829, "radius_km": 10}}],
 		"limit": 20}`)
@@ -532,7 +532,7 @@ func TestQueryPlanACompanyThatMovedIsNotAnsweredFromItsOldAddress(t *testing.T) 
 	q.moveCompany(t, moved, "Neue Strasse 1")
 
 	after := q.run(q.admin(), t, `{
-		"version": "v1", "target": "organization",
+		"version": "v1", "target": "company",
 		"where": [{"field": "address", "op": "within_radius",
 		           "value": {"lat": 48.7758, "lon": 9.1829, "radius_km": 10}}],
 		"limit": 20}`)
@@ -574,12 +574,12 @@ func TestQueryPlanARankedAnswerNeverLabelsItselfComplete(t *testing.T) {
 
 // The ranking runs WITHIN the plan's record type. A global page filtered
 // afterwards spends itself on types the plan never named — here the same word
-// names an organization, a project and a deal, and a page of two would answer
+// names a company, a project and a deal, and a page of two would answer
 // no deals at all for a corpus that has one.
 func TestQueryPlanRanksWithinTheRecordTypeItWasAsked(t *testing.T) {
 	q := setupQuery(t)
 	f := q.seedFixture(t)
-	// "Rollout" names the project and the deal; the organizations rank on
+	// "Rollout" names the project and the deal; the companies rank on
 	// "Stuttgart". Asking about deals must answer the deal.
 	result := q.run(q.admin(), t, `{
 		"version": "v1", "target": "deal", "similar_to": "Rollout", "limit": 1}`)
@@ -610,21 +610,21 @@ func TestQueryPlanARankingThatMatchesNothingAnswersNoRows(t *testing.T) {
 func TestQueryPlanNeverReturnsArchivedRecordsOrTheOwnCompany(t *testing.T) {
 	q := setupQuery(t)
 	f := q.seedFixture(t)
-	anchor := q.SeedID(t, `INSERT INTO organization (id, display_name, is_anchor, source, captured_by)
+	anchor := q.SeedID(t, `INSERT INTO company (id, display_name, is_anchor, source, captured_by)
 		VALUES ($1, 'Our Own Company', true, 'manual', 'human:x')`)
 	if _, err := q.Owner.Exec(context.Background(),
-		`UPDATE organization SET archived_at = now() WHERE id = $1`, f.rep3Org); err != nil {
+		`UPDATE company SET archived_at = now() WHERE id = $1`, f.rep3Company); err != nil {
 		t.Fatal(err)
 	}
-	got := idSet(q.run(q.admin(), t, `{"version": "v1", "target": "organization"}`))
+	got := idSet(q.run(q.admin(), t, `{"version": "v1", "target": "company"}`))
 	if got[anchor] {
 		t.Error("the installation's own company is discoverable through a query plan")
 	}
-	if got[f.rep3Org] {
-		t.Error("an archived organization is returned")
+	if got[f.rep3Company] {
+		t.Error("an archived company is returned")
 	}
-	if !got[f.rep1Org] {
-		t.Error("a live organization is missing")
+	if !got[f.rep1Company] {
+		t.Error("a live company is missing")
 	}
 }
 

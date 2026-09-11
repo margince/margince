@@ -128,7 +128,7 @@ function fallbacksIn(fileName: string, text: string): string[] {
     ) {
       const terms = chainOperands(node).map(fieldRead);
       // EVERY name in the chain is asked, not the first one: an
-      // organization-first label puts somebody else's `full_name` ahead of the
+      // company-first label puts somebody else's `full_name` ahead of the
       // lead's, and a scan that stopped at the first would look for the
       // address under the wrong receiver and find nothing.
       const named = terms.some(
@@ -204,7 +204,7 @@ describe("what a lead is called", () => {
       1,
     ],
     [
-      "an organization-first label, which still names the lead at its second term",
+      "a company-first label, which still names the lead at its second term",
       'const label = lead.company_name ?? lead.full_name ?? lead.email ?? "";',
       1,
     ],

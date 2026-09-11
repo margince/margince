@@ -43,7 +43,7 @@ export function emptyPage(): Response {
   return jsonResponse(emptySection);
 }
 
-export const org = {
+export const company = {
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
   industry: "Automotive",
@@ -67,9 +67,9 @@ export const org = {
  * absent and named in `sections_omitted`. A suite that IS about a section
  * spreads its own over this one.
  */
-export const org360 = {
+export const company360 = {
   as_of: "2026-06-01T09:00:00Z",
-  organization: org,
+  company: company,
   sections_omitted: [],
   people: emptySection,
   deals: {
@@ -108,7 +108,7 @@ export const emptyRollup = {
 
 /** A deterministic brief with nothing to say, in its quietest real state. */
 export const emptyBrief = {
-  organization_id: "o-1",
+  company_id: "o-1",
   generated_at: "2026-06-01T09:00:00Z",
   generated_by: "deterministic",
   sentences: [],
@@ -132,7 +132,7 @@ export const dormantStrength = {
  * request the screen fires.
  */
 export async function companyBackstop(url: string): Promise<Response> {
-  return url.endsWith("/organizations/o-1") ? jsonResponse(org) : emptyPage();
+  return url.endsWith("/companies/o-1") ? jsonResponse(company) : emptyPage();
 }
 
 // rollupResponse lets a suite hand back either a body or a whole Response,
@@ -160,12 +160,12 @@ function rollupResponse(rollup: unknown): Response {
 // the rules' live advice into every scan it wires, a never-read one included,
 // so a never-scanned account still carries the 360's own rows.
 export const neverScanned: {
-  organization_id: string;
+  company_id: string;
   state: string;
   findings: unknown[];
   findings_dropped: number;
 } = {
-  organization_id: "o-1",
+  company_id: "o-1",
   state: "never",
   findings: [],
   findings_dropped: 0,
@@ -197,7 +197,7 @@ function neverScannedEchoing(view: unknown): typeof neverScanned {
 // answers as a table.
 type BackstopOptions = Readonly<{
   strength?: unknown;
-  org360?: unknown;
+  company360?: unknown;
   scan?: unknown;
   rollup?: unknown;
   brief?: unknown;
@@ -216,12 +216,12 @@ function backstopAnswer(
   }
   if (pathname.endsWith("/context")) {
     return jsonResponse({
-      anchor: { type: "organization", id: "o-1" },
+      anchor: { type: "company", id: "o-1" },
       sections: [],
     });
   }
   if (pathname.endsWith("/360")) {
-    return jsonResponse(options?.org360 ?? org360);
+    return jsonResponse(options?.company360 ?? company360);
   }
   if (pathname.endsWith("/hierarchy-rollup")) {
     return rollupResponse(options?.rollup);
@@ -236,7 +236,7 @@ function backstopAnswer(
   // rows, unless a suite hands in one, so a page test is not also a scan test.
   if (pathname.endsWith("/scan")) {
     return jsonResponse(
-      options?.scan ?? neverScannedEchoing(options?.org360 ?? org360),
+      options?.scan ?? neverScannedEchoing(options?.company360 ?? company360),
     );
   }
   return undefined;
@@ -269,7 +269,7 @@ export function stubFetch(
 // The session a responder that never named one gets: a full seat holding
 // the grants a rep working their own accounts holds. Every write control on
 // the page asks the grant before it draws, so a responder that answered /me
-// with the ORG body (the catch-all most specs end in) would otherwise
+// with the COMPANY body (the catch-all most specs end in) would otherwise
 // describe a reader every verb is withheld from. A spec about a refusal
 // answers /me itself, with a `user`, and is passed through untouched.
 async function withSession(answer: Response): Promise<Response> {
@@ -285,7 +285,7 @@ async function withSession(answer: Response): Promise<Response> {
   return jsonResponse(
     meFixture({
       allow: {
-        organization: ["read", "create", "update", "delete"],
+        company: ["read", "create", "update", "delete"],
         deal: ["read", "create", "update"],
         relationship: ["read", "create", "update", "delete"],
         activity: ["read", "create"],

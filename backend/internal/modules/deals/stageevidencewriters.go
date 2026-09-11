@@ -170,9 +170,9 @@ func (s *Store) criteriaOfKind(
 // DealOfContract answers the deal a contract is bound to.
 //
 // contract.status_changed carries no deal_id — a contract belongs to an
-// organization and may name a deal — so the binding is read here rather than
+// company and may name a deal — so the binding is read here rather than
 // taken from the event. A contract naming no deal answers ErrNotFound, which
-// the trigger absorbs: an organization-level agreement settles no deal's
+// the trigger absorbs: a company-level agreement settles no deal's
 // criteria, and there is nothing to write.
 func DealOfContract(ctx context.Context, tx pgx.Tx, contractID ids.UUID) (ids.DealID, error) {
 	var dealID *ids.DealID

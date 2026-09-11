@@ -30,7 +30,7 @@ type Story = StoryObj;
 // that mounts the provider in its own return value is still outside it when
 // the hook runs. Every story here splits along that line.
 function TaskRowBody({ dueAt }: Readonly<{ dueAt?: string | null }>) {
-  const update = useTaskUpdate(taskWriteKeys("organization", "o-1"));
+  const update = useTaskUpdate(taskWriteKeys("company", "o-1"));
   return (
     <div
       style={{
@@ -96,7 +96,7 @@ function DetailModal() {
 }
 
 function DetailModalBody() {
-  const update = useTaskUpdate(taskWriteKeys("organization", "o-1"));
+  const update = useTaskUpdate(taskWriteKeys("company", "o-1"));
   return (
     <TaskDetailModal
       activityId="a-1"

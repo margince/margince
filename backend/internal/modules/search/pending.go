@@ -35,12 +35,12 @@ type pendingSource struct {
 // to BOTH maps; they must never diverge, since the pending count and the
 // live indexer must agree on what "this entity's text" means.
 var pendingSources = map[string]pendingSource{
-	entityPerson:       {table: entityPerson, text: "t.full_name"},
-	entityOrganization: {table: entityOrganization, text: "concat_ws(' ', t.display_name, t.legal_name, t.industry)"},
-	entityDeal:         {table: entityDeal, text: "t.name"},
-	entityLead:         {table: entityLead, text: "concat_ws(' ', t.full_name, t.company_name, t.title)"},
-	entityActivity:     {table: entityActivity, text: "concat_ws(' ', t.subject, t.body)"},
-	entityProject:      {table: entityProject, text: "concat_ws(' ', t.name, t.key, t.description)"},
+	entityPerson:   {table: entityPerson, text: "t.full_name"},
+	entityCompany:  {table: entityCompany, text: "concat_ws(' ', t.display_name, t.legal_name, t.industry)"},
+	entityDeal:     {table: entityDeal, text: "t.name"},
+	entityLead:     {table: entityLead, text: "concat_ws(' ', t.full_name, t.company_name, t.title)"},
+	entityActivity: {table: entityActivity, text: "concat_ws(' ', t.subject, t.body)"},
+	entityProject:  {table: entityProject, text: "concat_ws(' ', t.name, t.key, t.description)"},
 }
 
 // PendingByWorkspace is what a re-embed pass for each enumerated workspace will

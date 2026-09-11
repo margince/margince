@@ -12,7 +12,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 
 // The Profile tab's own body, in the two states that differ by WRITE STANDING:
 // every field editable, and the same fields with the verbs gone and one
@@ -20,11 +20,11 @@ type Organization = components["schemas"]["Organization"];
 // it carries the id every refused control below points at, so the notice's
 // heading IS the description rather than a second copy of it.
 
-const ORG = "01a04298-1971-7076-8076-8064da20fdff";
+const COMPANY = "01a04298-1971-7076-8076-8064da20fdff";
 
-const org = {
+const company = {
   writable: true,
-  id: ORG,
+  id: COMPANY,
   workspace_id: "01a04298-1971-7076-8076-8064da20fd01",
   display_name: "Brandt Automotive GmbH",
   legal_name: "Brandt Automotive GmbH",
@@ -39,27 +39,24 @@ const org = {
   version: 1,
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-01T08:00:00Z",
-} as unknown as Organization;
+} as unknown as Company;
 
-function frame(
-  organization: Organization,
-  allow: Parameters<typeof meRoute>[0],
-) {
+function frame(company: Company, allow: Parameters<typeof meRoute>[0]) {
   const routes: RouteMap = {
     "GET /me": meRoute(allow),
-    [`GET /organizations/${ORG}/profile-fields`]: () =>
+    [`GET /companies/${COMPANY}/profile-fields`]: () =>
       jsonResponse({ data: [] }),
-    [`GET /organizations/${ORG}/facts`]: () => jsonResponse({ data: [] }),
+    [`GET /companies/${COMPANY}/facts`]: () => jsonResponse({ data: [] }),
   };
   installFetchStub(routes);
   return (
     <StoryProviders>
-      <CompanyProfileForm org={organization} tools={null} />
+      <CompanyProfileForm company={company} tools={null} />
     </StoryProviders>
   );
 }
 
-const WRITER = { organization: ["read", "update"] } as const;
+const WRITER = { company: ["read", "update"] } as const;
 
 const meta: Meta<typeof CompanyProfileForm> = {
   title: "Records/Company 360/Profile tab",
@@ -70,7 +67,7 @@ export default meta;
 type Story = StoryObj<typeof CompanyProfileForm>;
 
 /** The ordinary tab: the account's own fields, every one of them editable. */
-export const Editable: Story = { render: () => frame(org, WRITER) };
+export const Editable: Story = { render: () => frame(company, WRITER) };
 
 /**
  * Archived, which is the more specific of the two denials and the one a reader
@@ -79,11 +76,13 @@ export const Editable: Story = { render: () => frame(org, WRITER) };
  * has nothing to interrupt for.
  */
 export const ReadOnlyBecauseArchived: Story = {
-  render: () => frame({ ...org, archived_at: "2026-07-15T00:00:00Z" }, WRITER),
+  render: () =>
+    frame({ ...company, archived_at: "2026-07-15T00:00:00Z" }, WRITER),
 };
 
 /** The same notice in dark, because tone reaches the heading's ink. */
 export const ReadOnlyBecauseArchivedDark: Story = {
   globals: { theme: "dark" },
-  render: () => frame({ ...org, archived_at: "2026-07-15T00:00:00Z" }, WRITER),
+  render: () =>
+    frame({ ...company, archived_at: "2026-07-15T00:00:00Z" }, WRITER),
 };

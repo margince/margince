@@ -32,11 +32,11 @@ type FilterSource struct {
 // engine (activities, partners — not predicate-leaf resources) are absent,
 // so a view over them cannot be filter-exported.
 var viewResourceToEngine = map[string]string{
-	"people":        "person",
-	"organizations": "organization",
-	"deals":         "deal",
-	"leads":         "lead",
-	"projects":      "project",
+	"people":    typePerson,
+	"companies": typeCompany,
+	"deals":     typeDeal,
+	"leads":     typeLead,
+	"projects":  "project",
 }
 
 // SavedViewFilterSource resolves a saved view to its export filter. It

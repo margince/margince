@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ProjectsScreen } from "./projects";
-import { ORG, project } from "./projects.fixtures";
+import { COMPANY, project } from "./projects.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -54,9 +54,9 @@ function installList(projects: unknown[]) {
         data: projects,
         page: { next_cursor: null, has_more: false },
       }),
-    "GET /organizations": () =>
-      jsonResponse({ data: [ORG], page: { next_cursor: null } }),
-    [`GET /organizations/${ORG.id}`]: () => jsonResponse(ORG),
+    "GET /companies": () =>
+      jsonResponse({ data: [COMPANY], page: { next_cursor: null } }),
+    [`GET /companies/${COMPANY.id}`]: () => jsonResponse(COMPANY),
     "GET /users": () =>
       jsonResponse({
         data: [{ id: "u-me", display_name: "Me", status: "active" }],

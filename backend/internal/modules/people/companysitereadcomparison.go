@@ -60,8 +60,8 @@ func (e *InvalidSiteReadResolutionError) Error() string { return e.Reason }
 // GetCompanySiteRead returns the operational dossier plus its comparison to
 // the currently confirmed anchor in one workspace transaction.
 func (s *Store) GetCompanySiteRead(ctx context.Context, readID ids.UUID) (SiteRead, []SiteReadComparison, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
-		if createErr := auth.Require(ctx, "organization", principal.ActionCreate); createErr != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		if createErr := auth.Require(ctx, "company", principal.ActionCreate); createErr != nil {
 			return SiteRead{}, nil, createErr
 		}
 	}
@@ -90,17 +90,17 @@ func (s *Store) GetCompanySiteRead(ctx context.Context, readID ids.UUID) (SiteRe
 
 //nolint:nilnil // a missing anchor is a valid pre-onboarding comparison state
 func readAnchorForComparison(ctx context.Context, tx pgx.Tx) (*Company, error) {
-	orgID, err := anchorOrganization(ctx, tx, false)
+	companyID, err := anchorCompany(ctx, tx, false)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
+	if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 		return nil, err
 	}
-	company, err := readCompany(ctx, tx, orgID)
+	company, err := readAnchorCompany(ctx, tx, companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func compareCompanySiteRead(read SiteRead, company *Company) []SiteReadCompariso
 		if _, found := currentFields[fieldDisplayName]; !found {
 			currentFields[fieldDisplayName] = CompanyProfileField{
 				Field: fieldDisplayName, Value: company.DisplayName,
-				Source: normalizeCompanySource(company.OrganizationSource),
+				Source: normalizeCompanySource(company.CompanySource),
 			}
 		}
 		for _, fact := range company.Facts {

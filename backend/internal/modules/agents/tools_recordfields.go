@@ -10,7 +10,7 @@ package agents
 // margince://schema/reports: a resource is reachable by a client that reads
 // resources and by nobody else, and most callers on this surface list TOOLS
 // only. Without a door they reach the field names by refusal alone — correct,
-// and measured: a tools-only run writing an organization, a person and a
+// and measured: a tools-only run writing a company, a person and a
 // relationship from one business card spent three turns being told the names it
 // had guessed, one per record type, before it wrote anything.
 //

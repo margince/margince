@@ -34,9 +34,9 @@ type RecordClaim struct {
 
 // claimableTables are the record types this module owns that a seat may
 // claim. A deal is claimed through the deals module, which owns its table.
-var claimableTables = map[string]bool{entityPerson: true, entityOrganization: true, entityLead: true}
+var claimableTables = map[string]bool{entityPerson: true, entityCompany: true, entityLead: true}
 
-// ClaimRecord makes the calling human the owner of one person, organization
+// ClaimRecord makes the calling human the owner of one person, company
 // or lead. Human-only: owning a customer record is a person's accountability,
 // not an agent's. ifVersion, when given, is the If-Match compare.
 func (s *Store) ClaimRecord(ctx context.Context, recordType string, id ids.UUID, ifVersion *int64) (RecordClaim, error) {
@@ -93,8 +93,8 @@ func emitOwnerChanged(ctx context.Context, tx pgx.Tx, auditID ids.UUID, recordTy
 	switch recordType {
 	case entityPerson:
 		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventPersonUpdated{ChangedFields: changed})
-	case entityOrganization:
-		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventOrganizationUpdated{ChangedFields: changed})
+	case entityCompany:
+		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventCompanyUpdated{ChangedFields: changed})
 	case entityLead:
 		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventLeadUpdated{ChangedFields: changed})
 	}

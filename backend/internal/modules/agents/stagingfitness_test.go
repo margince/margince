@@ -86,7 +86,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 		// links are what carry the refusal here.
 		"send_account_email": fmt.Sprintf(
 			`{"to":["a@example.test"],"subject":"s","body":"b","consent_purpose":"support",`+
-				`"links":[{"entity_type":"organization","entity_id":%q}]}`, ids.NewV7()),
+				`"links":[{"entity_type":"company","entity_id":%q}]}`, ids.NewV7()),
 		// The whole-call staging the tier floor produces (#982). It patches an
 		// existing row, so it carries the same obligation as its siblings.
 		"update_record": fmt.Sprintf(`{"record_type":"person","id":%q,"fields":{"full_name":"X"}}`, person),
@@ -97,7 +97,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 	// pins a version against, neither of which exists yet.
 	// The lifecycle, tag, import and enrich families, which the walk below
 	// registers alongside the core and comms sets.
-	org, tagA, tagB, importRun, project := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+	company, tagA, tagB, importRun, project := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	for name, in := range map[string]string{
 		"relink_activity": fmt.Sprintf(
 			`{"activity_id":%q,"entity_type":"deal","entity_id":%q}`, activity, deal),
@@ -110,7 +110,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 		"advance_project_phase": fmt.Sprintf(`{"project_id":%q,"to_phase":"delivering"}`, project),
 		"merge_tags":            fmt.Sprintf(`{"tag_id":%q,"into_tag_id":%q}`, tagA, tagB),
 		"commit_import":         fmt.Sprintf(`{"run_id":%q}`, importRun),
-		"enrich":                fmt.Sprintf(`{"organization_id":%q}`, org),
+		"enrich":                fmt.Sprintf(`{"company_id":%q}`, company),
 	} {
 		reads[name] = in
 	}
@@ -368,10 +368,10 @@ func (stagingTags) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) 
 
 // RecordTagTypes is read at registration, not at staging: the tag registrar
 // asks it while building the apply/remove schema.
-func (stagingTags) RecordTagTypes() []string { return []string{"person", "organization", "deal"} }
+func (stagingTags) RecordTagTypes() []string { return []string{"person", "company", "deal"} }
 
 // TaggableTypes is read at registration too, by apply_tag's schema.
-func (stagingTags) TaggableTypes() []string { return []string{"person", "organization", "deal"} }
+func (stagingTags) TaggableTypes() []string { return []string{"person", "company", "deal"} }
 
 // stagingImports serves the run commit_import reads before it can describe what
 // committing would do.

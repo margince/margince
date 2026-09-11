@@ -32,24 +32,24 @@ import (
 func TestMergingCompaniesReAnchorsTheProjectWithItsDeals(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	source := e.SeedOrg(t, "BAER Pharma GmbH", nil)
-	target := e.SeedOrg(t, "BAER Pharma", nil)
+	source := e.SeedCompany(t, "BAER Pharma GmbH", nil)
+	target := e.SeedCompany(t, "BAER Pharma", nil)
 	p := seedProject(e.Admin(), t, e, "ERP replacement", source, nil)
 
-	sourceID := orgIDOf(source)
+	sourceID := companyIDOf(source)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Phase one", PipelineID: pipeline, StageID: open,
-		OrganizationID: &sourceID, ProjectID: &p.ID, Source: "manual",
+		CompanyID: &sourceID, ProjectID: &p.ID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := e.People.MergeOrganization(e.Admin(), sourceID, orgIDOf(target)); err != nil {
+	if _, err := e.People.MergeCompany(e.Admin(), sourceID, companyIDOf(target)); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
-	if n := e.WsCount(t, `SELECT count(*) FROM project WHERE id = $1 AND organization_id = $2`,
+	if n := e.WsCount(t, `SELECT count(*) FROM project WHERE id = $1 AND company_id = $2`,
 		p.ID, target); n != 1 {
 		t.Error("the project stayed on the merged-away company")
 	}
@@ -69,12 +69,12 @@ func TestMergingCompaniesReAnchorsTheProjectWithItsDeals(t *testing.T) {
 // than leaving a human to find the duplicates later.
 func TestMergingTwoCompaniesThatBothCarryProjectsIsRefused(t *testing.T) {
 	e := Setup(t)
-	source := e.SeedOrg(t, "BAER Pharma GmbH", nil)
-	target := e.SeedOrg(t, "BAER Pharma", nil)
+	source := e.SeedCompany(t, "BAER Pharma GmbH", nil)
+	target := e.SeedCompany(t, "BAER Pharma", nil)
 	seedProject(e.Admin(), t, e, "ERP replacement", source, nil)
 	kept := seedProject(e.Admin(), t, e, "Validation", target, nil)
 
-	_, err := e.People.MergeOrganization(e.Admin(), orgIDOf(source), orgIDOf(target))
+	_, err := e.People.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target))
 	var both *people.BothCompaniesCarryProjectsError
 	if !errors.As(err, &both) {
 		t.Fatalf("merging two project-carrying companies produced %v, want a refusal", err)
@@ -84,7 +84,7 @@ func TestMergingTwoCompaniesThatBothCarryProjectsIsRefused(t *testing.T) {
 	}
 
 	// Refusing must change nothing: the transaction rolls back whole.
-	if n := e.WsCount(t, `SELECT count(*) FROM organization WHERE id = $1 AND archived_at IS NULL`, source); n != 1 {
+	if n := e.WsCount(t, `SELECT count(*) FROM company WHERE id = $1 AND archived_at IS NULL`, source); n != 1 {
 		t.Error("the refused merge still archived the source company")
 	}
 
@@ -92,7 +92,7 @@ func TestMergingTwoCompaniesThatBothCarryProjectsIsRefused(t *testing.T) {
 	if _, err := e.Projects.ArchiveProject(e.Admin(), kept.ID, nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.People.MergeOrganization(e.Admin(), orgIDOf(source), orgIDOf(target)); err != nil {
+	if _, err := e.People.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target)); err != nil {
 		t.Errorf("archiving one side did not unblock the merge: %v", err)
 	}
 }
@@ -111,15 +111,15 @@ func TestTheMergeRefusalBlocksAndNamesProjectsTheCallerDoesNotOwn(t *testing.T) 
 	e := Setup(t)
 	// The merging rep owns both companies (a merge is a write, and an own-scope
 	// seat only writes what it owns), but neither project under them.
-	source := e.SeedOrg(t, "Helios GmbH", &e.Rep3)
-	target := e.SeedOrg(t, "Helios AG", &e.Rep3)
+	source := e.SeedCompany(t, "Helios GmbH", &e.Rep3)
+	target := e.SeedCompany(t, "Helios AG", &e.Rep3)
 	seedProject(e.Admin(), t, e, "Another team's migration", source, &e.Rep1)
 	seedProject(e.Admin(), t, e, "Another team's rollout", target, &e.Rep2)
 
 	outsider := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"organization":          {Read: true, Update: true, Delete: true},
+			"company":               {Read: true, Update: true, Delete: true},
 			"project":               {Read: true},
 			"person":                {Read: true, Update: true},
 			"installation_settings": {Read: true},
@@ -127,7 +127,7 @@ func TestTheMergeRefusalBlocksAndNamesProjectsTheCallerDoesNotOwn(t *testing.T) 
 		RowScope: principal.RowScopeOwn,
 	})
 
-	_, err := e.People.MergeOrganization(outsider, orgIDOf(source), orgIDOf(target))
+	_, err := e.People.MergeCompany(outsider, companyIDOf(source), companyIDOf(target))
 	var both *people.BothCompaniesCarryProjectsError
 	if !errors.As(err, &both) {
 		t.Fatalf("the merge produced %v, want a refusal — another team's work still blocks it", err)
@@ -149,15 +149,15 @@ func TestTheMergeRefusalBlocksAndNamesProjectsTheCallerDoesNotOwn(t *testing.T) 
 // naming is precision, not silence.
 func TestTheMergeRefusalNamesTheProjectsTheCallerCanSee(t *testing.T) {
 	e := Setup(t)
-	source := e.SeedOrg(t, "Vector Ltd", &e.Rep1)
-	target := e.SeedOrg(t, "Vector Limited", &e.Rep1)
+	source := e.SeedCompany(t, "Vector Ltd", &e.Rep1)
+	target := e.SeedCompany(t, "Vector Limited", &e.Rep1)
 	seedProject(e.Admin(), t, e, "Mine A", source, &e.Rep1)
 	seedProject(e.Admin(), t, e, "Mine B", target, &e.Rep1)
 
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"organization":          {Read: true, Update: true, Delete: true},
+			"company":               {Read: true, Update: true, Delete: true},
 			"project":               {Read: true},
 			"person":                {Read: true, Update: true},
 			"installation_settings": {Read: true},
@@ -165,7 +165,7 @@ func TestTheMergeRefusalNamesTheProjectsTheCallerCanSee(t *testing.T) {
 		RowScope: principal.RowScopeOwn,
 	})
 
-	_, err := e.People.MergeOrganization(owner, orgIDOf(source), orgIDOf(target))
+	_, err := e.People.MergeCompany(owner, companyIDOf(source), companyIDOf(target))
 	var both *people.BothCompaniesCarryProjectsError
 	if !errors.As(err, &both) {
 		t.Fatalf("the merge produced %v, want a refusal", err)
@@ -181,15 +181,15 @@ func TestTheMergeRefusalNamesTheProjectsTheCallerCanSee(t *testing.T) {
 // The other half of the same rule: naming a project is a read of it, so a
 // caller who never held project.read is refused the merge WITHOUT the names.
 //
-// The merge entry point gates on organization.update alone, so this seat is a
+// The merge entry point gates on company.update alone, so this seat is a
 // real one — a rep who may tidy up duplicate companies and has no business
 // with the delivery side. Row scope does not narrow a project any more, but
 // the object grant is a separate gate, and the counts are what tells this
 // caller the work exists without telling them what it is called.
 func TestTheMergeRefusalWithholdsProjectNamesFromACallerWithoutTheGrant(t *testing.T) {
 	e := Setup(t)
-	source := e.SeedOrg(t, "Kepler GmbH", &e.Rep1)
-	target := e.SeedOrg(t, "Kepler AG", &e.Rep1)
+	source := e.SeedCompany(t, "Kepler GmbH", &e.Rep1)
+	target := e.SeedCompany(t, "Kepler AG", &e.Rep1)
 	seedProject(e.Admin(), t, e, "Secret migration", source, &e.Rep1)
 	seedProject(e.Admin(), t, e, "Secret rollout", target, &e.Rep1)
 
@@ -197,14 +197,14 @@ func TestTheMergeRefusalWithholdsProjectNamesFromACallerWithoutTheGrant(t *testi
 	ungranted := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"organization":          {Read: true, Update: true, Delete: true},
+			"company":               {Read: true, Update: true, Delete: true},
 			"person":                {Read: true, Update: true},
 			"installation_settings": {Read: true},
 		},
 		RowScope: principal.RowScopeOwn,
 	})
 
-	_, err := e.People.MergeOrganization(ungranted, orgIDOf(source), orgIDOf(target))
+	_, err := e.People.MergeCompany(ungranted, companyIDOf(source), companyIDOf(target))
 	var both *people.BothCompaniesCarryProjectsError
 	if !errors.As(err, &both) {
 		t.Fatalf("the merge produced %v, want a refusal — work the caller cannot see still blocks it", err)
@@ -238,12 +238,12 @@ func TestTheMergeRefusalWithholdsProjectNamesFromACallerWithoutTheGrant(t *testi
 // withhold, and archiving one side releases both in the same breath.
 func TestTheCardAndTheMergeAgreeOnWhoCarriesProjects(t *testing.T) {
 	e := Setup(t)
-	source := e.SeedOrg(t, "BAER Pharma GmbH", nil)
-	target := e.SeedOrg(t, "BAER Pharma", nil)
+	source := e.SeedCompany(t, "BAER Pharma GmbH", nil)
+	target := e.SeedCompany(t, "BAER Pharma", nil)
 	seedProject(e.Admin(), t, e, "ERP replacement", source, nil)
 	kept := seedProject(e.Admin(), t, e, "Validation", target, nil)
 
-	carrying, err := e.People.OrganizationsCarryingLiveProjects(e.Admin(),
+	carrying, err := e.People.CompaniesCarryingLiveProjects(e.Admin(),
 		[]ids.UUID{source, target})
 	if err != nil {
 		t.Fatalf("reading which companies carry live projects: %v", err)
@@ -254,7 +254,7 @@ func TestTheCardAndTheMergeAgreeOnWhoCarriesProjects(t *testing.T) {
 	}
 
 	// The merge refuses on exactly that pair, which is the agreement.
-	_, err = e.People.MergeOrganization(e.Admin(), orgIDOf(source), orgIDOf(target))
+	_, err = e.People.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target))
 	var both *people.BothCompaniesCarryProjectsError
 	if !errors.As(err, &both) {
 		t.Fatalf("the merge produced %v, want the refusal the card is predicting", err)
@@ -266,7 +266,7 @@ func TestTheCardAndTheMergeAgreeOnWhoCarriesProjects(t *testing.T) {
 	if _, err := e.Projects.ArchiveProject(e.Admin(), kept.ID, nil); err != nil {
 		t.Fatalf("archiving the target's project: %v", err)
 	}
-	carrying, err = e.People.OrganizationsCarryingLiveProjects(e.Admin(),
+	carrying, err = e.People.CompaniesCarryingLiveProjects(e.Admin(),
 		[]ids.UUID{source, target})
 	if err != nil {
 		t.Fatalf("re-reading after the archive: %v", err)
@@ -275,7 +275,7 @@ func TestTheCardAndTheMergeAgreeOnWhoCarriesProjects(t *testing.T) {
 		t.Errorf("the target still reads as carrying live work after its only project " +
 			"was archived — an archived project is a grouping already ended")
 	}
-	if _, err := e.People.MergeOrganization(e.Admin(), orgIDOf(source), orgIDOf(target)); err != nil {
+	if _, err := e.People.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target)); err != nil {
 		t.Errorf("the merge the card would now offer was refused: %v", err)
 	}
 }

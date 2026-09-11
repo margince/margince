@@ -28,11 +28,11 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type View = components["schemas"]["Organization360"];
+type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
-const org = {
+const company = {
   id: "o-1",
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
@@ -44,7 +44,7 @@ const org = {
 
 const populated = {
   as_of: "2026-07-13T09:00:00Z",
-  organization: org,
+  company: company,
   sections_omitted: [],
   state_strip: {
     account: { lifecycle: "customer", relationship_types: ["customer"] },
@@ -171,7 +171,7 @@ function Brief({
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <TodayOnThisAccount
-          orgId="o-1"
+          companyId="o-1"
           view={view}
           loading={loading}
           failed={failed}
@@ -235,7 +235,7 @@ export const BeingRead: Story = {
     <Brief
       view={populated}
       scan={{
-        organization_id: "o-1",
+        company_id: "o-1",
         state: "running",
         findings: populated.suggestions ?? [],
         findings_dropped: 0,
@@ -251,7 +251,7 @@ export const Scanned: Story = {
     <Brief
       view={populated}
       scan={{
-        organization_id: "o-1",
+        company_id: "o-1",
         state: "done",
         generated_at: "2026-08-07T08:58:00Z",
         generated_by: "model",
@@ -292,12 +292,12 @@ export const Scanned: Story = {
 // has a definition and no working to show.
 function Call({ view }: Readonly<{ view: View }>) {
   const reading = useTodayReading({
-    orgId: "o-1",
+    companyId: "o-1",
     view,
     loading: false,
     failed: false,
   });
-  return <Company360Call reading={reading} name={org.display_name} />;
+  return <Company360Call reading={reading} name={company.display_name} />;
 }
 
 export const Reading: Story = {

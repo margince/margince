@@ -475,7 +475,7 @@ function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
 //
 // WHY ONLY A PERSON. The composer lives on the person page and drafts to the
 // person, choosing its transport from their own reachability. A deal or an
-// organization has no composer to open, so a link claiming to draft there would
+// company has no composer to open, so a link claiming to draft there would
 // promise what the click cannot do — the defect this function's own comment
 // warned about before the route existed.
 //

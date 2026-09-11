@@ -16,7 +16,7 @@ package gates
 // WHY THIS GATE IS INVERTED. Its first version carried a LIST of the four
 // files that write prose, and justified the list by saying those four were
 // what "Margince writes prose" meant. The list was already wrong on the day it
-// shipped: orgdossier/growthfitwrite.go writes the recommended angle a reader
+// shipped: companydossier/growthfitwrite.go writes the recommended angle a reader
 // sees on the company page, carried its own hand-rolled "write one claim per
 // sentence, plainly", and sat in the same package as one of the four. A list
 // can only fail SHORT — it reads a smaller tree and reports the same word for

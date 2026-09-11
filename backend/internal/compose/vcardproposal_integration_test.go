@@ -32,9 +32,9 @@ const (
 // workspace already holds — the shape the import refuses to create.
 func reviewedCard() people.VCardEntry {
 	return people.VCardEntry{
-		FullName:     "Anna Weber",
-		Organization: "Weber Consulting",
-		Emails:       []people.VCardChannel{{Value: reviewedCardEmail, Kind: "work"}},
+		FullName: "Anna Weber",
+		Company:  "Weber Consulting",
+		Emails:   []people.VCardChannel{{Value: reviewedCardEmail, Kind: "work"}},
 	}
 }
 
@@ -112,11 +112,11 @@ func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
 		t.Errorf("people holding the card's own address %s = %d, want exactly the approved create", reviewedCardEmail, created)
 	}
 	// The other half of the release: the employer edge, through to the
-	// organization the card named.
+	// company the card named.
 	var employed int
 	if err := e.Pool.QueryRow(ctx, `
 		SELECT count(*) FROM relationship r
-		  JOIN organization o ON o.id = r.organization_id
+		  JOIN company o ON o.id = r.company_id
 		  JOIN person_email pe ON pe.person_id = r.person_id
 		 WHERE r.kind = 'employment' AND lower(pe.email) = $1
 		   AND o.display_name = 'Weber Consulting'`, reviewedCardEmail).Scan(&employed); err != nil {
@@ -127,11 +127,11 @@ func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
 	}
 }
 
-// orgLessReviewedCard is a near-match with no ORG line at all — an email
-// still gives it real addressing, but the identity asserts organization too
+// companyLessReviewedCard is a near-match with no COMPANY line at all — an email
+// still gives it real addressing, but the identity asserts company too
 // (as the empty string), and the staged payload must carry that same key or
 // the engine's containment check refuses the mismatch.
-func orgLessReviewedCard() people.VCardEntry {
+func companyLessReviewedCard() people.VCardEntry {
 	return people.VCardEntry{
 		FullName: "Anna Weber",
 		Emails:   []people.VCardChannel{{Value: reviewedCardEmail, Kind: "work"}},
@@ -141,10 +141,10 @@ func orgLessReviewedCard() people.VCardEntry {
 func TestACardNamingNoCompanyCanStillBeStaged(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	candidate := seedNearMatch(ctx, t, e, orgLessReviewedCard())
+	candidate := seedNearMatch(ctx, t, e, companyLessReviewedCard())
 
 	stage := vcardCreateStager(e.Pool)
-	if err := stage(ctx, orgLessReviewedCard(), candidate); err != nil {
+	if err := stage(ctx, companyLessReviewedCard(), candidate); err != nil {
 		t.Fatalf("staging a card naming no company: %v", err)
 	}
 
@@ -158,14 +158,14 @@ func TestACardNamingNoCompanyCanStillBeStaged(t *testing.T) {
 		t.Fatalf("listing the staged review: %v", err)
 	}
 	if len(rows) != 1 {
-		t.Fatalf("pending vcard_create proposals = %d, want the one org-less review", len(rows))
+		t.Fatalf("pending vcard_create proposals = %d, want the one company-less review", len(rows))
 	}
 
-	// The release half is the one org-less cards exercise differently: no
+	// The release half is the one company-less cards exercise differently: no
 	// company to attach means no employment edge, which is a distinct code
-	// path from the org-present create the sibling test already covers.
+	// path from the company-present create the sibling test already covers.
 	if _, err := svc.Decide(ctx, ids.From[ids.ApprovalKind](ids.UUID(rows[0].Id)), true, nil); err != nil {
-		t.Fatalf("approving the org-less create: %v", err)
+		t.Fatalf("approving the company-less create: %v", err)
 	}
 	var created, employed int
 	if err := e.Pool.QueryRow(ctx,
@@ -188,7 +188,7 @@ func TestACardNamingNoCompanyCanStillBeStaged(t *testing.T) {
 }
 
 // vacuousReviewedCard names a person and nothing else — no email, no
-// organization. Without a subject folded into the identity, this would
+// company. Without a subject folded into the identity, this would
 // collapse to the bare name alone — exactly what two DIFFERENT workspace
 // members could independently produce for two DIFFERENT people who share
 // that name.
@@ -294,14 +294,14 @@ func TestATwoMembersCardsWithNoCandidateDoNotJoinIntoOneReview(t *testing.T) {
 // card or a signature block, so a value-derived identity built from card
 // fields alone is guessable no matter how many of them are populated.
 func coworkerNamedCard() people.VCardEntry {
-	return people.VCardEntry{FullName: "Jan Kowalski", Organization: "Acme GmbH"}
+	return people.VCardEntry{FullName: "Jan Kowalski", Company: "Acme GmbH"}
 }
 
 // The harder case behind the one above: two DIFFERENT people who both work
 // at the same company and share a name are not a hypothetical the fix
 // happens to miss — they are exactly what an attacker with person:create
 // need only observe (or guess) to reproduce another member's card byte for
-// byte, if organization alone still discriminated the identity.
+// byte, if company alone still discriminated the identity.
 func TestATwoFieldCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T) {
 	e := integration.Setup(t)
 	adminCtx := e.Admin()

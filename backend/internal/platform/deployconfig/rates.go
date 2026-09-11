@@ -27,7 +27,7 @@ type RatesConfig struct {
 }
 
 // validate fails closed on a malformed candidate set: every fx_currencies entry
-// must be an ISO 4217 code (the same shape organization.base_currency is held
+// must be an ISO 4217 code (the same shape company.base_currency is held
 // to), and no currency may repeat. A typo must surface at boot, never as a
 // silently dropped bootstrap symbol the FX source omits without a trace.
 func (r RatesConfig) validate() error {

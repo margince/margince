@@ -98,10 +98,10 @@ const RAIL_ROUTES: RouteMap = {
       name: "Depot rollout",
     }),
   "POST /reports/deals-by-stage": () => report(pipelineRows),
-  "GET /organizations/org-nordwind": () =>
-    jsonResponse({ id: "org-nordwind", display_name: "Nordwind Logistik" }),
-  "GET /organizations/org-acme": () =>
-    jsonResponse({ id: "org-acme", display_name: "Acme Fördertechnik" }),
+  "GET /companies/company-nordwind": () =>
+    jsonResponse({ id: "company-nordwind", display_name: "Nordwind Logistik" }),
+  "GET /companies/company-acme": () =>
+    jsonResponse({ id: "company-acme", display_name: "Acme Fördertechnik" }),
 };
 
 /** One part, with the reads it makes answered and nothing else reachable. */

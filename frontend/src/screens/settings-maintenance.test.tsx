@@ -193,7 +193,7 @@ describe("ResetDataCard (danger zone)", () => {
     );
 
     const dialog = await screen.findByRole("dialog");
-    // The org name is shown so the admin can copy it into the input.
+    // The company name is shown so the admin can copy it into the input.
     expect(within(dialog).getByText("Acme Inc")).toBeTruthy();
     const confirmButton = within(dialog).getByRole("button", {
       name: /reset everything/i,
@@ -220,8 +220,7 @@ describe("ResetDataCard (danger zone)", () => {
         dataResetAvailable: true,
         resetStatus: 422,
         resetBody: {
-          detail:
-            "The typed confirmation does not match the organization name.",
+          detail: "The typed confirmation does not match the company name.",
         },
       }),
     );
@@ -237,7 +236,7 @@ describe("ResetDataCard (danger zone)", () => {
     );
     expect(
       await screen.findByText(
-        "The typed confirmation does not match the organization name.",
+        "The typed confirmation does not match the company name.",
       ),
     ).toBeTruthy();
   });
@@ -271,13 +270,13 @@ describe("ResetDataCard (danger zone)", () => {
 
   // Opens the confirm dialog, types the confirmation, and submits — the same
   // three steps every summary test needs before it can see a result.
-  async function confirmReset(user: UserEvent, orgName: string) {
+  async function confirmReset(user: UserEvent, companyName: string) {
     await user.click(
       await screen.findByRole("button", { name: /reset data/i }),
     );
     const dialog = await screen.findByRole("dialog");
     const input = within(dialog).getByRole("textbox");
-    await user.type(input, orgName);
+    await user.type(input, companyName);
     await user.click(
       within(dialog).getByRole("button", { name: /reset everything/i }),
     );

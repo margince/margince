@@ -356,10 +356,10 @@ func TestTheSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
 	}
 	e.MakeCapturePrivate(t, "person", ids.UUID(person.Id), e.Rep1)
 
-	// The workspace sweep, the shape an organization event triggers.
+	// The workspace sweep, the shape a company event triggers.
 	matcher := NewLinkedInMatchGen(e.Pool, e.People, identity.NewService(e.Pool), slog.New(slog.DiscardHandler))
 	if err := matcher.HandleEvent(ctx,
-		envelopeFor(e.WS, "organization.created", "organization", ids.NewV7())); err != nil {
+		envelopeFor(e.WS, "company.created", "company", ids.NewV7())); err != nil {
 		t.Fatalf("sweeping: %v", err)
 	}
 
@@ -381,7 +381,7 @@ func TestTheSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
 // TestThePerPersonSweepNeverMatchesOutsideTheGhostOwnersRowScope is the
 // per-person twin of the test above, over the path that actually matters in
 // practice — the one a normal capture/manual-entry write reaches
-// (person.created/person.updated), not just an organization sweep.
+// (person.created/person.updated), not just a company sweep.
 //
 // Passing the owner filter as ids.Nil (SQL NULL, "every owner") would let a
 // member iterated by forEachGhostOwner for their OWN unrelated ghost also

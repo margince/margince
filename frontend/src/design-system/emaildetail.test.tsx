@@ -271,7 +271,7 @@ describe("the drawer's filing line", () => {
   it("labels the records the host could name", async () => {
     stubRead(
       presentation({
-        links: [{ entity_type: "organization", entity_id: BRANDT }],
+        links: [{ entity_type: "company", entity_id: BRANDT }],
       }),
     );
     draw(

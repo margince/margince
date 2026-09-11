@@ -25,7 +25,7 @@ const STATUS_IDLE = {
 
 // utilization_impact is a top-level field of EmbedReindexPreview — the band the
 // INSTALLATION would land in (A107/ADR-0061: one installation, one
-// organization). It sat under a `per_workspace` array the contract has no such
+// company). It sat under a `per_workspace` array the contract has no such
 // property for, so the card read `preview.utilization_impact`, found nothing,
 // and the impact badge this story exists to show never rendered.
 const PREVIEW = {

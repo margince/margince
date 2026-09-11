@@ -91,7 +91,7 @@ const meetingPrepMoment: components["schemas"]["PersonMoment"] = {
   ],
 };
 
-// One contact at an organization: one unanswered inbound thread, a meeting
+// One contact at a company: one unanswered inbound thread, a meeting
 // accepted, no open deal, one colleague who knows them, email consent
 // allowed. The demo-seed spirit — a record with enough on it to fill every
 // card, and nothing invented past what the fixture states.
@@ -158,8 +158,8 @@ const populated: View = {
     data: [
       {
         relationship_id: "rel-1",
-        organization_id: "o-1",
-        organization_name: "Brandt Automotive GmbH",
+        company_id: "o-1",
+        company_name: "Brandt Automotive GmbH",
         role: "Head of Fleet",
         is_current_primary: true,
         started_at: "2022-03-01T00:00:00Z",
@@ -358,7 +358,7 @@ const jobChangeMoment: components["schemas"]["PersonMoment"] = {
   recommended_action: {
     kind: "open_record",
     label: "Review the account",
-    destination: { surface: "record", entity_type: "organization" },
+    destination: { surface: "record", entity_type: "company" },
     state: "available",
   },
   secondary_actions: [
@@ -933,8 +933,8 @@ const twoEmployers: View = {
     data: [
       {
         relationship_id: "rel-1",
-        organization_id: "o-1",
-        organization_name: "Brandt Automotive GmbH",
+        company_id: "o-1",
+        company_name: "Brandt Automotive GmbH",
         role: "Head of Fleet",
         is_current_primary: true,
         started_at: "2022-03-01T00:00:00Z",
@@ -942,8 +942,8 @@ const twoEmployers: View = {
       },
       {
         relationship_id: "rel-2",
-        organization_id: "o-2",
-        organization_name: "Voss Logistics",
+        company_id: "o-2",
+        company_name: "Voss Logistics",
         role: "Fleet Coordinator",
         is_current_primary: false,
         started_at: "2018-01-01T00:00:00Z",

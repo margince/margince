@@ -4,7 +4,7 @@ import { navigate } from "../app/router";
 import { Button, TextInput } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { useOrganization360 } from "./company360";
+import { useCompany360 } from "./company360";
 import type { DraftUnavailable } from "./compose";
 import { Citations } from "./record360";
 
@@ -27,20 +27,20 @@ import { Citations } from "./record360";
 // of the account, so a contact this picker offers that the view does not carry
 // would be one the draft then refuses.
 export function AccountDraftContext({
-  orgId,
+  companyId,
   recipientId,
   onRecipientChange,
   dealId,
   onDealChange,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   recipientId: string;
   onRecipientChange: (next: string) => void;
   dealId: string;
   onDealChange: (next: string) => void;
 }>) {
   const t = useT();
-  const query = useOrganization360(orgId);
+  const query = useCompany360(companyId);
   // An overlay workspace has no native 360 to ground from; the endpoint
   // refuses there too, so the pickers simply have nothing to offer.
   const view = query.data?.state === "ready" ? query.data.view : undefined;

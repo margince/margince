@@ -39,7 +39,7 @@ import (
 // offers and will not re-propose. What was lost is the cost. The sweep
 // enumerates every connection in (unmatched, suggested), so a refused one paid
 // an RBAC resolve, a whole-network match, a pending read and a staging
-// transaction on every hourly pass and every organization event, for a
+// transaction on every hourly pass and every company event, for a
 // guaranteed-empty result — a permanent per-pass charge that grows with the
 // size of the imported network, for a state that is supposed to be the cheap
 // one.

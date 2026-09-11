@@ -38,7 +38,7 @@ const budgetVolumeRows = 20000
 // outer scan stop at the page limit after a dozen rows and prove nothing about
 // what a plan can cost.
 const budgetVolumePlan = `{"version": "v1", "target": "person",
-	"traverse": {"relation": "organizations",
+	"traverse": {"relation": "companies",
 	             "where": [{"field": "address.city", "op": "eq", "value": "Volumeburg"}]}}`
 
 // rankedVolumePlan ranks every seeded person, so the ranking lane has the whole
@@ -52,7 +52,7 @@ const rankedVolumePlan = `{"version": "v1", "target": "person", "similar_to": "V
 func (q *queryEnv) seedBudgetVolume(t *testing.T) ids.UUID {
 	t.Helper()
 	ctx := q.admin()
-	org := q.SeedID(t, `INSERT INTO organization (id, display_name, address_city, source, captured_by)
+	company := q.SeedID(t, `INSERT INTO company (id, display_name, address_city, source, captured_by)
 		VALUES ($1, 'Volume GmbH', 'Volumeburg', 'manual', 'human:x')`)
 	if _, err := q.Owner.Exec(ctx, `INSERT INTO person (full_name, source, captured_by)
 		SELECT 'Volume Person ' || i, 'manual', 'human:x' FROM generate_series(1, $1) AS i`,
@@ -60,15 +60,15 @@ func (q *queryEnv) seedBudgetVolume(t *testing.T) ids.UUID {
 		t.Fatalf("seeding %d people: %v", budgetVolumeRows, err)
 	}
 	var employee ids.UUID
-	if err := q.Owner.QueryRow(ctx, `INSERT INTO relationship (kind, person_id, organization_id, source, captured_by)
+	if err := q.Owner.QueryRow(ctx, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
 		SELECT 'employment', id, $1, 'manual', 'human:x' FROM person ORDER BY id LIMIT 1
-		RETURNING person_id`, org).Scan(&employee); err != nil {
+		RETURNING person_id`, company).Scan(&employee); err != nil {
 		t.Fatalf("seeding the one employment edge: %v", err)
 	}
 	// Without fresh statistics the planner sizes these tables from whatever the
 	// last analyze saw, which on a just-reset database is nothing — and the plan
 	// it picks is what decides the cost under test.
-	if _, err := q.Owner.Exec(ctx, `ANALYZE person, organization, relationship`); err != nil {
+	if _, err := q.Owner.Exec(ctx, `ANALYZE person, company, relationship`); err != nil {
 		t.Fatalf("analyzing the seeded volume: %v", err)
 	}
 	return employee

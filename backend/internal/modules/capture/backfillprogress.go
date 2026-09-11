@@ -217,7 +217,7 @@ func createdSubjects(outcome EnsureOutcome) []createdSubject {
 	// domains did that work whether or not the crawls have answered yet, and
 	// reporting zero would hide it.
 	if outcome.CompanyQueued && outcome.QueuedDomain != "" {
-		out = append(out, createdSubject{kind: "organization_queued", subject: outcome.QueuedDomain})
+		out = append(out, createdSubject{kind: "company_queued", subject: outcome.QueuedDomain})
 	}
 	return out
 }
@@ -265,10 +265,10 @@ func (c *pageProgress) recordCreations(ctx context.Context, created []createdSub
 		_, err := tx.Exec(ctx, `
 			UPDATE capture_backfill b
 			SET people_created = greatest(counted.people, b.people_created),
-			    organizations_created = greatest(counted.organizations, b.organizations_created)
+			    companies_created = greatest(counted.companies, b.companies_created)
 			FROM (
 				SELECT count(*) FILTER (WHERE kind = 'person') AS people,
-				       count(*) FILTER (WHERE kind = 'organization_queued') AS organizations
+				       count(*) FILTER (WHERE kind = 'company_queued') AS companies
 				  FROM capture_backfill_creation
 				 WHERE backfill_id = $1
 			) counted

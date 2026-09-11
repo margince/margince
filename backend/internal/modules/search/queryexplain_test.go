@@ -13,17 +13,17 @@ import (
 // a caller reading rows beside it is reading a description of the query those
 // rows came from.
 func TestTheNarrativeDescribesTheExecutedPlan(t *testing.T) {
-	plan := validatedPlanDoc(readerFor(entityDeal, entityOrganization), t, `{
+	plan := validatedPlanDoc(readerFor(entityDeal, entityCompany), t, `{
 		"version": "v1", "target": "deal",
 		"where": [{"field": "status", "op": "eq", "value": "open"},
 		          {"field": "amount_minor", "op": "gte", "value": 100000}],
-		"traverse": {"relation": "organization",
+		"traverse": {"relation": "company",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]},
 		"similar_to": "manufacturers who churned after a pilot",
 		"limit": 25}`)
 	got := explainPlan(plan)
 	want := `deal records where status is "open" and amount_minor is at least 100000, ` +
-		`linked to an organization record where address.city is "Stuttgart", ` +
+		`linked to a company record where address.city is "Stuttgart", ` +
 		`ranked by similarity to "manufacturers who churned after a pilot"; at most 25.`
 	if got != want {
 		t.Errorf("narrative is\n  %s\nwant\n  %s", got, want)

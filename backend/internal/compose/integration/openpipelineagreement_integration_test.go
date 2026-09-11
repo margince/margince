@@ -7,10 +7,10 @@ package integration
 
 // One account, one field name, one number.
 //
-// `open_pipeline_minor_base` is published twice for the same organization: the
-// company RECORD computes it in SQL (organization_open_pipeline_rollup, read by
-// people/organization_computed.go) and the company PAGE computes it in Go
-// (org360's priceOpenDeals over deals.PriceAll). Two implementations of one
+// `open_pipeline_minor_base` is published twice for the same company: the
+// company RECORD computes it in SQL (company_open_pipeline_rollup, read by
+// people/company_computed.go) and the company PAGE computes it in Go
+// (company360's priceOpenDeals over deals.PriceAll). Two implementations of one
 // rule drift, and this one did: the Go side learned to scale both currencies'
 // minor units and the SQL side did not, so a yen deal came out a hundredfold
 // apart on two screens that name the same figure.
@@ -34,14 +34,14 @@ import (
 func TestBothOpenPipelineReadsAgreeOnAYenDeal(t *testing.T) {
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
-	orgID := e.SeedOrg(t, "Yen Pipeline KK", nil)
+	companyID := e.SeedCompany(t, "Yen Pipeline KK", nil)
 
 	// ¥5,000,000 — five million yen, since JPY has no minor unit — at
 	// 1 JPY = 0.006 EUR is €30,000, which is 3,000,000 EUR minor units.
 	// An unscaled multiply answers 30,000: €300.
 	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Tokyo renewal", AmountMinor: int64Ptr(5_000_000), Currency: strPtr("JPY"),
-		PipelineID: pipeline, StageID: open, OrganizationID: orgIDPtr(orgIDOf(orgID)), Source: "manual",
+		PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
 	}); err != nil {
 		t.Fatalf("seeding the yen deal: %v", err)
 	}
@@ -51,11 +51,11 @@ func TestBothOpenPipelineReadsAgreeOnAYenDeal(t *testing.T) {
 	const wantMinorBase = int64(3_000_000)
 
 	// The SQL side, as the company record publishes it.
-	org, err := e.People.GetOrganization(e.Admin(), orgIDOf(orgID), storekit.IncludeArchived)
+	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
 	if err != nil {
-		t.Fatalf("reading the organization: %v", err)
+		t.Fatalf("reading the company: %v", err)
 	}
-	record := computedFieldByKey(*org.ComputedFields, "open_pipeline")
+	record := computedFieldByKey(*company.ComputedFields, "open_pipeline")
 	if !record.Computable {
 		t.Fatal("the company record reports the pipeline as not computable, with a rate loaded for the pair")
 	}
@@ -65,7 +65,7 @@ func TestBothOpenPipelineReadsAgreeOnAYenDeal(t *testing.T) {
 	}
 
 	// The Go side, as the company page publishes it.
-	page, err := orgSurfaceService(e).Assemble(e.Admin(), orgIDOf(orgID))
+	page, err := companySurfaceService(e).Assemble(e.Admin(), companyIDOf(companyID))
 	if err != nil {
 		t.Fatalf("assembling the company page: %v", err)
 	}

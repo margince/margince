@@ -31,33 +31,33 @@ import (
 
 // employAlso adds a second employment for a person, without the flag: the
 // incumbent holds the slot, and this is the row a departure might promote.
-func (e *dedupeEnv) employAlso(ctx context.Context, t *testing.T, person ids.PersonID, orgName, domain string) {
+func (e *dedupeEnv) employAlso(ctx context.Context, t *testing.T, person ids.PersonID, companyName, domain string) {
 	t.Helper()
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
-		DisplayName: orgName, Source: "manual",
-		Domains: []OrgDomainInput{{Domain: domain, IsPrimary: true}},
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: companyName, Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: domain, IsPrimary: true}},
 	})
 	if err != nil {
-		t.Fatalf("seeding %s: %v", orgName, err)
+		t.Fatalf("seeding %s: %v", companyName, err)
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
-		Kind: "employment", PersonID: &person, OrganizationID: &orgID, Source: "manual",
+		Kind: "employment", PersonID: &person, CompanyID: &companyID, Source: "manual",
 	}); err != nil {
-		t.Fatalf("seeding the second employment at %s: %v", orgName, err)
+		t.Fatalf("seeding the second employment at %s: %v", companyName, err)
 	}
 }
 
 // employmentEdge answers the id of this person's employment at the company the
 // seed gave them, which is the edge the departures below retire.
-func (e *dedupeEnv) employmentEdge(ctx context.Context, t *testing.T, person ids.PersonID, org ids.OrganizationID) ids.UUID {
+func (e *dedupeEnv) employmentEdge(ctx context.Context, t *testing.T, person ids.PersonID, company ids.CompanyID) ids.UUID {
 	t.Helper()
 	var edge ids.UUID
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT id FROM relationship
-			  WHERE kind = 'employment' AND person_id = $1 AND organization_id = $2`,
-			person, org).Scan(&edge)
+			  WHERE kind = 'employment' AND person_id = $1 AND company_id = $2`,
+			person, company).Scan(&edge)
 	}); err != nil {
 		t.Fatalf("reading the person's employment edge: %v", err)
 	}
@@ -69,19 +69,19 @@ func (e *dedupeEnv) employmentEdge(ctx context.Context, t *testing.T, person ids
 // definition that moves underneath cannot leave this passing.
 func (e *dedupeEnv) primaryEmployer(ctx context.Context, t *testing.T, person ids.PersonID) ids.UUID {
 	t.Helper()
-	var org *ids.UUID
+	var company *ids.UUID
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT (SELECT organization_id FROM relationship
+			SELECT (SELECT company_id FROM relationship
 			         WHERE person_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`
-			           AND `+employment.IsCurrentSQL("ended_at")+`)`, person).Scan(&org)
+			           AND `+employment.IsCurrentSQL("ended_at")+`)`, person).Scan(&company)
 	}); err != nil {
 		t.Fatalf("reading the person's primary employer: %v", err)
 	}
-	if org == nil {
+	if company == nil {
 		return ids.Nil
 	}
-	return *org
+	return *company
 }
 
 // asRetirer is the editor with the one grant archiving needs, added to the
@@ -142,17 +142,17 @@ func TestRetiringThePrimaryEmploymentPromotesTheOneThatRemains(t *testing.T) {
 		t.Run(door.door, func(t *testing.T) {
 			e := setupDedupe(t)
 			ctx := e.as()
-			person, incumbentOrg := e.seedEmployedPerson(ctx, t,
+			person, incumbentCompany := e.seedEmployedPerson(ctx, t,
 				"Successor Subject", "successor@leaving.test", "Leaving GmbH", "leaving.test")
 			e.employAlso(ctx, t, person, "Staying GmbH", "staying-"+door.door[:3]+".test")
 
-			door.run(ctx, t, e, e.employmentEdge(ctx, t, person, incumbentOrg))
+			door.run(ctx, t, e, e.employmentEdge(ctx, t, person, incumbentCompany))
 
 			got := e.primaryEmployer(ctx, t, person)
 			if got == ids.Nil {
 				t.Fatal("the person has one employment left and no primary employer — the answer was not a choice, and the page reads as though they work nowhere")
 			}
-			if got == incumbentOrg.UUID {
+			if got == incumbentCompany.UUID {
 				t.Fatalf("the retired employer %s still holds the flag", got)
 			}
 		})
@@ -166,12 +166,12 @@ func TestRetiringThePrimaryEmploymentLeavesTwoSurvivorsUnchosen(t *testing.T) {
 		t.Run(door.door, func(t *testing.T) {
 			e := setupDedupe(t)
 			ctx := e.as()
-			person, incumbentOrg := e.seedEmployedPerson(ctx, t,
+			person, incumbentCompany := e.seedEmployedPerson(ctx, t,
 				"Twice Employed", "twice@leaving.test", "Leaving GmbH", "leaving.test")
 			e.employAlso(ctx, t, person, "First Survivor GmbH", "first-"+door.door[:3]+".test")
 			e.employAlso(ctx, t, person, "Second Survivor GmbH", "second-"+door.door[:3]+".test")
 
-			door.run(ctx, t, e, e.employmentEdge(ctx, t, person, incumbentOrg))
+			door.run(ctx, t, e, e.employmentEdge(ctx, t, person, incumbentCompany))
 
 			if got := e.primaryEmployer(ctx, t, person); got != ids.Nil {
 				t.Errorf("the product chose %s between two remaining employers — is_current_primary is a column humans set deliberately, and this is where that means something", got)
@@ -187,10 +187,10 @@ func TestRetiringTheOnlyEmploymentLeavesNoEmployer(t *testing.T) {
 		t.Run(door.door, func(t *testing.T) {
 			e := setupDedupe(t)
 			ctx := e.as()
-			person, incumbentOrg := e.seedEmployedPerson(ctx, t,
+			person, incumbentCompany := e.seedEmployedPerson(ctx, t,
 				"Last Job", "lastjob@leaving.test", "Leaving GmbH", "leaving.test")
 
-			door.run(ctx, t, e, e.employmentEdge(ctx, t, person, incumbentOrg))
+			door.run(ctx, t, e, e.employmentEdge(ctx, t, person, incumbentCompany))
 
 			if got := e.primaryEmployer(ctx, t, person); got != ids.Nil {
 				t.Errorf("a person with no employment left reads as employed at %s", got)
@@ -206,11 +206,11 @@ func TestRetiringTheOnlyEmploymentLeavesNoEmployer(t *testing.T) {
 func TestClearingTheFlagOnTheOnlyEmploymentIsNotOverruled(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	person, org := e.seedEmployedPerson(ctx, t,
+	person, company := e.seedEmployedPerson(ctx, t,
 		"Deliberate", "deliberate@leaving.test", "Leaving GmbH", "leaving.test")
 
 	no := false
-	if _, err := e.store.UpdateRelationship(e.asEditor(), e.employmentEdge(ctx, t, person, org),
+	if _, err := e.store.UpdateRelationship(e.asEditor(), e.employmentEdge(ctx, t, person, company),
 		UpdateRelationshipInput{IsCurrentPrimary: &no}); err != nil {
 		t.Fatalf("clearing the flag: %v", err)
 	}

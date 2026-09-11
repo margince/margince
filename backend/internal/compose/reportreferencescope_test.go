@@ -29,8 +29,8 @@ import (
 //
 // gatekit:fixture the reference columns a report row can carry, and the table each points at
 var referenceColumns = map[string]string{
-	colOrganizationID:     tableOrganization,
-	colPartnerOrgID:       tableOrganization,
+	colCompanyID:          tableCompany,
+	colPartnerCompanyID:   tableCompany,
 	colProjectID:          tableProject,
 	activityProjectIDExpr: tableProject,
 }
@@ -61,7 +61,7 @@ func TestEveryReferenceDimensionDeclaresItsScope(t *testing.T) {
 // that can defend it.
 //
 // The dimension case is obvious: the id is printed. A filter discloses the same
-// fact through the answer's SHAPE — `count deals where organization_id =
+// fact through the answer's SHAPE — `count deals where company_id =
 // <guess>` returns 1 for a company that exists with a deal and 0 for one that
 // does not, so a caller who cannot open that company learns it is there, one
 // guess at a time.
@@ -78,7 +78,7 @@ func TestEveryReferenceDimensionDeclaresItsScope(t *testing.T) {
 //     for a company they cannot see.
 //
 // A spec offering the filter with neither is the finding. deals-by-stage and
-// pipeline-current offered organization_id with neither, and a filtered count
+// pipeline-current offered company_id with neither, and a filtered count
 // there confirmed a capture-private company one guess at a time.
 func TestEveryReferenceFilterIsDefended(t *testing.T) {
 	judged := 0
@@ -238,7 +238,7 @@ func TestEveryScopedReferenceIsReachableThroughTheVocabulary(t *testing.T) {
 //
 // referenceColumns above is a list of id expressions, all `t.`-prefixed, and it
 // answers only for columns on the report's own table. A joined attribute —
-// `org.size_band`, and whatever `org.industry` somebody adds next — is not an
+// `company.size_band`, and whatever `company.industry` somebody adds next — is not an
 // id and appears in no such list, so both gates above skip it and it can ship
 // carrying no row scope at all. That is the exact defect scopeVia was added to
 // fix, and a point fix without a gate invites its second instance.
@@ -422,8 +422,8 @@ var (
 
 // joinedAlias reports which joined alias an expression reads, if any.
 //
-// Matches on `alias.`, so `org.size_band` reads the `org` join and
-// `t.organization_id` matches nothing — the base table is not a join.
+// Matches on `alias.`, so `company.size_band` reads the `company` join and
+// `t.company_id` matches nothing — the base table is not a join.
 func joinedAlias(expr string, aliases map[string]string) (string, bool) {
 	for alias := range aliases {
 		if strings.Contains(expr, alias+".") {

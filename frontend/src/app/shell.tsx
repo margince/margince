@@ -126,8 +126,8 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
       {narrow ? narrowVersion() : displayVersion()}
     </span>
   );
-  // The installation's own organization (A107/ADR-0061: one installation, one
-  // organization), OBSERVED on the entry the onboarding gate already filled.
+  // The installation's own company (ADR-0061: one installation, one
+  // company), OBSERVED on the entry the onboarding gate already filled.
   // A disabled observer: it never fetches, so it cannot re-trigger the gate's
   // read and walk the app back through its splash, but it does re-render when
   // the company card writes a new mark into the entry — a plain cache peek
@@ -153,7 +153,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
         </a>
         {/* No attribution line here: the product's own mark is already above it,
             and a company name is never invented to fill the row. */}
-        <span className="ws-org">{marker}</span>
+        <span className="ws-company">{marker}</span>
       </>
     );
   }
@@ -184,8 +184,8 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
             fallback={<b>{installation.display_name}</b>}
           />
         </a>
-        <span className="ws-org">
-          <span className="ws-org-text">
+        <span className="ws-company">
+          <span className="ws-company-text">
             {t("shell.poweredByPrefix")}{" "}
             <span className="ws-logo-product">{t("shell.logoAria")}</span>
           </span>
@@ -211,17 +211,17 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
             declared no icon has a face rather than a gap. */}
         <span className="ws-chip ws-chip-company">
           <Avatar
-            identity={installation.organization_id}
+            identity={installation.company_id}
             name={installation.display_name}
-            shape="organization"
+            shape="company"
           />
         </span>
         <span className="ws-name">
           <b>{installation.display_name}</b>
         </span>
       </a>
-      <span className="ws-org">
-        <span className="ws-org-text">{t("shell.poweredBy")}</span>
+      <span className="ws-company">
+        <span className="ws-company-text">{t("shell.poweredBy")}</span>
         {marker}
       </span>
     </>

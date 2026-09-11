@@ -3,7 +3,7 @@
 
 package compose
 
-// The site-lead identity contract: the cross-read natural key is org +
+// The site-lead identity contract: the cross-read natural key is company +
 // normalized name (+ published email), stable across page moves and
 // reflow. The published-only people GATE rules live with the corpus gate
 // (sitecorpusread_test.go).
@@ -16,25 +16,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestSiteLeadSourceIDIsOrgStableAcrossPagesAndNameReflow(t *testing.T) {
-	org := ids.NewV7()
-	// The key is the ORG + name, not the page: the same person found on
+func TestSiteLeadSourceIDIsCompanyStableAcrossPagesAndNameReflow(t *testing.T) {
+	company := ids.NewV7()
+	// The key is the COMPANY + name, not the page: the same person found on
 	// /team or /about, or after a re-crawl moved the page, is one lead.
-	teamPage := siteLeadSourceID(org, "Anna Muster", "")
-	aboutPage := siteLeadSourceID(org, "  anna   MUSTER ", "")
+	teamPage := siteLeadSourceID(company, "Anna Muster", "")
+	aboutPage := siteLeadSourceID(company, "  anna   MUSTER ", "")
 	if teamPage != aboutPage {
 		t.Fatal("the lead natural key changed on a whitespace/case reflow, or across pages of the same site")
 	}
-	// A different org is a different lead even for the same name.
+	// A different company is a different lead even for the same name.
 	if teamPage == siteLeadSourceID(ids.NewV7(), "Anna Muster", "") {
-		t.Fatal("the same name at two organizations collapsed to one lead key")
+		t.Fatal("the same name at two companies collapsed to one lead key")
 	}
 	// Two distinct people who share a name stay distinct via published email.
-	if siteLeadSourceID(org, "Anna Muster", "anna1@acme.example") ==
-		siteLeadSourceID(org, "Anna Muster", "anna2@acme.example") {
+	if siteLeadSourceID(company, "Anna Muster", "anna1@acme.example") ==
+		siteLeadSourceID(company, "Anna Muster", "anna2@acme.example") {
 		t.Fatal("two people sharing a name but not an email share one key")
 	}
-	if teamPage == siteLeadSourceID(org, "Bernd Beispiel", "") {
+	if teamPage == siteLeadSourceID(company, "Bernd Beispiel", "") {
 		t.Fatal("two different people share one lead natural key")
 	}
 	if strings.Contains(teamPage, "@") || len(teamPage) != 64 {
@@ -46,7 +46,7 @@ func TestSiteLeadSourceIDIsOrgStableAcrossPagesAndNameReflow(t *testing.T) {
 // that has one and not the other still mints a duplicate lead — and each was
 // held by only one of the two normalizers this key used to be spelled with.
 func TestSiteLeadSourceIDFoldsTheDACHPairAndReflowedWhitespace(t *testing.T) {
-	org := ids.NewV7()
+	company := ids.NewV7()
 	for _, c := range []struct {
 		what  string
 		left  string
@@ -59,7 +59,7 @@ func TestSiteLeadSourceIDFoldsTheDACHPairAndReflowedWhitespace(t *testing.T) {
 		// person; a key that keeps the second space mints them again.
 		{"an internal-whitespace collapse", "Anna Muster", "Anna  Muster"},
 	} {
-		if siteLeadSourceID(org, c.left, "") != siteLeadSourceID(org, c.right, "") {
+		if siteLeadSourceID(company, c.left, "") != siteLeadSourceID(company, c.right, "") {
 			t.Errorf("%q and %q took two lead keys — the key lost %s", c.left, c.right, c.what)
 		}
 	}
@@ -92,9 +92,9 @@ func TestSitePersonIdentityKeepsTwoPeopleTheAddressesTellApart(t *testing.T) {
 	}
 	// And it is the SAME identity the cross-read lead key is built on, so the
 	// two cannot decide differently about one pair.
-	org := ids.NewV7()
-	if (siteLeadSourceID(org, "José Silva", "jose@acme.example") ==
-		siteLeadSourceID(org, "Jose Silva", "silva@acme.example")) !=
+	company := ids.NewV7()
+	if (siteLeadSourceID(company, "José Silva", "jose@acme.example") ==
+		siteLeadSourceID(company, "Jose Silva", "silva@acme.example")) !=
 		(sitePersonIdentity("José Silva", "jose@acme.example") ==
 			sitePersonIdentity("Jose Silva", "silva@acme.example")) {
 		t.Error("the lead key and the read's own fold disagree about one pair")

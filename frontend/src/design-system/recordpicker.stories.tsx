@@ -16,9 +16,9 @@ export default meta;
 type Story = StoryObj;
 
 const fixtureCandidates: RecordPickerCandidate[] = [
-  { id: "org-1", name: "Brandt Automotive" },
-  { id: "org-2", name: "Weber Logistics" },
-  { id: "org-3", name: "Fischer & Wagner" },
+  { id: "company-1", name: "Brandt Automotive" },
+  { id: "company-2", name: "Weber Logistics" },
+  { id: "company-3", name: "Fischer & Wagner" },
 ];
 
 function searchFixture(q: string): Promise<RecordPickerCandidate[]> {
@@ -35,7 +35,7 @@ function PickerDemo() {
   return (
     <div style={{ maxWidth: 320 }}>
       <RecordPicker
-        label="Search organizations…"
+        label="Search companies…"
         searchTargets={searchFixture}
         onPick={setSelected}
         selected={selected}

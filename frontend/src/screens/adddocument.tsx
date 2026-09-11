@@ -36,7 +36,7 @@ import { problemMessageOf, throwProblem } from "./common";
 // for deal fields, because a deal is the only record the accept can write to.
 // Filing everything against the company would be the tidier form and would
 // quietly make that feature unreachable, which is the state this screen was in
-// before: the upload existed, hardcoded to the organization, and the reading it
+// before: the upload existed, hardcoded to the company, and the reading it
 // fed had no way to happen.
 //
 // WHY IT TAKES TWO REQUESTS. The upload endpoint carries the bytes and the
@@ -262,13 +262,13 @@ export function AddDocumentDialog({
   const fetchDealPage = useCallback(
     (cursor: string | null) =>
       queryClient.fetchQuery({
-        queryKey: ["dealsForOrg", anchor.id, cursor],
+        queryKey: ["dealsForCompany", anchor.id, cursor],
         staleTime: DEAL_PAGE_FRESH_MS,
         queryFn: async (): Promise<DealPage> => {
           const { data, error } = await api.GET("/deals", {
             params: {
               query: {
-                organization_id: anchor.id,
+                company_id: anchor.id,
                 limit: DEAL_PAGE_SIZE,
                 ...(cursor ? { cursor } : {}),
               },
@@ -420,7 +420,7 @@ export function AddDocumentDialog({
           somebody open it to find out what the alternative was
           (design-system/choicelist.tsx). A contact's library has no second
           answer, so it asks nothing. */}
-      {anchor.record === "organization" && (
+      {anchor.record === "company" && (
         <>
           <ChoiceList
             legend={t("docs.add.about")}
@@ -541,8 +541,8 @@ function staleAfterUpload(anchor: DocumentAnchor): readonly QueryKey[] {
     ];
   }
   return [
-    ["orgDocuments", anchor.id],
-    ["organization360", anchor.id],
+    ["companyDocuments", anchor.id],
+    ["company360", anchor.id],
   ];
 }
 

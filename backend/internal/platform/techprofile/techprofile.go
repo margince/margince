@@ -35,7 +35,7 @@ type Signal struct {
 }
 
 // The fields a technical profile writes. They are the `field` half of the
-// organization_fact vocabulary, under category `signal`.
+// company_fact vocabulary, under category `signal`.
 const (
 	FieldMailProvider    = "mail_provider"
 	FieldEmailSecurity   = "email_security"

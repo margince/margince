@@ -5,11 +5,11 @@ package search
 
 // A predicate on a REFERENCE column is a question about the record it names.
 //
-// `deal.organization_id eq <uuid>` compiles to a comparison under the deal's
+// `deal.company_id eq <uuid>` compiles to a comparison under the deal's
 // own scope, and every seat of the workspace reads every deal. So the rows that
 // come back answer "is this company on our books, and which deals are its" for
 // a company the same caller's ordinary read would refuse — capture privacy on
-// organization, own/team scope on project. Hydration masks the id on the way
+// company, own/team scope on project. Hydration masks the id on the way
 // out, which makes the answer quieter without making it different: the row is
 // still there, and the predicate that selected it is still the caller's own.
 //
@@ -35,7 +35,7 @@ import (
 // carries, or "" for a column that names nothing row-scoped.
 //
 // A NULL reference passes. The row names no record, so there is no target to
-// be admitted to — and without this arm `organization_id is_null` would answer
+// be admitted to — and without this arm `company_id is_null` would answer
 // nothing at all, having asked the guard about a row that has no company by
 // the caller's own choice of question.
 func referenceGuard(
@@ -69,16 +69,16 @@ func referenceGuard(
 // referencedBranch resolves the record type a reference field names.
 //
 // Three spellings, because the schema has three and a resolver that knew only
-// the first would read green over the other two — which is how `partner_org_id`
-// stayed unguarded while `organization_id` beside it was closed:
+// the first would read green over the other two — which is how `partner_company_id`
+// stayed unguarded while `company_id` beside it was closed:
 //
 //   - the contract's own, `<record type>_id`, which is also what
 //     contractRelations traverses on, so the direct form and the hop agree
 //     about which columns are references;
-//   - a NESTED member, `employer.organization_id`, whose target is spelled in
+//   - a NESTED member, `employer.company_id`, whose target is spelled in
 //     its last segment and whose leading path names the member rather than a
 //     record type;
-//   - a ROLE, `partner_org_id`, which names what the reference is FOR instead
+//   - a ROLE, `partner_company_id`, which names what the reference is FOR instead
 //     of what it points at. Those cannot be derived from the name at all and
 //     are declared below.
 //
@@ -117,8 +117,8 @@ func lastMember(path string) string {
 const memberPathSeparator = "."
 
 // roleNamedReferences are the columns that name what a reference is FOR rather
-// than what it points at. A deal's `partner_org_id` and an organization's
-// `parent_org_id` are both organizations, and no derivation from the name can
+// than what it points at. A deal's `partner_company_id` and a company's
+// `parent_company_id` are both companies, and no derivation from the name can
 // say so.
 //
 // Declared here and checked against the schema's own foreign keys by
@@ -126,18 +126,18 @@ const memberPathSeparator = "."
 // added later fails rather than quietly resolving to nothing — which is the
 // only way this list can be wrong and the only way that would not be noticed.
 var roleNamedReferences = map[string]string{
-	"partner_org_id":         entityOrganization,
-	"parent_org_id":          entityOrganization,
-	"counterparty_org_id":    entityOrganization,
-	"promoted_person_id":     entityPerson,
-	"qualified_deal_id":      entityDeal,
-	"converted_from_lead_id": entityLead,
-	"source_activity_id":     entityActivity,
+	"partner_company_id":      entityCompany,
+	"parent_company_id":       entityCompany,
+	"counterparty_company_id": entityCompany,
+	"promoted_person_id":      entityPerson,
+	"qualified_deal_id":       entityDeal,
+	"converted_from_lead_id":  entityLead,
+	"source_activity_id":      entityActivity,
 }
 
 // selfReferences name another row of the SAME record type, so their target is
 // whatever record carries them: a person's `merged_into_id` is a person, an
-// organization's is an organization. Resolving them from the name would need
+// company's is a company. Resolving them from the name would need
 // one entry per record type saying the same thing.
 var selfReferences = map[string]bool{"merged_into_id": true}
 

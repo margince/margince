@@ -193,11 +193,11 @@ func (m mixedHumanOwned) HumanOwnedConflicts(context.Context, string, ids.UUID, 
 // that reaches the residue path: before the ordering fix the handler ran first,
 // so this same call answered 422 with the agent-owned half already written.
 func TestTheResiduePathRefusesAnExternallyHeldRecordBeforeAnythingIsWritten(t *testing.T) {
-	orgID := ids.NewV7()
+	companyID := ids.NewV7()
 	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "updateOrganization", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization}
+	pol := agentPolicy{Op: "updateCompany", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany}
 	body := []byte(`{"display_name":"Renamed GmbH","industry":"software"}`)
-	req := patchRequest("/v1/organizations", orgID, body)
+	req := patchRequest("/v1/companies", companyID, body)
 	rec := httptest.NewRecorder()
 	next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		t.Error("the handler ran — the agent-owned half was written for a call this door then refused, " +
@@ -239,16 +239,16 @@ func TestTheResiduePathRefusesAnExternallyHeldRecordBeforeAnythingIsWritten(t *t
 // redeem — so what has to agree is the STAGED hash and the hash of a keyless
 // retry carrying the same residue.
 func TestAResidueStagedUnderAnIdempotencyKeyIsRedeemableByItsRetry(t *testing.T) {
-	orgID := ids.NewV7()
+	companyID := ids.NewV7()
 	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "updateOrganization", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization}
+	pol := agentPolicy{Op: "updateCompany", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany}
 	body := []byte(`{"display_name":"Renamed GmbH","industry":"software"}`)
-	req := operandRequest(http.MethodPatch, "/v1/organizations", orgID.String(), "", "", body)
+	req := operandRequest(http.MethodPatch, "/v1/companies", companyID.String(), "", "", body)
 	req.Header.Set(idempotencyKeyHeader, "01J0-agent-retry-key")
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"id":"` + orgID.String() + `","display_name":"Renamed GmbH","version":3}`))
+		_, _ = w.Write([]byte(`{"id":"` + companyID.String() + `","display_name":"Renamed GmbH","version":3}`))
 	})
 
 	admitAgentCall(httptest.NewRecorder(), req, next, admissionOutcome{
@@ -263,7 +263,7 @@ func TestAResidueStagedUnderAnIdempotencyKeyIsRedeemableByItsRetry(t *testing.T)
 	// The retry the staging note instructs: the withheld fields alone, the
 	// approval token, and NO idempotency key — the original is settled and a
 	// fresh one would be a different call.
-	retry := operandRequest(http.MethodPatch, "/v1/organizations", orgID.String(), "", "",
+	retry := operandRequest(http.MethodPatch, "/v1/companies", companyID.String(), "", "",
 		[]byte(staging.last.ProposedChange))
 	_, retryHash, err := canonicalRESTCall(pol.Op, retry.URL.Path, retry.Header,
 		[]byte(`{"display_name":"Renamed GmbH"}`), keyBindsTheRetry)
@@ -379,10 +379,10 @@ func (failingApprovals) StageCall(context.Context, agents.StageRequest) (ids.App
 // So the handler reports the write, and this asserts the report — the middleware
 // is a layer up and settleClaim's own case covers what it does with it.
 func TestARefusalAfterTheAppliedHalfReportsThatItWrote(t *testing.T) {
-	orgID := ids.NewV7()
-	pol := agentPolicy{Op: "updateOrganization", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization}
+	companyID := ids.NewV7()
+	pol := agentPolicy{Op: "updateCompany", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany}
 	body := []byte(`{"display_name":"Renamed GmbH","industry":"software"}`)
-	req := patchRequest("/v1/organizations", orgID, body)
+	req := patchRequest("/v1/companies", companyID, body)
 	ctx, effect := withWriteEffect(req.Context())
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
@@ -390,7 +390,7 @@ func TestARefusalAfterTheAppliedHalfReportsThatItWrote(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		if _, err := w.Write([]byte(`{"id":"` + orgID.String() + `","version":2}`)); err != nil {
+		if _, err := w.Write([]byte(`{"id":"` + companyID.String() + `","version":2}`)); err != nil {
 			t.Fatalf("writing the applied half: %v", err)
 		}
 	})
@@ -419,10 +419,10 @@ func TestARefusalAfterTheAppliedHalfReportsThatItWrote(t *testing.T) {
 // a door that reported a write on every path, which would strand the key of
 // every ordinary refusal — a caller unable to retry a call that changed nothing.
 func TestARefusalBeforeAnythingIsWrittenReportsNoWrite(t *testing.T) {
-	orgID := ids.NewV7()
-	pol := agentPolicy{Op: "updateOrganization", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization}
+	companyID := ids.NewV7()
+	pol := agentPolicy{Op: "updateCompany", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany}
 	body := []byte(`{"display_name":"Renamed GmbH","industry":"software"}`)
-	req := patchRequest("/v1/organizations", orgID, body)
+	req := patchRequest("/v1/companies", companyID, body)
 	ctx, effect := withWriteEffect(req.Context())
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
@@ -453,7 +453,7 @@ func TestARefusalBeforeAnythingIsWrittenReportsNoWrite(t *testing.T) {
 // Registering all the whole-record patch routes put patchResolver.Guards on
 // this path: a records.Read plus the external-system-of-record refusal that the
 // split path never ran on its own before. Deliberate, and until now exercised
-// for updateOrganization alone, with the policy written as a literal beside the
+// for updateCompany alone, with the policy written as a literal beside the
 // assertion — so the rest carried the ordering on the strength of sharing a
 // code path, which is the argument that stops being true the moment one of them
 // stops sharing it.

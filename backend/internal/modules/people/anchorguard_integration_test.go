@@ -44,15 +44,15 @@ func anchorProtected(err error) bool {
 // refused one line later by the opposite guard.
 func TestEachAnchorRefusalNamesItsFieldAndAWorkingMove(t *testing.T) {
 	env := newAnchorEnv(t)
-	other := env.newOrganization(t)
+	other := env.newCompany(t)
 
-	_, archiveErr := env.store.ArchiveOrganization(env.ctx, env.anchorID, nil)
-	_, sourceErr := env.store.MergeOrganization(env.ctx, env.anchorID, other)
-	_, targetErr := env.store.MergeOrganization(env.ctx, other, env.anchorID)
+	_, archiveErr := env.store.ArchiveCompany(env.ctx, env.anchorID, nil)
+	_, sourceErr := env.store.MergeCompany(env.ctx, env.anchorID, other)
+	_, targetErr := env.store.MergeCompany(env.ctx, other, env.anchorID)
 	// The rejection reaches this guard BEFORE it reads a domain, which is why
 	// the anchor — which carries none — is refused as the anchor here rather
 	// than for having nothing to refuse.
-	_, rejectErr := env.store.RejectOrganization(env.ctx, env.anchorID, "not a customer", nil)
+	_, rejectErr := env.store.RejectCompany(env.ctx, env.anchorID, "not a customer", nil)
 
 	for _, tc := range []struct {
 		operation string
@@ -99,18 +99,18 @@ func TestEachAnchorRefusalNamesItsFieldAndAWorkingMove(t *testing.T) {
 // path, and an unreadable one must stop the operation rather than permit it.
 func TestTheGuardPassesOnAnAbsentRowAndRefusesOnAnUnreadableOne(t *testing.T) {
 	env := newAnchorEnv(t)
-	missing := ids.From[ids.OrganizationKind](ids.NewV7())
+	missing := ids.From[ids.CompanyKind](ids.NewV7())
 
 	// Absent: the guard steps aside. Called through the store this branch is
 	// unreachable — auth.EnsureVisible answers not-found first — so the guard is
-	// called directly. Going through ArchiveOrganization would pass on the
+	// called directly. Going through ArchiveCompany would pass on the
 	// visibility gate's refusal and prove nothing about this line.
 	var absent error
 	if err := database.WithWorkspaceTx(env.ctx, env.pool, func(tx pgx.Tx) error {
 		absent = refuseIfAnchor(env.ctx, tx, missing, "id", "it cannot be archived")
 		return nil
 	}); err != nil {
-		t.Fatalf("reading the guard against a missing organization: %v", err)
+		t.Fatalf("reading the guard against a missing company: %v", err)
 	}
 	if absent != nil {
 		t.Fatalf("the guard answered %v for a row that does not exist — absence is the caller's not-found path to report, not a refusal", absent)
@@ -144,18 +144,18 @@ func TestTheGuardPassesOnAnAbsentRowAndRefusesOnAnUnreadableOne(t *testing.T) {
 func TestTheAnchorCannotBeArchived(t *testing.T) {
 	env := newAnchorEnv(t)
 
-	_, err := env.store.ArchiveOrganization(env.ctx, env.anchorID, nil)
+	_, err := env.store.ArchiveCompany(env.ctx, env.anchorID, nil)
 	if !anchorProtected(err) {
-		t.Fatalf("ArchiveOrganization on the anchor: got %v, want the anchor refusal", err)
+		t.Fatalf("ArchiveCompany on the anchor: got %v, want the anchor refusal", err)
 	}
 	env.assertCompanyStillReadable(t)
 }
 
 func TestTheAnchorCannotBeMergedAway(t *testing.T) {
 	env := newAnchorEnv(t)
-	other := env.newOrganization(t)
+	other := env.newCompany(t)
 
-	_, err := env.store.MergeOrganization(env.ctx, env.anchorID, other)
+	_, err := env.store.MergeCompany(env.ctx, env.anchorID, other)
 	if !anchorProtected(err) {
 		t.Fatalf("merging the anchor away: got %v, want the anchor refusal", err)
 	}
@@ -168,9 +168,9 @@ func TestTheAnchorCannotBeMergedAway(t *testing.T) {
 // installation's own company with no way to tell them apart afterwards.
 func TestNothingCanBeMergedIntoTheAnchor(t *testing.T) {
 	env := newAnchorEnv(t)
-	other := env.newOrganization(t)
+	other := env.newCompany(t)
 
-	_, err := env.store.MergeOrganization(env.ctx, other, env.anchorID)
+	_, err := env.store.MergeCompany(env.ctx, other, env.anchorID)
 	if !anchorProtected(err) {
 		t.Fatalf("merging a company into the anchor: got %v, want the anchor refusal", err)
 	}
@@ -185,7 +185,7 @@ func TestTheSchemaRefusesToRetireTheAnchor(t *testing.T) {
 
 	err := database.WithWorkspaceTx(env.ctx, env.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(env.ctx,
-			`UPDATE organization SET archived_at = now() WHERE id = $1`, env.anchorID)
+			`UPDATE company SET archived_at = now() WHERE id = $1`, env.anchorID)
 		return err
 	})
 	if err == nil {
@@ -198,28 +198,28 @@ func TestTheSchemaRefusesToRetireTheAnchor(t *testing.T) {
 // selling to", and present when a caller asks for it (PO-AC-43).
 func TestTheAnchorIsAbsentFromTheCompanyListUntilAskedFor(t *testing.T) {
 	env := newAnchorEnv(t)
-	env.newOrganization(t)
+	env.newCompany(t)
 
-	listed, _, err := env.store.ListOrganizations(env.ctx, ListOrganizationsInput{})
+	listed, _, err := env.store.ListCompanies(env.ctx, ListCompaniesInput{})
 	if err != nil {
-		t.Fatalf("ListOrganizations: %v", err)
+		t.Fatalf("ListCompanies: %v", err)
 	}
-	for _, org := range listed {
-		if org.Id == openapiUUID(env.anchorID) {
+	for _, company := range listed {
+		if company.Id == openapiUUID(env.anchorID) {
 			t.Fatal("the workspace's own company must not appear among the accounts it sells to")
 		}
 	}
 
-	withAnchor, _, err := env.store.ListOrganizations(env.ctx,
-		ListOrganizationsInput{IncludeAnchor: true})
+	withAnchor, _, err := env.store.ListCompanies(env.ctx,
+		ListCompaniesInput{IncludeAnchor: true})
 	if err != nil {
-		t.Fatalf("ListOrganizations(include_anchor): %v", err)
+		t.Fatalf("ListCompanies(include_anchor): %v", err)
 	}
 	var found bool
-	for _, org := range withAnchor {
-		if org.Id == openapiUUID(env.anchorID) {
+	for _, company := range withAnchor {
+		if company.Id == openapiUUID(env.anchorID) {
 			found = true
-			if org.IsAnchor == nil || !*org.IsAnchor {
+			if company.IsAnchor == nil || !*company.IsAnchor {
 				t.Error("the anchor must be identifiable on the wire — a caller offering company actions has to tell it apart")
 			}
 		}
@@ -237,7 +237,7 @@ type anchorEnv struct {
 	ctx      context.Context
 	pool     *pgxpool.Pool
 	store    *Store
-	anchorID ids.OrganizationID
+	anchorID ids.CompanyID
 }
 
 func newAnchorEnv(t *testing.T) *anchorEnv {
@@ -250,7 +250,7 @@ func newAnchorEnv(t *testing.T) *anchorEnv {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"organization": {Create: true, Read: true, Update: true, Delete: true},
+				"company": {Create: true, Read: true, Update: true, Delete: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -262,19 +262,19 @@ func newAnchorEnv(t *testing.T) *anchorEnv {
 	}
 	return &anchorEnv{
 		ctx: ctx, pool: base.store.db.Pool(), store: base.store,
-		anchorID: company.OrganizationID,
+		anchorID: company.CompanyID,
 	}
 }
 
-// newOrganization creates an ordinary customer company — the other side of
+// newCompany creates an ordinary customer company — the other side of
 // every refusal here, and the thing the anchor must stay distinguishable from.
-func (e *anchorEnv) newOrganization(t *testing.T) ids.OrganizationID {
+func (e *anchorEnv) newCompany(t *testing.T) ids.CompanyID {
 	t.Helper()
-	org, err := e.store.CreateOrganization(e.ctx, CreateOrganizationInput{DisplayName: "Brandt GmbH"})
+	company, err := e.store.CreateCompany(e.ctx, CreateCompanyInput{DisplayName: "Brandt GmbH"})
 	if err != nil {
 		t.Fatalf("creating the customer company: %v", err)
 	}
-	return ids.OrganizationID{UUID: ids.UUID(org.Id)}
+	return ids.CompanyID{UUID: ids.UUID(company.Id)}
 }
 
 // assertCompanyStillReadable checks the durable row, not only that the read
@@ -283,14 +283,14 @@ func (e *anchorEnv) newOrganization(t *testing.T) ids.OrganizationID {
 // AFTER a partial write; the row's own state is what would catch that.
 func (e *anchorEnv) assertCompanyStillReadable(t *testing.T) {
 	t.Helper()
-	if _, err := e.store.GetCompany(e.ctx); err != nil {
+	if _, err := e.store.GetAnchorCompany(e.ctx); err != nil {
 		t.Fatalf("the company read must survive a refused operation, got %v — a workspace whose anchor is gone reads as one that was never set up", err)
 	}
 	var intact bool
 	if err := database.WithWorkspaceTx(e.ctx, e.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.ctx, `
 			SELECT is_anchor AND archived_at IS NULL AND merged_into_id IS NULL
-			  FROM organization WHERE id = $1`, e.anchorID).Scan(&intact)
+			  FROM company WHERE id = $1`, e.anchorID).Scan(&intact)
 	}); err != nil {
 		t.Fatalf("reading the anchor row: %v", err)
 	}
@@ -305,11 +305,11 @@ func (e *anchorEnv) assertCompanyStillReadable(t *testing.T) {
 // error classifier reads.
 func TestTheSchemaRefusesAMergeIntoTheAnchor(t *testing.T) {
 	env := newAnchorEnv(t)
-	other := env.newOrganization(t)
+	other := env.newCompany(t)
 
 	err := database.WithWorkspaceTx(env.ctx, env.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(env.ctx,
-			`UPDATE organization SET merged_into_id = $1 WHERE id = $2`, env.anchorID, other)
+			`UPDATE company SET merged_into_id = $1 WHERE id = $2`, env.anchorID, other)
 		return err
 	})
 	if err == nil {
@@ -319,8 +319,8 @@ func TestTheSchemaRefusesAMergeIntoTheAnchor(t *testing.T) {
 	if !ok {
 		t.Fatalf("got %v, want a check violation the error classifier can answer 422 for", err)
 	}
-	if name != "organization_anchor_is_permanent" {
-		t.Errorf("constraint = %q, want organization_anchor_is_permanent — the name is what the classifier reads", name)
+	if name != "company_anchor_is_permanent" {
+		t.Errorf("constraint = %q, want company_anchor_is_permanent — the name is what the classifier reads", name)
 	}
 	env.assertCompanyStillReadable(t)
 }
@@ -333,7 +333,7 @@ func TestTheSchemaRefusesDemotingTheAnchor(t *testing.T) {
 
 	err := database.WithWorkspaceTx(env.ctx, env.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(env.ctx,
-			`UPDATE organization SET is_anchor = false, archived_at = now() WHERE id = $1`, env.anchorID)
+			`UPDATE company SET is_anchor = false, archived_at = now() WHERE id = $1`, env.anchorID)
 		return err
 	})
 	if err == nil {
@@ -343,14 +343,14 @@ func TestTheSchemaRefusesDemotingTheAnchor(t *testing.T) {
 	if !ok {
 		t.Fatalf("got %v, want a check violation the error classifier can answer 422 for", err)
 	}
-	if name != "organization_anchor_is_permanent" {
-		t.Errorf("constraint = %q, want organization_anchor_is_permanent — the name is what the classifier reads", name)
+	if name != "company_anchor_is_permanent" {
+		t.Errorf("constraint = %q, want company_anchor_is_permanent — the name is what the classifier reads", name)
 	}
 	env.assertCompanyStillReadable(t)
 }
 
 // openapiUUID renders a typed id in the wire model's uuid type, so a
 // comparison against a contract struct reads as one.
-func openapiUUID(id ids.OrganizationID) openapi_types.UUID {
+func openapiUUID(id ids.CompanyID) openapi_types.UUID {
 	return openapi_types.UUID(id.UUID)
 }

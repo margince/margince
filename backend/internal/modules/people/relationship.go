@@ -3,8 +3,8 @@
 
 package people
 
-// Relationship edges (data-model §5): employment (person↔org), deal
-// stakeholders (deal↔person), and org↔org partner edges. An edge's
+// Relationship edges (data-model §5): employment (person↔company), deal
+// stakeholders (deal↔person), and company↔company partner edges. An edge's
 // visibility derives from its ENDPOINTS — every non-null endpoint must
 // be visible to the caller, on read exactly as on write, so an edge can
 // never leak a record its ends would hide. Mutations emit the anchor
@@ -34,9 +34,9 @@ import (
 // The four anchor objects are named here because this is what produces them:
 // every switch that reads an anchor is reading one of these four answers.
 const (
-	anchorPerson = "person"
-	anchorDeal   = "deal"
-	anchorOrg    = "organization"
+	anchorPerson      = "person"
+	anchorDeal        = "deal"
+	anchorCompanyKind = "company"
 )
 
 func relationshipAnchor(kind string) (object, column string) {
@@ -48,7 +48,7 @@ func relationshipAnchor(kind string) (object, column string) {
 	case ProjectStakeholderKind, ProjectCompanyKind:
 		return projectObjectName, "project_id"
 	default: // partner_of, referred_by, co_sell_with
-		return anchorOrg, "organization_id"
+		return anchorCompanyKind, "company_id"
 	}
 }
 
@@ -59,17 +59,17 @@ func relationshipAnchor(kind string) (object, column string) {
 // annotate" would drift, and the half that drifted would be an ungated write.
 type relationshipEndpoints struct {
 	person  *ids.PersonID
-	org     *ids.OrganizationID
+	company *ids.CompanyID
 	deal    *ids.DealID
 	project *ids.ProjectID
 }
 
 func (r relationshipRow) endpoints() relationshipEndpoints {
-	return relationshipEndpoints{person: r.PersonID, org: r.OrganizationID, deal: r.DealID, project: r.ProjectID}
+	return relationshipEndpoints{person: r.PersonID, company: r.CompanyID, deal: r.DealID, project: r.ProjectID}
 }
 
 func (in CreateRelationshipInput) endpoints() relationshipEndpoints {
-	return relationshipEndpoints{person: in.PersonID, org: in.OrganizationID, deal: in.DealID, project: in.ProjectID}
+	return relationshipEndpoints{person: in.PersonID, company: in.CompanyID, deal: in.DealID, project: in.ProjectID}
 }
 
 // relationshipAnchorRow names the ROW an edge's authority is taken on: the
@@ -96,7 +96,7 @@ func relationshipAnchorRow(kind string, e relationshipEndpoints) (object string,
 	case projectObjectName:
 		return anchor, untypedPtr(e.project)
 	default:
-		return anchor, untypedPtr(e.org)
+		return anchor, untypedPtr(e.company)
 	}
 }
 
@@ -187,28 +187,28 @@ func refuseGenericProjectCompany(kind string) error {
 	return &RelationshipKindError{Kind: kind}
 }
 
-const relationshipColumns = `id, kind, person_id, organization_id, counterparty_org_id, counterparty_person_id, deal_id, project_id,
+const relationshipColumns = `id, kind, person_id, company_id, counterparty_company_id, counterparty_person_id, deal_id, project_id,
 	role, is_current_primary, started_at, ended_at, source, captured_by, version, created_at, updated_at, archived_at`
 
 type relationshipRow struct {
-	ID                 ids.UUID // no RelationshipKind in the kernel vocabulary: edges stay untyped
-	Kind               string
-	PersonID           *ids.PersonID
-	OrganizationID     *ids.OrganizationID
-	CounterpartyOrgID  *ids.OrganizationID
-	CounterpartyPerson *ids.PersonID
-	DealID             *ids.DealID
-	ProjectID          *ids.ProjectID
-	Role               *string
-	IsCurrentPrimary   bool
-	StartedAt          *time.Time
-	EndedAt            *time.Time
-	Source             string
-	CapturedBy         string
-	Version            int64
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	ArchivedAt         *time.Time
+	ID                    ids.UUID // no RelationshipKind in the kernel vocabulary: edges stay untyped
+	Kind                  string
+	PersonID              *ids.PersonID
+	CompanyID             *ids.CompanyID
+	CounterpartyCompanyID *ids.CompanyID
+	CounterpartyPerson    *ids.PersonID
+	DealID                *ids.DealID
+	ProjectID             *ids.ProjectID
+	Role                  *string
+	IsCurrentPrimary      bool
+	StartedAt             *time.Time
+	EndedAt               *time.Time
+	Source                string
+	CapturedBy            string
+	Version               int64
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	ArchivedAt            *time.Time
 }
 
 func scanRelationship(r pgx.Row) (relationshipRow, error) {
@@ -226,7 +226,7 @@ func scanRelationship(r pgx.Row) (relationshipRow, error) {
 func scanRelationshipWithPrior(r pgx.Row, prior **string, inserted *bool) (relationshipRow, error) {
 	var out relationshipRow
 	targets := []any{
-		&out.ID, &out.Kind, &out.PersonID, &out.OrganizationID, &out.CounterpartyOrgID,
+		&out.ID, &out.Kind, &out.PersonID, &out.CompanyID, &out.CounterpartyCompanyID,
 		&out.CounterpartyPerson, &out.DealID, &out.ProjectID, &out.Role, &out.IsCurrentPrimary, &out.StartedAt, &out.EndedAt,
 		&out.Source, &out.CapturedBy, &out.Version, &out.CreatedAt, &out.UpdatedAt, &out.ArchivedAt,
 	}

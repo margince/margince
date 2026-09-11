@@ -63,7 +63,7 @@ function surplusFacts(
 const READ = {
   id: "11111111-1111-4111-8111-111111111111",
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: "https://gradion.com",
   status: "ready",
   status_code: null,

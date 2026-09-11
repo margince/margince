@@ -44,7 +44,7 @@ const autonomy = {
       rejected: 0,
     },
     {
-      kind: "org_name_promotion",
+      kind: "company_name_promotion",
       mode: "auto",
       approved_clean: 0,
       approved_edited: 0,

@@ -498,13 +498,13 @@ describe("AnalyticsScreen", () => {
     expect(screen.queryByText("€49.37")).toBeNull();
   });
 
-  it("switching to Open deals per company groups by organization_id and renders a table", async () => {
+  it("switching to Open deals per company groups by company_id and renders a table", async () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
         companyRows: [
           {
-            organization_id: "o1",
+            company_id: "o1",
             raw_minor: 250000,
             deal_count: 4,
             currency: "EUR",
@@ -534,7 +534,7 @@ describe("AnalyticsScreen", () => {
         reportsStub({
           companyRows: [
             {
-              organization_id: "o1",
+              company_id: "o1",
               raw_minor: 250000,
               deal_count: 4,
               currency: "EUR",
@@ -545,7 +545,7 @@ describe("AnalyticsScreen", () => {
       render(<AnalyticsScreen />);
       await openPipelineTab();
       const door = await screen.findByRole("link", { name: "4" });
-      expect(door.getAttribute("href")).toContain("organization_id=o1");
+      expect(door.getAttribute("href")).toContain("company_id=o1");
       expect(door.getAttribute("href")).toContain("status=open");
     });
 
@@ -555,13 +555,13 @@ describe("AnalyticsScreen", () => {
         reportsStub({
           companyRows: [
             {
-              organization_id: "o1",
+              company_id: "o1",
               raw_minor: 250000,
               deal_count: 4,
               currency: "EUR",
             },
             {
-              organization_id: "o1",
+              company_id: "o1",
               raw_minor: 900000,
               deal_count: 3,
               currency: "VND",

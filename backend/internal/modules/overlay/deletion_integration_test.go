@@ -43,7 +43,7 @@ func TestPurgeRecordRemovesMirrorAssociationAndVisibility(t *testing.T) {
 	// One edge FROM the record and one edge TO it, so the purge is proven
 	// to clear both endpoints, not just the from-side.
 	if err := store.UpsertAssoc(ctx, Assoc{
-		FromType: objectClass, FromID: externalID, ToType: "organization", ToID: "900",
+		FromType: objectClass, FromID: externalID, ToType: "company", ToID: "900",
 		TypeID: 1, Category: "HUBSPOT_DEFINED", Direction: "from",
 	}); err != nil {
 		t.Fatalf("seeding the from-edge: %v", err)
@@ -103,7 +103,7 @@ func TestReconcileDeletionsPurgesMirroredRecordAndEmits(t *testing.T) {
 		t.Fatalf("seeding the mirror row: %v", err)
 	}
 	if err := ms.UpsertAssoc(ctx, Assoc{
-		FromType: objectClass, FromID: externalID, ToType: "organization", ToID: "900",
+		FromType: objectClass, FromID: externalID, ToType: "company", ToID: "900",
 		TypeID: 1, Category: "HUBSPOT_DEFINED", Direction: "from",
 	}); err != nil {
 		t.Fatalf("seeding the edge: %v", err)

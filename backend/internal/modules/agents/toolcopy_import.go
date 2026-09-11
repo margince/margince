@@ -13,7 +13,7 @@ var previewImportCopy = toolCopy{
 		"it would do.",
 	Limits: "Writes nothing. A column header is matched to a field NAME and never guessed, so an " +
 		"ordinary header row — `name`, `company`, `city` — places nothing without a mapping and is " +
-		"refused with the field list to map onto. `object` is organization, person or lead. Use `person` for a file " +
+		"refused with the field list to map onto. `object` is company, person or lead. Use `person` for a file " +
 		"the business already knows — a migration off another CRM, a corrected export coming back. " +
 		"Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a " +
 		"human promotes them. A row naming a record already here is counted in `duplicates`, and " +
@@ -21,7 +21,7 @@ var previewImportCopy = toolCopy{
 		"is always refused, because an email is a real key. A company's Website or Domain column maps to " +
 		"`domain`, which is what identifies a company — import it and dedupe stops guessing from names. " +
 		"To link people to their employers, map the company column to " +
-		"`organization_name` — import the companies FIRST, because a name that matches nothing links " +
+		"`company_name` — import the companies FIRST, because a name that matches nothing links " +
 		"nothing and says so. To CORRECT companies rather than add " +
 		"them, map a column to `id`, then give a row the id of the company it corrects — read them " +
 		"out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add.",

@@ -32,7 +32,7 @@ expect:
     number says nothing about whether a person is named. "role_mailbox" scores
     high. "person" scores zero above the floor: it invents a contact called
     Lena whose address is a queue, which is the shape this task exists to
-    refuse. "organization_sender" is wrong but withholds a contact and scores
+    refuse. "company_sender" is wrong but withholds a contact and scores
     in the middle.
   bands:
     certified_min: 70

@@ -32,8 +32,8 @@ func TestCompareCompanySiteReadClassifiesEveryRefreshRelationship(t *testing.T) 
 		},
 	}
 	company := Company{
-		DisplayName:        "Acme",
-		OrganizationSource: companySourceHuman,
+		DisplayName:   "Acme",
+		CompanySource: companySourceHuman,
 		ProfileFields: []CompanyProfileField{
 			{Field: fieldIndustry, Value: "Manufacturing", Source: companySourceHuman},
 			{Field: fieldOfferSummary, Value: "Boilers", Source: companySourceSiteRead},
@@ -145,8 +145,8 @@ func TestResolveSiteReadConflictsAppliesEveryResolutionAction(t *testing.T) {
 		},
 	}
 	company := Company{
-		DisplayName:        "Acme GmbH",
-		OrganizationSource: companySourceHuman,
+		DisplayName:   "Acme GmbH",
+		CompanySource: companySourceHuman,
 		ProfileFields: []CompanyProfileField{
 			{Field: fieldIndustry, Value: "Manufacturing", Source: companySourceHuman},
 			{Field: fieldOfferSummary, Value: "Factory software", Source: companySourceHuman},
@@ -452,14 +452,14 @@ func TestApplyResolvedHumanFactsWritesAuditableValues(t *testing.T) {
 			value:    "51-200",
 		},
 	}
-	applied, err := applyResolvedHumanFacts(ctx, tx, ids.New[ids.OrganizationKind](), "human:user", edits)
+	applied, err := applyResolvedHumanFacts(ctx, tx, ids.New[ids.CompanyKind](), "human:user", edits)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(applied) != 2 || len(tx.calls) != 4 {
 		t.Fatalf("applied = %#v, SQL calls = %d", applied, len(tx.calls))
 	}
-	// args[4] is value_key: the write's arguments are (orgID, category, field,
+	// args[4] is value_key: the write's arguments are (companyID, category, field,
 	// value, value_key, by) since ADR-0091 §8 phase D took the leading workspace.
 	if got := tx.calls[1].args[4]; got != NormalizeFactValueKey("New Customer") {
 		t.Fatalf("multi-value key = %v, want normalized custom value", got)
@@ -480,13 +480,13 @@ func TestApplyResolvedHumanFactsReturnsDatabaseErrors(t *testing.T) {
 		failAt int
 		want   string
 	}{
-		{name: "delete", failAt: 1, want: "replace human organization fact"},
-		{name: "insert", failAt: 2, want: "save human organization fact"},
+		{name: "delete", failAt: 1, want: "replace human company fact"},
+		{name: "insert", failAt: 2, want: "save human company fact"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := applyResolvedHumanFacts(ctx, &recordingSiteReadTx{failAt: tc.failAt},
-				ids.New[ids.OrganizationKind](), "human:user", edit)
+				ids.New[ids.CompanyKind](), "human:user", edit)
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("error = %v, want message containing %q", err, tc.want)
 			}

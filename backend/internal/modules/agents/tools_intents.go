@@ -44,7 +44,7 @@ type anchorArgs struct {
 }
 
 const anchorSchema = `{"type":"object","required":["record_type","record_id"],"properties":{
-	"record_type":{"type":"string","enum":["person","organization","deal","lead","project","activity"]},
+	"record_type":{"type":"string","enum":["person","company","deal","lead","project","activity"]},
 	"record_id":{"type":"string","format":"uuid"},
 	"max_items":{"type":"integer","minimum":1,"maximum":20},
 	"project_id":{"type":"string","format":"uuid","description":"Keep only what is filed under this project or under none"}},
@@ -119,7 +119,7 @@ func (t catchMeUpOn) Spec() mcp.ToolSpec {
 		Name: "catch_me_up_on", Title: "Catch me up on a record", Version: toolVersionV1,
 		Description:   catchMeUpOnCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp:    "getPerson/getOrganization/getDeal + listActivities",
+		OpenAPIOp:    "getPerson/getCompany/getDeal + listActivities",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[AssembledContextResult](),
 	}
@@ -155,7 +155,7 @@ func (t prepForMeeting) Spec() mcp.ToolSpec {
 		Name: "prep_for_meeting", Title: "Prepare for a meeting", Version: toolVersionV1,
 		Description:   prepForMeetingCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp:    "getMeetingBrief | getPerson/getOrganization/getDeal + listActivities",
+		OpenAPIOp:    "getMeetingBrief | getPerson/getCompany/getDeal + listActivities",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[PrepForMeetingResult](),
 	}

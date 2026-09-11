@@ -45,7 +45,7 @@ only borrows from is [relationship-graph.md](relationship-graph.md).
 ```
 
 - **Nine searchable entity types**, declared once in `searchBranches`: `person`,
-  `organization`, `deal`, `lead`, `project`, `product`, `offer_template`, `tag`,
+  `company`, `deal`, `lead`, `project`, `product`, `offer_template`, `tag`,
   `activity`. Adding a searchable entity is a row there (plus the matching
   `embedText` / `pendingSources` entries) — the query builder derives the rest,
   and `SearchedTables()` is what the structural GIN proof asks about, so a
@@ -290,14 +290,14 @@ the `catch_me_up_on` / `prep_for_meeting` intent tools consume through the same
 The walk is **fixed-depth by construction**, two joins rather than a traversal
 that can wander: anchor profile → the anchor's linked activities (hop 1, split
 into `recent_touches` and `open_tasks`) → those activities' *other* link targets
-(hop 2, emitted as `related_people` / `related_organizations` / `related_deals` /
+(hop 2, emitted as `related_people` / `related_companies` / `related_deals` /
 `related_projects`).
 Every leg reads at most 50 rows before ranking trims to `max_items` (default 5,
 capped at 25), so an anchor with thousands of links costs about what one with
 fifty costs. Anchors are the non-activity, non-`textOnly` searchable types the contract's
 path enum names — derived from `searchBranches` rather than kept as a parallel
 list; an activity is a link, not a thing links hang off. Only `person`,
-`organization`, `deal` and `project` are WALKABLE (`anchorLinkColumn`): `lead`,
+`company`, `deal` and `project` are WALKABLE (`anchorLinkColumn`): `lead`,
 `product` and `offer_template` name no `activity_link` column this walk follows,
 so their context is honestly their profile alone rather than a walk silently
 skipped. A `lead` has no `activity_link` neighborhood at all, so
@@ -321,7 +321,7 @@ mechanism with its own maintenance rules — see
 
 | Concern | Where |
 |---|---|
-| Lexical index | generated `search_tsv` columns on `person`, `organization`, `deal`, `activity`, `lead`, `project` (migrations `0004`–`0009`, `0131`), `tag`, and `product` + `offer_template`; linguistics `0052`, apostrophe folding `0077` |
+| Lexical index | generated `search_tsv` columns on `person`, `company`, `deal`, `activity`, `lead`, `project` (migrations `0004`–`0009`, `0131`), `tag`, and `product` + `offer_template`; linguistics `0052`, apostrophe folding `0077` |
 | Vector store | `embedding` (migration `0022`; identity stamp + unbounded `vector` + corpus wipe in `0114`) — **non-tenant**, no `workspace_id`, no RLS |
 | Binding marker | `embed_store_binding` (`0114`, run/identity/pending-set fan-out shape in `0174`) — **non-tenant**, no `workspace_id`, no RLS |
 | Relationship projection | `graph_interaction_edge` (`0158`) — see [relationship-graph.md](relationship-graph.md) |

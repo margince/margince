@@ -31,8 +31,8 @@ import (
 func (e *stagingEnv) lapsed(t *testing.T) ids.ApprovalID {
 	t.Helper()
 	passport := e.seedPassport(t)
-	org := e.seedOrg(t)
-	id, err := e.svc.Stage(e.asPassport(passport), e.agentCall(org))
+	company := e.seedCompany(t)
+	id, err := e.svc.Stage(e.asPassport(passport), e.agentCall(company))
 	if err != nil {
 		t.Fatalf("staging the agent call: %v", err)
 	}
@@ -152,8 +152,8 @@ func TestTheLapseSweepLeavesAlone(t *testing.T) {
 	t.Run("an approval the agent DID redeem", func(t *testing.T) {
 		e := setupStaging(t)
 		passport := e.seedPassport(t)
-		org := e.seedOrg(t)
-		call := e.agentCall(org)
+		company := e.seedCompany(t)
+		call := e.agentCall(company)
 		id, err := e.svc.Stage(e.asPassport(passport), call)
 		if err != nil {
 			t.Fatalf("staging: %v", err)
@@ -179,8 +179,8 @@ func TestTheLapseSweepLeavesAlone(t *testing.T) {
 	t.Run("a SERVER-proposed approval", func(t *testing.T) {
 		e := setupStaging(t)
 		ctx := e.asHumanWith(decidesEverything())
-		org := e.organization(t)
-		id := e.stageInto(ctx, t, ids.NewV7(), org, kindSiteLead, "lead-anna")
+		company := e.company(t)
+		id := e.stageInto(ctx, t, ids.NewV7(), company, kindSiteLead, "lead-anna")
 		if _, err := e.svc.Decide(ctx, id, true, nil); err != nil {
 			t.Fatalf("deciding: %v", err)
 		}
@@ -204,8 +204,8 @@ func TestTheLapseSweepLeavesAlone(t *testing.T) {
 	t.Run("an approval the human DECLINED", func(t *testing.T) {
 		e := setupStaging(t)
 		passport := e.seedPassport(t)
-		org := e.seedOrg(t)
-		id, err := e.svc.Stage(e.asPassport(passport), e.agentCall(org))
+		company := e.seedCompany(t)
+		id, err := e.svc.Stage(e.asPassport(passport), e.agentCall(company))
 		if err != nil {
 			t.Fatalf("staging: %v", err)
 		}
@@ -234,8 +234,8 @@ func TestTheLapseSweepLeavesAlone(t *testing.T) {
 	t.Run("an approval nobody decided", func(t *testing.T) {
 		e := setupStaging(t)
 		passport := e.seedPassport(t)
-		org := e.seedOrg(t)
-		id, err := e.svc.Stage(e.asPassport(passport), e.agentCall(org))
+		company := e.seedCompany(t)
+		id, err := e.svc.Stage(e.asPassport(passport), e.agentCall(company))
 		if err != nil {
 			t.Fatalf("staging: %v", err)
 		}

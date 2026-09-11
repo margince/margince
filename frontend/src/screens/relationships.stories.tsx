@@ -29,7 +29,7 @@ const employmentRel = {
   id: "rel-1",
   kind: "employment",
   person_id: "p-1",
-  organization_id: "o-1",
+  company_id: "o-1",
   role: "cto",
   is_current_primary: true,
   started_at: "2024-01-01",
@@ -46,7 +46,7 @@ const partnerOfRel = {
   id: "rel-2",
   kind: "partner_of",
   role: "referral partner",
-  organization_id: "o-2",
+  company_id: "o-2",
 };
 
 export const WithRelationships: Story = {
@@ -118,7 +118,7 @@ const stakeholderRel = {
   id: "rel-3",
   kind: "deal_stakeholder",
   deal_id: "d-1",
-  organization_id: null,
+  company_id: null,
   role: "champion",
   is_current_primary: false,
 };

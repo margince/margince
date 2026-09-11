@@ -399,15 +399,15 @@ func backfillStatusPayload(run *capture.BackfillRun) crmcontracts.BackfillStatus
 		st.EstimatedMessages = run.Estimate
 	}
 	st.Counts = &struct {
-		Captured             *int `json:"captured,omitempty"`
-		DedupeCandidates     *int `json:"dedupe_candidates,omitempty"`
-		MessagesScanned      *int `json:"messages_scanned,omitempty"`
-		OrganizationsCreated *int `json:"organizations_created,omitempty"`
-		PeopleCreated        *int `json:"people_created,omitempty"`
-		Skipped              *int `json:"skipped,omitempty"`
+		Captured         *int `json:"captured,omitempty"`
+		CompaniesCreated *int `json:"companies_created,omitempty"`
+		DedupeCandidates *int `json:"dedupe_candidates,omitempty"`
+		MessagesScanned  *int `json:"messages_scanned,omitempty"`
+		PeopleCreated    *int `json:"people_created,omitempty"`
+		Skipped          *int `json:"skipped,omitempty"`
 	}{
 		MessagesScanned: &run.Scanned, Captured: &run.Captured, Skipped: &run.Skipped,
-		PeopleCreated: &run.People, OrganizationsCreated: &run.Organizations, DedupeCandidates: &run.DedupeCands,
+		PeopleCreated: &run.People, CompaniesCreated: &run.Companies, DedupeCandidates: &run.DedupeCands,
 	}
 	st.LastErrorClass = run.ErrorClass
 	return st

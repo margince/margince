@@ -3,10 +3,10 @@
 
 package people
 
-// The partner extension (A41/ADR-0032): an organization promoted to a
+// The partner extension (ADR-0032): a company promoted to a
 // first-class partner. Identity is never duplicated — partner is a
-// one-to-one extension row, and upserting it flips the org's
-// classification; the org's own .updated event carries the change.
+// one-to-one extension row, and upserting it flips the company's
+// classification; the company's own .updated event carries the change.
 
 import (
 	"context"
@@ -26,14 +26,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const partnerColumns = `organization_id, cert_status, partner_role, margin_tier,
+const partnerColumns = `company_id, cert_status, partner_role, margin_tier,
 	certified_staff, retention_rate, relationship_stage, next_step, next_step_due_at,
 	served_segments, partner_fit_score, partner_fit_score_computed,
 	partner_fit_override_reason, relationship_health::text, last_contact_at,
 	version, created_at, updated_at, archived_at`
 
 type partnerRow struct {
-	OrganizationID    ids.OrganizationID
+	CompanyID         ids.CompanyID
 	CertStatus        string
 	PartnerRole       *string
 	MarginTier        *string
@@ -43,7 +43,7 @@ type partnerRow struct {
 	NextStep          *string
 	NextStepDueAt     *time.Time
 	ServedSegments    []string
-	// The A68/ADR-0053 Commercial Judgement pair (formulas §17): a non-nil
+	// The ADR-0053 Commercial Judgement pair (formulas §17): a non-nil
 	// FitOverrideReason marks FitScore human-set; the machine value is then
 	// retained in FitScoreComputed instead of overwriting FitScore.
 	FitScore           *int16
@@ -59,7 +59,7 @@ type partnerRow struct {
 
 func scanPartner(r pgx.Row) (partnerRow, error) {
 	var p partnerRow
-	err := r.Scan(&p.OrganizationID, &p.CertStatus, &p.PartnerRole, &p.MarginTier,
+	err := r.Scan(&p.CompanyID, &p.CertStatus, &p.PartnerRole, &p.MarginTier,
 		&p.CertifiedStaff, &p.RetentionRate, &p.RelationshipStage, &p.NextStep, &p.NextStepDueAt,
 		&p.ServedSegments, &p.FitScore, &p.FitScoreComputed, &p.FitOverrideReason,
 		&p.RelationshipHealth, &p.LastContactAt, &p.Version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt)
@@ -67,7 +67,7 @@ func scanPartner(r pgx.Row) (partnerRow, error) {
 }
 
 type UpsertPartnerInput struct {
-	OrganizationID    ids.OrganizationID
+	CompanyID         ids.CompanyID
 	PartnerRole       string
 	CertStatus        *string
 	MarginTier        *string
@@ -90,7 +90,7 @@ type UpsertPartnerInput struct {
 
 // PartnerFitOverrideReasonRequiredError rejects a human partner-fit score
 // with no written reason — the Commercial Judgement rule (formulas §17,
-// A68/ADR-0053): an override is auditable or it does not happen.
+// ADR-0053): an override is auditable or it does not happen.
 type PartnerFitOverrideReasonRequiredError struct{}
 
 func (e *PartnerFitOverrideReasonRequiredError) Error() string {
@@ -154,10 +154,10 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (partn
 	if err := auth.Require(ctx, "partner", principal.ActionUpdate); err != nil {
 		return partnerRow{}, err
 	}
-	// Promotion flips organization.classification — that is an org
-	// mutation, so the org's own write grant is required too; the
-	// partner grant alone must not become a side door onto orgs.
-	if err := auth.Require(ctx, "organization", principal.ActionUpdate); err != nil {
+	// Promotion flips company.classification — that is a company
+	// mutation, so the company's own write grant is required too; the
+	// partner grant alone must not become a side door onto companies.
+	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
 		return partnerRow{}, err
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
@@ -166,24 +166,24 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (partn
 	}
 	var out partnerRow
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// The org reference is a client-supplied FK argument (H1), probed for
+		// The company reference is a client-supplied FK argument (H1), probed for
 		// WRITE authority rather than sight: the object gate above says the
-		// partner grant must not become a side door onto organizations, and a
+		// partner grant must not become a side door onto companies, and a
 		// `read` share of one is that same side door a level down — visibility
 		// alone would let its holder reclassify the company.
-		if err := auth.EnsureWritable(ctx, tx, "organization", in.OrganizationID.UUID); err != nil {
+		if err := auth.EnsureWritable(ctx, tx, "company", in.CompanyID.UUID); err != nil {
 			return err
 		}
 		// The row lock makes the version pre-read and the upsert below one
-		// race-free unit; partner is keyed by its organization, so the org
+		// race-free unit; partner is keyed by its company, so the company
 		// row is the serialization point.
-		if _, err := storekit.LockRow(ctx, tx, "organization", in.OrganizationID.UUID, storekit.LiveOnly); err != nil {
+		if _, err := storekit.LockRow(ctx, tx, "company", in.CompanyID.UUID, storekit.LiveOnly); err != nil {
 			return err
 		}
 		// Before the upsert and under the lock: the statement coalesces every
 		// absent field onto its current value, so what the request actually
 		// moved is only knowable by comparing against the standing row.
-		before, err := readPartnerImage(ctx, tx, in.OrganizationID)
+		before, err := readPartnerImage(ctx, tx, in.CompanyID)
 		if err != nil {
 			return err
 		}
@@ -194,13 +194,13 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (partn
 		if out, err = upsertPartnerRow(ctx, tx, in, fit, capturedBy); err != nil {
 			return err
 		}
-		// Promotion is an org fact, and it is the invariant's other half: an org
+		// Promotion is a company fact, and it is the invariant's other half: a company
 		// IS a partner iff it has this row AND a live 'partner' relationship
 		// type (ADR-0079 amending ADR-0032 §Decision 2). Both are written in
 		// this one transaction, so the two can never disagree — the
 		// classification flip this replaces did the same job for the same
 		// reason, against a column that could hold only one answer.
-		if err := ensureOrgRelationshipType(ctx, tx, in.OrganizationID,
+		if err := ensureCompanyRelationshipType(ctx, tx, in.CompanyID,
 			relationshipTypePartner, "system", capturedBy); err != nil {
 			return err
 		}
@@ -210,11 +210,11 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (partn
 		// Narrowing to what moved is the same rule from the other side — it is
 		// what keeps a lifecycle edit from claiming the fit fields.
 		before, after := storekit.ChangedColumns(before, partnerAuditImage(out))
-		auditID, err := storekit.Audit(ctx, tx, "update", "organization", in.OrganizationID.UUID, before, after)
+		auditID, err := storekit.Audit(ctx, tx, "update", "company", in.CompanyID.UUID, before, after)
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEvent(ctx, tx, auditID, in.OrganizationID.UUID, crmcontracts.PublicEventOrganizationUpdated{
+		return storekit.EmitEvent(ctx, tx, auditID, in.CompanyID.UUID, crmcontracts.PublicEventCompanyUpdated{
 			ChangedFields: map[string]any{
 				eventKeyDelta: map[string]any{"partner": map[string]any{"role": in.PartnerRole, "cert_status": out.CertStatus}},
 			},
@@ -223,7 +223,7 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (partn
 	return out, err
 }
 
-// resolvePartnerFit pre-reads the current row under the org lock — one
+// resolvePartnerFit pre-reads the current row under the company lock — one
 // read feeds both the version guard and the fit-override fold (ErrNoRows
 // means this upsert is the promotion) — and folds the §17 override rules.
 func resolvePartnerFit(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput) (partnerFitState, error) {
@@ -231,7 +231,7 @@ func resolvePartnerFit(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput) (p
 	var current partnerFitState
 	err := tx.QueryRow(ctx,
 		`SELECT version, partner_fit_score, partner_fit_score_computed, partner_fit_override_reason
-		 FROM partner WHERE organization_id = $1`, in.OrganizationID).
+		 FROM partner WHERE company_id = $1`, in.CompanyID).
 		Scan(&currentVersion, &current.Score, &current.Computed, &current.OverrideReason)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return partnerFitState{}, err
@@ -253,13 +253,13 @@ func upsertPartnerRow(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput, fit
 		segments = *in.ServedSegments
 	}
 	row := tx.QueryRow(ctx, `
-		INSERT INTO partner (organization_id, partner_role, cert_status, margin_tier,
+		INSERT INTO partner (company_id, partner_role, cert_status, margin_tier,
 		                     certified_staff, retention_rate, relationship_stage, next_step,
 		                     next_step_due_at, served_segments, partner_fit_score,
 		                     partner_fit_score_computed, partner_fit_override_reason, source, captured_by)
 		VALUES ($1, $2, coalesce($3, 'applied'), $4, coalesce($5, 0), $6,
 		        coalesce($8, 'research'), $9, $10, $11, $12, $13, $14, 'manual', $7)
-		ON CONFLICT (organization_id) DO UPDATE SET
+		ON CONFLICT (company_id) DO UPDATE SET
 		  partner_role = EXCLUDED.partner_role,
 		  cert_status = coalesce($3, partner.cert_status),
 		  margin_tier = coalesce($4, partner.margin_tier),
@@ -274,32 +274,33 @@ func upsertPartnerRow(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput, fit
 		  partner_fit_override_reason = $14,
 		  archived_at = NULL
 		RETURNING `+partnerColumns,
-		in.OrganizationID, in.PartnerRole, in.CertStatus, in.MarginTier,
+		in.CompanyID, in.PartnerRole, in.CertStatus, in.MarginTier,
 		in.CertifiedStaff, in.RetentionRate, capturedBy,
 		in.RelationshipStage, in.NextStep, in.NextStepDueAt, segments,
 		fit.Score, fit.Computed, fit.OverrideReason)
 	return scanPartner(row)
 }
 
-func (s *Store) GetPartner(ctx context.Context, organizationID ids.OrganizationID) (partnerRow, error) {
+// GetPartner reads the partner row a company plays, if it plays one.
+func (s *Store) GetPartner(ctx context.Context, companyID ids.CompanyID) (partnerRow, error) {
 	if err := auth.Require(ctx, "partner", principal.ActionRead); err != nil {
 		return partnerRow{}, err
 	}
-	// Partner rows are organization-derived data.
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+	// Partner rows are company-derived data.
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return partnerRow{}, err
 	}
 	var out partnerRow
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "organization", organizationID.UUID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
 		var err error
 		out, err = scanPartner(tx.QueryRow(ctx,
-			`SELECT `+partnerColumns+` FROM partner WHERE organization_id = $1 AND archived_at IS NULL`,
-			organizationID))
+			`SELECT `+partnerColumns+` FROM partner WHERE company_id = $1 AND archived_at IS NULL`,
+			companyID))
 		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound // the org is not a partner
+			return apperrors.ErrNotFound // the company is not a partner
 		}
 		return err
 	})
@@ -317,7 +318,7 @@ func (s *Store) ListPartners(ctx context.Context, in ListPartnersInput) ([]partn
 	if err := auth.Require(ctx, "partner", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	limit := storekit.ClampLimit(in.Limit)
@@ -332,7 +333,7 @@ func (s *Store) ListPartners(ctx context.Context, in ListPartnersInput) ([]partn
 }
 
 // listPartnersTx runs the keyset-paged partner list inside the caller's
-// transaction: filters + org-derived row scope, one page + lookahead.
+// transaction: filters + company-derived row scope, one page + lookahead.
 func listPartnersTx(ctx context.Context, tx pgx.Tx, in ListPartnersInput, limit int) ([]partnerRow, storekit.Page, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -342,8 +343,8 @@ func listPartnersTx(ctx context.Context, tx pgx.Tx, in ListPartnersInput, limit 
 	}
 	sql := storekit.SQLf(`
 		SELECT %s FROM partner p
-		JOIN organization o ON o.id = p.organization_id AND o.archived_at IS NULL
-		WHERE %s ORDER BY p.organization_id LIMIT $%d`,
+		JOIN company o ON o.id = p.company_id AND o.archived_at IS NULL
+		WHERE %s ORDER BY p.company_id LIMIT $%d`,
 		aliased(partnerColumns, "p"), strings.Join(where, " AND "), arg(limit+1))
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
@@ -364,14 +365,14 @@ func listPartnersTx(ctx context.Context, tx pgx.Tx, in ListPartnersInput, limit 
 	var page storekit.Page
 	if len(out) > limit {
 		out = out[:limit]
-		page = storekit.Page{HasMore: true, NextCursor: out[limit-1].OrganizationID.String()}
+		page = storekit.Page{HasMore: true, NextCursor: out[limit-1].CompanyID.String()}
 	}
 	return out, page, nil
 }
 
 // partnerListWhere builds the WHERE fragments for the partner list: the
-// role/cert-status filters, the keyset cursor, and the org's own row scope
-// (a partner row is a read of its organization, so the org scope bounds
+// role/cert-status filters, the keyset cursor, and the company's own row scope
+// (a partner row is a read of its company, so the company scope bounds
 // the list).
 func partnerListWhere(ctx context.Context, in ListPartnersInput, arg func(any) int) ([]string, error) {
 	where := []string{"p.archived_at IS NULL"}
@@ -386,9 +387,9 @@ func partnerListWhere(ctx context.Context, in ListPartnersInput, arg func(any) i
 		if err != nil {
 			return nil, &storekit.MalformedCursorError{}
 		}
-		where = append(where, storekit.SQLf("p.organization_id > $%d", arg(after)))
+		where = append(where, storekit.SQLf("p.company_id > $%d", arg(after)))
 	}
-	scope, err := auth.ScopeClauseFor(ctx, "organization", "o", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
 	if err != nil {
 		return nil, err
 	}
@@ -400,11 +401,11 @@ func partnerListWhere(ctx context.Context, in ListPartnersInput, arg func(any) i
 
 func wirePartner(p partnerRow) crmcontracts.Partner {
 	out := crmcontracts.Partner{
-		OrganizationId: openapi_types.UUID(p.OrganizationID.UUID),
-		CertStatus:     crmcontracts.PartnerCertStatus(p.CertStatus),
-		CreatedAt:      p.CreatedAt,
-		UpdatedAt:      p.UpdatedAt,
-		ArchivedAt:     p.ArchivedAt,
+		CompanyId:  openapi_types.UUID(p.CompanyID.UUID),
+		CertStatus: crmcontracts.PartnerCertStatus(p.CertStatus),
+		CreatedAt:  p.CreatedAt,
+		UpdatedAt:  p.UpdatedAt,
+		ArchivedAt: p.ArchivedAt,
 	}
 	version := crmcontracts.RowVersion(p.Version)
 	out.Version = &version
@@ -449,11 +450,11 @@ func intPtr(v *int16) *int {
 	return &w
 }
 
-// MarginTierOf answers what commercial tier a partner organization is on, or
+// MarginTierOf answers what commercial tier a partner company is on, or
 // nil when it is not a partner or its tier was never set.
 //
 // A narrow accessor rather than a use of GetPartner because the caller needs
-// exactly one field and no organization read: the commission accrual prices a
+// exactly one field and no company read: the commission accrual prices a
 // win it was handed, it does not open the partner's record. It is still gated
 // on `partner` read — a tier is commercial terms, and the fact that the only
 // caller today runs as a system actor is not a reason to leave the door open
@@ -462,15 +463,15 @@ func intPtr(v *int16) *int {
 // Answering nil rather than an error for "not a partner" is what lets the
 // accrual treat an unpriced win as an ordinary outcome instead of a failure to
 // retry forever.
-func (s *Store) MarginTierOf(ctx context.Context, organizationID ids.OrganizationID) (*string, error) {
+func (s *Store) MarginTierOf(ctx context.Context, companyID ids.CompanyID) (*string, error) {
 	if err := auth.Require(ctx, "partner", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var tier *string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
-			`SELECT margin_tier FROM partner WHERE organization_id = $1 AND archived_at IS NULL`,
-			organizationID).Scan(&tier)
+			`SELECT margin_tier FROM partner WHERE company_id = $1 AND archived_at IS NULL`,
+			companyID).Scan(&tier)
 		if errors.Is(err, pgx.ErrNoRows) {
 			tier = nil
 			return nil

@@ -32,11 +32,11 @@ import (
 // confirms itself.
 func linkedInMatchFixture(ctx context.Context, t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
-	var orgID ids.UUID
+	var companyID ids.UUID
 	seedAsAdmin(t, e, func(c context.Context, tx pgx.Tx) error {
 		return tx.QueryRow(c, `
-			INSERT INTO organization (display_name, source, captured_by)
-			VALUES ('Acme GmbH', 'manual', 'human:test') RETURNING id`).Scan(&orgID)
+			INSERT INTO company (display_name, source, captured_by)
+			VALUES ('Acme GmbH', 'manual', 'human:test') RETURNING id`).Scan(&companyID)
 	}, "seeding the account")
 
 	person, err := e.People.CreatePerson(ctx, people.CreatePersonInput{
@@ -45,16 +45,16 @@ func linkedInMatchFixture(ctx context.Context, t *testing.T, e *integration.Env)
 	if err != nil {
 		t.Fatalf("seeding the contact: %v", err)
 	}
-	employAt(t, e, ids.UUID(person.Id), orgID)
+	employAt(t, e, ids.UUID(person.Id), companyID)
 
 	seedAsAdmin(t, e, func(c context.Context, tx pgx.Tx) error {
 		_, err := tx.Exec(c, `
 			INSERT INTO linkedin_connection
 			    (owner_user_id, full_name, normalized_name, company_name,
-			     normalized_company, profile_url, matched_org_id, source)
+			     normalized_company, profile_url, matched_company_id, source)
 			VALUES ($1, 'Andreas Müller', 'andreas muller', 'Acme GmbH',
 			        'acme', 'https://www.linkedin.com/in/amueller', $2, 'csv_export')`,
-			e.Rep1, orgID)
+			e.Rep1, companyID)
 		return err
 	}, "seeding the connection")
 	return ids.UUID(person.Id)

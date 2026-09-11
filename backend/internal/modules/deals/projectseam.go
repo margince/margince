@@ -60,25 +60,25 @@ func refusingStartDelivery() StartDeliveryForWonDeal {
 	}
 }
 
-// dealProjectSameOrgConstraint is the constraint trigger that enforces "a deal
+// dealProjectSameCompanyConstraint is the constraint trigger that enforces "a deal
 // and its project name the same company" — a rule spanning two rows, so it
 // cannot be a CHECK, and its name is what the deal write paths match on to
 // answer 422 rather than 500.
-const dealProjectSameOrgConstraint = "deal_project_same_org"
+const dealProjectSameCompanyConstraint = "deal_project_same_company"
 
-// DealProjectOrgMismatchError maps to 422: a deal and the project it belongs to
-// must name the same company. Raised by the deal_project_same_org constraint
+// DealProjectCompanyMismatchError maps to 422: a deal and the project it belongs to
+// must name the same company. Raised by the deal_project_same_company constraint
 // trigger, which is the only place the cross-row rule can be enforced.
 //
 // It lives with the deal rather than with the project because the write that
 // trips it is a deal write, and the field it faults is the deal's.
-type DealProjectOrgMismatchError struct{}
+type DealProjectCompanyMismatchError struct{}
 
-func (e *DealProjectOrgMismatchError) Error() string {
+func (e *DealProjectCompanyMismatchError) Error() string {
 	return "a deal and its project must belong to the same company"
 }
 
-// FieldFault refuses linking a deal to a project under a different organization.
-func (e *DealProjectOrgMismatchError) FieldFault() (field, code, message string) {
-	return "project_id", "project_organization_mismatch", e.Error()
+// FieldFault refuses linking a deal to a project under a different company.
+func (e *DealProjectCompanyMismatchError) FieldFault() (field, code, message string) {
+	return filterProjectID, "project_company_mismatch", e.Error()
 }

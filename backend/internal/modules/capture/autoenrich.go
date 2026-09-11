@@ -3,12 +3,12 @@
 
 package capture
 
-// The captured-organization auto-enrich sweep's store (CAP-PARAM-7,
-// ADR-0072/A118): the per-org attempt cursor (capture_auto_enrich_state), the
-// installation-wide daily spend cap (capture_auto_enrich_budget), and the due-org
+// The captured-company auto-enrich sweep's store (CAP-PARAM-7,
+// ADR-0072): the per-company attempt cursor (capture_auto_enrich_state), the
+// installation-wide daily spend cap (capture_auto_enrich_budget), and the due-company
 // candidate read. Compose owns the sweep worker and the deep-read enqueue; this
 // store owns the scheduling state and the atomic cap reservation so the two are
-// one transaction each. The candidate read joins organization / site_read
+// one transaction each. The candidate read joins company / site_read
 // (people-owned) — a read is bounded by its own workspace predicate, not by
 // which module owns the table — so all the sweep's eligibility logic lives in
 // one place.
@@ -26,16 +26,16 @@ import (
 )
 
 // autoEnrichMaxAttempts bounds how many times the sweep re-enqueues a deep-read
-// for one organization before giving up (ADR-0072: retries=2). A read that
+// for one company before giving up (ADR-0072: retries=2). A read that
 // applied or evidenced nothing is terminal (next_attempt_at NULL) and never
 // counts against this; only a failed read consumes an attempt.
 const autoEnrichMaxAttempts = 2
 
-// DueOrg is one organization the sweep should enrich: its id and the primary
+// DueCompany is one company the sweep should enrich: its id and the primary
 // domain that seeds the crawl.
-type DueOrg struct {
-	OrganizationID ids.OrganizationID
-	Domain         string
+type DueCompany struct {
+	CompanyID ids.CompanyID
+	Domain    string
 }
 
 // AutoEnrichStore owns the sweep's scheduling state and daily-cap reservation.
@@ -48,7 +48,7 @@ type AutoEnrichStore struct {
 // workspace it serves.
 func NewAutoEnrichStore(db *database.DB) *AutoEnrichStore { return &AutoEnrichStore{db: db} }
 
-// ListDueOrgs returns up to limit captured organizations that need a dossier,
+// ListDueCompanies returns up to limit captured companies that need a dossier,
 // OLDEST first: with a live primary domain, no dossier, and either no cursor
 // row or a due one under the attempt bound. The query's own workspace predicate
 // scopes it to the bound workspace.
@@ -63,7 +63,7 @@ func NewAutoEnrichStore(db *database.DB) *AutoEnrichStore { return &AutoEnrichSt
 // the moment they want one.
 //
 // The old rule had also made the lane inert rather than selective: all 195
-// organizations in the demo workspace carry name_source='human', so the sweep
+// companies in the demo workspace carry name_source='human', so the sweep
 // had no candidate at all and had never enriched anything.
 //
 // The anchor stays out, now by its OWN predicate rather than as a side effect
@@ -102,8 +102,8 @@ func NewAutoEnrichStore(db *database.DB) *AutoEnrichStore { return &AutoEnrichSt
 // is an order that is not total, or one a new row can enter arbitrarily far
 // ahead in — and the id is neither.
 //
-// The org-name sweep pages this same set to exhaustion instead
-// (people/orgnamepromotion.go). It can: its per-candidate work is one in-memory
+// The company-name sweep pages this same set to exhaustion instead
+// (people/companynamepromotion.go). It can: its per-candidate work is one in-memory
 // decision. This lane's is a model-backed site read under a daily cap, so a
 // pass takes one page by construction — which is why the ordering has to be the
 // thing that guarantees progress.
@@ -114,23 +114,23 @@ func NewAutoEnrichStore(db *database.DB) *AutoEnrichStore { return &AutoEnrichSt
 // read. Reading a cancellation as a dossier would make turning the setting back
 // on a permanent no-op for every company whose read it stopped, which is the
 // opposite of the self-healing this sweep is for.
-func (s *AutoEnrichStore) ListDueOrgs(ctx context.Context, limit int) ([]DueOrg, error) {
-	var out []DueOrg
+func (s *AutoEnrichStore) ListDueCompanies(ctx context.Context, limit int) ([]DueCompany, error) {
+	var out []DueCompany
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT o.id, d.domain
-			FROM organization o
-			JOIN organization_domain d
-			  ON d.organization_id = o.id AND d.is_primary AND d.archived_at IS NULL
-			LEFT JOIN capture_auto_enrich_state s ON s.organization_id = o.id
+			FROM company o
+			JOIN company_domain d
+			  ON d.company_id = o.id AND d.is_primary AND d.archived_at IS NULL
+			LEFT JOIN capture_auto_enrich_state s ON s.company_id = o.id
 			WHERE o.archived_at IS NULL
 			  AND NOT o.is_anchor
 			  AND NOT EXISTS (
 				SELECT 1 FROM site_read sr
-				WHERE sr.organization_id = o.id
+				WHERE sr.company_id = o.id
 				  AND sr.status NOT IN ('failed', 'cancelled'))
 			  AND (
-				s.organization_id IS NULL
+				s.company_id IS NULL
 				OR (s.next_attempt_at IS NOT NULL AND s.next_attempt_at <= now()
 				    AND s.attempts < $1))
 			ORDER BY o.id
@@ -140,8 +140,8 @@ func (s *AutoEnrichStore) ListDueOrgs(ctx context.Context, limit int) ([]DueOrg,
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var o DueOrg
-			if err := rows.Scan(&o.OrganizationID, &o.Domain); err != nil {
+			var o DueCompany
+			if err := rows.Scan(&o.CompanyID, &o.Domain); err != nil {
 				return err
 			}
 			out = append(out, o)
@@ -149,16 +149,16 @@ func (s *AutoEnrichStore) ListDueOrgs(ctx context.Context, limit int) ([]DueOrg,
 		return rows.Err()
 	})
 	if err != nil {
-		return nil, fmt.Errorf("capture: listing orgs due for auto-enrich: %w", err)
+		return nil, fmt.Errorf("capture: listing companies due for auto-enrich: %w", err)
 	}
 	return out, nil
 }
 
-// ExpireExhausted retires the cursors of orgs that have used every attempt
+// ExpireExhausted retires the cursors of companies that have used every attempt
 // without a dossier landing: it sets last_outcome='exhausted' and clears
 // next_attempt_at, so the row drops out of the partial due-index (it is no
 // longer re-scanned every pass) — the real termination the 'exhausted' state
-// names. Called once per sweep pass, before ListDueOrgs. A resolved org already
+// names. Called once per sweep pass, before ListDueCompanies. A resolved company already
 // has a NULL next_attempt_at, so the NOT-NULL guard leaves it untouched.
 func (s *AutoEnrichStore) ExpireExhausted(ctx context.Context) error {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -224,7 +224,7 @@ func (s *AutoEnrichStore) ReserveBudget(ctx context.Context, dailyCap int) (Budg
 // bought nothing.
 //
 // The pattern is reserve-before-spend, which means the caller sometimes holds a
-// slot it turns out not to need: two paths racing on one organization both
+// slot it turns out not to need: two paths racing on one company both
 // reserve, and the uniqueness index lets only one of them start a read. Without
 // the refund the day's allowance erodes a slot at a time, and the shortfall grows
 // with exactly the concurrency the cap is meant to be indifferent to. A slot that
@@ -257,7 +257,7 @@ func (s *AutoEnrichStore) ReleaseBudget(ctx context.Context, slot BudgetSlot) er
 	return nil
 }
 
-// MarkQueued records that the sweep enqueued a deep-read for orgID: it counts
+// MarkQueued records that the sweep enqueued a deep-read for companyID: it counts
 // the attempt and arms next_attempt_at at the failure backoff, so a job that
 // never completes is re-driven after the backoff, up to the attempt bound. A
 // terminal outcome (MarkResolved) clears next_attempt_at.
@@ -265,18 +265,18 @@ func (s *AutoEnrichStore) ReleaseBudget(ctx context.Context, slot BudgetSlot) er
 // next_attempt_at against Postgres now(). Deriving the deadline from the app
 // process instead makes that a cross-clock comparison, and the two clocks are
 // only ever coincidentally equal.
-func (s *AutoEnrichStore) MarkQueued(ctx context.Context, orgID ids.OrganizationID, backoff time.Duration) error {
+func (s *AutoEnrichStore) MarkQueued(ctx context.Context, companyID ids.CompanyID, backoff time.Duration) error {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO capture_auto_enrich_state
-			  (organization_id, attempts, last_attempt_at, next_attempt_at, last_outcome)
+			  (company_id, attempts, last_attempt_at, next_attempt_at, last_outcome)
 			VALUES ($1, 1, now(), now() + make_interval(secs => $2), 'queued')
-			ON CONFLICT (organization_id) DO UPDATE SET
+			ON CONFLICT (company_id) DO UPDATE SET
 			  attempts = capture_auto_enrich_state.attempts + 1,
 			  last_attempt_at = now(),
 			  next_attempt_at = now() + make_interval(secs => $2),
 			  last_outcome = 'queued',
-			  updated_at = now()`, orgID, backoff.Seconds())
+			  updated_at = now()`, companyID, backoff.Seconds())
 		return err
 	})
 	if err != nil {
@@ -286,18 +286,18 @@ func (s *AutoEnrichStore) MarkQueued(ctx context.Context, orgID ids.Organization
 }
 
 // MarkResolved records the terminal outcome of a deep-read the sweep triggered.
-// 'applied' and 'empty' are terminal — next_attempt_at is cleared so the org is
+// 'applied' and 'empty' are terminal — next_attempt_at is cleared so the company is
 // never re-enqueued; 'failed' leaves the queued backoff standing so the next
 // due sweep retries it (until the attempt bound). A cursor row is expected
 // (MarkQueued wrote it); a missing row is a no-op, never an error.
-func (s *AutoEnrichStore) MarkResolved(ctx context.Context, orgID ids.OrganizationID, outcome string) error {
+func (s *AutoEnrichStore) MarkResolved(ctx context.Context, companyID ids.CompanyID, outcome string) error {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			UPDATE capture_auto_enrich_state SET
 			  last_outcome = $2,
 			  next_attempt_at = CASE WHEN $2 IN ('applied', 'empty') THEN NULL ELSE next_attempt_at END,
 			  updated_at = now()
-			WHERE organization_id = $1`, orgID, outcome)
+			WHERE company_id = $1`, companyID, outcome)
 		return err
 	})
 	if err != nil {

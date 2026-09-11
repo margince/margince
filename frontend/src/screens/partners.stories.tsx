@@ -10,7 +10,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// PartnerTab treats GET /organizations/{id}/partner's 404 as "not a partner
+// PartnerTab treats GET /companies/{id}/partner's 404 as "not a partner
 // yet" (an honest empty state + setup form), never as an error — the
 // NotYetPartner story exercises that branch directly via a 404 stub.
 // PartnersScreen is the flat #/partners list read straight off GET /partners.
@@ -23,7 +23,7 @@ export default meta;
 type Story = StoryObj;
 
 const partner = {
-  organization_id: "o-1",
+  company_id: "o-1",
   partner_role: "hosting",
   cert_status: "certified",
   margin_tier: "tier2_20",
@@ -40,12 +40,12 @@ export const NotYetPartner: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /organizations/o-1/partner": () =>
+      "GET /companies/o-1/partner": () =>
         jsonResponse({ title: "Not found", detail: "no partner" }, 404),
     });
     return (
       <StoryProviders>
-        <PartnerTab organizationId="o-1" />
+        <PartnerTab companyId="o-1" />
       </StoryProviders>
     );
   },
@@ -57,7 +57,7 @@ export const NotYetPartner: Story = {
 const commission = {
   id: "c-1",
   deal_id: "d-1",
-  partner_org_id: "o-1",
+  partner_company_id: "o-1",
   status: "accrued",
   attribution_at_accrual: "sourced",
   margin_tier_at_accrual: "tier2_20",
@@ -77,8 +77,8 @@ const commission = {
 const sourcedDeal = {
   id: "d-1",
   name: "Northgate rollout",
-  organization_id: "cust-1",
-  partner_org_id: "o-1",
+  company_id: "cust-1",
+  partner_company_id: "o-1",
   partner_attribution: "sourced",
   amount_minor: 100000,
   currency: "EUR",
@@ -94,8 +94,8 @@ export const ExistingPartner: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /organizations/o-1/partner": () => jsonResponse(partner),
-      "GET /organizations/cust-1": () =>
+      "GET /companies/o-1/partner": () => jsonResponse(partner),
+      "GET /companies/cust-1": () =>
         jsonResponse({ id: "cust-1", display_name: "Northgate GmbH" }),
       "GET /deals": () =>
         jsonResponse({ data: [sourcedDeal], page: { has_more: false } }),
@@ -105,7 +105,7 @@ export const ExistingPartner: Story = {
     });
     return (
       <StoryProviders>
-        <PartnerTab organizationId="o-1" />
+        <PartnerTab companyId="o-1" />
       </StoryProviders>
     );
   },
@@ -117,7 +117,7 @@ export const PartnersList: Story = {
       "GET /me": meRoute({}),
       "GET /partners": () =>
         jsonResponse({
-          data: [partner, { ...partner, organization_id: "o-2" }],
+          data: [partner, { ...partner, company_id: "o-2" }],
           page: { next_cursor: null, has_more: false },
         }),
     });

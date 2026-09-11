@@ -21,7 +21,7 @@ import (
 //
 // That line is load-bearing, not tidiness. This file is the identity-mint site
 // backend/gates/dedupespine_test.go sanctions BY PATH, so a direct
-// `INSERT INTO person|organization|lead` belongs here and nowhere else in the
+// `INSERT INTO person|company|lead` belongs here and nowhere else in the
 // package — put one in harness.go and the gate fails, which is the point.
 
 // DealFixture provisions the workspace with the seeded default pipeline
@@ -91,8 +91,8 @@ func LinkActivity(t *testing.T, owner *pgx.Conn, activity ids.UUID, entityType s
 	switch entityType {
 	case "person":
 		column = "person_id"
-	case "organization":
-		column = "organization_id"
+	case "company":
+		column = "company_id"
 	}
 	if _, err := owner.Exec(context.Background(),
 		`INSERT INTO activity_link (activity_id, entity_type, `+column+`) VALUES ($1, $2, $3)`,
@@ -171,12 +171,12 @@ func SeedIDRow(t *testing.T, owner *pgx.Conn, sql string, args ...any) ids.UUID 
 	return id
 }
 
-// LinkToOrg attaches an activity directly to an account (LinkActivity above
+// LinkToCompany attaches an activity directly to an account (LinkActivity above
 // covers only the person and deal columns).
-func LinkToOrg(t *testing.T, e *Env, activity, org ids.UUID) {
+func LinkToCompany(t *testing.T, e *Env, activity, company ids.UUID) {
 	t.Helper()
-	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, organization_id)
-		VALUES ($1, 'organization', $2)`, activity, org)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id)
+		VALUES ($1, 'company', $2)`, activity, company)
 }
 
 // AccountMailDirectedAt seeds one message with an explicit direction, which is

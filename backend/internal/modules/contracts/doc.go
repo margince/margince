@@ -27,6 +27,6 @@
 //
 // The table carries no workspace column (ADR-0091/A136 — this is the first
 // table authored after the tenant boundary was retired) and no owner column:
-// visibility is derived from the linked deal, falling back to the organization,
+// visibility is derived from the linked deal, falling back to the company,
 // so reassigning a deal moves its contracts in the same query.
 package contracts

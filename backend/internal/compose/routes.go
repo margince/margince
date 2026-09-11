@@ -134,7 +134,7 @@ func replayProbes(approvalsSvc *approvals.Service, contractsStore *contracts.Sto
 			_, err := dealRoomsStore.GetRoom(ctx, ids.From[ids.DealRoomKind](id))
 			return err
 		},
-		// A contract's visibility is inherited from its deal or organization,
+		// A contract's visibility is inherited from its deal or company,
 		// which only its own store can evaluate — the generic row-scope helper
 		// refuses a table with no owner column.
 		probeContract: func(ctx context.Context, id ids.UUID) error {
@@ -180,9 +180,9 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	mux.HandleFunc("/readyz", httpserver.Readyz(srv.aiStateOrDefault(), srv.readyzEmbedState(), srv.readinessChecks(pool.Ping,
 		func(ctx context.Context) error { return AssertRuntimeRole(ctx, pool) })...))
 	// The claim surface, beside the probes rather than under /v1: the session
-	// middleware fronting /v1 resolves the singleton organization first and
+	// middleware fronting /v1 resolves the singleton company first and
 	// answers 503 when there is none, so an endpoint that exists to run when no
-	// organization exists cannot live behind it. See handlers_setup.go.
+	// company exists cannot live behind it. See handlers_setup.go.
 	setupLimit := newSetupLimiter()
 	mux.HandleFunc("GET /setup/status", setupStatus(identitySvc, setupLimit))
 	mux.HandleFunc("POST /setup/claim", setupClaim(identitySvc, pool, srv.bootstrapSeeds, setupLimit, log))

@@ -138,7 +138,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 
 	t.Run("the same mail is never read twice", func(t *testing.T) {
 		// The read cursor, not the field set, is what retires a person: this
-		// person still has no org_name evidence, so the field predicate would
+		// person still has no company_name evidence, so the field predicate would
 		// select them again — and asking would show the model the identical
 		// window and get the identical answer, nightly, forever.
 		before := brain.calls
@@ -193,7 +193,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		// She is still a candidate — the org_name her signature may state is
+		// She is still a candidate — the company_name her signature may state is
 		// unanswered — so the pass reads her mail and the model returns the
 		// same title it returns for everyone. The human's answer survives it.
 		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
@@ -627,7 +627,7 @@ func TestASignatureIsNotReadOffAMessageThePersonDidNotSend(t *testing.T) {
 	// in the window — so the evidence gate alone cannot refuse them.
 	brain := &signatureScriptBrain{fields: []map[string]any{
 		{"field": "title", "value": "PARTNER MANAGER DACH", "evidence_snippet": "PARTNER MANAGER DACH", "confidence": 1},
-		{"field": "org_name", "value": "Other Company GmbH", "evidence_snippet": "Other Company GmbH", "confidence": 1},
+		{"field": "company_name", "value": "Other Company GmbH", "evidence_snippet": "Other Company GmbH", "confidence": 1},
 		{"field": "address", "value": "Somestreet 7", "evidence_snippet": "Somestreet 7", "confidence": 1},
 	}}
 	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))

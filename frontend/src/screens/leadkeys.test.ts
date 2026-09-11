@@ -59,7 +59,7 @@ const srcRoot = join(screensDir, "..");
 const LEAD_ROOTS = ["lead", "leads", "lead-promote-preview"];
 
 // The two positions a query key actually occupies. An array literal anywhere
-// else is not one — `import.tsx` passes `["lead", "organization"]` as a record
+// else is not one — `import.tsx` passes `["lead", "company"]` as a record
 // KIND list, and a gate that read it as a key would be reporting a defect that
 // is not there, which is how a gate gets waived rather than fixed.
 //
@@ -230,7 +230,7 @@ describe("a lead's cached reads", () => {
       // The false positive the first draft of this gate reported. A gate that
       // cries about a record-kind list is a gate that gets waived.
       "a record-KIND list, which import.tsx really passes",
-      'p({ options: ["lead", "organization"] as const });',
+      'p({ options: ["lead", "company"] as const });',
       0,
     ],
     [

@@ -13,14 +13,14 @@ import { RecordSpine } from "./spine";
 // stop separates the first three, and it is the only stop drawn from an
 // ABSENCE rather than from a record.
 
-type View = components["schemas"]["Organization360"];
+type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 const AS_OF = "2026-08-25T09:00:00Z";
 
 const base = {
   as_of: AS_OF,
-  organization: {
+  company: {
     id: "o-1",
     display_name: "Kugellager-online.de",
     captured_by: "human:u1",

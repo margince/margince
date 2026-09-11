@@ -203,7 +203,11 @@ func (s *Store) entityVisibleTo(ctx context.Context, eventType, entityType strin
 		return ok && actor.UserID != ids.Nil && actor.UserID == entityID, nil
 	}
 	switch entityType {
-	case "person", "organization", "deal", "lead", "project", "voice_profile":
+	//nolint:goconst // wire entity types read as data. The constants goconst points at
+	// name other concepts that spell the same word — an approval target, a mirror
+	// object class — and hiding these behind one would assert a correspondence no
+	// gate holds.
+	case "person", "company", "deal", "lead", "project", "voice_profile":
 		return s.rowScopedVisible(ctx, entityType, func(c context.Context, tx pgx.Tx) error {
 			return auth.EnsureVisible(c, tx, entityType, entityID)
 		})
@@ -222,7 +226,7 @@ func (s *Store) entityVisibleTo(ctx context.Context, eventType, entityType strin
 		return s.offerVisibleTo(ctx, entityID)
 	case "contract":
 		// A contract has no owner of its own: it is visible through the deal it
-		// came from, falling back to its organization for the agreements that
+		// came from, falling back to its company for the agreements that
 		// never ran through a pipeline (ADR-0109 §8). Same shape as the offer
 		// above, one anchor further out.
 		return s.contractVisibleTo(ctx, entityID)
@@ -311,7 +315,7 @@ func (s *Store) offerVisibleTo(ctx context.Context, offerID ids.UUID) (bool, err
 }
 
 // contractVisibleTo gates a contract subject on contract.read and then on the
-// ROW SCOPE of its anchor — the deal it came from, or its organization when it
+// ROW SCOPE of its anchor — the deal it came from, or its company when it
 // has no deal. An absent contract reads as not-visible.
 //
 // The anchor's own OBJECT grant is deliberately not required, and that is the
@@ -333,10 +337,10 @@ func (s *Store) contractVisibleTo(ctx context.Context, contractID ids.UUID) (boo
 		return false, err
 	}
 	var dealID *ids.UUID
-	var orgID ids.UUID
+	var companyID ids.UUID
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT deal_id, organization_id FROM contract WHERE id = $1`, contractID).Scan(&dealID, &orgID)
+			`SELECT deal_id, company_id FROM contract WHERE id = $1`, contractID).Scan(&dealID, &companyID)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -344,7 +348,7 @@ func (s *Store) contractVisibleTo(ctx context.Context, contractID ids.UUID) (boo
 	if err != nil {
 		return false, err
 	}
-	anchor, anchorID := "organization", orgID
+	anchor, anchorID := "company", companyID
 	if dealID != nil {
 		anchor, anchorID = "deal", *dealID
 	}

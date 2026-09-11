@@ -27,7 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// OrganizationsCarryingLiveProjects answers which of these companies hold at
+// CompaniesCarryingLiveProjects answers which of these companies hold at
 // least one live project, for the lane deciding whether to offer a merge.
 //
 // UNSCOPED by project, exactly as the merge's own refusal is: work the reader
@@ -38,23 +38,23 @@ import (
 //
 // A SET at a time: the lane draws ten pairs, and asking per company would be
 // twenty round trips on the surface a rep opens first every morning.
-func (s *Store) OrganizationsCarryingLiveProjects(
-	ctx context.Context, organizationIDs []ids.UUID,
+func (s *Store) CompaniesCarryingLiveProjects(
+	ctx context.Context, companyIDs []ids.UUID,
 ) (map[ids.UUID]bool, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	carrying := map[ids.UUID]bool{}
-	if len(organizationIDs) == 0 {
+	if len(companyIDs) == 0 {
 		return carrying, nil
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		rows, err := tx.Query(ctx, storekit.SQLf(`
-			SELECT DISTINCT c.organization_id
+			SELECT DISTINCT c.company_id
 			  `+liveProjectEdge+`
-			   AND c.organization_id = ANY($%d)`, arg(organizationIDs)), args...)
+			   AND c.company_id = ANY($%d)`, arg(companyIDs)), args...)
 		if err != nil {
 			return fmt.Errorf("people: reading which companies carry live projects: %w", err)
 		}

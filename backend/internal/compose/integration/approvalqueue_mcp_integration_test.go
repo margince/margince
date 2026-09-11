@@ -89,20 +89,20 @@ func (q *queueEnv) mintPassport(t *testing.T, label string, scopes ...string) st
 // confirm-first for a reason that is not about authority at all: the MODEL
 // names the URL the server fetches. What the queue tests need is any verb that
 // still puts a call in front of a human, and this is it.
-func (q *queueEnv) stageAConfirmFirstCall(t *testing.T, invoke func(tool, args string) (string, error), name string) (orgID string, approvalID ids.UUID) {
+func (q *queueEnv) stageAConfirmFirstCall(t *testing.T, invoke func(tool, args string) (string, error), name string) (companyID string, approvalID ids.UUID) {
 	t.Helper()
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/organizations", AnyMap{"display_name": name}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create organization → %d", status)
+	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"display_name": name}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
-	_, err := invoke("enrich", `{"organization_id":"`+org.ID+`"}`)
+	_, err := invoke("enrich", `{"company_id":"`+company.ID+`"}`)
 	var staged *workflow.StagedApprovalError
 	if !errors.As(err, &staged) {
 		t.Fatalf("enrich → %v, want a staged approval", err)
 	}
-	return org.ID, staged.ApprovalID.UUID
+	return company.ID, staged.ApprovalID.UUID
 }
 
 type queueItem struct {
@@ -137,7 +137,7 @@ func answered[T any](t *testing.T, out string) T {
 func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.T) {
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "proposing agent", "read", "write", "enrich"))
-	orgID, approvalID := q.stageAConfirmFirstCall(t, invoke, "Queue Subject")
+	companyID, approvalID := q.stageAConfirmFirstCall(t, invoke, "Queue Subject")
 
 	// SEE IT. The proposal the agent could not perform is in the queue it can
 	// read, named the way it was staged.
@@ -157,8 +157,8 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 		if item.Kind != "enrich" || item.Status != "pending" {
 			t.Errorf("the staged item reads %s/%s, want enrich/pending", item.Kind, item.Status)
 		}
-		if item.TargetType != "organization" || item.TargetID != orgID {
-			t.Errorf("the item points at %s/%s, want organization/%s", item.TargetType, item.TargetID, orgID)
+		if item.TargetType != "company" || item.TargetID != companyID {
+			t.Errorf("the item points at %s/%s, want company/%s", item.TargetType, item.TargetID, companyID)
 		}
 		if item.Summary == "" {
 			t.Error("the item carries no sentence a person could answer from")
@@ -229,7 +229,7 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 	// business — this composition binds no model path — so the distinction is
 	// "refused by the gate" versus "released and now the tool's own answer".
 	_, released := invoke("enrich",
-		`{"organization_id":"`+orgID+`","approval_id":"`+approvalID.String()+`"}`)
+		`{"company_id":"`+companyID+`","approval_id":"`+approvalID.String()+`"}`)
 	if errors.Is(released, apperrors.ErrRequiresApproval) || errors.Is(released, apperrors.ErrApprovalTokenInvalid) {
 		t.Fatalf("the released retry → %v — the approval did not release the call", released)
 	}
@@ -286,17 +286,17 @@ func TestAnAgentRelinksToAPersonWithoutAskingAndStillStagesAProject(t *testing.T
 	if status := q.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Relink Subject"}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/organizations", AnyMap{"display_name": "Relink Account"}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create organization → %d", status)
+	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Relink Account"}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
 	var project struct {
 		ID string `json:"id"`
 	}
 	if status := q.Call(t, "POST", "/v1/projects", AnyMap{
-		"name": "Relink Engagement", "organization_id": org.ID,
+		"name": "Relink Engagement", "company_id": company.ID,
 	}, nil, &project); status != http.StatusCreated {
 		t.Fatalf("create project → %d", status)
 	}
@@ -326,7 +326,7 @@ func TestAnAgentRelinksToAPersonWithoutAskingAndStillStagesAProject(t *testing.T
 		entityID   string
 	}{
 		{"person", person.ID},
-		{"organization", org.ID},
+		{"company", company.ID},
 	} {
 		t.Run("a "+destination.entityType+" is relinked with no approval", func(t *testing.T) {
 			if _, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+

@@ -90,9 +90,9 @@ const defaultSearchPageSize = 50
 //
 // Partner is deliberately absent: a sweep carries no filters and matches on
 // text, and a partner has no text of its own — every word a caller would
-// search for lives on the organization the partner row extends. Including it
+// search for lives on the company the partner row extends. Including it
 // would return the same companies twice under two type names.
-var searchable = []datasource.EntityType{datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityDeal, datasource.EntityLead, datasource.EntityProject}
+var searchable = []datasource.EntityType{datasource.EntityPerson, datasource.EntityCompany, datasource.EntityDeal, datasource.EntityLead, datasource.EntityProject}
 
 // nameable is what a caller may ASK FOR BY NAME. It is a superset of
 // searchable, and the two are separate because they answer different
@@ -104,7 +104,7 @@ var nameable = append(append([]datasource.EntityType{}, searchable...), datasour
 
 func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	switch ref.Type {
-	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
+	case datasource.EntityPerson, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship, datasource.EntityPartner:
 		return p.people.Read(ctx, ref)
 	case datasource.EntityDeal:
@@ -128,7 +128,7 @@ func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasour
 // rather than a name it would refuse.
 func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	switch t {
-	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
+	case datasource.EntityPerson, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityPartner:
 		return p.people.ListFilters(t)
 	case datasource.EntityDeal:
@@ -220,7 +220,7 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 		err     error
 	)
 	switch t {
-	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
+	case datasource.EntityPerson, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityPartner:
 		records, next, _, err = p.people.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityDeal:
@@ -337,7 +337,7 @@ func sweepResumesAt(out datasource.SearchResult, et datasource.EntityType, inner
 
 func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datasource.EntityRef, error) {
 	switch in.EntityType {
-	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
+	case datasource.EntityPerson, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship:
 		return p.people.Create(ctx, in)
 	case datasource.EntityDeal:
@@ -353,7 +353,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 
 func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datasource.EntityRef, error) {
 	switch in.Ref.Type {
-	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
+	case datasource.EntityPerson, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship:
 		return p.people.Update(ctx, in)
 	case datasource.EntityDeal:
@@ -382,7 +382,7 @@ func (p *Provider) Archive(ctx context.Context, r datasource.EntityRef) (datasou
 //nolint:ireturn // the routing IS the return: three module providers answer one question, and naming one of them here would be a fourth copy of the switch
 func (p *Provider) archiverFor(t datasource.EntityType) datasource.RecordArchiverV2 {
 	switch t {
-	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityRelationship:
+	case datasource.EntityPerson, datasource.EntityCompany, datasource.EntityRelationship:
 		return p.people
 	case datasource.EntityDeal:
 		return p.deals
@@ -410,7 +410,7 @@ func (p *Provider) ArchivableTypes(ctx context.Context) ([]datasource.EntityType
 	}
 	slices.Sort(out)
 	// Compacted because this list is rendered to a model in a refusal
-	// ("it archives person, organization, deal, …"), and the modules below
+	// ("it archives person, company, deal, …"), and the modules below
 	// are disjoint today by construction rather than by anything that
 	// checks. A type two of them both claimed would read as said twice.
 	return slices.Compact(out), nil
@@ -437,7 +437,7 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 
 func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasource.EntityRef, error) {
 	switch in.Type {
-	case datasource.EntityPerson, datasource.EntityOrganization:
+	case datasource.EntityPerson, datasource.EntityCompany:
 		return p.people.Merge(ctx, in)
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Type)}

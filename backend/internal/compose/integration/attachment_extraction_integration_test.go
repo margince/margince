@@ -98,8 +98,8 @@ func TestGetAttachmentExtractionReadsAnyEntityType(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
-	org := e.SeedOrg(t, "Non-Deal Parent", &e.Rep1)
-	att := uploadTestAttachmentForOrg(ctx, t, h, org, "notes.txt", []byte("org notes"))
+	company := e.SeedCompany(t, "Non-Deal Parent", &e.Rep1)
+	att := uploadTestAttachmentForCompany(ctx, t, h, company, "notes.txt", []byte("company notes"))
 	seedExtractionReading(ctx, t, e, ids.UUID(att.Id), nil)
 
 	rec := httptest.NewRecorder()
@@ -263,10 +263,10 @@ func uploadTestAttachment(ctx context.Context, t *testing.T, h activities.Handle
 	return uploadAttachmentAs(ctx, t, h, "person", personID, filename, data)
 }
 
-// uploadTestAttachmentForOrg mirrors uploadTestAttachment for an
-// organization-scoped attachment (proving the extraction read is valid for
+// uploadTestAttachmentForCompany mirrors uploadTestAttachment for an
+// company-scoped attachment (proving the extraction read is valid for
 // any entity_type, not only deal).
-func uploadTestAttachmentForOrg(ctx context.Context, t *testing.T, h activities.Handlers, orgID ids.UUID, filename string, data []byte) crmcontracts.Attachment {
+func uploadTestAttachmentForCompany(ctx context.Context, t *testing.T, h activities.Handlers, companyID ids.UUID, filename string, data []byte) crmcontracts.Attachment {
 	t.Helper()
-	return uploadAttachmentAs(ctx, t, h, "organization", orgID, filename, data)
+	return uploadAttachmentAs(ctx, t, h, "company", companyID, filename, data)
 }

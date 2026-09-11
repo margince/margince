@@ -1074,7 +1074,7 @@ test("AC-settings: the passport list is metadata-only and strikes revoked rows",
 }) => {
   // Agent passports are a credential the PERSON holds, so they live on the
   // "Your agents" entry beside autonomy and the tool catalog — not on the
-  // organization's AI page, which is spend, model prices and automations.
+  // company's AI page, which is spend, model prices and automations.
   await page.goto("/#/settings/agents");
   await expect(page.getByText("Marcus' Claude", { exact: true })).toBeVisible();
   const revoked = page.locator('[data-passport="pp-2"]');
@@ -1258,10 +1258,10 @@ test.describe("B-EP09.23: overlay mode", () => {
     await page.goto("/#/settings/integrations");
     await expect(page.getByText("Verbunden", { exact: true })).toBeVisible();
     await expect(page.getByText(/eu1/)).toBeVisible();
-    // Per-object sync rows: person + organization landed fresh; deal is still
+    // Per-object sync rows: person + company landed fresh; deal is still
     // catching up — three distinct rows, not a collapsed summary.
     await expect(page.getByText("person", { exact: true })).toBeVisible();
-    await expect(page.getByText("organization", { exact: true })).toBeVisible();
+    await expect(page.getByText("company", { exact: true })).toBeVisible();
     await expect(page.getByText("deal", { exact: true })).toBeVisible();
     await expect(page.getByText("Aktuell")).toHaveCount(2);
     await expect(page.getByText("Sync ausstehend")).toBeVisible();
@@ -1419,7 +1419,7 @@ test.describe("B-EP09.23: overlay mode", () => {
     await page.getByRole("button", { name: "Trennen" }).click();
     await expect(
       page.getByText(
-        "Dies löscht die gespiegelten Daten und schaltet die Organisation zurück auf native Datensätze.",
+        "Dies löscht die gespiegelten Daten und schaltet die Firma zurück auf native Datensätze.",
         { exact: false },
       ),
     ).toBeVisible();
@@ -2298,7 +2298,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   // the fixed nav surface — so it gets its own test rather than reshaping that
   // list for one parameterised route.
   //
-  // This mock harness has no /organizations/{id}/360 route, and its fallback
+  // This mock harness has no /companies/{id}/360 route, and its fallback
   // answers an empty PAGE with 200 rather than 404 — so the read the record
   // depends on for its strip, tabs bodies and rail succeeds with a body that
   // carries none of the fields a 360 promises. The page renders in its own
@@ -2743,7 +2743,7 @@ test.describe("filters and views", () => {
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
 
     // The field picker is the SERVER's vocabulary, not a list this screen keeps:
-    // `industry` and `lifecycle` are organization fields, `tag` is the leaf that
+    // `industry` and `lifecycle` are company fields, `tag` is the leaf that
     // is an EXISTS over a join rather than a column, and none of them is
     // spelled anywhere in the frontend.
     await page.getByRole("combobox", { name: "Feld" }).click();

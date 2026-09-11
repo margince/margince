@@ -33,26 +33,26 @@ import (
 func TestSearchHonorsObjectRBAC(t *testing.T) {
 	e := SetupSearch(t)
 	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Rostock Person', 'manual', 'human:x')`)
-	e.SeedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Rostock Werft', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Rostock Werft', 'manual', 'human:x')`)
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	orgOnly := principal.WithActor(ctx, principal.Principal{
+	companyOnly := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"organization": {Read: true}, "installation_settings": {Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"company": {Read: true}, "installation_settings": {Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	page, err := e.Store.Search(orgOnly, search.Input{Query: "rostock"})
+	page, err := e.Store.Search(companyOnly, search.Input{Query: "rostock"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(page.Hits) != 1 || page.Hits[0].Type != "organization" {
+	if len(page.Hits) != 1 || page.Hits[0].Type != "company" {
 		t.Fatalf("object RBAC leaked into search: %+v", page.Hits)
 	}
 	// Explicitly requesting only the denied type answers an empty page,
 	// not an error — nothing to disclose.
-	page, err = e.Store.Search(orgOnly, search.Input{Query: "rostock", Types: []string{"person"}})
+	page, err = e.Store.Search(companyOnly, search.Input{Query: "rostock", Types: []string{"person"}})
 	if err != nil || len(page.Hits) != 0 {
 		t.Fatalf("denied-type search → %v %+v, want an empty page", err, page.Hits)
 	}
@@ -61,7 +61,7 @@ func TestSearchHonorsObjectRBAC(t *testing.T) {
 func TestSearchRanksAcrossObjectTypes(t *testing.T) {
 	e := SetupSearch(t)
 	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Heike Hamburg', 'manual', 'human:x')`)
-	e.SeedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Hamburg Logistics GmbH', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Hamburg Logistics GmbH', 'manual', 'human:x')`)
 	e.SeedID(t, `INSERT INTO lead (id, company_name, email, source, captured_by) VALUES ($1, 'Hamburg Freight', 'lead@hamburg.test', 'manual', 'human:x')`)
 	e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, source, captured_by) VALUES ($1, 'note', 'Hamburg visit', 'Met the Hamburg team at the Hamburg office in Hamburg', 'manual', 'human:x')`)
 	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Unrelated Munich', 'manual', 'human:x')`)
@@ -80,7 +80,7 @@ func TestSearchRanksAcrossObjectTypes(t *testing.T) {
 			t.Fatalf("non-matching row surfaced: %+v", hit)
 		}
 	}
-	for _, want := range []string{"person", "organization", "lead", "activity"} {
+	for _, want := range []string{"person", "company", "lead", "activity"} {
 		if !types[want] {
 			t.Errorf("no %s hit in %+v", want, page.Hits)
 		}
@@ -135,8 +135,8 @@ func TestSearchExcludesArchivedRows(t *testing.T) {
 // narrows is discovery.
 func TestSearchExcludesTheOwnCompany(t *testing.T) {
 	e := SetupSearch(t)
-	e.SeedID(t, `INSERT INTO organization (id, display_name, is_anchor, source, captured_by) VALUES ($1, 'Rostock Consulting GmbH', true, 'manual', 'human:x')`)
-	customer := e.SeedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Rostock Freight AG', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO company (id, display_name, is_anchor, source, captured_by) VALUES ($1, 'Rostock Consulting GmbH', true, 'manual', 'human:x')`)
+	customer := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Rostock Freight AG', 'manual', 'human:x')`)
 
 	page, err := e.Store.Search(e.Admin(), search.Input{Query: "rostock"})
 	if err != nil {
@@ -360,7 +360,7 @@ func searchAs(e *SearchEnv) context.Context {
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Read: true}, "organization": {Read: true},
+				"person": {Read: true}, "company": {Read: true},
 				"installation_settings": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,

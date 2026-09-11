@@ -172,10 +172,10 @@ func TestAPlanBoundToAnUnsearchableRecordTypeFailsLoudly(t *testing.T) {
 // The hop's binding carries the hop's own columns, so a hop predicate is
 // compiled against the table it filters rather than against the target's.
 func TestTheHopIsBoundToItsOwnTablesColumns(t *testing.T) {
-	ctx := readerFor(entityDeal, entityOrganization)
+	ctx := readerFor(entityDeal, entityCompany)
 	plan := validatedPlanDoc(ctx, t, `{
 		"version": "v1", "target": "deal",
-		"traverse": {"relation": "organization",
+		"traverse": {"relation": "company",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]}}`)
 	executor := &QueryExecutor{columns: stubColumns{tables: planTables}}
 	binding, err := executor.bindPlan(ctx, plan)

@@ -57,7 +57,7 @@ func TestTheDecisionLaneNamesAPageInOneReadPerEntityType(t *testing.T) {
 // the row scope is a different predicate per table, so the types cannot share a
 // statement.
 func TestAMixedPageCostsOneReadPerTypePresent(t *testing.T) {
-	pairs := append(pairsOf("person", 3), pairsOf("organization", 2)...)
+	pairs := append(pairsOf("person", 3), pairsOf("company", 2)...)
 	pairs = append(pairs, pairsOf("lead", 1)...)
 	var asked []string
 	s := serviceForDuplicates(t, stubDuplicates{pairs: pairs, open: len(pairs), asked: &asked})
@@ -69,7 +69,7 @@ func TestAMixedPageCostsOneReadPerTypePresent(t *testing.T) {
 	for _, entityType := range asked {
 		seen[entityType]++
 	}
-	if len(asked) != 3 || seen["person"] != 1 || seen["organization"] != 1 || seen["lead"] != 1 {
+	if len(asked) != 3 || seen["person"] != 1 || seen["company"] != 1 || seen["lead"] != 1 {
 		t.Errorf("reads = %v, want exactly one per type present", asked)
 	}
 }

@@ -22,8 +22,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seatEmployee plants one person employed by org, optionally with an email.
-func seatEmployee(t *testing.T, e *integration.Env, org ids.UUID, fullName, email string) ids.UUID {
+// seatEmployee plants one person employed by company, optionally with an email.
+func seatEmployee(t *testing.T, e *integration.Env, company ids.UUID, fullName, email string) ids.UUID {
 	t.Helper()
 	person := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -41,8 +41,8 @@ func seatEmployee(t *testing.T, e *integration.Env, org ids.UUID, fullName, emai
 			}
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO relationship (kind, person_id, organization_id, is_current_primary, source, captured_by)
-			VALUES ('employment', $1, $2, true, 'gmail:seed', 'connector:gmail')`, person, org)
+			INSERT INTO relationship (kind, person_id, company_id, is_current_primary, source, captured_by)
+			VALUES ('employment', $1, $2, true, 'gmail:seed', 'connector:gmail')`, person, company)
 		return err
 	})
 	if err != nil {
@@ -67,10 +67,10 @@ func seatedTitle(t *testing.T, e *integration.Env, person ids.UUID) *string {
 func TestApplySitePersonFieldsMatchesAnEmployeeByName(t *testing.T) {
 	e := integration.Setup(t)
 	store := people.NewStore(e.DB())
-	org := e.SeedOrg(t, "Acme", nil)
-	person := seatEmployee(t, e, org, "Bob Builder", "")
+	company := e.SeedCompany(t, "Acme", nil)
+	person := seatEmployee(t, e, company, "Bob Builder", "")
 
-	matched, err := store.ApplySitePersonFields(e.Admin(), ids.From[ids.OrganizationKind](org),
+	matched, err := store.ApplySitePersonFields(e.Admin(), ids.From[ids.CompanyKind](company),
 		people.SitePersonFields{
 			Name: "Bob Builder", Role: "Head of Delivery",
 			EvidenceSnippet: "Bob Builder — Head of Delivery",
@@ -93,7 +93,7 @@ func TestApplySitePersonFieldsMatchesAnEmployeeByName(t *testing.T) {
 	}
 
 	t.Run("a re-read applies nothing twice", func(t *testing.T) {
-		matched, err := store.ApplySitePersonFields(e.Admin(), ids.From[ids.OrganizationKind](org),
+		matched, err := store.ApplySitePersonFields(e.Admin(), ids.From[ids.CompanyKind](company),
 			people.SitePersonFields{
 				Name: "Bob Builder", Role: "Chief of Everything",
 				EvidenceSnippet: "Bob Builder — Chief of Everything",
@@ -111,12 +111,12 @@ func TestApplySitePersonFieldsMatchesAnEmployeeByName(t *testing.T) {
 func TestApplySitePersonFieldsRefusesToGuess(t *testing.T) {
 	e := integration.Setup(t)
 	store := people.NewStore(e.DB())
-	org := e.SeedOrg(t, "Acme", nil)
-	seatEmployee(t, e, org, "Chris Taylor", "")
-	seatEmployee(t, e, org, "Chris Taylor", "")
+	company := e.SeedCompany(t, "Acme", nil)
+	seatEmployee(t, e, company, "Chris Taylor", "")
+	seatEmployee(t, e, company, "Chris Taylor", "")
 
 	t.Run("two employees of the same name are not identifiable", func(t *testing.T) {
-		matched, err := store.ApplySitePersonFields(e.Admin(), ids.From[ids.OrganizationKind](org),
+		matched, err := store.ApplySitePersonFields(e.Admin(), ids.From[ids.CompanyKind](company),
 			people.SitePersonFields{
 				Name: "Chris Taylor", Role: "Engineer",
 				EvidenceSnippet: "Chris Taylor — Engineer", SourceURL: "https://acme.example/team",
@@ -130,7 +130,7 @@ func TestApplySitePersonFieldsRefusesToGuess(t *testing.T) {
 	})
 
 	t.Run("a stranger on the team page is not matched", func(t *testing.T) {
-		matched, err := store.ApplySitePersonFields(e.Admin(), ids.From[ids.OrganizationKind](org),
+		matched, err := store.ApplySitePersonFields(e.Admin(), ids.From[ids.CompanyKind](company),
 			people.SitePersonFields{
 				Name: "Someone Entirely Else", Role: "Engineer",
 				EvidenceSnippet: "Someone Entirely Else — Engineer", SourceURL: "https://acme.example/team",
@@ -147,13 +147,13 @@ func TestApplySitePersonFieldsRefusesToGuess(t *testing.T) {
 func TestApplySitePersonFieldsStaysInsideTheCompany(t *testing.T) {
 	e := integration.Setup(t)
 	store := people.NewStore(e.DB())
-	acme := e.SeedOrg(t, "Acme", nil)
-	other := e.SeedOrg(t, "Other", nil)
+	acme := e.SeedCompany(t, "Acme", nil)
+	other := e.SeedCompany(t, "Other", nil)
 	person := seatEmployee(t, e, other, "Dana Reed", "dana@other.example")
 
 	// Acme's site publishes Dana. The CRM records Dana at OTHER, so the two
 	// claims disagree about where she works — a human's call, not a sweep's.
-	matched, err := store.ApplySitePersonFields(e.Admin(), ids.From[ids.OrganizationKind](acme),
+	matched, err := store.ApplySitePersonFields(e.Admin(), ids.From[ids.CompanyKind](acme),
 		people.SitePersonFields{
 			Name: "Dana Reed", Role: "CTO", PublishedEmail: "dana@other.example",
 			EvidenceSnippet: "Dana Reed — CTO", SourceURL: "https://acme.example/team",
@@ -172,8 +172,8 @@ func TestApplySitePersonFieldsStaysInsideTheCompany(t *testing.T) {
 func TestApplySitePersonFieldsNeverTouchesAHumansAnswer(t *testing.T) {
 	e := integration.Setup(t)
 	store := people.NewStore(e.DB())
-	org := e.SeedOrg(t, "Acme", nil)
-	person := seatEmployee(t, e, org, "Erin Vance", "erin@acme.example")
+	company := e.SeedCompany(t, "Acme", nil)
+	person := seatEmployee(t, e, company, "Erin Vance", "erin@acme.example")
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE person SET title = 'Handwritten Title' WHERE id = $1`, person)
@@ -182,7 +182,7 @@ func TestApplySitePersonFieldsNeverTouchesAHumansAnswer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	matched, err := store.ApplySitePersonFields(e.Admin(), ids.From[ids.OrganizationKind](org),
+	matched, err := store.ApplySitePersonFields(e.Admin(), ids.From[ids.CompanyKind](company),
 		people.SitePersonFields{
 			Name: "Erin Vance", Role: "VP Sales", PublishedEmail: "erin@acme.example",
 			EvidenceSnippet: "Erin Vance — VP Sales", SourceURL: "https://acme.example/team",
@@ -202,9 +202,9 @@ func TestApplySitePersonFieldsNeverTouchesAHumansAnswer(t *testing.T) {
 // is what the two tests below turn on. seatEmployee leaves owner_id NULL, and an
 // unowned row is shared with everyone — so a probe against it passes for every
 // seat and would prove nothing about scope.
-func seatEmployeeOwnedBy(t *testing.T, e *integration.Env, org, owner ids.UUID, fullName string) ids.UUID {
+func seatEmployeeOwnedBy(t *testing.T, e *integration.Env, company, owner ids.UUID, fullName string) ids.UUID {
 	t.Helper()
-	person := seatEmployee(t, e, org, fullName, "")
+	person := seatEmployee(t, e, company, fullName, "")
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE person SET owner_id = $2 WHERE id = $1`, person, owner)
@@ -217,22 +217,22 @@ func seatEmployeeOwnedBy(t *testing.T, e *integration.Env, org, owner ids.UUID, 
 }
 
 // sitePersonRepPerms is a team-scoped rep who may read the company and update a
-// person. RepPerms itself is NOT usable here: it carries no `organization`
-// grant, so the organization gate would refuse before the person probe is ever
+// person. RepPerms itself is NOT usable here: it carries no `company`
+// grant, so the company gate would refuse before the person probe is ever
 // reached and the test would pass for the wrong reason.
 var sitePersonRepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"person":                {Create: true, Read: true, Update: true},
-		"organization":          {Create: true, Read: true, Update: true},
+		"company":               {Create: true, Read: true, Update: true},
 		"relationship":          {Create: true, Read: true, Update: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeTeam,
 }
 
-// The fill writes a person resolved from the ORGANIZATION's employment edges,
-// so the organization gate says nothing about it. A caller who may read the
+// The fill writes a person resolved from the COMPANY's employment edges,
+// so the company gate says nothing about it. A caller who may read the
 // company but may not write that employee must not change them.
 //
 // It has to be driven directly rather than through either production caller:
@@ -244,13 +244,13 @@ func TestApplySitePersonFieldsWillNotWriteAnEmployeeTheCallerCannotChange(t *tes
 	e := integration.Setup(t)
 	store := people.NewStore(e.DB())
 	// The company is the other team's, shared with nobody — but every seat
-	// reads an organization, so the org gate passes and the PERSON probe is
+	// reads a company, so the company gate passes and the PERSON probe is
 	// what the assertion turns on.
-	org := e.SeedOrg(t, "Acme", &e.Rep3)
-	theirs := seatEmployeeOwnedBy(t, e, org, e.Rep3, "Bob Builder")
+	company := e.SeedCompany(t, "Acme", &e.Rep3)
+	theirs := seatEmployeeOwnedBy(t, e, company, e.Rep3, "Bob Builder")
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, sitePersonRepPerms)
 
-	matched, err := store.ApplySitePersonFields(rep, ids.From[ids.OrganizationKind](org),
+	matched, err := store.ApplySitePersonFields(rep, ids.From[ids.CompanyKind](company),
 		people.SitePersonFields{
 			Name: "Bob Builder", Role: "Head of Delivery",
 			EvidenceSnippet: "Bob Builder — Head of Delivery",
@@ -289,11 +289,11 @@ func TestApplySitePersonFieldsWillNotWriteAnEmployeeTheCallerCannotChange(t *tes
 func TestApplySitePersonFieldsStillFillsAnEmployeeTheCallerMayChange(t *testing.T) {
 	e := integration.Setup(t)
 	store := people.NewStore(e.DB())
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
-	mine := seatEmployeeOwnedBy(t, e, org, e.Rep1, "Bob Builder")
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	mine := seatEmployeeOwnedBy(t, e, company, e.Rep1, "Bob Builder")
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, sitePersonRepPerms)
 
-	matched, err := store.ApplySitePersonFields(rep, ids.From[ids.OrganizationKind](org),
+	matched, err := store.ApplySitePersonFields(rep, ids.From[ids.CompanyKind](company),
 		people.SitePersonFields{
 			Name: "Bob Builder", Role: "Head of Delivery",
 			EvidenceSnippet: "Bob Builder — Head of Delivery",

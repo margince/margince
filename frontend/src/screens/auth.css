@@ -428,7 +428,7 @@
    line up with the form's own edges. */
 /* Two lines, sentence first, links under it — at every width.
    Stacking rather than sharing a row also settles a problem the row had: the
-   German sentence ("Der Zugang zu dieser Organisation ist beschränkt.") plus
+   German sentence ("Der Zugang zu dieser Firma ist beschränkt.") plus
    "Nutzungsbedingungen · Datenschutz" overflowed 440px, and the wrap then
    left-aligned the links under the text as two ragged fragments. In a column the
    sentence is free to be as long as its translation needs. */

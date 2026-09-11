@@ -41,7 +41,7 @@ subsystem against it.
 
 Margince is a **governed, single-tenant CRM** — a Go backend serving a contract-defined HTTP API under
 `/v1` (plus an MCP tool surface for AI agents) over Postgres + Redis. One installation serves one
-organisation; boot refuses a second. "Governed" is the theme: every read is workspace-scoped and
+company; boot refuses a second. "Governed" is the theme: every read is workspace-scoped and
 RBAC-scoped, every write is audited and announced as an event, and every AI action carries a declared
 autonomy tier (auto-execute vs. stage for human approval).
 

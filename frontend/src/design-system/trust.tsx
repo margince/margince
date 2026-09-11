@@ -275,7 +275,7 @@ export function ConfidenceMeter({
 // as an AI agent misdescribes both.
 //
 // `buyer` is the person on the other side of a Deal Room: outside the
-// organization, holding no seat and named in no member directory. It is its own
+// company, holding no seat and named in no member directory. It is its own
 // arm rather than a `human` one because a reader cannot ask a buyer the way
 // they can ask a colleague, and it is not `unknown` because that arm means
 // nobody recorded a source — here the source IS recorded, and it is a person.

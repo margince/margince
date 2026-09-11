@@ -21,8 +21,8 @@ import (
 
 func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, "ERP replacement", org, &e.Rep1)
+	company := e.SeedCompany(t, "BAER Pharma", nil)
+	p := seedProject(e.Admin(), t, e, "ERP replacement", company, &e.Rep1)
 
 	mover := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},

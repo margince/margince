@@ -31,20 +31,20 @@ import (
 // placement it is born on. CustomFields carries the request body's extra
 // top-level keys.
 type CreateDealInput struct {
-	Name           string
-	AmountMinor    *int64
-	Currency       *string
-	PipelineID     ids.PipelineID
-	StageID        ids.StageID
-	OrganizationID *ids.OrganizationID
-	// PartnerOrganizationID and PartnerAttribution are the one fact the
+	Name        string
+	AmountMinor *int64
+	Currency    *string
+	PipelineID  ids.PipelineID
+	StageID     ids.StageID
+	CompanyID   *ids.CompanyID
+	// PartnerCompanyID and PartnerAttribution are the one fact the
 	// schema stores as one: the deal_partner_attribution_pairing CHECK
 	// rejects either half alone, so birthAttribution below settles them
 	// together rather than letting a half-filled pair reach the insert.
-	PartnerOrganizationID *ids.OrganizationID
-	PartnerAttribution    *string
-	ProjectID             *ids.ProjectID
-	OwnerID               *ids.UserID
+	PartnerCompanyID   *ids.CompanyID
+	PartnerAttribution *string
+	ProjectID          *ids.ProjectID
+	OwnerID            *ids.UserID
 	// OwnerExact states that OwnerID — nil included — IS the decided owner,
 	// so the actor fallback below must not run. The lead-qualify seam sets
 	// it: the deal inherits the LEAD's owner, and an unassigned lead
@@ -177,7 +177,7 @@ func birthAttribution(in CreateDealInput) (*string, error) {
 			return nil, err
 		}
 	}
-	if in.PartnerOrganizationID == nil {
+	if in.PartnerCompanyID == nil {
 		if in.PartnerAttribution == nil {
 			return nil, nil //nolint:nilnil // both halves empty IS the settled answer for a deal naming no partner — the pairing CHECK admits the pair populated together or not at all, and a sentinel here would be an error the caller must discard.
 		}
@@ -194,7 +194,7 @@ func birthAttribution(in CreateDealInput) (*string, error) {
 // at to the caller's own row scope.
 //
 // An FK argument that names a row-scoped business record is a read of that
-// record: embedding organization_id into a deal the caller will read back
+// record: embedding company_id into a deal the caller will read back
 // discloses the link, so the target must be visible under the caller's row
 // scope — not merely same-workspace, which the composite FK already enforces.
 // The partner link is the same kind of disclosure and carries the same gate.
@@ -207,11 +207,11 @@ func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput,
 	// A link the deal does not name is not a read, so it is left out rather
 	// than checked as a zero id.
 	var links []recordLink
-	if in.OrganizationID != nil {
-		links = append(links, recordLink{linkEntityOrganization, in.OrganizationID.UUID})
+	if in.CompanyID != nil {
+		links = append(links, recordLink{linkEntityCompany, in.CompanyID.UUID})
 	}
-	if in.PartnerOrganizationID != nil {
-		links = append(links, recordLink{linkEntityOrganization, in.PartnerOrganizationID.UUID})
+	if in.PartnerCompanyID != nil {
+		links = append(links, recordLink{linkEntityCompany, in.PartnerCompanyID.UUID})
 	}
 	for _, link := range links {
 		if err := auth.EnsureLinkTarget(ctx, tx, link.entity, link.id); err != nil {
@@ -238,14 +238,14 @@ type recordLink struct {
 }
 
 // The entities a deal's birth links point at, as the visibility gate names
-// them. Both the customer and the partner are organizations.
+// them. Both the customer and the partner are companies.
 const (
-	linkEntityOrganization = "organization"
-	linkEntityProject      = "project"
+	linkEntityCompany = "company"
+	linkEntityProject = "project"
 )
 
 // createDealInTx guards the birth invariants (open stage, future close,
-// visible organization), inserts the deal with its first stage-history
+// visible company), inserts the deal with its first stage-history
 // row, and runs the write shape — all inside the caller's transaction.
 func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInput, born bornDeal, active []fieldcatalog.Column) (crmcontracts.Deal, error) {
 
@@ -266,8 +266,8 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	// Visible is not enough for the partner: it must actually BE one, or the
 	// deal reads as credited and can never earn anything (the accrual prices
 	// from the partner row's margin tier).
-	if in.PartnerOrganizationID != nil {
-		if err := s.installation.EnsurePartner(ctx, tx, *in.PartnerOrganizationID); err != nil {
+	if in.PartnerCompanyID != nil {
+		if err := s.installation.EnsurePartner(ctx, tx, *in.PartnerCompanyID); err != nil {
 			return crmcontracts.Deal{}, err
 		}
 	}
@@ -275,20 +275,20 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	id := ids.New[ids.DealKind]()
 	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
 		id, in.Name, in.AmountMinor, in.Currency, in.PipelineID, in.StageID,
-		in.OrganizationID, in.PartnerOrganizationID, born.attribution,
+		in.CompanyID, in.PartnerCompanyID, born.attribution,
 		in.ProjectID, in.OwnerID, in.ExpectedClose, in.Source, born.by,
 	})
 	_, err := tx.Exec(ctx,
 		`INSERT INTO deal (id, name, amount_minor, currency, pipeline_id, stage_id,
-		                   organization_id, partner_org_id, partner_attribution,
+		                   company_id, partner_company_id, partner_attribution,
 		                   project_id, owner_id, expected_close_date, source, captured_by`+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14`+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Covers the remaining FKs (pipeline, owner); the stage/pipeline
-		// pairing and the organization target were pre-checked above.
-		if constraint, ok := storekit.CheckViolation(err); ok && constraint == dealProjectSameOrgConstraint {
-			return crmcontracts.Deal{}, &DealProjectOrgMismatchError{}
+		// pairing and the company target were pre-checked above.
+		if constraint, ok := storekit.CheckViolation(err); ok && constraint == dealProjectSameCompanyConstraint {
+			return crmcontracts.Deal{}, &DealProjectCompanyMismatchError{}
 		}
 		if storekit.IsForeignKeyViolation(err) {
 			return crmcontracts.Deal{}, apperrors.ErrNotFound

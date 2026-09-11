@@ -80,28 +80,28 @@ func TestJaroCountsTranspositions(t *testing.T) {
 	}
 }
 
-func TestNormalizeOrgNameStripsTrailingLegalSuffixes(t *testing.T) {
+func TestNormalizeCompanyNameStripsTrailingLegalSuffixes(t *testing.T) {
 	// PO-F-2 worked example: "Acme Inc" and "Acme GmbH" normalize to
 	// "acme" and meet at name_sim = 1.0 → 🟡 review, because different
 	// legal entities are a human's call.
 	for _, spelling := range []string{"Acme Inc", "Acme GmbH", "Acme, Inc.", "ACME AG"} {
-		if got := NormalizeOrgName(spelling); got != "acme" {
-			t.Fatalf("NormalizeOrgName(%q) = %q, want %q", spelling, got, "acme")
+		if got := NormalizeCompanyName(spelling); got != "acme" {
+			t.Fatalf("NormalizeCompanyName(%q) = %q, want %q", spelling, got, "acme")
 		}
 	}
-	if got := nameSimilarity(NormalizeOrgName("Acme Inc"), NormalizeOrgName("Acme GmbH")); got != 1 {
+	if got := nameSimilarity(NormalizeCompanyName("Acme Inc"), NormalizeCompanyName("Acme GmbH")); got != 1 {
 		t.Fatalf("Acme Inc vs Acme GmbH scored %.4f, spec pins an exact 1.0", got)
 	}
 }
 
-func TestNormalizeOrgNameKeepsASuffixThatIsTheName(t *testing.T) {
+func TestNormalizeCompanyNameKeepsASuffixThatIsTheName(t *testing.T) {
 	// Stripping every occurrence rather than the trailing token would
 	// erase the company: a firm called "Co" or "AG Systems" is not a
 	// suffix.
-	if got := NormalizeOrgName("AG Systems"); got != "ag systems" {
-		t.Fatalf("NormalizeOrgName(AG Systems) = %q, want %q", got, "ag systems")
+	if got := NormalizeCompanyName("AG Systems"); got != "ag systems" {
+		t.Fatalf("NormalizeCompanyName(AG Systems) = %q, want %q", got, "ag systems")
 	}
-	if got := NormalizeOrgName("Co"); got != "co" {
+	if got := NormalizeCompanyName("Co"); got != "co" {
 		t.Fatalf("a lone suffix-shaped name was stripped to %q, want %q", got, "co")
 	}
 }
@@ -109,15 +109,15 @@ func TestNormalizeOrgNameKeepsASuffixThatIsTheName(t *testing.T) {
 // A compound German legal form is one suffix, not two tokens and a
 // connective. Before the ampersand was part of the strip this key came out as
 // "basecom gmbh &", which matches no account anybody stores.
-func TestNormalizeOrgNameStripsCompoundLegalForms(t *testing.T) {
+func TestNormalizeCompanyNameStripsCompoundLegalForms(t *testing.T) {
 	for _, spelling := range []string{
 		"Basecom GmbH & Co. KG",
 		"Basecom GmbH und Co KG",
 		"Basecom GmbH",
 		"Basecom",
 	} {
-		if got := NormalizeOrgName(spelling); got != "basecom" {
-			t.Errorf("NormalizeOrgName(%q) = %q, want %q", spelling, got, "basecom")
+		if got := NormalizeCompanyName(spelling); got != "basecom" {
+			t.Errorf("NormalizeCompanyName(%q) = %q, want %q", spelling, got, "basecom")
 		}
 	}
 }
@@ -125,10 +125,10 @@ func TestNormalizeOrgNameStripsCompoundLegalForms(t *testing.T) {
 // The strip must never eat the entire name. A company called "Co" keeps its
 // key; an empty one would collide with every other empty key and place
 // connections against an arbitrary account.
-func TestNormalizeOrgNameNeverStripsAwayTheWholeName(t *testing.T) {
+func TestNormalizeCompanyNameNeverStripsAwayTheWholeName(t *testing.T) {
 	for _, spelling := range []string{"Co", "GmbH", "& Co. KG"} {
-		if got := NormalizeOrgName(spelling); got == "" {
-			t.Errorf("NormalizeOrgName(%q) reduced the whole name to an empty key", spelling)
+		if got := NormalizeCompanyName(spelling); got == "" {
+			t.Errorf("NormalizeCompanyName(%q) reduced the whole name to an empty key", spelling)
 		}
 	}
 }
@@ -136,8 +136,8 @@ func TestNormalizeOrgNameNeverStripsAwayTheWholeName(t *testing.T) {
 func TestAConnectiveIsOnlyStrippedInsideACompoundLegalForm(t *testing.T) {
 	// "GmbH & Co. KG" is ONE legal form, so the whole tail goes and the key is
 	// the company's actual name.
-	if got := NormalizeOrgName("SIMIO GmbH & Co. KG"); got != "simio" {
-		t.Errorf("NormalizeOrgName(compound legal form) = %q, want %q", got, "simio")
+	if got := NormalizeCompanyName("SIMIO GmbH & Co. KG"); got != "simio" {
+		t.Errorf("NormalizeCompanyName(compound legal form) = %q, want %q", got, "simio")
 	}
 	// But a connective is not a suffix in its own right. Collapsing these would
 	// let two unrelated accounts meet at one key, and PO-PARAM-1 strips legal
@@ -150,8 +150,8 @@ func TestAConnectiveIsOnlyStrippedInsideACompoundLegalForm(t *testing.T) {
 		"Acme GmbH":            "acme",
 		"Basecom GmbH & Co KG": "basecom",
 	} {
-		if got := NormalizeOrgName(name); got != want {
-			t.Errorf("NormalizeOrgName(%q) = %q, want %q", name, got, want)
+		if got := NormalizeCompanyName(name); got != want {
+			t.Errorf("NormalizeCompanyName(%q) = %q, want %q", name, got, want)
 		}
 	}
 }

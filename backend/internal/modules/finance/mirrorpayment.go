@@ -19,10 +19,10 @@ import (
 )
 
 type paymentArgs struct {
-	connectionID   ids.UUID
-	organizationID ids.OrganizationID
-	payment        SourcePayment
-	capturedBy     string
+	connectionID ids.UUID
+	companyID    ids.CompanyID
+	payment      SourcePayment
+	capturedBy   string
 	// source is the provider's own name, stamped on every row it produced.
 	source string
 	rowIDs map[string]ids.UUID
@@ -54,13 +54,13 @@ func findPayment(
 	// FOR UPDATE for the reason findInvoice takes it: this read is the first
 	// half of a read-modify-write, and two sweeps must not both write.
 	err = tx.QueryRow(ctx, `
-		SELECT id, sync_hash, organization_id, invoice_id, currency,
+		SELECT id, sync_hash, company_id, invoice_id, currency,
 		       amount_minor, paid_at
 		  FROM finance_payment
 		 WHERE connection_id = $1 AND external_id = $2
 		   FOR UPDATE`,
 		connectionID, externalID).Scan(&id, &image.SyncHash,
-		&image.OrganizationID, &image.InvoiceID, &image.Currency,
+		&image.CompanyID, &image.InvoiceID, &image.Currency,
 		&image.AmountMinor, &image.PaidAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UUID{}, paymentImage{}, false, nil
@@ -88,11 +88,11 @@ func updatePayment(
 	after := paymentImageOf(args, hash)
 	if _, err := tx.Exec(ctx, `
 		UPDATE finance_payment
-		   SET organization_id = $2, invoice_id = $3, paid_at = $4,
+		   SET company_id = $2, invoice_id = $3, paid_at = $4,
 		       currency = $5, amount_minor = $6, source_updated_at = $7,
 		       sync_hash = $8
 		 WHERE id = $1`,
-		id, args.organizationID, after.InvoiceID,
+		id, args.companyID, after.InvoiceID,
 		after.PaidAt, after.Currency, after.AmountMinor, args.payment.UpdatedAt, hash); err != nil {
 		return fmt.Errorf("update the mirrored payment: %w", err)
 	}
@@ -107,11 +107,11 @@ func insertPayment(ctx context.Context, tx pgx.Tx, args paymentArgs, hash string
 	after := paymentImageOf(args, hash)
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO finance_payment
-		       (id, connection_id, organization_id, external_id, invoice_id,
+		       (id, connection_id, company_id, external_id, invoice_id,
 		        paid_at, currency, amount_minor, source_updated_at, sync_hash,
 		        source, captured_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-		id, args.connectionID, args.organizationID, args.payment.ExternalID,
+		id, args.connectionID, args.companyID, args.payment.ExternalID,
 		after.InvoiceID, after.PaidAt, after.Currency, after.AmountMinor,
 		args.payment.UpdatedAt, hash, args.source, args.capturedBy); err != nil {
 		return fmt.Errorf("mirror the payment: %w", err)
@@ -127,8 +127,8 @@ func insertPayment(ctx context.Context, tx pgx.Tx, args paymentArgs, hash string
 func paymentImageOf(args paymentArgs, hash string) paymentImage {
 	pay := args.payment
 	return paymentImage{
-		OrganizationID: args.organizationID,
-		InvoiceID:      resolveInvoice(pay, args.rowIDs), Currency: pay.Currency,
+		CompanyID: args.companyID,
+		InvoiceID: resolveInvoice(pay, args.rowIDs), Currency: pay.Currency,
 		AmountMinor: pay.AmountMinor, PaidAt: pay.PaidAt, SyncHash: hash,
 	}
 }

@@ -22,9 +22,9 @@ import (
 //
 // Two carry no start date, which is the ordinary shape of an imported
 // agreement and the case the null placement is about.
-func seedTermFixture(t *testing.T, e *Env) (org ids.OrganizationID, byTerm []string) {
+func seedTermFixture(t *testing.T, e *Env) (company ids.CompanyID, byTerm []string) {
 	t.Helper()
-	orgID := orgIDOf(e.SeedOrg(t, "Terms GmbH", nil))
+	companyID := companyIDOf(e.SeedCompany(t, "Terms GmbH", nil))
 	day := func(y int, m time.Month, d int) *time.Time {
 		when := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 		return &when
@@ -39,13 +39,13 @@ func seedTermFixture(t *testing.T, e *Env) (org ids.OrganizationID, byTerm []str
 		{"undated, written fourth", nil},
 	} {
 		seedContract(t, e, contracts.CreateContractInput{
-			OrganizationID: orgID, Title: c.title, StartsOn: c.startsOn, ValueBasis: "total",
+			CompanyID: companyID, Title: c.title, StartsOn: c.startsOn, ValueBasis: "total",
 		})
 	}
 	// Dated terms newest first, then the undated tail newest-written first —
 	// created_at DESC is the only ordering left among agreements that name no
 	// term, and it is the tiebreak the ORDER BY falls through to.
-	return orgID, []string{"2026 term", "2024 term", "undated, written fourth", "undated, written third"}
+	return companyID, []string{"2026 term", "2024 term", "undated, written fourth", "undated, written third"}
 }
 
 // The list answers "which agreement is current" — by term, not by write time.
@@ -55,10 +55,10 @@ func seedTermFixture(t *testing.T, e *Env) (org ids.OrganizationID, byTerm []str
 // orderings agreeing, a test cannot tell which one produced the page.
 func TestTheContractListIsOrderedByTermNotByWriteTime(t *testing.T) {
 	e := Setup(t)
-	org, wantOrder := seedTermFixture(t, e)
+	company, wantOrder := seedTermFixture(t, e)
 
-	page, err := e.Contracts.ListOrganizationContracts(e.Admin(), contracts.ListContractsInput{
-		OrganizationID: org,
+	page, err := e.Contracts.ListCompanyContracts(e.Admin(), contracts.ListContractsInput{
+		CompanyID: company,
 	})
 	if err != nil {
 		t.Fatalf("listing the account's contracts: %v", err)
@@ -92,14 +92,14 @@ func TestTheContractListIsOrderedByTermNotByWriteTime(t *testing.T) {
 // is exercised rather than hoped for.
 func TestPagingContractsCrossesTheUndatedBoundaryExactlyOnce(t *testing.T) {
 	e := Setup(t)
-	org, wantOrder := seedTermFixture(t, e)
+	company, wantOrder := seedTermFixture(t, e)
 
 	var seen []string
 	var cursor *string
 	for range len(wantOrder) + 2 {
 		limit := 1
-		page, err := e.Contracts.ListOrganizationContracts(e.Admin(), contracts.ListContractsInput{
-			OrganizationID: org, Limit: &limit, Cursor: cursor,
+		page, err := e.Contracts.ListCompanyContracts(e.Admin(), contracts.ListContractsInput{
+			CompanyID: company, Limit: &limit, Cursor: cursor,
 		})
 		if err != nil {
 			t.Fatalf("listing page after %v: %v", seen, err)

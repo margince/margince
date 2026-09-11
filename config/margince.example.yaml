@@ -6,7 +6,7 @@
 # — so your edits persist across `make dev-stop` / `make dev`. To reset, delete
 # config/margince.yaml and re-run `make dev`.
 #
-# The api bootstraps the demo organization + admin from this file the first time
+# The api bootstraps the demo company + admin from this file the first time
 # it boots against an empty database; an existing installation just reads it.
 #
 # This is the BASE. MARGINCE_ENV selects an overlay beside it —
@@ -65,7 +65,7 @@ bootstrap_admin:
   password_file: config/margince-admin-password
 
 # Retention posture at first boot (optional). Consumed ONCE, when the api
-# bootstraps the organization against an empty database — it is not re-read, and
+# bootstraps the company against an empty database — it is not re-read, and
 # an admin can change the posture afterwards on the privacy settings screen.
 #
 #   standard    (or omitted) the shipped storage-limitation ladder runs: an

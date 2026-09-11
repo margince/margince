@@ -355,7 +355,7 @@ func parseDeliveryClassification(t *testing.T) deliveryClassification {
 		t.Fatalf("parse %s: %v", deliveryVisibilityPath, err)
 	}
 	return deliveryClassification{
-		probeEntities:     switchCaseStrings(t, file, "entityVisibleTo"),
+		probeEntities:     switchCaseStrings(t, file, "entityVisibleTo", constValuesIn(t, deliveryVisibilityPath)),
 		workspaceEntities: mapLiteralKeys(t, file, "workspaceLevelEntities"),
 		deferredEntities:  mapLiteralKeys(t, file, "deferredDeliveryEntities"),
 		deferredEvents:    mapLiteralKeys(t, file, "deferredDeliveryEvents"),
@@ -407,7 +407,7 @@ func mapLiteralKeys(t *testing.T, file *ast.File, name string) map[string]bool {
 // switchCaseStrings collects every string literal appearing in a case clause
 // inside the named function's body — the row-scope probe branches of
 // entityVisibleTo's `switch entityType`.
-func switchCaseStrings(t *testing.T, file *ast.File, funcName string) map[string]bool {
+func switchCaseStrings(t *testing.T, file *ast.File, funcName string, consts map[string]string) map[string]bool {
 	t.Helper()
 	out := map[string]bool{}
 	found := false
@@ -423,8 +423,19 @@ func switchCaseStrings(t *testing.T, file *ast.File, funcName string) map[string
 				return true
 			}
 			for _, expr := range cc.List { // empty for the default clause
-				if lit, ok := expr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-					out[gatekit.TextOf(lit)] = true
+				switch e := expr.(type) {
+				case *ast.BasicLit:
+					if e.Kind == token.STRING {
+						out[gatekit.TextOf(e)] = true
+					}
+				case *ast.Ident:
+					// A case label that NAMES its value is the same label. A
+					// census reading only literals goes short the moment
+					// somebody lifts one into a constant, and reports the
+					// entity it stopped seeing as unresolvable.
+					if value, ok := consts[e.Name]; ok {
+						out[value] = true
+					}
 				}
 			}
 			return true

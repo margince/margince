@@ -43,7 +43,7 @@ const (
 // count assertion below rather than by trusting the regex alone.
 //
 // Digits are IN the alphabet, and that is not cosmetic. Without them a name
-// like `org360_view` matched as far as its first digit and was read as `org` —
+// like `company360_view` matched as far as its first digit and was read as `company` —
 // a name neither list holds — so the gate reported the SQL side preserving
 // something the Go side does not AND missing something it does, from one
 // correctly mirrored entry. A reader chasing that would have edited a file that

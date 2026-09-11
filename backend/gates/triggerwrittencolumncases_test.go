@@ -51,12 +51,12 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 	}{
 		{
 			name:      "the plain dead assignment",
-			statement: `UPDATE organization SET display_name = $2, updated_at = now() WHERE id = $1`,
-			writes:    map[string][]string{"organization": {"display_name", "updated_at"}},
+			statement: `UPDATE company SET display_name = $2, updated_at = now() WHERE id = $1`,
+			writes:    map[string][]string{"company": {"display_name", "updated_at"}},
 		}, {
 			name:      "no spaces around the equals",
-			statement: `UPDATE organization SET display_name=$2, version=version+1 WHERE id = $1`,
-			writes:    map[string][]string{"organization": {"display_name", "version"}},
+			statement: `UPDATE company SET display_name=$2, version=version+1 WHERE id = $1`,
+			writes:    map[string][]string{"company": {"display_name", "version"}},
 		}, {
 			// The shape execute.go writes: UPDATE … FROM with the target
 			// aliased. Its assignments are UNQUALIFIED, because Postgres
@@ -77,15 +77,15 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 			// assignment at all — the silent direction, and the dead write
 			// stays.
 			name:      "a quoted target",
-			statement: `UPDATE organization SET "display_name" = $2, "updated_at" = now() WHERE id = $1`,
-			writes:    map[string][]string{"organization": {"display_name", "updated_at"}},
+			statement: `UPDATE company SET "display_name" = $2, "updated_at" = now() WHERE id = $1`,
+			writes:    map[string][]string{"company": {"display_name", "updated_at"}},
 		}, {
 			// And the difference the quotes make. A quoted identifier is
 			// case-SENSITIVE, so this names a different column and folding it
 			// would report a write the statement does not make.
 			name:      "a quoted target in another case is another column",
-			statement: `UPDATE organization SET display_name = $2, "Updated_At" = now() WHERE id = $1`,
-			writes:    map[string][]string{"organization": {"display_name", "Updated_At"}},
+			statement: `UPDATE company SET display_name = $2, "Updated_At" = now() WHERE id = $1`,
+			writes:    map[string][]string{"company": {"display_name", "Updated_At"}},
 		}, {
 			// A clause word inside a VALUE. The assignment list ends at the
 			// literal's own `from` to a scan that does not track quotes, and
@@ -144,22 +144,22 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 			writes:    map[string][]string{"activity": {"subject", "updated_at"}},
 		}, {
 			name:      "the alias spelled with AS",
-			statement: `UPDATE organization AS o SET display_name = $2, updated_at = now() WHERE o.id = $1`,
-			writes:    map[string][]string{"organization": {"display_name", "updated_at"}},
+			statement: `UPDATE company AS o SET display_name = $2, updated_at = now() WHERE o.id = $1`,
+			writes:    map[string][]string{"company": {"display_name", "updated_at"}},
 		}, {
 			// SET is a legal identifier, so an aliasless statement can read as
 			// one whose alias is `SET` — and then the reader finds no
 			// assignment list and reports nothing at all.
 			name:      "a column whose name begins with the word SET",
-			statement: `UPDATE organization SET settlement_at = $2, updated_at = now() WHERE id = $1`,
-			writes:    map[string][]string{"organization": {"settlement_at", "updated_at"}},
+			statement: `UPDATE company SET settlement_at = $2, updated_at = now() WHERE id = $1`,
+			writes:    map[string][]string{"company": {"settlement_at", "updated_at"}},
 		}, {
 			// The upsert arm. A BEFORE UPDATE trigger fires on it exactly as on
 			// a plain UPDATE, and the table it writes is the one the INSERT
 			// named — which is nowhere near the word UPDATE.
 			name: "an ON CONFLICT DO UPDATE arm",
-			statement: `INSERT INTO relationship (project_id, organization_id, role) VALUES ($1, $2, $3) ` +
-				`ON CONFLICT (project_id, organization_id) DO UPDATE SET role = EXCLUDED.role, version = relationship.version + 1 RETURNING id`,
+			statement: `INSERT INTO relationship (project_id, company_id, role) VALUES ($1, $2, $3) ` +
+				`ON CONFLICT (project_id, company_id) DO UPDATE SET role = EXCLUDED.role, version = relationship.version + 1 RETURNING id`,
 			writes: map[string][]string{"relationship": {"role", "version"}},
 		}, {
 			// The shape retentionrestricted.go already writes. A lazy regex
@@ -188,8 +188,8 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 			// assignment would report every guarded update in the tree and
 			// send the next author to delete their own guard.
 			name:      "a version compared in the WHERE, not assigned",
-			statement: `UPDATE organization SET display_name = $2 WHERE id = $1 AND version = $3`,
-			writes:    map[string][]string{"organization": {"display_name"}},
+			statement: `UPDATE company SET display_name = $2 WHERE id = $1 AND version = $3`,
+			writes:    map[string][]string{"company": {"display_name"}},
 		}, {
 			// Same trap one clause further on.
 			name:      "a trigger column returned, not assigned",
@@ -198,8 +198,8 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 		}, {
 			// And inside a subquery's own predicate, at depth.
 			name:      "a trigger column inside a subquery predicate",
-			statement: `UPDATE organization SET display_name = (SELECT name FROM staging WHERE updated_at = $2) WHERE id = $1`,
-			writes:    map[string][]string{"organization": {"display_name"}},
+			statement: `UPDATE company SET display_name = (SELECT name FROM staging WHERE updated_at = $2) WHERE id = $1`,
+			writes:    map[string][]string{"company": {"display_name"}},
 		}, {
 			// The assignment list split at PAREN DEPTH ZERO, not on every
 			// comma. A comma inside a call, followed by an equality on a bare
@@ -207,12 +207,12 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 			// naively — and this gate's finding is a DELETION, so it would send
 			// the next author to remove a live comparison.
 			name:      "a comparison after a comma inside a call",
-			statement: `UPDATE organization SET meta = jsonb_build_object('bumped', version = $3), display_name = $2 WHERE id = $1`,
-			writes:    map[string][]string{"organization": {"meta", "display_name"}},
+			statement: `UPDATE company SET meta = jsonb_build_object('bumped', version = $3), display_name = $2 WHERE id = $1`,
+			writes:    map[string][]string{"company": {"meta", "display_name"}},
 		}, {
 			name:      "a longer column that merely starts with a trigger column's name",
-			statement: `UPDATE organization SET updated_at_source = $2 WHERE id = $1`,
-			writes:    map[string][]string{"organization": {"updated_at_source"}},
+			statement: `UPDATE company SET updated_at_source = $2 WHERE id = $1`,
+			writes:    map[string][]string{"company": {"updated_at_source"}},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -250,8 +250,8 @@ func TestTheTouchedTableDerivationReadsTheCatalog(t *testing.T) {
 
 	// Both arms of triggerWrites reach the tree, or half the table is a claim
 	// nothing exercises.
-	if got := touched["organization"]; !got["updated_at"] || !got["version"] {
-		t.Errorf("organization carries set_updated_at_bump_version and reads as %v", got)
+	if got := touched["company"]; !got["updated_at"] || !got["version"] {
+		t.Errorf("company carries set_updated_at_bump_version and reads as %v", got)
 	}
 	if got := touched["app_user"]; !got["updated_at"] || got["version"] {
 		t.Errorf("app_user carries set_updated_at, which does not bump version, and reads as %v", got)

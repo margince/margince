@@ -56,14 +56,14 @@ import (
 // The deal link is evidence, not decoration: an account-started send opens no
 // thread (that is the whole point of the suite it is fixturing), and a bare
 // `transactional` claim with nothing behind it resolves as a REVIEW —
-// ReasonLegacyTransactionalUnevidenced — not an allow. The org link stays
+// ReasonLegacyTransactionalUnevidenced — not an allow. The company link stays
 // too, because linkedActivities counts by it.
-func accountSendBody(org, deal, subject string) AnyMap {
+func accountSendBody(company, deal, subject string) AnyMap {
 	return AnyMap{
 		"subject": subject, "body": "Good morning — introducing ourselves.",
 		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
 		"links": []AnyMap{
-			{"entity_type": "organization", "entity_id": org},
+			{"entity_type": "company", "entity_id": company},
 			{"entity_type": "deal", "entity_id": deal},
 		},
 	}
@@ -73,8 +73,8 @@ func accountSendBody(org, deal, subject string) AnyMap {
 // conversation is filed under.
 type accountSendEnv struct {
 	*preflightEnv
-	org  string
-	deal string
+	company string
+	deal    string
 }
 
 func setupAccountSend(t *testing.T) *accountSendEnv {
@@ -83,14 +83,14 @@ func setupAccountSend(t *testing.T) *accountSendEnv {
 	// Without the send grant every send below refuses at the pre-flight, and
 	// this suite would pass while proving nothing about authority.
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
-	org := anchorOrg(t, p.AppEnv, "Northwind")
-	return &accountSendEnv{preflightEnv: p, org: org, deal: openDealWithStakeholder(t, p.AppEnv, org, p.personID)}
+	company := anchorCompany(t, p.AppEnv, "Northwind")
+	return &accountSendEnv{preflightEnv: p, company: company, deal: openDealWithStakeholder(t, p.AppEnv, company, p.personID)}
 }
 
-// openDealWithStakeholder plants a live opportunity on org with the recipient
+// openDealWithStakeholder plants a live opportunity on company with the recipient
 // staked on it, through the real endpoints — the shape resolveCategory's
 // live-deal arm looks for (backend/internal/modules/consent/authorizeevidence.go).
-func openDealWithStakeholder(t *testing.T, e *apptest.AppEnv, org, personID string) string {
+func openDealWithStakeholder(t *testing.T, e *apptest.AppEnv, company, personID string) string {
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	var deal struct {
@@ -98,7 +98,7 @@ func openDealWithStakeholder(t *testing.T, e *apptest.AppEnv, org, personID stri
 	}
 	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": "Northwind rollout", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
-		"organization_id": org, "source": "manual",
+		"company_id": company, "source": "manual",
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("create deal → %d", status)
 	}
@@ -118,7 +118,7 @@ func (a *accountSendEnv) deliveryCount(t *testing.T) int {
 	return a.stagedDeliveries(t)
 }
 
-// linkedActivities counts the outbound activities filed under the organization
+// linkedActivities counts the outbound activities filed under the company
 // this suite names — the account-started origin's own effect, since a reply
 // would have inherited its links from an anchor instead.
 func (a *accountSendEnv) linkedActivities(t *testing.T) int {
@@ -128,7 +128,7 @@ func (a *accountSendEnv) linkedActivities(t *testing.T) int {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
-			WHERE l.organization_id = $1 AND a.direction = 'outbound'`, a.org).Scan(&n)
+			WHERE l.company_id = $1 AND a.direction = 'outbound'`, a.company).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting the conversation's activities: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestAHumansAccountStartedSendLeavesWithoutAnApproval(t *testing.T) {
 	var sent struct {
 		ID string `json:"id"`
 	}
-	if status := a.Call(t, "POST", "/v1/emails", accountSendBody(a.org, a.deal, "Hello from Fable"), nil, &sent); status != http.StatusAccepted {
+	if status := a.Call(t, "POST", "/v1/emails", accountSendBody(a.company, a.deal, "Hello from Fable"), nil, &sent); status != http.StatusAccepted {
 		t.Fatalf("human account-started send → %d, want 202 — a human's own action is the approval", status)
 	}
 	if sent.ID == "" {
@@ -151,7 +151,7 @@ func TestAHumansAccountStartedSendLeavesWithoutAnApproval(t *testing.T) {
 		t.Fatalf("%d deliveries staged behind an accepted send, want 1", n)
 	}
 	if n := a.linkedActivities(t); n != 1 {
-		t.Fatalf("%d outbound activities filed under the named organization, want 1", n)
+		t.Fatalf("%d outbound activities filed under the named company, want 1", n)
 	}
 	if n := a.pendingApprovals(t); n != 0 {
 		t.Fatalf("%d approvals minted for a human's own send, want none", n)
@@ -193,7 +193,7 @@ func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
 	args, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello over MCP",
 		"body": "Good morning.", "consent_purpose": "transactional",
-		"links": []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
+		"links": []map[string]string{{"entity_type": "company", "entity_id": a.company}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -234,7 +234,7 @@ func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
 //   - nothing leaves before a human decides;
 //   - approving AUTHORIZES and does not itself send;
 //   - the approved retry delivers exactly one message;
-//   - that message is filed under the organization the call named, which is what
+//   - that message is filed under the company the call named, which is what
 //     an account-started send has instead of an anchor;
 //   - the approval is single-use, so a replay sends nothing more.
 //
@@ -250,7 +250,7 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
 		"body": "Good morning.", "consent_purpose": "transactional",
 		"links": []map[string]string{
-			{"entity_type": "organization", "entity_id": a.org},
+			{"entity_type": "company", "entity_id": a.company},
 			{"entity_type": "deal", "entity_id": a.deal},
 		},
 	})
@@ -302,7 +302,7 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
 		"body": "Good morning.", "consent_purpose": "transactional",
 		"links": []map[string]string{
-			{"entity_type": "organization", "entity_id": a.org},
+			{"entity_type": "company", "entity_id": a.company},
 			{"entity_type": "deal", "entity_id": a.deal},
 		},
 		"approval_id": approvalID,
@@ -317,7 +317,7 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 		t.Fatalf("%d deliveries after the approved retry, want exactly 1", n)
 	}
 	if n := a.linkedActivities(t); n != 1 {
-		t.Fatalf("%d outbound activities filed under the named organization, want 1 — the links are what "+
+		t.Fatalf("%d outbound activities filed under the named company, want 1 — the links are what "+
 			"an account-started send has instead of an anchor", n)
 	}
 

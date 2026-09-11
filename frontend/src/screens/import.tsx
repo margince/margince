@@ -187,12 +187,12 @@ function ImportWizard({
       {/* The control carries its own group label, so it needs no Field
           around it — a second label would announce the same words twice. */}
       <SegmentedControl
-        options={["organization", "person", "lead"] as const}
+        options={["company", "person", "lead"] as const}
         value={flow.object}
         onChange={busy ? () => undefined : flow.chooseObject}
         label={t("import.objectLabel")}
         labels={{
-          organization: t("import.object.organization"),
+          company: t("import.object.company"),
           person: t("import.object.person"),
           lead: t("import.object.lead"),
         }}

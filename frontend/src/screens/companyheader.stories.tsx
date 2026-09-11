@@ -18,7 +18,7 @@ import {
 } from "./story-utils";
 
 // The account header's own pieces (RecordView's nameBadge/subtitle/pulse/
-// actions slots in organizations.tsx), mounted together rather than through
+// actions slots in companies.tsx), mounted together rather than through
 // the whole record page: the header does not own a screen of its own, so
 // reaching for it through CompanyScreen would drag in every other tab's reads.
 
@@ -29,12 +29,12 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type Organization = components["schemas"]["Organization"];
-type View = components["schemas"]["Organization360"];
+type Company = components["schemas"]["Company"];
+type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
-const org = {
+const company = {
   id: "o-1",
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
@@ -48,19 +48,19 @@ const org = {
   captured_by: "human:u1",
   source: "manual",
   version: 1,
-  // formatDateAbbrev(org.created_at) throws RangeError on anything that isn't
-  // a real ISO string — an org fixture missing this renders the whole header
+  // formatDateAbbrev(company.created_at) throws RangeError on anything that isn't
+  // a real ISO string — a company fixture missing this renders the whole header
   // as nothing rather than a legible date.
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-01T08:00:00Z",
-} as unknown as Organization;
+} as unknown as Company;
 
 // The "way in" — the contact the relationship actually runs through — plus a
 // last exchange date. Both are withheld together whenever the 360 is still
 // loading, so this is the state a reader sees once it lands.
 const withWayIn = {
   as_of: "2026-06-01T09:00:00Z",
-  organization: org,
+  company: company,
   sections_omitted: [],
   strength: {
     score: 71,
@@ -102,15 +102,15 @@ const roster = [
 function Header({
   view,
   loading,
-  record = org,
-}: Readonly<{ view?: View; loading?: boolean; record?: Organization }>) {
+  record = company,
+}: Readonly<{ view?: View; loading?: boolean; record?: Company }>) {
   installFetchStub({
     // `activity: create` alongside the record grants: Log activity and Add
     // task read it, and without it every story here drew the two of them
     // dimmed under a refusal caption — which is not the state the header is
     // normally in, and not the one worth documenting by default.
     "GET /me": meRoute({
-      organization: ["read", "update"],
+      company: ["read", "update"],
       activity: ["create"],
     }),
     "GET /users": () => jsonResponse({ data: roster, page }),
@@ -120,8 +120,8 @@ function Header({
   return (
     <StoryProviders>
       <div style={{ maxWidth: 640 }}>
-        <CompanyLifecycleControl org={record} />
-        <CompanyIdentityLine org={record} view={view} loading={loading} />
+        <CompanyLifecycleControl company={record} />
+        <CompanyIdentityLine company={record} view={view} loading={loading} />
         <div
           style={{
             marginTop: "var(--space-2)",
@@ -130,12 +130,12 @@ function Header({
           }}
         >
           <CompanyPrimaryActions
-            org={record}
+            company={record}
             composerOpen={false}
             onComposerOpen={() => {}}
           />
           <CompanyActionBadges
-            org={record}
+            company={record}
             view={view}
             onOpenHistory={() => {}}
             onSetUpPartner={() => {}}
@@ -168,7 +168,10 @@ export const Loading: Story = {
 // "typed by you" for the reader's own writing.
 export const AuthorNamed: Story = {
   render: () => (
-    <Header view={withWayIn} record={{ ...org, captured_by: "human:u-2" }} />
+    <Header
+      view={withWayIn}
+      record={{ ...company, captured_by: "human:u-2" }}
+    />
   ),
 };
 
@@ -183,7 +186,7 @@ export const CustomerAndPartner: Story = {
   render: () => (
     <Header
       view={withWayIn}
-      record={{ ...org, relationship_types: ["customer", "partner"] }}
+      record={{ ...company, relationship_types: ["customer", "partner"] }}
     />
   ),
 };
@@ -214,7 +217,7 @@ export const ArchivedAccount: Story = {
   render: () => (
     <Header
       view={withWayIn}
-      record={{ ...org, archived_at: "2026-07-13T00:00:00Z" }}
+      record={{ ...company, archived_at: "2026-07-13T00:00:00Z" }}
     />
   ),
   play: async () => {

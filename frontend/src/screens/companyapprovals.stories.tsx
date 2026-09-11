@@ -21,7 +21,7 @@ export default meta;
 
 type Story = StoryObj;
 type Approval = components["schemas"]["Approval"];
-type View = components["schemas"]["Organization360"];
+type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
@@ -70,7 +70,7 @@ function Panel({ approvals: data }: Readonly<{ approvals: Approval[] }>) {
   stubApprovals(data);
   return (
     <StoryProviders>
-      <CompanyApprovalsPanel orgId="o-1" onClose={() => {}} />
+      <CompanyApprovalsPanel companyId="o-1" onClose={() => {}} />
     </StoryProviders>
   );
 }

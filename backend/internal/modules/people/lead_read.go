@@ -59,7 +59,7 @@ func leadLastActivitySQL() string {
 	     ` + auth.OriginIsEngagement("a") + `)`
 }
 
-var leadColumns = `id, full_name, email, title, company_name, candidate_org_key,
+var leadColumns = `id, full_name, email, title, company_name, candidate_company_key,
 	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, source_system, source_id,
 	promoted_person_id, promoted_at, merged_into_id, source, captured_by, version, created_at, updated_at, archived_at,
 	routed_at, first_response_at,
@@ -152,7 +152,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	var openTasks int
 
 	dests := []any{
-		&id, &l.FullName, &email, &l.Title, &l.CompanyName, &l.CandidateOrgKey,
+		&id, &l.FullName, &email, &l.Title, &l.CompanyName, &l.CandidateCompanyKey,
 		&l.LinkedinUrl, &status, &l.Score, &l.ScoreOverrideReason, &l.ScoreComputed, &ownerID, &projectID, &l.SourceSystem, &l.SourceId,
 		&promotedPerson, &l.PromotedAt, &mergedInto, &l.Source, &l.CapturedBy, &version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
 		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,

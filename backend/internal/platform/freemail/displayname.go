@@ -19,7 +19,7 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
-// DisplayName turns a mail domain into a readable organization name by
+// DisplayName turns a mail domain into a readable company name by
 // title-casing its registrable label: "gitex.com" → "Gitex",
 // "acme-corp.co.uk" → "Acme Corp", "eu.docusign.net" → "Docusign".
 //
@@ -31,7 +31,7 @@ import (
 // Falls back to the normalized domain when no registrable label can be found —
 // a bare public suffix, an intranet label — an honest last resort rather than a
 // fabrication. Callers that persist the result stamp it as provisional
-// (organization.name_source='domain'); a lead's own company_name column has no
+// (company.name_source='domain'); a lead's own company_name column has no
 // such marker, and needs none, because it is free text a human is expected to
 // correct.
 func DisplayName(domain string) string {

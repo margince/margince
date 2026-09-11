@@ -276,15 +276,15 @@ func TestDuplicate409DoesNotDiscloseOutOfScopeIDs(t *testing.T) {
 	}
 }
 
-// domainCreateRepPerms is a rep who may CREATE an organization and is bounded
+// domainCreateRepPerms is a rep who may CREATE a company and is bounded
 // to their team. Both halves are load-bearing: without the create grant the
 // probe below never runs and the test reports a permission denial instead of a
-// disclosure verdict, and an unbounded caller can see every org, which makes
+// disclosure verdict, and an unbounded caller can see every company, which makes
 // the withheld case unreachable.
 var domainCreateRepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"organization":          {Create: true, Read: true, Update: true},
+		"company":               {Create: true, Read: true, Update: true},
 		"person":                {Create: true, Read: true, Update: true},
 		"installation_settings": {Read: true},
 	},
@@ -298,49 +298,49 @@ var domainCreateRepPerms = principal.Permissions{
 // One test for four doors, because they share `claimedDomainOwner`: creating a
 // company, editing its domains, and saving its profile website all reach the
 // same probe, so the rule is held in one place for all of them.
-func TestDuplicateDomain409DoesNotDiscloseAnOrgOutOfScope(t *testing.T) {
+func TestDuplicateDomain409DoesNotDiscloseACompanyOutOfScope(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	hidden, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{
+	hidden, err := e.People.CreateCompany(admin, people.CreateCompanyInput{
 		DisplayName: "Owned elsewhere GmbH", Source: "manual",
-		Domains: []people.OrgDomainInput{{Domain: "hidden-owner.test", IsPrimary: true}},
+		Domains: []people.CompanyDomainInput{{Domain: "hidden-owner.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.MakeCapturePrivate(t, "organization", ids.UUID(hidden.Id), e.Rep3)
+	e.MakeCapturePrivate(t, "company", ids.UUID(hidden.Id), e.Rep3)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, domainCreateRepPerms)
-	_, err = e.People.CreateOrganization(rep, people.CreateOrganizationInput{
+	_, err = e.People.CreateCompany(rep, people.CreateCompanyInput{
 		DisplayName: "Duplicate attempt GmbH", Source: "manual",
-		Domains: []people.OrgDomainInput{{Domain: "hidden-owner.test", IsPrimary: true}},
+		Domains: []people.CompanyDomainInput{{Domain: "hidden-owner.test", IsPrimary: true}},
 	})
 	var dup *people.DuplicateDomainError
 	if !errors.As(err, &dup) {
 		t.Fatalf("duplicate domain → %v, want people.DuplicateDomainError", err)
 	}
 	if !dup.ExistingID.IsZero() {
-		t.Errorf("409 disclosed an out-of-scope organization %s", dup.ExistingID)
+		t.Errorf("409 disclosed an out-of-scope company %s", dup.ExistingID)
 	}
 
-	// And the same conflict against an org the rep CAN see keeps the id, so
+	// And the same conflict against a company the rep CAN see keeps the id, so
 	// the "open the existing company" affordance survives for legitimate cases.
-	visible, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{
+	visible, err := e.People.CreateCompany(admin, people.CreateCompanyInput{
 		DisplayName: "Visible GmbH", Source: "manual",
-		Domains: []people.OrgDomainInput{{Domain: "visible-owner.test", IsPrimary: true}},
+		Domains: []people.CompanyDomainInput{{Domain: "visible-owner.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = e.People.CreateOrganization(rep, people.CreateOrganizationInput{
+	_, err = e.People.CreateCompany(rep, people.CreateCompanyInput{
 		DisplayName: "Duplicate attempt 2 GmbH", Source: "manual",
-		Domains: []people.OrgDomainInput{{Domain: "visible-owner.test", IsPrimary: true}},
+		Domains: []people.CompanyDomainInput{{Domain: "visible-owner.test", IsPrimary: true}},
 	})
 	if !errors.As(err, &dup) {
 		t.Fatalf("visible duplicate domain → %v, want people.DuplicateDomainError", err)
 	}
-	if dup.ExistingID != ids.From[ids.OrganizationKind](ids.UUID(visible.Id)) {
+	if dup.ExistingID != ids.From[ids.CompanyKind](ids.UUID(visible.Id)) {
 		t.Errorf("409 for a visible duplicate carries %s, want the owner %s", dup.ExistingID, visible.Id)
 	}
 }
@@ -577,19 +577,19 @@ func TestUnknownAccountFilterValuesAreRefusedRatherThanAnsweredEmpty(t *testing.
 	for _, tc := range []struct {
 		name  string
 		field string
-		in    people.ListOrganizationsInput
+		in    people.ListCompaniesInput
 	}{
 		{
 			"a stage outside the vocabulary", "lifecycle",
-			people.ListOrganizationsInput{Lifecycle: strPtr("nearly_a_customer")},
+			people.ListCompaniesInput{Lifecycle: strPtr("nearly_a_customer")},
 		},
 		{
 			"a relationship type outside the vocabulary", "relationship_type",
-			people.ListOrganizationsInput{RelationshipType: strPtr("frenemy")},
+			people.ListCompaniesInput{RelationshipType: strPtr("frenemy")},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, _, err := e.People.ListOrganizations(admin, tc.in)
+			_, _, err := e.People.ListCompanies(admin, tc.in)
 			var detailed *httperr.DetailedError
 			if !errors.As(err, &detailed) {
 				t.Fatalf("filter %s=%q → %v, want a validation refusal", tc.field, *strPtrValue(tc.in), err)
@@ -607,18 +607,18 @@ func TestUnknownAccountFilterValuesAreRefusedRatherThanAnsweredEmpty(t *testing.
 	// The same dials with values the contract DOES define are selections, and
 	// answer normally — a rule that refused everything would pass the test
 	// above and break the feature.
-	for _, in := range []people.ListOrganizationsInput{
+	for _, in := range []people.ListCompaniesInput{
 		{Lifecycle: strPtr("customer")},
 		{RelationshipType: strPtr("partner")},
 	} {
-		if _, _, err := e.People.ListOrganizations(admin, in); err != nil {
+		if _, _, err := e.People.ListCompanies(admin, in); err != nil {
 			t.Errorf("a filter value the contract defines was refused: %v", err)
 		}
 	}
 }
 
 // strPtrValue names whichever of the two dials the case set, for the message.
-func strPtrValue(in people.ListOrganizationsInput) *string {
+func strPtrValue(in people.ListCompaniesInput) *string {
 	if in.Lifecycle != nil {
 		return in.Lifecycle
 	}

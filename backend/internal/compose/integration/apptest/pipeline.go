@@ -61,7 +61,7 @@ func DiscoverSeededPipeline(t *testing.T, e *AppEnv) SeededStages {
 	return stages
 }
 
-// ExerciseDealToWon creates the organization and deal and closes it as won,
+// ExerciseDealToWon creates the company and deal and closes it as won,
 // through the real endpoints, and returns the deal id.
 //
 // It asserts only what it needs to build that state: a caller wanting a won deal
@@ -87,31 +87,34 @@ func ExerciseDealToWon(t *testing.T, e *AppEnv, stages SeededStages) string {
 	return dealID
 }
 
-// CreateOpenDeal creates an organization and a deal in the pipeline's open stage,
+// CreateOpenDeal creates a company and a deal in the pipeline's open stage,
 // through the real endpoints, and returns the deal id. Separate from
 // ExerciseDealToWon because a suite asserting what happens to an OPEN deal — the
 // refusals around closing it, say — needs the state without the close.
 func CreateOpenDeal(t *testing.T, e *AppEnv, stages SeededStages) string {
 	t.Helper()
-	var org map[string]any
-	status := e.Call(t, "POST", "/v1/organizations", map[string]any{
+	var company map[string]any
+	status := e.Call(t, "POST", "/v1/companies", map[string]any{
 		"display_name": "Acme GmbH",
 		"source":       "ui",
 		"domains":      []map[string]any{{"domain": "acme.example", "is_primary": true}},
-	}, nil, &org)
+	}, nil, &company)
 	if status != http.StatusCreated {
-		t.Fatalf("create org = %d %v", status, org)
+		t.Fatalf("create company = %d %v", status, company)
 	}
 
 	var deal map[string]any
 	status = e.Call(t, "POST", "/v1/deals", map[string]any{
-		"name":            "Acme rollout",
-		"amount_minor":    250_000_00,
-		"currency":        "EUR",
-		"pipeline_id":     stages.PipelineID,
-		"stage_id":        stages.Open,
-		"organization_id": org["id"],
-		"source":          "ui",
+		//nolint:goconst // a request-body key, spelled where the body is written; the
+		// other "name" in this package is a key READ off an MCP tool listing, and one
+		// constant over both would assert the two wires agree about the word
+		"name":         "Acme rollout",
+		"amount_minor": 250_000_00,
+		"currency":     "EUR",
+		"pipeline_id":  stages.PipelineID,
+		"stage_id":     stages.Open,
+		"company_id":   company["id"],
+		"source":       "ui",
 	}, nil, &deal)
 	if status != http.StatusCreated {
 		t.Fatalf("create deal = %d %v", status, deal)
@@ -123,7 +126,7 @@ func CreateOpenDeal(t *testing.T, e *AppEnv, stages SeededStages) string {
 	return dealID
 }
 
-// StakeOnOpenDeal creates a bare deal (no organization) in the pipeline's
+// StakeOnOpenDeal creates a bare deal (no company) in the pipeline's
 // open stage and stakes personID on it as a deal_stakeholder, through the
 // real endpoints, and returns the deal id.
 //

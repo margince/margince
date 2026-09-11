@@ -34,7 +34,7 @@ func TestTheCompositeArchivesWhatItsModulesArchive(t *testing.T) {
 	}
 
 	want := []datasource.EntityType{
-		datasource.EntityActivity, datasource.EntityDeal, datasource.EntityOrganization,
+		datasource.EntityActivity, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityPerson, datasource.EntityProject, datasource.EntityRelationship,
 	}
 	if !slices.Equal(types, want) {

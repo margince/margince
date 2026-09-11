@@ -35,7 +35,7 @@ import (
 //
 // It carries BOTH gates and returns nothing rather than failing when either
 // refuses. The edge gate, because who works where is a fact about the PAIR that
-// the grant on the person does not cover; the organization gate and row scope,
+// the grant on the person does not cover; the company gate and row scope,
 // because the name is that record's to disclose. Refusal omits the field and
 // keeps the page: a person list is not a question about employers, so a caller
 // who may read people and not edges still gets their people — the contract says
@@ -49,13 +49,13 @@ import (
 // second reading of the same question.
 //
 // It takes its own gates rather than being handed them — the employment EDGE
-// scope, the organization object grant and its row scope, each of which can
+// scope, the company object grant and its row scope, each of which can
 // hide an employer independently — because a caller that had to remember to
 // pass three could forget one, and the one forgotten would be the one nobody
 // notices until a reader sees an account they hold no grant for.
 //
 // A false is not a refusal: a caller who may not traverse edges, or may not
-// read organizations, still gets their people. A person list is not a question
+// read companies, still gets their people. A person list is not a question
 // about employers, and the contract says an absent employer never means "works
 // nowhere".
 func currentEmployerFrom(
@@ -71,29 +71,29 @@ func currentEmployerFrom(
 	if edgeBound == "" {
 		edgeBound = scopeAllRows
 	}
-	if err := auth.Require(ctx, organizationEntity, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return "", false, nil
 		}
 		return "", false, err
 	}
-	orgScope, err := auth.ScopeClauseFor(ctx, organizationEntity, "org", arg)
+	companyScope, err := auth.ScopeClauseFor(ctx, companyEntity, "company", arg)
 	if err != nil {
 		return "", false, err
 	}
-	if orgScope == "" {
-		orgScope = scopeAllRows
+	if companyScope == "" {
+		companyScope = scopeAllRows
 	}
 	return `
 		 FROM relationship rel
-		 JOIN organization org ON org.id = rel.organization_id
+		 JOIN company company ON company.id = rel.company_id
 		 WHERE ` + personBinding + `
 		   AND rel.kind = 'employment'
 		   AND ` + employment.CurrentPrimarySQL("rel") + `
 		   AND rel.archived_at IS NULL
 		   AND ` + edgeBound + `
-		   AND org.archived_at IS NULL
-		   AND ` + orgScope, true, nil
+		   AND company.archived_at IS NULL
+		   AND ` + companyScope, true, nil
 }
 
 func attachPersonEmployers(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Person, personIDs []ids.UUID) error {
@@ -109,20 +109,20 @@ func attachPersonEmployers(ctx context.Context, tx pgx.Tx, idx map[openapi_types
 		return nil
 	}
 
-	rows, err := tx.Query(ctx, `SELECT rel.person_id, org.id, org.display_name`+from, args...)
+	rows, err := tx.Query(ctx, `SELECT rel.person_id, company.id, company.display_name`+from, args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var personID, orgID ids.UUID
+		var personID, companyID ids.UUID
 		var name string
-		if err := rows.Scan(&personID, &orgID, &name); err != nil {
+		if err := rows.Scan(&personID, &companyID, &name); err != nil {
 			return err
 		}
 		idx[openapi_types.UUID(personID)].Employer = &crmcontracts.PersonEmployer{
-			OrganizationId:   openapi_types.UUID(orgID),
-			OrganizationName: name,
+			CompanyId:   openapi_types.UUID(companyID),
+			CompanyName: name,
 		}
 	}
 	return rows.Err()

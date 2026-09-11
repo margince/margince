@@ -18,7 +18,7 @@ import type { Transport } from "./persontransports";
 import "./composehead.css";
 
 type Person360 = components["schemas"]["Person360"];
-type Organization360 = components["schemas"]["Organization360"];
+type Company360 = components["schemas"]["Company360"];
 
 /**
  * One line of the mail's head: what it is, then what it says.
@@ -92,7 +92,7 @@ export function FieldNeed({
  */
 export function recipientSuggestions(
   person: Person360 | undefined,
-  organization: Organization360 | undefined,
+  company: Company360 | undefined,
 ): readonly TokenSuggestion[] {
   const seen = new Set<string>();
   const out: TokenSuggestion[] = [];
@@ -108,7 +108,7 @@ export function recipientSuggestions(
   for (const address of subject?.emails ?? []) {
     offer(address.email, subject?.full_name ?? address.email);
   }
-  for (const contact of organization?.people?.data ?? []) {
+  for (const contact of company?.people?.data ?? []) {
     offer(contact.primary_email, contact.full_name);
   }
   return out;

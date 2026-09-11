@@ -25,7 +25,7 @@ import (
 // different published events, not variants of one, so the return type is the
 // shared events.Payload seam rather than a single struct.
 //
-//nolint:ireturn // dispatches to PublicEventPersonCreated vs Updated by the merged condition; tested directly via the interface in person_organization_payload_test.go
+//nolint:ireturn // dispatches to PublicEventPersonCreated vs Updated by the merged condition; tested directly via the interface in person_company_payload_test.go
 func promotedPersonPayload(person crmcontracts.Person, merged bool, mergeFields map[string]any) events.Payload {
 	if merged {
 		if len(mergeFields) == 0 {

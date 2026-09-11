@@ -46,7 +46,7 @@ const SETTLED_SITE_READ: AiActivityItem = {
   started_at: "2026-08-01T09:00:00Z",
   finished_at: "2026-08-01T09:01:00Z",
   subject_label: "Acme GmbH",
-  subject_type: "organization",
+  subject_type: "company",
   subject_id: "019f7e65-0000-7000-8000-0000000000b2",
 };
 

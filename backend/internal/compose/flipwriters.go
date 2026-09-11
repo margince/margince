@@ -77,7 +77,7 @@ type flipWriters struct {
 	// assocs are the estate's edges, set before the run: activity links
 	// must ride LogActivity's insert (links are write-once with the row),
 	// so EnsureActivity reads its own edges here while Associate applies
-	// the person/org/deal edges after every endpoint exists.
+	// the person/company/deal edges after every endpoint exists.
 	assocs []migration.Assoc
 	// stages is the native stage catalog, loaded lazily on the first deal.
 	stages *flipStageCatalog
@@ -196,7 +196,7 @@ func (w *flipWriters) lookup(ctx context.Context, object, ext string) (ids.UUID,
 // ensure — the allowlist the identity map's own writes rely on.
 func flipImportable(object string) bool {
 	switch object {
-	case flipObjectPerson, flipObjectOrganization, flipObjectDeal, flipObjectLead, flipObjectActivity:
+	case flipObjectPerson, flipObjectCompany, flipObjectDeal, flipObjectLead, flipObjectActivity:
 		return true
 	default:
 		return false
@@ -261,8 +261,8 @@ func (w *flipWriters) Ensure(ctx context.Context, object string, row migration.R
 		return migration.EnsureResult{Unchanged: true}, nil
 	}
 	switch object {
-	case flipObjectOrganization:
-		return w.ensureOrganization(ctx, row)
+	case flipObjectCompany:
+		return w.ensureCompany(ctx, row)
 	case flipObjectPerson:
 		return w.ensurePerson(ctx, row)
 	case flipObjectLead:
@@ -276,8 +276,8 @@ func (w *flipWriters) Ensure(ctx context.Context, object string, row migration.R
 	}
 }
 
-func (w *flipWriters) ensureOrganization(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
-	owner, disclosure, err := w.resolveOwner(ctx, row, flipObjectOrganization)
+func (w *flipWriters) ensureCompany(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
+	owner, disclosure, err := w.resolveOwner(ctx, row, flipObjectCompany)
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
@@ -285,24 +285,24 @@ func (w *flipWriters) ensureOrganization(ctx context.Context, row migration.Row)
 	if name == "" {
 		name = overlayUnnamed
 	}
-	in := people.CreateOrganizationInput{
+	in := people.CreateCompanyInput{
 		DisplayName: name,
 		Industry:    fieldStringPtr(row.Fields, "industry"),
 		OwnerID:     owner,
 		Address:     overlayAddress(row.Fields),
-		Domains:     flipOrgDomains(row.Fields),
-		Source:      w.provenance(flipObjectOrganization, row.ExternalID),
+		Domains:     flipCompanyDomains(row.Fields),
+		Source:      w.provenance(flipObjectCompany, row.ExternalID),
 	}
-	if band := crmcontracts.OrganizationSizeBand(fieldString(row.Fields, "size_band")); band.Valid() {
+	if band := crmcontracts.CompanySizeBand(fieldString(row.Fields, "size_band")); band.Valid() {
 		s := string(band)
 		in.SizeBand = &s
 	}
-	if _, err := w.landRecord(ctx, flipObjectOrganization, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
-		org, err := w.people.CreateOrganizationTx(ctx, tx, in)
+	if _, err := w.landRecord(ctx, flipObjectCompany, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
+		company, err := w.people.CreateCompanyTx(ctx, tx, in)
 		if err != nil {
-			return ids.UUID{}, fmt.Errorf("flip import: creating organization %s: %w", row.ExternalID, err)
+			return ids.UUID{}, fmt.Errorf("flip import: creating company %s: %w", row.ExternalID, err)
 		}
-		return ids.UUID(org.Id), nil
+		return ids.UUID(company.Id), nil
 	}); err != nil {
 		return migration.EnsureResult{}, err
 	}
@@ -389,19 +389,19 @@ func flipPersonEmails(fields map[string]any) []people.PersonEmailInput {
 	return out
 }
 
-// flipOrgDomains shapes the mirrored company's domains the way flipPersonEmails
+// flipCompanyDomains shapes the mirrored company's domains the way flipPersonEmails
 // shapes the contact's addresses — the same child collection, carried across
 // whole rather than reduced to its leading row (the people store normalizes the
 // host, so no pre-cleaning here). A domain row declares no type, so there is no
 // enum to hold it to.
-func flipOrgDomains(fields map[string]any) []people.OrgDomainInput {
-	var out []people.OrgDomainInput
-	for _, row := range overlayChildRows(fields, "organization_domain") {
+func flipCompanyDomains(fields map[string]any) []people.CompanyDomainInput {
+	var out []people.CompanyDomainInput
+	for _, row := range overlayChildRows(fields, "company_domain") {
 		domain := strings.TrimSpace(fieldString(row, "domain"))
 		if domain == "" {
 			continue
 		}
-		out = append(out, people.OrgDomainInput{Domain: domain, IsPrimary: childRowIsPrimary(row)})
+		out = append(out, people.CompanyDomainInput{Domain: domain, IsPrimary: childRowIsPrimary(row)})
 	}
 	return out
 }

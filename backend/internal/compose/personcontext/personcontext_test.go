@@ -13,7 +13,7 @@ import (
 
 // The employer reading, including the two cases that make it a refusal rather
 // than a lookup: a row that is not the current primary, and one with no
-// organization name. "Used to work at" is a different sentence from "works at",
+// company name. "Used to work at" is a different sentence from "works at",
 // and a draft that gets it wrong tells somebody about a job they have left.
 func TestCurrentEmployerRefusesAnythingButTheCurrentPrimary(t *testing.T) {
 	name := "Beispiel Maschinenbau GmbH"
@@ -26,16 +26,16 @@ func TestCurrentEmployerRefusesAnythingButTheCurrentPrimary(t *testing.T) {
 		{name: "no employments at all", rows: nil, want: ""},
 		{
 			name: "the current primary",
-			rows: []crmcontracts.Person360Employment{{IsCurrentPrimary: true, OrganizationName: &name}},
+			rows: []crmcontracts.Person360Employment{{IsCurrentPrimary: true, CompanyName: &name}},
 			want: name,
 		},
 		{
 			name: "a past role is not where they work now",
-			rows: []crmcontracts.Person360Employment{{IsCurrentPrimary: false, OrganizationName: &name}},
+			rows: []crmcontracts.Person360Employment{{IsCurrentPrimary: false, CompanyName: &name}},
 			want: "",
 		},
 		{
-			name: "a current row with no organization name",
+			name: "a current row with no company name",
 			rows: []crmcontracts.Person360Employment{{IsCurrentPrimary: true}},
 			want: "",
 		},

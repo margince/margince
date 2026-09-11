@@ -37,11 +37,11 @@ import (
 // baseline that puts every function ahead of every trigger, and a later
 // migration may replace either half on its own. Scoped to the two objects rather
 // than the whole namespace for the reason the column loop below needs — every
-// address column also appears in `CREATE TABLE organization`, so a check against
+// address column also appears in `CREATE TABLE company`, so a check against
 // all of core would pass whether or not the trigger watches anything.
 func geocodeStalenessSQL(t *testing.T) string {
 	t.Helper()
-	trigger := lastStatement(t, `CREATE (?:OR REPLACE )?TRIGGER trg_organization_geocode_stale\b.*?;`)
+	trigger := lastStatement(t, `CREATE (?:OR REPLACE )?TRIGGER trg_company_geocode_stale\b.*?;`)
 	fn := triggerFunction.FindStringSubmatch(trigger)
 	if fn == nil {
 		t.Fatalf("the staleness trigger names no function to execute:\n%s", trigger)
@@ -77,7 +77,7 @@ func lastStatement(t *testing.T, pattern string) string {
 		if err != nil {
 			t.Fatalf("reading %s: %v", file, err)
 		}
-		found = append(found, re.FindAllString(string(body), -1)...)
+		found = append(found, re.FindAllString(withCurrentNames(string(body)), -1)...)
 	}
 	if len(found) == 0 {
 		t.Fatalf("no statement in core/ matches %s", pattern)
@@ -124,14 +124,14 @@ func TestOnlyResolvedCoordinatesAreQueryable(t *testing.T) {
 	t.Parallel()
 	// A missing index is lastStatement's own failure: a radius query would then
 	// have nothing to select through.
-	index := lastStatement(t, `CREATE INDEX idx_organization_geocoded\b.*?;`)
+	index := lastStatement(t, `CREATE INDEX idx_company_geocoded\b.*?;`)
 	if !strings.Contains(index, "geocode_status = 'ok'") {
 		t.Errorf("the index does not restrict to resolved rows:\n%s\n\nA stale or failed row reachable "+
 			"through it answers a distance from an address the company no longer has.", index)
 	}
 }
 
-// Every organization address writer is still accounted for, so the trigger's
+// Every company address writer is still accounted for, so the trigger's
 // coverage can be checked against something rather than assumed.
 func TestTheAddressWritersAreStillTheOnesTheTriggerCovers(t *testing.T) {
 	t.Parallel()
@@ -140,7 +140,7 @@ func TestTheAddressWritersAreStillTheOnesTheTriggerCovers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading %s: %v", root, err)
 	}
-	writes := regexp.MustCompile(`(?i)(UPDATE|INSERT INTO)\s+organization\b[\s\S]{0,400}?address_(line1|city|country)`)
+	writes := regexp.MustCompile(`(?i)(UPDATE|INSERT INTO)\s+company\b[\s\S]{0,400}?address_(line1|city|country)`)
 	found := 0
 	for _, entry := range entries {
 		name := entry.Name()
@@ -160,7 +160,7 @@ func TestTheAddressWritersAreStillTheOnesTheTriggerCovers(t *testing.T) {
 	// mean is that the pattern has drifted from how addresses are written, and
 	// this test is checking nothing.
 	if found == 0 {
-		t.Fatal("no organization address writer was found — the pattern has drifted from how addresses " +
+		t.Fatal("no company address writer was found — the pattern has drifted from how addresses " +
 			"are written, so this test proves nothing about the trigger's coverage")
 	}
 }

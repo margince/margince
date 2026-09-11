@@ -262,7 +262,7 @@ The model returns one of eight kinds:
 |---|---|
 | `person` | Create the contact. Queue the domain for `site_triage` |
 | `role_mailbox` (e.g. `support@`, `cs6@`) | Keep the mail visible. Create no contact — there is no person to record |
-| `organization_sender` | Same as above |
+| `company_sender` | Same as above |
 | `newsletter` | Hide the mail, and mark the domain as "not a company" |
 | `transactional` | Same as above |
 | `spam` | Same as above |
@@ -273,7 +273,7 @@ A service desk is a `role_mailbox` whether or not it is numbered, and whether or
 not an agent signs with a first name: the next reply is written by somebody else.
 The same kind of desk handling the owner's OWN private affair — their landlord,
 their clinic, their bank — is `personal` instead. Whose matter it is decides,
-not what sort of organization it is.
+not what sort of company it is.
 
 ### A private correspondence leaves no contact behind
 

@@ -25,21 +25,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// GetSiteRead reads one dossier, scoped to the organization the caller
-// named: a read id that exists under another org — or an org the caller
+// GetSiteRead reads one dossier, scoped to the company the caller
+// named: a read id that exists under another company — or a company the caller
 // cannot see — is ErrNotFound (existence-hiding).
-func (s *Store) GetSiteRead(ctx context.Context, orgID ids.OrganizationID, readID ids.UUID) (SiteRead, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+func (s *Store) GetSiteRead(ctx context.Context, companyID ids.CompanyID, readID ids.UUID) (SiteRead, error) {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return SiteRead{}, err
 	}
 	var out SiteRead
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
 		row := tx.QueryRow(ctx, `
 			SELECT `+siteReadColumns+` FROM site_read
-			WHERE id = $1 AND organization_id = $2`, readID, orgID)
+			WHERE id = $1 AND company_id = $2`, readID, companyID)
 		var err error
 		out, err = scanSiteRead(row)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -65,20 +65,20 @@ func (s *Store) GetSiteRead(ctx context.Context, orgID ids.OrganizationID, readI
 // description and no facts, which looks exactly like an account nobody has
 // tried to enrich — and a draft written from it invented what it could not
 // find. Newest by created_at, so a retry supersedes the attempt before it.
-func (s *Store) LatestSiteRead(ctx context.Context, orgID ids.OrganizationID) (SiteRead, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+func (s *Store) LatestSiteRead(ctx context.Context, companyID ids.CompanyID) (SiteRead, error) {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return SiteRead{}, err
 	}
 	var out SiteRead
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
 		row := tx.QueryRow(ctx, `
 			SELECT `+siteReadColumns+` FROM site_read
-			WHERE organization_id = $1
+			WHERE company_id = $1
 			ORDER BY created_at DESC, id DESC
-			LIMIT 1`, orgID)
+			LIMIT 1`, companyID)
 		var err error
 		out, err = scanSiteRead(row)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -96,11 +96,11 @@ func (s *Store) LatestSiteRead(ctx context.Context, orgID ids.OrganizationID) (S
 }
 
 // GetOnboardingSiteRead reads an unbound dossier without requiring an anchor
-// row to exist. Workspace RLS and the normal organization read/create authority
+// row to exist. Workspace RLS and the normal company read/create authority
 // still gate the operational draft.
 func (s *Store) GetOnboardingSiteRead(ctx context.Context, readID ids.UUID) (SiteRead, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
-		if createErr := auth.Require(ctx, "organization", principal.ActionCreate); createErr != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		if createErr := auth.Require(ctx, "company", principal.ActionCreate); createErr != nil {
 			return SiteRead{}, createErr
 		}
 	}

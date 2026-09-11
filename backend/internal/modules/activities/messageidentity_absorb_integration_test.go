@@ -105,16 +105,16 @@ func (e *sendEnv) seedPerson(t *testing.T, name string) ids.UUID {
 // has something real to point at.
 func (e *sendEnv) seedProject(t *testing.T, name string) ids.UUID {
 	t.Helper()
-	org := ids.NewV7()
+	company := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO organization (id, display_name, source, captured_by)
-		VALUES ($1, $2, 'manual', 'human:x')`, org, name+" GmbH"); err != nil {
+		INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, $2, 'manual', 'human:x')`, company, name+" GmbH"); err != nil {
 		t.Fatalf("seeding the company: %v", err)
 	}
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO project (id, name, organization_id, source, captured_by)
-		VALUES ($1, $2, $3, 'manual', 'human:x')`, id, name, org); err != nil {
+		INSERT INTO project (id, name, company_id, source, captured_by)
+		VALUES ($1, $2, $3, 'manual', 'human:x')`, id, name, company); err != nil {
 		t.Fatalf("seeding the project: %v", err)
 	}
 	return id
@@ -180,7 +180,7 @@ func (e *sendEnv) reconcileAbsorbing(t *testing.T, survivor ids.ActivityID) {
 func (e *sendEnv) linkedTargets(t *testing.T, activityID ids.ActivityID, entityType string) []ids.UUID {
 	t.Helper()
 	rows, err := e.owner.Query(context.Background(), `
-		SELECT coalesce(person_id, organization_id, deal_id, lead_id, project_id)
+		SELECT coalesce(person_id, company_id, deal_id, lead_id, project_id)
 		  FROM activity_link
 		 WHERE activity_id = $1 AND entity_type = $2
 		 ORDER BY 1`, activityID, entityType)

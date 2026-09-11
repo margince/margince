@@ -4,13 +4,13 @@
 package compose
 
 // The domain-triage classifier: what a mail domain's own site says it IS,
-// before any organization is created from it.
+// before any company is created from it.
 //
 // It runs on the SEED PAGE ALONE, once, before the crawl proper. That is the
 // whole point — a personal homepage or a parked domain is obvious from its
 // front page, and answering there costs one page instead of twelve plus a
 // profile call. A company answer, or an unclear one, falls through to the full
-// read, which then produces the dossier the organization is named from.
+// read, which then produces the dossier the company is named from.
 
 import (
 	"encoding/json"
@@ -26,7 +26,7 @@ import (
 
 // The classes a seed page can fall into.
 const (
-	// siteKindCompany — an organization's own site. The read continues and the
+	// siteKindCompany — a company's own site. The read continues and the
 	// company is created from what it states.
 	siteKindCompany = "company"
 	// siteKindPersonal — one individual's site: a personal homepage, a CV, a
@@ -34,7 +34,7 @@ const (
 	siteKindPersonal = "personal"
 	// siteKindProvider — a business selling mailboxes, hosting, or domains to
 	// the public. The site belongs to a real company; that company is not the
-	// sender's employer, which is exactly why naming an organization after it
+	// sender's employer, which is exactly why naming a company after it
 	// is wrong. This is the live.fr class.
 	siteKindProvider = "provider"
 	// siteKindParked — a registrar placeholder, a "coming soon", an error page:
@@ -66,7 +66,7 @@ const triageSystem = `You decide what a website IS, from the text of its front p
 
 Answer with ONLY a JSON object: {"kind":one of company|personal|provider|parked|unclear,"confidence":0.0-1.0,"reason":"one short sentence"}
 
-company  — the site of an organization: it sells or offers something, names a team, or presents itself as a business, agency, institution, or association.
+company  — the site of a company: it sells or offers something, names a team, or presents itself as a business, agency, institution, or association.
 personal — the site of ONE individual: a personal homepage, CV, portfolio or blog, or a page whose subject is the person who owns the domain. A one-person business that presents itself AS a business is a company, not personal.
 provider — a business selling email mailboxes, web hosting, or domain registration to the general public. Answer this ONLY for the vendor's own site; a company that merely HAS a website is not a provider.
 parked   — a registrar placeholder, a "coming soon" or "under construction" page, a bare error page, or a domain-for-sale listing: nothing that identifies anybody.

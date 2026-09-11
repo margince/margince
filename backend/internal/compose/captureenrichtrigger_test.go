@@ -104,7 +104,7 @@ func TestTheSignaturePassIsNotQueuedByWhatCannotMakeSomebodyReadable(t *testing.
 		"a contact being archived": enrichEvent(t, "person.archived", "person", noPayload),
 		"a contact being updated":  enrichEvent(t, "person.updated", "person", noPayload),
 		// Streams the group also carries for its sibling consumers.
-		"an unrelated entity's event": enrichEvent(t, "organization.created", "organization", noPayload),
+		"an unrelated entity's event": enrichEvent(t, "company.created", "company", noPayload),
 	} {
 		if g.queues(ctx, env) {
 			t.Errorf("%s: queued a model-backed pass with no work in it", name)

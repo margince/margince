@@ -56,10 +56,10 @@ type ListPeopleInput struct {
 	// the company and deal lists call the same function.
 	TagIDs  []ids.UUID
 	TagMode storekit.TagMode
-	// OrganizationID narrows to the people employed there today. Employment is
+	// CompanyID narrows to the people employed there today. Employment is
 	// an edge, not a column on person, so this is a link predicate too — see
 	// personEmployerClause.
-	OrganizationID *ids.OrganizationID
+	CompanyID *ids.CompanyID
 }
 
 // personListFields is the person list's core sortable vocabulary —
@@ -117,7 +117,7 @@ func orderByCurrentEmployer(ctx context.Context, arg func(any) int) (string, err
 		// sits in the tail and the page falls back to its tie-breaker.
 		return "NULL::text", nil
 	}
-	return "(SELECT org.display_name" + from + ")", nil
+	return "(SELECT company.display_name" + from + ")", nil
 }
 
 // personTagClause narrows the page to the people carrying the named tags.
@@ -150,8 +150,8 @@ func personTagClause(ctx context.Context, tagIDs []ids.UUID, mode storekit.TagMo
 // edge is refused the FILTER rather than handed an empty page: they asked a
 // question about the pairs, and an empty page would answer it with "nobody",
 // which is false.
-func personEmployerClause(ctx context.Context, orgID *ids.OrganizationID, arg func(any) int) (string, error) {
-	if orgID == nil {
+func personEmployerClause(ctx context.Context, companyID *ids.CompanyID, arg func(any) int) (string, error) {
+	if companyID == nil {
 		return "", nil
 	}
 	edgeBound, err := auth.EdgeReadScope(ctx, "rel", arg)
@@ -168,7 +168,7 @@ func personEmployerClause(ctx context.Context, orgID *ids.OrganizationID, arg fu
 		  AND `+employment.CurrentPrimarySQL("rel")+`
 		  AND rel.archived_at IS NULL
 		  AND `+edgeBound+`
-		  AND rel.organization_id = $%d)`, arg(*orgID)), nil
+		  AND rel.company_id = $%d)`, arg(*companyID)), nil
 }
 
 // ListPeople is the row-scoped person list read: quick-find, owner, tag and
@@ -202,7 +202,7 @@ func (s *Store) ListPeople(ctx context.Context, in ListPeopleInput) ([]crmcontra
 			if clause := personTagClause(ctx, in.TagIDs, in.TagMode, arg); clause != "" {
 				where = append(where, clause)
 			}
-			employer, err := personEmployerClause(ctx, in.OrganizationID, arg)
+			employer, err := personEmployerClause(ctx, in.CompanyID, arg)
 			if err != nil {
 				return nil, err
 			}

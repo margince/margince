@@ -160,9 +160,9 @@ func TestGuardRefusalMatchesProviderCapability(t *testing.T) {
 		{datasource.EntityPerson, overlay.WriteCreate, "POST", "/v1/people"},
 		{datasource.EntityPerson, overlay.WriteUpdate, "PATCH", "/v1/people/{id}"},
 		{datasource.EntityPerson, overlay.WriteArchive, "DELETE", "/v1/people/{id}"},
-		{datasource.EntityOrganization, overlay.WriteCreate, "POST", "/v1/organizations"},
-		{datasource.EntityOrganization, overlay.WriteUpdate, "PATCH", "/v1/organizations/{id}"},
-		{datasource.EntityOrganization, overlay.WriteArchive, "DELETE", "/v1/organizations/{id}"},
+		{datasource.EntityCompany, overlay.WriteCreate, "POST", "/v1/companies"},
+		{datasource.EntityCompany, overlay.WriteUpdate, "PATCH", "/v1/companies/{id}"},
+		{datasource.EntityCompany, overlay.WriteArchive, "DELETE", "/v1/companies/{id}"},
 		{datasource.EntityDeal, overlay.WriteCreate, "POST", "/v1/deals"},
 		{datasource.EntityDeal, overlay.WriteUpdate, "PATCH", "/v1/deals/{id}"},
 		{datasource.EntityDeal, overlay.WriteArchive, "DELETE", "/v1/deals/{id}"},
@@ -248,11 +248,11 @@ func serverDeclaredMethods(t *testing.T) map[string]bool {
 // gatekit:fixture the expected spelling each shadow method name is built from —
 // naming-convention data, not a cost.
 var overlayEntityTitles = map[string]string{
-	string(datasource.EntityPerson):       "Person",
-	string(datasource.EntityOrganization): "Organization",
-	string(datasource.EntityDeal):         "Deal",
-	string(datasource.EntityLead):         "Lead",
-	string(datasource.EntityActivity):     "Activity",
+	string(datasource.EntityPerson):   "Person",
+	string(datasource.EntityCompany):  "Company",
+	string(datasource.EntityDeal):     "Deal",
+	string(datasource.EntityLead):     "Lead",
+	string(datasource.EntityActivity): "Activity",
 }
 
 // TestOverlayWriteShadowsCoverEverySupportedWrite keeps the guard and the

@@ -29,7 +29,7 @@ const waitingStates = `('available','scheduled','pending')`
 // river_job has no workspace_id COLUMN, so it has no RLS and no row-scope
 // clause can be inherited from platform/auth. An admin of one workspace
 // reading another's failures would be a cross-tenant read that nothing
-// authorized — the singleton organization is a boot-time admission policy,
+// authorized — the singleton company is a boot-time admission policy,
 // not permission to stop scoping.
 //
 // The untenanted arm is CLOSED against the caller's declared dispatcher

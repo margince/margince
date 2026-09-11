@@ -205,7 +205,7 @@ func linkedCustomers(ctx context.Context, tx pgx.Tx) ([]finance.SourceCustomer, 
 	rows, err := tx.Query(ctx, `
 		SELECT l.external_customer_id, coalesce(o.display_name, l.external_customer_id)
 		  FROM finance_customer_link l
-		  JOIN organization o ON o.id = l.organization_id
+		  JOIN company o ON o.id = l.company_id
 		 WHERE l.archived_at IS NULL
 		 ORDER BY l.external_customer_id`)
 	if err != nil {

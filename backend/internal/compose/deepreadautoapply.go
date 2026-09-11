@@ -4,9 +4,9 @@
 package compose
 
 // The deep read's auto-enrich lane (CAP-PARAM-7, ADR-0072/A118): a read the
-// captured-organization sweep triggered applies its findings DIRECTLY instead
+// captured-company sweep triggered applies its findings DIRECTLY instead
 // of staging a confirm-first proposal — the system chose to enrich the company,
-// so there is no human to confirm. The org fields + facts land through the same
+// so there is no human to confirm. The company fields + facts land through the same
 // fill-empty + human-precedence machinery a human accept uses (so a human value
 // is never overwritten and a re-run after a worker death is idempotent); site
 // people still stage as leads (strangers stay staged, NEVER-8). The sweep cursor
@@ -38,7 +38,7 @@ const (
 // ones the act still has to ASK about.
 //
 // The match is deliberately narrow (exact email, or exactly one confident name
-// among the org's own employees); everyone else, and every ambiguity, is a
+// among the company's own employees); everyone else, and every ambiguity, is a
 // stranger and stages. A fill that FAILS must not cost the lead either: the
 // person falls through to staging so they still reach a human, and the reason
 // goes to the log.
@@ -46,10 +46,10 @@ const (
 // It runs before the staging transaction rather than inside it, because these
 // writes and those proposals answer for different things — an apply that fails
 // on one person must not roll back the questions asked about the others.
-func (w *siteDeepReadWorker) fillMatchedPeople(ctx context.Context, orgID ids.OrganizationID, found []sitePerson) []sitePerson {
+func (w *siteDeepReadWorker) fillMatchedPeople(ctx context.Context, companyID ids.CompanyID, found []sitePerson) []sitePerson {
 	strangers := make([]sitePerson, 0, len(found))
 	for _, person := range found {
-		matched, err := w.people.ApplySitePersonFields(ctx, orgID, people.SitePersonFields{
+		matched, err := w.people.ApplySitePersonFields(ctx, companyID, people.SitePersonFields{
 			Name:            person.Name,
 			Role:            person.Role,
 			PublishedEmail:  person.PublishedEmail,
@@ -64,7 +64,7 @@ func (w *siteDeepReadWorker) fillMatchedPeople(ctx context.Context, orgID ids.Or
 			// invariant should not depend on remembering it.
 			matched = false
 			w.log.WarnContext(ctx, "auto-enrich: filling a matched site person failed",
-				"org", orgID.String(), "person", person.Name, "err", err)
+				"company", companyID.String(), "person", person.Name, "err", err)
 		}
 		if matched {
 			continue
@@ -79,7 +79,7 @@ func (w *siteDeepReadWorker) fillMatchedPeople(ctx context.Context, orgID ids.Or
 func isAutoEnrichRequest(requestedBy string) bool { return requestedBy == systemAutoEnrichActor }
 
 // applyForRequester is the human lane's terminal step: the person asked for
-// this read, so its org fields and facts land directly rather than becoming a
+// this read, so its company fields and facts land directly rather than becoming a
 // proposal that asks them to confirm what they just requested.
 //
 // It is deliberately NOT autoApply: that one also moves the auto-enrich sweep
@@ -91,10 +91,10 @@ func isAutoEnrichRequest(requestedBy string) bool { return requestedBy == system
 // lane keeps them: a person the site published is a new record about a human
 // being, not a column on the company the requester named.
 func (w *siteDeepReadWorker) applyForRequester(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, mergedFields []evidencedField, mergedFacts []people.DeepReadFact, mergedPeople []sitePerson) ([]ids.UUID, error) {
-	orgID := ids.From[ids.OrganizationKind](*claim.OrganizationID)
+	companyID := ids.From[ids.CompanyKind](*claim.CompanyID)
 	// Staged first for the reason autoApply states: the leads were evidenced
-	// independently of the org columns, so an apply failure must not drop them.
-	proposalIDs, err := w.stageSiteLeads(ctx, args.SiteReadID, claim, w.fillMatchedPeople(ctx, orgID, mergedPeople), ids.NewV7())
+	// independently of the company columns, so an apply failure must not drop them.
+	proposalIDs, err := w.stageSiteLeads(ctx, args.SiteReadID, claim, w.fillMatchedPeople(ctx, companyID, mergedPeople), ids.NewV7())
 	if err != nil {
 		return nil, err
 	}
@@ -103,11 +103,11 @@ func (w *siteDeepReadWorker) applyForRequester(ctx context.Context, args SiteDee
 		return proposalIDs, nil
 	}
 	if err := w.people.ApplyDeepRead(ctx, people.DeepReadProposal{
-		OrganizationID: orgID,
-		SourceURL:      claim.SeedURL,
-		SiteReadID:     args.SiteReadID,
-		Fields:         fields,
-		Facts:          mergedFacts,
+		CompanyID:  companyID,
+		SourceURL:  claim.SeedURL,
+		SiteReadID: args.SiteReadID,
+		Fields:     fields,
+		Facts:      mergedFacts,
 	}); err != nil {
 		// The people are staged; surfacing the error finishes the read failed,
 		// which is what tells the human the company half did not land.
@@ -116,20 +116,20 @@ func (w *siteDeepReadWorker) applyForRequester(ctx context.Context, args SiteDee
 	return proposalIDs, nil
 }
 
-// autoApply is the auto-enrich lane's terminal step: apply the org fields +
+// autoApply is the auto-enrich lane's terminal step: apply the company fields +
 // facts directly, stage site people as leads, and record the cursor outcome.
 func (w *siteDeepReadWorker) autoApply(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, mergedFields []evidencedField, mergedFacts []people.DeepReadFact, mergedPeople []sitePerson) ([]ids.UUID, error) {
-	orgID := ids.From[ids.OrganizationKind](*claim.OrganizationID)
+	companyID := ids.From[ids.CompanyKind](*claim.CompanyID)
 
 	// Site people stage as leads regardless of the field/fact apply outcome —
-	// the leads were evidenced independently of the org columns, and dropping
+	// the leads were evidenced independently of the company columns, and dropping
 	// them on an apply failure would break the strangers-stay-staged invariant
 	// (NEVER-8). Staged first so a later apply error cannot skip them.
 	//
-	// One act, one bundle, staged in one transaction: the org's own fields and
+	// One act, one bundle, staged in one transaction: the company's own fields and
 	// facts are APPLIED on this lane rather than proposed, so the leads are
 	// everything this act asked about, and they reach the inbox together.
-	proposalIDs, err := w.stageSiteLeads(ctx, args.SiteReadID, claim, w.fillMatchedPeople(ctx, orgID, mergedPeople), ids.NewV7())
+	proposalIDs, err := w.stageSiteLeads(ctx, args.SiteReadID, claim, w.fillMatchedPeople(ctx, companyID, mergedPeople), ids.NewV7())
 	if err != nil {
 		return nil, err
 	}
@@ -139,26 +139,26 @@ func (w *siteDeepReadWorker) autoApply(ctx context.Context, args SiteDeepReadArg
 	var applyErr error
 	if len(fields) > 0 || len(mergedFacts) > 0 {
 		if err := w.people.ApplyDeepRead(ctx, people.DeepReadProposal{
-			OrganizationID: orgID,
-			SourceURL:      claim.SeedURL,
-			SiteReadID:     args.SiteReadID,
-			Fields:         fields,
-			Facts:          mergedFacts,
+			CompanyID:  companyID,
+			SourceURL:  claim.SeedURL,
+			SiteReadID: args.SiteReadID,
+			Fields:     fields,
+			Facts:      mergedFacts,
 		}); err != nil {
 			applyErr, outcome = err, autoEnrichOutcomeFailed
 		} else {
 			outcome = autoEnrichOutcomeApplied
 		}
 	}
-	if err := w.autoEnrich.MarkResolved(ctx, orgID, outcome); err != nil {
+	if err := w.autoEnrich.MarkResolved(ctx, companyID, outcome); err != nil {
 		// A missed terminal write at worst lets the next sweep reconsider the
-		// org, which the dossier-exists gate then filters out (or, on a failed
+		// company, which the dossier-exists gate then filters out (or, on a failed
 		// apply, retries it) — never the read's success or failure.
-		w.log.WarnContext(ctx, "auto-enrich cursor not recorded", "org", orgID.String(), "outcome", outcome, "err", err)
+		w.log.WarnContext(ctx, "auto-enrich cursor not recorded", "company", companyID.String(), "outcome", outcome, "err", err)
 	}
 	if applyErr != nil {
 		// The people are staged; surface the apply failure so the read finishes
-		// failed and the sweep retries the org.
+		// failed and the sweep retries the company.
 		return proposalIDs, fmt.Errorf("auto-applying the deep read: %w", applyErr)
 	}
 	return proposalIDs, nil

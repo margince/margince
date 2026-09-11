@@ -23,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AccountStrength is the §4 org roll-up: the strongest current contact's
+// AccountStrength is the §4 company roll-up: the strongest current contact's
 // score, which contact carries it, and how many contacts it was chosen
 // from. The two extra facts exist because the number alone is not
 // actionable on an account — the rep needs to know whose relationship it is.
@@ -37,22 +37,22 @@ type AccountStrength struct {
 	ContactCount        int
 }
 
-// OrganizationStrength is the §4 org roll-up: the MAX over the org's
+// CompanyStrength is the §4 company roll-up: the MAX over the company's
 // current employees' strengths — one strong relationship makes the
 // account warm; an average would dilute it. A contact outside the caller's
 // row scope contributes nothing, so the roll-up never out-sees the contact
 // list.
-func (s *Store) OrganizationStrength(ctx context.Context, orgID ids.OrganizationID, now time.Time) (AccountStrength, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+func (s *Store) CompanyStrength(ctx context.Context, companyID ids.CompanyID, now time.Time) (AccountStrength, error) {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return AccountStrength{}, err
 	}
 	var out AccountStrength
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
 		var err error
-		out, err = AccountStrengthFor(ctx, tx, orgID, now)
+		out, err = AccountStrengthFor(ctx, tx, companyID, now)
 		return err
 	})
 	if err != nil {
@@ -61,11 +61,11 @@ func (s *Store) OrganizationStrength(ctx context.Context, orgID ids.Organization
 	return out, nil
 }
 
-// AccountStrengthFor is OrganizationStrength's body without the
-// transaction or the organization gate, so a composite read that already
+// AccountStrengthFor is CompanyStrength's body without the
+// transaction or the company gate, so a composite read that already
 // opened one transaction and already gated the account computes the same
 // roll-up inside it rather than opening a second one at a second instant.
-func AccountStrengthFor(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now time.Time) (AccountStrength, error) {
+func AccountStrengthFor(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time) (AccountStrength, error) {
 	// The EDGE grant is asked here and REFUSED, where the person grant below is
 	// swallowed into a dormant answer. The two look alike and are not: a caller
 	// who may not read people sees an account with nobody they may read, and
@@ -75,14 +75,14 @@ func AccountStrengthFor(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID
 	// the account something this caller was refused the means to compute.
 	//
 	// It is asked before the read rather than sorted out from its error, because
-	// StrengthForOrgContacts returns one sentinel for both refusals and the
+	// StrengthForCompanyContacts returns one sentinel for both refusals and the
 	// difference between them is the whole point.
 	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
 		return AccountStrength{}, err
 	}
-	contacts, err := StrengthForOrgContacts(ctx, tx, orgID, now, nil)
+	contacts, err := StrengthForCompanyContacts(ctx, tx, companyID, now, nil)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		// A caller holding organization:read but not person:read sees an
+		// A caller holding company:read but not person:read sees an
 		// account with no contacts they may read, so the roll-up is dormant
 		// with nobody behind it. Refusing here instead would newly 403 a
 		// route that has answered this shape since it shipped.

@@ -9,7 +9,7 @@ package people
 // rules are unit-tested against the ladder's own result types (resolve_test.go);
 // what only a database can show is that the ladder is actually being ASKED the
 // right question — that an address the caller sent reaches the exact tier, that
-// an organization is found by a domain nobody typed as one, and that the two
+// a company is found by a domain nobody typed as one, and that the two
 // halves of a mixed batch line up with the candidates that produced them.
 
 import (
@@ -105,15 +105,15 @@ func TestAPhoneHitIsReportedWithoutClaimingCertainty(t *testing.T) {
 }
 
 // The domain nobody typed. A caller holding a business card has an address, and
-// the organization tier is keyed on domain — so the derivation is what makes the
+// the company tier is keyed on domain — so the derivation is what makes the
 // difference between an exact hit and a name guess.
-func TestResolveFindsAnOrganizationByTheDomainInsideAnAddress(t *testing.T) {
+func TestResolveFindsACompanyByTheDomainInsideAnAddress(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	_, org := e.seedEmployedPerson(ctx, t, "Anna Weber", "anna@acme.example", "Acme GmbH", "acme.example")
+	_, company := e.seedEmployedPerson(ctx, t, "Anna Weber", "anna@acme.example", "Acme GmbH", "acme.example")
 
 	out, err := e.store.Resolve(ctx, []ResolveCandidate{
-		{Kind: ResolveOrganization, Name: "Something Else Entirely", Emails: []string{"info@acme.example"}},
+		{Kind: ResolveCompany, Name: "Something Else Entirely", Emails: []string{"info@acme.example"}},
 	})
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
@@ -122,20 +122,20 @@ func TestResolveFindsAnOrganizationByTheDomainInsideAnAddress(t *testing.T) {
 	if len(out) != 1 || len(out[0].Refs) != 1 || !out[0].Refs[0].Exact {
 		t.Fatalf("got %+v, want the domain to have resolved exactly", out)
 	}
-	if out[0].Refs[0].ID != org.UUID {
-		t.Errorf("resolved to %s, want the seeded organization %s", out[0].Refs[0].ID, org.UUID)
+	if out[0].Refs[0].ID != company.UUID {
+		t.Errorf("resolved to %s, want the seeded company %s", out[0].Refs[0].ID, company.UUID)
 	}
 }
 
 // A consumer-mail address contributes NO domain. Without this, every private
 // address would collide onto whichever company first claimed that provider.
-func TestResolveIgnoresAConsumerMailDomainOnAnOrganization(t *testing.T) {
+func TestResolveIgnoresAConsumerMailDomainOnACompany(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.seedEmployedPerson(ctx, t, "Anna Weber", "anna@gmail.com", "Gmail Holdings", "gmail.com")
 
 	out, err := e.store.Resolve(ctx, []ResolveCandidate{
-		{Kind: ResolveOrganization, Name: "Kärcher", Emails: []string{"someone@gmail.com"}},
+		{Kind: ResolveCompany, Name: "Kärcher", Emails: []string{"someone@gmail.com"}},
 	})
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
@@ -153,10 +153,10 @@ func TestResolveIgnoresAConsumerMailDomainOnAnOrganization(t *testing.T) {
 func TestResolveAnswersAMixedBatchInOrder(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	person, org := e.seedEmployedPerson(ctx, t, "Anna Weber", "anna@acme.example", "Acme GmbH", "acme.example")
+	person, company := e.seedEmployedPerson(ctx, t, "Anna Weber", "anna@acme.example", "Acme GmbH", "acme.example")
 
 	out, err := e.store.Resolve(ctx, []ResolveCandidate{
-		{Kind: ResolveOrganization, Domains: []string{"acme.example"}},
+		{Kind: ResolveCompany, Domains: []string{"acme.example"}},
 		{Kind: ResolvePerson, Emails: []string{"nobody@nowhere.example"}},
 		{Kind: ResolvePerson, Emails: []string{"anna@acme.example"}},
 	})
@@ -167,8 +167,8 @@ func TestResolveAnswersAMixedBatchInOrder(t *testing.T) {
 	if len(out) != 3 {
 		t.Fatalf("got %d answers for 3 candidates", len(out))
 	}
-	if len(out[0].Refs) != 1 || out[0].Refs[0].ID != org.UUID {
-		t.Errorf("answer 0 = %+v, want the organization", out[0])
+	if len(out[0].Refs) != 1 || out[0].Refs[0].ID != company.UUID {
+		t.Errorf("answer 0 = %+v, want the company", out[0])
 	}
 	if len(out[1].Refs) != 0 {
 		t.Errorf("answer 1 = %+v, want no match for an address nobody holds", out[1])
@@ -178,7 +178,7 @@ func TestResolveAnswersAMixedBatchInOrder(t *testing.T) {
 	}
 }
 
-// A caller who may not read organizations is refused BEFORE the person half
+// A caller who may not read companies is refused BEFORE the person half
 // runs — otherwise the refusal would arrive after the batch had already told
 // them which addresses exist.
 func TestResolveRefusesTheWholeBatchOnAMissingGrant(t *testing.T) {
@@ -197,7 +197,7 @@ func TestResolveRefusesTheWholeBatchOnAMissingGrant(t *testing.T) {
 
 	out, err := e.store.Resolve(peopleOnly, []ResolveCandidate{
 		{Kind: ResolvePerson, Emails: []string{"anna@acme.example"}},
-		{Kind: ResolveOrganization, Domains: []string{"acme.example"}},
+		{Kind: ResolveCompany, Domains: []string{"acme.example"}},
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("err = %v, want a permission denial", err)

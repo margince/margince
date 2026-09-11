@@ -43,7 +43,7 @@ type websiteReadFixture struct {
 	rep      context.Context
 	worker   context.Context
 	consumer *aiactivity.Consumer
-	org      ids.OrganizationID
+	company  ids.CompanyID
 	readID   ids.UUID
 	// delivered is how far the fixture's subscriber has got, so drain hands
 	// the consumer only what it has not seen — a replay of the first envelope
@@ -55,8 +55,8 @@ func newWebsiteReadFixture(t *testing.T) *websiteReadFixture {
 	t.Helper()
 	e := Setup(t)
 	rep := e.As(e.Rep1, nil, AdminPerms)
-	org := ids.From[ids.OrganizationKind](e.SeedOrg(t, "Acme Systems", &e.Rep1))
-	read, joined, err := e.People.StartSiteRead(rep, org, "https://acme.example", "human:"+e.Rep1.String())
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme Systems", &e.Rep1))
+	read, joined, err := e.People.StartSiteRead(rep, company, "https://acme.example", "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatalf("StartSiteRead: %v", err)
 	}
@@ -78,7 +78,7 @@ func newWebsiteReadFixture(t *testing.T) *websiteReadFixture {
 		rep:      rep,
 		worker:   worker,
 		consumer: aiactivity.NewConsumer(aiactivity.NewStore(e.DB()), testLogger(t)),
-		org:      org,
+		company:  company,
 		readID:   read.ID,
 	}
 }
@@ -183,8 +183,8 @@ func TestAQueuedWebsiteReadIsProjectedAsTheRepsOwnLiveWork(t *testing.T) {
 	if got.StaleAfter == nil {
 		t.Fatal("a queued occurrence carries no stale_after, so a queue nobody drains would render as live forever")
 	}
-	if got.SubjectType == nil || *got.SubjectType != "organization" || got.SubjectID == nil || *got.SubjectID != f.org.UUID {
-		t.Fatalf("subject = %v/%v, want organization/%s", got.SubjectType, got.SubjectID, f.org)
+	if got.SubjectType == nil || *got.SubjectType != "company" || got.SubjectID == nil || *got.SubjectID != f.company.UUID {
+		t.Fatalf("subject = %v/%v, want company/%s", got.SubjectType, got.SubjectID, f.company)
 	}
 	if got.SubjectLabel == nil || *got.SubjectLabel != "Acme Systems" {
 		t.Fatalf("subject_label = %v, want the company's own name, so the rail can say which website it is reading", got.SubjectLabel)

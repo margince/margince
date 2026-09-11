@@ -8,7 +8,7 @@ package agents
 // depend on. See toolcopy.go for what each field answers.
 
 var searchRecordsCopy = toolCopy{
-	Purpose: "Find people, organizations, deals, leads and projects when you know roughly what " +
+	Purpose: "Find people, companies, deals, leads and projects when you know roughly what " +
 		"they are called but not which record they are.",
 	Limits: "It matches text stored ON the record. It does not read a timeline: message bodies, " +
 		"call notes and meeting content are not searched, so a query describing what someone said " +
@@ -21,7 +21,7 @@ var searchRecordsCopy = toolCopy{
 }
 
 var listRecordsCopy = toolCopy{
-	Purpose: "Enumerate the people, organizations, deals, leads or projects that meet exact " +
+	Purpose: "Enumerate the people, companies, deals, leads or projects that meet exact " +
 		"conditions — every deal in one pipeline, the leads one person owns, the projects still " +
 		"being delivered.",
 	Limits: "It narrows only by the filters this workspace publishes for that record_type, which " +
@@ -45,7 +45,7 @@ var readRecordCopy = toolCopy{
 }
 
 var createRecordCopy = toolCopy{
-	Purpose: "Create a person, organization, deal, lead, project, activity or relationship that " +
+	Purpose: "Create a person, company, deal, lead, project, activity or relationship that " +
 		"does not exist yet.",
 	Limits: "Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what " +
 		"yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
@@ -78,8 +78,8 @@ var updateRecordCopy = toolCopy{
 //
 // Driven from claude.ai on 2026-08-25 the model logged a meeting with NO links
 // and then relinked three times, staging three approvals — while in the same
-// run create_task linked deal, person and organization in one call, four times
-// over. The ids were all in hand: the meeting was created LAST, after the org,
+// run create_task linked deal, person and company in one call, four times
+// over. The ids were all in hand: the meeting was created LAST, after the company,
 // the person and the deal. The difference was the copy. create_task's Purpose
 // says what it is "on which records", so the links are part of what the caller
 // is deciding; this one described a timeline and left linking to a subordinate
@@ -148,7 +148,7 @@ var archiveRecordCopy = toolCopy{
 var mergeRecordsCopy = toolCopy{
 	Purpose: "Collapse two records for the same real person or company into one, moving the " +
 		"source's activities, deals and links onto the record that survives.",
-	Limits: "People merge with people and organizations with organizations; the source is " +
+	Limits: "People merge with people and companies with companies; the source is " +
 		"archived and redirected to the target, and the direction is not reversible by calling " +
 		"this again the other way round.",
 	Instead: "Use archive_record when the extra record has nothing worth keeping, rather than " +

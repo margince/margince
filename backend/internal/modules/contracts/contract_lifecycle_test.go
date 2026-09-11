@@ -120,23 +120,23 @@ func TestAnUnmappedConstraintStillHidesTheSchema(t *testing.T) {
 // can see B. Two independent "can you see it" checks cannot catch that — only
 // asking whether the two name the same company can, and the database will
 // happily store the mismatched row if nothing asks.
-func TestACrossOrganizationLinkIsRefusedByField(t *testing.T) {
+func TestACrossCompanyLinkIsRefusedByField(t *testing.T) {
 	for _, field := range []string{"deal_id", "project_id"} {
 		t.Run(field, func(t *testing.T) {
-			err := error(&CrossOrganizationLinkError{Field: field})
+			err := error(&CrossCompanyLinkError{Field: field})
 
-			var crossOrg *CrossOrganizationLinkError
-			if !errors.As(err, &crossOrg) {
-				t.Fatalf("err = %v, want CrossOrganizationLinkError", err)
+			var crossCompany *CrossCompanyLinkError
+			if !errors.As(err, &crossCompany) {
+				t.Fatalf("err = %v, want CrossCompanyLinkError", err)
 			}
-			if crossOrg.Field != field {
-				t.Errorf("field = %q, want %q", crossOrg.Field, field)
+			if crossCompany.Field != field {
+				t.Errorf("field = %q, want %q", crossCompany.Field, field)
 			}
-			if !strings.Contains(crossOrg.Error(), "different company") {
-				t.Errorf("message does not say what is wrong: %q", crossOrg.Error())
+			if !strings.Contains(crossCompany.Error(), "different company") {
+				t.Errorf("message does not say what is wrong: %q", crossCompany.Error())
 			}
-			if strings.Contains(crossOrg.Error(), "_id") {
-				t.Errorf("message leaks a column name at the reader: %q", crossOrg.Error())
+			if strings.Contains(crossCompany.Error(), "_id") {
+				t.Errorf("message leaks a column name at the reader: %q", crossCompany.Error())
 			}
 		})
 	}

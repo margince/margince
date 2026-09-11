@@ -490,7 +490,7 @@ func TestAnOwnerDecidingDuringTheModelCallIsNotOverruled(t *testing.T) {
 	// And no domain suppression, which is the workspace-wide one: a colleague
 	// would otherwise stop receiving a company this seat just vouched for.
 	if n := countIn(t, e,
-		`SELECT count(*) FROM organization_domain_disposition
+		`SELECT count(*) FROM company_domain_disposition
 		  WHERE domain = 'partner.example' AND admission = 'suppressed'`); n != 0 {
 		t.Errorf("partner.example was suppressed for the whole workspace on one seat's " +
 			"stale read, after that seat said the sender is business")

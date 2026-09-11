@@ -154,7 +154,7 @@ export const Provenance: Story = {
           provenance={{ kind: "human", self: false, userId: "usr_7f2" }}
         />
       </div>
-      {/* A person from outside the organization, beside the unattributed row
+      {/* A person from outside the company, beside the unattributed row
           on purpose: reading a buyer as "source not recorded" was the defect,
           and only the wording and the ink tell the two apart. */}
       <div style={row}>

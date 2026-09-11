@@ -147,7 +147,7 @@ function quickCaptureFields(): CreateField[] {
   return [
     { key: "full_name", label: "create.fullName", required: true },
     { key: "title", label: "create.personTitle" },
-    { key: "organization_name", label: "create.companyName" },
+    { key: "company_name", label: "create.companyName" },
     { key: "profile_url", label: "create.linkedin" },
     { key: "email", label: "create.email", type: "email" },
     { key: "phone", label: "create.phone" },
@@ -170,7 +170,7 @@ async function quickCapturePerson(
     body: {
       full_name: values.full_name?.trim() ?? "",
       title: statedValue(values, "title"),
-      organization_name: statedValue(values, "organization_name"),
+      company_name: statedValue(values, "company_name"),
       // Normalized here rather than server-side for the same reason the person
       // rail normalizes on save: a bare `linkedin.com/in/jdoe` is an address
       // somebody typed, and storing it unusable makes the row permanently
@@ -340,7 +340,7 @@ export function ContactsScreen() {
             // nothing rather than drawing a dash a reader would take for an
             // answer.
             key: "company",
-            header: t("create.organization"),
+            header: t("create.relatedCompany"),
             // By the company's NAME, walking the same edge the row walked. A
             // reader who may see no employer at all is ordered by none.
             sort: "employer",
@@ -355,9 +355,9 @@ export function ContactsScreen() {
                 // person first. The name comes with the row, so this resolves
                 // nothing.
                 <EntityRef
-                  kind="organization"
-                  id={person.employer.organization_id}
-                  name={person.employer.organization_name}
+                  kind="company"
+                  id={person.employer.company_id}
+                  name={person.employer.company_name}
                 />
               ) : null,
           },

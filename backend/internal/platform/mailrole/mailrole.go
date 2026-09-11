@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package mailrole answers one question: does this address name a FUNCTION an
-// organization answers rather than a person? A yes means no contact may be
+// company answers rather than a person? A yes means no contact may be
 // created for it — support@acme.com is a queue, not somebody called "Support".
 //
 // It is not the machine-address question. `noreply@` reaches nobody and capture
@@ -229,7 +229,7 @@ func sortStrings(in []string) {
 //  1. The address is a role mailbox (Match).
 //  2. The display name is nothing but role words (DisplayName).
 //  3. The display name OPENS with the mailbox's own domain label. That token is
-//     the organization's name, so a greeting takes it for a first name and
+//     the company's name, so a greeting takes it for a first name and
 //     writes "steireif," to `partner@steireif.net` — a company greeted as a
 //     person, in the message a rep is about to send. `partner` is deliberately
 //     not in the role vocabulary, because it is ordinary business vocabulary a

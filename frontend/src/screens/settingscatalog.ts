@@ -406,21 +406,21 @@ export const SETTINGS_PAGES = [
     // workspace. Only admin and ops may change them.
     //
     // The company profile is different and stays a write a rep really holds:
-    // `organization:update` is hers, and the profile the AI reads is a thing
+    // `company:update` is hers, and the profile the AI reads is a thing
     // she legitimately edits. Its second condition is a deployment FLAG rather
     // than a permission, so the grant ANDs with it — the surface may simply not
     // exist on this installation.
     requires: anyOf(
       writes("installation_settings", ["update"]),
-      allOf(writes("organization"), available("company_context")),
+      allOf(writes("company"), available("company_context")),
       reads("fx_rate"),
     ),
     // The three cards, by the verb each performs. InstallationSettingsCard and
-    // FxRatesCard both write; CompanyContextCard asks `useCanUpsert("organization")`,
+    // FxRatesCard both write; CompanyContextCard asks `useCanUpsert("company")`,
     // which is create-or-update plus the seat — spelled here as `writes`.
     changes: acts(
       writes("installation_settings", ["update"]),
-      allOf(writes("organization"), available("company_context")),
+      allOf(writes("company"), available("company_context")),
       writes("fx_rate"),
     ),
   },
@@ -600,11 +600,11 @@ export const SETTINGS_PAGES = [
     requires: reads("capture_settings"),
     // Five cards. Four write `capture_settings:update` — the sharing rule, the
     // posture, the own-domain list and the consumer-mailbox list; the fifth,
-    // BlockedDomainsCard, writes `organization:update`, which every seeded sales
+    // BlockedDomainsCard, writes `company:update`, which every seeded sales
     // role holds — so a rep keeps this page in the rail.
     changes: acts(
       writes("capture_settings", ["update"]),
-      writes("organization", ["update"]),
+      writes("company", ["update"]),
     ),
   },
   {

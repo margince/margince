@@ -29,8 +29,8 @@ Every page carries a badge beside its heading saying who a change there affects:
 |---|---|
 | **Only you** | Your own seat. Nobody else sees the difference. |
 | **Your team** | The people on your team. |
-| **Company** | Everyone in this organization. |
-| **Installation** | Every organization on this deployment. |
+| **Company** | Everyone in this company. |
+| **Installation** | Every company on this deployment. |
 | **Mixed** | The page holds settings of more than one kind. Read the card. |
 
 Three pages are **Mixed**, and each for a named reason: *Connections* and
@@ -109,7 +109,7 @@ Two things on one page: the senders you keep out, and what the last 24 hours of
 your mail turned into.
 
 **Keep out of capture.** Addresses and domains whose messages never enter the
-CRM. Rules you set bind only your own mailboxes; the organization's rules bind
+CRM. Rules you set bind only your own mailboxes; the company's rules bind
 everyone (and only an administrator may add or remove one of those). Takes
 effect from the next message; what is already captured stays.
 
@@ -134,7 +134,7 @@ rather than only read them, follows your role — see the table at the end.
 *Group: Company.* Sign-in methods and OAuth applications moved to their own
 **Sign-in & apps** page in the same group.
 
-**Installation settings** — the organization's name, timezone and base currency.
+**Installation settings** — the company's name, timezone and base currency.
 
 **Currency rates** — "Exchange rates that convert foreign-currency amounts to
 your base currency. New rates take effect today or later; past rates are never
@@ -263,7 +263,7 @@ also run entirely against a local model with no cloud key at all.
 
 *Group: Data.* **Data import** is its own page in the same group.
 
-**Document sets**: "Bodies of text this organization can be asked questions of.
+**Document sets**: "Bodies of text this company can be asked questions of.
 An answer comes only from what is filed here, and a question they do not cover is
 refused rather than guessed at."
 
@@ -361,5 +361,5 @@ the deployment-level resets.
 **Your own email domains.** Get these right before you connect mailboxes. They
 decide what counts as internal, and the decision is not fully reversible.
 
-**Your retention posture.** Your organization already has six retention rules
+**Your retention posture.** Your company already has six retention rules
 running. Read them before your first deletion happens rather than after.

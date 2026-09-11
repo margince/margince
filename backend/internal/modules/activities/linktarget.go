@@ -39,7 +39,7 @@ type linkTarget struct {
 // on the one code path nobody exercised.
 var linkTargets = []linkTarget{
 	{datasource.RecordPerson, "person_id", "full_name"},
-	{datasource.RecordOrganization, "organization_id", "display_name"},
+	{datasource.RecordCompany, "company_id", "display_name"},
 	{datasource.RecordDeal, "deal_id", "name"},
 	{datasource.RecordLead, "lead_id", "full_name"},
 	{datasource.RecordProject, "project_id", "name"},

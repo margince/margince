@@ -49,13 +49,13 @@ type closeWonFixture struct {
 func seedCloseWonFixture(t *testing.T, e *Env, projectName string) closeWonFixture {
 	t.Helper()
 	pipeline, open, won := DealFixture(t, e)
-	org := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, projectName, org, nil)
+	company := e.SeedCompany(t, "BAER Pharma", nil)
+	p := seedProject(e.Admin(), t, e, projectName, company, nil)
 
-	orgID := orgIDOf(org)
+	companyID := companyIDOf(company)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: projectName + " phase one", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, ProjectID: &p.ID, Source: "manual",
+		CompanyID: &companyID, ProjectID: &p.ID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create the deal on the project: %v", err)
@@ -229,14 +229,14 @@ func TestWinningADealDoesNotReopenAClosedProject(t *testing.T) {
 func TestWinningAProjectlessDealTouchesNoProject(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
-	org := e.SeedOrg(t, "BAER Pharma", nil)
+	company := e.SeedCompany(t, "BAER Pharma", nil)
 	// A live project on the same company that the win must not reach for.
-	bystander := seedProject(e.Admin(), t, e, "Unrelated work", org, nil)
+	bystander := seedProject(e.Admin(), t, e, "Unrelated work", company, nil)
 
-	orgID := orgIDOf(org)
+	companyID := companyIDOf(company)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "No project", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, Source: "manual",
+		CompanyID: &companyID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -329,15 +329,15 @@ func TestReAssertingAWonStageDoesNotDriveTheProjectBack(t *testing.T) {
 func TestTwoDealsWinningOnOneProjectProduceOneTransition(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
-	org := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, "Multi-phase programme", org, nil)
+	company := e.SeedCompany(t, "BAER Pharma", nil)
+	p := seedProject(e.Admin(), t, e, "Multi-phase programme", company, nil)
 
-	orgID := orgIDOf(org)
+	companyID := companyIDOf(company)
 	var wonDeals []ids.DealID
 	for _, name := range []string{"Phase one", "Phase two"} {
 		d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 			Name: name, PipelineID: pipeline, StageID: open,
-			OrganizationID: &orgID, ProjectID: &p.ID, Source: "manual",
+			CompanyID: &companyID, ProjectID: &p.ID, Source: "manual",
 		})
 		if err != nil {
 			t.Fatalf("create %s: %v", name, err)
@@ -570,20 +570,20 @@ func TestTheDeliveryTransitionRecordsWhatActuallyAuthorizedIt(t *testing.T) {
 func TestARepCannotAttachAProjectTheyCannotWrite(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	org := e.SeedOrg(t, "BAER Pharma", nil)
+	company := e.SeedCompany(t, "BAER Pharma", nil)
 	// The project belongs to Rep1; the caller below is Rep3 in the other team,
 	// so neither own nor team scope reaches it — only the read class does.
 	owner := e.Rep1
-	theirProject := seedProject(e.Admin(), t, e, "Another team's delivery", org, &owner)
+	theirProject := seedProject(e.Admin(), t, e, "Another team's delivery", company, &owner)
 
-	orgID := orgIDOf(org)
+	companyID := companyIDOf(company)
 	rep := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"deal":         {Read: true, Create: true, Update: true},
-			"project":      {Read: true, Update: true},
-			"organization": {Read: true},
-			"pipeline":     {Read: true},
+			"deal":     {Read: true, Create: true, Update: true},
+			"project":  {Read: true, Update: true},
+			"company":  {Read: true},
+			"pipeline": {Read: true},
 		},
 		RowScope: principal.RowScopeOwn,
 	})
@@ -598,7 +598,7 @@ func TestARepCannotAttachAProjectTheyCannotWrite(t *testing.T) {
 	// Attaching at CREATE is refused.
 	_, err := e.Deals.CreateDeal(rep, deals.CreateDealInput{
 		Name: "Piggyback", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, ProjectID: &theirProject.ID, Source: "manual",
+		CompanyID: &companyID, ProjectID: &theirProject.ID, Source: "manual",
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("creating a deal on a project the caller cannot write → %v, want "+
@@ -609,7 +609,7 @@ func TestARepCannotAttachAProjectTheyCannotWrite(t *testing.T) {
 	// same escalation through the other door.
 	ownDeal, err := e.Deals.CreateDeal(rep, deals.CreateDealInput{
 		Name: "Mine", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, Source: "manual",
+		CompanyID: &companyID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create the rep's own deal: %v", err)
@@ -638,25 +638,25 @@ func TestARepCannotAttachAProjectTheyCannotWrite(t *testing.T) {
 func TestTheProjectsOwnerStillAttachesAndWins(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
-	org := e.SeedOrg(t, "BAER Pharma", nil)
+	company := e.SeedCompany(t, "BAER Pharma", nil)
 	owner := e.Rep1
-	mine := seedProject(e.Admin(), t, e, "My delivery", org, &owner)
+	mine := seedProject(e.Admin(), t, e, "My delivery", company, &owner)
 
-	orgID := orgIDOf(org)
+	companyID := companyIDOf(company)
 	rep := e.As(owner, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"deal":         {Read: true, Create: true, Update: true},
-			"project":      {Read: true, Update: true},
-			"organization": {Read: true},
-			"pipeline":     {Read: true},
+			"deal":     {Read: true, Create: true, Update: true},
+			"project":  {Read: true, Update: true},
+			"company":  {Read: true},
+			"pipeline": {Read: true},
 		},
 		RowScope: principal.RowScopeOwn,
 	})
 
 	d, err := e.Deals.CreateDeal(rep, deals.CreateDealInput{
 		Name: "Phase one", PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, ProjectID: &mine.ID, Source: "manual",
+		CompanyID: &companyID, ProjectID: &mine.ID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("the project's own owner cannot attach a deal to it: %v", err)

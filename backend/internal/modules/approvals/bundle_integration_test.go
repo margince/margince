@@ -28,7 +28,7 @@ import (
 )
 
 // The two kinds a site read stages together, and the grants deciding each one
-// takes: an organization update for the company's own facts, a lead create for
+// takes: a company update for the company's own facts, a lead create for
 // each person the site published. They differ on purpose — that difference is
 // what the authority test below turns on.
 const (
@@ -44,11 +44,11 @@ func grantsFor(objects map[string]principal.ObjectGrant) principal.Permissions {
 }
 
 // decidesEverything holds both grants a site read's bundle needs, plus the
-// organization READ every member's target-visibility probe asks for.
+// company READ every member's target-visibility probe asks for.
 func decidesEverything() principal.Permissions {
 	return grantsFor(map[string]principal.ObjectGrant{
-		tableOrganization: {Read: true, Update: true},
-		tableLead:         {Create: true},
+		tableCompany: {Read: true, Update: true},
+		tableLead:    {Create: true},
 	})
 }
 
@@ -62,29 +62,29 @@ func (e *stagingEnv) asHumanWith(perms principal.Permissions) context.Context {
 	})
 }
 
-// organization seeds the company every member of these bundles targets: the
+// company seeds the company every member of these bundles targets: the
 // staging path resolves its target's version, so an absent row would fail the
 // staging for a reason that has nothing to do with bundling.
-func (e *stagingEnv) organization(t *testing.T) ids.UUID {
+func (e *stagingEnv) company(t *testing.T) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO organization (id, display_name, source, captured_by)
+		INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Acme', 'gmail:seed', 'connector:gmail')`, id); err != nil {
-		t.Fatalf("seeding the target organization: %v", err)
+		t.Fatalf("seeding the target company: %v", err)
 	}
 	return id
 }
 
 // stageInto stages one proposal of kind into bundle, exactly as a site read does.
-func (e *stagingEnv) stageInto(ctx context.Context, t *testing.T, bundle, org ids.UUID, kind, hash string) ids.ApprovalID {
+func (e *stagingEnv) stageInto(ctx context.Context, t *testing.T, bundle, company ids.UUID, kind, hash string) ids.ApprovalID {
 	t.Helper()
 	id, err := e.svc.Stage(ctx, StageInput{
 		Kind:           kind,
-		ProposedChange: []byte(fmt.Sprintf(`{"organization_id":%q,"note":%q}`, org.String(), hash)),
+		ProposedChange: []byte(fmt.Sprintf(`{"company_id":%q,"note":%q}`, company.String(), hash)),
 		DiffHash:       hash,
-		TargetType:     tableOrganization,
-		TargetID:       org,
+		TargetType:     tableCompany,
+		TargetID:       company,
 		Summary:        "Staged by " + kind,
 		JoinPending:    true,
 		BundleID:       bundle,
@@ -134,11 +134,11 @@ func outcomes(members []BundleMember) map[ids.ApprovalID]BundleOutcome {
 func TestABundleIsDecidedOnceAndRecordedPerMember(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
-	facts := e.stageInto(ctx, t, bundle, org, kindDeepRead, "facts-hash")
-	first := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-anna")
-	second := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-bruno")
+	facts := e.stageInto(ctx, t, bundle, company, kindDeepRead, "facts-hash")
+	first := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-anna")
+	second := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-bruno")
 
 	members, err := e.svc.DecideBundle(ctx, bundle, true, nil)
 	if err != nil {
@@ -186,10 +186,10 @@ func TestABundleIsDecidedOnceAndRecordedPerMember(t *testing.T) {
 func TestABundleMemberAlreadyDecidedKeepsItsVerdictAndItsSiblingsStillDecide(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
-	rejected := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-anna")
-	pending := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-bruno")
+	rejected := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-anna")
+	pending := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-bruno")
 	if _, err := e.svc.Decide(ctx, rejected, false, nil); err != nil {
 		t.Fatalf("rejecting one member up front: %v", err)
 	}
@@ -220,10 +220,10 @@ func TestABundleMemberAlreadyDecidedKeepsItsVerdictAndItsSiblingsStillDecide(t *
 func TestAnExpiredBundleMemberIsReportedRatherThanApproved(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
-	lapsed := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-anna")
-	live := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-bruno")
+	lapsed := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-anna")
+	live := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-bruno")
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE approval SET expires_at = now() - interval '1 day' WHERE id = $1`, lapsed); err != nil {
 		t.Fatalf("backdating the lapsed member: %v", err)
@@ -251,15 +251,15 @@ func TestAnExpiredBundleMemberIsReportedRatherThanApproved(t *testing.T) {
 func TestABundleMemberOutsideTheCallersAuthorityIsNeitherShownNorDecided(t *testing.T) {
 	e := setupStaging(t)
 	staging := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
-	facts := e.stageInto(staging, t, bundle, org, kindDeepRead, "facts-hash")
-	lead := e.stageInto(staging, t, bundle, org, kindSiteLead, "lead-anna")
+	facts := e.stageInto(staging, t, bundle, company, kindDeepRead, "facts-hash")
+	lead := e.stageInto(staging, t, bundle, company, kindSiteLead, "lead-anna")
 
 	// This human may update the company but may not create a lead, so exactly
 	// one of the two proposals is theirs to answer.
 	deciding := e.asHumanWith(grantsFor(map[string]principal.ObjectGrant{
-		tableOrganization: {Read: true, Update: true},
+		tableCompany: {Read: true, Update: true},
 	}))
 	members, err := e.svc.DecideBundle(deciding, bundle, true, nil)
 	if err != nil {
@@ -280,9 +280,9 @@ func TestABundleMemberOutsideTheCallersAuthorityIsNeitherShownNorDecided(t *test
 func TestABundleWithNoDecidableMemberReadsAsAbsent(t *testing.T) {
 	e := setupStaging(t)
 	staging := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
-	e.stageInto(staging, t, bundle, org, kindSiteLead, "lead-anna")
+	e.stageInto(staging, t, bundle, company, kindSiteLead, "lead-anna")
 
 	ungranted := e.asHumanWith(grantsFor(map[string]principal.ObjectGrant{}))
 	if _, err := e.svc.DecideBundle(ungranted, bundle, true, nil); !errors.Is(err, apperrors.ErrNotFound) {
@@ -300,11 +300,11 @@ func TestABundleWithNoDecidableMemberReadsAsAbsent(t *testing.T) {
 func TestARestagedProposalMovesOntoTheFreshBundle(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	first, second := ids.NewV7(), ids.NewV7()
-	original := e.stageInto(ctx, t, first, org, kindSiteLead, "lead-anna")
+	original := e.stageInto(ctx, t, first, company, kindSiteLead, "lead-anna")
 
-	rejoined := e.stageInto(ctx, t, second, org, kindSiteLead, "lead-anna")
+	rejoined := e.stageInto(ctx, t, second, company, kindSiteLead, "lead-anna")
 	if rejoined != original {
 		t.Fatalf("the re-proposal created %s instead of joining %s", rejoined, original)
 	}
@@ -350,9 +350,9 @@ func TestARejectedBundleRunsNoEffect(t *testing.T) {
 		return nil
 	})
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
-	member := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-anna")
+	member := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-anna")
 
 	reason := "not our market"
 	members, err := e.svc.DecideBundle(ctx, bundle, false, &reason)
@@ -382,10 +382,10 @@ func TestABundleMemberWhoseEffectFailsIsReportedAlone(t *testing.T) {
 		return nil
 	})
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
-	facts := e.stageInto(ctx, t, bundle, org, kindDeepRead, "facts-hash")
-	lead := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-anna")
+	facts := e.stageInto(ctx, t, bundle, company, kindDeepRead, "facts-hash")
+	lead := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-anna")
 
 	members, err := e.svc.DecideBundle(ctx, bundle, true, nil)
 	if err != nil {
@@ -414,7 +414,7 @@ func TestABundleMemberWhoseEffectFailsIsReportedAlone(t *testing.T) {
 func TestABundleTooLargeToDecideIsRefusedAndStillHiddenFromOutsiders(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
 	// Inserted directly: staging one past the cap through the service would
 	// prove nothing this test is about and would cost a transaction each.
@@ -423,7 +423,7 @@ func TestABundleTooLargeToDecideIsRefusedAndStillHiddenFromOutsiders(t *testing.
 		                      target_entity_id, proposed_change, diff_hash, expires_at, bundle_id)
 		SELECT $1, 'human:seed', $2, $3, $4, '{}'::jsonb, 'hash-' || n, now() + interval '1 day', $5
 		FROM generate_series(1, $6) AS n`,
-		kindSiteLead, e.rep, tableOrganization, org, bundle, bundleDecisionCap+1); err != nil {
+		kindSiteLead, e.rep, tableCompany, company, bundle, bundleDecisionCap+1); err != nil {
 		t.Fatalf("seeding an oversized bundle: %v", err)
 	}
 
@@ -524,12 +524,12 @@ func backendPID(t *testing.T, tx pgx.Tx) int {
 func TestABundleMemberDecidedMidFlightIsAbsorbedRatherThanFailingTheBundle(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
 	// Oldest first is the order the decision walks, so the uncontested member is
 	// already decided when the contested one blocks.
-	uncontested := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-anna")
-	contested := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-bruno")
+	uncontested := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-anna")
+	contested := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-bruno")
 
 	bg := context.Background()
 	competing := e.competingTx(t)
@@ -598,16 +598,16 @@ func (e *stagingEnv) bundleOf(t *testing.T, id ids.ApprovalID) *ids.UUID {
 func TestARestagedProposalKeepsItsBundleWhenTheActHasNoneOrTheSameOne(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
-	member := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-anna")
+	member := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-anna")
 
 	if _, err := e.svc.Stage(ctx, StageInput{
 		Kind:           kindSiteLead,
-		ProposedChange: []byte(`{"organization_id":"` + org.String() + `","note":"lead-anna"}`),
+		ProposedChange: []byte(`{"company_id":"` + company.String() + `","note":"lead-anna"}`),
 		DiffHash:       "lead-anna",
-		TargetType:     tableOrganization,
-		TargetID:       org,
+		TargetType:     tableCompany,
+		TargetID:       company,
 		Summary:        "Re-proposed by an unbundled act",
 		JoinPending:    true,
 	}); err != nil {
@@ -617,7 +617,7 @@ func TestARestagedProposalKeepsItsBundleWhenTheActHasNoneOrTheSameOne(t *testing
 		t.Errorf("an unbundled re-proposal left the row in %v, want it still in %s", got, bundle)
 	}
 
-	e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-anna")
+	e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-anna")
 	if n := e.count(t, `SELECT count(*) FROM audit_log
 		WHERE entity_id = $1 AND after->>'bundle_id' IS NOT NULL`, member.UUID); n != 0 {
 		t.Errorf("re-proposing into the same bundle wrote %d rebundle audit rows, want none — nothing moved", n)
@@ -634,10 +634,10 @@ func TestARestagedProposalKeepsItsBundleWhenTheActHasNoneOrTheSameOne(t *testing
 func TestABundleWhoseTargetLeavesMidFlightDecidesNothingAtAll(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
-	first := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-anna")
-	second := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-bruno")
+	first := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-anna")
+	second := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-bruno")
 
 	bg := context.Background()
 	competing := e.competingTx(t)
@@ -656,7 +656,7 @@ func TestABundleWhoseTargetLeavesMidFlightDecidesNothingAtAll(t *testing.T) {
 	waitForRowLockWaiter(t, e, backendPID(t, competing), done)
 
 	if _, err := competing.Exec(bg,
-		`UPDATE organization SET archived_at = now() WHERE id = $1`, org); err != nil {
+		`UPDATE company SET archived_at = now() WHERE id = $1`, company); err != nil {
 		t.Fatalf("archiving the target: %v", err)
 	}
 	if err := competing.Commit(bg); err != nil {
@@ -698,9 +698,9 @@ func steppingClock(t0, t1 time.Time) func() time.Time {
 func TestAMemberThatLapsesBetweenTheTwoClockReadingsIsReportedExpired(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	bundle := ids.NewV7()
-	lapsing := e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-anna")
+	lapsing := e.stageInto(ctx, t, bundle, company, kindSiteLead, "lead-anna")
 
 	var expiresAt time.Time
 	if err := e.owner.QueryRow(context.Background(),
@@ -733,9 +733,9 @@ func TestAMemberThatLapsesBetweenTheTwoClockReadingsIsReportedExpired(t *testing
 func TestABundleDoesNotDecideAMemberThatMovedToAnotherBundleMidFlight(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	leaving, arriving := ids.NewV7(), ids.NewV7()
-	member := e.stageInto(ctx, t, leaving, org, kindSiteLead, "lead-anna")
+	member := e.stageInto(ctx, t, leaving, company, kindSiteLead, "lead-anna")
 
 	bg := context.Background()
 	competing := e.competingTx(t)
@@ -784,9 +784,9 @@ func TestABundleDoesNotDecideAMemberThatMovedToAnotherBundleMidFlight(t *testing
 func TestAProposalDecidedWhileARePropositionJoinsItIsNotRebundled(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
+	company := e.company(t)
 	settled, fresh := ids.NewV7(), ids.NewV7()
-	original := e.stageInto(ctx, t, settled, org, kindSiteLead, "lead-anna")
+	original := e.stageInto(ctx, t, settled, company, kindSiteLead, "lead-anna")
 
 	bg := context.Background()
 	deciding := e.competingTx(t)
@@ -806,10 +806,10 @@ func TestAProposalDecidedWhileARePropositionJoinsItIsNotRebundled(t *testing.T) 
 		defer close(finished)
 		id, err := e.svc.Stage(ctx, StageInput{
 			Kind:           kindSiteLead,
-			ProposedChange: []byte(`{"organization_id":"` + org.String() + `","note":"lead-anna"}`),
+			ProposedChange: []byte(`{"company_id":"` + company.String() + `","note":"lead-anna"}`),
 			DiffHash:       "lead-anna",
-			TargetType:     tableOrganization,
-			TargetID:       org,
+			TargetType:     tableCompany,
+			TargetID:       company,
 			Summary:        "Re-proposed while the first was being decided",
 			JoinPending:    true,
 			BundleID:       fresh,

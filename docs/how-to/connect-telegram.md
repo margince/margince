@@ -8,7 +8,7 @@ For the mental model on the inbound side — the connector seam, the one Sink, c
 [explanation/capture-connectors.md](../explanation/capture-connectors.md); for the outbound half — the
 staging row, the gates, the dispatcher — [explanation/outbound-messaging.md](../explanation/outbound-messaging.md).
 
-> **Single-organization installation.** One installation serves one organization; the server resolves
+> **Single-company installation.** One installation serves one company; the server resolves
 > it itself, so nothing you do here selects a tenant. `channel_connection` carries no tenant column at
 > all (core `0282`), and core row-level security was retired in `0217` — "the bot" below means the one
 > installation's bot.
@@ -73,7 +73,7 @@ Explicitly **not** needed, and not read by this surface:
 ## Connect
 
 1. **Settings → Connections.** The **Telegram bot** card sits below **Connected inboxes**, subtitled
-   *"One bot receives and sends messages for the whole organization."* With nothing bound, its roster
+   *"One bot receives and sends messages for the whole company."* With nothing bound, its roster
    row reads *"No bot is connected yet."*
 2. Click **Connect a Telegram bot** in the card header.
 3. Paste the BotFather token into **Bot token** — a password field, hinted *"Paste the token BotFather
@@ -167,7 +167,7 @@ sealed token nothing could then destroy.
 3. **The person was auto-created.** The Sink routes the sender through the people module's **one dedupe
    chokepoint**, exactly as a mail counterparty goes through it. The person is deliberately
    **ownerless**: a workspace bot acts for no one human, and the connection's `connected_by` is audit
-   only, so reusing the connecting admin as an owner is precisely what is refused. **No organization is
+   only, so reusing the connecting admin as an owner is precisely what is refused. **No company is
    derived** — a channel identity carries no mail domain to derive one from.
 4. **Grant consent.** Open the person, find the **Consent** section, and **Grant** the purpose you
    intend to send under (some purposes need a double opt-in token first). Outbound is default-deny *per

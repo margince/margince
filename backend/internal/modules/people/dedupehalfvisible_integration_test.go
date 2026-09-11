@@ -66,7 +66,7 @@ type halfVisibleArm struct {
 // passes while the queue discloses the evidence of records the reader may not
 // open.
 //
-// Run per entity type because the clause spells person and organization
+// Run per entity type because the clause spells person and company
 // separately, and per SIDE because it spells left and right separately too.
 // A lead has no arm here: it is workspace-readable identity with no capture
 // privacy, so no human seat can ever see only half of a lead pair.
@@ -85,10 +85,10 @@ func halfVisibleArms() []halfVisibleArm {
 			},
 		},
 		{
-			entityOrganization,
-			`UPDATE organization SET owner_id = $1, visibility = 'owner' WHERE id = $2`,
-			`UPDATE organization SET owner_id = $1, visibility = 'workspace' WHERE id = $2`,
-			seedOrgPair,
+			entityCompany,
+			`UPDATE company SET owner_id = $1, visibility = 'owner' WHERE id = $2`,
+			`UPDATE company SET owner_id = $1, visibility = 'workspace' WHERE id = $2`,
+			seedCompanyPair,
 		},
 	}
 }
@@ -205,7 +205,7 @@ func halfVisiblePairStaysHidden(t *testing.T, arm halfVisibleArm, hide string) {
 // A disposition CHANGES both records the pair names — a dismissal suppresses
 // them as a duplicate for the whole workspace, an undo puts the pair back — so
 // each end carries write authority, exactly as the merge arm does through
-// mergePair. The object grant is not that authority: person and organization
+// mergePair. The object grant is not that authority: person and company
 // are workspace-readable identity, so every seat holding person:update passes
 // the object gate over every colleague's records.
 //

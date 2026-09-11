@@ -50,7 +50,7 @@ type searchBranch struct {
 	// row scope. The by-id graph anchor read (graph.go) deliberately does not
 	// apply it: a record named by id is not being discovered, and the own
 	// company stays readable everywhere it is asked for by name.
-	// The organization branch uses it to keep the installation's own company
+	// The company branch uses it to keep the installation's own company
 	// out of results: search is how people find accounts, and the company
 	// running the CRM is not one to find (ADR-0082/A127). It stays reachable
 	// by id, and the company page is where it is read.
@@ -77,29 +77,29 @@ func mayRead(ctx context.Context, entity string) bool {
 }
 
 // projectSnippet is `key · company`, with the company named only to a caller
-// who may read that organization: naming the account behind a project is a
-// read of the organization row, and a searcher with no organization grant,
+// who may read that company: naming the account behind a project is a
+// read of the company row, and a searcher with no company grant,
 // or one outside the row's scope — a capture-private company another rep
 // owns — gets the key alone. coalesce keeps the key when the scoped subselect
 // finds no row; concat_ws skips a NULL key rather than printing the dot.
 func projectSnippet(ctx context.Context, fallback string, arg func(any) int) (string, error) {
-	// A denied organization grant is the key-only excerpt, not a refusal:
+	// A denied company grant is the key-only excerpt, not a refusal:
 	// the hit is the project's, which the caller may read.
-	if denied := auth.Require(ctx, "organization", principal.ActionRead); denied != nil {
+	if denied := auth.Require(ctx, "company", principal.ActionRead); denied != nil {
 		if !errors.Is(denied, apperrors.ErrPermissionDenied) {
 			return "", denied
 		}
 		return fallback, nil
 	}
-	scope, err := auth.ScopeClauseFor(ctx, "organization", "o", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
 	if err != nil {
 		return "", err
 	}
 	if scope != "" {
 		scope = " AND " + scope
 	}
-	return fmt.Sprintf(`coalesce((SELECT concat_ws(' · ', t.key, o.display_name) FROM organization o
-			WHERE o.id = t.organization_id AND o.archived_at IS NULL%s), %s)`, scope, fallback), nil
+	return fmt.Sprintf(`coalesce((SELECT concat_ws(' · ', t.key, o.display_name) FROM company o
+			WHERE o.id = t.company_id AND o.archived_at IS NULL%s), %s)`, scope, fallback), nil
 }
 
 // excerpt renders the branch's snippet expression for this caller.
@@ -128,7 +128,7 @@ func (b searchBranch) narrowing(alias string) string {
 // clause rendered against the wrong alias filters the wrong table, and
 // deciding whether a deal is visible by asking whether the caller may
 // see the deal, when the question was whether they may see the
-// organization behind it, is a visibility rule answering about a
+// company behind it, is a visibility rule answering about a
 // different row.
 func branchScope(ctx context.Context, branch searchBranch, alias string, arg func(any) int) (scope string, admitted bool, err error) {
 	if !mayRead(ctx, branch.entity) {
@@ -159,7 +159,7 @@ const columnName = "name"
 
 var searchBranches = []searchBranch{
 	{entity: "person", table: entityPerson, title: "full_name", snippet: noSnippet},
-	{entity: "organization", table: entityOrganization, title: "display_name", snippet: noSnippet, extraWhere: "NOT %s.is_anchor"},
+	{entity: "company", table: entityCompany, title: "display_name", snippet: noSnippet, extraWhere: "NOT %s.is_anchor"},
 	{entity: "deal", table: entityDeal, title: columnName, snippet: noSnippet},
 	{entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)", snippet: noSnippet},
 	// A project's name alone does not say which account's work it is, and two

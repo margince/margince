@@ -11,7 +11,7 @@
 #
 # MARGINCE_ENV=dev relaxes the production-only postures (an unlicensed install
 # warns rather than refuses, the data reset is reachable). It does NOT switch on
-# a workspace header: one installation serves one organization (ADR-0061), the
+# a workspace header: one installation serves one company (ADR-0061), the
 # server resolves it itself, and no request selects a tenant. localhost is a
 # browser secure-context, so the Secure session cookie survives over plain
 # http — no TLS front door needed.
@@ -1175,7 +1175,7 @@ up)
   # Exported unconditionally, and it used to be exported only inside the branch
   # below. A dev stack with no Gmail app in .env.local therefore mounted no
   # transport, so a stored app could never run its consent flow — and the
-  # connect step reported "your organization has not registered its Google app
+  # connect step reported "your company has not registered its Google app
   # yet" to somebody who had just registered one, because the roster could not
   # tell an unregistered app from an unusable deployment. Not a secret: a fixed
   # dev constant, overridden by .env.local where one is set.
@@ -1203,10 +1203,10 @@ up)
   fi
 
   # The deployment configuration (A107/ADR-0061): the api bootstraps the demo
-  # organization itself at boot — no public provisioning endpoint exists. Seeded
+  # company itself at boot — no public provisioning endpoint exists. Seeded
   # ONCE into a gitignored config/margince.yaml from config/margince.example.yaml
   # and then LEFT ALONE (create-if-missing / leave-if-exists) — so an engineer
-  # can edit org details or runtime
+  # can edit company details or runtime
   # posture (e.g. ai.capture_payloads for Layer-3 capture) and it persists across
   # restarts (it lives in config/, not the scratch rundir dev-stop clears).
   deploy_cfg="config/margince.yaml"
@@ -1224,7 +1224,7 @@ up)
   fi
   if [[ ! -f "$deploy_cfg" ]]; then
     cp config/margince.example.yaml "$deploy_cfg"
-    echo "dev: seeded $deploy_cfg from config/margince.example.yaml — edit it to change org/admin or AI posture (e.g. ai.capture_payloads)"
+    echo "dev: seeded $deploy_cfg from config/margince.example.yaml — edit it to change company/admin or AI posture (e.g. ai.capture_payloads)"
   fi
   # The dev posture's own differences — the Reset data button among them — live
   # in the TRACKED config/margince.dev.yaml, which MARGINCE_ENV=dev selects on
@@ -1307,7 +1307,7 @@ up)
     exit 1
   fi
   # No demo records: `make dev` brings up a COLD START — the installation the
-  # api bootstrapped from the deployment config (one organization, one admin
+  # api bootstrapped from the deployment config (one company, one admin
   # seat) and nothing else, so onboarding, empty states, and first-run flows are
   # what a developer sees by default. Demo data is an explicit opt-in step:
   # `make seed-dev` (API records + the FX/RBAC fixture) jumps over the cold

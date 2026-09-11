@@ -24,7 +24,7 @@ import {
 } from "./brief.queries";
 import { QueryGate } from "./common";
 import { errorClassKey, isUnhealthy } from "./connector-status";
-import { toBoardDeal, useOrgMarks } from "./deals";
+import { toBoardDeal, useCompanyMarks } from "./deals";
 import { EntityRef, rosterOwnerNaming, useRoster } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 
@@ -216,8 +216,8 @@ export function OvernightPanel() {
               }
             />
             <DigestCount
-              label={t("brief.digestOrgs")}
-              value={capture.organizations_created ?? 0}
+              label={t("brief.digestCompanies")}
+              value={capture.companies_created ?? 0}
               onOpen={() =>
                 navigate(
                   { screen: "companies" },
@@ -366,9 +366,9 @@ export function PositionPanel() {
  * The open deals nobody has heard from.
  *
  * The company on each card is resolved through the SAME naming the pipeline
- * board uses (`useOrgMarks` + `toBoardDeal`), which is what gives a card its
+ * board uses (`useCompanyMarks` + `toBoardDeal`), which is what gives a card its
  * four honest readings — named, withheld, unreadable, or genuinely no company.
- * Brief used to pass `org: ""` unconditionally, so every quiet deal on this page
+ * Brief used to pass `company: ""` unconditionally, so every quiet deal on this page
  * claimed to belong to no company at all.
  */
 export function WatchPanel({
@@ -385,9 +385,9 @@ export function WatchPanel({
 }>) {
   const t = useT();
   const recordZone = useRecordZone();
-  // No page of organizations to draw on here — this is a short list, and every
+  // No page of companies to draw on here — this is a short list, and every
   // company it names is resolved by id and cached.
-  const naming = useOrgMarks([...deals], [], true);
+  const naming = useCompanyMarks([...deals], [], true);
   const roster = useRoster(
     "user",
     deals.some((deal) => Boolean(deal.owner_id)),

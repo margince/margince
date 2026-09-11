@@ -5,7 +5,7 @@ package people
 
 // One clock decides which FX rate an account's pipeline converts at.
 //
-// The rollup used to read the database's CURRENT_DATE while org360 sampled Go's,
+// The rollup used to read the database's CURRENT_DATE while company360 sampled Go's,
 // so two readers of one response could select rates a whole day apart — at
 // midnight in the database's zone, and only then. A money figure that is wrong
 // rarely and cannot be reproduced afterwards is the worst kind: the product's

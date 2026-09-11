@@ -138,7 +138,7 @@ export function provenanceOfEntry(
   entry: Pick<AuditHistoryEntry, "actor_type" | "actor_id">,
   viewerUserId?: string,
 ): Provenance {
-  // A Deal Room participant: a person, and one from outside the organization,
+  // A Deal Room participant: a person, and one from outside the company,
   // which is its own arm rather than the machine treatment or the colleague
   // one. `actor_id` is `buyer:<participant uuid>` — an identifier no reader can
   // look up and no lookup here resolves — so the tag says the kind and stops.

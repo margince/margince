@@ -250,7 +250,7 @@ export const RecordDrawer: StoryObj = {
             attachments: [],
             links: [
               { entity_type: "person", entity_id: ANA },
-              { entity_type: "organization", entity_id: BRANDT },
+              { entity_type: "company", entity_id: BRANDT },
             ],
             access: {
               content_state: "available",
@@ -267,7 +267,7 @@ export const RecordDrawer: StoryObj = {
       // line as ids rather than as the names a reader would meet.
       [`GET /people/${ANA}`]: () =>
         jsonResponse({ id: ANA, full_name: "Ana Sommer" }),
-      [`GET /organizations/${BRANDT}`]: () =>
+      [`GET /companies/${BRANDT}`]: () =>
         jsonResponse({ id: BRANDT, display_name: "Brandt Automotive" }),
     });
     return (

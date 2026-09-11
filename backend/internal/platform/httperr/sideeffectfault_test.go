@@ -84,8 +84,8 @@ func TestAConstraintOnARowTheCallerNeverWroteIsOurFault(t *testing.T) {
 // per-path validation's fallback with it.
 func TestAConstraintOnTheCallersOwnRecordIsStillTheirs(t *testing.T) {
 	fault, ok := Classify(fmt.Errorf("writing the row: %w", &pgconn.PgError{
-		Code: "23514", TableName: "organization", ConstraintName: "organization_size_band_check",
-		Message: `new row for relation "organization" violates check constraint`,
+		Code: "23514", TableName: "company", ConstraintName: "company_size_band_check",
+		Message: `new row for relation "company" violates check constraint`,
 	}))
 	if !ok {
 		t.Fatal("the constraint reached the unhandled path")

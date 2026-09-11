@@ -69,8 +69,8 @@ const waitingRepliesSQL = `
 	       COALESCE((array_agg(wl.person_id ORDER BY wl.person_id::text)
 	                 FILTER (WHERE wl.person_id IS NOT NULL))[1],
 	                '00000000-0000-0000-0000-000000000000'::uuid),
-	       COALESCE((array_agg(wl.organization_id ORDER BY wl.organization_id::text)
-	                 FILTER (WHERE wl.organization_id IS NOT NULL))[1],
+	       COALESCE((array_agg(wl.company_id ORDER BY wl.company_id::text)
+	                 FILTER (WHERE wl.company_id IS NOT NULL))[1],
 	                '00000000-0000-0000-0000-000000000000'::uuid),
 	       COALESCE((array_agg(wl.deal_id ORDER BY wl.deal_id::text)
 	                 FILTER (WHERE wl.deal_id IS NOT NULL))[1],
@@ -84,7 +84,7 @@ const waitingRepliesSQL = `
 	       -- row they can see decline to go stale.
 	       bool_or(openDeal.id IS NOT NULL),
 	       -- WHO owes the reply, first owner found down the precedence: deal,
-	       -- lead, person, organization.
+	       -- lead, person, company.
 	       --
 	       -- COALESCE over four aggregates rather than four correlated
 	       -- subqueries: the links are already joined and grouped here, so this
@@ -171,8 +171,8 @@ const waitingRepliesSQL = `
 	          FILTER (WHERE ownerLead.owner_id IS NOT NULL))[1],
 	         (array_agg(ownerPerson.owner_id ORDER BY ownerPerson.id::text)
 	          FILTER (WHERE ownerPerson.owner_id IS NOT NULL))[1],
-	         (array_agg(ownerOrg.owner_id ORDER BY ownerOrg.id::text)
-	          FILTER (WHERE ownerOrg.owner_id IS NOT NULL))[1],
+	         (array_agg(ownerCompany.owner_id ORDER BY ownerCompany.id::text)
+	          FILTER (WHERE ownerCompany.owner_id IS NOT NULL))[1],
 	         '00000000-0000-0000-0000-000000000000'::uuid)
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
@@ -187,7 +187,7 @@ const waitingRepliesSQL = `
 	  LEFT JOIN deal ownerDeal ON ownerDeal.id = wl.deal_id
 	  LEFT JOIN lead ownerLead ON ownerLead.id = wl.lead_id
 	  LEFT JOIN person ownerPerson ON ownerPerson.id = wl.person_id
-	  LEFT JOIN organization ownerOrg ON ownerOrg.id = wl.organization_id
+	  LEFT JOIN company ownerCompany ON ownerCompany.id = wl.company_id
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
@@ -230,7 +230,7 @@ const waitingRepliesSQL = `
 	         SELECT 1 FROM activity_link sales
 	          WHERE sales.activity_id = a.id
 	            AND (sales.person_id IS NOT NULL
-	              OR sales.organization_id IS NOT NULL
+	              OR sales.company_id IS NOT NULL
 	              OR EXISTS (SELECT 1 FROM deal d
 	                          WHERE d.id = sales.deal_id AND %[6]s)
 	              OR EXISTS (SELECT 1 FROM lead ld
@@ -320,7 +320,7 @@ const waitingRepliesSQL = `
 	   -- not_mine carries no moment and does not lift at all. Ending it when the
 	   -- linked record changes hands would be the kinder rule, and it is not
 	   -- implemented: a message reaches its owner through a person, an
-	   -- organization, a deal or a lead, so the re-arm is a consumer over four
+	   -- company, a deal or a lead, so the re-arm is a consumer over four
 	   -- ownership events rather than a clause here. Until that exists the
 	   -- judgement stands until its reader withdraws it, and the contract says
 	   -- so rather than promising the re-arm.

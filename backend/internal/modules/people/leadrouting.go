@@ -33,6 +33,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
+// candidateCompanyKey is the lead column holding the employer a lead names
+// before any company record exists for it.
+const candidateCompanyKey = "candidate_company_key"
+
 // RoutingRule assigns leads whose field matches a literal value to one
 // named owner — territory/segment/source routing in its V1 shape.
 type RoutingRule struct {
@@ -61,7 +65,7 @@ type RoutingConfig struct {
 // supports. The mirror is TestRoutableLeadFieldVocabularyIsSingleSourced,
 // in compose — the only place both modules are visible.
 // Held by: TestEveryRoutableLeadFieldResolvesToItsOwnFact (backend/internal/modules/people/leadroutingvocab_test.go)
-var RoutableLeadFields = []string{"source", "company_name", "candidate_org_key"}
+var RoutableLeadFields = []string{leadSourceColumn, leadCompanyColumn, candidateCompanyKey}
 
 // ParseRoutingConfig decodes automation params into a RoutingConfig.
 // Params were validated against the catalog schema at write time; this
@@ -92,19 +96,19 @@ type RoutingDecision struct {
 
 // leadRoutingFacts is the lead-local slice a rule may look at.
 type leadRoutingFacts struct {
-	Source          string
-	CompanyName     string
-	CandidateOrgKey string
+	Source              string
+	CompanyName         string
+	CandidateCompanyKey string
 }
 
 func (f leadRoutingFacts) field(name string) string {
 	switch name {
 	case "source":
 		return f.Source
-	case "company_name":
+	case leadCompanyColumn:
 		return f.CompanyName
-	case "candidate_org_key":
-		return f.CandidateOrgKey
+	case candidateCompanyKey:
+		return f.CandidateCompanyKey
 	}
 	return ""
 }
@@ -181,9 +185,9 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 		var status string
 		var facts leadRoutingFacts
 		if err := tx.QueryRow(ctx, `
-			SELECT owner_id, status, source, coalesce(company_name, ''), coalesce(candidate_org_key, '')
+			SELECT owner_id, status, source, coalesce(company_name, ''), coalesce(candidate_company_key, '')
 			  FROM lead WHERE id = $1`,
-			leadID).Scan(&currentOwner, &status, &facts.Source, &facts.CompanyName, &facts.CandidateOrgKey); err != nil {
+			leadID).Scan(&currentOwner, &status, &facts.Source, &facts.CompanyName, &facts.CandidateCompanyKey); err != nil {
 			return err
 		}
 		if currentOwner != nil {

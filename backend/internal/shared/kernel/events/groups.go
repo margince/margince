@@ -38,7 +38,7 @@ func Groups() []Group {
 		return keys
 	}
 	return []Group{
-		{Name: "cg:context-graph", Streams: forEntities(personStreamEntity, organizationStreamEntity, dealStreamEntity, activityStreamEntity, leadStreamEntity)},
+		{Name: "cg:context-graph", Streams: forEntities(personStreamEntity, companyStreamEntity, dealStreamEntity, activityStreamEntity, leadStreamEntity)},
 		// The interaction-edge projection (CG-DDL-1 / ADR-0078). Its OWN group
 		// rather than a second handler on cg:context-graph: a projection
 		// rebuild must not be able to stall embedding freshness, and the two
@@ -55,11 +55,11 @@ func Groups() []Group {
 		// The LinkedIn ghost matcher (ADR-0078 §8b). Its own group rather than
 		// a second handler on cg:graph-edge: that consumer lives in the search
 		// module and this call belongs to people, and a module never reaches
-		// into a sibling. It listens on the person and organization streams —
+		// into a sibling. It listens on the person and company streams —
 		// a contact appearing is a chance to attach a ghost, and so is an
 		// account appearing, because employer resolution is what most ghosts
 		// are waiting on.
-		{Name: "cg:linkedin-match", Streams: forEntities(personStreamEntity, organizationStreamEntity)},
+		{Name: "cg:linkedin-match", Streams: forEntities(personStreamEntity, companyStreamEntity)},
 
 		// Its own group rather than a second handler on cg:person-auto-enrich:
 		// this repair attaches mail the workspace already holds to a record it
@@ -132,18 +132,18 @@ func Groups() []Group {
 		// keyed on the contact, and an account appearing enriches nobody
 		// until a person is filed against it, which is itself a person event.
 		{Name: "cg:person-auto-enrich", Streams: forEntities(personStreamEntity)},
-		// The prompt half of captured-organization auto-enrich (ADR-0072
-		// arc): an organization appearing or changing queues the workspace's
+		// The prompt half of captured-company auto-enrich (ADR-0072
+		// arc): a company appearing or changing queues the workspace's
 		// enrich pass NOW instead of leaving a company created between two
 		// daily sweeps without a dossier for up to a day. Its own group
 		// rather than a second handler on cg:linkedin-match for the standing
 		// reason: that consumer belongs to search-adjacent matching, this one
 		// to capture enrichment, and the two must not share a cursor. It
-		// listens on the organization stream alone — the pass it queues
-		// re-derives which organizations are due from the database, so no
+		// listens on the company stream alone — the pass it queues
+		// re-derives which companies are due from the database, so no
 		// other entity's event can make one due that this stream's events do
 		// not already announce.
-		{Name: "cg:org-auto-enrich", Streams: forEntities(organizationStreamEntity)},
+		{Name: "cg:company-auto-enrich", Streams: forEntities(companyStreamEntity)},
 		// Mail landing queues the signature-enrich pass, so a contact who wrote
 		// this morning is read now rather than tonight. Its own group rather
 		// than a second handler on an existing activity consumer: this one

@@ -16,7 +16,7 @@ package commissions
 // behind with the representative who no longer works the account.
 //
 // There is only one anchor. Unlike a contract, an entry cannot exist without a
-// deal — deal_id is NOT NULL — so there is no organization fallback arm.
+// deal — deal_id is NOT NULL — so there is no company fallback arm.
 
 import (
 	"context"

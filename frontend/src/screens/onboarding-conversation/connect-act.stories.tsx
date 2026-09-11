@@ -137,7 +137,7 @@ export const StaleReturn: Story = {
 };
 
 /**
- * No Microsoft app registered for this organization. The card cannot be opened
+ * No Microsoft app registered for this company. The card cannot be opened
  * because the connect behind it would be refused, so it says what is missing
  * and where it is fixed rather than leaving the reader to find that out by
  * clicking. Google and IMAP are unaffected, which is the point: this is one

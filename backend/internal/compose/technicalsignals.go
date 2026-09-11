@@ -52,9 +52,9 @@ func technicalChangeRecorder() people.TechnicalChangeRecorder {
 			return nil
 		}
 		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-			Kind:           kindTechnicalChange,
-			OrganizationID: change.OrganizationID.UUID,
-			Summary:        summary,
+			Kind:      kindTechnicalChange,
+			CompanyID: change.CompanyID.UUID,
+			Summary:   summary,
 			// Never `warn` or `urgent`: a company changing its own systems is
 			// news about the account, not a problem with it.
 			Severity: severityInfo,
@@ -65,7 +65,7 @@ func technicalChangeRecorder() people.TechnicalChangeRecorder {
 			// each time rather than the second Microsoft move colliding with
 			// the first. A pass over an UNCHANGED company still raises
 			// nothing, because it produces no change to file at all.
-			Fingerprint: fingerprintOf(technicalSource, change.OrganizationID.String(),
+			Fingerprint: fingerprintOf(technicalSource, change.CompanyID.String(),
 				change.Field, change.ValueKey, string(change.Kind), change.Previous),
 			// The evidence is the public record that proved it — the MX host,
 			// the certificate hostname, the matched marker — because "how do

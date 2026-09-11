@@ -80,7 +80,7 @@ may_call:
 must_call_with:
   - relink_activity.replace_existing_of_type=true
   - relink_activities.replace_existing_of_type=true
-  - relink_activities.entity_type=organization
+  - relink_activities.entity_type=company
 
 must_mention:
   # Criterion 1 and 2: it says where each thing went. Both destinations, because

@@ -18,14 +18,14 @@ import (
 )
 
 // setCompanyDomain records the company's own website as its primary domain —
-// the same handle the cold-start read-back resolves organizations by, so a
+// the same handle the cold-start read-back resolves companies by, so a
 // company saved by hand is findable exactly like one read from a site.
 //
-// An organization has at most ONE primary domain (uq_org_domain_primary), so a
+// A company has at most ONE primary domain (uq_company_domain_primary), so a
 // later save naming a new site must demote the old one first: inserting a
 // second primary would collide, and a swallowed collision would mean the human
 // edited their website, got a 200, and kept the old one.
-func setCompanyDomain(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, website, by string) error {
+func setCompanyDomain(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, website, by string) error {
 	host, err := companyHost(website)
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func setCompanyDomain(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, 
 	//
 	// This domain decides whether mail is STORED: correspondence among people
 	// on it produces zero rows (ADR-0082/A127), and a connector never offers a
-	// skipped message again. Leaving it on `organization.update` — which a rep
+	// skipped message again. Leaving it on `company.update` — which a rep
 	// holds — would let any rep name a customer's domain here and permanently
 	// stop the workspace keeping that customer's mail. The own-domain settings
 	// surface gates the same decision on `capture_settings`; this is the other
@@ -43,7 +43,7 @@ func setCompanyDomain(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, 
 	//
 	// Only a CHANGE is gated: re-saving the company with its existing domain is
 	// an ordinary profile edit and stays open to whoever may edit the profile.
-	changing, err := companyDomainWouldChange(ctx, tx, orgID, host)
+	changing, err := companyDomainWouldChange(ctx, tx, companyID, host)
 	if err != nil {
 		return err
 	}
@@ -53,16 +53,16 @@ func setCompanyDomain(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, 
 		}
 	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE organization_domain SET is_primary = false
-		  WHERE organization_id = $1
+		`UPDATE company_domain SET is_primary = false
+		  WHERE company_id = $1
 		    AND is_primary AND archived_at IS NULL AND domain <> lower($2)`,
-		orgID, host); err != nil {
+		companyID, host); err != nil {
 		return fmt.Errorf("demote previous company domain: %w", err)
 	}
 
 	// A live domain is unique across the INSTALLATION — uq is on (domain) where
 	// archived_at IS NULL, with no tenant term — so re-saving the same site
-	// re-primaries the row we already have, and a domain some CUSTOMER org
+	// re-primaries the row we already have, and a domain some CUSTOMER company
 	// already owns is a conflict: claiming it here would silently move a record
 	// off its company. Anything that narrows this back to a subset of the
 	// installation has to change the index, not just this statement.
@@ -70,19 +70,19 @@ func setCompanyDomain(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, 
 	// domain exactly as the domains endpoint does: a typed 409 NAMING the
 	// company already holding it, when the caller may see that company. The
 	// disclosure rule lives there, once.
-	if err := claimedDomainOwner(ctx, tx, orgID, host); err != nil {
+	if err := claimedDomainOwner(ctx, tx, companyID, host); err != nil {
 		return err
 	}
 
-	var owner ids.OrganizationID
+	var owner ids.CompanyID
 	err = tx.QueryRow(ctx,
-		`INSERT INTO organization_domain (organization_id, domain, is_primary, source, captured_by)
+		`INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
 		 VALUES ($1, lower($2), true, 'manual', $3)
 		 ON CONFLICT (domain) WHERE archived_at IS NULL
 		 DO UPDATE SET is_primary = true
-		 WHERE organization_domain.organization_id = EXCLUDED.organization_id
-		 RETURNING organization_id`,
-		orgID, host, by).Scan(&owner)
+		 WHERE company_domain.company_id = EXCLUDED.company_id
+		 RETURNING company_id`,
+		companyID, host, by).Scan(&owner)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The probe above said the domain was free, so reaching here means a
 		// concurrent claim landed between the two statements. The unique index
@@ -97,7 +97,7 @@ func setCompanyDomain(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, 
 	return nil
 }
 
-// companyHost reduces a website to the bare domain the organization_domain
+// companyHost reduces a website to the bare domain the company_domain
 // index keys on, accepting what a human actually types: "acme.com" as readily
 // as "https://www.acme.com/about". The transport rejects an unparseable
 // website before it gets here; this guard keeps a malformed one out of the
@@ -107,7 +107,7 @@ func setCompanyDomain(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, 
 // FQDN root form — `acme.example.`, and `https://acme.example./about`, where the
 // dot is inside the URL and trimming the string never reaches it — is the same
 // name to DNS and a different string to an index. Left in on the write side, one
-// company reachable by two spellings becomes two organizations, which is the
+// company reachable by two spellings becomes two companies, which is the
 // duplicate this module exists to prevent; left in on one side only, a read and
 // a write disagree about what they are looking at. The root dot is not part of
 // the key.
@@ -138,14 +138,14 @@ func companyHost(website string) (string, error) {
 // is a rep silently reverting the installation's own domain — and the domain
 // decides which mail is stored at all. The lock makes the decision and the
 // write one unit; a competing writer waits and this one re-reads its result.
-func companyDomainWouldChange(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, host string) (bool, error) {
+func companyDomainWouldChange(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, host string) (bool, error) {
 	var current string
 	err := tx.QueryRow(ctx,
-		`SELECT domain FROM organization_domain
-		  WHERE organization_id = $1
+		`SELECT domain FROM company_domain
+		  WHERE company_id = $1
 		    AND is_primary AND archived_at IS NULL
 		    FOR UPDATE`,
-		orgID).Scan(&current)
+		companyID).Scan(&current)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// No domain yet: the first one is a change from nothing.
 		return true, nil

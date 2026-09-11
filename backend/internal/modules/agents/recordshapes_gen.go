@@ -8,19 +8,19 @@ package agents
 
 var createRecordShapes = map[string]string{
 	"person":       "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \"work\"|\"personal\"|\"other\", is_primary?: boolean, position?: integer}], first_name?: string, full_name: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \"work\"|\"mobile\"|\"home\"|\"other\", position?: integer}], social?: object, source?: string, title?: string}",
-	"organization": "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, owner_id?: uuid, parent_org_id?: uuid, size_band?: \"1-10\"|\"11-50\"|\"51-200\"|\"201-500\"|\"501-1000\"|\"1001-5000\"|\"5000+\", source?: string}",
-	"deal":         "{amount_minor?: integer, currency?: string, expected_close_date?: YYYY-MM-DD, name: string, organization_id?: uuid, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_org_id?: uuid, pipeline_id: uuid, project_id?: uuid, source?: string, stage_id: uuid}",
-	"lead":         "{candidate_org_key?: string, company_name?: string, email?: email, full_name?: string, linkedin_url?: string, owner_id?: uuid, project_id?: uuid, source?: string, source_id?: string, source_system?: string, status?: \"new\"|\"contacted\"|\"engaged\"|\"promoted\"|\"disqualified\", title?: string}",
-	"activity":     "{assignee_id?: uuid, body?: string, channel_provider?: string, direction?: \"inbound\"|\"outbound\", due_at?: rfc3339, duration_seconds?: integer, kind: \"email\"|\"call\"|\"meeting\"|\"note\"|\"task\"|\"message\", links?: [{entity_id: uuid, entity_type: \"person\"|\"organization\"|\"deal\"|\"lead\"|\"project\"}], meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, raw?: object, remind_at?: rfc3339, source?: string, source_id?: string, source_system?: string, subject?: string}",
-	"project":      "{description?: string, name: string, organization_id: uuid, owner_id?: uuid, source?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
-	"relationship": "{counterparty_org_id?: uuid, counterparty_person_id?: uuid, deal_id?: uuid, ended_at?: YYYY-MM-DD, is_current_primary?: boolean, kind: \"employment\"|\"deal_stakeholder\"|\"project_stakeholder\"|\"partner_of\"|\"referred_by\"|\"co_sell_with\"|\"works_with\", organization_id?: uuid, person_id?: uuid, project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD}",
+	"company":      "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, owner_id?: uuid, parent_company_id?: uuid, size_band?: \"1-10\"|\"11-50\"|\"51-200\"|\"201-500\"|\"501-1000\"|\"1001-5000\"|\"5000+\", source?: string}",
+	"deal":         "{amount_minor?: integer, company_id?: uuid, currency?: string, expected_close_date?: YYYY-MM-DD, name: string, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_company_id?: uuid, pipeline_id: uuid, project_id?: uuid, source?: string, stage_id: uuid}",
+	"lead":         "{candidate_company_key?: string, company_name?: string, email?: email, full_name?: string, linkedin_url?: string, owner_id?: uuid, project_id?: uuid, source?: string, source_id?: string, source_system?: string, status?: \"new\"|\"contacted\"|\"engaged\"|\"promoted\"|\"disqualified\", title?: string}",
+	"activity":     "{assignee_id?: uuid, body?: string, channel_provider?: string, direction?: \"inbound\"|\"outbound\", due_at?: rfc3339, duration_seconds?: integer, kind: \"email\"|\"call\"|\"meeting\"|\"note\"|\"task\"|\"message\", links?: [{entity_id: uuid, entity_type: \"person\"|\"company\"|\"deal\"|\"lead\"|\"project\"}], meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, raw?: object, remind_at?: rfc3339, source?: string, source_id?: string, source_system?: string, subject?: string}",
+	"project":      "{company_id: uuid, description?: string, name: string, owner_id?: uuid, source?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
+	"relationship": "{company_id?: uuid, counterparty_company_id?: uuid, counterparty_person_id?: uuid, deal_id?: uuid, ended_at?: YYYY-MM-DD, is_current_primary?: boolean, kind: \"employment\"|\"deal_stakeholder\"|\"project_stakeholder\"|\"partner_of\"|\"referred_by\"|\"co_sell_with\"|\"works_with\", person_id?: uuid, project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD}",
 }
 
 var updateRecordShapes = map[string]string{
 	"person":       "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \"work\"|\"personal\"|\"other\", is_primary?: boolean, position?: integer}], first_name?: string, full_name?: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \"work\"|\"mobile\"|\"home\"|\"other\", position?: integer}], social?: object, title?: string, visibility?: \"workspace\"|\"owner\"}",
-	"organization": "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name?: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, lifecycle?: \"unknown\"|\"target\"|\"prospect\"|\"opportunity\"|\"customer\"|\"former_customer\"|\"disqualified\", linkedin_url?: string, owner_id?: uuid, parent_org_id?: uuid, relationship_types?: [\"customer\"|\"partner\"|\"supplier\"|\"investor\"|\"portfolio_company\"|\"competitor\"|\"other\"], size_band?: \"1-10\"|\"11-50\"|\"51-200\"|\"201-500\"|\"501-1000\"|\"1001-5000\"|\"5000+\"}",
-	"deal":         "{amount_minor?: integer, currency?: string, expected_close_date?: YYYY-MM-DD, forecast_category?: \"commit\"|\"best_case\"|\"pipeline\"|\"omitted\", fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, organization_id?: uuid, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_org_id?: uuid, project_id?: uuid, status?: \"open\"|\"won\"|\"lost\", wait_until?: YYYY-MM-DD}",
-	"lead":         "{candidate_org_key?: string, company_name?: string, email?: email, full_name?: string, owner_id?: uuid, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \"new\"|\"contacted\"|\"engaged\", title?: string}",
+	"company":      "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name?: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, lifecycle?: \"unknown\"|\"target\"|\"prospect\"|\"opportunity\"|\"customer\"|\"former_customer\"|\"disqualified\", linkedin_url?: string, owner_id?: uuid, parent_company_id?: uuid, relationship_types?: [\"customer\"|\"partner\"|\"supplier\"|\"investor\"|\"portfolio_company\"|\"competitor\"|\"other\"], size_band?: \"1-10\"|\"11-50\"|\"51-200\"|\"201-500\"|\"501-1000\"|\"1001-5000\"|\"5000+\"}",
+	"deal":         "{amount_minor?: integer, company_id?: uuid, currency?: string, expected_close_date?: YYYY-MM-DD, forecast_category?: \"commit\"|\"best_case\"|\"pipeline\"|\"omitted\", fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_company_id?: uuid, project_id?: uuid, status?: \"open\"|\"won\"|\"lost\", wait_until?: YYYY-MM-DD}",
+	"lead":         "{candidate_company_key?: string, company_name?: string, email?: email, full_name?: string, owner_id?: uuid, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \"new\"|\"contacted\"|\"engaged\", title?: string}",
 	"activity":     "{assignee_id?: uuid, body?: string, due_at?: rfc3339, is_done?: boolean, meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, remind_at?: rfc3339, subject?: string}",
 	"project":      "{description?: string, ended_at?: YYYY-MM-DD, name?: string, owner_id?: uuid, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
 	"relationship": "{ended_at?: YYYY-MM-DD, is_current_primary?: boolean, role?: string, started_at?: YYYY-MM-DD}",
@@ -31,7 +31,7 @@ var updateRecordShapes = map[string]string{
 
 const activityKindEnum = `["email","call","meeting","note","task","message"]`
 
-const activityLinkEntityTypeEnum = `["person","organization","deal","lead","project"]`
+const activityLinkEntityTypeEnum = `["person","company","deal","lead","project"]`
 
 // listRecordFilters is the CONTRACT half of what list_records may be asked to
 // filter by, per record_type: each list operation's OWN declared query
@@ -43,14 +43,14 @@ const activityLinkEntityTypeEnum = `["person","organization","deal","lead","proj
 // TestOnlyAFilterBothTheContractAndAStoreCarryIsPublished holds that.
 var listRecordFilters = map[string][]listFilter{
 	"person": {
-		{Name: "organization_id", Type: "string"},
+		{Name: "company_id", Type: "string"},
 		{Name: "owner_id", Type: "string"},
 		{Name: "owner_team_id", Type: "string"},
 		{Name: "tag_id", Type: "array"},
 		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
 		{Name: "unassigned", Type: "boolean"},
 	},
-	"organization": {
+	"company": {
 		{Name: "domain", Type: "string"},
 		{Name: "industry", Type: "string"},
 		{Name: "lifecycle", Type: "string", Enum: []string{"unknown", "target", "prospect", "opportunity", "customer", "former_customer", "disqualified"}},
@@ -63,11 +63,11 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "unassigned", Type: "boolean"},
 	},
 	"deal": {
+		{Name: "company_id", Type: "string"},
 		{Name: "forecast_category", Type: "string", Enum: []string{"commit", "best_case", "pipeline", "omitted"}},
-		{Name: "organization_id", Type: "string"},
 		{Name: "owner_id", Type: "string"},
 		{Name: "partner_attribution", Type: "string", Enum: []string{"sourced", "influenced"}},
-		{Name: "partner_org_id", Type: "string"},
+		{Name: "partner_company_id", Type: "string"},
 		{Name: "partner_sourced", Type: "boolean"},
 		{Name: "pipeline_id", Type: "string"},
 		{Name: "project_id", Type: "string"},
@@ -87,8 +87,8 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "unassigned", Type: "boolean"},
 	},
 	"project": {
+		{Name: "company_id", Type: "string"},
 		{Name: "key", Type: "string"},
-		{Name: "organization_id", Type: "string"},
 		{Name: "owner_id", Type: "string"},
 		{Name: "phase", Type: "string", Enum: []string{"initiative", "pursuing", "delivering", "closed"}},
 	},

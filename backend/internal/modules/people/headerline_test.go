@@ -28,8 +28,8 @@ func TestAHeaderLineIsABoundedPrefixOfWhatItRenders(t *testing.T) {
 		},
 		{
 			name:  "exactly at the bound is untouched",
-			value: strings.Repeat("a", orgDescriptionMax),
-			want:  strings.Repeat("a", orgDescriptionMax),
+			value: strings.Repeat("a", companyDescriptionMax),
+			want:  strings.Repeat("a", companyDescriptionMax),
 			why:   "the CHECK admits this length, so cutting it would shorten a value the column holds",
 		},
 		{
@@ -45,16 +45,16 @@ func TestAHeaderLineIsABoundedPrefixOfWhatItRenders(t *testing.T) {
 			// No boundary to cut at. A bounded value beats an empty one, and
 			// this is the case a word-boundary rule has to answer rather than
 			// fall through.
-			value: strings.Repeat("z", orgDescriptionMax+50),
-			want:  strings.Repeat("z", orgDescriptionMax),
+			value: strings.Repeat("z", companyDescriptionMax+50),
+			want:  strings.Repeat("z", companyDescriptionMax),
 			why:   "with no boundary to find, the hard cut is the only bounded answer",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := headerLine(tc.value)
-			if len([]rune(got)) > orgDescriptionMax {
+			if len([]rune(got)) > companyDescriptionMax {
 				t.Fatalf("the line is %d characters, over the column's %d — the write the column would "+
-					"refuse is exactly what this exists to prevent", len([]rune(got)), orgDescriptionMax)
+					"refuse is exactly what this exists to prevent", len([]rune(got)), companyDescriptionMax)
 			}
 			if got == "" && tc.value != "" {
 				t.Fatalf("a non-empty value rendered to nothing (%s)", tc.why)
@@ -77,7 +77,7 @@ func TestAHeaderLineIsABoundedPrefixOfWhatItRenders(t *testing.T) {
 // text the column accepts and split a character in half — a header rendering
 // as a replacement glyph, from a field a human wrote correctly.
 func TestAHeaderLineCountsCharactersNotBytes(t *testing.T) {
-	value := strings.Repeat("ü", orgDescriptionMax)
+	value := strings.Repeat("ü", companyDescriptionMax)
 
 	got := headerLine(value)
 

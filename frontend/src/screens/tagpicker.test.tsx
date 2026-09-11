@@ -15,7 +15,7 @@ import { AddTagDialog } from "./tagpicker";
 // a CUT list. A missing word then reads as a word the workspace does not have,
 // and the reader asks an admin to coin the duplicate this dialog prevents.
 
-const ORG = "01a06151-0000-7000-8000-000000000001";
+const COMPANY = "01a06151-0000-7000-8000-000000000001";
 
 function mount(truncated: boolean) {
   installFetchStub({
@@ -28,8 +28,8 @@ function mount(truncated: boolean) {
   render(
     <StoryProviders>
       <AddTagDialog
-        entityType="organization"
-        entityID={ORG}
+        entityType="company"
+        entityID={COMPANY}
         current={[]}
         onClose={() => {}}
       />

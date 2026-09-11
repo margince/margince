@@ -133,7 +133,7 @@ func (w *csvWriters) ReconcileIdentities(context.Context) error { return nil }
 // would report work that never happened, which is the reason this method existed
 // at all before there was an edge to write.
 func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
-	if a.FromType == migration.ObjectPerson && a.ToType == migration.AssocTargetOrganizationName {
+	if a.FromType == migration.ObjectPerson && a.ToType == migration.AssocTargetCompanyName {
 		return w.linkEmployer(ctx, a)
 	}
 	return migration.AssocResult{
@@ -235,8 +235,8 @@ func (w *csvWriters) create(ctx context.Context, object string, row migration.Ro
 	switch object {
 	case migration.ObjectLead:
 		return w.createLead(ctx, row)
-	case migration.ObjectOrganization:
-		return w.createOrganization(ctx, row)
+	case migration.ObjectCompany:
+		return w.createCompany(ctx, row)
 	case migration.ObjectPerson:
 		return w.createPerson(ctx, row)
 	default:
@@ -290,12 +290,12 @@ func (w *csvWriters) read(ctx context.Context, id ids.UUID) ([]byte, error) {
 			return nil, err
 		}
 		return encodeRecord(lead)
-	case migration.ObjectOrganization:
-		org, err := w.people.GetOrganization(ctx, ids.From[ids.OrganizationKind](id), storekit.LiveOnly)
+	case migration.ObjectCompany:
+		company, err := w.people.GetCompany(ctx, ids.From[ids.CompanyKind](id), storekit.LiveOnly)
 		if err != nil {
 			return nil, err
 		}
-		return encodeRecord(org)
+		return encodeRecord(company)
 	case migration.ObjectPerson:
 		person, err := w.people.GetPerson(ctx, ids.From[ids.PersonKind](id), storekit.LiveOnly)
 		if err != nil {
@@ -309,7 +309,7 @@ func (w *csvWriters) read(ctx context.Context, id ids.UUID) ([]byte, error) {
 
 // encodeRecord renders one stored record as JSON. Generic so no wire type
 // is widened to an empty interface on the way through.
-func encodeRecord[T crmcontracts.Lead | crmcontracts.Organization | crmcontracts.Person](record T) ([]byte, error) {
+func encodeRecord[T crmcontracts.Lead | crmcontracts.Company | crmcontracts.Person](record T) ([]byte, error) {
 	encoded, err := json.Marshal(record)
 	if err != nil {
 		return nil, fmt.Errorf("import: reading the stored record: %w", err)
@@ -318,7 +318,7 @@ func encodeRecord[T crmcontracts.Lead | crmcontracts.Organization | crmcontracts
 }
 
 // apply writes the changed fields. `current` is the stored record's JSON, which
-// the organization and person paths need because an address patch is
+// the company and person paths need because an address patch is
 // all-or-nothing: the store assigns all six address columns whenever an Address
 // is given, so a file carrying only a City would blank the street, postal code
 // and country a human entered. The mapped components are merged onto what is
@@ -336,8 +336,8 @@ func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]
 	case migration.ObjectLead:
 		_, err := w.people.UpdateLead(ctx, ids.From[ids.LeadKind](id), leadUpdateFrom(changed))
 		return err
-	case migration.ObjectOrganization:
-		in := organizationUpdateFrom(changed)
+	case migration.ObjectCompany:
+		in := companyUpdateFrom(changed)
 		merged, given, err := addressMergedOnto(current, in.Address)
 		if err != nil {
 			return err
@@ -347,14 +347,14 @@ func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]
 		}
 		// The same rule for domains, which the store also replaces wholesale: a
 		// file naming one must not archive the others.
-		mergedDomains, hasDomain, err := domainsMergedOnto(current, orgDomainsFrom(changed))
+		mergedDomains, hasDomain, err := domainsMergedOnto(current, companyDomainsFrom(changed))
 		if err != nil {
 			return err
 		}
 		if hasDomain {
 			in.Domains = &mergedDomains
 		}
-		_, err = w.people.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](id), in)
+		_, err = w.people.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
 		return err
 	case migration.ObjectPerson:
 		in := personUpdateFrom(changed)
@@ -410,17 +410,22 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migrati
 	return migration.EnsureResult{Created: true}, nil
 }
 
-func (w *csvWriters) createOrganization(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
-	in := organizationCreateFrom(textFields(row.Fields), w.provenanceOf(row.ExternalID))
+// different input builder, a different store call, a different emptiness to
+// refuse and a different sentence to refuse it with. Folding them together
+// would mean a generic seam that exists to satisfy a linter and nothing else.
+//
+//nolint:dupl // createPerson has the same SHAPE and not the same job: a
+func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
+	in := companyCreateFrom(textFields(row.Fields), w.provenanceOf(row.ExternalID))
 	if in.DisplayName == "" {
 		return migration.EnsureResult{Skipped: true, SkipReason: "the mapped display_name is empty, so the row names no company"}, nil
 	}
 	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
-		org, err := w.people.CreateOrganizationTx(ctx, tx, in)
+		company, err := w.people.CreateCompanyTx(ctx, tx, in)
 		if err != nil {
-			return ids.UUID{}, fmt.Errorf("import: creating organization %s: %w", row.ExternalID, err)
+			return ids.UUID{}, fmt.Errorf("import: creating company %s: %w", row.ExternalID, err)
 		}
-		return ids.UUID(org.Id), nil
+		return ids.UUID(company.Id), nil
 	})
 	var dup *people.DuplicateDomainError
 	if errors.As(err, &dup) {

@@ -455,16 +455,16 @@ func wireSections(in []Section) []crmcontracts.MeetingBriefSection {
 	return out
 }
 
-func wireSentences(in []Sentence) []crmcontracts.OrganizationBriefSentence {
-	out := make([]crmcontracts.OrganizationBriefSentence, 0, len(in))
+func wireSentences(in []Sentence) []crmcontracts.CompanyBriefSentence {
+	out := make([]crmcontracts.CompanyBriefSentence, 0, len(in))
 	for _, sentence := range in {
 		evidence, ok := wireEvidence(sentence.Evidence)
 		if !ok {
 			continue
 		}
-		wired := crmcontracts.OrganizationBriefSentence{Text: sentence.Text, Evidence: evidence}
+		wired := crmcontracts.CompanyBriefSentence{Text: sentence.Text, Evidence: evidence}
 		if sentence.Nature != "" {
-			nature := crmcontracts.OrganizationBriefSentenceNature(sentence.Nature)
+			nature := crmcontracts.CompanyBriefSentenceNature(sentence.Nature)
 			wired.Nature = &nature
 		}
 		out = append(out, wired)
@@ -475,19 +475,19 @@ func wireSentences(in []Sentence) []crmcontracts.OrganizationBriefSentence {
 // wireEvidence parses one sentence's citations, refusing the whole set when any
 // of them is not an id. An uncited sentence is refused for the same reason: it
 // is a claim with nothing behind it.
-func wireEvidence(cited []Evidence) ([]crmcontracts.OrganizationBriefEvidence, bool) {
+func wireEvidence(cited []Evidence) ([]crmcontracts.CompanyBriefEvidence, bool) {
 	if len(cited) == 0 {
 		return nil, false
 	}
-	out := make([]crmcontracts.OrganizationBriefEvidence, 0, len(cited))
+	out := make([]crmcontracts.CompanyBriefEvidence, 0, len(cited))
 	for _, one := range cited {
 		parsed, err := ids.Parse(one.EntityID)
 		if err != nil {
 			return nil, false
 		}
-		out = append(out, crmcontracts.OrganizationBriefEvidence{
+		out = append(out, crmcontracts.CompanyBriefEvidence{
 			EntityId:   openapi_types.UUID(parsed),
-			EntityType: crmcontracts.OrganizationBriefEvidenceEntityType(one.EntityType),
+			EntityType: crmcontracts.CompanyBriefEvidenceEntityType(one.EntityType),
 		})
 	}
 	return out, true

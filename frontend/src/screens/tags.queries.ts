@@ -13,7 +13,7 @@ export type RecordTag = components["schemas"]["RecordTag"];
 export type Tag = components["schemas"]["Tag"];
 
 /** The record types the tags panel serves. */
-export type TaggableType = "person" | "organization" | "deal";
+export type TaggableType = "person" | "company" | "deal";
 
 /**
  * The tags on one record, and whether the vocabulary was withheld.

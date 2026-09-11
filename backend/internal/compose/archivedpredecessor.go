@@ -3,8 +3,8 @@
 
 package compose
 
-// An installation that archived a predecessor organization is carrying that
-// organization's rows, and since ADR-0091 §8 phase D nothing can tell them from
+// An installation that archived a predecessor company is carrying that
+// company's rows, and since ADR-0091 §8 phase D nothing can tell them from
 // its own.
 //
 // This is stated at boot because it CANNOT be detected any other way. While the
@@ -32,7 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-// WarnOnArchivedPredecessor says, once per boot, what an archived organization
+// WarnOnArchivedPredecessor says, once per boot, what an archived company
 // left behind in this installation.
 func WarnOnArchivedPredecessor(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger) error {
 	var archived int
@@ -40,15 +40,15 @@ func WarnOnArchivedPredecessor(ctx context.Context, pool *pgxpool.Pool, log *slo
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM workspace WHERE archived_at IS NOT NULL`).Scan(&archived)
 	}); err != nil {
-		return fmt.Errorf("compose: checking for an archived predecessor organization: %w", err)
+		return fmt.Errorf("compose: checking for an archived predecessor company: %w", err)
 	}
 	if archived == 0 {
 		return nil
 	}
-	log.Warn("this installation carries an archived organization's rows, and they are no longer distinguishable from its own",
-		"archived_organizations", archived,
+	log.Warn("this installation carries an archived company's rows, and they are no longer distinguishable from its own",
+		"archived_companies", archived,
 		"what_merged", "login credentials, sessions and RBAC grants — not only records",
-		"what_to_check", "the roster and every role assignment: a seat from the archived organization "+
+		"what_to_check", "the roster and every role assignment: a seat from the archived company "+
 			"authenticates here and holds whatever role it held there",
 		"why_now", "ADR-0091 §8 phase D removed the tenant column, so no query can separate the two")
 	return nil

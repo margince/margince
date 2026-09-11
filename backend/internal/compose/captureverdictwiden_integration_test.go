@@ -57,11 +57,11 @@ func TestARealPersonVerdictReopensTheMailThePostureHeld(t *testing.T) {
 }
 
 // status `real` is not the question. advisor, role_mailbox and
-// organization_sender all settle `real`, and none of them is a person whose
+// company_sender all settle `real`, and none of them is a person whose
 // mail a posture should stop holding — an advisor's most of all, since that
 // record is deliberately kept to its owner.
 func TestAVerdictThatIsRealButNotAPersonPublishesNothing(t *testing.T) {
-	for _, kind := range []string{capture.KindAdvisor, capture.KindRoleMailbox, capture.KindOrganizationSender} {
+	for _, kind := range []string{capture.KindAdvisor, capture.KindRoleMailbox, capture.KindCompanySender} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
 			sender := fmt.Sprintf("%s@kanzlei.example", kind)
@@ -217,7 +217,7 @@ func TestMailCapturedBeforeReasonsWereRecordedStaysHeld(t *testing.T) {
 // verdict just landed, so the kind filter has to hold there on its own — this is
 // the only place a non-person `real` verdict can reach the release at all.
 func TestTheReconcilingPassLeavesARealButNonPersonSenderHeld(t *testing.T) {
-	for _, kind := range []string{capture.KindAdvisor, capture.KindRoleMailbox, capture.KindOrganizationSender} {
+	for _, kind := range []string{capture.KindAdvisor, capture.KindRoleMailbox, capture.KindCompanySender} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
 			sender := fmt.Sprintf("%s@kanzlei.example", kind)

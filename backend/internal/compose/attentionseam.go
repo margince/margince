@@ -88,8 +88,8 @@ var linkPriority = map[crmcontracts.ActivityLinkEntityType]int{
 	flipObjectLead: 1,
 	flipObjectDeal: 2,
 	crmcontracts.ActivityLinkEntityTypeProject: 3,
-	flipObjectPerson:       4,
-	flipObjectOrganization: 5,
+	flipObjectPerson:  4,
+	flipObjectCompany: 5,
 }
 
 // primaryLink picks the one record a task row points at.

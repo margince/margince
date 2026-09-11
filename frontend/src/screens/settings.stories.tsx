@@ -22,7 +22,7 @@ import {
 // fetch stub those cards read through, so the render is deterministic and
 // network-free — the same fixture shapes the settings.test.tsx cases use.
 //
-// An organization entry is only reachable when the principal holds what its
+// A company entry is only reachable when the principal holds what its
 // cards ask for, and SettingsScreen falls back to Account for anything else. So
 // a story about such an entry has to name its grants: `me({...})` builds the
 // /me body that opens the entry the story is capturing.
@@ -71,7 +71,7 @@ const tools = () =>
         name: "search_records",
         title: "Search records",
         description:
-          'Find people, organizations, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
+          'Find people, companies, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
         required_scope: "read",
         tier: "auto_execute",
         egress: false,
@@ -158,9 +158,9 @@ const auditLog = () =>
         id: "a5",
         occurred_at: "2026-07-10T06:00:00Z",
         actor_type: "agent",
-        actor_id: "agent:org_name_promotion",
+        actor_id: "agent:company_name_promotion",
         action: "update",
-        entity_type: "organization",
+        entity_type: "company",
         entity_id: "o-1",
       },
       {

@@ -73,6 +73,12 @@
         "read": true,
         "update": true
       },
+      "company": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -218,12 +224,6 @@
         "update": true
       },
       "offer_template": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "organization": {
         "create": true,
         "delete": true,
         "read": true,
@@ -426,6 +426,12 @@
         "read": false,
         "update": false
       },
+      "company": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -571,12 +577,6 @@
         "update": true
       },
       "offer_template": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "organization": {
         "create": true,
         "delete": true,
         "read": true,
@@ -779,6 +779,12 @@
         "read": false,
         "update": false
       },
+      "company": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -924,12 +930,6 @@
         "update": true
       },
       "offer_template": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "organization": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1132,6 +1132,12 @@
         "read": false,
         "update": false
       },
+      "company": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -1277,12 +1283,6 @@
         "update": true
       },
       "offer_template": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "organization": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1485,6 +1485,12 @@
         "read": false,
         "update": false
       },
+      "company": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -1630,12 +1636,6 @@
         "update": false
       },
       "offer_template": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
-      "organization": {
         "create": false,
         "delete": false,
         "read": true,
@@ -1838,6 +1838,12 @@
         "read": false,
         "update": false
       },
+      "company": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -1983,12 +1989,6 @@
         "update": true
       },
       "offer_template": {
-        "create": true,
-        "delete": false,
-        "read": true,
-        "update": true
-      },
-      "organization": {
         "create": true,
         "delete": false,
         "read": true,

@@ -28,17 +28,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
 )
 
-// seedDealFixtures plants a pipeline, one open stage, an organization
+// seedDealFixtures plants a pipeline, one open stage, a company
 // and n open deals owned by the given user (nil = ownerless).
 func (e *SearchEnv) seedDealFixtures(t *testing.T, n int, owner *ids.UUID) {
 	t.Helper()
 	pipelineID := e.SeedID(t, `INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, 'Sales', true, 0)`)
 	stageID := e.SeedID(t, `INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability) VALUES ($1, $2, 'Qualify', 0, 'open', 10)`, pipelineID)
-	orgID := e.SeedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Report Org', 'manual', 'human:x')`)
+	companyID := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Report Company', 'manual', 'human:x')`)
 	for i := 0; i < n; i++ {
-		e.SeedID(t, fmt.Sprintf(`INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, owner_id, amount_minor, currency, source, captured_by)
+		e.SeedID(t, fmt.Sprintf(`INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, owner_id, amount_minor, currency, source, captured_by)
 			VALUES ($1, 'Deal %d', $2, $3, $4, $5, 100000, 'EUR', 'manual', 'human:x')`, i),
-			pipelineID, stageID, orgID, owner)
+			pipelineID, stageID, companyID, owner)
 	}
 }
 
@@ -115,11 +115,11 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Reports E2E", "rep@fable.test", "Admin")
 
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{"display_name": "Acme"}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create org → %d", status)
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Acme"}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
 	var pipelines struct {
 		Data []struct {
@@ -146,7 +146,7 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 			"name": fmt.Sprintf("Acme Deal %d", i), "pipeline_id": pipelines.Data[0].ID,
-			"stage_id": stageID, "organization_id": org.ID,
+			"stage_id": stageID, "company_id": company.ID,
 		}, nil, nil); status != http.StatusCreated {
 			t.Fatalf("create deal → %d", status)
 		}
@@ -163,7 +163,7 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 	if result.Report != "open-deals-per-company" || len(result.Rows) != 1 {
 		t.Fatalf("report result: %+v", result)
 	}
-	if fmt.Sprint(result.Rows[0]["open_deals"]) != "2" || result.Rows[0]["organization_id"] != org.ID {
+	if fmt.Sprint(result.Rows[0]["open_deals"]) != "2" || result.Rows[0]["company_id"] != company.ID {
 		t.Fatalf("aggregate row wrong: %+v", result.Rows[0])
 	}
 
@@ -240,10 +240,10 @@ func TestAssembleContextFixedDepthWalk(t *testing.T) {
 	if len(sections["related_people"]) != 1 || sections["related_people"][0].Ref.ID != personID {
 		t.Fatalf("hop-2 people wrong: %+v", sections["related_people"])
 	}
-	if len(sections["related_organizations"]) != 0 {
-		// The org is linked to the deal via FK, not via activity_link —
+	if len(sections["related_companies"]) != 0 {
+		// The company is linked to the deal via FK, not via activity_link —
 		// the fixed-depth walk only follows conversation links.
-		t.Logf("note: org appears only when linked through an activity: %+v", sections["related_organizations"])
+		t.Logf("note: company appears only when linked through an activity: %+v", sections["related_companies"])
 	}
 
 	// An anchor outside the caller's row scope assembles nothing. A deal is

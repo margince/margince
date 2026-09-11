@@ -219,7 +219,7 @@ Nine workflows sit beside the gate, deliberately outside it:
   below, and this lane surrendered its `github-release` job to it.
   It used to run on **every push to `main`**: about 400 runs a week, ~10
   runner-minutes each on arm64, three jobs apiece drawn from the same
-  20-concurrent org ceiling the PR gates queue in — a full-stack merge already
+  20-concurrent company ceiling the PR gates queue in — a full-stack merge already
   schedules 28 jobs against it. Releasing per commit spent that budget on
   versions nobody asked for, which the epoch-pinned `1970.*` scheme says out
   loud: the repository is under heavy development and has no real releases yet.

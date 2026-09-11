@@ -168,7 +168,7 @@ func TestEveryAnswerableFieldCompilesToAnExpression(t *testing.T) {
 // hand one workspace's private column to the next caller.
 func TestTheStorageFilterRemovesNamesAndNeverAddsThem(t *testing.T) {
 	resolver := NewVocabularyResolver().WithColumnReader(stubColumns{tables: map[string][]StoredColumn{
-		"deal": columnsOf("id:uuid", "name", "status", "organization_id:uuid", "cf_another_workspaces_column"),
+		"deal": columnsOf("id:uuid", "name", "status", "company_id:uuid", "cf_another_workspaces_column"),
 	}})
 	vocab, err := resolver.Resolve(readerFor(entityDeal), entityDeal)
 	if err != nil {
@@ -228,21 +228,21 @@ func TestTheStorageFilterOnlyEverNarrows(t *testing.T) {
 // answer.
 func TestAnInverseRelationIsFilteredByTheReferringTablesSchema(t *testing.T) {
 	schema := map[string][]StoredColumn{
-		"organization": columnsOf("id:uuid", "display_name"),
-		"deal":         columnsOf("id:uuid", "name", "organization_id:uuid"),
-		"project":      columnsOf("id:uuid", "name"), // no organization_id: no edge back
+		"company": columnsOf("id:uuid", "display_name"),
+		"deal":    columnsOf("id:uuid", "name", "company_id:uuid"),
+		"project": columnsOf("id:uuid", "name"), // no company_id: no edge back
 	}
 	resolver := NewVocabularyResolver().WithColumnReader(stubColumns{tables: schema})
-	vocab, err := resolver.Resolve(readerFor(entityOrganization, entityDeal, entityProject), entityOrganization)
+	vocab, err := resolver.Resolve(readerFor(entityCompany, entityDeal, entityProject), entityCompany)
 	if err != nil {
 		t.Fatal(err)
 	}
-	target, ok := vocab.Target(entityOrganization)
+	target, ok := vocab.Target(entityCompany)
 	if !ok {
-		t.Fatal("organization absent from its own vocabulary")
+		t.Fatal("company absent from its own vocabulary")
 	}
 	if _, ok := target.Relation("deals"); !ok {
-		t.Error("deal.organization_id is a column and declares no inverse hop")
+		t.Error("deal.company_id is a column and declares no inverse hop")
 	}
 	if _, ok := target.Relation("projects"); ok {
 		t.Error("an inverse hop is published from a column the referring table does not hold")
@@ -255,12 +255,12 @@ func TestAnInverseRelationIsFilteredByTheReferringTablesSchema(t *testing.T) {
 // catalog for no new answer.
 func TestTheSchemaIsReadAtMostOncePerTablePerResolve(t *testing.T) {
 	reader := &countingColumns{tables: map[string][]StoredColumn{
-		"organization": columnsOf("id:uuid", "display_name"),
-		"deal":         columnsOf("id:uuid", "name", "organization_id:uuid", "project_id:uuid"),
-		"project":      columnsOf("id:uuid", "name", "organization_id:uuid"),
+		"company": columnsOf("id:uuid", "display_name"),
+		"deal":    columnsOf("id:uuid", "name", "company_id:uuid", "project_id:uuid"),
+		"project": columnsOf("id:uuid", "name", "company_id:uuid"),
 	}}
 	resolver := NewVocabularyResolver().WithColumnReader(reader)
-	if _, err := resolver.Resolve(readerFor(entityOrganization, entityDeal, entityProject)); err != nil {
+	if _, err := resolver.Resolve(readerFor(entityCompany, entityDeal, entityProject)); err != nil {
 		t.Fatal(err)
 	}
 	for table, reads := range reader.perTable {
@@ -281,7 +281,7 @@ func TestARelationIsDerivedOnlyFromAReferenceTheTableHolds(t *testing.T) {
 	resolver := NewVocabularyResolver().WithColumnReader(stubColumns{tables: map[string][]StoredColumn{
 		"deal": columnsOf("id:uuid", "name", "project_id:uuid"),
 	}})
-	vocab, err := resolver.Resolve(readerFor(entityDeal, entityOrganization, entityProject), entityDeal)
+	vocab, err := resolver.Resolve(readerFor(entityDeal, entityCompany, entityProject), entityDeal)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,8 +289,8 @@ func TestARelationIsDerivedOnlyFromAReferenceTheTableHolds(t *testing.T) {
 	if _, ok := target.Relation(entityProject); !ok {
 		t.Error("project_id is a column and declares no hop")
 	}
-	if _, ok := target.Relation(entityOrganization); ok {
-		t.Error("organization_id is not a column on this table and still declares a hop")
+	if _, ok := target.Relation(entityCompany); ok {
+		t.Error("company_id is not a column on this table and still declares a hop")
 	}
 }
 
@@ -401,10 +401,10 @@ func TestThePublishedDocumentCarriesTheFilteredVocabulary(t *testing.T) {
 // hide it behind a vocabulary that merely looks narrower than it should.
 func TestAnUnqualifiedInverseReferenceFailsLoudlyRatherThanNarrowing(t *testing.T) {
 	schema := newSchemaReads(stubColumns{tables: map[string][]StoredColumn{
-		"deal": columnsOf("id:uuid", "organization_id:uuid"),
+		"deal": columnsOf("id:uuid", "company_id:uuid"),
 	}})
-	_, err := storedInverseRelations(context.Background(), schema, entityOrganization,
-		[]Relation{{Name: "deals", Target: entityDeal, Via: "organization_id"}})
+	_, err := storedInverseRelations(context.Background(), schema, entityCompany,
+		[]Relation{{Name: "deals", Target: entityDeal, Via: "company_id"}})
 	if err == nil {
 		t.Fatal("an unqualified inverse reference was silently dropped")
 	}

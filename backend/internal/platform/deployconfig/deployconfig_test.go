@@ -54,7 +54,7 @@ func TestParseAcceptsTheFullDocumentedShape(t *testing.T) {
 		t.Fatalf("Parse: %v", err)
 	}
 	if cfg.Workspace.Name != "Gradion" || cfg.BootstrapAdmin.Email != "lars@example.com" {
-		t.Fatalf("parsed organization/admin = %+v / %+v", cfg.Workspace, cfg.BootstrapAdmin)
+		t.Fatalf("parsed company/admin = %+v / %+v", cfg.Workspace, cfg.BootstrapAdmin)
 	}
 	if cfg.Seeds.Pipeline.Name != "Sales" || len(cfg.Seeds.Pipeline.Stages) != 2 {
 		t.Fatalf("parsed pipeline seed = %+v", cfg.Seeds.Pipeline)

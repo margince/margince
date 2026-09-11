@@ -17,7 +17,7 @@ const hits = () =>
         trust_tier: "authoritative",
       },
       {
-        type: "organization",
+        type: "company",
         id: "o1",
         title: "Acme GmbH",
         snippet: "…Acme…",
@@ -101,7 +101,7 @@ export const EveryKind: Story = {
         jsonResponse({
           data: [
             { type: "person", id: "p1", title: "Dana Buyer", score: 0.91 },
-            { type: "organization", id: "o1", title: "Acme GmbH", score: 0.88 },
+            { type: "company", id: "o1", title: "Acme GmbH", score: 0.88 },
             {
               type: "deal",
               id: "d1",
@@ -213,7 +213,7 @@ export const EveryKindGerman: Story = {
         jsonResponse({
           data: [
             { type: "person", id: "p1", title: "Dana Buyer", score: 0.91 },
-            { type: "organization", id: "o1", title: "Acme GmbH", score: 0.88 },
+            { type: "company", id: "o1", title: "Acme GmbH", score: 0.88 },
             {
               type: "product",
               id: "pr1",

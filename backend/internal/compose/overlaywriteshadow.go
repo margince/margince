@@ -6,7 +6,7 @@ package compose
 // The overlay-mode human write surface (design.md §4.5, the write-back half
 // of "Overlay does not fork the data API"): Server shadows the contract
 // update/archive ops for the write verbs overlay.SupportsWrite reports true
-// — update on all five mirror entity types, archive on person/organization/
+// — update on all five mirror entity types, archive on person/company/
 // deal — routing them through the SAME Dispatcher the MCP/agent seam
 // consumers ride, and delegating to the native module handler otherwise.
 // The overlaywrite.go guard already refuses every write the provider cannot
@@ -171,7 +171,7 @@ func archivePrecondition(w http.ResponseWriter, r *http.Request) (*int64, bool) 
 // overlay mode, otherwise a dispatched seam Archive answered with the
 // archived row's last-known state — the contract's own archive response
 // shape (200 with the full entity body; architecture/11 §8 rules out a bare
-// 204 for a domain row, and every native ArchivePerson/ArchiveOrganization/
+// 204 for a domain row, and every native ArchivePerson/ArchiveCompany/
 // ArchiveDeal handler answers exactly that). The mirror row is purged by the
 // archive itself (provider_writes.go's Archive calls PurgeRecord), so
 // unlike overlayUpdate there is no read-BACK to ride: the record is read
@@ -277,18 +277,18 @@ func (s Server) ArchivePerson(w http.ResponseWriter, r *http.Request, id crmcont
 		})
 }
 
-// UpdateOrganization shadows the organization update.
-func (s Server) UpdateOrganization(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.UpdateOrganizationParams) {
-	overlayUpdate[crmcontracts.UpdateOrganizationRequest](s, w, r, datasource.EntityOrganization, id,
-		func() { s.peopleHandlers.UpdateOrganization(w, r, id, params) }, overlayWireOrganization)
+// UpdateCompany shadows the company update.
+func (s Server) UpdateCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.UpdateCompanyParams) {
+	overlayUpdate[crmcontracts.UpdateCompanyRequest](s, w, r, datasource.EntityCompany, id,
+		func() { s.peopleHandlers.UpdateCompany(w, r, id, params) }, overlayWireCompany)
 }
 
-// ArchiveOrganization shadows the organization archive.
-func (s Server) ArchiveOrganization(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ArchiveOrganizationParams) {
-	overlayArchive(s, w, r, datasource.EntityOrganization, id,
-		func() { s.peopleHandlers.ArchiveOrganization(w, r, id, params) }, archiveWire[crmcontracts.Organization]{
-			assemble:     overlayWireOrganization,
-			markArchived: func(o *crmcontracts.Organization, at time.Time) { o.ArchivedAt = &at },
+// ArchiveCompany shadows the company archive.
+func (s Server) ArchiveCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ArchiveCompanyParams) {
+	overlayArchive(s, w, r, datasource.EntityCompany, id,
+		func() { s.peopleHandlers.ArchiveCompany(w, r, id, params) }, archiveWire[crmcontracts.Company]{
+			assemble:     overlayWireCompany,
+			markArchived: func(o *crmcontracts.Company, at time.Time) { o.ArchivedAt = &at },
 		})
 }
 

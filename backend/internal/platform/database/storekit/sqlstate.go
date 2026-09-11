@@ -81,8 +81,8 @@ func ForeignKeyViolation(err error) (constraint string, ok bool) {
 //
 // It reads the column off the constraint name by removing the TABLE name
 // Postgres reports alongside it — exactly, not by splitting on underscores.
-// Both halves contain them, so `organization_parent_org_id_fkey` splits as
-// `organization` + `parent_org_id` and no guess at the boundary gets that
+// Both halves contain them, so `company_parent_company_id_fkey` splits as
+// `company` + `parent_company_id` and no guess at the boundary gets that
 // right. A hand-named constraint yields nothing rather than a wrong name.
 func ForeignKeyColumn(err error) (column string, ok bool) {
 	var pgErr *pgconn.PgError

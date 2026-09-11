@@ -94,7 +94,7 @@ func TestOnlyAMicrosoftAppCarriesADirectoryAndNeverAnAlias(t *testing.T) {
 		"the common alias": {
 			microsoftVendor, ConnectorApp{ClientID: entraID, ClientSecretRef: ref, Tenant: "common"}, false,
 		},
-		"the organizations alias, however spelled": {
+		"the companies alias, however spelled": {
 			microsoftVendor, ConnectorApp{ClientID: entraID, ClientSecretRef: ref, Tenant: "Organizations"}, false,
 		},
 		"the consumers alias": {

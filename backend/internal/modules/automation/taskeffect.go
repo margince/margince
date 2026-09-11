@@ -99,7 +99,7 @@ func ownedTaskEffect(
 // recordOwner reads who answers for the record that fired, or nil.
 //
 // One shape for every record type the task-minting handlers fire on: deal,
-// lead, person and organization all spell their owner `owner_id`, so one decode
+// lead, person and company all spell their owner `owner_id`, so one decode
 // answers all four and a per-type switch would be four spellings of one fact.
 func recordOwner(ctx context.Context, ex Executors, ev workflow.Event) (*ids.UUID, error) {
 	rec, err := ex.Provider.Read(ctx, ev.Entity)

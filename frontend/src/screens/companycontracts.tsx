@@ -89,7 +89,9 @@ function contractsState(
   return "ready";
 }
 
-export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
+export function CompanyContractsCard({
+  companyId,
+}: Readonly<{ companyId: string }>) {
   const t = useT();
   // `useCan` for the READ — the grant alone decides what may be shown. The
   // three below gate MUTATING controls, so they take the seat as well: the
@@ -120,12 +122,12 @@ export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
   const [formOpen, setFormOpen] = useState(false);
 
   const query = useQuery({
-    queryKey: ["orgContracts", orgId, activeOnly],
+    queryKey: ["companyContracts", companyId, activeOnly],
     enabled: mayRead,
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/contracts", {
+      const { data, error } = await api.GET("/companies/{id}/contracts", {
         params: {
-          path: { id: orgId },
+          path: { id: companyId },
           query: activeOnly ? { under_contract_only: true } : {},
         },
       });
@@ -151,7 +153,7 @@ export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
           account with no agreements — the account the add button most exists
           for. */}
       <ContractForm
-        orgId={orgId}
+        companyId={companyId}
         contract={editing}
         open={formOpen}
         onClose={() => {
@@ -205,7 +207,7 @@ export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
               <ContractRow
                 key={contract.id}
                 contract={contract}
-                orgId={orgId}
+                companyId={companyId}
                 mayWrite={mayEdit}
                 mayArchive={mayArchive}
                 mayRenew={mayRenew}
@@ -234,14 +236,14 @@ export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
 
 function ContractRow({
   contract,
-  orgId,
+  companyId,
   mayWrite,
   mayArchive,
   mayRenew,
   onEdit,
 }: Readonly<{
   contract: Contract;
-  orgId: string;
+  companyId: string;
   mayWrite: boolean;
   mayArchive: boolean;
   mayRenew: boolean;
@@ -282,8 +284,10 @@ function ContractRow({
     },
     onSuccess: () => {
       setAsking(false);
-      queryClient.invalidateQueries({ queryKey: ["orgContracts", orgId] });
-      queryClient.invalidateQueries({ queryKey: ["organization360", orgId] });
+      queryClient.invalidateQueries({
+        queryKey: ["companyContracts", companyId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["company360", companyId] });
     },
   });
 
@@ -309,11 +313,11 @@ function ContractRow({
           )}
           <ContractTerm contract={contract} />
           <ContractTermState contract={contract} />
-          {/* A bare EntityRef here would read as an org name or a person —
+          {/* A bare EntityRef here would read as a company name or a person —
               the other siblings on this line are all self-identifying by
               format (a mono number, a date range, a state pill), and a deal's
               name is not. Same {label}{" "}<EntityRef/> shape deals.tsx uses
-              for its own second, non-obvious reference (partner_org_id). */}
+              for its own second, non-obvious reference (partner_company_id). */}
           {contract.deal_id && (
             <span className="t-caption">
               {t("contracts.deal")}{" "}
@@ -323,7 +327,7 @@ function ContractRow({
         </span>
         {/* The paper sits under the agreement's own line: a file is about the
             agreement, not about any one of the facts beside it. */}
-        <ContractPaper contractId={contract.id} orgId={orgId} />
+        <ContractPaper contractId={contract.id} companyId={companyId} />
       </div>
       <div className="rec-end">
         {/* The figure and the basis it is stated on, stacked: the amount is
@@ -432,11 +436,11 @@ function ContractRow({
  */
 function ContractPaper({
   contractId,
-  orgId,
-}: Readonly<{ contractId: string; orgId: string }>) {
+  companyId,
+}: Readonly<{ contractId: string; companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const query = useContractPaper(orgId, contractId);
+  const query = useContractPaper(companyId, contractId);
 
   // A failed read says nothing here. The row's own commercial facts are
   // already on screen and are what the reader came for; an error chip next to

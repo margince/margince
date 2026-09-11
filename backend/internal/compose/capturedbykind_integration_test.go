@@ -97,23 +97,23 @@ func TestCapturedByKindIsRefusedOnlyAfterAuthorization(t *testing.T) {
 	e := integration.Setup(t)
 	store := people.NewStore(e.DB())
 
-	// A rep may read people but NOT organizations, so the organization list is
+	// A rep may read people but NOT companies, so the company list is
 	// the natural unauthorized caller here.
 	bogus := "not-a-kind"
-	_, _, err := store.ListOrganizations(e.As(e.Rep1, nil, integration.RepPerms),
-		people.ListOrganizationsInput{CapturedByKind: &bogus})
+	_, _, err := store.ListCompanies(e.As(e.Rep1, nil, integration.RepPerms),
+		people.ListCompaniesInput{CapturedByKind: &bogus})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("ListOrganizations err = %v, want the permission denial — the enum check must not answer before authorization", err)
+		t.Fatalf("ListCompanies err = %v, want the permission denial — the enum check must not answer before authorization", err)
 	}
 
 	// With the read granted, the same value is refused on its own merits.
-	_, _, err = store.ListOrganizations(e.As(e.Rep1, nil, integration.AdminPerms),
-		people.ListOrganizationsInput{CapturedByKind: &bogus})
+	_, _, err = store.ListCompanies(e.As(e.Rep1, nil, integration.AdminPerms),
+		people.ListCompaniesInput{CapturedByKind: &bogus})
 	if err == nil {
 		t.Fatal("an unknown provenance kind was accepted once the caller could read")
 	}
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("ListOrganizations err = %v, want the validation refusal for an authorized caller", err)
+		t.Fatalf("ListCompanies err = %v, want the validation refusal for an authorized caller", err)
 	}
 }
 
@@ -148,15 +148,15 @@ func TestCapturedByKindNarrowsRowScopeAndNeverWidensIt(t *testing.T) {
 	}
 }
 
-// seatConnectorOrg plants one organization the Gmail CONNECTOR created — the
+// seatConnectorCompany plants one company the Gmail CONNECTOR created — the
 // only creator these cases need, because the whole point is that an AI wrote
 // into a record it did not create.
-func seatConnectorOrg(t *testing.T, e *integration.Env, name, nameSource string) ids.UUID {
+func seatConnectorCompany(t *testing.T, e *integration.Env, name, nameSource string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO organization (id, owner_id, display_name, name_source, source, captured_by)
+			INSERT INTO company (id, owner_id, display_name, name_source, source, captured_by)
 			VALUES ($1, $2, $3, $4, 'test', 'connector:gmail')`, id, e.Rep1, name, nameSource)
 		return err
 	}); err != nil {
@@ -175,7 +175,7 @@ func agentCtx(e *integration.Env) context.Context {
 }
 
 // The case a record-level provenance filter gets wrong, and the reason
-// ai_written exists. Gmail capture mints the organization, so captured_by says
+// ai_written exists. Gmail capture mints the company, so captured_by says
 // `connector:gmail` — and then the AI writes into it. Asking "who created it"
 // answers `connector` and hides exactly the record somebody needs to check.
 //
@@ -186,20 +186,20 @@ func TestAiWrittenFindsRecordsTheConnectorMadeAndTheAiFilled(t *testing.T) {
 	adminCtx := e.As(e.Rep1, nil, integration.AdminPerms)
 	store := people.NewStore(e.DB())
 
-	filled := seatConnectorOrg(t, e, "Acme Filled", "domain")
+	filled := seatConnectorCompany(t, e, "Acme Filled", "domain")
 	industry := "Robotics"
-	if _, err := store.UpdateOrganization(agentCtx(e), ids.From[ids.OrganizationKind](filled),
-		people.UpdateOrganizationInput{Industry: &industry}); err != nil {
+	if _, err := store.UpdateCompany(agentCtx(e), ids.From[ids.CompanyKind](filled),
+		people.UpdateCompanyInput{Industry: &industry}); err != nil {
 		t.Fatalf("agent enrichment write: %v", err)
 	}
 	// Connector-made, connector-named, no AI ever near it.
-	seatConnectorOrg(t, e, "Gamma Untouched", "domain")
+	seatConnectorCompany(t, e, "Gamma Untouched", "domain")
 
 	names := func(ai *bool) []string {
 		t.Helper()
-		got, _, err := store.ListOrganizations(adminCtx, people.ListOrganizationsInput{AiWritten: ai})
+		got, _, err := store.ListCompanies(adminCtx, people.ListCompaniesInput{AiWritten: ai})
 		if err != nil {
-			t.Fatalf("ListOrganizations: %v", err)
+			t.Fatalf("ListCompanies: %v", err)
 		}
 		out := make([]string, 0, len(got))
 		for _, o := range got {
@@ -218,7 +218,7 @@ func TestAiWrittenFindsRecordsTheConnectorMadeAndTheAiFilled(t *testing.T) {
 
 	yes, no := true, false
 	if touched := names(&yes); !has(touched, "Acme Filled") || has(touched, "Gamma Untouched") {
-		t.Fatalf("ai_written=true returned %v, want the connector-made org an AI wrote into and not the untouched one", touched)
+		t.Fatalf("ai_written=true returned %v, want the connector-made company an AI wrote into and not the untouched one", touched)
 	}
 	// The complement is the complement.
 	if untouched := names(&no); !has(untouched, "Gamma Untouched") || has(untouched, "Acme Filled") {
@@ -228,9 +228,9 @@ func TestAiWrittenFindsRecordsTheConnectorMadeAndTheAiFilled(t *testing.T) {
 	// And the record-level filter still answers its own, narrower question:
 	// neither of these was CREATED by an AI.
 	agent := "agent"
-	if got, _, err := store.ListOrganizations(adminCtx,
-		people.ListOrganizationsInput{CapturedByKind: &agent}); err != nil || len(got) != 0 {
-		t.Fatalf("captured_by_kind=agent returned %d orgs (err %v), want 0 — the connector created both", len(got), err)
+	if got, _, err := store.ListCompanies(adminCtx,
+		people.ListCompaniesInput{CapturedByKind: &agent}); err != nil || len(got) != 0 {
+		t.Fatalf("captured_by_kind=agent returned %d companies (err %v), want 0 — the connector created both", len(got), err)
 	}
 }
 
@@ -243,24 +243,24 @@ func TestAiWrittenFindsRecordsTheConnectorMadeAndTheAiFilled(t *testing.T) {
 func TestAiWrittenCatchesAnAgentUpdatingAnOrdinaryColumn(t *testing.T) {
 	e := integration.Setup(t)
 	store := people.NewStore(e.DB())
-	org := seatConnectorOrg(t, e, "Delta Industries", "domain")
+	company := seatConnectorCompany(t, e, "Delta Industries", "domain")
 
 	industry := "Robotics"
-	if _, err := store.UpdateOrganization(agentCtx(e), ids.From[ids.OrganizationKind](org),
-		people.UpdateOrganizationInput{Industry: &industry}); err != nil {
+	if _, err := store.UpdateCompany(agentCtx(e), ids.From[ids.CompanyKind](company),
+		people.UpdateCompanyInput{Industry: &industry}); err != nil {
 		t.Fatalf("agent update: %v", err)
 	}
 
 	yes := true
-	got, _, err := store.ListOrganizations(e.As(e.Rep1, nil, integration.AdminPerms),
-		people.ListOrganizationsInput{AiWritten: &yes})
+	got, _, err := store.ListCompanies(e.As(e.Rep1, nil, integration.AdminPerms),
+		people.ListCompaniesInput{AiWritten: &yes})
 	if err != nil {
-		t.Fatalf("ListOrganizations: %v", err)
+		t.Fatalf("ListCompanies: %v", err)
 	}
 	for _, o := range got {
 		if o.DisplayName == "Delta Industries" {
 			return
 		}
 	}
-	t.Fatalf("ai_written=true returned %v, missing the org whose ordinary column an agent updated — a review list that only knows about enrichment tables is not a review list", got)
+	t.Fatalf("ai_written=true returned %v, missing the company whose ordinary column an agent updated — a review list that only knows about enrichment tables is not a review list", got)
 }

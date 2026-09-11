@@ -234,7 +234,7 @@ func presentOwners(ctx context.Context, pool *pgxpool.Pool, owners map[string]id
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		// The filter's whole purpose is "users that actually exist here", and
 		// since ADR-0091 §8 phase D took the tenant column off app_user, existing
-		// IS the test — an installation serves one organization (ADR-0061), so an
+		// IS the test — an installation serves one company (ADR-0061), so an
 		// owner id the export carried either names somebody or names nobody, and
 		// an unfiltered one fails the owner FK on import.
 		rows, err := tx.Query(ctx,

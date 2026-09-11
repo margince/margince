@@ -3,7 +3,7 @@
 
 package people
 
-// The per-domain organization verdict (organization_domain_disposition): what a
+// The per-domain company verdict (company_domain_disposition): what a
 // mail domain is allowed to create, asked once and answered once.
 //
 // This file is the ledger — reads, the pending record the ensure ladder writes,
@@ -24,18 +24,18 @@ import (
 
 // The verdicts a domain can carry. Only Pending leaves the question open.
 const (
-	// DomainPending — asked, unanswered; no organization exists for it yet.
+	// DomainPending — asked, unanswered; no company exists for it yet.
 	DomainPending = "pending"
-	// DomainCompany — answered yes; the row names the organization it created.
+	// DomainCompany — answered yes; the row names the company it created.
 	DomainCompany = "company"
 	// DomainPersonal — a natural person's own domain. A person, never a company.
 	DomainPersonal = "personal"
 	// DomainProvider — a mailbox or hosting vendor. Its site belongs to a real
 	// company that is emphatically not the sender's employer (live.fr is
-	// Microsoft's), so it must not become their organization either.
+	// Microsoft's), so it must not become their company either.
 	DomainProvider = "provider"
 	// DomainNoSite — nothing identified a company. Whether one nonetheless
-	// EXISTS depends on which path got here, and organization_id says which: a
+	// EXISTS depends on which path got here, and company_id says which: a
 	// site that could not be read falls to the sender's name and creates the
 	// company when that name does not explain the domain, while a landing page
 	// the classifier read as parked creates nothing. Both are settled, and both
@@ -75,11 +75,11 @@ type DomainDisposition struct {
 	// OwnerID is the human whose connection surfaced the domain, and it is a
 	// POINTER because the row's own FK clears it when that human is deleted.
 	// Reading it as a zero uuid would forge an owner no app_user row matches,
-	// and the organization insert would fail the foreign key — leaving the
+	// and the company insert would fail the foreign key — leaving the
 	// verdict pending for ever on a domain whose question was answered.
-	OwnerID        *ids.UUID
-	OrganizationID *ids.OrganizationID
-	Attempts       int
+	OwnerID   *ids.UUID
+	CompanyID *ids.CompanyID
+	Attempts  int
 	// Admission is the standing decision about the domain, "" when none was
 	// made. It travels on the LOCKED read so a caller decides from the same row
 	// version it is about to write: a suppression committing between an
@@ -106,7 +106,7 @@ type DueDomain struct {
 // cannot be written while one is deciding what to do about it.
 //
 // What the lock does NOT do is order an ensure against a verdict completely: the
-// ensure runs its organization dedupe BEFORE it gets here, so a resolve that
+// ensure runs its company dedupe BEFORE it gets here, so a resolve that
 // commits in between plants its employment edges without seeing that ensure's
 // still-uncommitted person. That person ends up with the company but no edge
 // until their next message, which the ensure then attaches — self-healing, and
@@ -116,13 +116,13 @@ type DueDomain struct {
 func readDispositionTx(ctx context.Context, tx pgx.Tx, domain string) (DomainDisposition, bool, error) {
 	var d DomainDisposition
 	var source *string
-	var orgID *ids.UUID
+	var companyID *ids.UUID
 	err := tx.QueryRow(ctx, `
-		SELECT domain, status, source, owner_id, organization_id, attempts,
+		SELECT domain, status, source, owner_id, company_id, attempts,
 		       COALESCE(admission, '')
-		FROM organization_domain_disposition
+		FROM company_domain_disposition
 		WHERE domain = $1
-		FOR UPDATE`, domain).Scan(&d.Domain, &d.Status, &source, &d.OwnerID, &orgID, &d.Attempts, &d.Admission)
+		FOR UPDATE`, domain).Scan(&d.Domain, &d.Status, &source, &d.OwnerID, &companyID, &d.Attempts, &d.Admission)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return DomainDisposition{}, false, nil
 	}
@@ -132,15 +132,15 @@ func readDispositionTx(ctx context.Context, tx pgx.Tx, domain string) (DomainDis
 	if source != nil {
 		d.Source = *source
 	}
-	if orgID != nil {
-		typed := ids.From[ids.OrganizationKind](*orgID)
-		d.OrganizationID = &typed
+	if companyID != nil {
+		typed := ids.From[ids.CompanyKind](*companyID)
+		d.CompanyID = &typed
 	}
 	return d, true, nil
 }
 
 // recordPendingDispositionTx opens the question for a domain nothing is yet
-// known about: the person is created, the organization is not, and this row is
+// known about: the person is created, the company is not, and this row is
 // what the triage read will answer.
 //
 // Idempotent by construction — two senders arriving on the same new domain both
@@ -152,7 +152,7 @@ func readDispositionTx(ctx context.Context, tx pgx.Tx, domain string) (DomainDis
 // hundred companies on the backfill that produced one.
 func recordPendingDispositionTx(ctx context.Context, tx pgx.Tx, domain string, ownerID ids.UUID) (bool, error) {
 	tag, err := tx.Exec(ctx, `
-		INSERT INTO organization_domain_disposition (domain, status, owner_id)
+		INSERT INTO company_domain_disposition (domain, status, owner_id)
 		VALUES ($1, 'pending', $2)
 		ON CONFLICT (domain) DO NOTHING`,
 		domain, ownerID)
@@ -172,14 +172,14 @@ func (s *Store) ListDueDomains(ctx context.Context, limit int) ([]DueDomain, err
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT d.domain
-			FROM organization_domain_disposition d
+			FROM company_domain_disposition d
 			WHERE d.status = 'pending'
 			  -- A refused domain is not a question. Crawling one would find the
 			  -- vendor's real corporate site, answer "company", and create
 			  -- exactly the record the refusal exists to prevent.
 			  AND d.admission IS DISTINCT FROM 'suppressed'
 			  -- A domain nobody is accountable for may not mint rows, so it is
-			  -- not worth a crawl either (ResolveDomainTriage stamps the org's
+			  -- not worth a crawl either (ResolveDomainTriage stamps the company's
 			  -- owner from this column).
 			  AND d.owner_id IS NOT NULL
 			  AND d.next_attempt_at IS NOT NULL
@@ -231,7 +231,7 @@ func (s *Store) MarkTriageQueued(ctx context.Context, domain string) error {
 // trigger that enqueues the job and arms the cursor in one commit.
 func MarkTriageQueuedTx(ctx context.Context, tx pgx.Tx, domain string) error {
 	if _, err := tx.Exec(ctx, `
-		UPDATE organization_domain_disposition
+		UPDATE company_domain_disposition
 		   SET attempts = attempts + 1,
 		       last_attempt_at = now(),
 		       next_attempt_at = now() + $2::interval,
@@ -252,7 +252,7 @@ func (s *Store) ExhaustedDomains(ctx context.Context, limit int) ([]DueDomain, e
 	var out []DueDomain
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT domain FROM organization_domain_disposition
+			SELECT domain FROM company_domain_disposition
 			WHERE status = 'pending'
 			  AND admission IS DISTINCT FROM 'suppressed'
 			  AND owner_id IS NOT NULL

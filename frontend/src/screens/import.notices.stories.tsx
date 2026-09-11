@@ -23,7 +23,7 @@ type Story = StoryObj;
 
 const ERRORED = [
   {
-    object: "organization" as const,
+    object: "company" as const,
     id: "01a04298-2000-7000-8000-000000000001",
     reason: "A person still references this company.",
   },

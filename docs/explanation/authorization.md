@@ -34,7 +34,7 @@ RBAC**:
 | An **agent** | REST | `Authorization: Bearer mgp_…` (a passport) |
 | An **agent** | MCP (`/mcp`, Streamable HTTP) | `Authorization: Bearer mgp_…` — a passport minted directly, or one the OAuth handshake issued for exactly the scopes the human ticked on the consent screen |
 
-(No request names a tenant: one installation serves one organization, and the
+(No request names a tenant: one installation serves one company, and the
 admission middleware binds that singleton workspace itself before any handler runs.)
 
 **Calling `/v1` as a human from a shell.** `crm_session` is set `Secure`, so a
@@ -138,7 +138,7 @@ whether it arrives over MCP or REST.
 ## The structural backstop — one transaction seam and the app role's grants
 
 No table carries row-level security and no policy exists to read: an installation holds one
-organization (ADR-0061), so what a statement reaches is decided by the statement and by the role
+company (ADR-0061), so what a statement reaches is decided by the statement and by the role
 issuing it.
 
 - Module statements are reachable **only** through `database.WithWorkspaceTx`, which **fails closed
@@ -170,7 +170,7 @@ See [write-backbone.md](write-backbone.md) for the write path that rides inside 
 - **Anything that returns a record is a read** and carries the row-scope gate — including replay,
   conflict, and error paths. A 409 that echoes a hidden row's id is a leak.
 - **A foreign-key reference to a row-scoped record is also a read** (`auth.EnsureLinkTarget`): naming a
-  deal's organization or an activity's link target asserts the target exists, so it is gated like a
+  deal's company or an activity's link target asserts the target exists, so it is gated like a
   read of that target.
 - **Object denial answers 403** (`apperrors.ErrPermissionDenied`): your role cannot do this at all.
 - **A row-scope miss answers 404** (`apperrors.ErrNotFound`): a record you cannot see is

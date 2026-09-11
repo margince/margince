@@ -23,13 +23,13 @@ import { DetailsGrid } from "./companyraildetails";
 // an absence assertion phrased as a missing node would pass on markup that
 // shows the reader all six.
 
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 type ProfileField = components["schemas"]["CompanyProfileField"];
 
-// A COMPLETE Organization, not a cast one: a fixture asserted into the contract
+// A COMPLETE Company, not a cast one: a fixture asserted into the contract
 // type can drop a required field and still compile, so the test would go on
 // passing after the wire shape moved under it.
-const ORG: Organization = {
+const COMPANY: Company = {
   id: "o-1",
   // The server answers this per row; a fixture without it reads as NOT
   // writable, which is the correct fail-closed default and would strip the
@@ -49,7 +49,7 @@ const ORG: Organization = {
 // The same record with one address part filled — the state that keeps the
 // disclosure open. Typed, so a part name the wire stops carrying fails here
 // rather than quietly asserting on a field the grid no longer reads.
-const ORG_WITH_CITY: Organization = { ...ORG, address: { city: "Berlin" } };
+const COMPANY_WITH_CITY: Company = { ...COMPANY, address: { city: "Berlin" } };
 
 // The six part labels, in the order the grid draws them.
 const PART_LABELS = [
@@ -92,7 +92,7 @@ function stub(
         ifMatch: request.headers.get("If-Match"),
       });
       if (pathname.endsWith("/me")) {
-        return json(meFixture({ allow: { organization: ["read", "update"] } }));
+        return json(meFixture({ allow: { company: ["read", "update"] } }));
       }
       if (pathname.endsWith("/profile-fields")) {
         return json({ data: profileFields });
@@ -130,7 +130,7 @@ function json(body: unknown) {
 }
 
 // A sidecar claim as the wire carries it. Complete rather than cast, for the
-// same reason ORG is: a fixture missing a required field still compiles.
+// same reason COMPANY is: a fixture missing a required field still compiles.
 function profileField(
   field: ProfileField["field"],
   value: string,
@@ -148,14 +148,14 @@ function profileField(
   };
 }
 
-function renderGrid(organization: Organization) {
+function renderGrid(company: Company) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <DetailsGrid organization={organization} />
+        <DetailsGrid company={company} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -166,12 +166,12 @@ function renderGrid(organization: Organization) {
 // The industry row is the anchor because it sits outside the disclosure and
 // carries a value in every fixture here.
 async function renderSettledGrid(
-  organization: Organization,
+  company: Company,
   profileFields: readonly ProfileField[] = [],
   answers: { patch?: () => Response; vatCheck?: () => Response } = {},
 ) {
   const calls = stub(profileFields, answers);
-  renderGrid(organization);
+  renderGrid(company);
   await screen.findByRole("button", { name: "Change Industry" });
   return calls;
 }
@@ -182,7 +182,7 @@ async function renderSettledGrid(
 // field a person most often knows was the field they could never record.
 describe("the legal identity a person can state", () => {
   it("invites a VAT number and a registry address on a record carrying neither", async () => {
-    await renderSettledGrid(ORG);
+    await renderSettledGrid(COMPANY);
 
     // Visible, not merely present: these sit in the identity grid beside the
     // legal name, never inside the address disclosure, which is closed here.
@@ -198,12 +198,12 @@ describe("the legal identity a person can state", () => {
   // for the old surface too — what has to be held is that it renders HERE.
   it("carries the register's verdict beside the number it answers for", async () => {
     await renderSettledGrid(
-      ORG,
+      COMPANY,
       [profileField("register_vat", "DE811907980")],
       {
         vatCheck: () =>
           json({
-            organization_id: "o-1",
+            company_id: "o-1",
             vat_number: "DE811907980",
             status: "valid",
             checked_at: "2026-08-14T09:12:00Z",
@@ -218,8 +218,8 @@ describe("the legal identity a person can state", () => {
   });
 
   // The grant is held and the RECORD is not writable — the case the button's
-  // old gate could not see. POST /organizations/{id}/vat-check runs
-  // EnsureWritableLive on this organization, so a rep holding `organization:
+  // old gate could not see. POST /companies/{id}/vat-check runs
+  // EnsureWritableLive on this company, so a rep holding `company:
   // update` who does not own the account was offered a check that comes back
   // refused on click.
   //
@@ -234,13 +234,13 @@ describe("the legal identity a person can state", () => {
     stub([profileField("register_vat", "DE811907980")], {
       vatCheck: () =>
         json({
-          organization_id: "o-1",
+          company_id: "o-1",
           vat_number: "DE811907980",
           status: "valid",
           checked_at: "2026-08-14T09:12:00Z",
         }),
     });
-    renderGrid({ ...ORG, writable: false });
+    renderGrid({ ...COMPANY, writable: false });
 
     await user.click(
       await screen.findByRole("button", { name: "VAT ID: Valid" }),
@@ -270,9 +270,7 @@ describe("the legal identity a person can state", () => {
           return held;
         }
         if (url.pathname.endsWith("/me")) {
-          return json(
-            meFixture({ allow: { organization: ["read", "update"] } }),
-          );
+          return json(meFixture({ allow: { company: ["read", "update"] } }));
         }
         if (url.pathname.endsWith("/vat-check")) {
           return new Response(null, { status: 404 });
@@ -280,10 +278,10 @@ describe("the legal identity a person can state", () => {
         return json({});
       }),
     );
-    renderGrid(ORG);
+    renderGrid(COMPANY);
     await screen.findByRole("button", { name: "Change Industry" });
 
-    // The industry row edits (it reads the organization, which HAS answered);
+    // The industry row edits (it reads the company, which HAS answered);
     // the sidecar rows do not, because their own read has not.
     expect(
       screen.queryByRole("button", { name: "Change Register / VAT ID" }),
@@ -303,7 +301,7 @@ describe("the legal identity a person can state", () => {
     // mark whether or not the field guard exists. Waiting for the VAT mark to
     // appear is what makes the address's own absence a settled fact.
     await renderSettledGrid(
-      ORG,
+      COMPANY,
       [
         profileField("register_vat", "DE811907980"),
         profileField("registered_address", "Kaiserdamm 1, 14057 Berlin"),
@@ -311,7 +309,7 @@ describe("the legal identity a person can state", () => {
       {
         vatCheck: () =>
           json({
-            organization_id: "o-1",
+            company_id: "o-1",
             vat_number: "DE811907980",
             status: "valid",
             checked_at: "2026-08-14T09:12:00Z",
@@ -329,7 +327,7 @@ describe("the legal identity a person can state", () => {
   });
 
   it("reads back the values the crawl already found", async () => {
-    await renderSettledGrid(ORG, [
+    await renderSettledGrid(COMPANY, [
       profileField("register_vat", "DE811907980"),
       profileField("registered_address", "Kaiserdamm 1, 14057 Berlin"),
     ]);
@@ -341,7 +339,7 @@ describe("the legal identity a person can state", () => {
 
   it("states a typed VAT number through the profile-field correction", async () => {
     const user = userEvent.setup();
-    const calls = await renderSettledGrid(ORG);
+    const calls = await renderSettledGrid(COMPANY);
 
     await user.click(
       screen.getByRole("button", { name: "Change Register / VAT ID" }),
@@ -350,14 +348,14 @@ describe("the legal identity a person can state", () => {
     await user.keyboard("{Enter}");
 
     // The endpoint matters as much as the value: this is the write that queues
-    // the VAT consultation, and PATCH /organizations/{id} would not.
+    // the VAT consultation, and PATCH /companies/{id} would not.
     const written = await waitFor(() => {
       const call = calls.find((one) => one.method === "PATCH");
       expect(call).toBeDefined();
       return call;
     });
     expect(written?.pathname).toBe(
-      "/v1/organizations/o-1/profile-fields/register_vat",
+      "/v1/companies/o-1/profile-fields/register_vat",
     );
     expect(JSON.parse(written?.body ?? "{}")).toEqual({
       value: "DE811907980",
@@ -369,7 +367,7 @@ describe("the legal identity a person can state", () => {
 
   it("pins the row when correcting a value somebody already stated", async () => {
     const user = userEvent.setup();
-    const calls = await renderSettledGrid(ORG, [
+    const calls = await renderSettledGrid(COMPANY, [
       profileField("register_vat", "DE111111111"),
     ]);
     await screen.findByText("DE111111111");
@@ -398,7 +396,7 @@ describe("the legal identity a person can state", () => {
   it("shows the refusal when a stated value is cleared", async () => {
     const user = userEvent.setup();
     await renderSettledGrid(
-      ORG,
+      COMPANY,
       [profileField("register_vat", "DE811907980")],
       {
         patch: () =>
@@ -435,7 +433,7 @@ describe("the legal identity a person can state", () => {
 
 describe("the postal address, behind one line until it has something in it", () => {
   it("holds the six parts behind one line that invites the first of them", async () => {
-    await renderSettledGrid(ORG);
+    await renderSettledGrid(COMPANY);
 
     expect(screen.getByText("Add an address")).toBeVisible();
     expect(document.querySelector("details")?.open).toBe(false);
@@ -450,7 +448,7 @@ describe("the postal address, behind one line until it has something in it", () 
   });
 
   it("opens on a half-filled address and reads the part that is set", async () => {
-    await renderSettledGrid(ORG_WITH_CITY);
+    await renderSettledGrid(COMPANY_WITH_CITY);
 
     expect(document.querySelector("details")?.open).toBe(true);
     expect(screen.getByText("Address")).toBeVisible();

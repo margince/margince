@@ -226,7 +226,7 @@ func (s *Service) recordTeamChange(ctx context.Context, tx pgx.Tx, actor Identit
 //
 // The caller's own id comes from the principal rather than from an argument, so
 // this cannot be asked about two other people. That is the gate: the answer
-// discloses one edge of the organization chart, and the only edge a reader is
+// discloses one edge of the company chart, and the only edge a reader is
 // entitled to probe is one they are themselves an end of. A caller with no
 // human behind it is refused — an agent or a system pass has no teammates, and
 // answering "false" would read as a fact rather than as an absence.

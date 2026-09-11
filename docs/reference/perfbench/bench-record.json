@@ -22,7 +22,7 @@
     },
     {
       "id": "PERF-1",
-      "name": "record_open_organization",
+      "name": "record_open_company",
       "p50_ms": 2.822916,
       "p95_ms": 3.172375,
       "p99_ms": 3.313667,

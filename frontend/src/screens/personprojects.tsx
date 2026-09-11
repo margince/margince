@@ -24,7 +24,7 @@ import type { ProjectPhase } from "./projects.form";
 // one project row, which is what lets one section serve both.
 type PersonRole = components["schemas"]["SetProjectStakeholderRequest"]["role"];
 
-type LinkedProjectRow = components["schemas"]["Organization360Project"];
+type LinkedProjectRow = components["schemas"]["Company360Project"];
 
 // What a person can BE on a project — the delivery half of the contract's
 // stakeholder vocabulary, which is what this section is for. The reader picks;

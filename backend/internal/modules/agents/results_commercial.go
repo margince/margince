@@ -113,13 +113,13 @@ type PreparedHandoff struct {
 	Key         string   `json:"key,omitempty"`
 	Phase       string   `json:"phase"`
 	Description string   `json:"description,omitempty"`
-	// OrganizationID is the account the work is for. A project always has one,
+	// CompanyID is the account the work is for. A project always has one,
 	// but it is omitted when the caller may not read that company — a project
 	// is readable across the workspace while its anchor can still be an
 	// unpromoted capture, and naming the id anyway would disclose it. Reported
 	// as a gap so the answer says the account is withheld rather than leaving
 	// a reader to conclude the project has none.
-	OrganizationID *ids.UUID `json:"organization_id,omitempty"`
+	CompanyID *ids.UUID `json:"company_id,omitempty"`
 	// OwnerID and OwnerName are absent together for a project nobody owns,
 	// which is reported as a gap rather than left to be noticed. The name is
 	// here for the reason HandoffStakeholder's is: "who is receiving this

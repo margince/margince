@@ -30,7 +30,7 @@ function entry(over: Partial<CommissionEntry>): CommissionEntry {
   return {
     id: "c-1",
     deal_id: "d-1",
-    partner_org_id: "o-1",
+    partner_company_id: "o-1",
     status: "accrued",
     attribution_at_accrual: "sourced",
     margin_tier_at_accrual: "tier2_20",
@@ -60,7 +60,7 @@ function Panel({ entries }: Readonly<{ entries: CommissionEntry[] }>) {
   });
   return (
     <StoryProviders>
-      <PartnerCommissions organizationId="o-1" />
+      <PartnerCommissions companyId="o-1" />
     </StoryProviders>
   );
 }

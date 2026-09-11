@@ -215,8 +215,8 @@ describe("AiRoutingCard", () => {
   // An installation with no tiers used to get a sentence and nothing else: "a
   // deployment declares its first binding under seeds.ai_routing". True of a
   // deployment and false for everyone else — that seed is consumed once, at
-  // organization creation, so an installation that ALREADY EXISTS can never
-  // take one. The desktop bundles ship a database, so their organization was
+  // company creation, so an installation that ALREADY EXISTS can never
+  // take one. The desktop bundles ship a database, so their company was
   // created on the build machine, and their recipient reached this screen with
   // no way forward but curl or deleting the demo data they were given.
   it("offers a first binding from a keyed provider when nothing is bound", async () => {

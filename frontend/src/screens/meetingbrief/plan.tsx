@@ -16,7 +16,7 @@ import { SentenceList } from "../record360";
 
 type MeetingBrief = components["schemas"]["MeetingBrief"];
 type MeetingPlan = NonNullable<MeetingBrief["plan"]>;
-type BriefSentence = components["schemas"]["OrganizationBriefSentence"];
+type BriefSentence = components["schemas"]["CompanyBriefSentence"];
 
 type OpenRecord = (entityType: string, entityId: string) => void;
 

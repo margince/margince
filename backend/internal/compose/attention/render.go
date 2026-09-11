@@ -20,7 +20,7 @@ import (
 //
 // The rule every renderer here keeps: the title is what a person would say
 // happened, and the identifiers stay in `id` and `subject` where a client uses
-// them to navigate. A card that printed `organization_id` at a reader was
+// them to navigate. A card that printed `company_id` at a reader was
 // showing them the plumbing and calling it information.
 
 // actionOpen sends the reader to the record named in the item's `subject`, so
@@ -286,7 +286,7 @@ func stagedFacts(
 	// matching" (modules/capture/pending.go). A sender types it, so
 	// `Alice <alice@gmail.com>` would have read as a company we know.
 	//
-	// A real match needs a lookup against the organizations this workspace has,
+	// A real match needs a lookup against the companies this workspace has,
 	// which is a read this assembler does not make. Until it does, a contact
 	// question is either from a machine or is the honest remainder.
 	return facts, true
@@ -430,7 +430,7 @@ func subjectOf(entityType string, id ids.UUID) *crmcontracts.AttentionSubject {
 // pointed a reader at the wrong record would be worse than one that pointed
 // nowhere.
 var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
-	"organization": "organization",
+	subjectCompany: subjectCompany,
 	"person":       "person",
 	"deal":         "deal",
 	"lead":         "lead",
@@ -447,7 +447,7 @@ func openableSubject(subject *crmcontracts.AttentionSubject) bool {
 		return false
 	}
 	switch subject.Type {
-	case "organization", "person", "deal", "lead", "project":
+	case subjectCompany, subjectPerson, subjectDeal, "lead", "project":
 		return true
 	}
 	return false

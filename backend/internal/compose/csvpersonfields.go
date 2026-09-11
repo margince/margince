@@ -11,7 +11,7 @@ package compose
 // primary flag, its own position and its own uniqueness across the estate, so
 // the create path, the patch path and the diff each need a shape the flat helpers
 // next door do not have. Keeping that in one file is what stops the shape leaking
-// into the organization and lead paths, which do not want it.
+// into the company and lead paths, which do not want it.
 
 import (
 	"encoding/json"

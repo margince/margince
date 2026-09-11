@@ -199,27 +199,27 @@ func TestFieldHistoryActorAndFieldFilters(t *testing.T) {
 
 func TestFieldHistoryPaginationPreservesRowBoundaries(t *testing.T) {
 	e := Setup(t)
-	// SeedOrg's own create audit row (before=nil, after={display_name})
+	// SeedCompany's own create audit row (before=nil, after={display_name})
 	// is a real projected third row — create carries honest field images,
 	// so the action allowlist keeps it — so it plays the true oldest row
 	// (a one-field genesis) instead of fighting to exclude it. rOldest
 	// and rNewest are dated forward from it so ordering is unambiguous
 	// regardless of clock skew between the test process and Postgres.
-	orgID := e.SeedOrg(t, "Paging Org", nil)
+	companyID := e.SeedCompany(t, "Paging Company", nil)
 	older := time.Now().Add(1 * time.Hour).UTC().Truncate(time.Microsecond)
 	newer := time.Now().Add(2 * time.Hour).UTC().Truncate(time.Microsecond)
 
 	// rOldest is a two-field update: it must fill (and overflow) a
 	// limit=1 page whole, and — with the genesis row still following —
 	// must honestly report more, not falsely claim exhaustion.
-	rOldest := seedAuditDiffRow(t, e, "organization", orgID, "human",
+	rOldest := seedAuditDiffRow(t, e, "company", companyID, "human",
 		nil, map[string]any{"industry": "Tech", "name": "Acme"}, older)
-	rNewest := seedAuditDiffRow(t, e, "organization", orgID, "human",
+	rNewest := seedAuditDiffRow(t, e, "company", companyID, "human",
 		map[string]any{"phone": "1"}, map[string]any{"phone": "2"}, newer)
 
 	one := 1
 	page1, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "organization", EntityID: orgID, Limit: &one,
+		EntityType: "company", EntityID: companyID, Limit: &one,
 	})
 	if err != nil {
 		t.Fatalf("page1: %v", err)
@@ -232,7 +232,7 @@ func TestFieldHistoryPaginationPreservesRowBoundaries(t *testing.T) {
 	}
 
 	page2, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "organization", EntityID: orgID, Limit: &one, Cursor: &page1.NextCursor,
+		EntityType: "company", EntityID: companyID, Limit: &one, Cursor: &page1.NextCursor,
 	})
 	if err != nil {
 		t.Fatalf("page2: %v", err)
@@ -252,7 +252,7 @@ func TestFieldHistoryPaginationPreservesRowBoundaries(t *testing.T) {
 	// The genesis row is the true last row: a real page boundary with
 	// nothing behind it must report genuine exhaustion, empty cursor.
 	page3, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "organization", EntityID: orgID, Limit: &one, Cursor: &page2.NextCursor,
+		EntityType: "company", EntityID: companyID, Limit: &one, Cursor: &page2.NextCursor,
 	})
 	if err != nil {
 		t.Fatalf("page3: %v", err)
@@ -539,18 +539,18 @@ func TestEnrichmentWritesProjectAsRealColumnDiffs(t *testing.T) {
 	e := Setup(t)
 
 	// The apply resolves its target by the source URL's host, so it names the
-	// organization it touched rather than one seeded beside it.
-	org, err := e.People.ApplyColdStartProfile(e.Admin(), people.ApplyColdStartProfileInput{
+	// company it touched rather than one seeded beside it.
+	company, err := e.People.ApplyColdStartProfile(e.Admin(), people.ApplyColdStartProfileInput{
 		SourceURL: "https://scale.example/impressum",
 		Fields: []people.ColdStartFieldInput{
 			{Field: "legal_name", Value: "Scale Commerce GmbH", EvidenceSnippet: "Scale Commerce GmbH, Berlin", SourceURL: "https://scale.example/impressum", Confidence: 0.9},
 			// Column-backed through a column of a DIFFERENT name: an accepted
-			// offer_summary fills organization.description. It is here because
+			// offer_summary fills company.description. It is here because
 			// that pair is where the field-vs-column keying can part company.
 			{Field: "offer_summary", Value: "Managed hosting", EvidenceSnippet: "Managed hosting for e-commerce", SourceURL: "https://scale.example", Confidence: 0.8},
 			// Not column-backed at all: it lives only in
-			// organization_profile_field, so it must NOT appear as a change to
-			// the organization row.
+			// company_profile_field, so it must NOT appear as a change to
+			// the company row.
 			{Field: "icp", Value: "Mid-market retailers", EvidenceSnippet: "We serve mid-market retailers", SourceURL: "https://scale.example", Confidence: 0.7},
 		},
 	})
@@ -559,7 +559,7 @@ func TestEnrichmentWritesProjectAsRealColumnDiffs(t *testing.T) {
 	}
 
 	page, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "organization", EntityID: org.UUID,
+		EntityType: "company", EntityID: company.UUID,
 	})
 	if err != nil {
 		t.Fatalf("list: %v", err)
@@ -574,7 +574,7 @@ func TestEnrichmentWritesProjectAsRealColumnDiffs(t *testing.T) {
 		}
 	}
 	if seen["icp"] {
-		t.Error("a profile-field-only value appeared as an organization column change")
+		t.Error("a profile-field-only value appeared as a company column change")
 	}
 	// And the positive half: the column the apply actually filled is the one a
 	// reader now sees. Asserting only the absence of the pseudo-fields would
@@ -582,7 +582,7 @@ func TestEnrichmentWritesProjectAsRealColumnDiffs(t *testing.T) {
 	if !seen["legal_name"] {
 		t.Errorf("legal_name is missing from field history: %v — the apply wrote it, so the record's own change must be what shows", seen)
 	}
-	// offer_summary rides organization.description, and the images are keyed by
+	// offer_summary rides company.description, and the images are keyed by
 	// FIELD rather than by column on purpose: filed under the column, this
 	// change would reach the reader as `description`, a name the profile
 	// surface does not have — the same complaint registered_address/address_line1

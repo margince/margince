@@ -89,13 +89,13 @@ describe("EntityRef", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/organizations/o-1")) {
+        if (request.url.includes("/companies/o-1")) {
           return jsonResponse({ id: "o-1", display_name: "Brandt GmbH" });
         }
         return jsonResponse({}, 404);
       }),
     );
-    render(<EntityRef kind="organization" id="o-1" />);
+    render(<EntityRef kind="company" id="o-1" />);
 
     // The href IS the destination. Asserting it rather than a click's effect
     // is the stronger claim: it is also what a new tab, a bookmark and a
@@ -165,7 +165,7 @@ describe("EntityRef", () => {
       "fetch",
       vi.fn(async () => jsonResponse({ id: "o-nameless" })),
     );
-    render(<EntityRef kind="organization" id="o-nameless" />);
+    render(<EntityRef kind="company" id="o-nameless" />);
     await waitFor(() => expect(screen.getByText("o-nameless")).toBeTruthy());
     expect(screen.queryByRole("button", { name: "o-nameless" })).toBeNull();
   });
@@ -175,7 +175,7 @@ describe("EntityRef", () => {
       "fetch",
       vi.fn(async () => jsonResponse({ title: "Forbidden" }, 403)),
     );
-    render(<EntityRef kind="organization" id="o-403" />);
+    render(<EntityRef kind="company" id="o-403" />);
 
     expect(await screen.findByText("Name didn't load")).toBeTruthy();
     // Painting the id here would report the reference as settled: a reader
@@ -224,7 +224,7 @@ describe("EntityRef", () => {
           }),
       ),
     );
-    render(<EntityRef kind="organization" id="o-slow" />);
+    render(<EntityRef kind="company" id="o-slow" />);
 
     expect(await screen.findByText("Loading…")).toBeTruthy();
     expect(screen.queryByText("o-slow")).toBeNull();
@@ -380,13 +380,13 @@ describe("EntityRef", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/organizations/o-1")) {
+        if (request.url.includes("/companies/o-1")) {
           return jsonResponse({ id: "o-1", display_name: "Brandt GmbH" });
         }
         return jsonResponse({}, 404);
       }),
     );
-    render(<EntityRef kind="organization" id="o-1" name="   " />);
+    render(<EntityRef kind="company" id="o-1" name="   " />);
 
     // Whitespace is the caller saying it has nothing, exactly as an empty
     // string is. Taken at face value it becomes a link with no readable

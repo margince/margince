@@ -69,12 +69,12 @@ func TestAnEdgeReverseOvertakenInsideItsDecisionWindowRefuses(t *testing.T) {
 	ctx := e.Admin()
 
 	personID := e.SeedPerson(t, "Ada Overtaken", nil)
-	orgID := e.SeedOrg(t, "Overtaken GmbH", nil)
+	companyID := e.SeedCompany(t, "Overtaken GmbH", nil)
 	person := ids.From[ids.PersonKind](personID)
-	org := ids.From[ids.OrganizationKind](orgID)
+	company := ids.From[ids.CompanyKind](companyID)
 	held, changed := "cto", "coo"
 	edge, err := e.People.CreateRelationship(ctx, people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &person, OrganizationID: &org,
+		Kind: "employment", PersonID: &person, CompanyID: &company,
 		Role: &held, Source: "manual",
 	})
 	if err != nil {

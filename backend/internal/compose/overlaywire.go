@@ -4,7 +4,7 @@
 package compose
 
 // The mirror-record → typed-contract assembly (design.md §4.1/§4.6): the
-// ONE place an overlay datasource.Record becomes a Person/Organization/
+// ONE place an overlay datasource.Record becomes a Person/Company/
 // Deal/Lead/Activity wire struct for the human REST surface. Field-picking
 // out of the mirror's canonical jsonb payload lives in overlaywirefields.go;
 // this file is the struct-shaping on top of it. Every struct is stamped
@@ -12,7 +12,7 @@ package compose
 // mapper landed is dropped just because a typed slot doesn't exist for
 // it), and a timestamp is the incumbent's own wherever the mapping mirrors
 // one: every entity's updated_at is the incumbent's last-modified instant, and
-// a person's and an organization's created_at is the incumbent's create
+// a person's and a company's created_at is the incumbent's create
 // instant — each falling back to the mirror's own last-synced instant, the only
 // time the mirror can claim for itself, where the incumbent stamped none. A
 // deal's, a lead's and an activity's created_at is that fallback throughout,
@@ -125,7 +125,7 @@ func overlayWirePerson(ctx context.Context, rec datasource.Record) (crmcontracts
 	}, nil
 }
 
-// overlayWireOrganization assembles the contract Organization from a
+// overlayWireCompany assembles the contract Company from a
 // mirror record. size_band rides only when it lands on the contract's
 // own enum (the mapper's transform already targets those band labels);
 // an off-enum value stays in raw rather than shipping an invalid enum.
@@ -134,22 +134,22 @@ func overlayWirePerson(ctx context.Context, rec datasource.Record) (crmcontracts
 // themselves, carried across whole the way a person's emails and phones are —
 // the primary flag among them is the mapping's declaration, never this
 // reader's assumption.
-func overlayWireOrganization(ctx context.Context, rec datasource.Record) (crmcontracts.Organization, error) {
+func overlayWireCompany(ctx context.Context, rec datasource.Record) (crmcontracts.Company, error) {
 	fields, err := overlayRecordFields(rec)
 	if err != nil {
-		return crmcontracts.Organization{}, err
+		return crmcontracts.Company{}, err
 	}
 	syncedAt := rec.Freshness.LastSyncedAt
 	displayName := strings.TrimSpace(fieldString(fields, "display_name"))
 	if displayName == "" {
 		displayName = overlayUnnamed
 	}
-	orgID := openapi_types.UUID(rec.Ref.ID)
-	domains := overlayOrganizationDomains(orgID, fields)
-	mayEdit := overlay.Writable(ctx, datasource.EntityOrganization)
-	org := crmcontracts.Organization{
+	companyID := openapi_types.UUID(rec.Ref.ID)
+	domains := overlayCompanyDomains(companyID, fields)
+	mayEdit := overlay.Writable(ctx, datasource.EntityCompany)
+	company := crmcontracts.Company{
 		Writable:    &mayEdit,
-		Id:          orgID,
+		Id:          companyID,
 		Source:      overlaySource,
 		CapturedBy:  ptrString(overlayCapturedByValue),
 		DisplayName: displayName,
@@ -160,17 +160,17 @@ func overlayWireOrganization(ctx context.Context, rec datasource.Record) (crmcon
 		CreatedAt:   overlayTimeOr(fields, "created_at", syncedAt),
 		UpdatedAt:   overlayTimeOr(fields, overlayCanonicalLastModified, syncedAt),
 		Raw:         &fields,
-		// Stated rather than omitted: a mirror-backed organization is one of
+		// Stated rather than omitted: a mirror-backed company is one of
 		// the incumbent's accounts, and the installation's own company is a
 		// native row that is never among them. Leaving the field absent would
 		// make a client read "unknown" where the answer is known
 		// (ADR-0082/A127).
 		IsAnchor: ptrBool(false),
 	}
-	if band := crmcontracts.OrganizationSizeBand(fieldString(fields, "size_band")); band.Valid() {
-		org.SizeBand = &band
+	if band := crmcontracts.CompanySizeBand(fieldString(fields, "size_band")); band.Valid() {
+		company.SizeBand = &band
 	}
-	return org, nil
+	return company, nil
 }
 
 // overlaySyntheticID derives an id for a mirrored child row from its parent id,
@@ -377,7 +377,7 @@ func overlayWireTitle(et datasource.EntityType, fields map[string]any) string {
 			name = overlayPersonEmail(fields)
 		}
 		return name
-	case datasource.EntityOrganization:
+	case datasource.EntityCompany:
 		return strings.TrimSpace(fieldString(fields, "display_name"))
 	case datasource.EntityDeal:
 		return strings.TrimSpace(fieldString(fields, "name"))

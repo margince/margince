@@ -408,7 +408,7 @@ export const Default: Story = {
         jsonResponse({
           data: [
             { type: "deal", id: "d-9", title: "Acme renewal" },
-            { type: "organization", id: "o-2", title: "Acme GmbH" },
+            { type: "company", id: "o-2", title: "Acme GmbH" },
             { type: "person", id: "pp-1", title: "Jane Doe" },
           ],
           page: { has_more: false },

@@ -9,10 +9,10 @@ package people
 // a company a human has not confirmed into being — and the seed page's
 // declarations are in hand only while the crawl is, so a mark that is not
 // parked here is a mark nothing can resolve later. The dossier parks one per
-// SLOT, in the same pair of columns per slot the organization row carries
-// (orglogowrite.go), and the confirmation moves each onto the record
+// SLOT, in the same pair of columns per slot the company row carries
+// (companylogowrite.go), and the confirmation moves each onto the record
 // (bindSiteReadLogo). Both slots take one statement each, with the slot as a
-// bind parameter, for the reason the organization write gives: two spellings
+// bind parameter, for the reason the company write gives: two spellings
 // of one UPDATE agree right up until one of them is edited.
 
 import (
@@ -30,7 +30,7 @@ import (
 )
 
 // siteReadLogoWrite parks one slot's mark on a dossier the caller still holds.
-// The RETURNING is the pre-write key, exactly as orgLogoWrite's is: the
+// The RETURNING is the pre-write key, exactly as companyLogoWrite's is: the
 // sub-select reads the statement's own snapshot, so it names the object this
 // write supersedes rather than the one it just stored. The casts are what let
 // Postgres type the CASE arms from bound parameters.
@@ -41,7 +41,7 @@ const siteReadLogoWrite = `UPDATE site_read SET
 		logo_icon_origin     = CASE WHEN $5::boolean THEN logo_icon_origin ELSE $3::text END,
 		updated_at = now()
 	WHERE id = $1 AND status = 'running' AND started_at = $4
-	  AND organization_id IS NULL AND confirmed_at IS NULL
+	  AND company_id IS NULL AND confirmed_at IS NULL
 	RETURNING (SELECT CASE WHEN $5::boolean THEN sr.logo_object_key ELSE sr.logo_icon_object_key END
 	             FROM site_read sr WHERE sr.id = $1)`
 
@@ -49,16 +49,16 @@ const siteReadLogoWrite = `UPDATE site_read SET
 // aliases site_read as `sr` and binds the slot as $2.
 const siteReadLogoSlotKey = `CASE WHEN $2::boolean THEN sr.logo_object_key ELSE sr.logo_icon_object_key END`
 
-// logoUnwornByAnyOrganization is the safety proof every drop of a parked
+// logoUnwornByAnyCompany is the safety proof every drop of a parked
 // reference carries, in one spelling: the reference goes only while no
-// organization names the same key in EITHER of its slots, so an object a
+// company names the same key in EITHER of its slots, so an object a
 // company wears is never reported as collectable. The key is the whole scope
 // and it is enough: an object key carries its workspace prefix, so two tenants
 // cannot name the same object and a foreign record's bytes cannot be described
 // here at all. Said plainly here because no row-level policy says it a second
 // way. It reads the `sr` alias and the $2 slot its statements bind.
-const logoUnwornByAnyOrganization = `NOT EXISTS (
-		SELECT 1 FROM organization o
+const logoUnwornByAnyCompany = `NOT EXISTS (
+		SELECT 1 FROM company o
 		WHERE o.logo_object_key = ` + siteReadLogoSlotKey + `
 		   OR o.logo_icon_object_key = ` + siteReadLogoSlotKey + `)`
 
@@ -73,7 +73,7 @@ const siteReadLogoRelease = `UPDATE site_read sr SET
 		logo_icon_origin     = CASE WHEN $2::boolean THEN logo_icon_origin ELSE NULL END,
 		updated_at = now()
 	WHERE sr.id = $1 AND ` + siteReadLogoSlotKey + ` IS NOT NULL
-	  AND ` + logoUnwornByAnyOrganization
+	  AND ` + logoUnwornByAnyCompany
 
 // siteReadLogoReleased is the RETURNING every release ends with.
 const siteReadLogoReleased = ` RETURNING (SELECT CASE WHEN $2::boolean THEN parked.logo_object_key ELSE parked.logo_icon_object_key END
@@ -96,8 +96,8 @@ var logoSlots = []LogoSlot{LogoWide, LogoIcon}
 // The same gate GetCompanySiteRead holds: the reader of a dossier is the one
 // who may read the record it will become, or create it on the cold start.
 func (s *Store) SiteReadLogoKey(ctx context.Context, readID ids.UUID) (string, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
-		if createErr := auth.Require(ctx, "organization", principal.ActionCreate); createErr != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		if createErr := auth.Require(ctx, "company", principal.ActionCreate); createErr != nil {
 			return "", createErr
 		}
 	}
@@ -140,7 +140,7 @@ func (s *Store) SiteReadLogoKey(ctx context.Context, readID ids.UUID) (string, e
 // It reports whether the dossier took the reference and hands back the key the
 // slot named before, so the caller can reclaim bytes nothing references any
 // more. A refused park hands back none — the object stored for it is the
-// caller's to collect. Same contract as SetOrganizationLogo, for the same
+// caller's to collect. Same contract as SetCompanyLogo, for the same
 // reason: each attempt writes its own key, so two resolves of one read can never
 // write the same object.
 //

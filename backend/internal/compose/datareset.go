@@ -38,9 +38,9 @@ import (
 const objectWorkspace = "workspace"
 
 // errResetConfirmationMismatch means the caller's typed confirmation did not
-// match the workspace's organization name — the reset is refused before any
+// match the workspace's company name — the reset is refused before any
 // data is touched.
-var errResetConfirmationMismatch = errors.New("data reset: confirmation does not match the organization name")
+var errResetConfirmationMismatch = errors.New("data reset: confirmation does not match the company name")
 
 // resetDataResponse is the 200 body. The contract declares the shape inline
 // (no generated type), so it is spelled here — and
@@ -105,9 +105,9 @@ func (h dataResetHandlers) run(ctx context.Context, confirmation string) (resetC
 	// Read BEFORE anything is paused or purged: a typo must cost the
 	// installation nothing, and quiescing the job fleet is not nothing. The
 	// sweep re-checks inside its own transaction — one row read that closes
-	// the window where the organization is renamed in between.
+	// the window where the company is renamed in between.
 	if err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
-		return confirmResetOrgName(ctx, tx, confirmation)
+		return confirmResetCompanyName(ctx, tx, confirmation)
 	}); err != nil {
 		return resetCounts{}, err
 	}
@@ -203,17 +203,17 @@ func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clear
 	return counts, nil
 }
 
-// confirmResetOrgName refuses the reset unless confirmation is exactly the
-// organization's name.
-func confirmResetOrgName(ctx context.Context, tx pgx.Tx, confirmation string) error {
+// confirmResetCompanyName refuses the reset unless confirmation is exactly the
+// company's name.
+func confirmResetCompanyName(ctx context.Context, tx pgx.Tx, confirmation string) error {
 	// The SETTING, because that is the name the operator is reading off the
 	// screen when they type it — and, since the workspace row's copy was
 	// dropped, the only name there is.
-	orgName, err := identity.NameOf(ctx, tx)
+	companyName, err := identity.NameOf(ctx, tx)
 	if err != nil {
 		return err
 	}
-	if confirmation != orgName {
+	if confirmation != companyName {
 		return errResetConfirmationMismatch
 	}
 	return nil
@@ -226,7 +226,7 @@ func confirmResetOrgName(ctx context.Context, tx pgx.Tx, confirmation string) er
 // nothing staged to ship into streams that were just emptied (clearOutbox).
 func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, confirmation string, counts *resetCounts) error {
 	return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
-		if err := confirmResetOrgName(ctx, tx, confirmation); err != nil {
+		if err := confirmResetCompanyName(ctx, tx, confirmation); err != nil {
 			return err
 		}
 		tables, err := resetTargetTables(ctx, tx)
@@ -421,7 +421,7 @@ func (h dataResetHandlers) ResetData(w http.ResponseWriter, r *http.Request) {
 	counts, err := h.run(ctx, req.Confirmation)
 	if errors.Is(err, errResetConfirmationMismatch) {
 		httperr.Write(w, r, httperr.Validation("confirmation", "confirmation_mismatch",
-			"The typed confirmation does not match the organization name."))
+			"The typed confirmation does not match the company name."))
 		return
 	}
 	if err != nil {

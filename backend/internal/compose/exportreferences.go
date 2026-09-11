@@ -6,10 +6,10 @@ package compose
 // What an exported row may say about the records it POINTS AT.
 //
 // A row the caller may read is not a licence to read everything it names. An
-// organization can be capture-private to the colleague who captured it and a
+// company can be capture-private to the colleague who captured it and a
 // project keeps its own/team scope, so a deal — which every seat of the
 // workspace reads, because a deal is customer identity — carries references
-// its reader's own organization and project reads would refuse.
+// its reader's own company and project reads would refuse.
 //
 // Field masks do not answer this. maskedRowSelects applies the caller's ROLE
 // masks, which ask what this role may see of any row — never what THIS reader
@@ -39,26 +39,26 @@ type exportedReference struct {
 	column string
 	// target is the table the column references — what a visibility probe is
 	// asked about, and why two columns of one table can need different answers
-	// (a deal's partner and its customer are both organizations; its project
+	// (a deal's partner and its customer are both companies; its project
 	// is not).
 	target string
 }
 
 // The reference columns, prefixed for what they are.
 //
-// NOT report.go's colPartnerOrgID and friends, which carry the same words with
+// NOT report.go's colPartnerCompanyID and friends, which carry the same words with
 // a `t.` alias in front: those name a column inside one report's own SELECT,
 // and these name a column of a row the export hands back. Two vocabularies
 // that happen to share their spelling.
 const (
 	refColMergedInto        = "merged_into_id"
-	refColOrganization      = "organization_id"
-	refColPartnerOrg        = "partner_org_id"
+	refColCompany           = "company_id"
+	refColPartnerCompany    = "partner_company_id"
 	refColProject           = "project_id"
 	refColPromotedPerson    = "promoted_person_id"
 	refColQualifiedDeal     = "qualified_deal_id"
 	refColConvertedFromLead = "converted_from_lead_id"
-	refColParentOrg         = "parent_org_id"
+	refColParentCompany     = "parent_company_id"
 )
 
 // referencesByTable is every column an exported row carries that names a
@@ -76,8 +76,8 @@ const (
 // types or report dimensions that happen to share their spelling.
 var referencesByTable = map[string][]exportedReference{
 	tableDeal: {
-		{column: refColOrganization, target: tableOrganization},
-		{column: refColPartnerOrg, target: tableOrganization},
+		{column: refColCompany, target: tableCompany},
+		{column: refColPartnerCompany, target: tableCompany},
 		{column: refColProject, target: tableProject},
 	},
 	tableLead: {
@@ -86,16 +86,16 @@ var referencesByTable = map[string][]exportedReference{
 		{column: refColPromotedPerson, target: tablePerson},
 		{column: refColQualifiedDeal, target: tableDeal},
 	},
-	tableOrganization: {
-		{column: refColMergedInto, target: tableOrganization},
-		{column: refColParentOrg, target: tableOrganization},
+	tableCompany: {
+		{column: refColMergedInto, target: tableCompany},
+		{column: refColParentCompany, target: tableCompany},
 	},
 	tablePerson: {
 		{column: refColConvertedFromLead, target: tableLead},
 		{column: refColMergedInto, target: tablePerson},
 	},
 	tableProject: {
-		{column: refColOrganization, target: tableOrganization},
+		{column: refColCompany, target: tableCompany},
 	},
 }
 

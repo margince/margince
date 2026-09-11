@@ -4,10 +4,10 @@
 package compose
 
 // The domain-triage lane of the deep-read worker: decide whether a mail domain
-// deserves an organization, and create one only if it does.
+// deserves a company, and create one only if it does.
 //
 // It is the same worker, the same crawler and the same extraction spine as an
-// organization read — what differs is that it starts with no organization and
+// company read — what differs is that it starts with no company and
 // may finish without creating one. Two things happen here that happen nowhere
 // else: the seed page is classified BEFORE the crawl, so a personal or parked
 // domain costs one page instead of twelve; and when no site can be read at all,
@@ -41,7 +41,7 @@ func isSystemRead(requestedBy string) bool {
 	return isAutoEnrichRequest(requestedBy) || isDomainTriageRequest(requestedBy)
 }
 
-// runTriage answers one domain's organization question.
+// runTriage answers one domain's company question.
 //
 // The order is the cost order: the cheapest answer that can be trusted wins,
 // and only a domain that survives every cheap refusal pays for a full crawl.
@@ -175,7 +175,7 @@ func (w *siteDeepReadWorker) resolveUnreachable(ctx context.Context, args SiteDe
 			fmt.Errorf("site deep read %s: settling the unreadable domain %s: %w", args.SiteReadID, domain, err))
 	}
 	w.log.InfoContext(ctx, "domain triage settled without a site", "domain", domain,
-		"organization_created", res.OrgCreated, "employment_edges", res.EdgesPlanted, "why", warning)
+		"company_created", res.CompanyCreated, "employment_edges", res.EdgesPlanted, "why", warning)
 	return w.finishTriageRead(ctx, args, claim, status, warning, nil)
 }
 
@@ -189,7 +189,7 @@ type triagePayload struct {
 	People      []sitePerson
 	// Entities is the legal census the read gathered. It has to travel to the
 	// terminal write or the finish overwrites it with an empty list, and the
-	// dossier loses the very entity the organization was named after.
+	// dossier loses the very entity the company was named after.
 	Entities []people.SiteReadLegalEntity
 	Crawl    siteCrawl
 }
@@ -210,21 +210,21 @@ func (w *siteDeepReadWorker) settleTriage(ctx context.Context, args SiteDeepRead
 		return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: settling the verdict for %s: %w", args.SiteReadID, domain, err))
 	}
 	w.log.InfoContext(ctx, "domain triage settled", "domain", domain, "verdict", status,
-		"source", source, "organization_created", res.OrgCreated, "employment_edges", res.EdgesPlanted)
+		"source", source, "company_created", res.CompanyCreated, "employment_edges", res.EdgesPlanted)
 
-	if payload == nil || res.OrganizationID == nil {
+	if payload == nil || res.CompanyID == nil {
 		// Nothing was created, so there is nothing to stage people onto and no
 		// dossier to report against a company.
 		return w.finishTriageRead(ctx, args, claim, readStatus, warning, payload)
 	}
-	// Site people stage as leads onto the organization the verdict just made —
+	// Site people stage as leads onto the company the verdict just made —
 	// strangers stay staged (NEVER-8), exactly as on the auto-enrich lane.
 	// A claim shaped for the logo lane, naming the company the verdict just
 	// made — not this read's own claim, which the terminal write is reserved to.
-	logoClaim := people.SiteReadClaim{OrganizationID: &res.OrganizationID.UUID, SeedURL: payload.SeedURL}
+	logoClaim := people.SiteReadClaim{CompanyID: &res.CompanyID.UUID, SeedURL: payload.SeedURL}
 	// The logo, on the same terms as every other company (A55): a 🟢 display
 	// asset read off the seed page's own markup. Nothing else would ever give
-	// these organizations one — the auto-enrich sweep only offers rows with no
+	// these companies one — the auto-enrich sweep only offers rows with no
 	// finished read, and a triage company already has one — so skipping it here
 	// means faceless forever.
 	w.resolveLogo(ctx, args, logoClaim, payload.Crawl)

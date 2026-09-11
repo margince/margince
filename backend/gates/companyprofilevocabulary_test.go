@@ -8,7 +8,7 @@ package gates
 // The company-profile vocabulary is spelled in eight places, and this gate is
 // what makes widening seven of them a failure instead of a silent half-job.
 //
-// `organization_profile_field.field` names what a company profile may state.
+// `company_profile_field.field` names what a company profile may state.
 // The same list is restated by the contract enum (four times, because four
 // schemas inline it), by two Go constant blocks that key the same rows, by the
 // extraction allowlist that tells the model what to look for, and by the
@@ -55,7 +55,7 @@ import (
 
 // theProfileVocabulary is the column whose CHECK this gate treats as the
 // authority.
-const theProfileVocabulary = "organization_profile_field.field"
+const theProfileVocabulary = "company_profile_field.field"
 
 // profileVocabularyMirrors are the Go declarations that must each carry the
 // whole vocabulary. Every one keys rows in that column, so a name it lacks is
@@ -80,19 +80,19 @@ var profileVocabularyMirrors = []struct {
 		why:  "the company form can neither write nor read it back",
 	},
 	{
-		file: "internal/modules/people/company.go",
+		file: "internal/modules/people/anchorcompany.go",
 		decl: "fieldOfferSummary",
 		why:  "the store has no constant for it",
 	},
 	{
-		file: "internal/modules/people/company.go",
+		file: "internal/modules/people/anchorcompany.go",
 		decl: "companyFields",
 		why:  "the value is accepted at the API and then never written",
 	},
 }
 
 // displayName is the company's own name, which the CHECK admits as a profile
-// field but the store writes through the organization row instead
+// field but the store writes through the company row instead
 // (SaveCompany sets it directly). So the two people-module mirrors legitimately
 // omit it, and this gate would otherwise demand a constant nothing should use.
 const displayName = "display_name"
@@ -100,8 +100,8 @@ const displayName = "display_name"
 // mirrorsExemptFromDisplayName are the declarations that may omit it, by the
 // file and declaration name they are listed under above.
 var mirrorsExemptFromDisplayName = map[string]bool{
-	"internal/modules/people/company.go:fieldOfferSummary": true,
-	"internal/modules/people/company.go:companyFields":     true,
+	"internal/modules/people/anchorcompany.go:fieldOfferSummary": true,
+	"internal/modules/people/anchorcompany.go:companyFields":     true,
 }
 
 func TestTheCompanyProfileVocabularyIsSpelledOnceEverywhere(t *testing.T) {

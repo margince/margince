@@ -113,12 +113,12 @@ export const HeaderTriggers: Story = {
       <StoryProviders>
         <div style={{ display: "flex", gap: "var(--gapActions)" }}>
           <LogActivityAction
-            entityType="organization"
+            entityType="company"
             entityId="o1"
             triggerIcon={<FileText aria-hidden="true" />}
           />
           <LogActivityAction
-            entityType="organization"
+            entityType="company"
             entityId="o1"
             askedKind="task"
             triggerLabel="log.addTask"

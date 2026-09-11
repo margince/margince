@@ -164,7 +164,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	// A company appearing queues its workspace's enrich pass now; the daily
 	// sweep stays the reconciler. Beside the enqueuing lanes rather than the
 	// projections because a failed inserter must fail the boot.
-	if err := startOrgAutoEnrichTrigger(laneCtx, pool, rdb, lanes.background, logger, stdout); err != nil {
+	if err := startCompanyAutoEnrichTrigger(laneCtx, pool, rdb, lanes.background, logger, stdout); err != nil {
 		return lanes, err
 	}
 	// The same shape for captured mail: a contact who wrote this morning has

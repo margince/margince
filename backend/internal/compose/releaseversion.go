@@ -83,7 +83,7 @@ const releaseLedgerFact = "release-version"
 //
 // It carries no scope, because ADR-0091 §8 phase D took the tenant column off
 // system_log and there is nothing left to scope by: one installation serves one
-// organization (ADR-0061), and this ledger records that installation's releases.
+// company (ADR-0061), and this ledger records that installation's releases.
 //
 // The residue this DOES admit, named because it is not hypothetical: an
 // installation that merged an ARCHIVED predecessor still holds that

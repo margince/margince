@@ -824,10 +824,10 @@ function useSetMailPosture(provider: CaptureConnection["provider"]) {
 //
 // Tri-state on the wire, two states on screen. A Switch has no third position,
 // so what a reader sees is on or off and what they are told beside it is
-// whether that answer is this mailbox's own or the organization's — the
+// whether that answer is this mailbox's own or the company's — the
 // description says which. Turning the switch makes it the mailbox's own; there
 // is no control for handing the question back, because a reader who wants that
-// wants "follow the organization", and no product surface has ever needed to
+// wants "follow the company", and no product surface has ever needed to
 // say it twice.
 function SignatureEnrichmentRow({
   conn,

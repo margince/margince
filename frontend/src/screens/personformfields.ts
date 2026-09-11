@@ -114,7 +114,7 @@ export function mapPersonUpdate(
 // Takes t rather than resolving its own strings because the email/phone
 // "Type" options are display text, not raw values — fieldControl (create.tsx)
 // renders option.label verbatim, so the human-readable string has to be
-// resolved via useT() before it reaches CreateField, unlike organizations.tsx's
+// resolved via useT() before it reaches CreateField, unlike companies.tsx's
 // size_band options, which are already display-ready raw labels ("1-10").
 export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
   return [

@@ -36,14 +36,14 @@ const TARGET = {
 function story(draft: unknown, status = 200) {
   return () => {
     installFetchStub({
-      "GET /me": meRoute({ organization: ["read"], person: ["read"] }),
-      "POST /organizations/o-1/intro-request-draft": () =>
+      "GET /me": meRoute({ company: ["read"], person: ["read"] }),
+      "POST /companies/o-1/intro-request-draft": () =>
         jsonResponse(draft, status),
     });
     return (
       <StoryProviders>
         <IntroRequestModal
-          orgId="o-1"
+          companyId="o-1"
           target={TARGET}
           dealId="d-1"
           onClose={() => {}}
@@ -55,7 +55,7 @@ function story(draft: unknown, status = 200) {
 
 /** Before anything is written: who is being asked, and about whom. */
 export const BeforeWriting: Story = {
-  args: { orgId: "o-1", target: TARGET, onClose: () => {} },
+  args: { companyId: "o-1", target: TARGET, onClose: () => {} },
   render: story({}),
 };
 
@@ -65,7 +65,7 @@ export const BeforeWriting: Story = {
  * machine's.
  */
 export const ModelDraft: Story = {
-  args: { orgId: "o-1", target: TARGET, onClose: () => {} },
+  args: { companyId: "o-1", target: TARGET, onClose: () => {} },
   render: story({
     subject: "Could you introduce me to Philipp Königs?",
     body:
@@ -90,7 +90,7 @@ export const ModelDraft: Story = {
  * reading does not.
  */
 export const TemplateDraft: Story = {
-  args: { orgId: "o-1", target: TARGET, onClose: () => {} },
+  args: { companyId: "o-1", target: TARGET, onClose: () => {} },
   render: story({
     subject: "Could you introduce me to Philipp Königs?",
     body:
@@ -110,6 +110,6 @@ export const TemplateDraft: Story = {
 
 /** The colleague has no recorded route, so there is no favour to ask. */
 export const Refused: Story = {
-  args: { orgId: "o-1", target: TARGET, onClose: () => {} },
+  args: { companyId: "o-1", target: TARGET, onClose: () => {} },
   render: story({ code: "not_found", title: "Not Found" }, 404),
 };

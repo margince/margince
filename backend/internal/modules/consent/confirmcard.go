@@ -37,7 +37,7 @@ const (
 )
 
 // confirmCorrectableFields is the closed set a submission may name. The company
-// is deliberately absent: which organization employs somebody is a relationship
+// is deliberately absent: which company employs somebody is a relationship
 // this workspace maintains, not a string on the person, and a correction to it
 // would have to create or merge a company record — which is a rep's judgment
 // and not a text box on a public page.
@@ -93,7 +93,7 @@ func (s *Store) confirmCardFor(ctx context.Context, personID ids.PersonID) (Conf
 		err := tx.QueryRow(ctx, `
 			SELECT coalesce(p.full_name, ''), coalesce(p.title, ''),
 			       coalesce((SELECT o.display_name FROM relationship r
-			                   JOIN organization o ON o.id = r.organization_id
+			                   JOIN company o ON o.id = r.company_id
 			                  WHERE r.person_id = p.id AND r.kind = 'employment'
 			                    AND `+employment.IsCurrentSQL("r.ended_at")+`
 			                    AND r.archived_at IS NULL

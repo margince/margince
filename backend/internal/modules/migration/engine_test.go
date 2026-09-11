@@ -240,11 +240,11 @@ func (r *fakeRuns) record(rep Report) {
 
 func twoObjectSource() *fakeSource {
 	return &fakeSource{
-		order: []string{"organization", "person"},
+		order: []string{"company", "person"},
 		objects: map[string][]Row{
-			"organization": {
-				{ExternalID: "org-1", Fields: map[string]any{"display_name": "BÄR Pharma"}},
-				{ExternalID: "org-2", Fields: map[string]any{"display_name": "Gitex"}},
+			"company": {
+				{ExternalID: "company-1", Fields: map[string]any{"display_name": "BÄR Pharma"}},
+				{ExternalID: "company-2", Fields: map[string]any{"display_name": "Gitex"}},
 			},
 			"person": {
 				{ExternalID: "p-1", Fields: map[string]any{"full_name": "Mor Anders"}},
@@ -253,7 +253,7 @@ func twoObjectSource() *fakeSource {
 			},
 		},
 		assocs: []Assoc{
-			{FromType: "person", FromID: "p-1", ToType: "organization", ToID: "org-1", Category: "employment"},
+			{FromType: "person", FromID: "p-1", ToType: "company", ToID: "company-1", Category: "employment"},
 			// An edge whose target never landed: disclosed, never counted
 			// as applied.
 			{FromType: "person", FromID: "p-1", ToType: "nowhere", ToID: "x-1", Category: "employment"},
@@ -277,9 +277,9 @@ func TestDryRunClassifiesWithoutWriting(t *testing.T) {
 	for _, or := range rep.Objects {
 		byObject[or.Object] = or
 	}
-	org := byObject["organization"]
-	if org.WillCreate != 2 || org.WillUpdate != 0 || org.MirrorCount != 2 {
-		t.Errorf("organization report = %+v, want 2 creates of 2", org)
+	company := byObject["company"]
+	if company.WillCreate != 2 || company.WillUpdate != 0 || company.MirrorCount != 2 {
+		t.Errorf("company report = %+v, want 2 creates of 2", company)
 	}
 	person := byObject["person"]
 	if person.WillCreate != 1 || person.WillUpdate != 1 {
@@ -303,7 +303,7 @@ func TestRunImportsInOrderWithSkipsDisclosed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	wantOrder := []string{"organization/org-1", "organization/org-2", "person/p-1", "person/p-3"}
+	wantOrder := []string{"company/company-1", "company/company-2", "person/p-1", "person/p-3"}
 	if len(w.ensured) != len(wantOrder) {
 		t.Fatalf("ensured %v, want %v", w.ensured, wantOrder)
 	}
@@ -353,7 +353,7 @@ func TestRunResumesFromCheckpointAndConverges(t *testing.T) {
 		t.Fatalf("crashed run = %+v, want failed with the cause recorded", runs.run)
 	}
 	if runs.run.Checkpoint != 2 {
-		t.Fatalf("checkpoint after crash = %d, want 2 (both organizations landed, the crashed row not)", runs.run.Checkpoint)
+		t.Fatalf("checkpoint after crash = %d, want 2 (both companies landed, the crashed row not)", runs.run.Checkpoint)
 	}
 
 	// Resume: same run id, cursor intact — the end state must equal an
@@ -391,7 +391,7 @@ func TestRunResumesFromCheckpointAndConverges(t *testing.T) {
 		t.Fatal("a completed run must record a report")
 	}
 	if stored.Imported != 4 {
-		t.Errorf("recorded imported = %d, want 4 — the two pre-crash organizations plus the two resumed persons", stored.Imported)
+		t.Errorf("recorded imported = %d, want 4 — the two pre-crash companies plus the two resumed persons", stored.Imported)
 	}
 	landed := map[string]int{}
 	for _, or := range stored.Objects {
@@ -400,8 +400,8 @@ func TestRunResumesFromCheckpointAndConverges(t *testing.T) {
 		}
 		landed[or.Object] = or.Created + or.Updated
 	}
-	if landed["organization"] != 2 || landed["person"] != 2 {
-		t.Errorf("recorded dispositions = %v, want 2 organizations and 2 persons across both attempts", landed)
+	if landed["company"] != 2 || landed["person"] != 2 {
+		t.Errorf("recorded dispositions = %v, want 2 companies and 2 persons across both attempts", landed)
 	}
 }
 
@@ -410,11 +410,11 @@ func TestRunResumesFromCheckpointAndConverges(t *testing.T) {
 // wrongly tracks the finished class's cursor sends the loop backwards.
 func threeObjectSource() *fakeSource {
 	return &fakeSource{
-		order: []string{"organization", "person", "deal"},
+		order: []string{"company", "person", "deal"},
 		objects: map[string][]Row{
-			"organization": {
-				{ExternalID: "org-1", Fields: map[string]any{"display_name": "One"}},
-				{ExternalID: "org-2", Fields: map[string]any{"display_name": "Two"}},
+			"company": {
+				{ExternalID: "company-1", Fields: map[string]any{"display_name": "One"}},
+				{ExternalID: "company-2", Fields: map[string]any{"display_name": "Two"}},
 			},
 			"person": {
 				{ExternalID: "p-1", Fields: map[string]any{"full_name": "Ada"}},
@@ -649,14 +649,14 @@ func TestAResumedRunCountsEveryDuplicateItMetAndCountsEachOnce(t *testing.T) {
 	w := newFakeWriters()
 	// One duplicate either side of the crash, so a merge that dropped a leg and
 	// a merge that double-counted one are different answers from the truth.
-	w.duplicates["org-1"] = true
+	w.duplicates["company-1"] = true
 	w.duplicates["p-3"] = true
-	w.failAt = 3 // crash on person/p-1, after both organizations landed
+	w.failAt = 3 // crash on person/p-1, after both companies landed
 	runs := newFakeRuns()
 	// What the dry run predicted, recorded before the commit ever ran. It must
 	// not be added to what the attempts observe.
 	runs.run.Report = &Report{Objects: []ObjectReport{
-		{Object: "organization", WillDuplicate: 1},
+		{Object: "company", WillDuplicate: 1},
 		{Object: "person", WillDuplicate: 1},
 	}}
 	e := &Engine{runs: runs, w: w}

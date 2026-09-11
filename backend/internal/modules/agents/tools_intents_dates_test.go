@@ -24,7 +24,7 @@ func TestAnAssembledContextCarriesWhenEachThingHappened(t *testing.T) {
 	when := time.Date(2025, 9, 13, 9, 30, 0, 0, time.UTC)
 	activity, person := ids.NewV7(), ids.NewV7()
 	got := assembledContext(context.Background(), retrieval.Context{
-		Anchor: datasource.EntityRef{Type: datasource.EntityOrganization, ID: ids.NewV7()},
+		Anchor: datasource.EntityRef{Type: datasource.EntityCompany, ID: ids.NewV7()},
 		Sections: []retrieval.Section{{Name: "recent", Items: []retrieval.Item{
 			{
 				Ref:     datasource.EntityRef{Type: datasource.EntityActivity, ID: activity},

@@ -9,7 +9,7 @@
 #                   lives in exactly one place: the tag list. The fixture
 #                   deliberately leaves that word applied to NOTHING, so it
 #                   cannot be picked up off a record row either — an
-#                   organization row carries the tags it holds, and a K5 already
+#                   company row carries the tags it holds, and a K5 already
 #                   on an account would hand the spelling over for free.
 #
 #   create_tag    — "Revisit Q1" does not exist and apply_tag will not coin it.

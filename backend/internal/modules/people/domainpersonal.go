@@ -9,7 +9,7 @@ package people
 // site is always better evidence than a name coincidence.
 //
 // It is the last line before falling back to creating a company. Getting it
-// wrong in one direction costs a real one-person consultancy its organization
+// wrong in one direction costs a real one-person consultancy its company
 // row; in the other it manufactures a company named after a human. So the rule
 // is deliberately narrow: the domain's registrable label must BE somebody's
 // name, spelled the way people spell their own domains.
@@ -46,7 +46,7 @@ const domainPersonalSimilarity = 0.94
 // matches, because a company is exactly what a shared domain is.
 //
 // With nobody known it answers no: there is then no name to compare, and
-// refusing an organization on no evidence at all would be a guess.
+// refusing a company on no evidence at all would be a guess.
 func DomainLooksPersonal(label string, persons []DomainPerson) bool {
 	label = normalizeName(strings.Join(strings.FieldsFunc(label, isNameSeparator), ""))
 	if label == "" || len(persons) == 0 {

@@ -61,7 +61,7 @@ func TestEverySubjectTypeIsAnRBACObject(t *testing.T) {
 			t.Error("an empty subject type would gate auth.Require on nothing")
 		}
 	}
-	for _, want := range []string{"organization", "person", "deal", "lead"} {
+	for _, want := range []string{"company", "person", "deal", "lead"} {
 		if !feedbackSubjects[want] {
 			t.Errorf("%q is in the column's CHECK but not accepted here", want)
 		}

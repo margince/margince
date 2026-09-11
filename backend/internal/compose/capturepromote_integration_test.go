@@ -360,7 +360,7 @@ func domainAdmission(t *testing.T, e *integration.Env, domain string) string {
 	var admission string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(context.Background(),
-			`SELECT coalesce(admission, '') FROM organization_domain_disposition WHERE domain = $1`,
+			`SELECT coalesce(admission, '') FROM company_domain_disposition WHERE domain = $1`,
 			domain).Scan(&admission)
 		if err == pgx.ErrNoRows {
 			admission = ""

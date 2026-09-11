@@ -12,15 +12,15 @@ package gates
 // next overlay read returns the old value, so to a user the edit looks like
 // somebody else reverted it.
 //
-// It happened three times over on organization: legal_name, linkedin_url and
+// It happened three times over on company: legal_name, linkedin_url and
 // description were each simply never added when their column landed. Three
 // column changes failing to notice one obligation is one missing rule, not
 // three mistakes — which is why this is a rule and not three entries. Measured
-// while writing it, the gap was wider than the report: ten of organization's
+// while writing it, the gap was wider than the report: ten of company's
 // twelve writable fields were unanswered for, and person and lead had never
 // been asked at all.
 //
-// THE CORPUS IS THE CONTRACT, not the schema. `organization` carries 65 columns
+// THE CORPUS IS THE CONTRACT, not the schema. `company` carries 65 columns
 // and most are ours alone — geocode state, logo keys, legal_hold. What makes a
 // field's absence a DEFECT is that the published contract invites a caller to
 // write it, so each update operation's own request schema is the set that has
@@ -55,7 +55,7 @@ import (
 // declarations in mapwrite.go that must together answer for it.
 //
 // A table rather than three tests, because the three fail the same way — and a
-// class missing from it is the shape that let organization drift while person
+// class missing from it is the shape that let company drift while person
 // and lead were never asked.
 var writeProjections = []struct {
 	canonical, projects, deferred string
@@ -63,7 +63,7 @@ var writeProjections = []struct {
 	// json tags ARE the writable set.
 	request any
 }{
-	{"organization", "organizationWriteFields", "deferredOrganizationWrites", crmcontracts.UpdateOrganizationRequest{}},
+	{"company", "companyWriteFields", "deferredCompanyWrites", crmcontracts.UpdateCompanyRequest{}},
 	{"person", "personWriteFields", "deferredPersonWrites", crmcontracts.UpdatePersonRequest{}},
 	{"lead", "leadWriteFields", "deferredLeadWrites", crmcontracts.UpdateLeadRequest{}},
 }

@@ -53,7 +53,7 @@ type scopeMode uint8
 
 const (
 	// scopeShareable is the own/team owner predicate OR a live record
-	// grant — person, organization, deal, lead (auth.ScopeClauseFor).
+	// grant — person, company, deal, lead (auth.ScopeClauseFor).
 	scopeShareable scopeMode = iota
 	// scopeActivity walks activity_link: an activity is visible when any
 	// linked record is, or when it has no links (auth.ActivityContentClause).
@@ -108,7 +108,7 @@ type exportMember struct {
 var exportMembers = []exportMember{
 	{table: "person", scope: scopeShareable, objectGate: "person"},
 	{table: "person_social", scope: scopePersonChild, objectGate: "person"},
-	{table: "organization", scope: scopeShareable, objectGate: "organization"},
+	{table: string(recordTypeCompany), scope: scopeShareable, objectGate: string(recordTypeCompany)},
 	{table: "deal", scope: scopeShareable, objectGate: "deal"},
 	{table: "lead", scope: scopeShareable, objectGate: "lead"},
 	{table: "activity", scope: scopeActivity, objectGate: "activity"},
@@ -294,7 +294,7 @@ func readMember(ctx context.Context, tx pgx.Tx, m exportMember) (memberData, err
 	}
 	// The bundle reads every column of every row in scope and applies neither
 	// the role masks nor this — so a private company's id left through the deal
-	// member while the organization member of the same bundle correctly omitted
+	// member while the company member of the same bundle correctly omitted
 	// the company itself.
 	if err := withholdUnreadableReferences(ctx, tx, m.table, columns, data.rows); err != nil {
 		return memberData{}, err

@@ -209,7 +209,7 @@ func TestNoTwoStageableActsShareAHeadline(t *testing.T) {
 	// A verb covering several stageable operations must name each of them, or
 	// the ones it does not name collapse together. Checking only for identical
 	// phrases is not enough: naming ONE of a colliding pair separates them
-	// while leaving the other reading "Enrich organization", which still does
+	// while leaving the other reading "Enrich company", which still does
 	// not say which enrichment a reader is approving.
 	byVerb := map[string]map[string]bool{}
 	for _, pol := range agentPolicies {

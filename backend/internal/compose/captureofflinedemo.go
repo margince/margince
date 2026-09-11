@@ -92,13 +92,13 @@ func (d offlineDemoDirectory) accounts(ctx context.Context, tx pgx.Tx, userID st
 	rows, err := tx.Query(ctx, `
 		SELECT o.id::text,
 		       coalesce(o.display_name, o.legal_name, ''),
-		       coalesce((SELECT domain FROM organization_domain
-		                  WHERE organization_id = o.id ORDER BY created_at LIMIT 1), ''),
+		       coalesce((SELECT domain FROM company_domain
+		                  WHERE company_id = o.id ORDER BY created_at LIMIT 1), ''),
 		       coalesce(o.lifecycle, 'unknown'),
 		       coalesce((SELECT contract_number FROM contract
-		                  WHERE organization_id = o.id AND archived_at IS NULL
+		                  WHERE company_id = o.id AND archived_at IS NULL
 		                  ORDER BY created_at DESC LIMIT 1), '')
-		  FROM organization o
+		  FROM company o
 		 WHERE o.owner_id = $1 AND o.archived_at IS NULL AND NOT o.is_anchor
 		 ORDER BY o.created_at, o.id`, userID)
 	if err != nil {
@@ -109,11 +109,11 @@ func (d offlineDemoDirectory) accounts(ctx context.Context, tx pgx.Tx, userID st
 	var out []offlinedemo.Account
 	for rows.Next() {
 		var a offlinedemo.Account
-		if err := rows.Scan(&a.OrganizationID, &a.Name, &a.Domain, &a.Lifecycle, &a.ContractNumber); err != nil {
+		if err := rows.Scan(&a.CompanyID, &a.Name, &a.Domain, &a.Lifecycle, &a.ContractNumber); err != nil {
 			return nil, fmt.Errorf("scanning an account: %w", err)
 		}
 		// The correspondence is dated backward from the run, never forward
-		// from the row: in a fresh installation every organization was created
+		// from the row: in a fresh installation every company was created
 		// today, and a captured message in the future is refused outright.
 		a.Now = time.Now().UTC()
 		out = append(out, a)
@@ -137,9 +137,9 @@ func (d offlineDemoDirectory) fillParties(ctx context.Context, tx pgx.Tx, accoun
 		  FROM relationship r
 		  JOIN person p ON p.id = r.person_id
 		  LEFT JOIN person_email e ON e.person_id = p.id AND e.is_primary
-		 WHERE r.kind = 'employment' AND r.organization_id = $1::uuid
+		 WHERE r.kind = 'employment' AND r.company_id = $1::uuid
 		   AND r.archived_at IS NULL AND p.archived_at IS NULL
-		 ORDER BY p.created_at LIMIT 8`, account.OrganizationID)
+		 ORDER BY p.created_at LIMIT 8`, account.CompanyID)
 	if err != nil {
 		return fmt.Errorf("reading the people at %s: %w", account.Domain, err)
 	}
@@ -161,8 +161,8 @@ func (d offlineDemoDirectory) fillParties(ctx context.Context, tx pgx.Tx, accoun
 	deals, err := tx.Query(ctx, `
 		SELECT d.id::text, coalesce(d.name, ''), coalesce(s.name, '')
 		  FROM deal d LEFT JOIN stage s ON s.id = d.stage_id
-		 WHERE d.organization_id = $1::uuid AND d.archived_at IS NULL
-		 ORDER BY d.created_at LIMIT 2`, account.OrganizationID)
+		 WHERE d.company_id = $1::uuid AND d.archived_at IS NULL
+		 ORDER BY d.created_at LIMIT 2`, account.CompanyID)
 	if err != nil {
 		return fmt.Errorf("reading the deals at %s: %w", account.Domain, err)
 	}

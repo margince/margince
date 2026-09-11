@@ -491,12 +491,12 @@ describe("the grant that opens one settings page", () => {
   // server answers 200 on — three of which (products, offer templates, custom
   // fields) were ungated routes of their own before the merge.
 
-  it("shows Company profile to an admin holding the organization read once the company rollout flag is on", async () => {
+  it("shows Company profile to an admin holding the company read once the company rollout flag is on", async () => {
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({
         roles: ["admin"],
-        allow: { ...readOn("organization"), organization: ["read", "update"] },
+        allow: { ...readOn("company"), company: ["read", "update"] },
         companyReadEnabled: true,
       }),
     );
@@ -518,7 +518,7 @@ describe("the grant that opens one settings page", () => {
     // before the snapshot it reads. The race is gone rather than untested, which
     // is why the second moment went with it.
     //
-    // The organization WRITE is the only term of Company profile's requirement
+    // The company WRITE is the only term of Company profile's requirement
     // this fixture grants, which is what leaves the flag decisive. Granting the
     // read alone would hide the page whatever the flag said, and the case would
     // pass while proving nothing about the flag.
@@ -527,8 +527,8 @@ describe("the grant that opens one settings page", () => {
       settingsNavBackend({
         roles: ["admin"],
         allow: {
-          ...readOn("organization"),
-          organization: ["read", "update"],
+          ...readOn("company"),
+          company: ["read", "update"],
           // The witness, so the absence below is asserted against a
           // RESOLVED snapshot rather than the loading render.
           pipeline: ["read"],
@@ -562,8 +562,8 @@ describe("the grant that opens one settings page", () => {
         // alone the page is shut anyway and the absent-availability arm this
         // case exists to hold would never be reached.
         allow: {
-          ...readOn("organization"),
-          organization: ["read", "update"],
+          ...readOn("company"),
+          company: ["read", "update"],
           // The witness, so the absence below is asserted against a
           // RESOLVED snapshot rather than the loading render.
           pipeline: ["read"],

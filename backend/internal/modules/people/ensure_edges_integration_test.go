@@ -46,7 +46,7 @@ func TestEnsureCounterpartyReusesTheExactIncumbent(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
-	// An unknown domain creates the PERSON and opens the organization
+	// An unknown domain creates the PERSON and opens the company
 	// question. No company is invented from the domain label.
 	first, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "carol@ensure.test", "Carol Example", "ensure.test"))
 	if err != nil {
@@ -55,8 +55,8 @@ func TestEnsureCounterpartyReusesTheExactIncumbent(t *testing.T) {
 	if !first.PersonCreated {
 		t.Fatalf("first ensure = %+v, want the person created", first)
 	}
-	if first.OrganizationID != nil {
-		t.Fatalf("first ensure = %+v, want NO organization from an unjudged domain", first)
+	if first.CompanyID != nil {
+		t.Fatalf("first ensure = %+v, want NO company from an unjudged domain", first)
 	}
 	if !first.TriagePending || first.TriageDomain != "ensure.test" {
 		t.Fatalf("first ensure = %+v, want the triage question opened for ensure.test", first)
@@ -75,7 +75,7 @@ func TestEnsureCounterpartyReusesTheExactIncumbent(t *testing.T) {
 	var questions int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT count(*) FROM organization_domain_disposition
+			SELECT count(*) FROM company_domain_disposition
 			WHERE domain = 'ensure.test' AND status = 'pending'`).Scan(&questions)
 	}); err != nil {
 		t.Fatal(err)
@@ -85,15 +85,15 @@ func TestEnsureCounterpartyReusesTheExactIncumbent(t *testing.T) {
 	}
 }
 
-func TestEnsureCounterpartyAttachesToAnOrganizationThatAlreadyExists(t *testing.T) {
+func TestEnsureCounterpartyAttachesToACompanyThatAlreadyExists(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
 	// A human typed the company in first. Capture must attach to it, not defer
 	// a question about a domain the workspace has already answered by hand.
-	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Ensure Test GmbH", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "attach.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "attach.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -106,8 +106,8 @@ func TestEnsureCounterpartyAttachesToAnOrganizationThatAlreadyExists(t *testing.
 	if res.TriagePending {
 		t.Fatalf("ensure = %+v, want no question about a domain that already has a company", res)
 	}
-	if res.OrganizationID == nil || res.OrganizationID.UUID != ids.UUID(org.Id) {
-		t.Fatalf("ensure = %+v, want the existing organization %s attached", res, org.Id)
+	if res.CompanyID == nil || res.CompanyID.UUID != ids.UUID(company.Id) {
+		t.Fatalf("ensure = %+v, want the existing company %s attached", res, company.Id)
 	}
 	var employments int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -134,9 +134,9 @@ func TestEnsureCounterpartyAttachesToAnOrganizationThatAlreadyExists(t *testing.
 func TestCapturedEmploymentCarriesTheWriteShapeAndANoOpCarriesNothing(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	if _, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Write Shape GmbH", Source: "manual",
-		Domains: []OrgDomainInput{{Domain: "writeshape.test", IsPrimary: true}},
+		Domains: []CompanyDomainInput{{Domain: "writeshape.test", IsPrimary: true}},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -206,12 +206,12 @@ func TestEnsureCounterpartyAsksNothingAboutConsumerMail(t *testing.T) {
 	if !res.PersonCreated {
 		t.Fatal("a consumer-mail counterparty is still a person")
 	}
-	if res.OrganizationID != nil || res.TriagePending {
+	if res.CompanyID != nil || res.TriagePending {
 		t.Fatalf("ensure = %+v, want no company and no question for consumer mail", res)
 	}
 	var questions int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT count(*) FROM organization_domain_disposition`).Scan(&questions)
+		return tx.QueryRow(ctx, `SELECT count(*) FROM company_domain_disposition`).Scan(&questions)
 	}); err != nil {
 		t.Fatal(err)
 	}

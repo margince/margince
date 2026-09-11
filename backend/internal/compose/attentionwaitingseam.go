@@ -108,7 +108,7 @@ func (w attentionWaiting) Unanswered(
 			Subject:            row.Subject,
 			Since:              row.OccurredAt,
 			PersonID:           row.PersonID,
-			OrganizationID:     row.OrganizationID,
+			CompanyID:          row.CompanyID,
 			DealID:             row.DealID,
 			HasOpenDeal:        row.HasOpenDeal,
 			Engaged:            row.Engaged,

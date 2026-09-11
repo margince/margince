@@ -15,7 +15,7 @@ package migration
 // different ways. The person is named by the run's source key, which the identity
 // map can resolve because this run is landing that person. The company is named
 // by TEXT, which no identity map can resolve, so it travels as text and the
-// writer resolves it. `AssocTargetOrganizationName` exists to say that
+// writer resolves it. `AssocTargetCompanyName` exists to say that
 // explicitly: an endpoint that is a name and not an id must not be handed to a
 // lookup that answers ids.
 
@@ -25,17 +25,17 @@ import (
 	"strings"
 )
 
-// AssocTargetOrganizationName is the `To` endpoint kind for an edge whose other
+// AssocTargetCompanyName is the `To` endpoint kind for an edge whose other
 // end is a company NAME rather than a company id.
 //
-// Named apart from ObjectOrganization on purpose. A writer that saw
-// `organization` there would be right to send the value to its identity map,
+// Named apart from ObjectCompany on purpose. A writer that saw
+// `company` there would be right to send the value to its identity map,
 // which holds ids — and would get nothing, silently, for every row.
 //
 // It doubles as the mapping target a person file points its company column at.
 // compose assigns its own csvEmployerName from this constant rather than
 // spelling it again, so both sides are one value by construction.
-const AssocTargetOrganizationName = "organization_name"
+const AssocTargetCompanyName = "company_name"
 
 // assocCategoryEmployment is what the edge means: this person works here.
 const assocCategoryEmployment = "employment"
@@ -51,13 +51,13 @@ const assocCategoryEmployment = "employment"
 // count.
 //
 // Empty for every object but a person run, and for a person run whose mapping
-// names no company column: an organization or lead import is unaffected by this
+// names no company column: a company or lead import is unaffected by this
 // file existing.
 func (s *CSVSource) Associations(ctx context.Context) ([]Assoc, error) {
 	if s.object != ObjectPerson {
 		return nil, nil
 	}
-	column := s.columnFor(AssocTargetOrganizationName)
+	column := s.columnFor(AssocTargetCompanyName)
 	if column == "" {
 		return nil, nil
 	}
@@ -96,7 +96,7 @@ func (s *CSVSource) Associations(ctx context.Context) ([]Assoc, error) {
 		out = append(out, Assoc{
 			FromType: ObjectPerson,
 			FromID:   row.ExternalID,
-			ToType:   AssocTargetOrganizationName,
+			ToType:   AssocTargetCompanyName,
 			ToID:     name,
 			Category: assocCategoryEmployment,
 		})

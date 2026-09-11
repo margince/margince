@@ -13,7 +13,7 @@ import "./candidatepicker.css";
 // this record (the source, A) into a picked survivor (B) — A is archived
 // with merged_into_id=B, B keeps the id the rest of the CRM already points
 // at. Person and Company 360s have an identical merge shape (target_id body
-// + If-Match precondition, survivor Person/Organization back), so this stays
+// + If-Match precondition, survivor Person/Company back), so this stays
 // resource-agnostic: the screen supplies the search transport, the merge
 // transport, and where the survivor's 360 lives.
 

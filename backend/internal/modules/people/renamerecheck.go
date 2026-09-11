@@ -6,7 +6,7 @@ package people
 // The rename re-check (PO-F-2 applied to an EXISTING row).
 //
 // A create asks "does this company already exist?" once, with whatever it
-// knows at that moment — and for a captured organization that is a name
+// knows at that moment — and for a captured company that is a name
 // derived from its mail domain. The real name arrives later: a corroborated
 // signature promotes it, a site dossier fills its legal name. That is the
 // moment a duplicate becomes visible, and until now nothing looked. One
@@ -41,56 +41,56 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// orgRenameRecheckSource names this detector on the rows it files. The queue's
+// companyRenameRecheckSource names this detector on the rows it files. The queue's
 // `source` column says which detector found a pair, and a rename-found pair is
 // worth telling apart from one found at create time — they answer different
 // questions about how the duplicate got in.
-const orgRenameRecheckSource = "org_rename_recheck"
+const companyRenameRecheckSource = "company_rename_recheck"
 
-// recheckOrgNameForDuplicates scores an organization against the rest of the
+// recheckCompanyNameForDuplicates scores a company against the rest of the
 // workspace after its name changed, and files the best pair the queue has not
 // already been asked about.
 //
-// The organization excludes itself from both tiers: it holds its own domains
+// The company excludes itself from both tiers: it holds its own domains
 // and its own name, so without that it matches itself perfectly and hides
 // every real rival behind the self-score.
-func recheckOrgNameForDuplicates(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, by string) error {
+func recheckCompanyNameForDuplicates(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, by string) error {
 	var display, legal string
 	var anchor bool
 	err := tx.QueryRow(ctx, `
 		SELECT display_name, coalesce(legal_name, ''), is_anchor
-		  FROM organization
-		 WHERE id = $1 AND archived_at IS NULL`, orgID).Scan(&display, &legal, &anchor)
+		  FROM company
+		 WHERE id = $1 AND archived_at IS NULL`, companyID).Scan(&display, &legal, &anchor)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Archived or erased between the rename and here: there is no
 			// record left to find a twin for, and that is not a fault.
 			return nil
 		}
-		return fmt.Errorf("people: reading the renamed organization: %w", err)
+		return fmt.Errorf("people: reading the renamed company: %w", err)
 	}
 	// The installation's own company is filed as neither side of a duplicate
 	// pair. A dedupe proposal exists to be disposed by a merge, and the anchor
 	// refuses every merge — so a pair naming it can only ever be dismissed as
 	// not-a-duplicate, and would sit in the queue forever asking a question
 	// nobody can answer (ADR-0082/A127). The candidate set already leaves it
-	// out as a rival (dedupeorg.go); this is the same rule for the subject.
+	// out as a rival (dedupecompany.go); this is the same rule for the subject.
 	if anchor {
 		return nil
 	}
 
-	// Two organizations converging on names that score against each other would,
+	// Two companies converging on names that score against each other would,
 	// at READ COMMITTED, each read before the other committed, each find
 	// nothing, and both land with no pair filed — the duplicate this whole path
 	// exists to catch, missed by a race.
-	if err := lockOrgNameWrites(ctx, tx); err != nil {
+	if err := lockCompanyNameWrites(ctx, tx); err != nil {
 		return err
 	}
 
-	match, err := DedupeOrganization(ctx, tx, OrganizationCandidate{
+	match, err := DedupeCompany(ctx, tx, CompanyCandidate{
 		DisplayName: display,
 		LegalName:   legal,
-		ExcludeID:   &orgID,
+		ExcludeID:   &companyID,
 	})
 	if err != nil {
 		return err
@@ -105,22 +105,22 @@ func recheckOrgNameForDuplicates(ctx context.Context, tx pgx.Tx, orgID ids.Organ
 	// against it. Left as the winner alone, one dismissal would mask every
 	// genuine duplicate behind it for good.
 	for _, rival := range match.Ranked {
-		filed, err := orgPairAlreadyFiled(ctx, tx, orgID, rival.OrganizationID)
+		filed, err := companyPairAlreadyFiled(ctx, tx, companyID, rival.CompanyID)
 		if err != nil {
 			return err
 		}
 		if filed {
 			continue
 		}
-		return recordNearMatch(ctx, tx, entityOrganization, orgID.UUID, rival.OrganizationID.UUID,
+		return recordNearMatch(ctx, tx, entityCompany, companyID.UUID, rival.CompanyID.UUID,
 			rival.Confidence,
 			nearMatchEvidence(rival.MatchedField, rival.CandidateValue, rival.IncumbentValue, rival.Confidence),
-			orgRenameRecheckSource, by)
+			companyRenameRecheckSource, by)
 	}
 	return nil
 }
 
-// orgNameWriteIdentity is the ONE key every organization-name writer takes, for
+// companyNameWriteIdentity is the ONE key every company-name writer takes, for
 // the whole workspace.
 //
 // It is workspace-wide rather than per-name because a per-name key cannot do
@@ -137,24 +137,24 @@ func recheckOrgNameForDuplicates(ctx context.Context, tx pgx.Tx, orgID ids.Organ
 // is why callers take it only when a name is actually being written, and why
 // the metric it protects is capped (nameScoringMaxRunes) rather than left to
 // run as long as an input allows.
-const orgNameWriteIdentity = "all"
+const companyNameWriteIdentity = "all"
 
-// orgNameColumns are the columns a duplicate re-check keys on. Writing either
+// companyNameColumns are the columns a duplicate re-check keys on. Writing either
 // is a rename as far as this module is concerned, whichever channel wrote it,
 // and both the lock that serializes renames and the re-check that follows one
 // ask this same question rather than each carrying its own list.
-var orgNameColumns = map[string]bool{fieldDisplayName: true, fieldLegalName: true}
+var companyNameColumns = map[string]bool{fieldDisplayName: true, fieldLegalName: true}
 
-// renamesAnOrganization reports whether an edit writes a name column, and so
+// renamesACompany reports whether an edit writes a name column, and so
 // whether it must take the name lock.
 //
 // TWO channels write one, and only the supplied value was ever asked about. A
 // CLEAR naming the field — `Clear: ["legal_name"]` — sets the column to NULL,
-// lands in the patch's after-image and triggers recheckRenamedOrganization
+// lands in the patch's after-image and triggers recheckRenamedCompany
 // exactly as a rename does. Missing it, a clear took the ROW lock through the
 // guarded write and reached for the name lock afterwards: the ordering this
 // file forbids, and without the serialization the re-check depends on.
-func renamesAnOrganization(in UpdateOrganizationInput) bool {
+func renamesACompany(in UpdateCompanyInput) bool {
 	if in.DisplayName != nil || in.LegalName != nil {
 		return true
 	}
@@ -163,20 +163,20 @@ func renamesAnOrganization(in UpdateOrganizationInput) bool {
 	// today, and a second answer spelled here is how they would stop. The
 	// current values that map carries are the audit image; nothing in this
 	// question reads them, so the zero record is the honest argument.
-	clearable := clearableOrganizationColumns(crmcontracts.Organization{})
+	clearable := clearableCompanyColumns(crmcontracts.Company{})
 	for _, field := range in.Clear {
-		if orgNameColumns[clearable[field].Column] {
+		if companyNameColumns[clearable[field].Column] {
 			return true
 		}
 	}
 	return false
 }
 
-// lockOrgNameWrites serializes every writer that could create or rename an
-// organization into another one's similarity neighbourhood.
+// lockCompanyNameWrites serializes every writer that could create or rename an
+// company into another one's similarity neighbourhood.
 //
-// THE RULE FOR A NEW CALLER: take this BEFORE any lock on an organization row —
-// before a guarded patch, a `SELECT … FOR UPDATE`, or an `UPDATE organization`
+// THE RULE FOR A NEW CALLER: take this BEFORE any lock on a company row —
+// before a guarded patch, a `SELECT … FOR UPDATE`, or an `UPDATE company`
 // that touches the row you are about to re-check. Three paths took it the other
 // way round and were only found by review: enrichment, deep-read apply and
 // site-read confirmation all wrote legal_name (locking the row) and then
@@ -184,14 +184,14 @@ func renamesAnOrganization(in UpdateOrganizationInput) bool {
 // the reverse. They now take it at the top of applyEvidenceFieldsWithOverwrite
 // and resolveOrCreateAnchor respectively. It is reentrant, so taking it early
 // costs a path that already holds it nothing.
-func lockOrgNameWrites(ctx context.Context, tx pgx.Tx) error {
-	return storekit.LockWriteIdentity(ctx, tx, "organization_name", orgNameWriteIdentity)
+func lockCompanyNameWrites(ctx context.Context, tx pgx.Tx) error {
+	return storekit.LockWriteIdentity(ctx, tx, "company_name", companyNameWriteIdentity)
 }
 
-// orgPairAlreadyFiled reports whether the queue already holds this pair, in
+// companyPairAlreadyFiled reports whether the queue already holds this pair, in
 // any disposition. The pair is stored canonically (lower id left, DH-DDL-1),
 // so the lookup orders the two ids the same way the insert does.
-func orgPairAlreadyFiled(ctx context.Context, tx pgx.Tx, a, b ids.OrganizationID) (bool, error) {
+func companyPairAlreadyFiled(ctx context.Context, tx pgx.Tx, a, b ids.CompanyID) (bool, error) {
 	left, right := a.UUID, b.UUID
 	if right.String() < left.String() {
 		left, right = right, left
@@ -200,8 +200,8 @@ func orgPairAlreadyFiled(ctx context.Context, tx pgx.Tx, a, b ids.OrganizationID
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		  SELECT 1 FROM dedupe_candidate
-		   WHERE entity_type = $1 AND left_org_id = $2 AND right_org_id = $3)`,
-		entityOrganization, left, right).Scan(&exists); err != nil {
+		   WHERE entity_type = $1 AND left_company_id = $2 AND right_company_id = $3)`,
+		entityCompany, left, right).Scan(&exists); err != nil {
 		return false, fmt.Errorf("people: reading the dedupe queue for this pair: %w", err)
 	}
 	return exists, nil

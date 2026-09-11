@@ -5,7 +5,7 @@ import { type Mock, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { emptyPage, jsonResponse } from "./company.fixtures";
-import { ORG, project, project360 } from "./projects.fixtures";
+import { COMPANY, project, project360 } from "./projects.fixtures";
 
 type Project = components["schemas"]["Project"];
 type Project360 = components["schemas"]["Project360"];
@@ -62,8 +62,8 @@ function quietDefault(
           },
         }),
       ),
-    "/v1/organizations": () => jsonResponse({ data: [ORG], page: listPage }),
-    [`/v1/organizations/${ORG.id}`]: () => jsonResponse(ORG),
+    "/v1/companies": () => jsonResponse({ data: [COMPANY], page: listPage }),
+    [`/v1/companies/${COMPANY.id}`]: () => jsonResponse(COMPANY),
     "/v1/projects": () => jsonResponse({ data: rows, page: listPage }),
   };
   const matched = Object.hasOwn(exact, pathname) ? exact[pathname] : undefined;

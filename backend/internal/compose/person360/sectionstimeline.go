@@ -39,7 +39,7 @@ import (
 // counterparty, so a thread a contact was copied on is filed under somebody else
 // and their own page never showed it.
 //
-// No deal arm, deliberately, although the ORG walk has one. A company's reach is
+// No deal arm, deliberately, although the COMPANY walk has one. A company's reach is
 // the company's business and a deal belongs to it; a person's page answers a
 // narrower question — what did I have with THIS human — and pulling in every
 // message on their employer's deals would put colleagues' threads they were

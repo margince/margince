@@ -1679,7 +1679,7 @@
 }
 
 /* The one state where the dashed treatment above is the honest one: this
-   provider cannot be connected until somebody registers the organization's
+   provider cannot be connected until somebody registers the company's
    app, which is a different thing from a choice that happens to be settled.
    It is not a button either, so it carries no :disabled to inherit from. */
 .ob-connect-card[data-state="unavailable"] {

@@ -5,7 +5,7 @@
 
 package people
 
-// OrganizationLinkedInReach answers "who on our team can get us in", and the
+// CompanyLinkedInReach answers "who on our team can get us in", and the
 // answer has to be somebody who can actually be asked.
 //
 // The join filtered `u.archived_at IS NULL` and nothing else, which is only
@@ -30,14 +30,14 @@ import (
 func TestReachCountsOnlyColleaguesWhoStillWorkHere(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	org := e.seedOrgNamed(t, "Acme GmbH")
+	company := e.seedAcmeCompany(t)
 
 	// One connection each, so a count that loses a seat is unambiguous: the
 	// map either names them or it does not.
-	e.seedReach(ctx, t, e.rep, org, "Abbas Fawaz")
-	e.seedReach(ctx, t, e.otherRep, org, "Bea Hoffmann")
+	e.seedReach(ctx, t, e.rep, company, "Abbas Fawaz")
+	e.seedReach(ctx, t, e.otherRep, company, "Bea Hoffmann")
 
-	both := e.reachInto(ctx, t, org)
+	both := e.reachInto(ctx, t, company)
 	if both[e.rep] != 1 || both[e.otherRep] != 1 {
 		t.Fatalf("with both seats live the reach is %v, want one connection each for %s and %s — "+
 			"the rest of this test cannot mean anything if the baseline is already wrong",
@@ -46,7 +46,7 @@ func TestReachCountsOnlyColleaguesWhoStillWorkHere(t *testing.T) {
 
 	e.deactivate(ctx, t, e.otherRep)
 
-	after := e.reachInto(ctx, t, org)
+	after := e.reachInto(ctx, t, company)
 	if _, offered := after[e.otherRep]; offered {
 		t.Errorf("a deactivated colleague is still offered as a route into the account: %v", after)
 	}
@@ -61,19 +61,19 @@ func TestReachCountsOnlyColleaguesWhoStillWorkHere(t *testing.T) {
 // this suite is about is which colleagues the count admits, so the connection
 // arrives ready-matched.
 //
-// 'suggested' and not 'confirmed': matchGhostOrganizations attaches a ghost to
+// 'suggested' and not 'confirmed': matchGhostCompanies attaches a ghost to
 // an ACCOUNT by employer name even when the person never matches, and a
-// 'confirmed' row needs a matched_person_id it would not have. The org-matched,
+// 'confirmed' row needs a matched_person_id it would not have. The company-matched,
 // person-unmatched row IS the reach case.
-func (e *dedupeEnv) seedReach(ctx context.Context, t *testing.T, owner ids.UUID, org ids.OrganizationID, name string) {
+func (e *dedupeEnv) seedReach(ctx context.Context, t *testing.T, owner ids.UUID, company ids.CompanyID, name string) {
 	t.Helper()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO linkedin_connection
 			  (owner_user_id, full_name, normalized_name, company_name,
-			   normalized_company, matched_org_id, match_status, source)
+			   normalized_company, matched_company_id, match_status, source)
 			VALUES ($1, $2, lower($2), 'Acme GmbH', 'acme gmbh', $3, 'suggested', 'csv_export')`,
-			owner, name, org)
+			owner, name, company)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding a connection for %s: %v", owner, err)
@@ -112,14 +112,14 @@ func (e *dedupeEnv) deactivate(ctx context.Context, t *testing.T, user ids.UUID)
 	}
 }
 
-func (e *dedupeEnv) reachInto(ctx context.Context, t *testing.T, org ids.OrganizationID) map[ids.UUID]int {
+func (e *dedupeEnv) reachInto(ctx context.Context, t *testing.T, company ids.CompanyID) map[ids.UUID]int {
 	t.Helper()
 	var out map[ids.UUID]int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = OrganizationLinkedInReach(ctx, tx, org)
+		out, err = CompanyLinkedInReach(ctx, tx, company)
 		return err
 	}); err != nil {
-		t.Fatalf("OrganizationLinkedInReach: %v", err)
+		t.Fatalf("CompanyLinkedInReach: %v", err)
 	}
 	return out
 }

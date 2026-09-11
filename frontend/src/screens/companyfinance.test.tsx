@@ -20,11 +20,11 @@ beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
 });
 
-type FinanceSummary = components["schemas"]["OrganizationFinanceSummary"];
+type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 type FinanceInvoice = components["schemas"]["FinanceInvoice"];
 
 const CONNECTED: FinanceSummary = {
-  organization_id: "o-1",
+  company_id: "o-1",
   state: "connected",
   provider: "offline_demo",
   net_invoiced: { amount_minor: 18642000, currency: "EUR" },
@@ -63,7 +63,7 @@ describe("the finance card is absent only where FIN-AC-3 says so", () => {
     (lifecycle) => {
       stub();
       const { container } = render(
-        <CompanyFinanceCard orgId="o-1" lifecycle={lifecycle} />,
+        <CompanyFinanceCard companyId="o-1" lifecycle={lifecycle} />,
       );
       expect(container.textContent).toBe("");
     },
@@ -76,7 +76,7 @@ describe("the finance card is absent only where FIN-AC-3 says so", () => {
     "renders for a %s, which may have been invoiced",
     async (lifecycle) => {
       stub();
-      render(<CompanyFinanceCard orgId="o-1" lifecycle={lifecycle} />);
+      render(<CompanyFinanceCard companyId="o-1" lifecycle={lifecycle} />);
       // A figure only the LOADED body draws. The card's title renders on the
       // loading skeleton too, so asserting on it would pass before the read
       // lands — and would then prove only that the lifecycle set said no,
@@ -89,7 +89,7 @@ describe("the finance card is absent only where FIN-AC-3 says so", () => {
   // never billed.
   it("renders when the lifecycle is not known", async () => {
     stub();
-    render(<CompanyFinanceCard orgId="o-1" />);
+    render(<CompanyFinanceCard companyId="o-1" />);
     expect(await screen.findByText("€186,420.00")).toBeTruthy();
   });
 
@@ -98,7 +98,7 @@ describe("the finance card is absent only where FIN-AC-3 says so", () => {
   // as current.
   it("labels a former customer's money historical", async () => {
     stub();
-    render(<CompanyFinanceCard orgId="o-1" lifecycle="former_customer" />);
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="former_customer" />);
     expect(await screen.findByText("Finance · historical")).toBeTruthy();
   });
 
@@ -108,13 +108,13 @@ describe("the finance card is absent only where FIN-AC-3 says so", () => {
   // under a heading that claims it is current.
   it("keeps the historical label while the read is still in flight", () => {
     stub();
-    render(<CompanyFinanceCard orgId="o-1" lifecycle="former_customer" />);
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="former_customer" />);
     expect(screen.getByText("Finance · historical")).toBeTruthy();
   });
 
   it("leaves a current customer's card unqualified", async () => {
     stub();
-    render(<CompanyFinanceCard orgId="o-1" lifecycle="customer" />);
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
     expect(await screen.findByText("€186,420.00")).toBeTruthy();
     expect(screen.getByText("Finance")).toBeTruthy();
     expect(screen.queryByText("Finance · historical")).toBeNull();
@@ -140,7 +140,7 @@ describe("how late an invoice was, counted in whole days", () => {
 
   function withInvoices(invoices: FinanceInvoice[]) {
     stub({ ...CONNECTED, recent_invoices: invoices });
-    render(<CompanyFinanceCard orgId="o-1" lifecycle="customer" />);
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
   }
 
   it("says one day late in the singular, and the rest in the plural", async () => {
@@ -159,7 +159,7 @@ describe("how late an invoice was, counted in whole days", () => {
 describe("the two readings the card draws as shapes", () => {
   function withSummary(patch: Partial<FinanceSummary>) {
     stub({ ...CONNECTED, ...patch });
-    render(<CompanyFinanceCard orgId="o-1" lifecycle="customer" />);
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
   }
 
   it("draws the payment habit's shape, and states the median beside the money", async () => {

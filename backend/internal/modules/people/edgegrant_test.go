@@ -31,10 +31,10 @@ func edgeGrantCtx(objects map[string]principal.ObjectGrant) context.Context {
 // is false.
 func TestTheEmployerFilterIsRefusedWithoutTheEdgeGrant(t *testing.T) {
 	ctx := edgeGrantCtx(map[string]principal.ObjectGrant{
-		"person": {Read: true}, "organization": {Read: true},
+		"person": {Read: true}, "company": {Read: true},
 	})
-	orgID := ids.From[ids.OrganizationKind](ids.NewV7())
-	clause, err := personEmployerClause(ctx, &orgID, func(any) int { return 1 })
+	companyID := ids.From[ids.CompanyKind](ids.NewV7())
+	clause, err := personEmployerClause(ctx, &companyID, func(any) int { return 1 })
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("personEmployerClause(no edge grant) = %v, want ErrPermissionDenied", err)
 	}
@@ -64,9 +64,9 @@ func TestTheEmployerFilterBoundsTheEdgeWithTheGrant(t *testing.T) {
 	ctx := edgeGrantCtx(map[string]principal.ObjectGrant{
 		"person": {Read: true}, "relationship": {Read: true},
 	})
-	orgID := ids.From[ids.OrganizationKind](ids.NewV7())
+	companyID := ids.From[ids.CompanyKind](ids.NewV7())
 	var args []any
-	clause, err := personEmployerClause(ctx, &orgID, func(v any) int {
+	clause, err := personEmployerClause(ctx, &companyID, func(v any) int {
 		args = append(args, v)
 		return len(args)
 	})
@@ -76,7 +76,7 @@ func TestTheEmployerFilterBoundsTheEdgeWithTheGrant(t *testing.T) {
 	if !strings.Contains(clause, "FROM relationship rel") {
 		t.Errorf("the filter does not read the edge table: %s", clause)
 	}
-	if !strings.Contains(clause, "rel.organization_id") {
+	if !strings.Contains(clause, "rel.company_id") {
 		t.Errorf("the filter does not pin the employer: %s", clause)
 	}
 }
@@ -95,7 +95,7 @@ func TestTheContactCountNeedsBothThePersonAndTheEdgeGrant(t *testing.T) {
 		}, true},
 		"person only": {map[string]principal.ObjectGrant{"person": {Read: true}}, false},
 		"edge only":   {map[string]principal.ObjectGrant{"relationship": {Read: true}}, false},
-		"neither":     {map[string]principal.ObjectGrant{"organization": {Read: true}}, false},
+		"neither":     {map[string]principal.ObjectGrant{"company": {Read: true}}, false},
 	}
 	for name, tc := range cases {
 		ctx := edgeGrantCtx(tc.objects)
@@ -107,17 +107,17 @@ func TestTheContactCountNeedsBothThePersonAndTheEdgeGrant(t *testing.T) {
 }
 
 // The account roster is drawn from employment edges, so a caller refused the
-// edge is refused the roster — and org360 names `people` in sections_omitted
+// edge is refused the roster — and company360 names `people` in sections_omitted
 // rather than drawing an account with nobody at it.
 //
 // The nil transaction is the assertion, not an oversight: the gate is resolved
 // before the statement, so a refused read never reaches a database. A version
 // that filtered rows after the read would panic here.
-func TestTheOrgRosterIsRefusedBeforeItReachesAStatement(t *testing.T) {
+func TestTheCompanyRosterIsRefusedBeforeItReachesAStatement(t *testing.T) {
 	ctx := edgeGrantCtx(map[string]principal.ObjectGrant{"person": {Read: true}})
-	if _, err := StrengthForOrgContacts(ctx, nil, ids.From[ids.OrganizationKind](ids.NewV7()),
+	if _, err := StrengthForCompanyContacts(ctx, nil, ids.From[ids.CompanyKind](ids.NewV7()),
 		time.Now().UTC(), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("StrengthForOrgContacts(no edge grant) = %v, want ErrPermissionDenied", err)
+		t.Errorf("StrengthForCompanyContacts(no edge grant) = %v, want ErrPermissionDenied", err)
 	}
 }
 
@@ -128,7 +128,7 @@ func TestTheOrgRosterIsRefusedBeforeItReachesAStatement(t *testing.T) {
 // as a fact about the account something they were refused the means to compute.
 func TestAWithheldEdgeIsRefusedRatherThanReportedAsDormant(t *testing.T) {
 	ctx := edgeGrantCtx(map[string]principal.ObjectGrant{"person": {Read: true}})
-	got, err := AccountStrengthFor(ctx, nil, ids.From[ids.OrganizationKind](ids.NewV7()),
+	got, err := AccountStrengthFor(ctx, nil, ids.From[ids.CompanyKind](ids.NewV7()),
 		time.Now().UTC())
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("AccountStrengthFor(no edge grant) = (%+v, %v), want ErrPermissionDenied — a dormant "+

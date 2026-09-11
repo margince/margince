@@ -21,7 +21,7 @@ jsonb column — that is field *metadata*, not a value store.
 ## What a custom field may be — the closed sets
 
 Six types (`text`, `number`, `date`, `currency`, `picklist`, `boolean`) on five objects (`person`,
-`organization`, `deal`, `lead`, `activity`). **No cap on how many, no widening of what** — the
+`company`, `deal`, `lead`, `activity`). **No cap on how many, no widening of what** — the
 surface itself is the knob. Each type maps to one storage type: `number` → `numeric` (round-tripped
 as a string, never a float, so precision survives), `currency` → `bigint` minor units with the
 ISO-4217 code held in the catalog row rather than the column, `picklist` → `text` plus a generated
@@ -153,8 +153,8 @@ as a core column", names "static schema → real indexes → correct, fast repor
 honesty bet, and its worked example creates one alongside the column:
 
 ```sql
-CREATE INDEX idx_org_renewal_risk
-  ON organization (workspace_id, renewal_risk)
+CREATE INDEX idx_company_renewal_risk
+  ON company (workspace_id, renewal_risk)
   WHERE renewal_risk IS NOT NULL AND archived_at IS NULL;
 ```
 

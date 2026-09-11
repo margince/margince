@@ -117,15 +117,15 @@ func marketingStateOf(t *testing.T, e *channelConsentEnv) string {
 // went unexercised until it 500'd against a real record.
 func TestTheCardShowsTheSubjectTheirOwnRecord(t *testing.T) {
 	e := setupChannelConsent(t)
-	orgID := ids.New[ids.OrganizationKind]()
+	companyID := ids.New[ids.CompanyKind]()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO organization (id, display_name, source, captured_by)
-		 VALUES ($1, 'Acme GmbH', 'manual', 'human:x')`, orgID); err != nil {
+		`INSERT INTO company (id, display_name, source, captured_by)
+		 VALUES ($1, 'Acme GmbH', 'manual', 'human:x')`, companyID); err != nil {
 		t.Fatalf("seed the employer: %v", err)
 	}
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO relationship (kind, person_id, organization_id, source, captured_by)
-		 VALUES ('employment', $1, $2, 'manual', 'human:x')`, e.person, orgID); err != nil {
+		`INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
+		 VALUES ('employment', $1, $2, 'manual', 'human:x')`, e.person, companyID); err != nil {
 		t.Fatalf("seed the employment: %v", err)
 	}
 	if _, err := e.owner.Exec(context.Background(),

@@ -106,9 +106,7 @@ export function ThinState({
         <p style={{ margin: 0, lineHeight: 1.55 }}>
           {t("person.thin.known", {
             name: view.person.full_name,
-            what: [email, employer?.organization_name]
-              .filter(Boolean)
-              .join(" · "),
+            what: [email, employer?.company_name].filter(Boolean).join(" · "),
           })}
         </p>
         <p style={{ margin: "var(--space-2) 0 0", lineHeight: 1.55 }}>
@@ -293,12 +291,12 @@ export function IdentityRail({
                             value={current.role ?? view.person.title ?? "—"}
                             field={byField.get("role") ?? byField.get("title")}
                           />
-                          {current.organization_name && (
+                          {current.company_name && (
                             <>
                               {" · "}
                               <EntityRef
-                                kind="organization"
-                                id={current.organization_id}
+                                kind="company"
+                                id={current.company_id}
                               />
                             </>
                           )}
@@ -349,13 +347,13 @@ export function IdentityRail({
                   style={{ marginTop: "var(--space-1)" }}
                 >
                   {/* A former employer is a company the reader can open, and
-                      `organization_id` was on the row already. EntityRef draws
+                      `company_id` was on the row already. EntityRef draws
                       the em dash itself when there is no id, which is what this
                       was falling back to by hand. */}
                   <EntityRef
-                    kind="organization"
-                    id={e.organization_id}
-                    name={e.organization_name}
+                    kind="company"
+                    id={e.company_id}
+                    name={e.company_name}
                   />
                   {e.role && <> · {e.role}</>}
                 </li>

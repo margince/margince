@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The warm/cold join (B-E08.3, features/07 §9 [MVP]) — the V1-WOW core:
-// a signal resolved to an organization where we already hold a live
+// a signal resolved to a company where we already hold a live
 // contact edge is WARM and routes to the warm room; a resolved
-// organization with no contact is COLD and routes to the cold queue. The
-// answer is EVIDENCE — the source signal id, the resolved org id, and the
+// company with no contact is COLD and routes to the cold queue. The
+// answer is EVIDENCE — the source signal id, the resolved company id, and the
 // specific contact id(s) in our own graph, each with its explainable §4
 // strength — never a bare score. The join reads only company-level rows
 // and our own relational core; it creates nothing (P11/P12).
@@ -53,11 +53,11 @@ func (s *Store) Warmth(ctx context.Context, signalID ids.SignalID, now time.Time
 		if sig, err = readSignal(ctx, tx, signalID, storekit.LiveOnly); err != nil {
 			return err
 		}
-		if sig.ResolutionState != "resolved" || sig.ResolvedOrgId == nil {
+		if sig.ResolutionState != resolutionResolved || sig.ResolvedCompanyId == nil {
 			return &NoWarmthError{Reason: fmt.Sprintf(
-				"signal is %s: only a signal resolved to an organization has a warm/cold branch", sig.ResolutionState)}
+				"signal is %s: only a signal resolved to a company has a warm/cold branch", sig.ResolutionState)}
 		}
-		contacts, err = RouteInEdges(ctx, tx, ids.From[ids.OrganizationKind](ids.UUID(*sig.ResolvedOrgId)))
+		contacts, err = RouteInEdges(ctx, tx, ids.From[ids.CompanyKind](ids.UUID(*sig.ResolvedCompanyId)))
 		return err
 	})
 	if err != nil {
@@ -65,7 +65,7 @@ func (s *Store) Warmth(ctx context.Context, signalID ids.SignalID, now time.Time
 	}
 
 	// Strength rides the injected §4 seam (B-E13.16) — outside the row
-	// transaction, exactly like the people module's own org roll-up. A
+	// transaction, exactly like the people module's own company roll-up. A
 	// contact outside the caller's row scope was already excluded by the
 	// edge query; a residual scope miss contributes nothing rather than
 	// out-seeing the person list.
@@ -91,12 +91,12 @@ func (s *Store) Warmth(ctx context.Context, signalID ids.SignalID, now time.Time
 	}
 
 	out := crmcontracts.SignalWarmth{
-		SourceSignalId: sig.Id,
-		ResolvedOrgId:  *sig.ResolvedOrgId,
-		ContactIds:     []openapi_types.UUID{},
-		Contacts:       []crmcontracts.SignalWarmContact{},
-		Warm:           len(scored) > 0,
-		Routing:        crmcontracts.SignalWarmthRouting("cold_queue"),
+		SourceSignalId:    sig.Id,
+		ResolvedCompanyId: *sig.ResolvedCompanyId,
+		ContactIds:        []openapi_types.UUID{},
+		Contacts:          []crmcontracts.SignalWarmContact{},
+		Warm:              len(scored) > 0,
+		Routing:           crmcontracts.SignalWarmthRouting("cold_queue"),
 	}
 	if out.Warm {
 		out.Routing = crmcontracts.SignalWarmthRouting("warm_room")
@@ -140,9 +140,9 @@ func RankRouteIn(edges []RouteInEdge, score func(ids.PersonID) (int, bool)) []Ro
 	return scored
 }
 
-// RouteInEdges finds the live contact edges anchoring the org in OUR
-// graph: current employment at the org, or a stakeholder seat on one of
-// the org's live deals. Row-scoped — a contact the caller cannot see
+// RouteInEdges finds the live contact edges anchoring the company in OUR
+// graph: current employment at the company, or a stakeholder seat on one of
+// the company's live deals. Row-scoped — a contact the caller cannot see
 // cannot be their evidence. It reads inside the CALLER's transaction, so
 // the answer shares the caller's instant.
 //
@@ -159,16 +159,16 @@ func RankRouteIn(edges []RouteInEdge, score func(ids.PersonID) (int, bool)) []Ro
 //
 // It carries the EDGE gate for the same reason, and the name says why: these
 // ARE edges, returned with their kind and role. Refusing is the honest answer
-// on both surfaces — org360 names `intro_path` in groups_omitted, and the warm
+// on both surfaces — company360 names `intro_path` in groups_omitted, and the warm
 // room refuses outright rather than reporting a COLD verdict it reached by not
 // being allowed to look for warmth.
-func RouteInEdges(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) ([]RouteInEdge, error) {
+func RouteInEdges(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]RouteInEdge, error) {
 	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos := arg(orgID)
+	companyPos := arg(companyID)
 	edgeBound, err := auth.EdgeReadScope(ctx, "r", arg)
 	if err != nil {
 		return nil, err
@@ -191,11 +191,11 @@ func RouteInEdges(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) ([]R
 		FROM relationship r
 		JOIN person p ON p.id = r.person_id AND p.archived_at IS NULL
 		WHERE r.archived_at IS NULL AND r.person_id IS NOT NULL
-		  AND ((r.kind = 'employment' AND r.organization_id = $%[1]d
+		  AND ((r.kind = 'employment' AND r.company_id = $%[1]d
 		        AND `+employment.IsCurrentSQL("r.ended_at")+`)
 		    OR (r.kind = 'deal_stakeholder' AND r.ended_at IS NULL AND r.deal_id IN (
-		          SELECT d.id FROM deal d WHERE d.organization_id = $%[1]d AND d.archived_at IS NULL)))%s%s
-		ORDER BY p.id, r.kind`, orgPos, edgeBound, visible), args...)
+		          SELECT d.id FROM deal d WHERE d.company_id = $%[1]d AND d.archived_at IS NULL)))%s%s
+		ORDER BY p.id, r.kind`, companyPos, edgeBound, visible), args...)
 	if err != nil {
 		return nil, fmt.Errorf("contact edges: %w", err)
 	}

@@ -111,7 +111,7 @@ func sameInstant(a, b *time.Time) bool {
 
 // The output language is the writer's default, NOT a guess from the scenario.
 //
-// This endpoint sets textlang.Unknown and lets noteLang default it; org360's
+// This endpoint sets textlang.Unknown and lets noteLang default it; company360's
 // sibling detects a language from the contact's correspondence. Copying that
 // detection into this seam is what the first version did, and it would have
 // certified a German prompt this product cannot send.

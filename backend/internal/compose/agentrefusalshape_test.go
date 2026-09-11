@@ -84,9 +84,9 @@ func TestAMergeWithNoTargetNamesTheFieldRatherThanHidingARecord(t *testing.T) {
 	// A ROUTED request, so the source id resolves and the only thing missing is
 	// the one this case is about.
 	_, err := mergeCommand(
-		agentPolicy{Op: "mergeOrganization", RecordType: recordTypeOrganization},
+		agentPolicy{Op: "mergeCompany", RecordType: recordTypeCompany},
 		restCommandDeps{records: seamRecord{}},
-		patchRequest("/v1/organizations", ids.NewV7(), []byte(`{}`)),
+		patchRequest("/v1/companies", ids.NewV7(), []byte(`{}`)),
 		[]byte(`{}`),
 	)
 	if err == nil {

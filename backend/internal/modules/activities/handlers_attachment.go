@@ -73,7 +73,7 @@ func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	entityType := r.FormValue("entity_type")
 	if !crmcontracts.AttachmentEntityType(entityType).Valid() {
 		httperr.Write(w, r, httperr.Validation("entity_type", "invalid_enum",
-			"entity_type must be one of person, organization, deal, activity, lead"))
+			"entity_type must be one of person, company, deal, activity, lead"))
 		return
 	}
 	entityID, err := ids.Parse(r.FormValue("entity_id"))
@@ -187,11 +187,11 @@ func writeAttachmentErr(w http.ResponseWriter, r *http.Request, err error) {
 	writeStoreErr(w, r, err)
 }
 
-// ListOrganizationDocuments serves the account's document library. Every row is
+// ListCompanyDocuments serves the account's document library. Every row is
 // scoped through its own primary parent, so a file on a record the caller
 // cannot read contributes neither a row nor a count (DOC-WIRE-1).
-func (h Handlers) ListOrganizationDocuments(w http.ResponseWriter, r *http.Request,
-	id crmcontracts.Id, params crmcontracts.ListOrganizationDocumentsParams,
+func (h Handlers) ListCompanyDocuments(w http.ResponseWriter, r *http.Request,
+	id crmcontracts.Id, params crmcontracts.ListCompanyDocumentsParams,
 ) {
 	in := DocumentFilters{
 		PinnedOnly: params.PinnedOnly != nil && *params.PinnedOnly,
@@ -216,7 +216,7 @@ func (h Handlers) ListOrganizationDocuments(w http.ResponseWriter, r *http.Reque
 		contractID := ids.UUID(*params.ContractId)
 		in.ContractID = &contractID
 	}
-	docs, page, err := h.store.ListOrganizationDocuments(r.Context(), ids.UUID(id), in)
+	docs, page, err := h.store.ListCompanyDocuments(r.Context(), ids.UUID(id), in)
 	if err != nil {
 		writeAttachmentErr(w, r, err)
 		return

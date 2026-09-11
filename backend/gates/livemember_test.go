@@ -9,8 +9,8 @@ package gates
 // NULL` on app_user, and TWO functions in two different packages each called
 // themselves the ONE spelling of it while the tree held about twenty copies.
 //
-// org360's said so; search's said so as well, and its own comment recorded
-// that org360 had already spelled it that way — so the second author knew
+// company360's said so; search's said so as well, and its own comment recorded
+// that company360 had already spelled it that way — so the second author knew
 // about the first copy and minted a third anyway. Neither had anything holding
 // it. That is the false-uniqueness pair CLAUDE.md names: the next author greps,
 // finds a comment claiming the question is settled, and stops looking.
@@ -64,7 +64,7 @@ const (
 // because the module DAG forbids them the helper.
 //
 // identity owns app_user and a module never imports a sibling (ADR-0054 §3).
-// compose may reach identity and now does — org360 and the extension-job seam
+// compose may reach identity and now does — company360 and the extension-job seam
 // both call the helper — but seven statements sit in sibling modules, and the
 // predicate would have to move tier before they could adopt it. That is an
 // architecture decision with an owner rather than something to smuggle in here.
@@ -389,7 +389,7 @@ func activatableCopy(sql string) bool {
 // `const liveMemberWhere = "u.status = 'active' AND u.archived_at IS NULL"` is
 // invisible to a table-keyed walk from both ends — the declaration never
 // mentions app_user, and the statement that concatenates it renders the
-// identifier as a blank. That is precisely how org360's copy sat unheld while
+// identifier as a blank. That is precisely how company360's copy sat unheld while
 // its comment told the next reader the question was already settled.
 //
 // It deliberately does not catch a HALF spelled into a bare declaration: a lone
@@ -404,7 +404,7 @@ func bareLivenessPredicate(sql string) bool {
 // exactly once per predicate: `const activatableWhere = "status IN ('invited',
 // 'active') AND archived_at IS NULL"` names no table, so a table-keyed walk
 // never yields it and the copy sits unheld while its comment tells the next
-// reader the question is settled. That is the org360 incident, verbatim, for a
+// reader the question is settled. That is the company360 incident, verbatim, for a
 // predicate added after it.
 func bareActivatablePredicate(sql string) bool {
 	return onlyTheActivatablePair.MatchString(strings.TrimSpace(sql))
@@ -799,7 +799,7 @@ func read() string {
 func read() string {
 	return ` + "`" + `SELECT id FROM app_user WHERE ` + "`" + ` + other.ActivatableMemberSQL("status IN ('invited', 'active') AND archived_at IS NULL")
 }`},
-	// The org360 shape, for the second predicate: a bare declaration naming no
+	// The company360 shape, for the second predicate: a bare declaration naming no
 	// table, consumed elsewhere by name. Invisible to a table-keyed walk from
 	// both ends, which is exactly why it needs its own recogniser.
 	{"the activatable pair spelled into a bare declaration", "activatable-copy", "", `

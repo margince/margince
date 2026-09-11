@@ -300,7 +300,7 @@ export function CompanyContextCard() {
   // client asking for either verb alone would hide the editor from a principal
   // the server would have admitted.
   const me = useMe();
-  const canEdit = useCanUpsert("organization");
+  const canEdit = useCanUpsert("company");
   const company = useQuery({
     queryKey: ["company"],
     queryFn: async (): Promise<CompanyProfile> => {

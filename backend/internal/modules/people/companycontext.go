@@ -83,14 +83,14 @@ type CompanyContextSection struct {
 	Items []CompanyContextItem
 }
 
-// CompanyContext is the deterministic read model over the anchor organization,
+// CompanyContext is the deterministic read model over the anchor company,
 // its curated profile and its repeatable facts.
 type CompanyContext struct {
-	OrganizationID ids.OrganizationID
-	SchemaVersion  int
-	Scopes         []CompanyContextSection
-	Fingerprint    string
-	GeneratedAt    time.Time
+	CompanyID     ids.CompanyID
+	SchemaVersion int
+	Scopes        []CompanyContextSection
+	Fingerprint   string
+	GeneratedAt   time.Time
 }
 
 var profileContextScopes = map[string]CompanyContextScope{
@@ -116,21 +116,21 @@ var profileContextScopes = map[string]CompanyContextScope{
 }
 
 // GetCompanyContext reads and assembles the selected anchor-company scopes
-// under the normal workspace transaction and organization visibility gate.
+// under the normal workspace transaction and company visibility gate.
 func (s *Store) GetCompanyContext(ctx context.Context, requested []CompanyContextScope) (CompanyContext, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return CompanyContext{}, err
 	}
 	var out CompanyContext
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		orgID, err := anchorOrganization(ctx, tx, false)
+		companyID, err := anchorCompany(ctx, tx, false)
 		if err != nil {
 			return err
 		}
-		if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
-		company, err := readCompany(ctx, tx, orgID)
+		company, err := readAnchorCompany(ctx, tx, companyID)
 		if err != nil {
 			return err
 		}
@@ -170,17 +170,17 @@ func assembleCompanyContext(company Company, requested []CompanyContextScope, ge
 		seenDisplayName = seenDisplayName || field.Field == fieldDisplayName
 	}
 	if selected[CompanyContextIdentity] {
-		fallbackSource := normalizeCompanySource(company.OrganizationSource)
+		fallbackSource := normalizeCompanySource(company.CompanySource)
 		if !seenDisplayName {
 			sections[CompanyContextIdentity] = append(sections[CompanyContextIdentity], CompanyContextItem{
 				Key: fieldDisplayName, Value: company.DisplayName, Source: fallbackSource,
-				CapturedBy: company.OrganizationCapturedBy,
+				CapturedBy: company.CompanyCapturedBy,
 			})
 		}
 		if company.Website != nil {
 			sections[CompanyContextIdentity] = append(sections[CompanyContextIdentity], CompanyContextItem{
 				Key: "primary_domain", Value: *company.Website, Source: fallbackSource,
-				CapturedBy: company.OrganizationCapturedBy,
+				CapturedBy: company.CompanyCapturedBy,
 			})
 		}
 	}
@@ -206,11 +206,11 @@ func assembleCompanyContext(company Company, requested []CompanyContextScope, ge
 		ordered = append(ordered, CompanyContextSection{Scope: scope, Items: items})
 	}
 	return CompanyContext{
-		OrganizationID: company.OrganizationID,
-		SchemaVersion:  1,
-		Scopes:         ordered,
-		Fingerprint:    fingerprintCompanyContext(ordered),
-		GeneratedAt:    generatedAt,
+		CompanyID:     company.CompanyID,
+		SchemaVersion: 1,
+		Scopes:        ordered,
+		Fingerprint:   fingerprintCompanyContext(ordered),
+		GeneratedAt:   generatedAt,
 	}
 }
 

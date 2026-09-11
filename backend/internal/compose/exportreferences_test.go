@@ -36,10 +36,10 @@ func TestATableWithNoReferencesAsksNothing(t *testing.T) {
 }
 
 func TestIndexOfColumnAnswersMinusOneForAColumnThePageLacks(t *testing.T) {
-	if at := indexOfColumn([]string{"id", "name"}, refColOrganization); at != -1 {
+	if at := indexOfColumn([]string{"id", "name"}, refColCompany); at != -1 {
 		t.Fatalf("a column the page lacks resolved to %d", at)
 	}
-	if at := indexOfColumn([]string{"id", refColOrganization}, refColOrganization); at != 1 {
+	if at := indexOfColumn([]string{"id", refColCompany}, refColCompany); at != 1 {
 		t.Fatalf("the reference column resolved to %d", at)
 	}
 }

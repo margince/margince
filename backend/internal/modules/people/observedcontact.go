@@ -43,11 +43,11 @@ import (
 // for. fieldTitle and fieldPhone are declared where their own writers first
 // needed them.
 const (
-	fieldRole     = "role"
-	fieldOrgName  = "org_name"
-	fieldAddress  = "address"
-	fieldLinkedin = "linkedin"
-	fieldWebsite  = "website"
+	fieldRole        = "role"
+	fieldCompanyName = "company_name"
+	fieldAddress     = "address"
+	fieldLinkedin    = "linkedin"
+	fieldWebsite     = "website"
 )
 
 // observedField is one dated statement about one field.
@@ -136,8 +136,8 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, f
 
 	column, mirrored := observedFieldColumn(f.Field)
 	if !mirrored {
-		// role, linkedin, org_name, website: no column to fill. org_name in
-		// particular must never touch an organization — the promotion pass
+		// role, linkedin, company_name, website: no column to fill. company_name in
+		// particular must never touch a company — the promotion pass
 		// weighs these rows and decides that separately.
 		return observedApplied, nil
 	}

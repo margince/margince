@@ -134,7 +134,7 @@ function stubBackend(opts: {
         teams: [],
       });
     }
-    if (url.includes("/organizations")) {
+    if (url.includes("/companies")) {
       return jsonResponse({ data: [], page: { next_cursor: null } });
     }
     if (url.includes("/deals")) {

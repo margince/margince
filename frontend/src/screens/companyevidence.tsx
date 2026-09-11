@@ -50,12 +50,12 @@ export type CitedRecord = {
  * add.
  */
 export function EvidenceModal({
-  orgId,
+  companyId,
   cited,
   onClose,
   onStep,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   cited: CitedRecord;
   onClose: () => void;
   // Move to the neighbouring claim in the list that opened this. The ORDER is
@@ -67,14 +67,14 @@ export function EvidenceModal({
   const t = useT();
   const { locale } = useLocale();
   const receipt = useQuery({
-    queryKey: ["claim-evidence", orgId, cited.entityType, cited.entityId],
+    queryKey: ["claim-evidence", companyId, cited.entityType, cited.entityId],
     queryFn: async () => {
       const { data, error } = await api.GET(
-        "/organizations/{id}/evidence/{entityType}/{entityId}",
+        "/companies/{id}/evidence/{entityType}/{entityId}",
         {
           params: {
             path: {
-              id: orgId,
+              id: companyId,
               entityType: cited.entityType,
               entityId: cited.entityId,
             },

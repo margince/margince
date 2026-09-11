@@ -114,8 +114,8 @@ func subjectFrom(view crmcontracts.Person360) persondata.Subject {
 	}
 	if view.Employments != nil && len(view.Employments.Data) > 0 {
 		first := view.Employments.Data[0]
-		if first.IsCurrentPrimary && first.OrganizationName != nil {
-			subject.Employer = *first.OrganizationName
+		if first.IsCurrentPrimary && first.CompanyName != nil {
+			subject.Employer = *first.CompanyName
 		}
 	}
 	return subject

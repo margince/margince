@@ -119,11 +119,11 @@ func emitRelationshipChangeWithEvidence(ctx context.Context, tx pgx.Tx, action s
 // relationship mutation — the same changed_fields delta wrapped in
 // whichever of the three anchors' published OPEN envelopes this edge
 // points at. All three (deal.updated, person.updated,
-// organization.updated) are OPEN envelopes with an identical
+// company.updated) are OPEN envelopes with an identical
 // changed_fields shape, so the only real work here is picking the right
 // generated struct for the anchor.
 //
-//nolint:ireturn // dispatches to one of PublicEventDeal/Project/Person/OrganizationUpdated by anchorObject; tested directly via the interface in person_organization_payload_test.go
+//nolint:ireturn // dispatches to one of PublicEventDeal/Project/Person/CompanyUpdated by anchorObject; tested directly via the interface in person_company_payload_test.go
 func relationshipUpdatedPayload(anchorObject string, changedFields map[string]any) events.Payload {
 	switch anchorObject {
 	case anchorDeal:
@@ -132,7 +132,7 @@ func relationshipUpdatedPayload(anchorObject string, changedFields map[string]an
 		return crmcontracts.PublicEventProjectUpdated{ChangedFields: changedFields}
 	case anchorPerson:
 		return crmcontracts.PublicEventPersonUpdated{ChangedFields: changedFields}
-	default: // organization
-		return crmcontracts.PublicEventOrganizationUpdated{ChangedFields: changedFields}
+	default: // company
+		return crmcontracts.PublicEventCompanyUpdated{ChangedFields: changedFields}
 	}
 }

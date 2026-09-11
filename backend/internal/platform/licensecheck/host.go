@@ -62,7 +62,7 @@ type Result struct {
 
 // License is the metadata of the license the module verified.
 //
-// Org, ContactName and ContactEmail are empty for a license issued before those
+// Company, ContactName and ContactEmail are empty for a license issued before those
 // claims existed. A zero IssuedAt or NotBefore means the token carried no such
 // claim. InGrace reports a license past its expiry that the grace period still
 // accepts: the check passes today and will stop passing.
@@ -76,7 +76,7 @@ type License struct {
 	Expiry       time.Time `json:"expiry"`
 	ID           string    `json:"id"`
 	Subject      string    `json:"subject"`
-	Org          string    `json:"org,omitempty"`
+	Company      string    `json:"company,omitempty"`
 	ContactName  string    `json:"name,omitempty"`
 	ContactEmail string    `json:"email,omitempty"`
 	KeyID        string    `json:"key_id"`

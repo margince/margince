@@ -30,7 +30,7 @@ const DOCS = [
     doc_state: "final",
     pinned: true,
     created_at: "2026-08-01T09:00:00Z",
-    entity_type: "organization",
+    entity_type: "company",
     entity_id: "o-1",
     source: "upload",
     captured_by: "human:x",
@@ -42,7 +42,7 @@ const DOCS = [
     doc_state: "draft",
     pinned: false,
     created_at: "2026-08-02T09:00:00Z",
-    entity_type: "organization",
+    entity_type: "company",
     entity_id: "o-1",
     source: "upload",
     captured_by: "human:x",
@@ -54,7 +54,7 @@ const DOCS = [
     doc_state: "current",
     pinned: false,
     created_at: "2026-08-03T09:00:00Z",
-    entity_type: "organization",
+    entity_type: "company",
     entity_id: "o-1",
     source: "upload",
     captured_by: "human:x",
@@ -88,7 +88,7 @@ function show(ui: ReactNode) {
 describe("the account's document library", () => {
   it("prefers the display title a human gave over the filename that arrived", async () => {
     stub(DOCS);
-    show(<CompanyDocumentsCard orgId="o-1" />);
+    show(<CompanyDocumentsCard companyId="o-1" />);
     // "Framework agreement — signed" is what a reader looks for and what the
     // row is named by; "Rahmenvertrag.pdf" is what the scanner produced, and it
     // is what lands in the downloads folder — so it reads underneath as the
@@ -104,7 +104,7 @@ describe("the account's document library", () => {
 
   it("makes every document's name its download", async () => {
     stub(DOCS);
-    show(<CompanyDocumentsCard orgId="o-1" />);
+    show(<CompanyDocumentsCard companyId="o-1" />);
     await screen.findByText("Framework agreement — signed");
 
     // Every listed document is reachable: authorization is the parent record's,
@@ -125,7 +125,7 @@ describe("the account's document library", () => {
 
   it("says the account has no documents rather than leaving the section blank", async () => {
     stub([]);
-    show(<CompanyDocumentsCard orgId="o-1" />);
+    show(<CompanyDocumentsCard companyId="o-1" />);
     expect(
       await screen.findByText("No documents on this account yet."),
     ).toBeTruthy();
@@ -145,14 +145,14 @@ describe("the account's document library", () => {
         contract_id: "c-1",
       },
     ]);
-    show(<CompanyDocumentsCard orgId="o-1" />);
+    show(<CompanyDocumentsCard companyId="o-1" />);
     await screen.findByText("Framework agreement — signed");
     expect(screen.queryByText("Framework agreement 2026")).toBeNull();
   });
 
   it("says why the library is empty when every file belongs to an agreement", async () => {
     stub([{ ...DOCS[0], contract_id: "c-1" }]);
-    show(<CompanyDocumentsCard orgId="o-1" />);
+    show(<CompanyDocumentsCard companyId="o-1" />);
     // "No documents on this account yet" would be a lie about an account that
     // has one: the file is upstairs, and the copy has to say so.
     expect(
@@ -172,7 +172,7 @@ describe("the account's document library", () => {
         doc_state: "superseded",
       },
     ]);
-    show(<CompanyDocumentsCard orgId="o-1" />);
+    show(<CompanyDocumentsCard companyId="o-1" />);
     await screen.findByText("Framework agreement — signed");
     // Three uploads of one document are one document to a rep. The history is
     // reachable, not gone: the footer says how much of it is being held back,
@@ -186,7 +186,7 @@ describe("the account's document library", () => {
 
   it("opens a document's staged reading only when a reader asks for it", async () => {
     stub([{ ...DOCS[1], entity_type: "deal", entity_id: "dl-1" }]);
-    show(<CompanyDocumentsCard orgId="o-1" />);
+    show(<CompanyDocumentsCard companyId="o-1" />);
     // Each reading panel asks the server for its own document on mount, so a
     // list that opened them all fired one request per deal file and buried the
     // filenames the reader came for.
@@ -203,7 +203,7 @@ describe("the account's document library", () => {
 
   it("names the lifecycle state each file asserts", async () => {
     stub(DOCS);
-    show(<CompanyDocumentsCard orgId="o-1" />);
+    show(<CompanyDocumentsCard companyId="o-1" />);
     await waitFor(() => expect(screen.getByText("Final")).toBeTruthy());
     // Draft and Current sit beside Final rather than being inferred from
     // upload order: the newest upload is very often a draft.
@@ -222,13 +222,13 @@ describe("the account's document library", () => {
         doc_state: "current",
         pinned: false,
         created_at: "2026-08-04T09:00:00Z",
-        entity_type: "organization",
+        entity_type: "company",
         entity_id: "o-1",
         source: "telegram",
         captured_by: "connector:telegram",
       },
     ]);
-    show(<CompanyDocumentsCard orgId="o-1" />);
+    show(<CompanyDocumentsCard companyId="o-1" />);
 
     // The chip exists at all, which is what makes the new category reachable —
     // a value the row can hold and no control can filter on is a category a
@@ -248,7 +248,7 @@ describe("the account's document library", () => {
     // hand, and a state a reader can see and cannot reach reads as broken
     // rather than absent.
     stub(DOCS);
-    show(<CompanyDocumentsCard orgId="o-1" />);
+    show(<CompanyDocumentsCard companyId="o-1" />);
     await screen.findByText("Framework agreement — signed");
     expect(screen.queryByText("Pinned")).toBeNull();
   });

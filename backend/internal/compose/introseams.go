@@ -53,21 +53,21 @@ const accountContactFetch = 200
 // the account's contact count and nothing about the shape of the graph beyond
 // it.
 func introPathLister(pool *pgxpool.Pool) agents.IntroPathLister {
-	return func(ctx context.Context, orgID ids.UUID) ([]agents.IntroRoute, bool, error) {
+	return func(ctx context.Context, companyID ids.UUID) ([]agents.IntroRoute, bool, error) {
 		var out []agents.IntroRoute
 		var truncated bool
 		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 			// The account gate first. A route names the account's people, so a
 			// caller who cannot read the account must not learn who works
 			// there — through a tool any more than through a URL.
-			if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+			if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 				return err
 			}
 			// Live probe, matching every other single-record read: EnsureVisible
 			// skips its existence check for an unbounded caller, so an unknown
 			// id would answer "no routes" instead of a refusal, and "no routes"
 			// is a believable answer that hides a 404.
-			if err := auth.EnsureVisibleLive(ctx, tx, "organization", orgID); err != nil {
+			if err := auth.EnsureVisibleLive(ctx, tx, "company", companyID); err != nil {
 				return err
 			}
 			// The person grant, taken BEFORE the read rather than inferred from
@@ -78,7 +78,7 @@ func introPathLister(pool *pgxpool.Pool) agents.IntroPathLister {
 			if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
 				return err
 			}
-			contacts, err := accountContacts(ctx, tx, orgID)
+			contacts, err := accountContacts(ctx, tx, companyID)
 			if err != nil {
 				return err
 			}
@@ -173,10 +173,10 @@ type accountContact struct {
 // accountContacts reads the account's live employees under the caller's person
 // row scope, in id order, reading one row past the bound so the caller can tell
 // a full account from a cut one.
-func accountContacts(ctx context.Context, tx pgx.Tx, orgID ids.UUID) ([]accountContact, error) {
+func accountContacts(ctx context.Context, tx pgx.Tx, companyID ids.UUID) ([]accountContact, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos := arg(orgID)
+	companyPos := arg(companyID)
 	// The edge grant, taken BEFORE the read for the same reason the person
 	// grant above is: an intro route IS the employment edge — "who works there
 	// that we know" — so a caller refused edges must be refused here rather
@@ -201,7 +201,7 @@ func accountContacts(ctx context.Context, tx pgx.Tx, orgID ids.UUID) ([]accountC
 		SELECT DISTINCT p.id, p.full_name
 		  FROM relationship r
 		  JOIN person p ON p.id = r.person_id AND p.archived_at IS NULL
-		 WHERE r.kind = 'employment' AND r.organization_id = $%d
+		 WHERE r.kind = 'employment' AND r.company_id = $%d
 		   -- Still employed TODAY. A future end date is still employment: a
 		   -- person leaving next month can still make an introduction this
 		   -- week, and the departure rule in compose/network already treats
@@ -210,7 +210,7 @@ func accountContacts(ctx context.Context, tx pgx.Tx, orgID ids.UUID) ([]accountC
 		   AND r.archived_at IS NULL
 		   AND `+employment.IsCurrentSQL("r.ended_at")+`
 		   AND (%s) AND (%s)
-		 ORDER BY p.id LIMIT %d`, orgPos, edgeBound, visible, accountContactFetch+1), args...)
+		 ORDER BY p.id LIMIT %d`, companyPos, edgeBound, visible, accountContactFetch+1), args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading an account's contacts for an intro route: %w", err)
 	}

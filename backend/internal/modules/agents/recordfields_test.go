@@ -104,7 +104,7 @@ func TestDescriptionsCarryNoControlCharacters(t *testing.T) {
 }
 
 // The writes real sessions lost data to. Each returned 200 with the value
-// discarded: organization_id is not a person field at all, and `source` is a
+// discarded: company_id is not a person field at all, and `source` is a
 // person field on CREATE and no field at all on UPDATE — the shape a caller is
 // most likely to get wrong, because it exists next door.
 //
@@ -125,9 +125,9 @@ func TestWriteToolsRefuseFieldsTheRecordCannotStore(t *testing.T) {
 		fields     string
 		wantNamed  string
 	}{
-		{"organization_id on a person create", createWriteShapes, "person", `{"full_name":"A","organization_id":"x"}`, "organization_id"},
+		{"company_id on a person create", createWriteShapes, "person", `{"full_name":"A","company_id":"x"}`, "company_id"},
 		{"source on a person update", updateWriteShapes, "person", `{"source":"manual"}`, "source"},
-		{"a typo next to a real field", createWriteShapes, "organization", `{"displayname":"Firecrawl"}`, "displayname"},
+		{"a typo next to a real field", createWriteShapes, "company", `{"displayname":"Firecrawl"}`, "displayname"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -374,7 +374,7 @@ func recordTypeEnum(t *testing.T, tool string, raw json.RawMessage) []string {
 // A refusal hands back the SHAPE, because the name alone leaves the next
 // refusal in place.
 //
-// Measured: a run told `organization` accepts `domains` sent
+// Measured: a run told `company` accepts `domains` sent
 // `["example.test"]`, was refused for an array of strings, and only then
 // learned the item shape; another omitted `relationship.kind` because nothing
 // had said which fields are required. Both facts are in the generated line the
@@ -390,7 +390,7 @@ func TestARefusedFieldListCarriesTypesAndWhatIsRequired(t *testing.T) {
 		says   []string
 	}{
 		{
-			what: "an organization create", shapes: createWriteShapes, record: "organization",
+			what: "a company create", shapes: createWriteShapes, record: "company",
 			fields: `{"name":"Terralogic","domain":"terralogic.test"}`,
 			says: []string{
 				// The item shape, which a name list cannot carry.

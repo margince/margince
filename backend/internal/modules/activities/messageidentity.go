@@ -345,9 +345,9 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.ActivityID, stamp StampProject) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_link
-		  (activity_id, entity_type, person_id, organization_id, deal_id, lead_id, project_id)
+		  (activity_id, entity_type, person_id, company_id, deal_id, lead_id, project_id)
 		SELECT $1, echo_link.entity_type,
-		       echo_link.person_id, echo_link.organization_id, echo_link.deal_id,
+		       echo_link.person_id, echo_link.company_id, echo_link.deal_id,
 		       echo_link.lead_id, echo_link.project_id
 		  FROM activity_link echo_link
 		 WHERE echo_link.activity_id = $2
@@ -355,8 +355,8 @@ func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.Activi
 		       SELECT 1 FROM activity_link held
 		        WHERE held.activity_id = $1
 		          AND held.entity_type = echo_link.entity_type
-		          AND coalesce(held.person_id, held.organization_id, held.deal_id, held.lead_id, held.project_id)
-		            = coalesce(echo_link.person_id, echo_link.organization_id, echo_link.deal_id, echo_link.lead_id, echo_link.project_id))
+		          AND coalesce(held.person_id, held.company_id, held.deal_id, held.lead_id, held.project_id)
+		            = coalesce(echo_link.person_id, echo_link.company_id, echo_link.deal_id, echo_link.lead_id, echo_link.project_id))
 		   AND NOT (echo_link.entity_type = 'project' AND EXISTS (
 		       SELECT 1 FROM activity_link held
 		        WHERE held.activity_id = $1 AND held.entity_type = 'project'))`,

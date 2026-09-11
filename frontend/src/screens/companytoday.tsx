@@ -42,7 +42,7 @@ import {
 } from "./record360";
 import "./company360.css";
 
-type Organization360 = components["schemas"]["Organization360"];
+type Company360 = components["schemas"]["Company360"];
 type HealthRating = components["schemas"]["HealthDimension"]["rating"];
 
 // The lead reading: whose move it is, under the call and in its own weight. It
@@ -104,8 +104,8 @@ export type TodayReading =
 // What a reading is computed from: the account's composite read and the
 // verbs the surface above can perform on what it says.
 type TodayReadingInputs = Readonly<{
-  orgId: string;
-  view?: Organization360;
+  companyId: string;
+  view?: Company360;
   loading: boolean;
   // The composite read failed. Distinct from "still loading" and from "nothing
   // is happening on this account" — all three draw a short section, and only
@@ -130,7 +130,7 @@ type TodayReadingInputs = Readonly<{
 }>;
 
 export function useTodayReading({
-  orgId,
+  companyId,
   view,
   loading,
   failed,
@@ -147,9 +147,9 @@ export function useTodayReading({
   const recordZone = useRecordZone();
   // Called before the loading/failed branches below, like every other hook
   // here: React requires it, and it answers "nothing rated" on its own.
-  const verdict = useAccountStanding(orgId, view?.health);
+  const verdict = useAccountStanding(companyId, view?.health);
   const suggestions = useSuggestionsBody({
-    orgId,
+    companyId,
     view,
     onOpenRecord,
     onOpenEmail,
@@ -413,7 +413,7 @@ export function TodayOnThisAccount({
     <>
       <Company360Call
         reading={reading}
-        name={inputs.view?.organization?.display_name}
+        name={inputs.view?.company?.display_name}
       >
         {spine}
       </Company360Call>
@@ -528,7 +528,7 @@ function manualMoveRows({
   onDraftTo,
   hasDraftReply,
 }: Readonly<{
-  view: Organization360;
+  view: Company360;
   t: ReturnType<typeof useT>;
   onPrepareMeeting?: (activityId: string) => void;
   onDraftTo?: (personId: string) => void;
@@ -599,7 +599,7 @@ function manualMoveRows({
   return rows;
 }
 
-function omitted(view: Organization360, section: string): boolean {
+function omitted(view: Company360, section: string): boolean {
   return (view.sections_omitted ?? []).some((name) => name === section);
 }
 
@@ -613,7 +613,7 @@ const TODAY_SOURCES: ReadonlyArray<{ section: string; label: MessageKey }> = [
   { section: "suggestions", label: "today.source.suggestions" },
 ];
 
-function TodayWithheld({ view }: Readonly<{ view: Organization360 }>) {
+function TodayWithheld({ view }: Readonly<{ view: Company360 }>) {
   const t = useT();
   const hidden = TODAY_SOURCES.filter((source) =>
     omitted(view, source.section),
@@ -626,7 +626,7 @@ function whoseMove({
   t,
   locale,
 }: Readonly<{
-  view: Organization360;
+  view: Company360;
   t: ReturnType<typeof useT>;
   locale: Locale;
 }>): TodayLead | null {
@@ -642,7 +642,7 @@ function whoseMove({
 }
 
 function silenceNote(
-  view: Organization360,
+  view: Company360,
   locale: Locale,
   t: ReturnType<typeof useT>,
 ): string | undefined {
@@ -661,14 +661,9 @@ function silenceNote(
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-function byStrengthThenId(
-  a: Organization360Contact,
-  b: Organization360Contact,
-): number {
+function byStrengthThenId(a: Company360Contact, b: Company360Contact): number {
   const delta = (b.strength?.score ?? 0) - (a.strength?.score ?? 0);
   return delta !== 0 ? delta : stable(a.person_id, b.person_id);
 }
 
-type Organization360Contact = NonNullable<
-  Organization360["people"]
->["data"][number];
+type Company360Contact = NonNullable<Company360["people"]>["data"][number];

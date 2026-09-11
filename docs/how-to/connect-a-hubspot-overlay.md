@@ -7,7 +7,7 @@ first.
 
 **Read, continuous sync, and write-back.** HubSpot stays canonical; records flow into Margince's
 mirror, and a write to an overlay-mode record is applied to HubSpot **first**, then re-mirrored
-(incumbent-first, with a stored-baseline drift check). Update and archive on person, organization, and
+(incumbent-first, with a stored-baseline drift check). Update and archive on person, company, and
 deal are live, plus update on lead and activity; the 360 screens show Edit and Archive whenever the type
 supports them, and Settings → Integrations manages the connection itself. `create`, `merge`,
 `advance-deal`, `promote-lead`, and `disqualify-lead` still answer `422 unsupported_by_sor`: `create`
@@ -16,8 +16,8 @@ unowned record invisible to everyone, including its author; the mirror implement
 four. To test write-back locally against an isolated HubSpot test account — including the field-level
 detail of what's actually writable — see [test-overlay-locally.md](test-overlay-locally.md).
 
-> **Single-organization installation.** One installation serves one organization; the
-> server resolves its singleton organization itself, so no request selects a tenant — there is no
+> **Single-company installation.** One installation serves one company; the
+> server resolves its singleton company itself, so no request selects a tenant — there is no
 > `X-Workspace-Slug` header. The `curl`s below carry only the session cookie. ("Workspace" still names
 > the internal tenant identity `WithWorkspaceTx` carries on the context; it keeps the transaction
 > boundary and a fail-closed check that a workspace is present, but binds no database GUC — no table
@@ -26,7 +26,7 @@ detail of what's actually writable — see [test-overlay-locally.md](test-overla
 ## Prerequisites
 
 - Admin or ops RBAC. Connecting, disconnecting, and reconciling an overlay connection are
-  organization-wide destructive config (they flip the SoR mode and purge the mirror for every user),
+  company-wide destructive config (they flip the SoR mode and purge the mirror for every user),
   so — like quota configuration — they are gated `admin`/`ops`-only. Every role may *read* the
   connection status.
 - A HubSpot portal you can register a private app in (Settings → Integrations → Private Apps).

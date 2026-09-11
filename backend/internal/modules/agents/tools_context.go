@@ -89,11 +89,11 @@ const contextSearchMaxQueryRunes = 1000
 // Keyed by the seam's own type so the set and the value handed to the retriever
 // are the same thing, rather than two spellings kept in step.
 var contextSearchTypes = map[datasource.EntityType]bool{
-	datasource.EntityPerson:       true,
-	datasource.EntityOrganization: true,
-	datasource.EntityDeal:         true,
-	datasource.EntityLead:         true,
-	datasource.EntityProject:      true,
+	datasource.EntityPerson:  true,
+	datasource.EntityCompany: true,
+	datasource.EntityDeal:    true,
+	datasource.EntityLead:    true,
+	datasource.EntityProject: true,
 }
 
 // RegisterContextSearchTool joins search_context to the surface once a retriever
@@ -126,7 +126,7 @@ func (t searchContext) Spec() mcp.ToolSpec {
 		// description says so rather than declaring a filter it would ignore.
 		InputSchema: schema(`{"type":"object","required":["query"],"properties":{
 			"query":{"type":"string","maxLength":1000,"description":"What to look for, in your own words. The wording is matched by meaning as well as by the words themselves, so a phrase that appears nowhere on a record can still rank it."},
-			"record_types":{"type":"array","items":{"type":"string","enum":["person","organization","deal","lead","project"]},"description":"Restrict the sweep to these types; omit to sweep all of them."},
+			"record_types":{"type":"array","items":{"type":"string","enum":["person","company","deal","lead","project"]},"description":"Restrict the sweep to these types; omit to sweep all of them."},
 			"limit":{"type":"integer","minimum":1,"maximum":25}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[SearchContextResult](),
@@ -171,7 +171,7 @@ func (t searchContext) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 		entity := datasource.EntityType(recordType)
 		if !contextSearchTypes[entity] {
 			return nil, &BadArgsError{Cause: fmt.Errorf(
-				"`record_types` does not take %q; this tool sweeps person, organization, deal, lead and project",
+				"`record_types` does not take %q; this tool sweeps person, company, deal, lead and project",
 				recordType)}
 		}
 		q.EntityTypes = append(q.EntityTypes, entity)

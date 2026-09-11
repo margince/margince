@@ -111,7 +111,7 @@ func setupReconcileWithOwnerPolicy(t *testing.T, document string) *reconcileEnv 
 // narrower policy below instead.
 const reconcileOwnerPolicy = `{"objects":{"activity":{"create":true,"read":true,"update":true},
 	  "deal":{"read":true,"update":true},"person":{"read":true},
-	  "organization":{"read":true},"pipeline":{"read":true}},"row_scope":"all"}`
+	  "company":{"read":true},"pipeline":{"read":true}},"row_scope":"all"}`
 
 // grantOwner gives a member an actual role row, which is what
 // EffectiveAuthority reads. The harness's As(...) permissions never reach this

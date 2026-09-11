@@ -30,7 +30,7 @@ expect:
     shared vocabulary was introduced to end.
     "role_mailbox" scores highest: a function nobody owns, whose mail is real
     and whose contact would be a department with a person's shape.
-    "organization_sender" is a near miss and scores nearly as high — the effect
+    "company_sender" is a near miss and scores nearly as high — the effect
     is identical.
     "transactional" is defensible and scores partially: this is close to a
     notice a system emits, and hiding it costs little.

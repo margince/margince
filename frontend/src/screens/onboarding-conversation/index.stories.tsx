@@ -51,7 +51,7 @@ function wizardAt(step: string, path: "creator" | "member" = "creator") {
 }
 
 const COMPANY = {
-  organization_id: "018f3a1b-0000-7000-8000-0000000000a1",
+  company_id: "018f3a1b-0000-7000-8000-0000000000a1",
   display_name: "Gradion",
   website: "gradion.com",
   offer_summary: "Revenue software for manufacturers",

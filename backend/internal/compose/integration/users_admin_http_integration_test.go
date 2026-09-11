@@ -204,7 +204,7 @@ func TestAdminUserManagementOverHTTP(t *testing.T) {
 
 	// The bootstrap admin is the only admin (the invited member holds manager
 	// by now): neither deactivating nor demoting them is allowed — it would
-	// lock the organization out of user administration entirely.
+	// lock the company out of user administration entirely.
 	var me struct {
 		User struct {
 			ID string `json:"id"`

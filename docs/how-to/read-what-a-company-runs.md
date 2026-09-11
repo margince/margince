@@ -22,7 +22,7 @@ it worked.
 | `operated_service` | certificate log | many | `webshop`, `careers`, `customer_portal`, `api`, `vpn`, `status_page` |
 | `technology` | site-page fingerprint | many | `shopware`, `shopify`, `wordpress`, `typo3`, `matomo`, `google_analytics` |
 
-Every value is an `organization_fact` row with `category='signal'` and `source='technical_lookup'`,
+Every value is an `company_fact` row with `category='signal'` and `source='technical_lookup'`,
 carrying the public record that proved it — the winning MX host, the proving subdomain, the matched
 marker — so the record can always answer "how do you know?".
 
@@ -90,7 +90,7 @@ This covers both the automatic capture read and a human pressing **read the site
    point: unlike geocoding, which fires when an address is *written*, a company's mail provider
    changes at the **company** and no write on our side ever announces it. Only a scheduled pass
    observes a move.
-3. **`POST /organizations/{id}/technical-enrich`** — the API surface, 202 with no body. No UI calls
+3. **`POST /companies/{id}/technical-enrich`** — the API surface, 202 with no body. No UI calls
    it; it exists for scripting.
 
 Those two **enqueue rather than run inline**, because a certificate log with a five-second pacer
@@ -135,7 +135,7 @@ With it unset, the job kinds are never registered, and anything that enqueues a 
 job that retries against an unregistered kind:
 
 ```
-job kind is not registered in the client's Workers bundle: technical_enrich_organization
+job kind is not registered in the client's Workers bundle: technical_enrich_company
 ```
 
 ### `--technical-backfill-interval` — how often to refresh
@@ -202,7 +202,7 @@ run, so no raw certificate hostname is stored.
 lookup is queued when the read finishes, so the fields arrive shortly after the read closes, not
 with it.
 
-**Per lane.** `GET /organizations/{id}/technical-enrich/latest` reports what each of the three
+**Per lane.** `GET /companies/{id}/technical-enrich/latest` reports what each of the three
 sources last did, with attempt counts and last-success stamps. Per lane rather than per run, because
 the three sources fail independently and one verdict would hide which of them is stale. The
 `homepage` lane is the site-page one, written by the crawl.

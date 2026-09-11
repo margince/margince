@@ -42,7 +42,7 @@ it may WRITE:
 - **all** — every record in the workspace.
 
 Both questions have to pass, and they do not bind equally. Row scope narrows
-WRITES; a customer record — person, organization, lead, deal, project — is read
+WRITES; a customer record — person, company, lead, deal, project — is read
 by every seat that holds its read grant, whatever their scope. So a rep holding
 CRU- on deals reads the whole workspace's deals and may update only the ones
 their scope reaches, while a read-only auditor holding R--- reads them all and
@@ -75,6 +75,7 @@ changes none.
 | `channel_connection` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `commission` | CRUD | CRUD | CRUD | -R-- | -R-- | CRUD |
 | `communication_exception` | CRUD | ---- | ---- | ---- | ---- | ---- |
+| `company` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `computed_field` | -R-- | -R-- | -R-- | -R-- | -R-- | -R-- |
 | `consent_config` | CRUD | -R-- | ---- | ---- | ---- | CRUD |
 | `contract` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
@@ -100,7 +101,6 @@ changes none.
 | `oauth_application` | CRUD | -R-- | ---- | ---- | ---- | CRUD |
 | `offer` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `offer_template` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
-| `organization` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `overlay_connection` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `partner` | CRUD | CRUD | CRUD | -R-- | -R-- | CRUD |
 | `person` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
@@ -184,6 +184,6 @@ mask authored on a custom role does not reach it.
 Nor is it lifted by write authority, the way a role mask conditioned on
 outside_write_authority is: being allowed to change a contract says nothing
 about being allowed to read the company it names. A contract is admitted by
-its deal OR its organization, and that disjunction decides ADMISSION only — a
+its deal OR its company, and that disjunction decides ADMISSION only — a
 reader let in through the deal is still asked, per reference, whether they
 could open what it points at.

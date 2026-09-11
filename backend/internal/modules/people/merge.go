@@ -32,14 +32,14 @@ import (
 // surviving record must still satisfy afterwards —
 //
 //   - ≤1 primary email/phone per (person, type) and ≤1 primary domain per
-//     org: A's primaries demote when B already holds that slot.
+//     company: A's primaries demote when B already holds that slot.
 //   - ≤1 current-primary employer per person: same demotion rule.
 //   - an activity/list/tag linked to BOTH records keeps B's link and
 //     drops A's (pure link rows, deletion loses nothing).
 //   - a relationship edge A already shares with B (same kind + same far
 //     end) archives instead of relinking — a duplicate edge is noise,
 //     and archived rows keep the provenance.
-//   - a partner edge BETWEEN A and B can survive on neither (an org
+//   - a partner edge BETWEEN A and B can survive on neither (a company
 //     cannot partner with itself): it archives.
 //
 // Consent merges restrictively where the two records disagree: A's
@@ -51,7 +51,7 @@ import (
 // records are the same human, so a consent that human granted remains
 // proven (the same carry-through the lead→person promotion does).
 
-// The audit keys a merge writes, spelled once so the person, organization
+// The audit keys a merge writes, spelled once so the person, company
 // and lead merges cannot drift apart in what they record.
 // Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
 const (
@@ -245,14 +245,14 @@ func relinkPersonEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Pe
 		return 0, err
 	}
 	// works_with is handled above and excluded here: its duplicate is a PAIR
-	// duplicate, not a (kind, org, deal) one, and this predicate would archive
+	// duplicate, not a (kind, company, deal) one, and this predicate would archive
 	// a source edge because the target pairs with ANYBODY.
 	if _, err := tx.Exec(ctx, `
 		UPDATE relationship a SET archived_at = $3
 		WHERE a.person_id = $1 AND a.kind <> 'works_with' AND a.archived_at IS NULL AND EXISTS (
 		  SELECT 1 FROM relationship b
 		  WHERE b.person_id = $2 AND b.kind = a.kind AND b.archived_at IS NULL
-		    AND b.organization_id IS NOT DISTINCT FROM a.organization_id
+		    AND b.company_id IS NOT DISTINCT FROM a.company_id
 		    AND b.deal_id IS NOT DISTINCT FROM a.deal_id)`,
 		sourceID, targetID, time.Now().UTC()); err != nil {
 		return 0, err
@@ -305,7 +305,7 @@ func relinkWorksWithEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids
 // copy — these rows carry no provenance of their own, so deletion loses
 // nothing — and the rest relink.
 func relinkLinkRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) (int64, error) {
-	column := entityType + "_id" // person_id | organization_id
+	column := entityType + "_id" // person_id | company_id
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_link a
 		WHERE a.`+column+` = $1 AND EXISTS (

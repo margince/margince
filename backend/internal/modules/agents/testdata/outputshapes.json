@@ -4034,7 +4034,7 @@
           "candidates_truncated": {
             "type": "boolean"
           },
-          "organization_id": {
+          "company_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -4080,7 +4080,7 @@
         },
         "required": [
           "candidates_truncated",
-          "organization_id",
+          "company_id",
           "routes"
         ]
       },
@@ -6240,6 +6240,10 @@
           "as_of": {
             "type": "string"
           },
+          "company_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "deals": {
             "type": "array",
             "items": {
@@ -6372,10 +6376,6 @@
                 "subject"
               ]
             }
-          },
-          "organization_id": {
-            "type": "string",
-            "format": "uuid"
           },
           "owner_id": {
             "type": "string",
@@ -8110,6 +8110,22 @@
               "truncated"
             ]
           },
+          "company": {
+            "type": "object",
+            "properties": {
+              "company_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "company_id",
+              "name"
+            ]
+          },
           "contracts": {
             "type": "object",
             "properties": {
@@ -8269,22 +8285,6 @@
               "unattributed_nearby"
             ]
           },
-          "organization": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "organization_id": {
-                "type": "string",
-                "format": "uuid"
-              }
-            },
-            "required": [
-              "name",
-              "organization_id"
-            ]
-          },
           "phase_history": {
             "type": "object",
             "properties": {
@@ -8356,6 +8356,10 @@
               "closed_reason": {
                 "type": "string"
               },
+              "company_id": {
+                "type": "string",
+                "format": "uuid"
+              },
               "description": {
                 "type": "string"
               },
@@ -8367,10 +8371,6 @@
               },
               "name": {
                 "type": "string"
-              },
-              "organization_id": {
-                "type": "string",
-                "format": "uuid"
               },
               "owner_id": {
                 "type": "string",

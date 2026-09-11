@@ -30,7 +30,7 @@ expect:
     "Your Customer Service Team".
     "role_mailbox" scores high: it keeps the mail visible and withholds only the
     contact record, which is exactly right when the address is a function rather
-    than a person. "organization_sender" is a near miss and scores nearly as
+    than a person. "company_sender" is a near miss and scores nearly as
     high — it has the same effect, real correspondence with no person created,
     and the line between a service desk and the company writing as itself is
     genuinely thin here. "person" is the junk-record failure this scenario exists
