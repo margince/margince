@@ -3865,6 +3865,7 @@ public.idx_product_active CREATE INDEX idx_product_active ON public.product USIN
 public.idx_product_search CREATE INDEX idx_product_search ON public.product USING gin (search_tsv)
 public.idx_project_company CREATE INDEX idx_project_company ON public.project USING btree (company_id) WHERE (archived_at IS NULL)
 public.idx_project_company_open CREATE INDEX idx_project_company_open ON public.project USING btree (company_id) WHERE ((phase <> 'closed'::text) AND (archived_at IS NULL))
+public.idx_project_health_current CREATE INDEX idx_project_health_current ON public.project_health_assessment USING btree (project_id, assessed_at DESC, created_at DESC, id DESC)
 public.idx_project_last_activity_keyset CREATE INDEX idx_project_last_activity_keyset ON public.project USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_project_name_trgm CREATE INDEX idx_project_name_trgm ON public.project USING gin (f_unaccent(lower(name)) gin_trgm_ops)
 public.idx_project_owner CREATE INDEX idx_project_owner ON public.project USING btree (owner_id) WHERE (archived_at IS NULL)
@@ -4885,6 +4886,27 @@ public.project.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.project.uq_project_ws_id UNIQUE (id)
 public.project.version bigint NOT NULL gen=- def=1
 public.project.visibility text NOT NULL gen=- def='workspace'::text
+public.project_health_assessment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.project_health_assessment.assessed_at timestamp with time zone NOT NULL gen=- def=-
+public.project_health_assessment.captured_by text NOT NULL gen=- def=-
+public.project_health_assessment.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.project_health_assessment.id uuid NOT NULL gen=- def=uuidv7()
+public.project_health_assessment.note text gen=- def=-
+public.project_health_assessment.project_health_assessment_pkey PRIMARY KEY (id)
+public.project_health_assessment.project_health_assessment_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
+public.project_health_assessment.project_health_assessment_project_id_key UNIQUE (project_id, id)
+public.project_health_assessment.project_health_not_its_own_successor CHECK ((supersedes_assessment_id IS DISTINCT FROM id))
+public.project_health_assessment.project_health_note_bounded CHECK (((note IS NULL) OR (length(note) <= 4000)))
+public.project_health_assessment.project_health_state_known CHECK ((state = ANY (ARRAY['on_track'::text, 'at_risk'::text, 'off_track'::text])))
+public.project_health_assessment.project_health_supersedes_same_project FOREIGN KEY (project_id, supersedes_assessment_id) REFERENCES project_health_assessment(project_id, id) ON DELETE RESTRICT
+public.project_health_assessment.project_health_trouble_is_explained CHECK (((state = 'on_track'::text) OR ((note IS NOT NULL) AND (length(btrim(note)) > 0))))
+public.project_health_assessment.project_id uuid NOT NULL gen=- def=-
+public.project_health_assessment.source text NOT NULL gen=- def=-
+public.project_health_assessment.source_author text gen=- def=-
+public.project_health_assessment.state text NOT NULL gen=- def=-
+public.project_health_assessment.supersedes_assessment_id uuid gen=- def=-
+public.project_health_assessment_pkey CREATE UNIQUE INDEX project_health_assessment_pkey ON public.project_health_assessment USING btree (id)
+public.project_health_assessment_project_id_key CREATE UNIQUE INDEX project_health_assessment_project_id_key ON public.project_health_assessment USING btree (project_id, id)
 public.project_phase_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.project_phase_history.changed_by text NOT NULL gen=- def=-
 public.project_phase_history.from_phase text gen=- def=-
@@ -5980,6 +6002,7 @@ public.uq_pipeline_default CREATE UNIQUE INDEX uq_pipeline_default ON public.pip
 public.uq_preference_token_contact_address CREATE UNIQUE INDEX uq_preference_token_contact_address ON public.preference_token USING btree (contact_id, contact_email_id) NULLS NOT DISTINCT WHERE (revoked_at IS NULL)
 public.uq_product_sku CREATE UNIQUE INDEX uq_product_sku ON public.product USING btree (sku) WHERE ((sku IS NOT NULL) AND (archived_at IS NULL))
 public.uq_product_ws_id CREATE UNIQUE INDEX uq_product_ws_id ON public.product USING btree (id)
+public.uq_project_health_one_successor CREATE UNIQUE INDEX uq_project_health_one_successor ON public.project_health_assessment USING btree (supersedes_assessment_id) WHERE (supersedes_assessment_id IS NOT NULL)
 public.uq_project_key CREATE UNIQUE INDEX uq_project_key ON public.project USING btree (lower(key)) WHERE ((key IS NOT NULL) AND (archived_at IS NULL))
 public.uq_project_ws_id CREATE UNIQUE INDEX uq_project_ws_id ON public.project USING btree (id)
 public.uq_record_assignment_company_team CREATE UNIQUE INDEX uq_record_assignment_company_team ON public.record_assignment USING btree (company_id, role_id, team_id) WHERE ((company_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL))

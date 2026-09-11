@@ -338,18 +338,24 @@ var replayableOperations = map[string]replayTarget{
 	// The two administered lead vocabularies are gated like the field catalog
 	// they extend — auth.Require on "custom_field" in every store entry point —
 	// and their rows are workspace-shared config with no owner column.
-	"POST /v1/lead-sources":                  {object: objectCustomField, rowNote: noOwnerCatalog},
-	"PATCH /v1/lead-sources/{id}":            {object: objectCustomField, rowNote: noOwnerCatalog},
-	"POST /v1/acquisition-sources":           {object: objectCustomField, rowNote: noOwnerCatalog},
-	"PATCH /v1/acquisition-sources/{id}":     {object: objectCustomField, rowNote: noOwnerCatalog},
-	"POST /v1/record-roles":                  {object: objectCustomField, rowNote: noOwnerCatalog},
-	"PATCH /v1/record-roles/{id}":            {object: objectCustomField, rowNote: noOwnerCatalog},
-	"POST /v1/lead-disqualify-reasons":       {object: objectCustomField, rowNote: noOwnerCatalog},
-	"PATCH /v1/lead-disqualify-reasons/{id}": {object: objectCustomField, rowNote: noOwnerCatalog},
-	"POST /v1/custom-fields":                 {objectNote: fieldCatalogGate, rowNote: noOwnerCatalog},
-	"PATCH /v1/custom-fields/{id}":           {objectNote: fieldCatalogGate, rowNote: noOwnerCatalog},
-	"PATCH /v1/custom-fields/{id}/options":   {objectNote: fieldCatalogGate, rowNote: noOwnerCatalog},
-	"POST /v1/custom-fields/{id}/retire":     {objectNote: fieldCatalogGate, rowNote: noOwnerCatalog},
+	"POST /v1/lead-sources":              {object: objectCustomField, rowNote: noOwnerCatalog},
+	"PATCH /v1/lead-sources/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
+	"POST /v1/acquisition-sources":       {object: objectCustomField, rowNote: noOwnerCatalog},
+	"PATCH /v1/acquisition-sources/{id}": {object: objectCustomField, rowNote: noOwnerCatalog},
+	"POST /v1/record-roles":              {object: objectCustomField, rowNote: noOwnerCatalog},
+	// A health assessment hangs on the project and has no owner of its own, so
+	// the row a replay must re-probe is the PROJECT: telling somebody how a
+	// delivery is going is something to say only to a caller who may still open
+	// it. The project id is in the response body, as project_id.
+	"POST /v1/projects/{id}/health-assessments":                             {object: tableProject, table: tableProject, idPath: "project_id"},
+	"POST /v1/projects/{id}/health-assessments/{assessment_id}/corrections": {object: tableProject, table: tableProject, idPath: "project_id"},
+	"PATCH /v1/record-roles/{id}":                                           {object: objectCustomField, rowNote: noOwnerCatalog},
+	"POST /v1/lead-disqualify-reasons":                                      {object: objectCustomField, rowNote: noOwnerCatalog},
+	"PATCH /v1/lead-disqualify-reasons/{id}":                                {object: objectCustomField, rowNote: noOwnerCatalog},
+	"POST /v1/custom-fields":                                                {objectNote: fieldCatalogGate, rowNote: noOwnerCatalog},
+	"PATCH /v1/custom-fields/{id}":                                          {objectNote: fieldCatalogGate, rowNote: noOwnerCatalog},
+	"PATCH /v1/custom-fields/{id}/options":                                  {objectNote: fieldCatalogGate, rowNote: noOwnerCatalog},
+	"POST /v1/custom-fields/{id}/retire":                                    {objectNote: fieldCatalogGate, rowNote: noOwnerCatalog},
 	// An approval is row-scoped through its TARGET (approvals.decidable =
 	// decision grants AND targetVisible), and that rule lives inside the
 	// approvals module — so the probe is borrowed rather than reimplemented

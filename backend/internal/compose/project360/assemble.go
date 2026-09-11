@@ -173,6 +173,7 @@ func (a *assembly) sections() error {
 		{crmcontracts.Project360SectionPhaseHistory, a.readPhaseHistory},
 		{crmcontracts.Project360SectionDeals, a.readDeals},
 		{crmcontracts.Project360SectionStakeholders, a.readStakeholders},
+		{crmcontracts.Project360SectionHealth, a.readHealth},
 		{crmcontracts.Project360SectionContracts, a.readContracts},
 		{crmcontracts.Project360SectionCommitments, a.readCommitments},
 		{crmcontracts.Project360SectionActivities, a.readTimeline},
