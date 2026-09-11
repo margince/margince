@@ -37644,10 +37644,16 @@ components:
         Four names come from a durable carrier that owns its own occurrence and can say
         queued and running: the two scheduled kinds match a name in runner.Catalog(),
         `document_extract` is a reading of an attached document a human asked for, and
-        `site_read` is a deep read of a company's website — one occurrence for the whole crawl,
-        where the site tasks below are the individual model calls it makes. Every other
-        name is an api/ai-tasks.yaml task announced by the router on the task's own behalf —
+        `site_read` is a deep read of a company's website. Every other name is an
+        api/ai-tasks.yaml task announced by the router on the task's own behalf —
         settled when it appears, because the router learns of a call once the call is over.
+
+        `site_extract`, `site_fact_extract` and `site_triage` are RETIRED names: a website
+        read runs those three passes and is one occurrence of the read, so the passes report
+        none of their own. Nothing writes them any more. They stay in this list because it is
+        also what a caller may FILTER on, and rows written before they were retired are served
+        until the projection's retention window closes over them — narrowing the filter would
+        refuse a query that still has answers.
 
         Its own schema because the item that reports a kind and the query that asks for kinds
         must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody

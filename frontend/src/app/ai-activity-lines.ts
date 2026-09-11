@@ -35,17 +35,24 @@ const SYSTEM_SWEEP = notDisplayed(
 
 // The site-read lanes, which do NOT belong above however much they look like it.
 //
-// Their attribution is a property of the READ, not of the task: compose binds
-// the requester as OnBehalfOf when a human asked (deepreadprincipal.go), so
-// those occurrences resolve to that person and land in their personal feed —
-// while a read requested by domain triage or the auto-enrich sweep names no
-// human, yields the zero uuid, and is workspace-scoped like any sweep. Calling
-// all three "work that belongs to nobody" is therefore false for the commonest
+// They are RETIRED names. A read runs all three as model calls and is one
+// occurrence of the read, so nothing announces them any more — but the wire can
+// still carry them, from rows written before that and from a caller filtering on
+// the name, so the rail still has to answer for what it draws. Nothing, as
+// before.
+//
+// Their attribution is why this is a reason of its own rather than the sweep's:
+// compose binds the requester as OnBehalfOf when a human asked
+// (deepreadprincipal.go), so those occurrences resolve to that person and land
+// in their personal feed — while a read requested by domain triage or the
+// auto-enrich sweep names no human and is workspace-scoped like any sweep.
+// Calling all three "work that belongs to nobody" is false for the commonest
 // case, and a kind-level map cannot say "sometimes personal" in the SYSTEM_SWEEP
-// sentence — which is why they get their own reason instead of sharing one.
+// sentence.
 const SITE_READ_WATCHED_WHERE_IT_RUNS = notDisplayed(
-  "the site-read lanes, which are the individual model calls a website read makes, and the read narrates itself: `site_read` below is one occurrence for the whole crawl, announced by the dossier row from the moment it is queued to the moment it settles, so a line per call would tell one reading several times over — and at a grain the rail could not render honestly, because the occurrence key is correlation+task and one read's correlation is its site_read row id, so a single read files one occurrence PER LANE it runs. Their attribution is a fact about the READ rather than the task: a human-requested read carries that person as on_behalf_of and IS personal to them, while a domain-triage or auto-enrich read names no human and is workspace-scoped, exactly like the sweeps above",
+  "the site-read lanes, which are the individual model calls a website read makes. The read narrates itself: `site_read` below is one occurrence for the whole crawl, announced by the dossier row from the moment it is queued to the moment it settles, so a line per call would tell one reading several times over. These three no longer report at all — the rail registry has them as steps inside the read — and the names survive here because rows written before that are served until the projection's retention window closes over them, and because the same list is what a caller may filter on. Their attribution was never the task's either: a human-requested read carries that person as on_behalf_of and IS personal to them, while a domain-triage or auto-enrich read names no human and is workspace-scoped, exactly like the sweeps above",
 );
+
 /**
  * The line for one (kind, state), by literal key — or the reason there is none.
  *
