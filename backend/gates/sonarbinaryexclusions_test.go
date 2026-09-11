@@ -45,11 +45,22 @@ func trackedBinaries(t *testing.T) []string {
 		if rel == "" {
 			continue
 		}
-		content, err := os.ReadFile(filepath.Join(repoRoot, rel))
+		full := filepath.Join(repoRoot, rel)
+		// A tracked path that is not a regular file is a submodule or a symlink,
+		// which the sensor does not open. Asked before the read, and separately
+		// from it, so that an unreadable REGULAR file fails below rather than
+		// dropping out of the corpus — a census that skips what it cannot read
+		// reports PASS for exactly the file it failed to examine.
+		info, err := os.Lstat(full)
 		if err != nil {
-			// A tracked path that is not a readable file here is a submodule or
-			// a symlink, not something the sensor opens.
+			t.Fatalf("%s is tracked but cannot be stat'd: %v", rel, err)
+		}
+		if !info.Mode().IsRegular() {
 			continue
+		}
+		content, err := os.ReadFile(full)
+		if err != nil {
+			t.Fatalf("reading tracked file %s: %v", rel, err)
 		}
 		read++
 		if !utf8.Valid(content) {
