@@ -12,6 +12,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { openAnalyticsSection } from "./analytics.address";
 import { AgendaPanel, AgendaSummary } from "./brief.teamweeklyagenda";
 import { OutlookPanel } from "./brief.waterfall";
 import {
@@ -130,7 +131,7 @@ export function TeamWeeklySection({
   const review = answer.data?.kind === "review" ? answer.data.review : null;
 
   return (
-    <section id="brief-team-weekly" aria-label={t("teamweekly.title")}>
+    <section id="brief-team-weekly">
       <Panel
         title={t("teamweekly.title")}
         sub={
@@ -199,6 +200,7 @@ function TeamOutlook({
       locale={locale}
       horizon={horizon}
       onHorizon={setHorizon}
+      onOpenForecast={() => openAnalyticsSection("forecast")}
     />
   );
 }

@@ -240,6 +240,16 @@
   margin-top: 0;
 }
 
+/* The sub-heading inside a band: which day this run of work is due.
+   Quieter than the band above it and indented to the same gutter, so it reads
+   as a division WITHIN the band rather than as a band of its own. */
+.worklist-due-run {
+  color: var(--textMeta);
+  display: block;
+  margin: var(--space-4) 0 var(--space-2);
+  padding-inline: var(--padPanel);
+}
+
 /* What an empty band says. Set in the meta ink so a clear band reads as a quiet
    answer rather than as the same weight as work. */
 .worklist-band-clear {

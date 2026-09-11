@@ -158,7 +158,7 @@ func TestAnAnswerFromTheConfirmPageCompletesTheGrant(t *testing.T) {
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
 
-	if err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
+	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
 		MarketingChoice:  string(StateGranted),
 		MarketingWording: "News from time to time, roughly once a month.",
 	}); err != nil {
@@ -203,10 +203,10 @@ func TestAConfirmLinkAnswersOnce(t *testing.T) {
 		MarketingChoice:  string(StateGranted),
 		MarketingWording: "News from time to time.",
 	}
-	if err := e.store.SubmitConfirmation(e.ctx, link.Token, first); err != nil {
+	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, first); err != nil {
 		t.Fatalf("first submit: %v", err)
 	}
-	err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
+	_, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
 		MarketingChoice:  string(StateWithdrawn),
 		MarketingWording: "News from time to time.",
 	})
@@ -228,7 +228,7 @@ func TestASpentLinkOpensNothing(t *testing.T) {
 	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token); err != nil {
 		t.Fatalf("resolve a live link: %v", err)
 	}
-	if err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{}); err != nil {
+	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{}); err != nil {
 		t.Fatalf("submit: %v", err)
 	}
 	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token); !errors.Is(err, apperrors.ErrNotFound) {
@@ -250,7 +250,7 @@ func TestACorrectionIsStagedAndNeverWritten(t *testing.T) {
 		t.Fatalf("read the name before: %v", err)
 	}
 
-	if err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
+	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
 		Corrections: map[string]string{ConfirmFieldFullName: "Corrected Name"},
 	}); err != nil {
 		t.Fatalf("submit a correction: %v", err)
@@ -285,7 +285,7 @@ func TestARemovalRequestIsFiledAndTheRecordSurvives(t *testing.T) {
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
 
-	if err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
+	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
 		RequestErasure: true,
 	}); err != nil {
 		t.Fatalf("submit a removal request: %v", err)
@@ -318,7 +318,7 @@ func TestOpeningThePageAndCorrectingGrantsNothing(t *testing.T) {
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
 
-	if err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
+	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
 		Corrections: map[string]string{ConfirmFieldTitle: "CFO"},
 	}); err != nil {
 		t.Fatalf("submit without an answer: %v", err)
@@ -338,7 +338,7 @@ func TestARefusedAnswerLeavesNoStagedCorrections(t *testing.T) {
 	// this a real test of the rollback rather than of validation.
 	link := issueLink(t, e)
 
-	err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
+	_, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
 		Corrections:      map[string]string{ConfirmFieldFullName: "Corrected Name"},
 		MarketingChoice:  string(StateGranted),
 		MarketingWording: "News from time to time.",
@@ -369,7 +369,7 @@ func TestAnUnofferedFieldIsRefusedWithoutSpendingTheLink(t *testing.T) {
 	link := issueLink(t, e)
 
 	var invalid *ValidationError
-	err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
+	_, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
 		Corrections: map[string]string{"owner_id": ids.NewV7().String()},
 	})
 	if !errors.As(err, &invalid) {
@@ -410,7 +410,10 @@ func TestTwoSubmitsRacingOnOneLinkLeaveOneWinner(t *testing.T) {
 	}
 	results := make(chan error, 2)
 	for range 2 {
-		go func() { results <- e.store.SubmitConfirmation(e.ctx, link.Token, answer) }()
+		go func() {
+			_, err := e.store.SubmitConfirmation(e.ctx, link.Token, answer)
+			results <- err
+		}()
 	}
 	var won int
 	for range 2 {
@@ -451,7 +454,7 @@ func TestALinkHeldByAnArchivedSubjectReadsAsAbsent(t *testing.T) {
 	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("resolve: %v, want not-found — an archived subject's link reads as absent", err)
 	}
-	if err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{}); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("submit: %v, want not-found", err)
 	}
 	var spent bool

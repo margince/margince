@@ -128,8 +128,17 @@
 .btn-primary:hover {
   filter: brightness(1.06);
 }
+/* The READING red, not the base hue. A destructive button is chrome carrying a
+   word, so the pair that has to clear AA is its fill and its label — and the
+   base status hues are tuned to be seen at a figure's or a bar's size, which
+   leaves no ink able to sit on them: the brightest red the palette holds pays
+   4.11:1 for the best ink there is, and axe reads that as the failure it is.
+   The Text token is the same hue at the share a reader's contrast needs, so the
+   fill is still unmistakably the destructive red and the label is legible on
+   it. Any filled status control follows this — a bar, a dot, a border or a
+   meter keeps the base, because nothing is read ON it. */
 .btn-danger {
-  background: var(--danger);
+  background: var(--dangerText);
   color: var(--textOnStatusControl);
 }
 .btn-danger:hover {
@@ -512,7 +521,7 @@ a:not([class]):focus-visible {
    worn over a size class — `t-caption t-danger`, `t-sub t-danger` — and a
    second font-size here would fight whichever one that is. */
 .t-danger {
-  color: var(--danger);
+  color: var(--dangerText);
   font-weight: var(--fw-medium);
 }
 

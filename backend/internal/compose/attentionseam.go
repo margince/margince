@@ -37,7 +37,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -123,88 +122,6 @@ func primaryLink(row crmcontracts.Activity) (string, ids.UUID) {
 	return bestType, bestID
 }
 
-// approvalStatusApproved is the decided status a receipt is read from. Spelled
-// once here because the receipt lane asks for it by name and a typo would
-// quietly return an empty lane rather than an error.
-const approvalStatusApproved = "approved"
-
-// attentionReceipts reads what ran without asking.
-//
-// The test is the decision's own decided_by_system marker. It used to be
-// decided_by IS NULL, inferring "nobody decided" from an empty column, and that
-// read the wrong thing twice over: no writer produces approved-with-no-decider,
-// and deleting an app_user empties decided_by on every approval that person
-// decided — which would move their decisions into a lane headed "Done for you".
-// Filtering on status alone would do the same thing to every reader's own
-// approvals, which is the one claim this lane exists to make.
-type attentionReceipts struct{ svc *approvals.Service }
-
-func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit int) ([]attention.Receipt, error) {
-	return recentReceipts(since, limit, func(scan int) ([]crmcontracts.Approval, error) {
-		status := approvalStatusApproved
-		bySystem := true
-		rows, _, err := r.svc.ListWire(ctx, approvals.ListInput{
-			Status: &status, DecidedBySystem: &bySystem, DecidedAfter: &since, Limit: scan,
-		})
-		return rows, err
-	})
-}
-
-// recentReceipts turns the store's rows into the lane's cards.
-//
-// The read is bounded by the lane rather than widened past it: the store answers
-// "approved, decided by the system, decided since" itself, so the limit applies
-// to rows that qualify. The window belongs in SQL with the rest — the page is
-// ordered by created_at while the window is about decided_at, so a window
-// applied afterwards can discard a whole page and hide a decision made minutes
-// ago beneath approvals staged more recently.
-//
-// The re-check below is not a second filter. It is what makes the deref of
-// DecidedAt safe in this package, where the SQL guaranteeing it is elsewhere.
-//
-// The page reader is a parameter so a test can answer exactly the width it was
-// asked for; nothing else varies it.
-func recentReceipts(
-	since time.Time, limit int, page func(scan int) ([]crmcontracts.Approval, error),
-) ([]attention.Receipt, error) {
-	rows, err := page(limit)
-	if err != nil {
-		return nil, err
-	}
-	return receiptsWithin(rows, since), nil
-}
-
-// receiptsWithin keeps the decided rows inside the lane's window.
-func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.Receipt {
-	out := make([]attention.Receipt, 0, len(rows))
-	for _, row := range rows {
-		// Inside the window, not before it: `since` is the receipt lane's own
-		// horizon, and the same authority answers "is this behind that" here as
-		// answers it for a task's due date.
-		if row.DecidedAt == nil || deadline.Passed(row.DecidedAt, since) {
-			continue
-		}
-		summary := ""
-		if row.Summary != nil {
-			summary = *row.Summary
-		}
-		receipt := attention.Receipt{
-			ID:         ids.UUID(row.Id),
-			Kind:       row.Kind,
-			Summary:    summary,
-			OccurredAt: *row.DecidedAt,
-		}
-		// Both or neither: a type with no id names nothing, and an id with no
-		// type says where to look without saying at what.
-		if row.TargetEntityType != nil && row.TargetEntityId != nil {
-			receipt.TargetType = *row.TargetEntityType
-			receipt.TargetID = ids.UUID(*row.TargetEntityId)
-		}
-		out = append(out, receipt)
-	}
-	return out
-}
-
 // attentionFailedEffects reads the decisions this rep approved whose released
 // work then failed — the mark decide.go leaves on the approved row. The
 // service binds the acting user itself (FailedForDecider), so this lane can
@@ -264,7 +181,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: people.NewStore(db)},
 		attentionTasks{store: activities.NewStore(db)},
-		attentionReceipts{svc: svc},
+		attentionReceipts{svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
 			engine: briefs.NewBriefEngine(pool, people.NewStore(db)),
 			// The same reader WithDealFacts binds below, so the lane keeps an

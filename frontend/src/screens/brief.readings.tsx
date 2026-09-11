@@ -21,6 +21,7 @@ import {
   usePlural,
   useT,
 } from "../i18n";
+import { openAnalyticsSection } from "./analytics.address";
 import { useAnalyticsContext } from "./analytics.context";
 import { useForecastReadings } from "./forecast.queries";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
@@ -84,13 +85,11 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
       <StatStrip
         testId="brief-readings"
-        hero
         floor={
           readings.more_available ? t("brief.readings.truncated") : undefined
         }
       >
         <StatCard
-          numeric
           label={t("brief.readings.urgent")}
           value={formatNumber(day.summary.urgent, locale)}
           tone={day.summary.urgent > 0 ? "warn" : undefined}
@@ -103,9 +102,6 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // zero already reads as "none"; a line under it repeating that says
           // the same thing twice and drops the one fact it could add.
           detail={t("brief.readings.urgentBasis")}
-          openLabel={t("brief.readings.openLaneNamed", {
-            reading: t("brief.readings.urgent"),
-          })}
           onOpen={() => openLane("all")}
         />
         <MeetingsStat
@@ -124,14 +120,10 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
         />
         <PipelineOutlook />
         <StatCard
-          numeric
           label={t("brief.readings.decisions")}
           value={formatNumber(readings.review, locale)}
           tone={readings.review > 0 ? "warn" : undefined}
           detail={t("brief.readings.decisionsBasis")}
-          openLabel={t("brief.readings.openLaneNamed", {
-            reading: t("brief.readings.decisions"),
-          })}
           onOpen={() => openLane("decisions")}
         />
       </StatStrip>
@@ -163,14 +155,10 @@ function MeetingsStat({
   const plural = usePlural();
   return (
     <StatCard
-      numeric
       label={t("brief.readings.meetings")}
       value={formatNumber(meetings, locale)}
       tone={unready !== null && unready > 0 ? "warn" : undefined}
       detail={meetingsDetail(meetings, unready, locale, t, plural)}
-      openLabel={t("brief.readings.openLaneNamed", {
-        reading: t("brief.readings.meetings"),
-      })}
       onOpen={onOpen}
     />
   );
@@ -222,7 +210,6 @@ function LeadsStat({
 }>) {
   return (
     <StatCard
-      numeric
       label={t("brief.readings.leads")}
       value={formatNumber(leads, locale)}
       tone={leads > 0 ? "warn" : undefined}
@@ -233,9 +220,6 @@ function LeadsStat({
               value: formatDateTime(soonest, locale, viewerZone()),
             })
       }
-      openLabel={t("brief.readings.openLaneNamed", {
-        reading: t("brief.readings.leads"),
-      })}
       onOpen={onOpen}
     />
   );
@@ -373,7 +357,7 @@ function PipelineOutlook() {
     return (
       <StatCard
         label={t("brief.readings.pipeline")}
-        value="—"
+        value={t("brief.readings.pipelinePending")}
         detail={t("brief.readings.pipelineReading")}
       />
     );
@@ -389,13 +373,13 @@ function PipelineOutlook() {
   // send it, a projection that lost it, or a proxy answering the route with
   // something else all arrive this way.
   if (readings.isError || !readings.data?.base_currency) {
-    // A read that did not land is not a pipeline of nothing. The em dash says
-    // the question went unanswered, which is what the retired slots said and
-    // the one case where that spelling is still true.
+    // A read that did not land is not a pipeline of nothing, and the slot says
+    // so in words: a glyph in one slot of a row read across as one statement
+    // reads as a figure the plate failed to draw rather than as one nobody has.
     return (
       <StatCard
         label={t("brief.readings.pipeline")}
-        value="—"
+        value={t("brief.readings.pipelineNoRead")}
         detail={t("brief.readings.pipelineUnread")}
       />
     );
@@ -425,6 +409,11 @@ function PipelineOutlook() {
       // in the viewer's clock west of UTC they print the day before — a quarter
       // labelled 30 Jun – 29 Sept. The period is a property of the
       // installation's calendar, the same for every colleague reading it.
+      // The forecast section, which is where this figure is read from: the
+      // same query key, under the same scope the server named for this reader.
+      // Not the deals list — the reading is a period's weighted outlook, and a
+      // list of open deals is a different question that happens to share a sum.
+      onOpen={() => openAnalyticsSection("forecast")}
       detail={t("brief.readings.pipelineBasis", {
         period: `${formatDateAbbrev(
           middayInstant(data.period_start, recordZone),

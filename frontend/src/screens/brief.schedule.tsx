@@ -39,7 +39,7 @@ export function SchedulePanel({
   const zone = viewerZone();
   const meetings = rowsFrom(day, MEETING);
   return (
-    <section id="brief-schedule" aria-label={t("brief.panel.schedule")}>
+    <section id="brief-schedule">
       <Panel title={t("brief.panel.schedule")} className="rail-panel">
         {/* The rows are `PanelRow`s and carry the panel's own gutter, so they
             sit in the Panel directly — inside a `PanelBody` they would be
@@ -84,7 +84,7 @@ export function PromisesPanel({
   const t = useT();
   const tasks = rowsFrom(day, TASK);
   return (
-    <section id="brief-promises" aria-label={t("brief.panel.promises")}>
+    <section id="brief-promises">
       <Panel title={t("brief.panel.promises")} className="rail-panel">
         <SurfaceState
           loadingLabel={t("brief.panel.promises")}

@@ -69,13 +69,35 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, personID ids.PersonID, e
 		  DELETE FROM communication_basis
 		  WHERE lead_id IN (SELECT id FROM wiped)
 		), leadsuppressions AS (
+		  -- BY ADDRESS TOO, because a public unsubscribe press can record a
+		  -- stop against an address no record held at the time. Nothing keyed
+		  -- by subject reaches such a row, and it carries the erased
+		  -- address in plaintext.
 		  DELETE FROM communication_suppression
 		  WHERE lead_id IN (SELECT id FROM wiped)
+		     OR (address IS NOT NULL AND lower(address) = ANY($2))
+		), leadcredentials AS (
+		  DELETE FROM withdrawal_credential
+		  WHERE lead_id IN (SELECT id FROM wiped)
+		     OR lower(address) = ANY($2)
 		), leaddecisions AS (
 		  UPDATE communication_decision
 		     SET recipient_address = 'erased+' || id || '@example.invalid',
 		         subject_id = NULL, subject_kind = NULL
 		   WHERE subject_kind = 'lead' AND subject_id IN (SELECT id FROM wiped)
+		), leadreviews AS (
+		  -- The refused-send reviews that named this LEAD. The person sweep
+		  -- reaches a review by the person's own id or one of their addresses,
+		  -- and an unpromoted lead has neither — so a message refused for the
+		  -- lead before promotion would keep their address here after the
+		  -- person it became was erased.
+		  UPDATE communication_review
+		     SET refusals = '[]'::jsonb
+		   WHERE EXISTS (
+		           SELECT 1 FROM jsonb_array_elements(refusals) AS refusal
+		            WHERE (refusal->>'subject_kind' = 'lead'
+		                   AND refusal->>'subject_id' IN (SELECT id::text FROM wiped))
+		               OR lower(refusal->>'address') = ANY($2))
 		)
 		SELECT id FROM wiped`, nullColumnAssignments(leadCustom)),
 		personID, lowercased(emails))

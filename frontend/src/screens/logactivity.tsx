@@ -6,13 +6,13 @@ import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import {
   Button,
-  Card,
   Checkbox,
   Field,
   Modal,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -429,20 +429,24 @@ export function LogActivity({
   }
   if (logRefused) {
     return (
-      <Card className="card-stack" title={t("log.title")} sub={t("log.sub")}>
-        <p className="t-caption">{t("record.logActivityRefused")}</p>
-      </Card>
+      <Panel title={t("log.title")} sub={t("log.sub")}>
+        <PanelBody>
+          <p className="t-caption">{t("record.logActivityRefused")}</p>
+        </PanelBody>
+      </Panel>
     );
   }
   return (
-    <Card className="card-stack" title={t("log.title")} sub={t("log.sub")}>
-      <LogActivityForm
-        entityType={entityType}
-        entityId={entityId}
-        askedKind={askedKind}
-        onLogged={onLogged}
-      />
-    </Card>
+    <Panel title={t("log.title")} sub={t("log.sub")}>
+      <PanelBody>
+        <LogActivityForm
+          entityType={entityType}
+          entityId={entityId}
+          askedKind={askedKind}
+          onLogged={onLogged}
+        />
+      </PanelBody>
+    </Panel>
   );
 }
 

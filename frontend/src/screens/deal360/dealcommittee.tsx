@@ -15,7 +15,8 @@
 // only rendering of absence that a reader can count.
 
 import type { components } from "../../api/schema";
-import { Badge, Card } from "../../design-system/atoms";
+import { Badge } from "../../design-system/atoms";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
@@ -112,64 +113,69 @@ export function DealCommitteeMap({
       );
 
   return (
-    <Card className="dc-card" title={t("deal.committee.title")}>
-      <SurfaceState
-        loadingLabel={t("deal.committee.title")}
-        state={state}
-        emptyLabel={t("deal.committee.empty")}
-        detail={
-          overlay ? { unsupportedReason: t("overlay.unavailable") } : undefined
-        }
-      >
-        <CommitteeSvg seats={seats} ourCount={ours.length} ghosts={ghosts} />
-        <ul className="dc-legend t-caption">
-          <li>
-            <span className="dc-swatch dc-swatch-engaged" />
-            {t("deal.committee.legendEngaged")}
-          </li>
-          <li>
-            <span className="dc-swatch dc-swatch-quiet" />
-            {t("deal.committee.legendQuiet")}
-          </li>
-          {ghosts > 0 && (
+    <Panel title={t("deal.committee.title")}>
+      <PanelBody>
+        <SurfaceState
+          loadingLabel={t("deal.committee.title")}
+          state={state}
+          emptyLabel={t("deal.committee.empty")}
+          detail={
+            overlay
+              ? { unsupportedReason: t("overlay.unavailable") }
+              : undefined
+          }
+        >
+          <CommitteeSvg seats={seats} ourCount={ours.length} ghosts={ghosts} />
+          <ul className="dc-legend t-caption">
             <li>
-              <span className="dc-swatch dc-swatch-gap" />
-              {t("deal.committee.legendGap")}
+              <span className="dc-swatch dc-swatch-engaged" />
+              {t("deal.committee.legendEngaged")}
             </li>
-          )}
-        </ul>
-        {/* The accessible rendering of the same seats, in the same order. */}
-        <ul className="dc-seats">
-          {seats.map((seat) => (
-            <li key={seat.person_id} className="dc-seat-row">
-              <span className="dc-seat-name">
-                <SeatPerson seat={seat} />
-              </span>
-              <span className="dc-role">{dealRoleLabel(seat.role, t)}</span>
-              <Badge tone={seat.engaged ? "success" : undefined}>
-                {seat.engaged
-                  ? t("deal.committee.engaged")
-                  : t("deal.committee.quiet")}
-              </Badge>
+            <li>
+              <span className="dc-swatch dc-swatch-quiet" />
+              {t("deal.committee.legendQuiet")}
             </li>
-          ))}
-        </ul>
-        {/* The findings themselves are NOT repeated here. DealSignals
-              already renders the same `risks` as localized chips above this
-              card, and a second rendering would give one finding two
-              spellings — and this one would be the untranslated summary. What
-              the map adds is where the gap IS, which the ghosts carry. */}
-        <p className="t-caption">
-          {t("deal.committee.threads", {
-            engaged: formatNumber(
-              seats.filter((s) => s.engaged).length,
-              locale,
-            ),
-            total: formatNumber(seats.length, locale),
-          })}
-        </p>
-      </SurfaceState>
-    </Card>
+            {ghosts > 0 && (
+              <li>
+                <span className="dc-swatch dc-swatch-gap" />
+                {t("deal.committee.legendGap")}
+              </li>
+            )}
+          </ul>
+          {/* The accessible rendering of the same seats, in the same order. */}
+          <ul className="dc-seats">
+            {seats.map((seat) => (
+              <li key={seat.person_id} className="dc-seat-row">
+                <span className="dc-seat-name">
+                  <SeatPerson seat={seat} />
+                </span>
+                <span className="dc-role">{dealRoleLabel(seat.role, t)}</span>
+                <Badge tone={seat.engaged ? "success" : undefined}>
+                  {seat.engaged
+                    ? t("deal.committee.engaged")
+                    : t("deal.committee.quiet")}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+          {/* The findings themselves are NOT repeated here. DealSignals
+                already renders the same `risks` as localized chips above this
+                panel, and a second rendering would give one finding two
+                spellings — and this one would be the untranslated summary.
+                What the map adds is where the gap IS, which the ghosts
+                carry. */}
+          <p className="t-caption">
+            {t("deal.committee.threads", {
+              engaged: formatNumber(
+                seats.filter((s) => s.engaged).length,
+                locale,
+              ),
+              total: formatNumber(seats.length, locale),
+            })}
+          </p>
+        </SurfaceState>
+      </PanelBody>
+    </Panel>
   );
 }
 

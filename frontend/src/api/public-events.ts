@@ -535,7 +535,7 @@ export interface components {
                 [key: string]: unknown;
             };
         };
-        /** @description Payload for pipeline.archived. Never emitted today (no archive path exists for pipeline); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it. */
+        /** @description Payload for pipeline.archived — a pipeline was retired as a choice. It leaves the pickers and the new-deal flows; the deals on it keep their stage, their history and their forecast contribution, so a subscriber acting on this must not treat it as work moving. The payload is empty because the entity id is the whole fact. */
         PublicEventPipelineArchived: Record<string, never>;
         /** @description Payload for stage.created — a stage was added to a pipeline. */
         PublicEventStageCreated: {

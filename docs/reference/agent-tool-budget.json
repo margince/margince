@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 75,
     "system_frame_tokens": 353,
-    "tokens": 22580,
-    "median_tool_tokens": 266,
-    "mean_tool_tokens": 300
+    "tokens": 23483,
+    "median_tool_tokens": 267,
+    "mean_tool_tokens": 312
   },
   "agents": [
     {
@@ -72,19 +72,19 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 938
+      "tokens": 989
     },
     {
       "name": "send_account_email",
-      "tokens": 741
+      "tokens": 767
+    },
+    {
+      "name": "send_email",
+      "tokens": 698
     },
     {
       "name": "log_activity",
       "tokens": 676
-    },
-    {
-      "name": "send_email",
-      "tokens": 675
     },
     {
       "name": "preview_import",
@@ -96,7 +96,11 @@
     },
     {
       "name": "send_message",
-      "tokens": 518
+      "tokens": 546
+    },
+    {
+      "name": "forecast_readings",
+      "tokens": 509
     },
     {
       "name": "progress_deal",
@@ -123,8 +127,20 @@
       "tokens": 470
     },
     {
+      "name": "forecast_movement",
+      "tokens": 453
+    },
+    {
       "name": "advance_deal",
       "tokens": 447
+    },
+    {
+      "name": "compose_analytics_report",
+      "tokens": 440
+    },
+    {
+      "name": "book_meeting",
+      "tokens": 423
     },
     {
       "name": "annotate_brief",
@@ -135,28 +151,12 @@
       "tokens": 401
     },
     {
-      "name": "book_meeting",
-      "tokens": 391
-    },
-    {
-      "name": "compose_analytics_report",
-      "tokens": 390
-    },
-    {
       "name": "enrich",
-      "tokens": 385
+      "tokens": 391
     },
     {
       "name": "search_records",
       "tokens": 382
-    },
-    {
-      "name": "forecast_readings",
-      "tokens": 357
-    },
-    {
-      "name": "forecast_movement",
-      "tokens": 351
     },
     {
       "name": "describe_report_vocabulary",
@@ -167,6 +167,14 @@
       "tokens": 343
     },
     {
+      "name": "advance_project_phase",
+      "tokens": 340
+    },
+    {
+      "name": "forecast_input_checks",
+      "tokens": 324
+    },
+    {
       "name": "prep_for_meeting",
       "tokens": 324
     },
@@ -175,16 +183,20 @@
       "tokens": 316
     },
     {
+      "name": "promote_lead",
+      "tokens": 303
+    },
+    {
       "name": "merge_records",
+      "tokens": 291
+    },
+    {
+      "name": "archive_record",
       "tokens": 289
     },
     {
       "name": "describe_analytics_vocabulary",
       "tokens": 286
-    },
-    {
-      "name": "advance_project_phase",
-      "tokens": 279
     },
     {
       "name": "catch_me_up_on",
@@ -207,10 +219,6 @@
       "tokens": 272
     },
     {
-      "name": "promote_lead",
-      "tokens": 270
-    },
-    {
       "name": "list_approvals",
       "tokens": 267
     },
@@ -225,14 +233,6 @@
     {
       "name": "check_availability",
       "tokens": 263
-    },
-    {
-      "name": "archive_record",
-      "tokens": 260
-    },
-    {
-      "name": "forecast_input_checks",
-      "tokens": 252
     },
     {
       "name": "account_coverage",
@@ -267,6 +267,14 @@
       "tokens": 211
     },
     {
+      "name": "disqualify_lead",
+      "tokens": 209
+    },
+    {
+      "name": "list_input_checks",
+      "tokens": 209
+    },
+    {
       "name": "at_risk_relationships",
       "tokens": 208
     },
@@ -291,16 +299,20 @@
       "tokens": 196
     },
     {
+      "name": "data_coverage",
+      "tokens": 195
+    },
+    {
+      "name": "list_colleagues",
+      "tokens": 195
+    },
+    {
       "name": "who_knows",
       "tokens": 194
     },
     {
       "name": "list_pipelines",
       "tokens": 191
-    },
-    {
-      "name": "disqualify_lead",
-      "tokens": 190
     },
     {
       "name": "intro_path_to",
@@ -331,28 +343,16 @@
       "tokens": 153
     },
     {
-      "name": "list_input_checks",
-      "tokens": 146
-    },
-    {
       "name": "get_record_tags",
       "tokens": 141
     },
     {
-      "name": "list_colleagues",
-      "tokens": 141
+      "name": "commit_import",
+      "tokens": 128
     },
     {
       "name": "whoami",
       "tokens": 128
-    },
-    {
-      "name": "commit_import",
-      "tokens": 118
-    },
-    {
-      "name": "data_coverage",
-      "tokens": 109
     },
     {
       "name": "list_tags",
@@ -364,7 +364,7 @@
     },
     {
       "name": "read_import_report",
-      "tokens": 73
+      "tokens": 77
     },
     {
       "name": "read_import_run",

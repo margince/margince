@@ -96,6 +96,10 @@ For EACH supplied address emit exactly one kind:
     ONLY this kind becomes a contact record.
   "role_mailbox" — an address a company answers rather than a person (support@, info@,
     sales@, a shared team mailbox). The correspondence is real; there is no human to name.
+    This includes any SERVICE DESK answering for its company: customer service, tenant or
+    property management, a utility, bank, insurer or airline, a clinic reception, a booking or
+    reservations desk. A numbered queue is still one desk — support2@, cs6@ — and so is a desk
+    whose agent signs with a first name, because the next mail is answered by somebody else.
   "company_sender" — the company itself writing under its own name rather than a
     named employee, including mail signed only with a company or product name.
   "newsletter" — bulk editorial or marketing mail, however welcome. Subscribing is not a
@@ -114,6 +118,14 @@ For EACH supplied address emit exactly one kind:
     belongs to the mailbox owner alone.
 Judge the SENDER, not the tone: a poorly written mail from a named prospect is "person", and a
 polished newsletter from a company they never contacted is "newsletter".
+A service desk can be either "role_mailbox" or "personal", and WHOSE MATTER it is decides
+which: a desk this business deals with is "role_mailbox", while the same kind of desk handling
+the mailbox owner's own private affair — their landlord, their own clinic, their child's
+school, their personal bank — is "personal". Ask who the matter belongs to, not what sort of
+company it is.
+DIRECTION matters where you are told it. A message the mailbox owner WROTE to an address is an
+intention, not yet a relationship, and an address that has never written back has told you
+nothing about itself. Prefer a kind that records no contact, and lower your confidence.
 Judge the DIRECTION of the offer, not its politeness. A "person" wants something this business
 sells, or supplies something it was engaged to supply. Someone offering to sell this business a
 service it shows no sign of having asked for — financing, capital, leads, SEO, staffing,

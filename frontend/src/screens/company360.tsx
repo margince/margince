@@ -982,11 +982,10 @@ function LastTouchStat({
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
-  const door = { openLabel: t("co.strip.open.history"), onOpen };
   if (!view || omitted(view, "last_touch")) {
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.lastTouch")}
         value={t(WITHHELD_READING)}
       />
@@ -999,7 +998,7 @@ function LastTouchStat({
   if (!last) {
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.lastTouch")}
         value={t("co.strip.lastTouch.never")}
       />
@@ -1008,7 +1007,7 @@ function LastTouchStat({
   const days = calendarDaysBetween(new Date(last), new Date(view.as_of));
   return (
     <StatCard
-      {...door}
+      onOpen={onOpen}
       label={t("co.strip.lastTouch")}
       value={
         days <= 0
@@ -1053,11 +1052,10 @@ function NextStat({
   // card that reads meetings cannot be the route to the task list without
   // saying one thing and doing another, and the tab strip reaches tasks
   // directly.
-  const door = { openLabel: t("co.strip.open.history"), onOpen };
   if (!view || omitted(view, "next_meeting")) {
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.nextMeeting")}
         value={t(WITHHELD_READING)}
       />
@@ -1067,7 +1065,7 @@ function NextStat({
   if (!meeting) {
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.nextMeeting")}
         value={t("co.strip.next.none")}
       />
@@ -1075,7 +1073,7 @@ function NextStat({
   }
   return (
     <StatCard
-      {...door}
+      onOpen={onOpen}
       label={t("co.strip.nextMeeting")}
       value={formatDateAbbrev(meeting.starts_at, locale, recordZone)}
       detail={join(
@@ -1204,14 +1202,12 @@ function MoneyStat({
   // reader meets on the health card can be checked against the money it was
   // read from, on the card that holds the money.
   dimension?: HealthDimension;
+  // Handed to every shape this reading takes: a withheld reading and a priced
+  // one are the same reading, and only one of them offering the tab would make
+  // the way out look like a property of the figure.
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
-  // The door out of this reading, handed to every shape it takes: a
-  // withheld reading and a priced one are the same reading, and only one
-  // of them offering the tab would make the way out look like a property
-  // of the figure.
-  const door = { openLabel: t("co.strip.open.finance"), onOpen };
   // The SAME query the finance card and the payment health dimension run, so
   // every money reading on one page agrees and all but the first cost no
   // request.
@@ -1236,9 +1232,9 @@ function MoneyStat({
   if (!customer) {
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.finance")}
-        value={t("co.strip.financeUnknown")}
+        value={t("co.strip.fin.neverInvoiced")}
         detail={t("co.strip.fin.notACustomer")}
       />
     );
@@ -1256,9 +1252,9 @@ function MoneyStat({
   if (!amount || amount.amount_minor == null || !amount.currency) {
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.finance")}
-        value={t("co.strip.financeUnknown")}
+        value={t("co.strip.fin.noFigure")}
         detail={t(
           financeDetailKey({
             pending: isPending,
@@ -1273,7 +1269,7 @@ function MoneyStat({
   }
   return (
     <StatCard
-      {...door}
+      onOpen={onOpen}
       label={t("co.strip.netInvoiced")}
       value={formatMoneyCompact(amount.amount_minor, amount.currency, locale)}
       // The provider name goes in the detail line rather than beside the label:
@@ -1366,14 +1362,12 @@ function PipelineCard({
   dimension?: HealthDimension;
   locale: Locale;
   recordZone: string;
+  // Handed to every shape this reading takes: a withheld reading and a priced
+  // one are the same reading, and only one of them offering the tab would make
+  // the way out look like a property of the figure.
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
-  // The door out of this reading, handed to every shape it takes: a
-  // withheld reading and a priced one are the same reading, and only one
-  // of them offering the tab would make the way out look like a property
-  // of the figure.
-  const door = { openLabel: t("co.strip.open.deals"), onOpen };
   const basis = dimension ? (
     <FactList
       facts={[
@@ -1396,7 +1390,7 @@ function PipelineCard({
     // rep acts on, invented out of a permission.
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.pipeline")}
         value={t(WITHHELD_READING)}
         {...basisProps}
@@ -1409,7 +1403,7 @@ function PipelineCard({
   if (commercial.open_count === 0) {
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.pipeline")}
         value={t("co.strip.noOpenDeals")}
         {...basisProps}
@@ -1431,7 +1425,7 @@ function PipelineCard({
     // to know the pipeline was never priced at all.
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.pipeline")}
         value={t("co.strip.openDeals", {
           count: formatNumber(commercial.open_count, locale),
@@ -1457,7 +1451,7 @@ function PipelineCard({
       : undefined;
   return (
     <StatCard
-      {...door}
+      onOpen={onOpen}
       label={t("co.strip.pipeline")}
       value={formatMoney(value, currency, locale)}
       tone={stalled ? "warn" : undefined}
@@ -1504,14 +1498,12 @@ function HealthStat({
   health?: Health;
   locale: Locale;
   withheld: boolean;
+  // Handed to every shape this reading takes: a withheld reading and a priced
+  // one are the same reading, and only one of them offering the tab would make
+  // the way out look like a property of the figure.
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
-  // The door out of this reading, handed to every shape it takes: a
-  // withheld reading and a priced one are the same reading, and only one
-  // of them offering the tab would make the way out look like a property
-  // of the figure.
-  const door = { openLabel: t("co.strip.open.history"), onOpen };
   const dimension = health?.relationship;
   const basisProps = {
     basis: dimension ? (
@@ -1533,7 +1525,7 @@ function HealthStat({
     // about the account this read has no basis for.
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.health")}
         value={t(withheld ? WITHHELD_READING : UNASSESSED_READING)}
       />
@@ -1543,7 +1535,7 @@ function HealthStat({
   if (days == null) {
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.health")}
         value={t("co.strip.noInboundEver")}
         tone="warn"
@@ -1554,7 +1546,7 @@ function HealthStat({
   if (days > HEALTH_QUIET_DAYS) {
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.health")}
         value={t("co.strip.healthQuiet")}
         tone="warn"
@@ -1572,7 +1564,7 @@ function HealthStat({
   if (share == null) {
     return (
       <StatCard
-        {...door}
+        onOpen={onOpen}
         label={t("co.strip.health")}
         value={t("co.strip.healthActive")}
         {...basisProps}
@@ -1583,7 +1575,7 @@ function HealthStat({
   const oneSided = share < 0.34 || share > 0.66;
   return (
     <StatCard
-      {...door}
+      onOpen={onOpen}
       label={t("co.strip.health")}
       value={
         oneSided ? t("co.strip.healthOneSided") : t("co.strip.healthBalanced")

@@ -78,8 +78,18 @@ type SARPackage struct {
 	CommunicationDecisions   []map[string]any `json:"communication_decisions"`
 	CommunicationBases       []map[string]any `json:"communication_bases"`
 	CommunicationSuppression []map[string]any `json:"communication_suppression"`
-	RawCapture               []map[string]any `json:"raw_capture"`
-	FieldOrigins             []map[string]any `json:"field_origins"`
+	// The times a named person decided a message to this subject went out
+	// DESPITE a refusal. Art. 15 owes what is held, and a subject asking why
+	// they received something the installation had refused is owed the override
+	// as much as the refusal — an export showing only the second describes a
+	// message that never went.
+	//
+	// It carries the decision, never the director's own sentence about them:
+	// the explanation is erased with the subject, so the export reads it back
+	// as the tombstone it becomes.
+	CommunicationExceptions []map[string]any `json:"communication_exceptions"`
+	RawCapture              []map[string]any `json:"raw_capture"`
+	FieldOrigins            []map[string]any `json:"field_origins"`
 	// EnrichedFields is what the system read about the subject from a public
 	// page or a mail signature, each with the verbatim text it came from.
 	// Art. 15(1)(g) makes the source itself disclosable, and the snippet IS
@@ -189,11 +199,11 @@ func AssembleSAR(ctx context.Context, db *database.DB, personID ids.PersonID) (S
 		// The subject's addresses and lead twins, read BEFORE the sections run:
 		// the staged-approvals section matches on them, and unlike erasure this
 		// path destroys nothing, so they are still there to read.
-		emails, leads, err := subjectReach(ctx, tx, personID)
+		emails, leads, identities, err := subjectReach(ctx, tx, personID)
 		if err != nil {
 			return err
 		}
-		sections := sarSections(&pkg, personID, emails, leads)
+		sections := sarSections(&pkg, personID, emails, leads, identities)
 
 		subject, err := rowMaps(ctx, tx, `
 			SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
@@ -327,26 +337,84 @@ func readableValue(value any) any {
 // Erasure cannot read them at that point — it has already destroyed them — so
 // the predicate takes them as arguments and each caller supplies them from
 // wherever it still can.
-func subjectReach(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]string, []ids.UUID, error) {
+func subjectReach(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]string, []ids.UUID, []ids.UUID, error) {
 	emails, err := subjectStrings(ctx, tx,
 		`SELECT email FROM person_email WHERE person_id = $1 AND email <> ''`, personID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reading the subject's addresses for the export: %w", err)
+		return nil, nil, nil, fmt.Errorf("reading the subject's addresses for the export: %w", err)
 	}
-	rows, err := tx.Query(ctx, `SELECT id FROM lead WHERE promoted_person_id = $1`, personID.UUID)
+	// THE ADDRESSES OF EVERY IDENTITY THIS SUBJECT IS, not only the surviving
+	// row's. A merged-away predecessor keeps its own person_email rows, and the
+	// sections that match by address — the participant reach above, staged
+	// approvals — would otherwise miss a conversation held under the address
+	// the subject used before the cleanup.
+	priorEmails, err := subjectStrings(ctx, tx, `
+		SELECT email FROM person_email
+		 WHERE person_id IN (SELECT id FROM person WHERE merged_into_id = $1)
+		   AND email <> ''`, personID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reading the subject's lead twins for the export: %w", err)
+		return nil, nil, nil, fmt.Errorf("reading the merged-away addresses for the export: %w", err)
+	}
+	emails = append(emails, priorEmails...)
+	// LEAD TWINS OF EVERY IDENTITY TOO. A lead promoted into a record that was
+	// later merged away points at the PREDECESSOR, so following only the
+	// survivor's promotions loses the lead-keyed proof A6 deliberately leaves
+	// on the lead.
+	rows, err := tx.Query(ctx, `
+		SELECT id FROM lead
+		 WHERE promoted_person_id = $1
+		    OR promoted_person_id IN (SELECT id FROM person WHERE merged_into_id = $1)`,
+		personID.UUID)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("reading the subject's lead twins for the export: %w", err)
 	}
 	defer rows.Close()
 	leads := []ids.UUID{}
 	for rows.Next() {
 		var id ids.UUID
 		if err := rows.Scan(&id); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		leads = append(leads, id)
 	}
-	return emails, leads, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, nil, nil, err
+	}
+	// EVERY PERSON ID THIS SUBJECT IS. The surviving row first, then each
+	// record merged into it — which keeps its own rows on purpose, because a
+	// predecessor's objection is evidence that THAT record's subject refused,
+	// and repointing it would make the history say somebody else objected.
+	//
+	// One hop, not a walk: a merge repoints the loser's own predecessors at the
+	// survivor as it goes, so the pointers are flat rather than a chain.
+	identities, err := subjectIdentities(ctx, tx, personID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return emails, leads, identities, nil
+}
+
+// subjectIdentities returns the survivor's own id plus the id of each record
+// merged into them, which together are the person rows an export must reach.
+func subjectIdentities(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]ids.UUID, error) {
+	// The survivor's own id is carried in the WHERE rather than selected as a
+	// bare parameter: a lone `SELECT $1` in a UNION gives Postgres nothing to
+	// infer the type from, and it refuses to prepare the statement.
+	rows, err := tx.Query(ctx, `
+		SELECT id FROM person WHERE id = $1 OR merged_into_id = $1`, personID.UUID)
+	if err != nil {
+		return nil, fmt.Errorf("reading the identities this subject is, for the export: %w", err)
+	}
+	defer rows.Close()
+	out := []ids.UUID{}
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
 }
 
 // subjectStrings runs a one-column text query into a slice.

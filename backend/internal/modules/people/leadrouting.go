@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -339,12 +340,35 @@ func (leadRouting) Spec() workflow.Spec {
 
 // Match declines an unconfigured instance: with no pool and no rules
 // there is no decision to make or record.
+//
+// It also declines a lead nobody asked us for — a name read off a public web
+// page. Assigning one hands a rep a stranger who has never written to them, and
+// the assignment is not only a label: it stamps routed_at, which starts the
+// first-response clock and lands the lead in that rep's "owes a reply" lane.
+//
+// The same rule gates the follow-up task in the automation module. Both read it
+// from the kernel rather than each spelling it, because they run on one event
+// with no ordering between them: two copies would disagree about a source the
+// day one of them learned a new one.
 func (leadRouting) Match(_ context.Context, ev workflow.Event) (bool, error) {
 	cfg, err := ParseRoutingConfig(ev.Params)
 	if err != nil {
 		return false, err
 	}
-	return cfg.Configured(), nil
+	if !cfg.Configured() {
+		return false, nil
+	}
+	if len(ev.Payload) == 0 {
+		return true, nil
+	}
+	var payload crmcontracts.PublicEventLeadCreated
+	if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+		return false, err
+	}
+	if payload.SourceSystem == nil {
+		return true, nil
+	}
+	return !leadsource.IsPassiveDiscovery(*payload.SourceSystem), nil
 }
 
 // Plan declares the assignment; the concrete owner is chosen inside the

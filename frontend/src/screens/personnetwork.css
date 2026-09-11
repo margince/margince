@@ -103,7 +103,7 @@
    screen is not the answer — not merely that there is none. */
 .pn-failed {
   margin: 0;
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The verdict's two halves: the move, and the figures it rests on. Both

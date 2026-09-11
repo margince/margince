@@ -5,7 +5,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { isTechnicalFact, TechnicalProfileCard } from "./companytechnical";
+import { isTechnicalFact, TechnicalProfilePanel } from "./companytechnical";
 import {
   installFetchStub,
   jsonResponse,
@@ -52,7 +52,7 @@ function laneState(outcome = "applied") {
 function renderCard() {
   return render(
     <StoryProviders locale="de">
-      <TechnicalProfileCard companyId={COMPANY} />
+      <TechnicalProfilePanel companyId={COMPANY} />
     </StoryProviders>,
   );
 }

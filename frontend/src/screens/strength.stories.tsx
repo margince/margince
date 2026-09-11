@@ -8,9 +8,9 @@ import {
   meRoute,
   StoryProviders,
 } from "./story-utils";
-import { StrengthCard } from "./strength";
+import { StrengthPanel } from "./strength";
 
-// StrengthCard fetches its own data (GET /people/{id}/strength or
+// StrengthPanel fetches its own data (GET /people/{id}/strength or
 // /companies/{id}/strength) — the shared fetch stub (story-utils.tsx)
 // mirrors the strength fixtures already exercised in contacts.test.tsx.
 const meta: Meta = {
@@ -46,7 +46,7 @@ export const Strong: Story = {
     });
     return (
       <StoryProviders>
-        <StrengthCard kind="person" id="p-1" />
+        <StrengthPanel kind="person" id="p-1" />
       </StoryProviders>
     );
   },
@@ -63,7 +63,7 @@ export const Dormant: Story = {
     });
     return (
       <StoryProviders>
-        <StrengthCard kind="person" id="p-1" />
+        <StrengthPanel kind="person" id="p-1" />
       </StoryProviders>
     );
   },

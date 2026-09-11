@@ -344,9 +344,11 @@ describe("BriefScreen — the context rail", () => {
 
     const moves = await screen.findByLabelText("Phase moves");
     expect(moves.textContent).toContain("Pursuing → Delivering");
-    expect(screen.getByLabelText("Gone quiet").textContent).toContain(
-      "quiet for 40 days",
-    );
+    // By ROLE as well as by name: the watch panel in the rail carries the same
+    // words as its heading, and this assertion is about the digest's list.
+    expect(
+      screen.getByRole("list", { name: "Gone quiet" }).textContent,
+    ).toContain("quiet for 40 days");
     const links = await screen.findAllByRole("link", {
       name: "ERP replacement",
     });

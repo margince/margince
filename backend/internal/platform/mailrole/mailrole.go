@@ -156,8 +156,37 @@ func localPartRole(local string) (string, bool) {
 		if _, role := roleTokens[field]; role {
 			return field, true
 		}
+		// A NUMBERED queue: `support2`, `cs6`, `kundenservice3`. A desk that
+		// runs several mailboxes numbers them, and the digits say nothing about
+		// whether a person is named — the word in front of them already
+		// answered that.
+		//
+		// Only when the stem is a whole role word on its own. `supporter` keeps
+		// its trailing letters and stays a name, and so does `newsome`: nothing
+		// is stripped but a run of digits at the very end.
+		if stem, ok := withoutTrailingDigits(field); ok {
+			if _, role := roleTokens[stem]; role {
+				return stem, true
+			}
+		}
 	}
 	return "", false
+}
+
+// withoutTrailingDigits removes a run of digits from the end of a word and
+// reports whether there was one to remove.
+//
+// A word that is ALL digits yields nothing: `2@` names no function, and
+// returning the empty stem would ask the vocabulary a question about "".
+func withoutTrailingDigits(field string) (string, bool) {
+	end := len(field)
+	for end > 0 && field[end-1] >= '0' && field[end-1] <= '9' {
+		end--
+	}
+	if end == len(field) || end == 0 {
+		return "", false
+	}
+	return field[:end], true
 }
 
 // isSeparator splits a local part into words. Only the three characters mail

@@ -90,6 +90,15 @@ func siteLeadAcceptEffect(svc *approvals.Service, sink connector.Sink) approvals
 				FullName: proposal.Name,
 				Email:    proposal.PublishedEmail,
 				Title:    proposal.Role,
+				// Accepting a name read off a company's website records that
+				// the person exists. It is not a statement that the accepter
+				// has taken them on, and owning it would say so: the lead would
+				// enter their "owes a reply" lane and start its first-response
+				// clock against somebody who has never written to anyone.
+				//
+				// Nobody owns it until a human picks it up in Leads, and there
+				// is no connector replay here to need write authority back.
+				Unowned: true,
 			},
 			Source:     "siteread",
 			CapturedBy: siteLeadCapturedBy,

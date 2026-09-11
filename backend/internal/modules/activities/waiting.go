@@ -79,6 +79,15 @@ type WaitingReply struct {
 	// which is the one failure this queue must not have. A caller demotes an
 	// unengaged wait instead, so being wrong costs a scroll.
 	Engaged bool
+	// AddressedElsewhere reports that the message names header recipients and
+	// none of them is this reader — mail written to a colleague that reached
+	// this mailbox.
+	//
+	// Phrased as the exception so FALSE is the answer whenever there is no
+	// evidence: no header recipients recorded, or the reader's own addresses
+	// unresolved. REPORTED, never used to exclude, for Engaged's reason — the
+	// caller demotes what it cannot prove.
+	AddressedElsewhere bool
 	// OwnerID is who owes this reply, resolved from the record the thread is
 	// filed under. Zero when no record on it names an owner.
 	//
@@ -261,6 +270,13 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		if err != nil {
 			return err
 		}
+		// The reader's own addresses, read in the SAME transaction as the scan
+		// so a mailbox connected mid-read cannot make one row judge the
+		// envelope differently from the next.
+		readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx,
 			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 				horizon,
@@ -272,7 +288,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 				scopeUnbounded,
 				neverRelaxed, neverRelaxed,
 				neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
-				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent)), args...)
+				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
+				fmt.Sprintf("$%d", arg(readerAddresses))), args...)
 		if err != nil {
 			return err
 		}
@@ -282,7 +299,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			var row WaitingReply
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.PersonID, &row.CompanyID, &row.DealID,
-				&row.HasOpenDeal, &row.OwedVerdict, &row.Engaged, &row.OwnerID); err != nil {
+				&row.HasOpenDeal, &row.OwedVerdict, &row.AddressedElsewhere,
+				&row.Engaged, &row.OwnerID); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)
@@ -314,6 +332,17 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 // exactly one rule.
 type OwnDomains interface {
 	Domains(ctx context.Context, tx pgx.Tx) ([]string, error)
+	// ReaderAddresses is the reader's OWN addresses, for telling a message
+	// written to them from one written to a colleague that they can see.
+	//
+	// Capture stamps the mailbox owner as a recipient on every inbound message
+	// it stores, so a participant row alone proves nothing about the envelope.
+	// These are the addresses a header has to name.
+	//
+	// Empty admits everyone, like Domains above and for the same reason: a
+	// reader whose addresses cannot be resolved is one whose real waiting mail
+	// must not silently vanish.
+	ReaderAddresses(ctx context.Context, tx pgx.Tx, reader ids.UUID) ([]string, error)
 }
 
 // WithOwnDomains wires the colleague-domain reader the waiting queue needs.
@@ -337,6 +366,21 @@ func (h Handlers) WithOwnDomains(own OwnDomains) Handlers {
 
 // ownDomainList reads the colleague domains for one query, or none when no
 // reader is wired.
+// readerAddressList is the reader's own addresses, or none when no seam is
+// wired — which admits every message, the same failure direction ownDomainList
+// takes and for the same reason: a reader whose addresses cannot be resolved
+// must not have their real waiting mail silently demoted.
+func (s *Store) readerAddressList(ctx context.Context, tx pgx.Tx, reader ids.UUID) ([]string, error) {
+	if s.ownDomains == nil {
+		return nil, nil
+	}
+	addresses, err := s.ownDomains.ReaderAddresses(ctx, tx, reader)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading the reader's own addresses: %w", err)
+	}
+	return addresses, nil
+}
+
 func (s *Store) ownDomainList(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	if s.ownDomains == nil {
 		return nil, nil

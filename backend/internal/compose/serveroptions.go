@@ -155,6 +155,13 @@ func WithBlobstore(store blobstore.Store) Option {
 		// dropped by a WithCaptureConfig that runs afterwards and assigns the
 		// whole struct, and that failure has no error and nothing missing to
 		// see until somebody looks for a file that never arrived.
+		// The Art. 15 export rebuilds a slimmed provider original, so it needs
+		// the store the part sweep moved those octets into. Built here rather
+		// than at assembly for the reason the purger above is: a role with no
+		// object store has no restore, and disclosing the stanza instead would
+		// answer Art. 15 with an address the subject cannot resolve.
+		s.consentHandlers = s.WithSubjectAccessAssembler(
+			newSubjectAccessAssembler(InstallationDB(pool)).withBlobstore(store))
 		s.captureConfig.Blob = store
 		s.activitiesHandlers = s.activitiesHandlers.WithBlobstore(store)
 		s.dealsHandlers = s.dealsHandlers.WithBlobstore(store)

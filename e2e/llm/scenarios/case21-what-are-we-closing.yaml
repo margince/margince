@@ -67,7 +67,11 @@ may_call:
 
 must_mention:
   # It came back with money, not with a description of the forecast.
-  - "[0-9]"
+  # A MONEY FIGURE, not any digit. A bare [0-9] is satisfied by a date, an id
+  # or a quarter label — and "the forecast for Q3 is EUR 0 across 0 deals"
+  # passed it. The route is already held by must_call: forecast_readings, so
+  # what this adds is that a FIGURE reached the reader.
+  - "(?:\u20ac|EUR|\$)\s?[0-9]|[0-9][0-9.,]*\s?(?:\u20ac|EUR|k\b|m\b|million|Mio)|\b[0-9]+\s+(?:open |won |priced )?deals?\b|\b[0-9]{1,3}(?:[.,][0-9]{3})+\b"
   # CRITERION 4 — the unpriced deal is named as absent from the total.
   #
   # Judged on the FINDING, not the wording. "One deal carries no amount, so it

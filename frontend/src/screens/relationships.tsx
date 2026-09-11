@@ -12,7 +12,6 @@ import { isOption } from "../app/options";
 import {
   Badge,
   Button,
-  Card,
   DataTable,
   EmptyState,
   Field,
@@ -20,6 +19,7 @@ import {
   SearchField,
   TextInput,
 } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -543,7 +543,7 @@ function AddRelationshipAction({
             }}
           />
           {searchFailure ? (
-            <p className="t-caption" style={{ color: "var(--danger)" }}>
+            <p className="t-caption" style={{ color: "var(--dangerText)" }}>
               {problemMessageOf(searchFailure, t)}
             </p>
           ) : null}
@@ -569,7 +569,7 @@ function AddRelationshipAction({
             </p>
           )}
           {mutation.isError && (
-            <p className="t-caption" style={{ color: "var(--danger)" }}>
+            <p className="t-caption" style={{ color: "var(--dangerText)" }}>
               {problemMessageOf(mutation.error, t)}
             </p>
           )}
@@ -614,15 +614,12 @@ const relationshipEditFields: CreateField[] = [
   { key: "ended_at", label: "rel.endedAt", type: "date" },
 ];
 
-// UpdateRelationshipRequest fields are nullable, but the backend's
-// UpdateRelationship applies them via coalesce($n, col) — null means KEEP
-// the existing value, not clear it (backend/internal/modules/people/
-// relationship.go). So this can SET/CHANGE role/started_at/ended_at to a
-// new value, but an emptied field is NOT reachable this way: sending null
-// leaves the stored value untouched rather than wiping it. `orNull` still
-// avoids sending an empty string over the wire; true clear-support needs a
-// backend change (distinguish omit vs. explicit-null) and is out of scope
-// here.
+// UpdateRelationshipRequest fields are nullable, but the backend applies them
+// via coalesce($n, col) (backend/internal/modules/people/relationship.go):
+// null means KEEP the stored value, never clear it. So role, started_at and
+// ended_at can be set or changed here while an emptied one stays as it was —
+// clearing needs the server to tell omit from explicit-null first. `orNull`
+// still keeps an empty string off the wire.
 function orNull(value: unknown): string | null {
   const text = typeof value === "string" ? value.trim() : "";
   return text.length > 0 ? text : null;
@@ -677,9 +674,9 @@ export function RelationshipsTab({
   });
 
   return (
-    <Card
+    <Panel
       title={t(copy.title)}
-      actions={
+      titleAction={
         canCreate ? (
           <AddRelationshipAction
             scope={scope}
@@ -688,110 +685,112 @@ export function RelationshipsTab({
         ) : undefined
       }
     >
-      <QueryGate query={query} pendingLabel={t(copy.title)}>
-        {(rows) =>
-          rows.length === 0 ? (
-            <EmptyState>{t(copy.empty)}</EmptyState>
-          ) : (
-            <DataTable
-              label={t(copy.title)}
-              columns={[
-                ...(copy.singleKind
-                  ? []
-                  : [
-                      {
-                        key: "kind",
-                        header: t("rel.kind"),
-                        render: (rel: Relationship) => (
-                          <Badge>{t(KIND_LABELS[rel.kind])}</Badge>
-                        ),
-                      },
-                    ]),
-                {
-                  key: "role",
-                  header: t("rel.role"),
-                  render: (rel: Relationship) => rel.role ?? "",
-                },
-                {
-                  key: "counterparty",
-                  header: t("rel.counterparty"),
-                  render: (rel: Relationship) => {
-                    const ref = counterpartyRef(rel, scope);
-                    return ref ? (
-                      <EntityRef kind={ref.kind} id={ref.id} />
-                    ) : (
-                      <span className="t-mono">—</span>
-                    );
+      <PanelBody>
+        <QueryGate query={query} pendingLabel={t(copy.title)}>
+          {(rows) =>
+            rows.length === 0 ? (
+              <EmptyState>{t(copy.empty)}</EmptyState>
+            ) : (
+              <DataTable
+                label={t(copy.title)}
+                columns={[
+                  ...(copy.singleKind
+                    ? []
+                    : [
+                        {
+                          key: "kind",
+                          header: t("rel.kind"),
+                          render: (rel: Relationship) => (
+                            <Badge>{t(KIND_LABELS[rel.kind])}</Badge>
+                          ),
+                        },
+                      ]),
+                  {
+                    key: "role",
+                    header: t("rel.role"),
+                    render: (rel: Relationship) => rel.role ?? "",
                   },
-                },
-                {
-                  key: "dates",
-                  header: t("rel.dates"),
-                  render: (rel: Relationship) => dateRange(rel, t),
-                },
-                {
-                  key: "actions",
-                  header: "",
-                  render: (rel: Relationship) => (
-                    <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                      {canUpdate && (
-                        <EditAction
-                          disabledReasonId={refusedReasonId}
-                          label={t("record.edit")}
-                          savedMessage={t("rel.saveDone")}
-                          fields={relationshipEditFields}
-                          record={{
-                            id: rel.id,
-                            version: rel.version,
-                            role: rel.role ?? "",
-                            started_at: rel.started_at ?? "",
-                            ended_at: rel.ended_at ?? "",
-                          }}
-                          update={async (values, _rows, opened) => {
-                            const { data, error } = await api.PATCH(
-                              "/relationships/{id}",
-                              {
-                                params: {
-                                  path: { id: rel.id },
-                                  ...ifMatch(requireVersion(opened?.version)),
+                  {
+                    key: "counterparty",
+                    header: t("rel.counterparty"),
+                    render: (rel: Relationship) => {
+                      const ref = counterpartyRef(rel, scope);
+                      return ref ? (
+                        <EntityRef kind={ref.kind} id={ref.id} />
+                      ) : (
+                        <span className="t-mono">—</span>
+                      );
+                    },
+                  },
+                  {
+                    key: "dates",
+                    header: t("rel.dates"),
+                    render: (rel: Relationship) => dateRange(rel, t),
+                  },
+                  {
+                    key: "actions",
+                    header: "",
+                    render: (rel: Relationship) => (
+                      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                        {canUpdate && (
+                          <EditAction
+                            disabledReasonId={refusedReasonId}
+                            label={t("record.edit")}
+                            savedMessage={t("rel.saveDone")}
+                            fields={relationshipEditFields}
+                            record={{
+                              id: rel.id,
+                              version: rel.version,
+                              role: rel.role ?? "",
+                              started_at: rel.started_at ?? "",
+                              ended_at: rel.ended_at ?? "",
+                            }}
+                            update={async (values, _rows, opened) => {
+                              const { data, error } = await api.PATCH(
+                                "/relationships/{id}",
+                                {
+                                  params: {
+                                    path: { id: rel.id },
+                                    ...ifMatch(requireVersion(opened?.version)),
+                                  },
+                                  body: {
+                                    role: orNull(values.role),
+                                    started_at: orNull(values.started_at),
+                                    ended_at: orNull(values.ended_at),
+                                  },
                                 },
-                                body: {
-                                  role: orNull(values.role),
-                                  started_at: orNull(values.started_at),
-                                  ended_at: orNull(values.ended_at),
-                                },
-                              },
-                            );
-                            if (error) {
-                              throwProblem(error);
-                            }
-                            return data;
-                          }}
-                          invalidate="relationships"
-                          recordKey="relationship"
-                        />
-                      )}
-                      {canDelete && (
-                        <Button
-                          small
-                          variant="danger"
-                          reasonId={refusedReasonId}
-                          onClick={() => setRemoving(rel)}
-                          data-testid="remove-relationship"
-                        >
-                          {t("rel.remove")}
-                        </Button>
-                      )}
-                    </div>
-                  ),
-                },
-              ]}
-              rows={rows}
-              rowKey={(rel) => rel.id}
-            />
-          )
-        }
-      </QueryGate>
+                              );
+                              if (error) {
+                                throwProblem(error);
+                              }
+                              return data;
+                            }}
+                            invalidate="relationships"
+                            recordKey="relationship"
+                          />
+                        )}
+                        {canDelete && (
+                          <Button
+                            small
+                            variant="danger"
+                            reasonId={refusedReasonId}
+                            onClick={() => setRemoving(rel)}
+                            data-testid="remove-relationship"
+                          >
+                            {t("rel.remove")}
+                          </Button>
+                        )}
+                      </div>
+                    ),
+                  },
+                ]}
+                rows={rows}
+                rowKey={(rel) => rel.id}
+              />
+            )
+          }
+        </QueryGate>
+      </PanelBody>
       <Modal
         open={removing !== null}
         onClose={() => {
@@ -805,7 +804,7 @@ export function RelationshipsTab({
         </h2>
         <p style={{ marginBottom: 16 }}>{t("rel.removeConfirm")}</p>
         {remove.isError && (
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
+          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(remove.error, t)}
           </p>
         )}
@@ -838,6 +837,6 @@ export function RelationshipsTab({
           </Button>
         </div>
       </Modal>
-    </Card>
+    </Panel>
   );
 }

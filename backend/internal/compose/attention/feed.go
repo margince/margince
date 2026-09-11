@@ -6,7 +6,6 @@ package attention
 import (
 	"context"
 	"errors"
-	"sort"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
@@ -43,6 +42,17 @@ const batchScanDepth = 200
 // plannedCap bounds today's agreed work for the same reason. Higher than the
 // decision lane because reading a task costs less than deciding one.
 const plannedCap = 12
+
+// upcomingCap bounds the work due AFTER today, and upcomingHorizonDays how far
+// ahead it looks.
+//
+// Small on purpose. The lane's job is still today: a handful of "due tomorrow"
+// rows tell a reader what is landing, where a full fortnight of them would bury
+// the work that is actually owed now under a calendar.
+const (
+	upcomingCap         = 6
+	upcomingHorizonDays = 14
+)
 
 // doneCap bounds the receipts. They are the least urgent thing on the surface
 // and the easiest to let run long, so this is deliberately the shortest window
@@ -266,7 +276,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 	// The day's end, resolved ONCE for the whole assembly: every due-dated lane
 	// is judged against the same instant, and the installation is asked for its
 	// timezone once rather than per lane.
-	until, err := s.endOfDay(ctx, asOf)
+	until, loc, err := s.endOfDay(ctx, asOf)
 	if err != nil {
 		return crmcontracts.Attention{}, theNight{}, err
 	}
@@ -306,7 +316,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 		return crmcontracts.Attention{}, theNight{}, err
 	}
 
-	planned, plannedTotal, err := s.planned(ctx, asOf, until, s.taskScope)
+	planned, plannedTotal, err := s.planned(ctx, asOf, until, loc, s.taskScope)
 	omitted, err = fill(omitted, "planned", err, func() {
 		out.Planned = planned
 		out.Counts.Planned = plannedTotal
@@ -436,35 +446,6 @@ func interleave(first, second []crmcontracts.AttentionItem, limit int) []crmcont
 		}
 	}
 	return out
-}
-
-// planned is today's agreed work, overdue first. The bound is the day's end,
-// resolved once by Assemble so every due-dated lane judges the same afternoon.
-func (s *Service) planned(
-	ctx context.Context, asOf, until time.Time, scope TaskScope,
-) ([]crmcontracts.AttentionItem, int, error) {
-	open, err := s.tasks.OpenForViewer(ctx, until, plannedCap, scope, s.taskOwner)
-	if err != nil {
-		return nil, 0, err
-	}
-	// How many there ARE, beside the page. The lane is capped at a dozen, so a
-	// badge of len(items) tells a reader with thirteen that they have twelve —
-	// and there is no second page on this lane to find the thirteenth by. The
-	// same reading needs_you has always had.
-	total, err := s.tasks.CountOpenForViewer(ctx, until, scope, s.taskOwner)
-	if err != nil {
-		return nil, 0, err
-	}
-	items := make([]crmcontracts.AttentionItem, 0, len(open))
-	for _, task := range open {
-		items = append(items, taskItem(task, asOf))
-	}
-	// Overdue first: a promise already broken outranks one merely due, and the
-	// server resolves it so every surface agrees on where the line falls.
-	sort.SliceStable(items, func(i, j int) bool {
-		return overdue(items[i]) && !overdue(items[j])
-	})
-	return items, total, nil
 }
 
 // done is the receipt lane: what ran without asking, so a rep can see it and

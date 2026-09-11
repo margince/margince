@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // newPeopleHandlers builds the person/company/lead transport with the
@@ -63,7 +64,11 @@ func newPeopleHandlers(pool *pgxpool.Pool) peopleHandlers {
 		WithVCardReviewStager(vcardCreateStager(pool)).
 		WithSettings(NewSettingsStore(pool)).
 		WithSeatReadsLeads(seatReadsLeads(pool)).
-		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())})
+		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
+		// A merge carries the retiring subject's stops, or it refuses. consent
+		// owns communication_suppression; people owns the merge; neither
+		// imports the other, so the edge is injected here.
+		WithStopCarrier(consent.NewStore(InstallationDB(pool)))
 }
 
 // newActivitiesHandlers builds the timeline transport over the sibling
@@ -111,6 +116,12 @@ type ownDomainReader struct{ store *capture.OwnDomainStore }
 
 func (o ownDomainReader) Domains(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	return o.store.ColleagueDomainsTx(ctx, tx)
+}
+
+func (o ownDomainReader) ReaderAddresses(
+	ctx context.Context, tx pgx.Tx, reader ids.UUID,
+) ([]string, error) {
+	return o.store.ReaderAddressesTx(ctx, tx, reader)
 }
 
 // NewCollectionsStore is the ONE spelling of "the collections store with

@@ -119,9 +119,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // is built from its own translated key (worklist.source.failed /
   // .withheld), so this value is the placeholder and a full stop.
   "worklist.partial",
-  // An em dash standing in for a figure nobody can compute yet. A glyph, not a
-  // word — the sentence explaining it is the detail line beside it.
-  "co.strip.financeUnknown",
   // Brand and provider names: proper nouns, not translated in any locale.
   "connectors.provGmail",
   "connectors.provGcal",

@@ -2075,7 +2075,7 @@ describe("LeadScreen — score explain + override (P-10)", () => {
     const submit = screen.getByRole("button", { name: "Save override" });
     expect((submit as HTMLButtonElement).disabled).toBe(true);
 
-    const scoreInput = screen.getByLabelText("Score");
+    const scoreInput = screen.getByRole("spinbutton", { name: "Score" });
     const reasonInput = screen.getByLabelText("Reason");
     await userEvent.clear(scoreInput);
     await userEvent.type(scoreInput, "90");
@@ -2112,7 +2112,7 @@ describe("LeadScreen — score explain + override (P-10)", () => {
     );
 
     const submit = screen.getByRole("button", { name: "Save override" });
-    const scoreInput = screen.getByLabelText("Score");
+    const scoreInput = screen.getByRole("spinbutton", { name: "Score" });
     const reasonInput = screen.getByLabelText("Reason");
     await userEvent.type(reasonInput, "Strong buying signal");
 
@@ -2415,11 +2415,6 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // A reading's receipt: it opens what the figure was computed from and
       // writes nothing.
       "Evidence",
-      // The status reading's own door: it opens the LEADS LIST narrowed to this
-      // status. Another screen, a read, and nothing on this record — the same
-      // species as "View tasks" above. A terminal lead is read-only rather than
-      // unreadable, and this is one of the reads.
-      "Open leads in this status →",
     ]);
     // The one WRITE a terminal lead offers, and it is named separately from
     // the reads above because it is one: reopening is not a change to the
@@ -2448,7 +2443,12 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
         viewControls.has(name) ||
         closureReversals.has(name) ||
         contextColumn?.contains(button) ||
-        button.classList.contains("r360-rests-toggle")
+        button.classList.contains("r360-rests-toggle") ||
+        // A reading's door, skipped structurally: every stat card says the same
+        // word now, so a set keyed on "Open" would exempt any control sharing
+        // it. The class names a door OUT of the reading — another screen, a
+        // read, nothing written on this record.
+        button.classList.contains("stat-card-open")
       ) {
         continue;
       }

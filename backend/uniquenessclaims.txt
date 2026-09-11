@@ -72,7 +72,7 @@ internal/compose/aicert/reportcmd/report.go#var reportColumns
 internal/compose/aicert/run.go#type runCalls
 internal/compose/aicert/scenario.go#const sourceHandAuthored
 internal/compose/approval_kinds_test.go#var exportedApprovalKinds
-internal/compose/attentionseam.go#const approvalStatusApproved
+internal/compose/attentionreceiptseam.go#const approvalStatusApproved
 internal/compose/backfilltransport.go#func backfillStatusPayload
 internal/compose/backfilltransport.go#func writeBackfillJSON
 internal/compose/bodyceilingcensus_test.go#var httpMethods

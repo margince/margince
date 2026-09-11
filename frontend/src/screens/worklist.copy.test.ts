@@ -485,3 +485,30 @@ function briefRow(withPerson: string | undefined) {
     move: { action: "open_meeting_brief", activity_id: "a-7" },
   } as unknown as WorklistItem;
 }
+
+describe("moveHref — the reconnect move", () => {
+  // A lapsed relationship offers a draft with no thread behind it: nobody is
+  // waiting on a reply, so the composer opens on the contact and starts one.
+  it("opens the composer on the contact with no thread anchored", () => {
+    const row = {
+      id: "p-9",
+      source: "relationship_decay",
+      category: "deals_at_risk",
+      level: 4,
+      consequence: "relationship_cools",
+      title: "Marta Feld",
+      because: [],
+      actions: ["open", "dismiss"],
+      subject: { type: "person", id: "p-9" },
+      move: { action: "draft_email" },
+    } as unknown as WorklistItem;
+
+    const href = moveHref(row);
+    expect(href).toContain("#/contacts/p-9");
+    expect(href).toContain("compose=reply");
+    // No thread parameter: anchoring one would open the composer on a
+    // conversation this row is not about.
+    expect(href).not.toContain("thread=");
+    expect(moveOpensComposer(row)).toBe(true);
+  });
+});

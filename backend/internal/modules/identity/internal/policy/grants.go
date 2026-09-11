@@ -266,6 +266,14 @@ const (
 	// judged against. Ops holds it in full because the purposes are wiring, and
 	// Management reads what its team is bound by.
 	objConsentConfig = "consent_config"
+	// objCommunicationException is who may direct a send the engine refused.
+	//
+	// Its own object rather than a corner of consent_config, because the two are
+	// different authorities: consent_config is who may change the RULES, and
+	// this is who may act against the answer those rules produced about one
+	// person. An installation that delegates the first has not thereby
+	// delegated the second.
+	objCommunicationException = "communication_exception"
 	// The sign-in policy: which providers are offered and whether a password is
 	// one of them. Management and Ops read the posture; changing who may enter
 	// the installation is admin.

@@ -256,16 +256,73 @@ and display name are trimmed in SQL first (300 / 1200 / 300 characters) and wrap
 fence. The reply must be valid JSON with the exact requested ID, a kind from a fixed list, and a
 confidence score. Anything else is rejected.
 
-The model returns one of six kinds:
+The model returns one of eight kinds:
 
 | Kind | What happens |
 |---|---|
 | `person` | Create the contact. Queue the domain for `site_triage` |
-| `role_mailbox` (e.g. `support@`) | Keep the mail visible. Create no contact — there is no person to record |
+| `role_mailbox` (e.g. `support@`, `cs6@`) | Keep the mail visible. Create no contact — there is no person to record |
 | `company_sender` | Same as above |
 | `newsletter` | Hide the mail, and mark the domain as "not a company" |
 | `transactional` | Same as above |
 | `spam` | Same as above |
+| `advisor` | Create the contact, visible to the mailbox owner alone |
+| `personal` | Create no contact, and withdraw one already made. The mail stays the owner's |
+
+A service desk is a `role_mailbox` whether or not it is numbered, and whether or
+not an agent signs with a first name: the next reply is written by somebody else.
+The same kind of desk handling the owner's OWN private affair — their landlord,
+their clinic, their bank — is `personal` instead. Whose matter it is decides,
+not what sort of company it is.
+
+### A private correspondence leaves no contact behind
+
+The verdict almost always arrives AFTER the contact: capture creates a record on
+commit, and classification reads the conversation minutes or hours later. So
+refusing to create one is only half an answer — in one real mailbox every contact
+on a personal thread predated the verdict about it. Both verdicts therefore
+WITHDRAW the record as well as refusing a new one.
+
+Two answers reach a contact, and they ask different questions:
+
+- The **sender** verdict answers about an address. `personal` withdraws the
+  records that address holds in the deciding seat's own mailbox.
+- The **thread** verdict answers about one conversation. `personal` withdraws the
+  counterparty's record when no OTHER conversation with that seat is business.
+
+Correspondence does not save a record from either. That bound exists to stop one
+misclassified newsletter from costing a real counterparty their record, and it is
+wrong here: the owner writing back is what a private correspondence looks like.
+Applied to `personal`, it kept every record the kind is about — a founder's own
+clinic among them, with its test results, in a CRM the whole company reads.
+
+What still protects a record, in every case:
+
+- **A human published or edited it.** A machine promotion does not: the sender
+  classifier publishes a contact it judges a counterparty with nobody behind it,
+  so treating `workspace` visibility as protection let the earlier of two machine
+  answers outrank the later one.
+- **The owner marked the address `business`.** A standing human decision outranks
+  every classifier.
+- **Another conversation with that seat is business.** Evidence, not silence: a
+  thread that has been judged and is not personal, or mail already open to the
+  whole workspace. A thread nobody has judged is unknown, and a question still in
+  flight is a reason to wait — when it resolves personal, the withdrawal runs
+  again.
+
+A withdrawal is an archive like any other, on the record's own audit trail, and a
+record that was workspace-visible is narrowed to its owner first — an archived
+contact is still listable by anyone who asks to see archived ones.
+
+A `person` verdict does not always publish the contact. Two cases keep the record
+visible to the mailbox owner alone:
+
+- **The owner wrote first and the address has never answered.** Writing to
+  somebody is an intention rather than a relationship, and publishing it tells
+  every colleague who this rep is prospecting. The record widens on its own the
+  first time that address replies.
+- **The thread is under a confidentiality hold.** A workspace-visible contact
+  minted off held mail announces the counterparty the hold exists to keep quiet.
 
 Marking the domain matters separately from hiding the mail. A newsletter company has a real website,
 so without the mark, company triage would create it anyway the next time a named employee writes from
@@ -297,6 +354,38 @@ vouched for does not protect it.
 
 Steps 2–6 run even with AI switched off. Turning off AI does not mean keeping the content of messages
 the workspace already decided were noise.
+
+### Mail that arrived at an address before we knew it was yours
+
+A message is imported for a seat when one of that seat's OWN addresses is on it.
+Most addresses are known from the start: declared, reported by the connection, or
+signed in with. A forwarding alias is not — a previous employer's address, a role
+address that redirects, a personal domain pointed at a work mailbox. None of those
+is ever the From of anything the mailbox sends, so the only way to learn one is
+from the mail arriving at it, and two separate messages must agree before it is
+believed.
+
+Which means there is always mail older than the claim, and for that mail the seat
+was nobody. It got no import row, so no confidentiality question was opened, so
+under a classified mailbox it stayed held with nothing scheduled ever to judge it.
+Held is indistinguishable from broken.
+
+An address becoming a seat's own — discovered or declared — now adopts that mail:
+it writes the import row the message should have had, and opens the question its
+thread was owed. A settled thread's answer is inherited rather than re-asked. A
+`shared` mailbox gets the row and no question, which matters more than it sounds:
+a question written but never asked reads as HELD, so the naive version of this
+would have held a shared mailbox's mail forever.
+
+The nightly reconcile does the same for mail stranded before this existed. It
+derives its work from the state — an address the seat owns, a message their own
+connector captured, no import row — rather than from a list, so it also catches
+mail stranded by any other route to the same condition.
+
+The delivery evidence is unchanged: an exact address the receiving server
+attested, never a domain, and never a `Delivered-To` a sender wrote themselves.
+A forged header claims no mail, because it never becomes an address in the first
+place.
 
 ## 5. What a dropped message stores
 

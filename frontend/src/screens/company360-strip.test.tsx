@@ -247,6 +247,14 @@ describe("a slot with no reading says which absence it is", () => {
   });
 });
 
+// A card's door, by the reading it belongs to. Every door on the plate carries
+// the SAME word — "Open" is the component's, not the caller's — so what tells
+// five of them apart for a screen reader is the DESCRIPTION, which is the
+// reading's own label. Folded into the name it read "Open Open pipeline".
+function door(label: string): HTMLElement {
+  return screen.getByRole("button", { name: "Open", description: label });
+}
+
 describe("a reading offers the tab it is a reading of", () => {
   it("sends the reader to deals, finance and history from their own doors", async () => {
     stubFinance(NO_CONNECTION);
@@ -254,8 +262,8 @@ describe("a reading offers the tab it is a reading of", () => {
     renderStrip(view({ state_strip: customer }), (tab) => opened.push(tab));
     await readings();
 
-    for (const name of ["Open deals", "Open finance"]) {
-      await userEvent.click(screen.getByRole("button", { name }));
+    for (const label of ["Open pipeline", "Finance"]) {
+      await userEvent.click(door(label));
     }
     // THREE readings open the same page, and each is read off it: the
     // conversation, the last touch and the next meeting all live on the
@@ -263,10 +271,8 @@ describe("a reading offers the tab it is a reading of", () => {
     // which made it the strip's only route to tasks — and made it a card
     // that said one thing and did another. Tasks is reached from the tab
     // strip; a meeting card is not the place to hide the door to it.
-    for (const door of screen.getAllByRole("button", {
-      name: "Open history",
-    })) {
-      await userEvent.click(door);
+    for (const label of ["Conversation", "Last touch", "Next meeting"]) {
+      await userEvent.click(door(label));
     }
 
     expect(opened).toEqual([
@@ -285,6 +291,6 @@ describe("a reading offers the tab it is a reading of", () => {
     renderStrip(view({ state_strip: customer }));
     await readings();
 
-    expect(screen.queryByRole("button", { name: "Open deals" })).toBeNull();
+    expect(screen.queryAllByRole("button", { name: /^Open / })).toHaveLength(0);
   });
 });

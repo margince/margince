@@ -64,6 +64,11 @@ type Store struct {
 	// dealOpener opens the deal a qualify call asks for, inside the promote
 	// transaction; compose binds the deals store. Nil refuses such calls.
 	dealOpener LeadDealOpener
+	// stopCarrier moves a retiring subject's recorded stops onto the record
+	// that survives them, inside the merge or promote transaction; compose
+	// binds the consent store. Nil REFUSES the merge — see stopcarry.go: a
+	// merge that quietly dropped a stop resumes mail somebody refused.
+	stopCarrier StopCarrier
 }
 
 // ConsumerMailReader builds the workspace's consumer-mail matcher on a

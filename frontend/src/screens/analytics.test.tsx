@@ -1,19 +1,11 @@
 /** @vitest-environment jsdom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { formatMoney, MONEY_ABSENT } from "../format/format";
-import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
 type Stage = components["schemas"]["Stage"];
 
@@ -23,8 +15,8 @@ import {
   derivationCellCurrency,
   derivationColumns,
   parseDerivationQuery,
-  sectionFromAddress,
 } from "./analytics";
+import { sectionFromAddress } from "./analytics.address";
 
 // D2 acceptance: a report picker over deals-by-stage (unchanged), forecast
 // (unweighted category tiles + a weighted-vs-unweighted banner), and
@@ -35,175 +27,6 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-const render = (ui: ReactNode) => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-};
-
-type ReportsStubOpts = {
-  onRun?: (key: string, body: Record<string, unknown>) => void;
-  // Model a server that sends only PART of the frame — an installation
-  // mid-upgrade, which is the one place a partial result actually arrives.
-  // Dropping the whole frame would be a weaker fixture: a guard that checks
-  // only one of the three fields passes against it, and the caption then
-  // renders with an undefined zone.
-  partialFrame?: boolean;
-  stageRows?: Record<string, unknown>[];
-  forecastRows?: Record<string, unknown>[];
-  companyRows?: Record<string, unknown>[];
-  winLossRows?: Record<string, unknown>[];
-  stageAgeRows?: Record<string, unknown>[];
-  meetingRows?: Record<string, unknown>[];
-  phaseRows?: Record<string, unknown>[];
-  commitmentRows?: Record<string, unknown>[];
-  quietRows?: Record<string, unknown>[];
-  // The coverage read: a payload, a status (403 for a seat without the ops
-  // grant, 404 for a fresh installation), or omitted for the default 403.
-  coverage?: { status: number; body?: unknown };
-  derivation?: Record<string, unknown>;
-  onDerivation?: (url: string) => void;
-  context?: Record<string, unknown>;
-};
-
-function reportsStub(opts: ReportsStubOpts = {}) {
-  return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const request = input instanceof Request ? input : null;
-    const url = String(request ? request.url : input);
-    const method = request ? request.method : (init?.method ?? "GET");
-    // Every Analytics surface reads its frame first: which population these
-    // numbers cover, and whether this reader may publish a forecast. A stub
-    // without it leaves the screen waiting and the assertions below looking
-    // like a rendering bug.
-    if (url.endsWith("/me")) {
-      return jsonResponse(
-        meFixture({
-          roles: ["rep"],
-          allow: {
-            data_coverage:
-              opts.coverage !== undefined && opts.coverage.status !== 403
-                ? ["read"]
-                : [],
-          },
-        }),
-      );
-    }
-    if (url.includes("/analytics/coverage")) {
-      const cov = opts.coverage ?? { status: 403 };
-      return jsonResponse(
-        cov.body ?? { title: "Forbidden", status: cov.status },
-        cov.status,
-      );
-    }
-    if (url.includes("/analytics/context")) {
-      return jsonResponse(
-        opts.context ?? {
-          default_scope: { kind: "workspace", label: "Whole workspace" },
-          allowed_scopes: [{ kind: "workspace", label: "Whole workspace" }],
-          capabilities: {
-            view_manager_forecast: true,
-            submit_manager_forecast: true,
-          },
-          as_of: "2026-09-04T00:00:00Z",
-          timezone: "Europe/Berlin",
-          base_currency: "EUR",
-        },
-      );
-    }
-    if (method === "GET" && url.includes("/derivation")) {
-      opts.onDerivation?.(url);
-      return jsonResponse(opts.derivation ?? {});
-    }
-    if (url.includes("/pipelines")) {
-      return jsonResponse({
-        data: [
-          {
-            id: "pl",
-            name: "Sales",
-            is_default: true,
-            position: 0,
-            stages: [
-              {
-                id: "pl-s1",
-                pipeline_id: "pl",
-                name: "Qualify",
-                position: 1,
-                semantic: "open",
-                win_probability: 20,
-              },
-            ],
-          },
-        ],
-        page: { next_cursor: null },
-      });
-    }
-    if (method === "POST" && url.includes("/reports/")) {
-      const match = url.match(/\/reports\/([^/?]+)/);
-      const key = match ? match[1] : "";
-      const body = request
-        ? await request.json()
-        : JSON.parse(String(init?.body));
-      opts.onRun?.(key, body);
-      const rows =
-        key === "forecast"
-          ? (opts.forecastRows ?? [])
-          : key === "activities-by-kind"
-            ? (opts.meetingRows ?? [])
-            : key === "projects-by-phase"
-              ? (opts.phaseRows ?? [])
-              : key === "project-commitments"
-                ? (opts.commitmentRows ?? [])
-                : key === "projects-gone-quiet"
-                  ? (opts.quietRows ?? [])
-                  : key === "win-loss"
-                    ? (opts.winLossRows ?? [])
-                    : key === "stage-age"
-                      ? (opts.stageAgeRows ?? [])
-                      : key === "open-deals-per-company"
-                        ? (opts.companyRows ?? [])
-                        : (opts.stageRows ?? [
-                            {
-                              stage_id: "pl-s1",
-                              raw_minor: 100000,
-                              deal_count: 2,
-                              currency: "EUR",
-                            },
-                          ]);
-      return jsonResponse({
-        report: key,
-        plan: {},
-        columns: [],
-        rows,
-        // The frame the server sends with every result. A fixture that omits
-        // it models a response no live server produces, and the screen would
-        // then be tested against a shape it never meets.
-        as_of: "2026-03-04T09:00:00Z",
-        ...(opts.partialFrame
-          ? {}
-          : {
-              timezone: "Europe/Berlin",
-              base_currency: "EUR",
-              fiscal_year_start_month: 1,
-            }),
-        derivation_url: `/v1/reports/${key}/derivation?by=stage_id&agg=sum:amount_minor:raw_minor&stage_id=pl-s1`,
-      });
-    }
-    return jsonResponse({ data: [], page: { next_cursor: null } });
-  });
-}
 
 // The pipeline reports live behind their own tab now, and Forecast is the
 // section a reader lands on. A test that wants deals-by-stage opens the tab
@@ -371,19 +194,6 @@ describe("the data coverage section", () => {
   });
 });
 
-// A context whose default lens is one seat: the rep's own.
-const ownLensContext = {
-  default_scope: { kind: "owner", id: "u-rep-1", label: "Riley Rep" },
-  allowed_scopes: [{ kind: "owner", id: "u-rep-1", label: "Riley Rep" }],
-  capabilities: {
-    view_manager_forecast: false,
-    submit_manager_forecast: false,
-  },
-  as_of: "2026-09-04T00:00:00Z",
-  timezone: "Europe/Berlin",
-  base_currency: "EUR",
-};
-
 describe("the my-outcomes section", () => {
   it("shows the tab under an owner lens and answers with the seat's own facts", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];
@@ -452,6 +262,45 @@ describe("the my-outcomes section", () => {
       expect(bodies.some((sent) => sent.key === "activities-by-kind")).toBe(
         false,
       );
+    } finally {
+      window.location.hash = "";
+    }
+  });
+
+  // A reading with no way out. Both figures are one row of the pipeline report,
+  // and the section that draws that report is on this very screen — a rep who
+  // wanted the deals behind "4" had to find the tab themselves.
+  it("opens the pipeline section from each of the seat's readings", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        context: ownLensContext,
+        stageRows: [{ deal_count: 4, raw_minor: 250000 }],
+      }),
+    );
+    const user = userEvent.setup();
+    try {
+      render(<AnalyticsScreen />);
+      await user.click(
+        await screen.findByRole("button", { name: "My outcomes" }),
+      );
+      await screen.findByText("4");
+
+      // TWO doors, and every door in the product carries the same word — so
+      // what tells them apart for a screen reader is each one's own reading.
+      // The meetings cards below read from a different report and offer none.
+      const doors = screen.getAllByRole("button", { name: "Open" });
+      expect(doors).toHaveLength(2);
+      expect([
+        screen.getByRole("button", { name: "Open", description: "Deals" }),
+        screen.getByRole("button", {
+          name: "Open",
+          description: "Value (EUR)",
+        }),
+      ]).toEqual(doors);
+
+      await user.click(doors[0]);
+      expect(window.location.hash).toBe("#/analytics/pipeline");
     } finally {
       window.location.hash = "";
     }

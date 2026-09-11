@@ -14,13 +14,13 @@
   gap: var(--space-4);
 }
 
-/* `.wrap > .card + .card` is the shell's fallback rhythm for a screen that drops
- * cards straight into the gutter with no row gap. This screen has one, so the
- * fallback would land on top of it and space two cards twice as far apart as
- * every other pair on the page. Specificity, not source order: the shell's rule
- * is three classes and so is a bare `.filters-screen >` one, and a tie is
+/* `.wrap > :is(.card, .panel) + :is(.card, .panel)` is the shell's fallback
+ * rhythm for a screen that drops house boxes straight into the gutter with no
+ * row gap. This screen has one, so the fallback would land on top of it and
+ * space two panes twice as far apart as every other pair on the page.
+ * Specificity, not source order: the shell's rule is three classes and a tie is
  * decided by which stylesheet the bundler happened to emit last. */
-.wrap.filters-screen > .card + .card {
+.wrap.filters-screen > :is(.card, .panel) + :is(.card, .panel) {
   margin-top: 0;
 }
 
@@ -38,20 +38,6 @@
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
-}
-
-/* SectionHeader makes its actions `flex: none` because the usual cluster is a
- * button or two that must not be squeezed narrower than their labels. This
- * cluster is a toolbar — a count, a badge that spells out what "dynamic" means,
- * and three menus — and `flex: none` meant it kept its content width whatever
- * the viewport was: 614px at a 390px viewport, taking the page 257px sideways.
- *
- * The row already declares flex-wrap. Being ALLOWED to shrink is the half that
- * was missing, so this says so for this header only rather than changing what
- * `flex: none` means for every other one. */
-.filters-screen .section-header-actions {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .filters-count {
@@ -89,28 +75,17 @@
  * results card, the only row wide enough for both. */
 .filters-count-failed {
   font-weight: 400;
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The export sits under the builder, because it takes the filter as its
  * argument. Empty until the filter is one the engine would accept, so it holds
  * no space of its own then. */
-.filters-export-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.filters-export-row:not(:empty) {
-  margin-top: var(--space-4);
-}
-
 /* An export that failed, beside the button that failed — a reader waiting for a
  * file has to be told there isn't one. It wraps rather than clipping: the reason
  * comes from the server and can be a full sentence, and a truncated reason is
  * one a reader cannot act on. */
 .filters-export-error {
-  color: var(--danger);
+  color: var(--dangerText);
   font-weight: var(--fw-medium);
 }

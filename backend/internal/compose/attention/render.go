@@ -28,6 +28,13 @@ import (
 // lanewiring_test.go refuses the rest.
 const actionOpen crmcontracts.AttentionItemActions = "open"
 
+// actionUndo puts back a change the system made without asking.
+//
+// Offered on a receipt alone, and only on one carrying an audit row to restore:
+// the record-history route reads the before-image from it, so a card without
+// one would be a button naming nothing to reverse.
+const actionUndo crmcontracts.AttentionItemActions = "undo"
+
 // actionDismiss puts a lapsed contact aside for a while.
 //
 // Offered ONLY where a dismissal endpoint takes the row's own id, which today
@@ -291,7 +298,7 @@ func stagedFacts(
 // — the one place that decides whether a due moment is behind now.
 // Held by: TestOnlyOnePlaceDecidesWhetherSomethingIsLate
 // (backend/gates/overdueboundary_test.go).
-func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
+func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts.AttentionItem {
 	subject := task.Subject
 	item := crmcontracts.AttentionItem{
 		Id:      task.ID.String(),
@@ -305,6 +312,11 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 		item.DueAt = &due
 		past := deadline.Passed(task.DueAt, asOf)
 		item.Overdue = &past
+		// Which run of the page it heads. Only dated rows carry one, which is
+		// what the contract says and what lets a client group without having to
+		// decide the day's end for itself.
+		group := crmcontracts.AttentionItemDueGroup(dueGroup(due, asOf, until, loc))
+		item.DueGroup = &group
 	}
 	// Who holds it. Absent means nobody has taken it, which the unassigned
 	// scope exists to surface and which the row could not say before.
@@ -397,34 +409,6 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		item.Kind = &label
 	}
 	return item
-}
-
-// receiptItem renders one thing the system did on its own.
-//
-// It offers no decision: a receipt reports a finished act, and asking the reader
-// to answer a question already answered is not a verb this lane has.
-//
-// It offers `open` only when the decision named a record. Not every approval is
-// about one, and a card that advertised the verb regardless would send a client
-// that trusts it to a destination the card never carried.
-func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
-	kind := receipt.Kind
-	occurred := receipt.OccurredAt
-	summary := receipt.Summary
-	subject := subjectOf(receipt.TargetType, receipt.TargetID)
-	actions := []crmcontracts.AttentionItemActions{}
-	if openableSubject(subject) {
-		actions = append(actions, actionOpen)
-	}
-	return crmcontracts.AttentionItem{
-		Id:         receipt.ID.String(),
-		Source:     crmcontracts.AttentionItemSource("approval"),
-		Kind:       &kind,
-		Title:      &summary,
-		Subject:    subject,
-		OccurredAt: &occurred,
-		Actions:    actions,
-	}
 }
 
 // subjectOf names the record an item concerns, when the producer named one.

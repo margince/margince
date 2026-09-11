@@ -298,7 +298,11 @@ func (s *Store) SendMessage(ctx context.Context, anchorID ids.ActivityID, in Sen
 		return stager.StageChannelTx(ctx, tx, message.delivery(ids.From[ids.ActivityKind](ids.UUID(sent.Id))))
 	})
 	if err != nil {
-		return crmcontracts.Activity{}, err
+		// A channel refusal is recorded on the same terms an email one is: a
+		// message the engine stopped is the same piece of work whichever
+		// transport it was going out on, and a rep reading a code with no
+		// record is the same dead end.
+		return crmcontracts.Activity{}, recordChannelRefusal(ctx, stager, err)
 	}
 	return sent, nil
 }

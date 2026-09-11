@@ -21,6 +21,7 @@ import type {
   WorklistReason,
   WorklistValue,
 } from "./worklist.queries";
+import { known } from "./worklist.reasoncensus";
 
 type T = ReturnType<typeof useT>;
 
@@ -178,47 +179,6 @@ function daysValued(
   kind: WorklistReason["kind"],
 ): kind is keyof typeof DAYS_VALUED_REASONS {
   return kind in DAYS_VALUED_REASONS;
-}
-
-// Every reason this client has a sentence for.
-//
-// A newer server sending a reason this build does not know must not print
-// `worklist.because.customer_escalated` at a reader — a missing translation
-// returns its own key, so an unrecognised value has to be caught here rather
-// than discovered on screen.
-const KNOWN_REASONS = {
-  pinned: true,
-  buyer_wrote_last: true,
-  waiting_days: true,
-  overdue: true,
-  due_today: true,
-  closing_soon: true,
-  expected_revenue: true,
-  material: true,
-  below_material: true,
-  quiet_days: true,
-  no_champion: true,
-  promised: true,
-  approved_and_failed: true,
-  blocks_customer_work: true,
-  routine: true,
-  repeated_failure: true,
-  legal_deadline: true,
-  meeting_soon: true,
-  meeting_unprepared: true,
-  response_overdue: true,
-  response_due_soon: true,
-  unassigned: true,
-  stale: true,
-  no_reply_history: true,
-  asks_nothing: true,
-  outcome_unrecorded: true,
-} as const;
-
-type KnownReason = keyof typeof KNOWN_REASONS;
-
-function known(kind: WorklistReason["kind"]): kind is KnownReason {
-  return kind in KNOWN_REASONS;
 }
 
 // The comparators this build can name, for the same reason.

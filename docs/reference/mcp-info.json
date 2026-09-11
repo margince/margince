@@ -10,16 +10,16 @@
   "totals": {
     "tools": 75,
     "resources": 12,
-    "tool_catalog_bytes": 215252,
+    "tool_catalog_bytes": 219217,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 54959,
+    "approx_wire_tokens_total": 55950,
     "largest_tool_bytes": 8975,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 53026,
+      "description_bytes": 56638,
       "input_schema_bytes": 45344,
-      "output_schema_bytes": 100703,
-      "description_plus_input_schema_bytes": 98370
+      "output_schema_bytes": 101056,
+      "description_plus_input_schema_bytes": 101982
     }
   },
   "tools": {
@@ -442,7 +442,7 @@
           "readOnlyHint": false,
           "title": "Move a project to a phase"
         },
-        "description": "Move a project to another phase — initiative, pursuing, delivering, closed. The four names are fixed but the order is not enforced: a project may go back a phase, and a closed one may be reopened. Closing requires a reason, which is recorded on the phase history either way. Use advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a different record. Send if_version with the version you read; a person approves the move before it runs. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Move a project to another phase — initiative, pursuing, delivering, closed. The four names are fixed but the order is not enforced: a project may go back a phase, and a closed one may be reopened. Closing requires a reason, which is recorded on the phase history either way. Use advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a different record. Send if_version with the version you read. By default the phase moves when this call answers. Where an installation has raised this verb to confirm first, the answer is a staged approval and the phase has NOT moved — keep its id and do not report the project as advanced until the retry that carries the approval has answered. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -890,7 +890,7 @@
           "readOnlyHint": false,
           "title": "Archive a record"
         },
-        "description": "Retire a record that should no longer be worked — a duplicate, a dead account, a project that ended. Archiving hides the record from day-to-day work; it does not delete it and does not move anything attached to it, so an archived duplicate still holds the activities and deals that were logged against it. Use merge_records when a duplicate's history should end up on the record that survives, and disqualify_lead when a lead is going nowhere — a lead's own transition records the reason where archiving would not. A person approves this call before it runs; do not report the record as archived until the retry that carries their approval has answered. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Retire a record that should no longer be worked — a duplicate, a dead account, a project that ended. Archiving hides the record from day-to-day work; it does not delete it and does not move anything attached to it, so an archived duplicate still holds the activities and deals that were logged against it. Use merge_records when a duplicate's history should end up on the record that survives, and disqualify_lead when a lead is going nowhere — a lead's own transition records the reason where archiving would not. By default the record is archived when this call answers; where an installation has raised this verb to confirm first, the answer is a staged approval and you must not report the record as archived until the retry that carries their approval has answered. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -1224,7 +1224,7 @@
           "readOnlyHint": false,
           "title": "Book a meeting"
         },
-        "description": "Hold a slot in the host's calendar and record the meeting against the records it is about. Needs at least one link saying what it is about. The slot is taken and the meeting is a real commitment, so a person approves it first. No attendee list: who is invited is the calendar connection's business. Check the slot is free first — this tool does not. Use check_availability to find the time, and log_activity to record a meeting that already happened. Keep the staged approval id and re-send the identical start, end and links: the approval is bound to the meeting as it was described. (Governance: runs immediately; requires passport scope \"send\".)",
+        "description": "Hold a slot in the host's calendar and record the meeting against the records it is about. Needs at least one link saying what it is about. The slot is taken and the meeting is a real commitment, and by default it is taken when this call answers — where an installation has raised this verb to confirm first, the answer is a staged approval instead. No attendee list: who is invited is the calendar connection's business. Check the slot is free first — this tool does not. Use check_availability to find the time, and log_activity to record a meeting that already happened. Keep the staged approval id and re-send the identical start, end and links: the approval is bound to the meeting as it was described. (Governance: runs immediately; requires passport scope \"send\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -1877,7 +1877,7 @@
           "readOnlyHint": false,
           "title": "Commit an import"
         },
-        "description": "Write a checked import into the workspace, once a person approves. Only from awaiting_approval. Undoing one needs the web app. read_import_report first; nobody should approve what they have not read. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Write a checked import into the workspace. The dry run is the check; by default this commits when it answers. Only from awaiting_approval. Undoing one needs the web app. read_import_report first; nobody should approve what they have not read. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2016,7 +2016,7 @@
           "readOnlyHint": true,
           "title": "Compose an analytics report"
         },
-        "description": "Render a report whose every figure comes from a saved analytics run. The document carries the STRUCTURE and the WORDS; each number names a run id and a cell inside it, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Save a run first — run an analytics query with save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary for a meeting — whose every number comes from a saved analytics run instead of being typed. Not for answering with a figure: a number in the reply is run_analytics_query's or run_report's. The document carries the STRUCTURE and the WORDS; each figure names a run id and a cell inside it, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Save a run first — run an analytics query with save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2687,7 +2687,7 @@
           "readOnlyHint": true,
           "title": "How current the sources are"
         },
-        "description": "Which connectors the nightly check could read, and how far back each reaches. Needs the data_coverage grant, which operators hold and sellers do not — a refusal here is a seat boundary, not a missing run. Only a `checked` source carries a date. On any other state nothing was read, and a quiet week is indistinguishable from a broken connector until somebody looks. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Answer how much of what is going on this workspace can actually SEE — which connectors the nightly check could read, and how far back each reaches. Needs the data_coverage grant, which operators hold and sellers do not — a refusal here is a seat boundary, not a missing run. Only a `checked` source carries a date; on any other state nothing was read, and a quiet week is indistinguishable from a broken connector until somebody looks. forecast_input_checks and list_input_checks answer what the check FOUND, and both are silent on whether it could look — a clean set of findings over sources nobody opened reads as good news and is not. Ask this one when the question is whether to trust the other two. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
@@ -3792,7 +3792,7 @@
           "readOnlyHint": false,
           "title": "Disqualify a lead"
         },
-        "description": "Close out a lead that is not going anywhere, so it stops appearing as live work. It is the lead's own terminal state and keeps the record and its history; it is not a deletion and not an archive. Use promote_lead when engagement says the opposite, and qualify_lead when the lead is only missing information. A person approves this call before it runs; do not report the lead as disqualified until the retry carrying their approval has answered. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Close out a lead that is not going anywhere, so it stops appearing as live work. It is the lead's own terminal state and keeps the record and its history; it is not a deletion and not an archive. Use promote_lead when engagement says the opposite, and qualify_lead when the lead is only missing information. By default the lead is disqualified when this call answers; where an installation has raised this verb to confirm first, do not report the lead as disqualified until the retry carrying their approval has answered. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -4266,7 +4266,7 @@
           "readOnlyHint": false,
           "title": "Enrich a company from its website"
         },
-        "description": "Learn about a company by reading its public website, and propose what was found for a person to accept onto the record. It reaches OUTSIDE the workspace, so a person approves the call before it runs, and what it returns is a proposal — nothing lands on the record until someone accepts it. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the company_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a person approves every call before it runs; requires passport scope \"enrich\".)",
+        "description": "Learn about a company by reading its public website, and propose what was found for a person to accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing lands on the record until someone accepts it, which is the review that guards this, not an approval on the call. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the company_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a person approves every call before it runs; requires passport scope \"enrich\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -4398,7 +4398,7 @@
           "readOnlyHint": true,
           "title": "What the forecast's inputs were checked against"
         },
-        "description": "What last night's input check found, and how much of the pipeline it reached. A forecast is only as good as its inputs, and the failures are mundane: a close date that went by, an amount that disagrees with the offer that was sent, a deal nobody has heard from in ninety days. Read `readiness` before quoting any forecast figure. `checks_incomplete` is NOT a worse `needs_review` — one says the pipeline has problems, the other says we could not look, and reporting the first when the second is true tells somebody their pipeline is sound when nobody read the mailbox. `sources` says why: each carries the state the run reached, and only a `checked` source has a date. An absent or unread source means the run could not confirm anything from it, which is different from finding nothing there. `eligible_deals` is how much there was to check — compared against an earlier run it shows a pass that covered less of the pipeline. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Answer whether the forecast's inputs are sound enough to quote — a verdict, and how much of the pipeline last night's check reached. A forecast is only as good as its inputs, and the failures are mundane: a close date that went by, an amount that disagrees with the offer that was sent, a deal nobody has heard from in ninety days. `checks_incomplete` is NOT a worse `needs_review` — one says the pipeline has problems, the other says we could not look, and reporting the first when the second is true tells somebody their pipeline is sound when nobody read the mailbox. This is the VERDICT. list_input_checks is the findings themselves, one row per problem, when the question is what to go and fix. data_coverage is the third question and the one this cannot answer: whether the CONNECTORS were readable at all, which is what makes a clean verdict trustworthy rather than merely clean. Read `readiness` before quoting any forecast figure. `sources` says why: each carries the state the run reached, and only a `checked` source has a date — an absent or unread source means the run could not confirm anything from it, which is different from finding nothing there. `eligible_deals` is how much there was to check. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
@@ -4544,7 +4544,7 @@
           "readOnlyHint": true,
           "title": "What moved the forecast"
         },
-        "description": "The difference between two forecast snapshots, classified into named causes. Opening plus every bucket equals closing, exactly — so the buckets are a complete account of the change and not a selection from it. A deal appears in exactly ONE bucket: one that both slipped and was repriced has moved for one reason as far as a reader is concerned, which is that it left. Two buckets are about the machinery rather than the business, and quoting them as sales movement is the mistake this classification exists to prevent. `definition` means the two snapshots were computed under different rules, and then the WHOLE difference is in that bucket. `model` means a probability the product re-scored. `reopened_or_archived` carries a deal that left the population entirely — archived, or no longer visible to this caller — with its whole prior contribution, so no money disappears without a row that says where it went. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Explain why a forecast changed between two points, as named causes that account for the whole difference. Opening plus every bucket equals closing, exactly, so the buckets are a complete account of the change and not a selection from it. A deal appears in exactly ONE bucket: one that both slipped and was repriced has moved for one reason as far as a reader is concerned, which is that it left. Two buckets are about the machinery rather than the business, and quoting them as sales movement is the mistake this classification exists to prevent: `definition` means the two snapshots were computed under different rules, and then the WHOLE difference is in that bucket; `model` means a probability the product re-scored. IT NEEDS TWO SNAPSHOT IDS, and nothing on this surface hands one out — no tool lists snapshots and no resource publishes them, so a caller that has not been given ids from elsewhere cannot call this. Reading forecast_readings twice and subtracting is NOT the same answer and must not be reported as one: the difference between two reads is a number with no account of where it went. `reopened_or_archived` carries a deal that left the population entirely — archived, or no longer visible to this caller — with its whole prior contribution, so no money disappears without a row that says where it went. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -4741,7 +4741,7 @@
           "readOnlyHint": true,
           "title": "Read the forecast"
         },
-        "description": "What a period is expected to close, in four readings. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover, and it is absent only when they cover every eligible deal — so quoting a total without it reports a partial pipeline as a complete one. `eligible_count`, `priced_count` and `fx_missing_count` are the counts it is written from. Quote `as_of`, `timezone` and `base_currency` with the number: a total placed in the reader's own zone is a different total. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Answer what a period is expected to close — `won`, `evidence`, `best_case` and `open`, plus `weighted` — under the installation's own fiscal calendar and base currency. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover and is absent only when they cover every eligible deal, so quoting a total without it reports a partial pipeline as a complete one. run_report's forecast report and a hand-summed query_workspace also produce a number, and NEITHER is the forecast: only this applies the fiscal calendar, the base currency conversion and the weighting. These figures also cannot be cited in a composed document — for a board-pack section or anything a reader keeps, run_analytics_query with save and compose_analytics_report from the run id. Ask forecast_input_checks whether the inputs behind these numbers were read. Quote `as_of`, `timezone` and `base_currency` with the number — a total placed in the reader's own zone is a different total — and `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is written from. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -5737,7 +5737,7 @@
           "readOnlyHint": true,
           "title": "List colleagues"
         },
-        "description": "List the people who work HERE — colleagues holding a seat, not the contacts stored as person records. Reads only, and lists seats that can actually receive work — archived, suspended and locked-out ones are absent. `truncated` means there are more. search_records/person finds a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an is_agent seat. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "List the people who work HERE — colleagues holding a seat, not the contacts stored as person records. Reads only, and lists seats that can actually receive work — archived, suspended and locked-out ones are absent. `truncated` means there are more. A `q` matching nobody answers with `all_colleagues` and a warning; that list is ABSENT if it could not be read and partial if `all_colleagues_truncated`, so read the warning before concluding a person has no seat. search_records/person finds a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an is_agent seat. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -5753,6 +5753,40 @@
           "properties": {
             "data": {
               "properties": {
+                "all_colleagues": {
+                  "items": {
+                    "properties": {
+                      "display_name": {
+                        "type": "string"
+                      },
+                      "email": {
+                        "type": "string"
+                      },
+                      "is_agent": {
+                        "type": "boolean"
+                      },
+                      "seat_type": {
+                        "type": "string"
+                      },
+                      "user_id": {
+                        "format": "uuid",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "display_name",
+                      "email",
+                      "is_agent",
+                      "seat_type",
+                      "user_id"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "all_colleagues_truncated": {
+                  "type": "boolean"
+                },
                 "colleagues": {
                   "items": {
                     "properties": {
@@ -5879,7 +5913,7 @@
           "readOnlyHint": true,
           "title": "What the forecast's inputs still need"
         },
-        "description": "The open findings from the nightly input check, most material first. Read them before quoting a forecast figure: a close date that went by, or an amount that disagrees with the offer that was sent, makes a total wrong without making the arithmetic wrong. Scoped to what this caller can open, with no count of what was withheld — a count of what somebody may not read is itself a statement about how much there is. `affected_minor` absent means the money at stake cannot be said, not that nothing is at stake. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "List the open input problems behind the forecast, most material first, so they can be fixed. A close date that went by, or an amount that disagrees with the offer that was sent, makes a total wrong without making the arithmetic wrong. Scoped to what this caller can open, with no count of what was withheld — a count of what somebody may not read is itself a statement about how much there is. forecast_input_checks answers the VERDICT — whether the numbers are quotable at all — which is the question before this one and the cheaper call. data_coverage answers whether the sources were readable, which an empty list here cannot distinguish from a clean pipeline. `affected_minor` absent means the money at stake cannot be said, not that nothing is at stake. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
@@ -6701,7 +6735,7 @@
           "readOnlyHint": false,
           "title": "Merge two records"
         },
-        "description": "Collapse two records for the same real person or company into one, moving the source's activities, deals and links onto the record that survives. People merge with people and companies with companies; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing, because a person approves the call as you described it. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Collapse two records for the same real person or company into one, moving the source's activities, deals and links onto the record that survives. People merge with people and companies with companies; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing: the fold cannot be called back, and by default nothing holds it. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -8511,7 +8545,7 @@
           "readOnlyHint": false,
           "title": "Promote a lead to a person"
         },
-        "description": "Turn a lead who has genuinely engaged into a person record, carrying their history across. It requires a trigger naming the engagement that justifies it — a reply, a booked or held meeting, or a human's decision. Cold outreach that nobody answered is not a promotion, and there is no trigger for it. Use qualify_lead when the lead is merely incomplete rather than ready, and disqualify_lead when the engagement says the opposite. A person approves this call before it runs; the promoted person's id comes back only from the retry that carries their approval. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Turn a lead who has genuinely engaged into a person record, carrying their history across. It requires a trigger naming the engagement that justifies it — a reply, a booked or held meeting, or a human's decision. Cold outreach that nobody answered is not a promotion, and there is no trigger for it. Use qualify_lead when the lead is merely incomplete rather than ready, and disqualify_lead when the engagement says the opposite. By default the lead is promoted when this call answers and the promoted person's id comes back with it. Where an installation has raised this verb to confirm first, the answer is a staged approval instead and the id arrives only from the retry that carries it. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -9501,7 +9535,7 @@
           "readOnlyHint": true,
           "title": "Read an import report"
         },
-        "description": "What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what a person weighs before committing. Same shape before and after. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -11918,7 +11952,7 @@
           "readOnlyHint": true,
           "title": "Run a report"
         },
-        "description": "Answer a question about totals, counts or breakdowns — pipeline by stage, deals won by owner, activity volume over time — by running one of this workspace's prebuilt reports. Only the named reports exist, each with its own filter, grouping and measure names; anything else is refused. It aggregates: how many and how much, never which record. Use search_records or whats_slipping_this_week when the answer wanted is the records themselves rather than a number over them. Call a report with no plan first to see its default answer, then narrow with the names its catalog entry lists. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Answer a question about totals, counts or breakdowns — pipeline by stage, deals won by owner, activity volume over time — by running one of this workspace's prebuilt reports. Only the named reports exist, each with its own filter, grouping and measure names; anything else is refused. It aggregates: how many and how much, never which record. Use search_records or whats_slipping_this_week when the answer wanted is the records themselves rather than a number over them. Reach for run_analytics_query only when NO prebuilt report answers the question: a report already carries the filter and the grouping, so it is one call where a query is a vocabulary lookup and a query. Call a report with no plan first to see its default answer, then narrow with the names its catalog entry lists. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -12502,7 +12536,7 @@
           "readOnlyHint": false,
           "title": "Start an email conversation from a record"
         },
-        "description": "Put a mail on the wire to a real recipient, from this workspace, starting a new conversation rather than answering one, and file it on the records it is about. Sends EXACTLY the subject and body given; composes nothing. Needs at least one link naming the records it belongs to. Every recipient must have granted the named consent purpose, and a person approves the send first — a sent mail cannot be recalled. Use send_email to answer a conversation already recorded here; this starts a separate thread beside it. Keep the staged approval id and re-send the identical text and links: the approval is bound to that exact message. The activity_id that comes back is the new conversation. (Governance: runs immediately; requires passport scope \"send\".)",
+        "description": "Put a mail on the wire to a real recipient, from this workspace, starting a new conversation rather than answering one, and file it on the records it is about. Sends EXACTLY the subject and body given; composes nothing. Needs at least one link naming the records it belongs to. Every recipient must have granted the named consent purpose. A sent mail cannot be recalled, and by default nothing holds it: where an installation has raised this verb to confirm first, the answer is a staged approval instead of a send. Use send_email to answer a conversation already recorded here; this starts a separate thread beside it. Keep the staged approval id and re-send the identical text and links: the approval is bound to that exact message. The activity_id that comes back is the new conversation. (Governance: runs immediately; requires passport scope \"send\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -12744,7 +12778,7 @@
           "readOnlyHint": false,
           "title": "Send an email"
         },
-        "description": "Put a mail on the wire to a real recipient, from this workspace, and record it on the thread it belongs to. It sends EXACTLY the subject and body it is given and composes nothing, so it is not the tool to reach for when the message does not exist yet. Every recipient must have granted the consent purpose the call names, and a person approves the send before it leaves — a message leaving the workspace cannot be recalled. Use draft_email first to produce the message and let it be read, and send_message when the conversation is on a chat channel rather than mail. Send the same activity_id, subject and body the draft produced, and keep the staged approval id: the approval is bound to that exact message, so changed text needs a new approval. (Governance: runs immediately; requires passport scope \"send\".)",
+        "description": "Put a mail on the wire to a real recipient, from this workspace, and record it on the thread it belongs to. It sends EXACTLY the subject and body it is given and composes nothing, so it is not the tool to reach for when the message does not exist yet. Every recipient must have granted the consent purpose the call names. A message leaving the workspace cannot be recalled, and by default nothing holds it: where an installation has raised this verb to confirm first, the answer is a staged approval instead of a send. Use draft_email first to produce the message and let it be read, and send_message when the conversation is on a chat channel rather than mail. Send the same activity_id, subject and body the draft produced, and keep the staged approval id: the approval is bound to that exact message, so changed text needs a new approval. (Governance: runs immediately; requires passport scope \"send\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -12960,7 +12994,7 @@
           "readOnlyHint": false,
           "title": "Reply on a channel conversation"
         },
-        "description": "Reply on a captured chat conversation — the channels this workspace has connected — on the thread it was captured from. It replies to an existing conversation named by activity_id; it cannot start one, and it cannot choose a channel. The recipient must have granted the consent purpose the call names, and a person approves it before it leaves. Use send_email when the thread is a mail thread, and log_activity when the point is to record that something was said rather than to say it. Keep the activity_id of the conversation and the staged approval id; the approval binds the exact text, so changed text needs a new approval. (Governance: runs immediately; requires passport scope \"send\".)",
+        "description": "Reply on a captured chat conversation — the channels this workspace has connected — on the thread it was captured from. It replies to an existing conversation named by activity_id; it cannot start one, and it cannot choose a channel. The recipient must have granted the consent purpose the call names. By default the message leaves when this call answers; where an installation has raised this verb to confirm first, the answer is a staged approval instead. Use send_email when the thread is a mail thread, and log_activity when the point is to record that something was said rather than to say it. Keep the activity_id of the conversation and the staged approval id; the approval binds the exact text, so changed text needs a new approval. (Governance: runs immediately; requires passport scope \"send\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {

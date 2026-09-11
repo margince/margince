@@ -1916,7 +1916,7 @@ type PublicEventPersonUpdated struct {
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
-// PublicEventPipelineArchived Payload for pipeline.archived. Never emitted today (no archive path exists for pipeline); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it.
+// PublicEventPipelineArchived Payload for pipeline.archived — a pipeline was retired as a choice. It leaves the pickers and the new-deal flows; the deals on it keep their stage, their history and their forecast contribution, so a subscriber acting on this must not treat it as work moving. The payload is empty because the entity id is the whole fact.
 type PublicEventPipelineArchived struct{}
 
 // PublicEventPipelineCreated Payload for pipeline.created — a pipeline was created with its initial stage set in the same transaction.

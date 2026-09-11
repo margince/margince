@@ -27,9 +27,13 @@ import (
 // their column (a human's own form overwrites — unlike a read-back, which only
 // fills blanks), and every one onto its provenance row. Returns what changed,
 // for the audit delta.
-// branches are main's, and only the names in them moved.
 //
-//nolint:cyclop // Unchanged by this rename — see the note on readContractStrip: the
+// one before it, name for name. cyclop is diff-scoped against the merge base, so
+// renaming an identifier on every line presents the whole function as new and
+// surfaces a count that was always here. Splitting it to satisfy a linter that
+// is only looking because of a rename would make the rename unreviewable.
+//
+//nolint:cyclop // The rename did not add a branch: this body is identical to the
 func writeCompanyFields(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, by string, fields map[string]*string) (map[string]any, error) {
 	applied := map[string]any{}
 	renamed := false
@@ -124,6 +128,19 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 // it. Said here because the form carries no version to pin, so nothing else in
 // this file records what stops the second save silently losing the first.
 func setCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, spec companyField, value string) (bool, error) {
+	// Bounded HERE, at the one edge both writers pass through, so the header
+	// line is derived once rather than guarded twice. The column it feeds is a
+	// display line with a CHECK behind it; the profile field it comes from is
+	// what an installation says about itself, and the contract accepts far more
+	// of that than the line can show.
+	//
+	// This used to be a length test inside the statement, and an overlong value
+	// simply did not write: the summary saved, the header stayed blank, and
+	// nothing told the caller. A prefix cannot fail that way — every value the
+	// contract accepts now reaches the header as much of itself as fits.
+	if spec.column == columnDescription {
+		value = headerLine(value)
+	}
 	var stored *string
 	if value != "" {
 		stored = &value

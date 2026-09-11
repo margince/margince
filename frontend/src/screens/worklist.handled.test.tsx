@@ -19,7 +19,7 @@ afterEach(() => {
 // must never do.
 
 describe("what was handled for the reader", () => {
-  it("AC-WORKLIST-TRUST-01: reports what happened and offers nothing to do about it", async () => {
+  it("AC-WORKLIST-TRUST-01: offers nothing to do about work somebody agreed to", async () => {
     stubHandled({
       as_of: "2026-09-05T09:00:00Z",
       truncated: false,
@@ -38,8 +38,10 @@ describe("what was handled for the reader", () => {
     await screen.findByText("Sent the confirmation to Kirsten");
 
     expect(screen.getByText("Kirsten Vogel")).toBeTruthy();
-    // NO VERBS. The work is done, and a control here would ask the reader to
-    // redo it on the one surface that exists to tell them they need not.
+    // NO VERBS on a receipt for a DECISION. The work was agreed to and is
+    // done, so a control here would ask the reader to redo it on the one
+    // surface that exists to tell them they need not. A correction nobody was
+    // asked about is the deliberate exception, covered below.
     //
     // Asserted over the TABLE rather than the panel: Disclosure draws a native
     // <summary> to fold itself, which is not a button role and would let a
@@ -48,6 +50,71 @@ describe("what was handled for the reader", () => {
     expect(
       table.querySelectorAll("button, a, input, [role='button']").length,
     ).toBe(0);
+  });
+
+  // The one row on this panel that carries a verb, and why it must.
+  //
+  // A close date the nightly sweep corrected was never staged as a card and
+  // never agreed to by anyone. This receipt is its ONLY telling, so if the
+  // reader disagrees, the way back has to be here — there is no approvals row
+  // to go and reject.
+  it("offers the way back on a correction nobody was asked about", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [
+        {
+          id: "01a05500-0000-7000-8000-00000000e004",
+          kind: "close_date_correction",
+          summary: 'Corrected the close date on "Ablösung Checkout"',
+          occurred_at: "2026-09-05T08:00:00Z",
+          subject: { type: "deal", id: "d1", label: "Ablösung Checkout" },
+          undo: {
+            audit_log_id: "01a05500-0000-7000-8000-0000000000a1",
+            version: 4,
+            reversed: false,
+          },
+        },
+      ],
+    });
+
+    render(panel());
+    await screen.findByText('Corrected the close date on "Ablösung Checkout"');
+
+    expect(
+      screen.getByRole("button", { name: en["history.undo.action"] }),
+    ).toBeTruthy();
+  });
+
+  // A correction already put back keeps its row and says so. Dropping the row
+  // on success would leave the reader unsure whether their press landed or the
+  // list simply moved under them.
+  it("says a correction was already put back instead of offering it twice", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [
+        {
+          id: "01a05500-0000-7000-8000-00000000e005",
+          kind: "close_date_correction",
+          summary: 'Corrected the close date on "Ablösung Checkout"',
+          occurred_at: "2026-09-05T08:00:00Z",
+          subject: { type: "deal", id: "d1", label: "Ablösung Checkout" },
+          undo: {
+            audit_log_id: "01a05500-0000-7000-8000-0000000000a2",
+            version: 4,
+            reversed: true,
+          },
+        },
+      ],
+    });
+
+    render(panel());
+    await screen.findByText(en["worklist.handled.putBackDone"]);
+
+    expect(
+      screen.queryByRole("button", { name: en["history.undo.action"] }),
+    ).toBeNull();
   });
 
   it("says no record where the act named none", async () => {

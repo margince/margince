@@ -153,10 +153,10 @@
 }
 .co-spine-gap .co-spine-title {
   font-weight: var(--fw-medium);
-  color: var(--warn);
+  color: var(--warnText);
 }
 .co-spine-gap .co-spine-detail {
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 /* PAST ITS DATE — a commitment that has slipped. Same tone as the gap, since
@@ -166,7 +166,7 @@
   border-color: var(--warnBorder);
 }
 .co-spine-overdue .co-spine-detail {
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 /* AHEAD — dated and not yet happened. A hollow dot, because the difference

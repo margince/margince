@@ -298,3 +298,45 @@ describe("when the question did not arrive", () => {
     expect(screen.queryByText(/asked not to receive marketing/i)).toBeNull();
   });
 });
+
+describe("an answer that has not arrived is not an answer", () => {
+  // THE DEFECT THIS SLICE EXISTS FOR. `decidingRecipient(undefined)` returned
+  // "allowed", so a composer waiting on the engine looked exactly like one that
+  // had been told yes — and a rep who pressed Send in that window met the
+  // refusal at the button.
+  //
+  // Three situations reached that one answer: nobody asked, the asking is in
+  // flight, and the answer came back clean. Only the third is permission.
+  it("draws checking while the question is in flight", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SendPermission preview={undefined} asking />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(/check/i);
+  });
+
+  it("does not claim the send is allowed while it is still asking", () => {
+    const { state } = decidingRecipient(undefined, true);
+    expect(state).toBe("checking");
+  });
+
+  // An unasked question is not a refusal either. A surface with no recipient
+  // yet has nothing to ask about, and drawing a warning there would tell a rep
+  // something is wrong with a message they have not written.
+  it("stays quiet when there is nothing to ask about", () => {
+    const { state } = decidingRecipient(undefined, false);
+    expect(state).toBe("allowed");
+  });
+
+  // And a real allow still reads as one. Without this the fix above could be
+  // "never say allowed", which would take the composer's quiet confirmation
+  // away with it.
+  it("still allows a message every recipient permits", () => {
+    const { state } = decidingRecipient(
+      preview(answer({ decided_by: "machine", verdict: "allow" })),
+      false,
+    );
+    expect(state).toBe("allowed");
+  });
+});

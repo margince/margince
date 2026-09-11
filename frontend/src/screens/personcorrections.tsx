@@ -5,13 +5,8 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
-import {
-  Badge,
-  Button,
-  Card,
-  SectionHeader,
-  TextInput,
-} from "../design-system/atoms";
+import { Badge, Button, TextInput } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
@@ -51,15 +46,18 @@ export function EnrichedFields({
     return null;
   }
   return (
-    <Card>
-      <div style={{ padding: "var(--space-4)" }}>
-        <SectionHeader
-          title={t("person.enriched.title")}
-          sub={t("person.enriched.sub")}
-        />
+    // Indigo is the claim that a machine produced what is inside: every value
+    // in this panel was read out of a page or a signature by the enrichment
+    // pass, and the verdict controls exist because a reader may disagree with
+    // one. The tone says who wrote the body, not that the panel leads the page.
+    <Panel tone="ai" title={t("person.enriched.title")}>
+      <PanelBody>
+        <p className="t-sub">{t("person.enriched.sub")}</p>
+      </PanelBody>
+      <PanelBody>
         <ul
           style={{
-            margin: "var(--space-3) 0 0",
+            margin: 0,
             padding: 0,
             listStyle: "none",
             display: "grid",
@@ -76,8 +74,8 @@ export function EnrichedFields({
             </li>
           ))}
         </ul>
-      </div>
-    </Card>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -310,7 +308,7 @@ function EnrichedField({
       {record.isError && (
         <p
           role="alert"
-          style={{ margin: "var(--space-2) 0 0", color: "var(--danger)" }}
+          style={{ margin: "var(--space-2) 0 0", color: "var(--dangerText)" }}
         >
           {problemMessageOf(record.error, t)}
         </p>

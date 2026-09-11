@@ -60,11 +60,16 @@ var theOtherWord = regexp.MustCompile(
 		`|(?:^|[^A-Za-z0-9])ORGS?(?:[^A-Za-z0-9]|$)`)
 
 // notThisRecordType is the words that merely look like it: a meeting organizer,
-// the ordinary adjective, the ordinary verb. Removed before the match rather
-// than waived per site, because they are a property of English and not of any
-// one file.
+// the ordinary adjective, the ordinary verb, and REORGANISATION — restructuring
+// a sales pipeline, which is a thing this product's prose says and has nothing
+// to do with the record type. Removed before the match rather than waived per
+// site, because they are a property of English and not of any one file.
+//
+// reorgani[sz]ation comes FIRST: the alternation is ordered, and a bare
+// organi[sz]ation branch would eat the tail of the longer word and leave `re`
+// behind for the next reader to puzzle over.
 var notThisRecordType = regexp.MustCompile(
-	`(?i)organi[sz]er|organi[sz]ational|organi[sz]e[sd]|organi[sz]ing|organi[sz]es`)
+	`(?i)reorgani[sz]ations?|organi[sz]er|organi[sz]ational|organi[sz]e[sd]|organi[sz]ing|organi[sz]es`)
 
 // hostname matches a .org TLD. There are 275 in this tree — a go.mod require,
 // a disposable-email fixture list, schema.org in a comment — and in each one
@@ -227,6 +232,7 @@ func TestTheWordIsSeenAfterADot(t *testing.T) {
 		`GOVULNCHECK ?= $(call resolve-gate-tool,govulncheck,golang\.org/x/vuln)`,
 		`	expect(screen.queryByText(/mail\.example\.org/)).not.toBeInTheDocument();`,
 		`golang.org/x/tools v0.38.0 // indirect`,
+		`// endpoint could produce the state. Every reorganisation of a sales process`,
 		`// client and this suite would reach api.telegram.org.`,
 		`mail.org.uk`,
 		`2ch.orgs.hk`,

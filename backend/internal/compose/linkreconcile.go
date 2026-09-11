@@ -86,6 +86,11 @@ func (w *linkReconcileWorker) Work(ctx context.Context, _ *river.Job[LinkReconci
 	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.reconcileLinksForWorkspace))
 }
 
+// adoptStrandedPerTick bounds the stranded-mail adoption, on this job's usual
+// reasoning: the population shrinks as it is worked, so a small bound costs one
+// probe a tick once it is empty.
+const adoptStrandedPerTick = 200
+
 func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, workspace ids.UUID) error {
 	ctx = principal.WithWorkspaceID(ctx, workspace)
 	sweepCtx := w.systemContext(ctx, workspace)
@@ -141,6 +146,19 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 	if retracted > 0 {
 		w.log.InfoContext(ctx, "link reconcile: contacts a noise verdict already covered are retracted",
 			"workspace", workspace.String(), "contacts", retracted)
+	}
+	// Mail a seat holds at an address they own but claimed too late. Held with
+	// nothing scheduled to judge it until this runs, which is indistinguishable
+	// from the product being broken — and, where the address is a private
+	// correspondent's, it is what let an unjudged thread read as business and
+	// keep a contact the workspace should never have had.
+	adopted, err := w.pending.AdoptStrandedMail(sweepCtx, activities.RecomputeAudienceTx, adoptStrandedPerTick)
+	if err != nil {
+		failed = errors.Join(failed, err)
+	}
+	if adopted > 0 {
+		w.log.InfoContext(ctx, "link reconcile: mail held at an unclaimed address is imported for its seat",
+			"workspace", workspace.String(), "messages", adopted)
 	}
 	return jobs.FaultContext(ctx, errors.Join(failed, w.attachDomainBacklogs(sweepCtx, workspace)))
 }

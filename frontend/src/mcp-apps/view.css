@@ -115,18 +115,18 @@ h1 {
 
 /* The warmth bands are TEXT, so each has to clear 4.5:1 against --bgElevated in
    both themes — and "none" is exactly the band a rep has to be able to read.
-   Measured on the canon's own values, named by token because check-ds-purity.sh
-   greps comments too and a hex here would fail the gate this comment explains:
-   --success 4.88:1 light / 9.84:1 dark, --warn 6.89 / 10.27,
-   --textMeta 5.36 / 6.25. All four clear the bar as they stand, which is
-   why they are read directly rather than mixed toward one. */
+   Hence the Text half of the status family and not the bright hue the same
+   names carry for shapes: --successText and --warnText are the readings the
+   design system holds at AA for small text, and --textMeta already was. Named
+   by token because check-ds-purity.sh greps comments too, and a hex here would
+   fail the gate this comment explains. */
 .band-high {
-  color: var(--success);
+  color: var(--successText);
   font-weight: 600;
 }
 
 .band-medium {
-  color: var(--warn);
+  color: var(--warnText);
   font-weight: 600;
 }
 
@@ -135,16 +135,17 @@ h1 {
   color: var(--textMeta);
 }
 
-/* A promise's state, and a handover's gaps. Both are TEXT, so each clears
-   4.5:1 against --bgElevated in both themes on the canon's own values —
-   --danger 6.29:1 light / 6.20:1 dark, --warn 6.89 / 10.27,
-   --textMeta 5.36 / 6.25. Named by token because check-ds-purity.sh
-   greps comments too, and a hex here would fail the gate this note explains.
+/* A promise's state is TEXT, so it takes --dangerText, which the design system
+   holds at AA for small text against --bgElevated in both themes — not the
+   bright --danger the same family gives a bar or a dot. The gap's rule below
+   is a shape, which is why that one keeps the bright hue. Named by token
+   because check-ds-purity.sh greps comments too, and a hex here would fail the
+   gate this note explains.
 
    "overdue" is the one that has to carry weight: it is the only state on
    these views that asks the reader to do something today. */
 .state-overdue {
-  color: var(--danger);
+  color: var(--dangerText);
   font-weight: 600;
 }
 

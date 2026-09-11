@@ -11,7 +11,7 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { PersonNetworkCard } from "./network";
+import { PersonNetworkPanel } from "./network";
 
 // The relationship-graph card. What is worth pinning is not that it renders a
 // list — it is the two readings that would quietly mislead a rep: an unspoken
@@ -60,7 +60,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("PersonNetworkCard", () => {
+describe("PersonNetworkPanel", () => {
   it("keeps the server's warmest-first order instead of re-ranking", async () => {
     // The score is computed at read from a decay formula. A client that sorted
     // these itself would be a second implementation of that formula, and the
@@ -89,7 +89,7 @@ describe("PersonNetworkCard", () => {
         ],
       },
     });
-    render(<PersonNetworkCard id="p-1" />);
+    render(<PersonNetworkPanel id="p-1" />);
     const rows = await screen.findAllByRole("listitem");
     expect(within(rows[0]).getByText("Anna Weber")).toBeInTheDocument();
     expect(within(rows[1]).getByText("Jonas Bach")).toBeInTheDocument();
@@ -114,7 +114,7 @@ describe("PersonNetworkCard", () => {
         ],
       },
     });
-    render(<PersonNetworkCard id="p-1" />);
+    render(<PersonNetworkPanel id="p-1" />);
     expect(await screen.findByText("Anna Weber")).toBeInTheDocument();
     expect(screen.getByText(/no contact/i)).toBeInTheDocument();
     expect(screen.getByText(/no recorded contact/i)).toBeInTheDocument();
@@ -124,7 +124,7 @@ describe("PersonNetworkCard", () => {
     stubRoutes({
       "/people/p-1/network": { person_id: "p-1", colleagues: [] },
     });
-    render(<PersonNetworkCard id="p-1" />);
+    render(<PersonNetworkPanel id="p-1" />);
     expect(
       await screen.findByText(/nobody here has been in touch/i),
     ).toBeInTheDocument();

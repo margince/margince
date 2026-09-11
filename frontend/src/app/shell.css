@@ -288,10 +288,18 @@
    this: a tab that draws two panels draws them edge to edge. A record's own
    step is the wider one its bodies take from `.record-stack` (composed.css) —
    this is the floor under a body that has not, not a second answer to how a
-   record reads. */
+   record reads.
+
+   `.stat-strip-wrap` is a readings ROW standing in the same stack, and it
+   belongs on both sides of the pair for the same reason the panel does: the
+   strip draws no box of its own, so a panel landing under one sat on it with
+   nothing between — the forecast's call editor against the readings it argues
+   with. The interval is the page's, not the strip's, which is why it is stated
+   here rather than as a margin the strip carries into every layout it is used
+   in. */
 :is(.wrap, .surfacestate-part, .page-zones-main)
-  > :is(.card, .panel)
-  + :is(.card, .panel) {
+  > :is(.card, .panel, .stat-strip-wrap)
+  + :is(.card, .panel, .stat-strip-wrap) {
   margin-top: var(--gapCards);
 }
 

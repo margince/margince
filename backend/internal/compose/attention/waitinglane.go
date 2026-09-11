@@ -118,6 +118,16 @@ type WaitingCustomer struct {
 	// headers gives each message its own thread, so this demotes rather than
 	// hides.
 	Engaged bool
+	// AddressedElsewhere says every header recipient on this message names
+	// somebody OTHER than this reader — a thread they were copied on, or one on
+	// a record they own. That is real mail and stays on the page; it is simply
+	// not a customer waiting on THEM.
+	//
+	// Phrased as the exception rather than the rule so its ZERO VALUE is the
+	// safe one. A caller that has not resolved the reader's addresses, and a
+	// fixture that says nothing about them, both mean "no evidence this is
+	// somebody else's" — which must not demote a live customer.
+	AddressedElsewhere bool
 	// AsksNothing says a classifier judged this message to inform rather than
 	// to ask — a report, a receipt, a statement.
 	//

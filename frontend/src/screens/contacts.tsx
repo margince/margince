@@ -32,7 +32,7 @@ import {
 import { ConsentSection } from "./consent";
 import { RecordContextPanel } from "./context";
 import { CreateAction, type CreateField, type FormRows } from "./create";
-import { CustomFieldsCard } from "./customfields.card";
+import { CustomFieldsPanel } from "./customfields.card";
 import {
   type ObjectCustomFields,
   useObjectCustomFields,
@@ -458,7 +458,11 @@ function PersonTabPanels({
   const queryClient = useQueryClient();
   const id = person.id;
   return (
-    <>
+    // The rhythm between the tab's panels belongs to the column that holds
+    // them, not to the panels: the work column is an `.arrive-stack` and
+    // carries no interval of its own, so bare siblings would meet at the
+    // border and a panel spacing itself would space only its own side.
+    <div className="record-stack">
       {tab === "overview" && thinRecord(view) && view && (
         <ThinState view={view} />
       )}
@@ -473,7 +477,7 @@ function PersonTabPanels({
       )}
       {tab === "overview" && !thinRecord(view) && (
         <>
-          <CustomFieldsCard object="person" record={person} />
+          <CustomFieldsPanel object="person" record={person} />
           <RecordContextPanel entityType="person" id={person.id} />
           <LogActivity entityType="person" entityId={person.id} />
         </>
@@ -495,7 +499,7 @@ function PersonTabPanels({
           }}
         />
       )}
-    </>
+    </div>
   );
 }
 

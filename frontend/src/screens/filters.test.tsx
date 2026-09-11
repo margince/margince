@@ -326,6 +326,28 @@ it("saves the tree under the key the server validates as a filter", async () => 
   });
 });
 
+it("draws the export band only once there is something to export", async () => {
+  const { wrapper } = mount({ match_count: 2 });
+  const user = userEvent.setup();
+  render(<FiltersScreen />, { wrapper });
+  const builder = () =>
+    screen
+      .getByRole("heading", { name: en["filters.builderTitle"] })
+      .closest(".panel");
+
+  await screen.findByRole("button", { name: "Add clause" });
+  // The band under the body is the export's, and an unfinished filter has
+  // nothing to export. The menu answers that by rendering nothing, which is not
+  // the same as not being there: a slot filled with an element that draws
+  // nothing still rules an empty strip under the builder.
+  expect(builder()?.querySelector(".panel-actions")).toBeNull();
+
+  await user.click(screen.getByRole("button", { name: "Add clause" }));
+  await user.type(screen.getByLabelText("Value"), "ann");
+
+  expect(builder()?.querySelector(".panel-actions")).not.toBeNull();
+});
+
 it("exports the filter on screen, under the name the server gave it", async () => {
   const createObjectURL = vi.fn(() => "blob:test");
   const revokeObjectURL = vi.fn();

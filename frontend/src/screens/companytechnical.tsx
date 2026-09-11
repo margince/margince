@@ -3,9 +3,10 @@ import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Card } from "../design-system/atoms";
+import { Badge } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -47,7 +48,7 @@ export function isTechnicalFact(fact: CompanyFact): boolean {
 }
 
 /**
- * TechnicalProfileCard shows what a company publicly runs.
+ * TechnicalProfilePanel shows what a company publicly runs.
  *
  * It reads and never asks: the lookup is queued by the site read, so this card
  * has no button. A reader who wants it refreshed reads the site.
@@ -57,7 +58,7 @@ export function isTechnicalFact(fact: CompanyFact): boolean {
  * the rest of the record uses, because "how do you know?" is the first
  * question a claim like this invites.
  */
-export function TechnicalProfileCard({
+export function TechnicalProfilePanel({
   companyId,
 }: Readonly<{ companyId: string }>): ReactNode {
   const t = useT();
@@ -100,16 +101,25 @@ export function TechnicalProfileCard({
   });
 
   return (
-    <Card title={t("co.tech.title")} sub={t("co.tech.sub")}>
-      <QueryGate query={facts} pendingLabel={t("co.tech.title")}>
-        {(rows) => (
-          <TechnicalSections
-            facts={rows.filter(isTechnicalFact)}
-            lanes={lanes.data?.lanes ?? []}
-          />
-        )}
-      </QueryGate>
-    </Card>
+    <Panel title={t("co.tech.title")}>
+      {/* Which public records these values were read from is the answer to
+          "how do you know?", so it is a sentence rather than a truncated
+          line: it leads the panel in a block of its own, and the panel's own
+          seam divides it from the facts it qualifies. */}
+      <PanelBody>
+        <p className="t-sub">{t("co.tech.sub")}</p>
+      </PanelBody>
+      <PanelBody>
+        <QueryGate query={facts} pendingLabel={t("co.tech.title")}>
+          {(rows) => (
+            <TechnicalSections
+              facts={rows.filter(isTechnicalFact)}
+              lanes={lanes.data?.lanes ?? []}
+            />
+          )}
+        </QueryGate>
+      </PanelBody>
+    </Panel>
   );
 }
 

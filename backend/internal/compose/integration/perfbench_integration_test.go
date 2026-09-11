@@ -310,6 +310,12 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 		t.Helper()
 		benchExec(t, owner, spec.tier, sql, args...)
 	}
+	// pgx.Identifier.Sanitize rather than interpolation: ANALYZE takes no
+	// parameter, so the table name is the one thing that has to be formatted in.
+	analyze := func(table string) {
+		t.Helper()
+		benchExec(t, owner, spec.tier, `ANALYZE `+pgx.Identifier{table}.Sanitize())
+	}
 
 	exec(`INSERT INTO workspace (id) VALUES ($1)`, ws)
 
@@ -322,33 +328,47 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 	exec(`INSERT INTO company (display_name, source, captured_by)
 	      SELECT 'Company ' || i || CASE WHEN i % 89 = 0 THEN ' Hamburg GmbH' ELSE '' END, 'manual', 'human:bench'
 	      FROM generate_series(1, $1) AS i`, spec.companies)
+	analyze(`person`)
+	analyze(`company`)
 
 	// Background timeline volume: activities linked cyclically across
 	// the person population — the activity_link fan the recursive walk
 	// competes with.
+	exec(`INSERT INTO activity (kind, subject, body, occurred_at, source, captured_by)
+	      SELECT CASE WHEN i % 5 = 0 THEN 'task' ELSE 'email' END,
+	             'Subject ' || i || CASE WHEN i % 101 = 0 THEN ' Hamburg' ELSE '' END,
+	             'Body ' || i,
+	             now() - (i % 720 || ' hours')::interval,
+	             'manual', 'human:bench'
+	      FROM generate_series(1, $1) AS i`, spec.bulkActivities)
+	analyze(`activity`)
+
+	// The link fan-out and the employment edges below each fire a
+	// denormalisation trigger per row, and the trigger's read is planned
+	// against whatever statistics its tables carry. That is why the inserts
+	// are separate statements with an ANALYZE between them rather than the
+	// one chained CTE they used to be: a CTE cannot analyse what it is still
+	// writing, so every trigger call planned against an empty `activity` and
+	// drove the lookup from there — one scan of the whole activity table per
+	// link, quadratic in the tier. No installation plans that way; none of
+	// them is unanalysed.
+	//
 	// The cyclic assignment precomputes each row's target ordinal so the
 	// join is a plain hashable equijoin — an expression joining both
 	// sides' row_numbers forces the planner into a nested loop that is
 	// pathological at the mid-market tier.
-	exec(`WITH act AS (
-	        INSERT INTO activity (kind, subject, body, occurred_at, source, captured_by)
-	        SELECT CASE WHEN i % 5 = 0 THEN 'task' ELSE 'email' END,
-	               'Subject ' || i || CASE WHEN i % 101 = 0 THEN ' Hamburg' ELSE '' END,
-	               'Body ' || i,
-	               now() - (i % 720 || ' hours')::interval,
-	               'manual', 'human:bench'
-	        FROM generate_series(1, $1) AS i
-	        RETURNING id
-	      ), total AS (
+	exec(`WITH total AS (
 	        SELECT count(*) AS n FROM person
 	      ), numbered AS (
-	        SELECT id, (row_number() OVER () - 1) % (SELECT n FROM total) + 1 AS target_rn FROM act
+	        SELECT id, (row_number() OVER (ORDER BY id) - 1) % (SELECT n FROM total) + 1 AS target_rn
+	        FROM activity
 	      ), people AS (
 	        SELECT id, row_number() OVER () AS rn FROM person
 	      )
 	      INSERT INTO activity_link (activity_id, entity_type, person_id)
 	      SELECT n.id, 'person', p.id
-	      FROM numbered n JOIN people p ON p.rn = n.target_rn`, spec.bulkActivities)
+	      FROM numbered n JOIN people p ON p.rn = n.target_rn`)
+	analyze(`activity_link`)
 
 	// Employment edges for the ADR-0021 edge-count evidence.
 	exec(`WITH total AS (
@@ -362,9 +382,14 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 	      INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
 	      SELECT 'employment', p.id, o.id, 'manual', 'human:bench'
 	      FROM people p JOIN companies o ON o.rn = p.target_rn`, spec.relationships)
+	// The anchor's touches reach the employer through this table, so it is
+	// the last one the seeding triggers read unanalysed.
+	analyze(`relationship`)
 
 	anchor := seedBenchAnchor(t, owner, ws, spec)
 
+	// The anchor added rows to every table the measured queries read; the
+	// statistics they plan against are these, not the ones the seed ran on.
 	exec(`ANALYZE person, company, activity, activity_link, relationship`)
 	return anchor
 }

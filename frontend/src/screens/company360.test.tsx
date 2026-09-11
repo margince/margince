@@ -2265,7 +2265,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
     // dimension of its own.
     expect(
       within(region).getByText("Conversation", {
-        selector: ".stat-card-label",
+        selector: ".stat-card-label-text",
       }),
     ).toBeTruthy();
     // The other two doors: the last touch and the calendar, whatever the
@@ -2294,7 +2294,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
     // dimension of its own.
     expect(
       within(region).getByText("Conversation", {
-        selector: ".stat-card-label",
+        selector: ".stat-card-label-text",
       }),
     ).toBeTruthy();
     expect(within(region).getByText("Last touch")).toBeTruthy();

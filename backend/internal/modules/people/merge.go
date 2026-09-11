@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -142,6 +143,15 @@ func (s *Store) MergePerson(ctx context.Context, sourceID, targetID ids.PersonID
 // concurrent merge(target→elsewhere) could archive the survivor
 // mid-merge, leaving relinked children pointing at a dead record.
 func (s *Store) mergePersonTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.PersonID, active []fieldcatalog.Column) (crmcontracts.Person, error) {
+	// BEFORE LockPair, because recording a stop takes consent's lock and then
+	// reads the person row. Locking the rows first and reaching for consent's
+	// lock later (inside carryStopsTx, below) inverts the order between the two
+	// transactions and deadlocks — see StopCarrier.LockStopsTx.
+	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier,
+		commsauthz.PersonStopSubject(sourceID),
+		commsauthz.PersonStopSubject(targetID)); err != nil {
+		return crmcontracts.Person{}, err
+	}
 	_, tgtLock, err := storekit.LockPair(ctx, tx, "person", sourceID.UUID, targetID.UUID)
 	if err != nil {
 		return crmcontracts.Person{}, err
@@ -153,6 +163,15 @@ func (s *Store) mergePersonTx(ctx context.Context, tx pgx.Tx, sourceID, targetID
 	counts, err := relinkPersonReferences(ctx, tx, sourceID, targetID)
 	if err != nil {
 		return crmcontracts.Person{}, err
+	}
+	// The STOPS come across too, and they are not a relink — see stopcarry.go.
+	// relinkPersonReferences moved the grants; without this the objections
+	// stayed on a record no send evaluates any more, and marketing resumed
+	// against somebody who had explicitly refused it.
+	if err := s.carryStopsTx(ctx, tx,
+		commsauthz.PersonStopSubject(sourceID),
+		commsauthz.PersonStopSubject(targetID)); err != nil {
+		return crmcontracts.Person{}, fmt.Errorf("carry the merged-away person's stops: %w", err)
 	}
 	p := buildSurvivorshipPatch(tgt, src)
 	if !p.Empty() {

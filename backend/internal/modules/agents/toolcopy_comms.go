@@ -36,8 +36,9 @@ var sendEmailCopy = toolCopy{
 		"the thread it belongs to.",
 	Limits: "It sends EXACTLY the subject and body it is given and composes nothing, so it is " +
 		"not the tool to reach for when the message does not exist yet. Every recipient must " +
-		"have granted the consent purpose the call names, and a person approves the send before " +
-		"it leaves — a message leaving the workspace cannot be recalled.",
+		"have granted the consent purpose the call names. A message leaving the workspace cannot " +
+		"be recalled, and by default nothing holds it: where an installation has raised this verb " +
+		"to confirm first, the answer is a staged approval instead of a send.",
 	Instead: "Use draft_email first to produce the message and let it be read, and send_message " +
 		"when the conversation is on a chat channel rather than mail.",
 	Retain: "Send the same activity_id, subject and body the draft produced, and keep the staged " +
@@ -50,7 +51,9 @@ var sendAccountEmailCopy = toolCopy{
 		"conversation rather than answering one, and file it on the records it is about.",
 	Limits: "Sends EXACTLY the subject and body given; composes nothing. Needs at least one link " +
 		"naming the records it belongs to. Every recipient must have granted the named consent " +
-		"purpose, and a person approves the send first — a sent mail cannot be recalled.",
+		"purpose. A sent mail cannot be recalled, and by default nothing holds it: where an " +
+		"installation has raised this verb to confirm first, the answer is a staged approval " +
+		"instead of a send.",
 	Instead: "Use send_email to answer a conversation already recorded here; this starts a " +
 		"separate thread beside it.",
 	Retain: "Keep the staged approval id and re-send the identical text and links: the approval " +
@@ -62,7 +65,8 @@ var sendMessageCopy = toolCopy{
 		"— on the thread it was captured from.",
 	Limits: "It replies to an existing conversation named by activity_id; it cannot start one, " +
 		"and it cannot choose a channel. The recipient must have granted the consent purpose the " +
-		"call names, and a person approves it before it leaves.",
+		"call names. By default the message leaves when this call answers; where an installation " +
+		"has raised this verb to confirm first, the answer is a staged approval instead.",
 	Instead: "Use send_email when the thread is a mail thread, and log_activity when the point is " +
 		"to record that something was said rather than to say it.",
 	Retain: "Keep the activity_id of the conversation and the staged approval id; the approval " +
@@ -83,7 +87,9 @@ var bookMeetingCopy = toolCopy{
 	Purpose: "Hold a slot in the host's calendar and record the meeting against the records it " +
 		"is about.",
 	Limits: "Needs at least one link saying what it is about. The slot is taken and the meeting " +
-		"is a real commitment, so a person approves it first. No attendee list: who is invited is " +
+		"is a real commitment, and by default it is taken when this call answers — where an " +
+		"installation has raised this verb to confirm first, the answer is a staged approval " +
+		"instead. No attendee list: who is invited is " +
 		"the calendar connection's business. Check the slot is free first — this tool does not.",
 	Instead: "Use check_availability to find the time, and log_activity to record a meeting that " +
 		"already happened.",
@@ -94,8 +100,9 @@ var bookMeetingCopy = toolCopy{
 var enrichCopy = toolCopy{
 	Purpose: "Learn about a company by reading its public website, and propose what was " +
 		"found for a person to accept onto the record.",
-	Limits: "It reaches OUTSIDE the workspace, so a person approves the call before it runs, and " +
-		"what it returns is a proposal — nothing lands on the record until someone accepts it. " +
+	Limits: "It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing " +
+		"lands on the record until someone accepts it, which is the review that guards this, not " +
+		"an approval on the call. " +
 		"Reading one page answers immediately; reading a whole site is queued and answers with a " +
 		"read id rather than the content. What it finds is captured text from a third party, not " +
 		"a fact this workspace has verified.",

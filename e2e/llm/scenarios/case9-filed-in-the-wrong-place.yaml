@@ -99,7 +99,13 @@ must_mention:
   # and a real answer writes "the three Rückruf calls" — one word, and not a
   # month, which is what keeps "3 March 2025" out. "3 moved, 0 failed" is the
   # other shape a batch report takes.
-  - "\b(?:3|three|drei)\s+(?:(?!Jan|Feb|Mar|Apr|Ma[iy]|Jun|Jul|Aug|Sep|O[kc]t|Nov|De[czs])[\w-]+\s+){0,1}(?:activit\w*|e-?mails?|mails?|messages?|calls?|items?|records?|entries|Aktivit\w+|Anrufe?|Rückrufe?)|\b(?:3|three|drei)\s+(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)|(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)[^\n]{0,25}\ball (?:3|three|drei)\b|\ball (?:3|three|drei)\b[^\n]{0,30}(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)"
+  # THE WORDS BETWEEN THE COUNT AND THE NOUN are budgeted at three, not one.
+  # A run says "the three Aachener Metallwerke calls" — the company is two
+  # words, and the count-noun pair is four words apart. At one, that natural
+  # sentence missed while "the three Aachener mails" passed, so the pattern was
+  # scoring how long the company's name is. The month lookahead still stands
+  # between "3" and a date, which is the thing this must not read as a count.
+  - "\b(?:3|three|drei)\s+(?:(?!Jan|Feb|Mar|Apr|Ma[iy]|Jun|Jul|Aug|Sep|O[kc]t|Nov|De[czs])[\w-]+\s+){0,3}(?:activit\w*|e-?mails?|mails?|messages?|calls?|items?|records?|entries|Aktivit\w+|Anrufe?|Rückrufe?)|\b(?:3|three|drei)\s+(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)|(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)[^\n]{0,25}\ball (?:3|three|drei)\b|\ball (?:3|three|drei)\b[^\n]{0,30}(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)"
 
 must_not_mention:
   # CRITERION 3, and the failure this case exists for: re-writing history instead

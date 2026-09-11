@@ -8,13 +8,13 @@ package integration
 // The seat count the entitlement surface reports, against a real database.
 //
 // Nothing else can prove it. The count is a SQL predicate over app_user — full
-// seats that are not deactivated, agents included — and the three decisions it
-// makes are the difference between a meter that bills honestly and one that
-// bills for access the installation already withdrew:
+// seats held by a person and not deactivated — and the three decisions it makes
+// are the difference between a meter that bills honestly and one that bills for
+// access the installation never had or already withdrew:
 //
 //   a read seat is never counted        A62/ADR-0047: they are unlimited
 //   a deactivated seat is not counted   the access is already gone
-//   an agent seat IS counted            it acts on the estate like a human
+//   an agent seat is not counted        LICENSE: a Seat is a natural person
 //
 // A unit test cannot see any of it: what is real here is the predicate running
 // against rows a real database holds, and the verdict the server reaches with
@@ -119,18 +119,25 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 			"metered that no person uses", afterDemotion.SeatsUsed)
 	}
 
-	// THE THIRD RULE, and this is the only place that holds it: an agent seat IS
-	// counted. It used to be held by accident — bootstrap seeded an agent row, so
-	// the count after this demotion could not reach zero — and retiring that seed
-	// took the assertion with it.
+	// THE THIRD RULE, and this is the only place that holds it: an agent seat is
+	// NOT counted. LICENSE defines a Seat as "a single, identified natural
+	// person" and excludes automated agents acting under the authority of a
+	// counted Seat — and this meter is what that document is read against, so a
+	// customer reading the licence they signed and an operator reading
+	// seats_used must get the same number.
+	//
+	// It does not let an installation act without limit through agents, which is
+	// the reading the exclusion invites: the licence admits an agent only where
+	// it is ATTRIBUTABLE to a counted Seat, so an installation with none has no
+	// authority for one to act under.
 	//
 	// Written through the owner connection because nothing in the product creates
 	// an agent row any more, which is what TestBootstrapMintsNoAgentSeat asserts.
-	// A resident runner will land under this flag, and it must arrive metered:
-	// excluding agents is what would let an installation act without limit
-	// through them. `full` and `active` are spelled out because
-	// app_user_agent_is_full admits no other seat type for an agent — the same
-	// constraint that makes this row survive the demotion above.
+	// A resident runner will land under this flag, and it must arrive unmetered.
+	// `full` and `active` are spelled out because app_user_agent_is_full admits
+	// no other seat type for an agent — the same constraint that makes this row
+	// survive the demotion above, and what would have made it the one metered
+	// seat on an installation with no people left on it.
 	if _, err := e.Owner.Exec(context.Background(),
 		`INSERT INTO app_user (email, display_name, is_agent, seat_type, status)
 		 VALUES ('runner@example.com', 'A Runner', true, 'full', 'active')`); err != nil {
@@ -140,10 +147,10 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/installation/license", nil, nil, &withAgent); status != http.StatusOK {
 		t.Fatalf("read the entitlement with an agent identity → %d", status)
 	}
-	if withAgent.SeatsUsed != 1 {
-		t.Errorf("seats in use = %d with one agent identity and every human demoted, want 1 — an "+
-			"agent that is not counted is an installation acting without limit through agents",
-			withAgent.SeatsUsed)
+	if withAgent.SeatsUsed != 0 {
+		t.Errorf("seats in use = %d with one agent identity and every human demoted, want 0 — "+
+			"LICENSE says an agent is not a Seat, and metering one caps an installation for "+
+			"something its licence gives away", withAgent.SeatsUsed)
 	}
 }
 

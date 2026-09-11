@@ -152,6 +152,20 @@ type PendingCounterparty struct {
 	Subject     string
 	Body        string
 
+	// Direction says who reached whom: 'inbound' is a stranger writing in,
+	// 'outbound' is the mailbox owner writing TO this address.
+	//
+	// On the row because the judgment turns on it and the prompt cannot infer
+	// it. A mailbox the owner wrote to was described to the model as "From:",
+	// so a property manager the founder emailed was judged as though it had
+	// written in — and a service desk reads very differently depending on which
+	// way the message went.
+	Direction string
+	// WroteBack reports that this address has ever answered us in a thread we
+	// started. An address that never has is an intention rather than a
+	// relationship, whatever the outbound message says about it.
+	WroteBack bool
+
 	// Claim is this lease's token, minted by the ClaimDue that handed the row
 	// out. Every write back to the ledger presents it, so a worker holding an
 	// expired lease can no longer resolve a row that someone else has since
@@ -280,64 +294,6 @@ type PendingStore struct{ db *database.DB }
 // NewPendingStore builds the ledger store on a handle already bound to the
 // workspace it serves.
 func NewPendingStore(db *database.DB) *PendingStore { return &PendingStore{db: db} }
-
-// ClaimDue atomically leases up to limit due rows for this workspace. FOR UPDATE
-// SKIP LOCKED lets several replicas drain the ledger without double-judging a
-// row or serializing on each other; the lease is what a crashed worker releases
-// by expiry.
-//
-// Claiming bumps attempts, so a row that keeps failing walks toward its bound
-// rather than being retried forever, and stamps a fresh claim token every
-// batch shares — the key Resolve and Defer demand back.
-func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounterparty, error) {
-	claim := ids.NewV7()
-	var out []PendingCounterparty
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			UPDATE capture_pending_counterparty p
-			   SET attempts = p.attempts + 1,
-			       claimed_until = now() + make_interval(secs => $2),
-			       claimed_by = $4,
-			       updated_at = now()
-			 WHERE p.id IN (
-			   SELECT id FROM capture_pending_counterparty
-			    WHERE status = 'pending'
-			      AND next_attempt_at IS NOT NULL AND next_attempt_at <= now()
-			      AND (claimed_until IS NULL OR claimed_until <= now())
-			      -- The bound is a property of the ROW, not of a live worker.
-			      -- A worker that crashes, is killed, or outruns its lease never
-			      -- reaches Defer, so a row whose content reliably kills the
-			      -- verdict step would otherwise be re-claimed every lease
-			      -- expiry forever, at one model call a time.
-			      AND attempts < $3
-			    ORDER BY next_attempt_at
-			    LIMIT $1
-			    FOR UPDATE SKIP LOCKED)
-			RETURNING p.id, p.email, coalesce(p.domain, ''), coalesce(left(p.display_name, $5), ''),
-			          p.activity_id, p.owner_id,
-			          coalesce(left((SELECT a.subject FROM activity a WHERE a.id = p.activity_id AND a.restricted_at IS NULL), $6), ''),
-			          coalesce(left((SELECT a.body FROM activity a WHERE a.id = p.activity_id AND a.restricted_at IS NULL), $7), '')`,
-			limit, pendingLease.Seconds(), PendingMaxAttempts, claim,
-			MaxCapturedNameChars, MaxCapturedSubjectChars, MaxCapturedBodyChars)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			p := PendingCounterparty{Claim: claim}
-			if err := rows.Scan(&p.ID, &p.Email, &p.Domain, &p.DisplayName,
-				&p.ActivityID, &p.OwnerID, &p.Subject, &p.Body); err != nil {
-				return err
-			}
-			out = append(out, p)
-		}
-		return rows.Err()
-	})
-	if err != nil {
-		return nil, fmt.Errorf("capture: claiming due dispositions: %w", err)
-	}
-	return out, nil
-}
 
 // Resolve closes a claimed row with its verdict, recording no sender kind.
 //

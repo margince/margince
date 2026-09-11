@@ -32,7 +32,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1626 | 4% | 21584 | 6 | 6 |
 | `overnight_at_risk_sweep` | 7 | 2499 | 7% | 20711 | 15 | 10 |
-| _whole served catalog, for scale_ | 75 | 22580 | 68% | — | — | — |
+| _whole served catalog, for scale_ | 75 | 23483 | 71% | — | — | — |
 
 ### `morning_brief`
 
@@ -126,7 +126,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 266 tokens, mean 300, across 75 served tools.
+Median 267 tokens, mean 312, across 75 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -135,47 +135,47 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 938 | 3 scenarios |
-| `send_account_email` | 741 | — |
+| `run_report` | 989 | 3 scenarios |
+| `send_account_email` | 767 | — |
+| `send_email` | 698 | 1 scenario |
 | `log_activity` | 676 | 1 scenario |
-| `send_email` | 675 | 1 scenario |
 | `preview_import` | 672 | — |
 | `update_record` | 571 | 4 scenarios |
-| `send_message` | 518 | — |
+| `send_message` | 546 | — |
+| `forecast_readings` | 509 | — |
 | `progress_deal` | 505 | 3 scenarios |
 | `list_records` | 503 | — |
 | `resolve_entities` | 491 | — |
 | `query_workspace` | 484 | 3 scenarios |
 | `run_analytics_query` | 476 | — |
 | `create_record` | 470 | 1 scenario |
+| `forecast_movement` | 453 | — |
 | `advance_deal` | 447 | 1 scenario |
+| `compose_analytics_report` | 440 | — |
+| `book_meeting` | 423 | — |
 | `annotate_brief` | 418 | — |
 | `review_commitments` | 401 | 1 scenario |
-| `book_meeting` | 391 | — |
-| `compose_analytics_report` | 390 | — |
-| `enrich` | 385 | — |
+| `enrich` | 391 | — |
 | `search_records` | 382 | 9 scenarios |
-| `forecast_readings` | 357 | — |
-| `forecast_movement` | 351 | — |
 | `describe_report_vocabulary` | 349 | — |
 | `search_context` | 343 | — |
+| `advance_project_phase` | 340 | — |
+| `forecast_input_checks` | 324 | — |
 | `prep_for_meeting` | 324 | — |
 | `demote_lead` | 316 | — |
-| `merge_records` | 289 | — |
+| `promote_lead` | 303 | — |
+| `merge_records` | 291 | — |
+| `archive_record` | 289 | — |
 | `describe_analytics_vocabulary` | 286 | — |
-| `advance_project_phase` | 279 | — |
 | `catch_me_up_on` | 278 | 3 scenarios |
 | `draft_email` | 278 | — |
 | `relink_activity` | 276 | — |
 | `draft_follow_ups_for` | 273 | — |
 | `decide_approval` | 272 | — |
-| `promote_lead` | 270 | — |
 | `list_approvals` | 267 | — |
 | `prepare_handoff` | 267 | 1 scenario |
 | `describe_query_vocabulary` | 266 | — |
 | `check_availability` | 263 | — |
-| `archive_record` | 260 | — |
-| `forecast_input_checks` | 252 | — |
 | `account_coverage` | 245 | 2 scenarios |
 | `describe_report_blocks` | 245 | — |
 | `decide_approval_bundle` | 235 | — |
@@ -184,15 +184,18 @@ a term in an addition.
 | `create_task` | 220 | — |
 | `read_record` | 220 | 3 scenarios |
 | `whats_slipping_this_week` | 211 | 2 scenarios |
+| `disqualify_lead` | 209 | — |
+| `list_input_checks` | 209 | — |
 | `at_risk_relationships` | 208 | — |
 | `read_brief` | 206 | — |
 | `update_tag` | 205 | — |
 | `relink_activities` | 204 | — |
 | `merge_tags` | 198 | — |
 | `relink_thread` | 196 | — |
+| `data_coverage` | 195 | — |
+| `list_colleagues` | 195 | — |
 | `who_knows` | 194 | — |
 | `list_pipelines` | 191 | — |
-| `disqualify_lead` | 190 | — |
 | `intro_path_to` | 187 | 2 scenarios |
 | `create_tag` | 183 | — |
 | `list_channel_providers` | 174 | — |
@@ -200,15 +203,12 @@ a term in an addition.
 | `check_location_support` | 156 | — |
 | `read_project_360` | 156 | — |
 | `read_approval` | 153 | — |
-| `list_input_checks` | 146 | — |
 | `get_record_tags` | 141 | — |
-| `list_colleagues` | 141 | — |
+| `commit_import` | 128 | — |
 | `whoami` | 128 | — |
-| `commit_import` | 118 | — |
-| `data_coverage` | 109 | — |
 | `list_tags` | 95 | — |
 | `get_tag` | 86 | — |
-| `read_import_report` | 73 | — |
+| `read_import_report` | 77 | — |
 | `read_import_run` | 67 | — |
 
 ## Related

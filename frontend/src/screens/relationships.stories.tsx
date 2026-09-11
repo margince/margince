@@ -89,6 +89,30 @@ export const Empty: Story = {
   },
 };
 
+// A role holding no `relationship` grant at all: the head band keeps its
+// measure with nothing beside the title, and the rows carry no verbs. A
+// withheld verb is absent rather than disabled — there is no fact about this
+// record to report, so there is nothing for a refusal to explain.
+export const NoVerbsForThisRole: Story = {
+  render: () => {
+    stubWithSession(
+      {
+        "GET /relationships": () =>
+          jsonResponse({
+            data: [employmentRel, partnerOfRel],
+            page: { next_cursor: null, has_more: false },
+          }),
+      },
+      {},
+    );
+    return (
+      <StoryProviders>
+        <RelationshipsTab scope={{ person_id: "p-1" }} />
+      </StoryProviders>
+    );
+  },
+};
+
 const stakeholderRel = {
   ...employmentRel,
   id: "rel-3",

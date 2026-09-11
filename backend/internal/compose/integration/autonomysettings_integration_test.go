@@ -30,12 +30,19 @@ import (
 // made about it is a claim about a path that runs.
 func closeDateRow(t *testing.T, settings []approvals.KindAutonomy) approvals.KindAutonomy {
 	t.Helper()
+	return kindRow(t, settings, deals.CloseDateCorrectionKind)
+}
+
+// kindRow finds one named kind in a settings answer, for the tests whose
+// subject is not the close-date kind itself.
+func kindRow(t *testing.T, settings []approvals.KindAutonomy, kind string) approvals.KindAutonomy {
+	t.Helper()
 	for _, row := range settings {
-		if row.Kind == deals.CloseDateCorrectionKind {
+		if row.Kind == kind {
 			return row
 		}
 	}
-	t.Fatalf("the settings answer names no %q: %+v", deals.CloseDateCorrectionKind, settings)
+	t.Fatalf("the settings answer names no %q: %+v", kind, settings)
 	return approvals.KindAutonomy{}
 }
 
@@ -63,11 +70,45 @@ func TestEveryAutomatableKindIsOfferedBeforeAnyoneHasDecidedOne(t *testing.T) {
 		if !approvals.AutoApplyKinds[row.Kind] {
 			t.Errorf("offered %q, which is not a kind that can apply automatically", row.Kind)
 		}
-		if row.Mode != approvals.ModeManual {
-			t.Errorf("%q reads %q for a rep who has decided nothing; a kind nobody has "+
-				"chosen must read manual, which is what will happen to it",
-				row.Kind, row.Mode)
+		// The screen must report what will ACTUALLY happen to a rep who leaves
+		// this switch alone, which is the whole reason the row is offered
+		// before anyone has decided. Manual for almost every kind. Close-date
+		// corrections apply — the sweep writes the date and reports itself on
+		// the morning receipt with a way back — so a switch drawn off for that
+		// kind would be the screen telling the rep the opposite of the truth.
+		want := approvals.ModeManual
+		if row.Kind == "close_date_correction" {
+			want = approvals.ModeAuto
 		}
+		if row.Mode != want {
+			t.Errorf("%q reads %q for a rep who has decided nothing, want %q — the switch "+
+				"must say what happens to somebody who never touches it",
+				row.Kind, row.Mode, want)
+		}
+	}
+}
+
+// The default is not consent, and the applier is where that distinction bites.
+//
+// A close-date card staged before the sweep stopped staging them is still
+// sitting in some installations' queues. The sweep's own default is auto, and
+// reading that default through the shared AutoApplyMode would have confirmed
+// those leftover cards for reps who never opted in — turning a machine estimate
+// into a date a human is recorded as having agreed to.
+func TestALeftoverCardIsNotConfirmedByTheSweepsOwnDefault(t *testing.T) {
+	e := Setup(t)
+	svc := approvals.NewService(e.DB())
+	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+
+	mode, err := svc.AutoApplyMode(repCtx, "close_date_correction")
+	if err != nil {
+		t.Fatalf("reading the applier's mode: %v", err)
+	}
+
+	if mode != approvals.ModeManual {
+		t.Errorf("the staged-card applier reads %q for a rep who has decided nothing, "+
+			"want %q — a card nobody answered must wait, whatever the sweep's own default is",
+			mode, approvals.ModeManual)
 	}
 }
 
@@ -124,8 +165,13 @@ func TestOneRepsAutonomyIsInvisibleToAnother(t *testing.T) {
 	svc := approvals.NewService(e.DB())
 	first := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	second := e.As(e.Rep2, []ids.UUID{e.Team1}, RepPerms)
+	// A kind whose default is MANUAL, so the second rep's answer can only read
+	// auto by inheriting the first rep's row. Close-date corrections default to
+	// auto — the sweep applies them and reports itself — so a colleague reading
+	// auto there proves nothing about isolation.
+	const kind = "company_name_promotion"
 
-	if _, err := svc.SetAutoApply(first, deals.CloseDateCorrectionKind, true); err != nil {
+	if _, err := svc.SetAutoApply(first, kind, true); err != nil {
 		t.Fatalf("switching the first rep's kind on: %v", err)
 	}
 
@@ -133,7 +179,7 @@ func TestOneRepsAutonomyIsInvisibleToAnother(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the second rep's settings: %v", err)
 	}
-	if got := closeDateRow(t, settings).Mode; got != approvals.ModeManual {
+	if got := kindRow(t, settings, kind).Mode; got != approvals.ModeManual {
 		t.Fatalf("the second rep inherited %q from a colleague's choice", got)
 	}
 }

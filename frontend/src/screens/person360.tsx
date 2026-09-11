@@ -3,15 +3,10 @@ import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import {
-  Badge,
-  Button,
-  Card,
-  Disclosure,
-  SectionHeader,
-} from "../design-system/atoms";
+import { Badge, Button, Disclosure } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { FactList } from "../design-system/factlist";
+import { Panel, PanelBody } from "../design-system/panel";
 import type { ConfidenceLevel } from "../design-system/trust";
 import { formatDate, formatDecimal, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -106,16 +101,17 @@ export function ThinState({
     : t("person.thin.remediation.employer");
 
   return (
-    <Card>
-      <div style={{ padding: "var(--space-6)" }}>
-        <SectionHeader title={t("person.thin.title")} />
-        <p style={{ margin: "8px 0 0", lineHeight: 1.55 }}>
+    <Panel title={t("person.thin.title")}>
+      <PanelBody>
+        <p style={{ margin: 0, lineHeight: 1.55 }}>
           {t("person.thin.known", {
             name: view.person.full_name,
             what: [email, employer?.company_name].filter(Boolean).join(" · "),
           })}
         </p>
-        <p style={{ margin: "10px 0 0", lineHeight: 1.55 }}>{remediation}</p>
+        <p style={{ margin: "var(--space-2) 0 0", lineHeight: 1.55 }}>
+          {remediation}
+        </p>
         {/* A bare `.btn` names no variant, and the variants are what carry the
             fill, the border and the ink — so this rendered transparent,
             borderless and unreadable against the plate behind it. It is the one
@@ -129,8 +125,8 @@ export function ThinState({
             {t("person.thin.logFirst")}
           </Button>
         )}
-      </div>
-    </Card>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -154,10 +150,9 @@ export function RelationshipPulse({ view }: Readonly<{ view: Person360 }>) {
   const warmest = view.network?.colleagues[0];
 
   return (
-    <Card>
-      <div style={{ padding: "var(--space-4)" }}>
-        <SectionHeader title={t("person.pulse.title")} />
-        <p style={{ margin: "8px 0 0", lineHeight: 1.5 }}>
+    <Panel title={t("person.pulse.title")}>
+      <PanelBody>
+        <p style={{ margin: 0, lineHeight: 1.5 }}>
           {warmest
             ? t("person.pulse.warmestIs", { name: warmest.display_name })
             : t("person.pulse.nobodyYet")}
@@ -197,8 +192,8 @@ export function RelationshipPulse({ view }: Readonly<{ view: Person360 }>) {
             </p>
           </Disclosure>
         )}
-      </div>
-    </Card>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -255,9 +250,8 @@ export function IdentityRail({
 
   return (
     <>
-      <Card>
-        <div style={{ padding: "var(--space-4)" }}>
-          <SectionHeader title={t("person.identity.title")} />
+      <Panel title={t("person.identity.title")}>
+        <PanelBody>
           <FactList
             facts={[
               ...(view.person.emails ?? []).map((e) => ({
@@ -340,13 +334,12 @@ export function IdentityRail({
               })),
             ]}
           />
-        </div>
-      </Card>
+        </PanelBody>
+      </Panel>
 
       {former.length > 0 && (
-        <Card>
-          <div style={{ padding: "var(--space-4)" }}>
-            <SectionHeader title={t("person.career.title")} />
+        <Panel title={t("person.career.title")}>
+          <PanelBody>
             <ul style={{ margin: 0, paddingLeft: "var(--space-4)" }}>
               {former.map((e) => (
                 <li
@@ -366,8 +359,8 @@ export function IdentityRail({
                 </li>
               ))}
             </ul>
-          </div>
-        </Card>
+          </PanelBody>
+        </Panel>
       )}
 
       <ConsentGuard view={view} />
@@ -389,10 +382,9 @@ function ConsentGuard({ view }: Readonly<{ view: Person360 }>) {
   const granted = view.consent.state.filter((s) => s.state === "granted");
   const blocked = view.consent.state.filter((s) => s.state !== "granted");
   return (
-    <Card>
-      <div style={{ padding: "var(--space-4)" }}>
-        <SectionHeader title={t("person.consent.title")} />
-        <p style={{ margin: "8px 0 0", lineHeight: 1.5 }}>
+    <Panel title={t("person.consent.title")}>
+      <PanelBody>
+        <p style={{ margin: 0, lineHeight: 1.5 }}>
           {granted.length > 0
             ? t("person.consent.allowed", {
                 purposes: granted.map((g) => g.purpose_key ?? "").join(", "),
@@ -400,14 +392,14 @@ function ConsentGuard({ view }: Readonly<{ view: Person360 }>) {
             : t("person.consent.noneGranted")}
         </p>
         {blocked.length > 0 && (
-          <p style={{ margin: "6px 0 0", lineHeight: 1.5 }}>
+          <p style={{ margin: "var(--space-1) 0 0", lineHeight: 1.5 }}>
             {t("person.consent.blocked", {
               purposes: blocked.map((b) => b.purpose_key ?? "").join(", "),
             })}
           </p>
         )}
-      </div>
-    </Card>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -461,12 +453,11 @@ export function WhoKnowsThem({ view }: Readonly<{ view: Person360 }>) {
     return null;
   }
   return (
-    <Card>
-      <div style={{ padding: "var(--space-4)" }}>
-        <SectionHeader title={t("person.network.title")} />
+    <Panel title={t("person.network.title")}>
+      <PanelBody>
         <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
           {colleagues.map((c) => (
-            <li key={c.user_id} style={{ padding: "8px 0" }}>
+            <li key={c.user_id} style={{ padding: "var(--space-2) 0" }}>
               <strong>{c.display_name}</strong>
               <div style={{ fontSize: "var(--fs-meta)", opacity: 0.75 }}>
                 {proofLine(c, t, locale, recordZone)}
@@ -474,8 +465,8 @@ export function WhoKnowsThem({ view }: Readonly<{ view: Person360 }>) {
             </li>
           ))}
         </ul>
-      </div>
-    </Card>
+      </PanelBody>
+    </Panel>
   );
 }
 

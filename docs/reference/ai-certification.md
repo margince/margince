@@ -29,7 +29,7 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | … best state `partial` | 0 |
 | … best state `stale` | 41 |
 | … `absent` on every binding | 1 |
-| Scenarios in the corpus | 158 |
+| Scenarios in the corpus | 161 |
 | Committed records | 74 |
 | Bindings measured | 10 |
 
@@ -95,7 +95,7 @@ Which model to run each site on, and what that choice rests on.
 | [`brief_ranking/rank`](#brief_rankingrank) | - | - | - | `stale` | 1 | 4 |
 | [`capture_classify/classify`](#capture_classifyclassify) | - | - | - | `stale` | 5 | 3 |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 14 | 2 |
-| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | - | - | - | `stale` | 16 | 3 |
+| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | - | - | - | `stale` | 19 | 3 |
 | [`cert_judge/judge`](#cert_judgejudge) | - | - | - | `stale` | 2 | 4 |
 | [`cold_start/acts`](#cold_startacts) | - | - | - | `stale` | 5 | 3 |
 | [`cold_start/company_message`](#cold_startcompany_message) | - | - | - | `stale` | 1 | 3 |
@@ -458,7 +458,7 @@ Records (2):
 
 Scope a run of it can claim: `single_call`.
 
-Scenarios (16):
+Scenarios (19):
 
 | Scenario | Expects | Case |
 |---|---|---|
@@ -466,7 +466,9 @@ Scenarios (16):
 | `a_company_writing_as_itself_does_not_become_a_contact_named_after_it` | `accepted` | [company_sender_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_sender_01.yaml) |
 | `a_department_display_name_is_not_somebodys_name` | `accepted` | [role_display_name_billing_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_display_name_billing_01.yaml) |
 | `a_fluent_machine_written_pitch_is_still_spam` | `accepted` | [spam_bot_written_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml) |
+| `a_numbered_support_queue_is_one_desk` | `accepted` | [role_mailbox_numbered_queue_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_numbered_queue_01.yaml) |
 | `a_private_correspondent_is_not_a_business_contact` | `accepted` | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_01.yaml) |
+| `a_private_property_desk_the_owner_wrote_to_is_not_a_person` | `accepted` | [role_mailbox_property_desk_outbound_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_property_desk_outbound_01.yaml) |
 | `a_shared_mailbox_is_real_correspondence_with_nobody_to_name` | `accepted` | [role_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_01.yaml) |
 | `a_trade_offices_city_mailbox_names_a_place_not_a_person` | `accepted` | [company_city_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_city_mailbox_01.yaml) |
 | `a_two_sided_thread_is_a_conversation` | `accepted` | [false_spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_02.yaml) |
@@ -477,15 +479,16 @@ Scenarios (16):
 | `forged_fence_marker_is_data_not_authority` | `accepted` | [forged_fence_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/forged_fence_01.yaml) |
 | `invited_supplier_must_not_be_spam` | `accepted` | [false_spam_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_01.yaml) |
 | `real_prospect_must_not_be_noise` | `accepted` | [false_noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_noise_01.yaml) |
+| `the_owners_own_clinic_is_not_the_businesss_correspondent` | `accepted` | [personal_clinic_reception_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_clinic_reception_01.yaml) |
 | `the_owners_own_lawyer_is_not_the_workspaces_contact` | `accepted` | [advisor_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/advisor_01.yaml) |
 
 Records (3):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/16 | `supported_degraded` | 48 | 47 | 0.98 | 1139ms | 1327ms | 47 | 1 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/19 | `supported_degraded` | 48 | 47 | 0.98 | 1139ms | 1327ms | 47 | 1 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `certified` | 9 | 9 | 1.00 | 1856ms | 22390ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/16 | `not_supported` | 48 | 40 | 0.83 | 744ms | 1184ms | 40 | 7 | 1 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/19 | `not_supported` | 48 | 40 | 0.83 | 744ms | 1184ms | 40 | 7 | 1 | 0 |
 
 ### `cert_judge`
 

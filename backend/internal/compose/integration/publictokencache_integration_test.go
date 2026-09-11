@@ -142,10 +142,10 @@ func redactToken(path string) string {
 func TestEveryPreferenceAnswerIsUncacheable(t *testing.T) {
 	c := setupConsent(t)
 	grantPurpose(t, c, createNewsletterPurpose(t, c))
-	live := sendAndAssertUnsubscribeLink(t, c)
+	live, manage := sendAndAssertUnsubscribeLink(t, c)
 
 	driven := assertNoStore(t, c.AppEnv, []tokenCase{
-		{"a live token's view", "GET", "/v1/public/preferences/" + live, nil},
+		{"a live token's view", "GET", "/v1/public/preferences/" + manage, nil},
 		{
 			"a live token's one-click withdrawal", "POST",
 			"/v1/public/preferences/" + live + "/unsubscribe?purpose=newsletter", nil,
@@ -302,7 +302,11 @@ func TestARateLimitedAnswerIsUncacheable(t *testing.T) {
 func revokePreferenceTokens(t *testing.T, c *consentEnv) {
 	t.Helper()
 	if _, err := c.Owner.Exec(context.Background(),
-		`UPDATE preference_token SET revoked_at = now() WHERE revoked_at IS NULL`); err != nil {
+		// The reason is required by a paired CHECK, so a revocation without one
+		// writes no row at all and every assertion below would run against
+		// tokens that are still live.
+		`UPDATE preference_token SET revoked_at = now(), revoked_reason = 'compromise'
+		  WHERE revoked_at IS NULL`); err != nil {
 		t.Fatalf("revoking the preference tokens: %v", err)
 	}
 }

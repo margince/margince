@@ -350,3 +350,26 @@ export const CompanyDeals: Story = {
     );
   },
 };
+
+// The Profile tab's reference panes, each naming itself in the record's own
+// stack: relationships, the group roll-up, the research offer and the
+// technical read. They are siblings rather than children of one "Data &
+// tools" pane, so the column reads as one rhythm of titled panels instead of
+// panels nested inside a panel.
+export const CompanyProfile: Story = {
+  render: () => {
+    globalThis.location.hash = "#/companies/o-1/profile";
+    installFetchStub({
+      "GET /me": meRoute({ company: ["read", "update"] }),
+      ...overviewRoutes,
+      "GET /companies/o-1/profile-fields": () =>
+        jsonResponse({ data: profileFields }),
+      "GET /companies/o-1/facts": () => jsonResponse({ data: facts }),
+    });
+    return (
+      <StoryProviders>
+        <CompanyScreen id="o-1" />
+      </StoryProviders>
+    );
+  },
+};

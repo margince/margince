@@ -631,9 +631,9 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
 // automation:update grant as pause and edit; the panels mount lazily and
 // independently (opening one never closes the other).
 describe("AutomationRow — Runs/Preview toggles", () => {
-  // A benign stub for the lazily-mounted panels' first fetch: the toggle
-  // tests care about mount/independence, not panel contents, so runs answer
-  // an empty page and preview a zero-radius result.
+  const previewTitle = "Dry-run blast radius";
+  // A benign stub for the lazily-mounted panels' first fetch: these tests are
+  // about mount and independence, so runs answer empty and preview zero.
   function panelBackend() {
     return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = input instanceof Request ? input : null;
@@ -719,11 +719,11 @@ describe("AutomationRow — Runs/Preview toggles", () => {
         />
       </ul>,
     );
-    expect(screen.queryByTestId("automation-runs")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Run history" })).toBeNull();
     await openRowMenu();
     await userEvent.click(screen.getByRole("button", { name: "Runs" }));
-    expect(screen.getByTestId("automation-runs")).toBeTruthy();
-    expect(screen.queryByTestId("automation-preview")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Run history" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: previewTitle })).toBeNull();
   });
 
   it("keeps both panels open independently", async () => {
@@ -742,8 +742,8 @@ describe("AutomationRow — Runs/Preview toggles", () => {
     await openRowMenu();
     await userEvent.click(screen.getByRole("button", { name: "Runs" }));
     await userEvent.click(screen.getByRole("button", { name: "Preview" }));
-    expect(screen.getByTestId("automation-runs")).toBeTruthy();
-    expect(screen.getByTestId("automation-preview")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Run history" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: previewTitle })).toBeTruthy();
   });
 });
 

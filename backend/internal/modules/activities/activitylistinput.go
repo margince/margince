@@ -144,6 +144,10 @@ type ListActivitiesInput struct {
 	// in, never by a caller: it is one read's snapshot, not a request parameter,
 	// and a caller supplying it could widen or narrow who counts as a colleague.
 	ownDomains []string
+	// readerAddresses is the reader's own address snapshot, measured beside
+	// ownDomains and in the same transaction, for the same reason: the
+	// addressing test must judge every row of one scan against one answer.
+	readerAddresses []string
 	// horizonDays is how far back a wait reaches and still counts, derived from
 	// this installation's own response spread (waitinghorizon.go). Unexported
 	// and set beside the transaction it was measured in, for ownDomains' exact
@@ -168,4 +172,13 @@ type ListActivitiesInput struct {
 	// work for a given instant, and a queue that promised today's list would be
 	// lying if it carried the undated backlog too.
 	OpenAndDueBy *time.Time
+	// OpenAndDueAfter narrows the same read to work due LATER than an instant,
+	// and is paired with OpenAndDueBy to ask for one window.
+	//
+	// It exists so "what is coming" can be a separate bounded read from "what
+	// is due today", rather than one wider read split afterwards in Go. Split
+	// afterwards, a full day's backlog fills the limit before a single upcoming
+	// row is reached, and the reader who most needs to see next week's deadline
+	// is exactly the reader who never does.
+	OpenAndDueAfter *time.Time
 }

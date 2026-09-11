@@ -111,6 +111,13 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 	// ownerless lead is nobody's to change, and the connector's own replay is
 	// a write — a lead it could not write back to would be one it created and
 	// then could never resume.
+	//
+	// A source that declines ownership is saying it has no replay to protect
+	// and no assignment to make; LeadFields.Unowned carries the reason.
+	owner := storekit.OwnerOrActor(ctx, nil)
+	if fields.Unowned {
+		owner = nil
+	}
 	err := tx.QueryRow(ctx, `
 		INSERT INTO lead (full_name, email, company_name, title, source_system, source_id, source, captured_by, owner_id)
 		VALUES (NULLIF($1, ''), NULLIF(lower($2), ''), NULLIF($3, ''), NULLIF($4, ''), $5, $6, $7, $8, $9)
@@ -119,7 +126,7 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 		RETURNING id`,
 		fields.FullName, fields.Email, fields.CompanyName, fields.Title,
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), rec.CapturedBy,
-		storekit.OwnerOrActor(ctx, nil)).Scan(&id)
+		owner).Scan(&id)
 	if err == nil {
 		var stamps []storekit.FieldStamp
 		for _, f := range []struct{ field, value string }{
@@ -155,7 +162,19 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 	// only a `read` share of are equally not the connector's to fold onto, and
 	// the difference between 404 and 403 is a distinction for a caller, which a
 	// sweep does not have.
-	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
+	// A source that declined ownership gets a READ probe instead of a write one.
+	//
+	// EnsureWritable refuses an unowned row on purpose — it is nobody's to
+	// change until somebody claims it — so asking it here would fail every
+	// replay of exactly the rows this source creates. There is nothing to
+	// resume in any case: the row already carries what the natural key says,
+	// and this path folds no new field onto it. What still has to hold is that
+	// the caller may SEE the lead, which is what the replay hands back.
+	probe := auth.EnsureWritable
+	if fields.Unowned {
+		probe = auth.EnsureVisibleLive
+	}
+	if err := probe(ctx, tx, "lead", id.UUID); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 			return ids.LeadID{}, false, skipInvisibleIncumbent(rec, "lead")
 		}

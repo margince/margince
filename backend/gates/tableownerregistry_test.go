@@ -205,6 +205,8 @@ var tableOwners = map[string]string{
 	"consent_text_version":           "internal/modules/consent",
 	"communication_decision":         "internal/modules/consent",
 	"communication_basis":            "internal/modules/consent",
+	"communication_review":           "internal/modules/consent",
+	"communication_instruction":      "internal/modules/consent",
 	"communication_suppression":      "internal/modules/consent",
 	"consent_qualifying_event":       "internal/modules/consent",
 	"consent_existing_customer_flag": "internal/modules/consent",
@@ -215,6 +217,7 @@ var tableOwners = map[string]string{
 	// what the token authorises is a consent decision and the address it was
 	// delivered to is the evidence that decision rests on.
 	"confirm_token":             "internal/modules/consent",
+	"withdrawal_credential":     "internal/modules/consent",
 	"person_confirm_submission": "internal/modules/consent",
 	// retention_policy sits in consent's DDL block (DM-DDL-10) but is OWNED by
 	// privacy, because ownership here names the module whose store owns the

@@ -18,10 +18,13 @@ package compose
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -47,12 +50,20 @@ import (
 //     at a company where anything at all is open.
 //   - An ARCHIVED task does not count, for the reason every read here excludes
 //     archived rows: it is retired, and a retired step is not a step.
+//   - A MEETING ALREADY ON THE CALENDAR counts. A deal whose next commitment is
+//     Thursday's review has a next step, and reporting it as missing sends a rep
+//     to chase something already booked.
+//
+// The predicate itself is deals.OpenNextStepSQL, shared with the overnight
+// follow-up sweep. Both once carried their own copy of the task-only reading,
+// and fixing one alone would have left the other proposing a follow-up for a
+// deal this lane had just called planned.
 //
 // One statement over all the candidate ids rather than a probe per deal: the
 // sweep already reads its candidates in two bounded queries, and a third that
 // grew with the set would make the lane's cost quadratic in a page.
 func dealsWithNoOpenNextStep(
-	ctx context.Context, pool *pgxpool.Pool, candidates []ids.UUID,
+	ctx context.Context, pool *pgxpool.Pool, candidates []ids.UUID, asOf time.Time,
 ) (map[ids.UUID]bool, error) {
 	none := map[ids.UUID]bool{}
 	if len(candidates) == 0 {
@@ -61,15 +72,14 @@ func dealsWithNoOpenNextStep(
 	for _, id := range candidates {
 		none[id] = true
 	}
+	// Selected FROM deal rather than from the activity rows, because the shared
+	// predicate asks about a deal and answers over two different tables: a
+	// statement shaped around one of them could not see the other.
+	query := fmt.Sprintf(`
+		SELECT d.id FROM deal d
+		 WHERE d.id = ANY($1) AND %s`, deals.OpenNextStepSQL("d.id", "$2"))
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT DISTINCT l.deal_id
-			  FROM activity a
-			  JOIN activity_link l ON l.activity_id = a.id
-			 WHERE l.deal_id = ANY($1)
-			   AND a.kind = 'task'
-			   AND a.is_done = false
-			   AND a.archived_at IS NULL`, candidates)
+		rows, err := tx.Query(ctx, query, candidates, asOf)
 		if err != nil {
 			return err
 		}

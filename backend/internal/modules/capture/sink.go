@@ -202,7 +202,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			// BEFORE the activity is captured, so a message that completes the
 			// corroboration is judged under the claim it just proved rather
 			// than being the last one read as mail from a stranger.
-			if err := noteAliasSightingTx(ctx, tx, actor.UserID, rec.DeliveredTo, rec.Source); err != nil {
+			if err := s.noteAliasSightingTx(ctx, tx, actor.UserID, rec.DeliveredTo, rec.Source); err != nil {
 				return err
 			}
 			var err error

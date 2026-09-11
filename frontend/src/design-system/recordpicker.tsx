@@ -152,7 +152,7 @@ export function RecordPicker({
         onChange={(event) => setTerm(event.target.value)}
       />
       {searchFailure !== null && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(searchFailure.cause, t)}
         </p>
       )}

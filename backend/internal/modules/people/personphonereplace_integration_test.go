@@ -18,6 +18,7 @@ package people
 // several people, and that is not a duplicate.
 
 import (
+	"errors"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -109,6 +110,84 @@ func TestAnEmptyPhoneListRemovesThem(t *testing.T) {
 	}
 	if rows := livePhoneRows(updated); len(rows) != 0 {
 		t.Errorf("phones = %+v after an empty list, want none", rows)
+	}
+}
+
+// The same swap the address side has: pressing the primary radio on the other
+// of two work numbers moves the primary between two RETAINED rows, so both
+// travel the re-placement loop, and promoting one while the other is still
+// primary is two live work primaries for the length of a statement unless the
+// loop demotes before it promotes.
+func TestSwappingWhichWorkPhoneIsPrimary(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	person, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Ada Lovelace",
+		Phones: []PersonPhoneInput{
+			{Phone: "+493011111111", PhoneType: "work", IsPrimary: false, Position: 0},
+			{Phone: "+493022222222", PhoneType: "work", IsPrimary: true, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("create person: %v", err)
+	}
+
+	updated, err := e.store.UpdatePerson(ctx, ids.From[ids.PersonKind](ids.UUID(person.Id)), UpdatePersonInput{
+		Phones: []PersonPhoneInput{
+			{Phone: "+493011111111", PhoneType: "work", IsPrimary: true, Position: 0},
+			{Phone: "+493022222222", PhoneType: "work", IsPrimary: false, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("swapping which work number is primary: %v", err)
+	}
+	rows := livePhoneRows(updated)
+	if len(rows) != 2 {
+		t.Fatalf("phones = %+v, want both numbers live", rows)
+	}
+	var primary string
+	for _, row := range rows {
+		if row.IsPrimary {
+			primary = row.Phone
+		}
+	}
+	if primary != "+493011111111" {
+		t.Fatalf("primary = %q, want the number the swap promoted", primary)
+	}
+}
+
+// The same contradiction on numbers: two primaries of one type is refused
+// before any write, and the refusal names the type rather than the bare
+// conflict uq_person_phone_primary would answer with.
+func TestTwoPrimaryPhonesOfOneTypeIsRefusedByType(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	person, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Ada Lovelace",
+		Phones:   []PersonPhoneInput{{Phone: "+493011111111", PhoneType: "work", IsPrimary: true, Position: 0}},
+		Source:   "test",
+	})
+	if err != nil {
+		t.Fatalf("create person: %v", err)
+	}
+
+	_, err = e.store.UpdatePerson(ctx, ids.From[ids.PersonKind](ids.UUID(person.Id)), UpdatePersonInput{
+		Phones: []PersonPhoneInput{
+			{Phone: "+493011111111", PhoneType: "work", IsPrimary: true, Position: 0},
+			{Phone: "+493022222222", PhoneType: "work", IsPrimary: true, Position: 1},
+		},
+		Source: "test",
+	})
+	var conflict *PrimaryConflictError
+	if !errors.As(err, &conflict) {
+		t.Fatalf("two work primaries → %v, want PrimaryConflictError", err)
+	}
+	if conflict.Type != "work" {
+		t.Fatalf("conflict names type %q, want work", conflict.Type)
 	}
 }
 

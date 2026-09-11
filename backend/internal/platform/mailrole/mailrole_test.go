@@ -19,6 +19,12 @@ func TestEveryObservedRoleAddressIsRefused(t *testing.T) {
 		"billing_apac@habyt.com",
 		"hello.events@thesentry.com.vn",
 		"asia-accounting@nfq.com",
+		// A NUMBERED service desk. This one reached the CRM as a person called
+		// "City Garden CS6" — the digits kept the role word from matching, and
+		// the address the founder had WRITTEN TO was judged as a stranger who
+		// had written in. Sanitized to the shape, not the customer's domain.
+		"citygarden-cs6@example.com",
+		"support2@example.com",
 	} {
 		if _, role := mailrole.Match(address); !role {
 			t.Errorf("%s: wanted a role mailbox, got a person", address)

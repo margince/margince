@@ -63,6 +63,24 @@ func (s *Store) ClaimRecord(ctx context.Context, recordType string, id ids.UUID,
 		if !claim.Changed {
 			return nil
 		}
+		// Claiming a LEAD starts its response clock, the same as assigning one
+		// through an update.
+		//
+		// This is the path the "Take ownership" button actually takes, and it
+		// writes owner_id alone. Stamped only in the update path, a claimed lead
+		// kept a NULL routed_at and its deadline went on being measured from
+		// created_at — so picking up a week-old lead handed somebody a week-old
+		// breach they had no part in.
+		//
+		// Only on a lead that had no owner, and only when the clock has not
+		// already started: a claim that takes a record off a colleague is a
+		// reassignment, and the customer has been waiting since the first
+		// person took it on.
+		if recordType == entityLead && claim.Before == nil {
+			if err := startLeadResponseClockTx(ctx, tx, id); err != nil {
+				return err
+			}
+		}
 		return emitOwnerChanged(ctx, tx, auditID, recordType, id, actor.UserID)
 	})
 	return out, err

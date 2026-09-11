@@ -122,7 +122,7 @@ func TestNoWithheldColumnReachesTheAssembledExport(t *testing.T) {
 	}
 
 	var pkg SARPackage
-	sections := sarSections(&pkg, ids.New[ids.PersonKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()})
+	sections := sarSections(&pkg, ids.New[ids.PersonKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
 
 	var probed int
 	for _, section := range sections {

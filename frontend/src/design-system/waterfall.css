@@ -48,6 +48,6 @@
 }
 .waterfall-warning {
   margin: var(--space-2) 0 0;
-  color: var(--danger);
+  color: var(--dangerText);
   font-size: var(--fs-sm);
 }

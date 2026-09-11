@@ -87,7 +87,7 @@ func (s *Store) recordAdmittedTx(
 		action = "consent_withdraw"
 	}
 	auditID, err := storekit.Audit(ctx, tx, action, sub.entityType, sub.id, map[string]any{fieldState: stateOrUnknown(current)}, map[string]any{
-		"purpose": purposeKey, fieldState: in.NewState,
+		fieldKeyPurpose: purposeKey, fieldState: in.NewState,
 	})
 	if err != nil {
 		return State{}, err

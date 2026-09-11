@@ -43,7 +43,7 @@ type SeatUsageStore struct {
 func NewSeatUsage(db *database.DB) *SeatUsageStore { return &SeatUsageStore{db: db} }
 
 // FullSeatsInUse counts the full seats this installation is using: every
-// non-deactivated one, agents included.
+// non-deactivated one held by a person.
 //
 // Three decisions the count makes, each of which the meter would be wrong
 // without:
@@ -55,9 +55,23 @@ func NewSeatUsage(db *database.DB) *SeatUsageStore { return &SeatUsageStore{db: 
 // acting without erasing them, so counting one would bill for access the
 // installation has already withdrawn.
 //
-// AN AGENT SEAT IS COUNTED. `app_user_agent_is_full` makes every agent a full
-// seat, and a first-party runner acts on the estate exactly as a human does.
-// Excluding them would let an installation act without limit through agents.
+// AN AGENT SEAT IS NOT COUNTED, because LICENSE says so: a Seat is "a single,
+// identified natural person", and automated agents that act under the authority
+// of a counted Seat explicitly do not count. That document is what a customer
+// relies on and what this meter is measured against, so the meter follows it —
+// counting agents would cap an installation for something its licence gives
+// away, and the first customer to read both carefully would find it.
+//
+// It does not let an installation act without limit through agents, which is the
+// reading the exclusion invites: the licence admits an agent only where it is
+// attributable to a counted Seat, so an installation with no seats has no
+// authority for one to act under.
+//
+// `is_agent` is the whole of it. The licence also excludes service accounts, and
+// app_user carries no second marker for one — the only service account in this
+// product is Google's Pub/Sub signer, which is an external identity and holds no
+// row here. A second exclusion would be inventing a distinction the schema does
+// not make.
 //
 // This is deliberately NOT the spec's "active" definition (signed in within 30
 // days, UC-ADMIN-03 precondition 3): the two meters therefore disagree, which is
@@ -105,10 +119,14 @@ func (s *SeatUsageStore) countFullSeats(ctx context.Context) (int, error) {
 // nobody can see are the same defect from two sides, and the only way the two
 // cannot drift is that there is one of them.
 //
-// The predicate is the three decisions above: full seats only, agents included,
-// and neither a suspended nor a deactivated seat — both are access the
-// installation has already withdrawn, and an admin who suspended somebody to
-// free a seat has to actually get it back.
+// The predicate is the three decisions above: full seats only, no agents, and
+// neither a suspended nor a deactivated seat — both are access the installation
+// has already withdrawn, and an admin who suspended somebody to free a seat has
+// to actually get it back.
+//
+// `NOT is_agent` is the licence's own exclusion and not a filter somebody added:
+// a Seat is a natural person there, so an agent row is not one of these however
+// much estate it touches. Removing it would meter what the licence gives away.
 //
 // It names the statuses that do NOT count rather than the one that does. A seat
 // exists until the installation withdraws it, so a status added later should
@@ -116,4 +134,5 @@ func (s *SeatUsageStore) countFullSeats(ctx context.Context) (int, error) {
 // stop metering a state nobody had thought about, and an installation would
 // issue seats its license never granted.
 const fullSeatsInUseQuery = `SELECT count(*) FROM app_user
-	 WHERE seat_type = 'full' AND status NOT IN ('suspended', 'deactivated')`
+	 WHERE seat_type = 'full' AND NOT is_agent
+	   AND status NOT IN ('suspended', 'deactivated')`

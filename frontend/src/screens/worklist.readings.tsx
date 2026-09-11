@@ -70,7 +70,6 @@ export function WorklistReadings({
           detail={t("worklist.readings.replies.detail")}
           count={readings.buyer_replies}
           locale={locale}
-          openLabel={t("worklist.readings.openLane")}
           onOpen={() => onLane("customer_waiting")}
         />
         <CountStat
@@ -78,7 +77,6 @@ export function WorklistReadings({
           detail={t("worklist.readings.prospecting.detail")}
           count={readings.prospecting}
           locale={locale}
-          openLabel={t("worklist.readings.openLane")}
           onOpen={() => onLane("leads")}
         />
         <CountStat
@@ -86,7 +84,6 @@ export function WorklistReadings({
           detail={t("worklist.readings.review.detail")}
           count={readings.review}
           locale={locale}
-          openLabel={t("worklist.readings.openLane")}
           onOpen={() => onLane("decisions")}
         />
       </StatStrip>
@@ -118,12 +115,14 @@ function RevenueStat({
   const currency = readings.revenue_currency;
   if (minor == null || !currency) {
     return (
-      // No door on this arm: nothing here could be priced, so the lane behind
-      // it is not what the reader is missing — the prices are.
+      // The SAME door as the priced arm. The lane holds the drifting deals
+      // whether or not anybody priced them, and pricing them is this reader's
+      // work, so the door is drawn on both arms.
       <StatCard
         label={t("worklist.readings.revenue")}
-        value="—"
+        value={t("worklist.readings.revenue.noFigure")}
         detail={t("worklist.readings.revenue.unpriced")}
+        onOpen={onOpen}
       />
     );
   }
@@ -136,8 +135,6 @@ function RevenueStat({
       // the thing this strip exists to surface, and a rep who sees it in the
       // page's ordinary tone reads it as a status rather than as work.
       tone={minor > 0 ? "warn" : undefined}
-      numeric
-      openLabel={t("worklist.readings.openLane")}
       onOpen={onOpen}
     />
   );
@@ -149,14 +146,12 @@ function CountStat({
   detail,
   count,
   locale,
-  openLabel,
   onOpen,
 }: Readonly<{
   label: string;
   detail: string;
   count: number;
   locale: Locale;
-  openLabel: string;
   onOpen: () => void;
 }>) {
   return (
@@ -164,8 +159,6 @@ function CountStat({
       label={label}
       value={formatNumber(count, locale)}
       detail={detail}
-      numeric
-      openLabel={openLabel}
       onOpen={onOpen}
     />
   );

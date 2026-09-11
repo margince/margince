@@ -10,6 +10,7 @@ import {
   EmptyState,
   Skeleton,
 } from "../design-system/atoms";
+import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -183,7 +184,7 @@ function MutationError({ error }: Readonly<{ error: unknown }>) {
     return null;
   }
   return (
-    <p className="t-caption" style={{ color: "var(--danger)" }}>
+    <p className="t-caption" style={{ color: "var(--dangerText)" }}>
       {problemMessageOf(error, t)}
     </p>
   );
@@ -256,7 +257,7 @@ function ConsentRow({
   });
 
   return (
-    <div className="consent-row">
+    <PanelRow className="consent-row">
       <div className="consent-row-head">
         <strong>
           {purpose?.label ?? entry.purpose_key ?? entry.purpose_id}
@@ -298,7 +299,7 @@ function ConsentRow({
       {requiresDoi && <p className="t-caption">{t("consent.doiBySubject")}</p>}
       {setState.isError && <MutationError error={setState.error} />}
       {showLog && <ConsentProofLog events={events} />}
-    </div>
+    </PanelRow>
   );
 }
 
@@ -328,53 +329,65 @@ export function ConsentSection({
   // legal control. share.tsx's RosterPicker gates its two roster fetches the
   // same explicit way, for the same reason: a collapsed-to-empty failure
   // must never be mistaken for a real empty list.
-  let body: ReactNode = null;
+  // Until the consent read settles the panel shows that read's own state, and
+  // every state but the settled one is prose that wants the body's margin. The
+  // purposes themselves are rows of a list and run to the panel's edges.
+  let body: ReactNode = (
+    <PanelBody>
+      <QueryStates query={consentQuery} pendingLabel={t("person.consent")}>
+        {null}
+      </QueryStates>
+    </PanelBody>
+  );
   if (consent) {
     if (purposesQuery.isPending) {
-      body = <Skeleton width="60%" />;
+      body = (
+        <PanelBody>
+          <Skeleton width="60%" />
+        </PanelBody>
+      );
     } else if (purposesQuery.isError) {
       body = (
-        <EmptyState>
-          <p>{t("consent.purposesUnavailable")}</p>
-          <Button small onClick={() => purposesQuery.refetch()}>
-            {t("common.retry")}
-          </Button>
-        </EmptyState>
+        <PanelBody>
+          <EmptyState>
+            <p>{t("consent.purposesUnavailable")}</p>
+            <Button small onClick={() => purposesQuery.refetch()}>
+              {t("common.retry")}
+            </Button>
+          </EmptyState>
+        </PanelBody>
       );
     } else if (noPurposes) {
-      body = <EmptyState>{t("consent.noPurposes")}</EmptyState>;
-    } else {
       body = (
-        <div>
-          {consent.state.map((entry) => (
-            <ConsentRow
-              mayWrite={mayWrite}
-              key={entry.purpose_id}
-              personId={personId}
-              entry={entry}
-              purpose={purposes.find(
-                (purpose) => purpose.id === entry.purpose_id,
-              )}
-              events={consent.events.filter(
-                (event) => event.purpose_id === entry.purpose_id,
-              )}
-            />
-          ))}
-        </div>
+        <PanelBody>
+          <EmptyState>{t("consent.noPurposes")}</EmptyState>
+        </PanelBody>
       );
+    } else {
+      body = consent.state.map((entry) => (
+        <ConsentRow
+          mayWrite={mayWrite}
+          key={entry.purpose_id}
+          personId={personId}
+          entry={entry}
+          purpose={purposes.find((purpose) => purpose.id === entry.purpose_id)}
+          events={consent.events.filter(
+            (event) => event.purpose_id === entry.purpose_id,
+          )}
+        />
+      ));
     }
   }
 
   return (
-    <Card
-      style={{ marginBottom: "var(--space-4)" }}
-      ariaLabel={t("person.consent")}
-      title={t("person.consent")}
-      sub={t("consent.defaultDeny")}
-    >
-      <QueryStates query={consentQuery} pendingLabel={t("person.consent")}>
-        {body}
-      </QueryStates>
+    <Panel title={t("person.consent")}>
+      {/* The default-deny rule is two sentences, and the head band holds one
+          line: truncating the half that says a grant is per purpose would
+          leave the rule saying the opposite of what it means. */}
+      <PanelBody>
+        <p className="t-sub">{t("consent.defaultDeny")}</p>
+      </PanelBody>
+      {body}
       {/* Per PERSON rather than per purpose, so it sits under the rows instead
           of inside one: the link opens everything held about them and asks the
           marketing question once, which is not a fact about any single
@@ -388,7 +401,7 @@ export function ConsentSection({
         personId={personId}
         mayWrite={mayWrite}
       />
-    </Card>
+    </Panel>
   );
 }
 
@@ -452,7 +465,7 @@ function ConfirmDetailsAction({
     return null;
   }
   return (
-    <div className="consent-confirm-ask">
+    <PanelBody className="consent-confirm-ask">
       <Button
         small
         disabled={ask.isPending}
@@ -473,6 +486,6 @@ function ConfirmDetailsAction({
           {formatDateTime(ask.data.expires_at, locale, zone)}
         </p>
       )}
-    </div>
+    </PanelBody>
   );
 }

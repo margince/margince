@@ -4359,6 +4359,40 @@
       "data": {
         "type": "object",
         "properties": {
+          "all_colleagues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "display_name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "is_agent": {
+                  "type": "boolean"
+                },
+                "seat_type": {
+                  "type": "string"
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "display_name",
+                "email",
+                "is_agent",
+                "seat_type",
+                "user_id"
+              ]
+            }
+          },
+          "all_colleagues_truncated": {
+            "type": "boolean"
+          },
           "colleagues": {
             "type": "array",
             "items": {

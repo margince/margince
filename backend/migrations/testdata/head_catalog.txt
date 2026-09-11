@@ -1402,6 +1402,7 @@ public.capture_pending_counterparty.resolved_by_owner boolean NOT NULL gen=- def
 public.capture_pending_counterparty.served_model text gen=- def=-
 public.capture_pending_counterparty.status text NOT NULL gen=- def='pending'::text
 public.capture_pending_counterparty.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_pending_counterparty.withheld_from_workspace boolean NOT NULL gen=- def=false
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)
 public.capture_sender_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_sender_override.address text NOT NULL gen=- def=-
@@ -1426,6 +1427,7 @@ public.capture_sync_state.capture_sync_state_pkey PRIMARY KEY (connection_id)
 public.capture_sync_state.connection_id uuid NOT NULL gen=- def=-
 public.capture_sync_state.consecutive_failures integer NOT NULL gen=- def=0
 public.capture_sync_state.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_sync_state.failing_since timestamp with time zone gen=- def=-
 public.capture_sync_state.last_error_class text gen=- def=-
 public.capture_sync_state.last_success_at timestamp with time zone gen=- def=-
 public.capture_sync_state.last_synced_at timestamp with time zone gen=- def=-
@@ -1729,9 +1731,112 @@ public.communication_decision_by_subject CREATE INDEX communication_decision_by_
 public.communication_decision_disagreements CREATE INDEX communication_decision_disagreements ON public.communication_decision USING btree (decided_at) WHERE ((legacy_verdict IS NOT NULL) AND (legacy_verdict <> verdict))
 public.communication_decision_one_per_decision CREATE UNIQUE INDEX communication_decision_one_per_decision ON public.communication_decision USING btree (decision_set_id, recipient_address, phase)
 public.communication_decision_pkey CREATE UNIQUE INDEX communication_decision_pkey ON public.communication_decision USING btree (id)
+public.communication_instruction acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_instruction.acknowledged_at timestamp with time zone NOT NULL gen=- def=-
+public.communication_instruction.communication_instruction_consumption_shape CHECK (((status = 'consumed'::text) = (consumed_at IS NOT NULL)))
+public.communication_instruction.communication_instruction_directed_by_fkey FOREIGN KEY (directed_by) REFERENCES app_user(id) ON DELETE RESTRICT
+public.communication_instruction.communication_instruction_explained CHECK ((length(btrim(explanation)) > 0))
+public.communication_instruction.communication_instruction_pkey PRIMARY KEY (id)
+public.communication_instruction.communication_instruction_reason CHECK ((reason_code = ANY (ARRAY['customer_requested_outside_crm'::text, 'contractual_necessity'::text, 'legal_obligation'::text, 'other'::text])))
+public.communication_instruction.communication_instruction_refuse_rewrite CREATE TRIGGER communication_instruction_refuse_rewrite BEFORE DELETE OR UPDATE ON public.communication_instruction FOR EACH ROW EXECUTE FUNCTION communication_instruction_refuse_rewrite()
+public.communication_instruction.communication_instruction_review_id_fkey FOREIGN KEY (review_id) REFERENCES communication_review(id) ON DELETE CASCADE
+public.communication_instruction.communication_instruction_review_id_key UNIQUE (review_id)
+public.communication_instruction.communication_instruction_revocation_shape CHECK (((status = 'revoked'::text) = ((revoked_at IS NOT NULL) AND (revoked_by IS NOT NULL) AND (revoked_reason IS NOT NULL))))
+public.communication_instruction.communication_instruction_revocation_whole CHECK ((num_nonnulls(revoked_at, revoked_by, revoked_reason) = ANY (ARRAY[0, 3])))
+public.communication_instruction.communication_instruction_revoked_by_fkey FOREIGN KEY (revoked_by) REFERENCES app_user(id) ON DELETE RESTRICT
+public.communication_instruction.communication_instruction_status CHECK ((status = ANY (ARRAY['directed'::text, 'consumed'::text, 'revoked'::text, 'expired'::text])))
+public.communication_instruction.communication_instruction_window CHECK ((valid_until > facts_as_of))
+public.communication_instruction.consumed_at timestamp with time zone gen=- def=-
+public.communication_instruction.directed_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_instruction.directed_by uuid NOT NULL gen=- def=-
+public.communication_instruction.explanation text NOT NULL gen=- def=-
+public.communication_instruction.facts_as_of timestamp with time zone NOT NULL gen=- def=-
+public.communication_instruction.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_instruction.reason_code text NOT NULL gen=- def=-
+public.communication_instruction.review_id uuid NOT NULL gen=- def=-
+public.communication_instruction.revoked_at timestamp with time zone gen=- def=-
+public.communication_instruction.revoked_by uuid gen=- def=-
+public.communication_instruction.revoked_reason text gen=- def=-
+public.communication_instruction.status text NOT NULL gen=- def='directed'::text
+public.communication_instruction.valid_until timestamp with time zone NOT NULL gen=- def=-
+public.communication_instruction.warning_version text NOT NULL gen=- def=-
+public.communication_instruction_by_director CREATE INDEX communication_instruction_by_director ON public.communication_instruction USING btree (directed_by, directed_at DESC)
+public.communication_instruction_live CREATE INDEX communication_instruction_live ON public.communication_instruction USING btree (valid_until) WHERE (status = 'directed'::text)
+public.communication_instruction_pkey CREATE UNIQUE INDEX communication_instruction_pkey ON public.communication_instruction USING btree (id)
+public.communication_instruction_refuse_rewrite() secdef=false cfg=- acl=- 
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'a communication instruction is the record of a decision and is never deleted'
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'communication_instruction_immutable';
+  END IF;
+  -- The ID FIRST, because everything else that points at this row points at
+  -- it: the audit entries naming the decision, and any later reference to the
+  -- instruction a send went out under. Moving it would disconnect the record
+  -- from its own history while leaving every frozen field untouched.
+  -- ONE WAY THROUGH THE FREEZE, and only one: an Art. 17 erasure tombstoning
+  -- the words. The explanation is written by a rep about a named subject, so it
+  -- is personal data the installation may be told to destroy — and a record
+  -- that could not be scrubbed would put immutability above the right it
+  -- exists inside.
+  --
+  -- The TOMBSTONE is the whole of what is allowed: the explanation may become
+  -- exactly this string and nothing else, so the freeze still refuses an
+  -- improved account of the decision. What survives is the fact that somebody
+  -- decided, who they were, when, and under which reason code — the accountable
+  -- half, which names no subject.
+  IF NEW.explanation = '[erased]'
+     AND NEW.id IS NOT DISTINCT FROM OLD.id
+     AND NEW.review_id IS NOT DISTINCT FROM OLD.review_id
+     AND NEW.directed_by IS NOT DISTINCT FROM OLD.directed_by
+     AND NEW.reason_code IS NOT DISTINCT FROM OLD.reason_code THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.id IS DISTINCT FROM OLD.id
+     OR NEW.review_id IS DISTINCT FROM OLD.review_id
+     OR NEW.directed_by IS DISTINCT FROM OLD.directed_by
+     OR NEW.reason_code IS DISTINCT FROM OLD.reason_code
+     OR NEW.explanation IS DISTINCT FROM OLD.explanation
+     OR NEW.warning_version IS DISTINCT FROM OLD.warning_version
+     OR NEW.acknowledged_at IS DISTINCT FROM OLD.acknowledged_at
+     OR NEW.facts_as_of IS DISTINCT FROM OLD.facts_as_of
+     OR NEW.valid_until IS DISTINCT FROM OLD.valid_until
+     OR NEW.directed_at IS DISTINCT FROM OLD.directed_at THEN
+    RAISE EXCEPTION 'a communication instruction records what was decided and cannot be rewritten; only its status, consumption and revocation move'
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'communication_instruction_immutable';
+  END IF;
+  RETURN NEW;
+END 
+public.communication_instruction_review_id_key CREATE UNIQUE INDEX communication_instruction_review_id_key ON public.communication_instruction USING btree (review_id)
+public.communication_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_review.communication_review_delivery_intent_id_fkey FOREIGN KEY (delivery_intent_id) REFERENCES scheduled_send(id) ON DELETE CASCADE
+public.communication_review.communication_review_initiated_by_fkey FOREIGN KEY (initiated_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.communication_review.communication_review_kind CHECK ((kind = 'single'::text))
+public.communication_review.communication_review_pkey PRIMARY KEY (id)
+public.communication_review.communication_review_resolution_shape CHECK (((state = ANY (ARRAY['resolved'::text, 'superseded'::text, 'cancelled'::text])) = (resolved_at IS NOT NULL)))
+public.communication_review.communication_review_state CHECK ((state = ANY (ARRAY['needs_context'::text, 'needs_repair'::text, 'resolved'::text, 'superseded'::text, 'cancelled'::text])))
+public.communication_review.communication_review_superseded_by_fkey FOREIGN KEY (superseded_by) REFERENCES communication_review(id) ON DELETE RESTRICT
+public.communication_review.communication_review_supersession_shape CHECK (((state = 'superseded'::text) = (superseded_by IS NOT NULL)))
+public.communication_review.delivery_intent_id uuid gen=- def=-
+public.communication_review.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_review.initiated_by uuid gen=- def=-
+public.communication_review.kind text NOT NULL gen=- def='single'::text
+public.communication_review.opened_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_review.reason_code text NOT NULL gen=- def=-
+public.communication_review.refusals jsonb NOT NULL gen=- def='[]'::jsonb
+public.communication_review.resolved_at timestamp with time zone gen=- def=-
+public.communication_review.state text NOT NULL gen=- def='needs_context'::text
+public.communication_review.superseded_by uuid gen=- def=-
+public.communication_review_by_initiator CREATE INDEX communication_review_by_initiator ON public.communication_review USING btree (initiated_by, opened_at DESC)
+public.communication_review_one_live_per_intent CREATE UNIQUE INDEX communication_review_one_live_per_intent ON public.communication_review USING btree (delivery_intent_id) WHERE ((delivery_intent_id IS NOT NULL) AND (resolved_at IS NULL))
+public.communication_review_open CREATE INDEX communication_review_open ON public.communication_review USING btree (opened_at) WHERE (resolved_at IS NULL)
+public.communication_review_pkey CREATE UNIQUE INDEX communication_review_pkey ON public.communication_review USING btree (id)
 public.communication_suppression acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_suppression.address text gen=- def=-
 public.communication_suppression.captured_by text NOT NULL gen=- def=-
+public.communication_suppression.carried_from uuid gen=- def=-
+public.communication_suppression.communication_suppression_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES communication_suppression(id) ON DELETE SET NULL
 public.communication_suppression.communication_suppression_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['machine'::text, 'user'::text, 'admin'::text, 'subject'::text])))
 public.communication_suppression.communication_suppression_kind CHECK ((kind = ANY (ARRAY['marketing_objection'::text, 'processing_restriction'::text, 'hard_bounce'::text, 'subject_request'::text])))
 public.communication_suppression.communication_suppression_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
@@ -2462,8 +2567,11 @@ public.custom_field.version bigint NOT NULL gen=- def=1
 public.custom_field_pkey CREATE UNIQUE INDEX custom_field_pkey ON public.custom_field USING btree (id)
 public.data_subject_request acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.data_subject_request.assignee_id uuid gen=- def=-
+public.data_subject_request.channel text gen=- def=-
 public.data_subject_request.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.data_subject_request.data_subject_request_channel CHECK (((channel IS NULL) OR (channel = ANY (ARRAY['confirm_link'::text, 'email'::text, 'phone'::text, 'letter'::text, 'in_person'::text, 'operator_ui'::text]))))
 public.data_subject_request.data_subject_request_kind_check CHECK ((kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text])))
+public.data_subject_request.data_subject_request_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE SET NULL
 public.data_subject_request.data_subject_request_pkey PRIMARY KEY (id)
 public.data_subject_request.data_subject_request_status_check CHECK ((status = ANY (ARRAY['open'::text, 'in_progress'::text, 'fulfilled'::text, 'rejected'::text])))
 public.data_subject_request.dsr_assignee_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
@@ -2471,12 +2579,18 @@ public.data_subject_request.dsr_resolution_shape CHECK (((status <> ALL (ARRAY['
 public.data_subject_request.due_at timestamp with time zone NOT NULL gen=- def=-
 public.data_subject_request.id uuid NOT NULL gen=- def=uuidv7()
 public.data_subject_request.kind text NOT NULL gen=- def=-
+public.data_subject_request.person_id uuid gen=- def=-
+public.data_subject_request.receipt_reference text gen=- def=-
+public.data_subject_request.received_at timestamp with time zone gen=- def=-
 public.data_subject_request.resolution text gen=- def=-
+public.data_subject_request.source_submission_id uuid gen=- def=-
 public.data_subject_request.status text NOT NULL gen=- def='open'::text
 public.data_subject_request.subject_ref text NOT NULL gen=- def=-
 public.data_subject_request.trg_dsr_updated CREATE TRIGGER trg_dsr_updated BEFORE UPDATE ON public.data_subject_request FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.data_subject_request.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.data_subject_request_one_case_per_submission CREATE UNIQUE INDEX data_subject_request_one_case_per_submission ON public.data_subject_request USING btree (source_submission_id) WHERE (source_submission_id IS NOT NULL)
 public.data_subject_request_pkey CREATE UNIQUE INDEX data_subject_request_pkey ON public.data_subject_request USING btree (id)
+public.data_subject_request_receipt_reference CREATE UNIQUE INDEX data_subject_request_receipt_reference ON public.data_subject_request USING btree (receipt_reference) WHERE (receipt_reference IS NOT NULL)
 public.deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal.amount_minor bigint gen=- def=-
 public.deal.amount_minor_base bigint gen=- def=-
@@ -3528,6 +3642,9 @@ public.idx_weekly_review_deal_review CREATE INDEX idx_weekly_review_deal_review 
 public.idx_weekly_review_driver_bar CREATE INDEX idx_weekly_review_driver_bar ON public.weekly_review_driver USING btree (weekly_review_id, period_kind, bar)
 public.idx_weekly_review_learning_review CREATE INDEX idx_weekly_review_learning_review ON public.weekly_review_learning USING btree (weekly_review_id, "position")
 public.idx_weekly_review_user CREATE INDEX idx_weekly_review_user ON public.weekly_review USING btree (user_id, local_week_start DESC)
+public.idx_withdrawal_credential_lead CREATE INDEX idx_withdrawal_credential_lead ON public.withdrawal_credential USING btree (lead_id) WHERE (lead_id IS NOT NULL)
+public.idx_withdrawal_credential_live CREATE INDEX idx_withdrawal_credential_live ON public.withdrawal_credential USING btree (lower(address), scope) WHERE (revoked_at IS NULL)
+public.idx_withdrawal_credential_person CREATE INDEX idx_withdrawal_credential_person ON public.withdrawal_credential USING btree (person_id) WHERE (person_id IS NOT NULL)
 public.import_record_map acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.import_record_map.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_record_map.external_id text NOT NULL gen=- def=-
@@ -4621,8 +4738,11 @@ public.preference_token.person_id uuid NOT NULL gen=- def=-
 public.preference_token.preference_token_person_email_id_fkey FOREIGN KEY (person_email_id) REFERENCES person_email(id) ON DELETE SET NULL
 public.preference_token.preference_token_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.preference_token.preference_token_pkey PRIMARY KEY (id)
+public.preference_token.preference_token_revocation_is_reasoned CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL)))
+public.preference_token.preference_token_revoked_reason_check CHECK ((revoked_reason = ANY (ARRAY['rotated'::text, 'expired'::text, 'erasure'::text, 'compromise'::text, 'merged_predecessor'::text])))
 public.preference_token.preference_token_token_key UNIQUE (token)
 public.preference_token.revoked_at timestamp with time zone gen=- def=-
+public.preference_token.revoked_reason text gen=- def=-
 public.preference_token.token text NOT NULL gen=- def=-
 public.preference_token_pkey CREATE UNIQUE INDEX preference_token_pkey ON public.preference_token USING btree (id)
 public.preference_token_token_key CREATE UNIQUE INDEX preference_token_token_key ON public.preference_token USING btree (token)
@@ -4847,6 +4967,7 @@ public.provider_run_reservation.run_id uuid NOT NULL gen=- def=-
 public.provider_run_reservation_pkey CREATE UNIQUE INDEX provider_run_reservation_pkey ON public.provider_run_reservation USING btree (run_id, pool)
 public.raw_capture acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.raw_capture.id uuid NOT NULL gen=- def=uuidv7()
+public.raw_capture.parts_slimmed_at timestamp with time zone gen=- def=-
 public.raw_capture.payload jsonb NOT NULL gen=- def=-
 public.raw_capture.raw_capture_pkey PRIMARY KEY (id)
 public.raw_capture.raw_capture_source_unique UNIQUE (source_system, source_id)
@@ -4855,6 +4976,7 @@ public.raw_capture.source_id text NOT NULL gen=- def=-
 public.raw_capture.source_system text NOT NULL gen=- def=-
 public.raw_capture_pkey CREATE UNIQUE INDEX raw_capture_pkey ON public.raw_capture USING btree (id)
 public.raw_capture_source_unique CREATE UNIQUE INDEX raw_capture_source_unique ON public.raw_capture USING btree (source_system, source_id)
+public.raw_capture_unslimmed_idx CREATE INDEX raw_capture_unslimmed_idx ON public.raw_capture USING btree (received_at) WHERE (parts_slimmed_at IS NULL)
 public.record_grant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.record_grant.access text NOT NULL gen=- def=-
 public.record_grant.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6295,6 +6417,31 @@ public.weekly_review_scorecard.weekly_review_scorecard_review_fkey FOREIGN KEY (
 public.weekly_review_scorecard.weekly_review_scorecard_subsets_fit CHECK (((deal_open IS NULL) OR ((deal_with_next_step <= deal_open) AND (deal_multi_threaded <= deal_open) AND (deal_close_date_sound <= deal_open))))
 public.weekly_review_scorecard_one_per_review CREATE UNIQUE INDEX weekly_review_scorecard_one_per_review ON public.weekly_review_scorecard USING btree (weekly_review_id)
 public.weekly_review_scorecard_pkey CREATE UNIQUE INDEX weekly_review_scorecard_pkey ON public.weekly_review_scorecard USING btree (id)
+public.withdrawal_credential acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.withdrawal_credential.address text NOT NULL gen=- def=-
+public.withdrawal_credential.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.withdrawal_credential.id uuid NOT NULL gen=- def=uuidv7()
+public.withdrawal_credential.issued_at timestamp with time zone NOT NULL gen=- def=now()
+public.withdrawal_credential.last_used_at timestamp with time zone gen=- def=-
+public.withdrawal_credential.lead_id uuid gen=- def=-
+public.withdrawal_credential.person_id uuid gen=- def=-
+public.withdrawal_credential.purpose_id uuid gen=- def=-
+public.withdrawal_credential.revoked_at timestamp with time zone gen=- def=-
+public.withdrawal_credential.revoked_reason text gen=- def=-
+public.withdrawal_credential.scope text NOT NULL gen=- def=-
+public.withdrawal_credential.token_hash text NOT NULL gen=- def=-
+public.withdrawal_credential.withdrawal_credential_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE SET NULL
+public.withdrawal_credential.withdrawal_credential_names_at_most_one_subject CHECK ((NOT ((person_id IS NOT NULL) AND (lead_id IS NOT NULL))))
+public.withdrawal_credential.withdrawal_credential_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE SET NULL
+public.withdrawal_credential.withdrawal_credential_pkey PRIMARY KEY (id)
+public.withdrawal_credential.withdrawal_credential_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE CASCADE
+public.withdrawal_credential.withdrawal_credential_revocation_is_reasoned CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL)))
+public.withdrawal_credential.withdrawal_credential_revoked_reason_check CHECK ((revoked_reason = ANY (ARRAY['erasure'::text, 'compromise'::text, 'merged_predecessor'::text, 'superseded'::text])))
+public.withdrawal_credential.withdrawal_credential_scope_check CHECK ((scope = ANY (ARRAY['named_purpose'::text, 'all_marketing'::text])))
+public.withdrawal_credential.withdrawal_credential_scope_names_its_target CHECK (((scope = 'named_purpose'::text) = (purpose_id IS NOT NULL)))
+public.withdrawal_credential.withdrawal_credential_token_hash_key UNIQUE (token_hash)
+public.withdrawal_credential_pkey CREATE UNIQUE INDEX withdrawal_credential_pkey ON public.withdrawal_credential USING btree (id)
+public.withdrawal_credential_token_hash_key CREATE UNIQUE INDEX withdrawal_credential_token_hash_key ON public.withdrawal_credential USING btree (token_hash)
 public.workflow_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workflow_run.applied jsonb gen=- def=-
 public.workflow_run.created_at timestamp with time zone NOT NULL gen=- def=now()

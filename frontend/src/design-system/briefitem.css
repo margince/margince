@@ -229,7 +229,7 @@
 }
 
 .brief-item-error {
-  color: var(--danger);
+  color: var(--dangerText);
   margin: 0;
 }
 

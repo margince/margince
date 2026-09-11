@@ -50,7 +50,7 @@ const FACT_SUSPECT_LABELS: Record<FactSuspectReason, MessageKey> = {
 // the server refuses.
 //
 // The technical fields are absent on purpose: they are read from DNS and
-// certificates rather than from anything a person knows, TechnicalProfileCard
+// certificates rather than from anything a person knows, TechnicalProfilePanel
 // owns them, and a hand-stated "hosting provider" would contradict the lookup
 // the next site read runs.
 const STATEABLE: Readonly<Record<FactCategory, readonly FactField[]>> = {

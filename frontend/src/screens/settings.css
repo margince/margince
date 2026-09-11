@@ -108,7 +108,7 @@ p.settings-panel-sub {
 }
 .settings-danger-warning {
   margin-top: var(--space-1);
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 /* A RUN of small items inside one of a row's two columns: a passport's dates,

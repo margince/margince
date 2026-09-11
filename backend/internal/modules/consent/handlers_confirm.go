@@ -68,11 +68,34 @@ func (h Handlers) SubmitConfirmDetails(w http.ResponseWriter, r *http.Request, t
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := h.store.SubmitConfirmation(r.Context(), token, submissionFromWire(req)); err != nil {
+	receipts, err := h.store.SubmitConfirmation(r.Context(), token, submissionFromWire(req))
+	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	httperr.WriteJSON(w, http.StatusOK, wireRightsCaseReceipts(receipts))
+}
+
+// wireRightsCaseReceipts renders the receipts for the page that has to show
+// them. An EMPTY LIST rather than a null: a submission carrying only a
+// marketing answer opens no case, and a page distinguishing "no cases" from
+// "the field was absent" would be reading a difference that means nothing.
+func wireRightsCaseReceipts(receipts []RightsCaseReceipt) crmcontracts.ConfirmSubmissionReceipt {
+	out := crmcontracts.ConfirmSubmissionReceipt{
+		Cases: make([]crmcontracts.RightsCaseReceipt, 0, len(receipts)),
+	}
+	for _, receipt := range receipts {
+		wire := crmcontracts.RightsCaseReceipt{
+			Kind:      crmcontracts.RightsCaseReceiptKind(receipt.Kind),
+			Reference: receipt.Reference,
+		}
+		if receipt.Field != "" {
+			field := receipt.Field
+			wire.Field = &field
+		}
+		out.Cases = append(out.Cases, wire)
+	}
+	return out
 }
 
 // submissionFromWire reads the request into the store's shape. A repeated field

@@ -1532,6 +1532,7 @@ const (
 	AttentionItemActionsRetry       AttentionItemActions = "retry"
 	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze      AttentionItemActions = "snooze"
+	AttentionItemActionsUndo        AttentionItemActions = "undo"
 )
 
 // Valid indicates whether the value is a known member of the AttentionItemActions enum.
@@ -1558,6 +1559,35 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsSetAside:
 		return true
 	case AttentionItemActionsSnooze:
+		return true
+	case AttentionItemActionsUndo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttentionItemDueGroup.
+const (
+	AttentionItemDueGroupLater    AttentionItemDueGroup = "later"
+	AttentionItemDueGroupOverdue  AttentionItemDueGroup = "overdue"
+	AttentionItemDueGroupThisWeek AttentionItemDueGroup = "this_week"
+	AttentionItemDueGroupToday    AttentionItemDueGroup = "today"
+	AttentionItemDueGroupTomorrow AttentionItemDueGroup = "tomorrow"
+)
+
+// Valid indicates whether the value is a known member of the AttentionItemDueGroup enum.
+func (e AttentionItemDueGroup) Valid() bool {
+	switch e {
+	case AttentionItemDueGroupLater:
+		return true
+	case AttentionItemDueGroupOverdue:
+		return true
+	case AttentionItemDueGroupThisWeek:
+		return true
+	case AttentionItemDueGroupToday:
+		return true
+	case AttentionItemDueGroupTomorrow:
 		return true
 	default:
 		return false
@@ -3052,6 +3082,48 @@ func (e CommunicationContext) Valid() bool {
 	case CommunicationContextReplyToInbound:
 		return true
 	case CommunicationContextRequestedFollowup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CommunicationReviewKind.
+const (
+	Single CommunicationReviewKind = "single"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationReviewKind enum.
+func (e CommunicationReviewKind) Valid() bool {
+	switch e {
+	case Single:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CommunicationReviewState.
+const (
+	CommunicationReviewStateCancelled    CommunicationReviewState = "cancelled"
+	CommunicationReviewStateNeedsContext CommunicationReviewState = "needs_context"
+	CommunicationReviewStateNeedsRepair  CommunicationReviewState = "needs_repair"
+	CommunicationReviewStateResolved     CommunicationReviewState = "resolved"
+	CommunicationReviewStateSuperseded   CommunicationReviewState = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationReviewState enum.
+func (e CommunicationReviewState) Valid() bool {
+	switch e {
+	case CommunicationReviewStateCancelled:
+		return true
+	case CommunicationReviewStateNeedsContext:
+		return true
+	case CommunicationReviewStateNeedsRepair:
+		return true
+	case CommunicationReviewStateResolved:
+		return true
+	case CommunicationReviewStateSuperseded:
 		return true
 	default:
 		return false
@@ -10735,6 +10807,24 @@ func (e RefreshAcceptedStatus) Valid() bool {
 	}
 }
 
+// Defines values for RefusedRecipientSubjectKind.
+const (
+	RefusedRecipientSubjectKindLead   RefusedRecipientSubjectKind = "lead"
+	RefusedRecipientSubjectKindPerson RefusedRecipientSubjectKind = "person"
+)
+
+// Valid indicates whether the value is a known member of the RefusedRecipientSubjectKind enum.
+func (e RefusedRecipientSubjectKind) Valid() bool {
+	switch e {
+	case RefusedRecipientSubjectKindLead:
+		return true
+	case RefusedRecipientSubjectKindPerson:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RelationshipKind.
 const (
 	RelationshipKindCoSellWith         RelationshipKind = "co_sell_with"
@@ -11020,6 +11110,24 @@ func (e RetentionScope) Valid() bool {
 	case RetentionScopeLeadunconverted:
 		return true
 	case RetentionScopePersonnoConsentNoDeal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RightsCaseReceiptKind.
+const (
+	Erasure RightsCaseReceiptKind = "erasure"
+	Rectify RightsCaseReceiptKind = "rectify"
+)
+
+// Valid indicates whether the value is a known member of the RightsCaseReceiptKind enum.
+func (e RightsCaseReceiptKind) Valid() bool {
+	switch e {
+	case Erasure:
+		return true
+	case Rectify:
 		return true
 	default:
 		return false
@@ -14393,6 +14501,7 @@ const (
 	WorklistItemActionsRetry       WorklistItemActions = "retry"
 	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze      WorklistItemActions = "snooze"
+	WorklistItemActionsUndo        WorklistItemActions = "undo"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemActions enum.
@@ -14419,6 +14528,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsSetAside:
 		return true
 	case WorklistItemActionsSnooze:
+		return true
+	case WorklistItemActionsUndo:
 		return true
 	default:
 		return false
@@ -14599,6 +14710,33 @@ func (e WorklistItemDispositions) Valid() bool {
 	case WorklistDispositionNotSales:
 		return true
 	case WorklistDispositionSnooze:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemDueGroup.
+const (
+	WorklistDueGroupLater    WorklistItemDueGroup = "later"
+	WorklistDueGroupOverdue  WorklistItemDueGroup = "overdue"
+	WorklistDueGroupThisWeek WorklistItemDueGroup = "this_week"
+	WorklistDueGroupToday    WorklistItemDueGroup = "today"
+	WorklistDueGroupTomorrow WorklistItemDueGroup = "tomorrow"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemDueGroup enum.
+func (e WorklistItemDueGroup) Valid() bool {
+	switch e {
+	case WorklistDueGroupLater:
+		return true
+	case WorklistDueGroupOverdue:
+		return true
+	case WorklistDueGroupThisWeek:
+		return true
+	case WorklistDueGroupToday:
+		return true
+	case WorklistDueGroupTomorrow:
 		return true
 	default:
 		return false
@@ -14859,6 +14997,7 @@ func (e WorklistReachSource) Valid() bool {
 
 // Defines values for WorklistReasonKind.
 const (
+	WorklistReasonKindAddressedElsewhere WorklistReasonKind = "addressed_elsewhere"
 	WorklistReasonKindApprovedAndFailed  WorklistReasonKind = "approved_and_failed"
 	WorklistReasonKindAsksNothing        WorklistReasonKind = "asks_nothing"
 	WorklistReasonKindBelowMaterial      WorklistReasonKind = "below_material"
@@ -14890,6 +15029,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistReasonKind enum.
 func (e WorklistReasonKind) Valid() bool {
 	switch e {
+	case WorklistReasonKindAddressedElsewhere:
+		return true
 	case WorklistReasonKindApprovedAndFailed:
 		return true
 	case WorklistReasonKindAsksNothing:
@@ -15714,22 +15855,22 @@ func (e ListCompanyDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListCompanyDocumentsParamsDocState.
 const (
-	Current    ListCompanyDocumentsParamsDocState = "current"
-	Draft      ListCompanyDocumentsParamsDocState = "draft"
-	Final      ListCompanyDocumentsParamsDocState = "final"
-	Superseded ListCompanyDocumentsParamsDocState = "superseded"
+	ListCompanyDocumentsParamsDocStateCurrent    ListCompanyDocumentsParamsDocState = "current"
+	ListCompanyDocumentsParamsDocStateDraft      ListCompanyDocumentsParamsDocState = "draft"
+	ListCompanyDocumentsParamsDocStateFinal      ListCompanyDocumentsParamsDocState = "final"
+	ListCompanyDocumentsParamsDocStateSuperseded ListCompanyDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListCompanyDocumentsParamsDocState enum.
 func (e ListCompanyDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case Current:
+	case ListCompanyDocumentsParamsDocStateCurrent:
 		return true
-	case Draft:
+	case ListCompanyDocumentsParamsDocStateDraft:
 		return true
-	case Final:
+	case ListCompanyDocumentsParamsDocStateFinal:
 		return true
-	case Superseded:
+	case ListCompanyDocumentsParamsDocStateSuperseded:
 		return true
 	default:
 		return false
@@ -16423,6 +16564,42 @@ func (e ListProjectsParamsPhase) Valid() bool {
 	}
 }
 
+// Defines values for BookPublicMeeting201JSONResponseBodyBooking.
+const (
+	Confirmed BookPublicMeeting201JSONResponseBodyBooking = "confirmed"
+)
+
+// Valid indicates whether the value is a known member of the BookPublicMeeting201JSONResponseBodyBooking enum.
+func (e BookPublicMeeting201JSONResponseBodyBooking) Valid() bool {
+	switch e {
+	case Confirmed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BookPublicMeeting201JSONResponseBodyMarketing.
+const (
+	NotAsked            BookPublicMeeting201JSONResponseBodyMarketing = "not_asked"
+	NotRequested        BookPublicMeeting201JSONResponseBodyMarketing = "not_requested"
+	PendingConfirmation BookPublicMeeting201JSONResponseBodyMarketing = "pending_confirmation"
+)
+
+// Valid indicates whether the value is a known member of the BookPublicMeeting201JSONResponseBodyMarketing enum.
+func (e BookPublicMeeting201JSONResponseBodyMarketing) Valid() bool {
+	switch e {
+	case NotAsked:
+		return true
+	case NotRequested:
+		return true
+	case PendingConfirmation:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SubmitConfirmDetailsJSONBodyCorrectionsField.
 const (
 	SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
@@ -16785,19 +16962,19 @@ func (e PreviewAccessParamsRole) Valid() bool {
 
 // Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
 const (
-	Done    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
-	Dropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
-	Open    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
+	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
+	SetWeeklyPlanCommitmentStateJSONBodyStateDropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
+	SetWeeklyPlanCommitmentStateJSONBodyStateOpen    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
 )
 
 // Valid indicates whether the value is a known member of the SetWeeklyPlanCommitmentStateJSONBodyState enum.
 func (e SetWeeklyPlanCommitmentStateJSONBodyState) Valid() bool {
 	switch e {
-	case Done:
+	case SetWeeklyPlanCommitmentStateJSONBodyStateDone:
 		return true
-	case Dropped:
+	case SetWeeklyPlanCommitmentStateJSONBodyStateDropped:
 		return true
-	case Open:
+	case SetWeeklyPlanCommitmentStateJSONBodyStateOpen:
 		return true
 	default:
 		return false
@@ -16830,40 +17007,40 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	GetWorklistParamsFilterAll               GetWorklistParamsFilter = "all"
-	GetWorklistParamsFilterChangedSinceBrief GetWorklistParamsFilter = "changed_since_brief"
-	GetWorklistParamsFilterCustomerWaiting   GetWorklistParamsFilter = "customer_waiting"
-	GetWorklistParamsFilterDealsAtRisk       GetWorklistParamsFilter = "deals_at_risk"
-	GetWorklistParamsFilterDecisions         GetWorklistParamsFilter = "decisions"
-	GetWorklistParamsFilterExceptDecisions   GetWorklistParamsFilter = "except_decisions"
-	GetWorklistParamsFilterLeads             GetWorklistParamsFilter = "leads"
-	GetWorklistParamsFilterMeetings          GetWorklistParamsFilter = "meetings"
-	GetWorklistParamsFilterSystem            GetWorklistParamsFilter = "system"
-	GetWorklistParamsFilterTasks             GetWorklistParamsFilter = "tasks"
+	All               GetWorklistParamsFilter = "all"
+	ChangedSinceBrief GetWorklistParamsFilter = "changed_since_brief"
+	CustomerWaiting   GetWorklistParamsFilter = "customer_waiting"
+	DealsAtRisk       GetWorklistParamsFilter = "deals_at_risk"
+	Decisions         GetWorklistParamsFilter = "decisions"
+	ExceptDecisions   GetWorklistParamsFilter = "except_decisions"
+	Leads             GetWorklistParamsFilter = "leads"
+	Meetings          GetWorklistParamsFilter = "meetings"
+	System            GetWorklistParamsFilter = "system"
+	Tasks             GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case GetWorklistParamsFilterAll:
+	case All:
 		return true
-	case GetWorklistParamsFilterChangedSinceBrief:
+	case ChangedSinceBrief:
 		return true
-	case GetWorklistParamsFilterCustomerWaiting:
+	case CustomerWaiting:
 		return true
-	case GetWorklistParamsFilterDealsAtRisk:
+	case DealsAtRisk:
 		return true
-	case GetWorklistParamsFilterDecisions:
+	case Decisions:
 		return true
-	case GetWorklistParamsFilterExceptDecisions:
+	case ExceptDecisions:
 		return true
-	case GetWorklistParamsFilterLeads:
+	case Leads:
 		return true
-	case GetWorklistParamsFilterMeetings:
+	case Meetings:
 		return true
-	case GetWorklistParamsFilterSystem:
+	case System:
 		return true
-	case GetWorklistParamsFilterTasks:
+	case Tasks:
 		return true
 	default:
 		return false
@@ -18062,6 +18239,18 @@ type AnnotateBriefRequest struct {
 	Narrative *string `json:"narrative,omitempty"`
 }
 
+// AppliedUndo What a receipt needs to offer a way back from a change nobody was asked about.
+type AppliedUndo struct {
+	// AuditLogId The change to put back, through the record-history restore route.
+	AuditLogId openapi_types.UUID `json:"audit_log_id"`
+
+	// Reversed Somebody already put this back. The row stays and says so rather than vanishing, which would leave a reader unsure their Undo landed.
+	Reversed bool `json:"reversed"`
+
+	// Version The record's version as this receipt was read, for the `If-Match` the restore route requires. Carried on the receipt rather than re-read by the client: a second read would race the sweep, and a stale version is what makes the restore refuse rather than overwrite somebody else's later edit.
+	Version int64 `json:"version"`
+}
+
 // ApplyTagRequest defines model for ApplyTagRequest.
 type ApplyTagRequest struct {
 	EntityId   openapi_types.UUID        `json:"entity_id"`
@@ -18933,6 +19122,10 @@ type AttentionItem struct {
 	// DueAt When this is due (tasks), or when it lapses (approvals).
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+	DueGroup *AttentionItemDueGroup `json:"due_group,omitempty"`
+
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
 	// `source: meeting_outcome`.
 	//
@@ -19020,6 +19213,10 @@ type AttentionItem struct {
 	// and the client writes the line in the reader's own.
 	Title *string `json:"title,omitempty"`
 
+	// Undo The way back from work that was APPLIED rather than approved.
+	// A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
+	Undo *AppliedUndo `json:"undo,omitempty"`
+
 	// Version The version of the row this item's own verbs write to, present where it names one — a
 	// task today. Carried for the reason `email_summary` carries one: a lane that offers
 	// `complete` and `snooze` has to name the row those presses condition on, or two people
@@ -19044,6 +19241,10 @@ type AttentionItem struct {
 
 // AttentionItemActions defines model for AttentionItem.Actions.
 type AttentionItemActions string
+
+// AttentionItemDueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+type AttentionItemDueGroup string
 
 // AttentionItemSource Which producer raised it, and therefore which endpoint its verbs go to.
 type AttentionItemSource string
@@ -19939,8 +20140,11 @@ type CaptureConnection struct {
 	Status CaptureConnectionStatus `json:"status"`
 
 	// SyncCursor Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture — read-only.
-	SyncCursor *string    `json:"sync_cursor,omitempty"`
-	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
+	SyncCursor *string `json:"sync_cursor,omitempty"`
+
+	// SyncFailingSince When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage's — last_synced_at moves on every postponed tick and dates the newest attempt instead.
+	SyncFailingSince *time.Time `json:"sync_failing_since,omitempty"`
+	UpdatedAt        *time.Time `json:"updated_at,omitempty"`
 
 	// WatchExpiresAt Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null.
 	WatchExpiresAt *time.Time `json:"watch_expires_at,omitempty"`
@@ -20774,6 +20978,35 @@ type CommunicationEvidence struct {
 	// InvoiceId The invoice or payment event this send is about.
 	InvoiceId *openapi_types.UUID `json:"invoice_id,omitempty"`
 }
+
+// CommunicationReview What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
+// given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
+// what the consent rows say today.
+type CommunicationReview struct {
+	Id   openapi_types.UUID      `json:"id"`
+	Kind CommunicationReviewKind `json:"kind"`
+
+	// ReasonCode The strongest reason across the recipients, so a queue can order without opening the snapshot.
+	ReasonCode string `json:"reason_code"`
+
+	// Refusals What was refused, per recipient. Empty once an erasure has cleared the subject from it.
+	Refusals []RefusedRecipient `json:"refusals"`
+
+	// State What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
+	// and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
+	// answer — an objection, a dead address — where offering a context form would invite a rep
+	// to argue with a withdrawal.
+	State CommunicationReviewState `json:"state"`
+}
+
+// CommunicationReviewKind defines model for CommunicationReview.Kind.
+type CommunicationReviewKind string
+
+// CommunicationReviewState What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
+// and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
+// answer — an objection, a dead address — where offering a context form would invite a rep
+// to argue with a withdrawal.
+type CommunicationReviewState string
 
 // Company A company. Mirrors the `company` table.
 type Company struct {
@@ -23172,6 +23405,13 @@ type ConfirmRequestIssued struct {
 	// Sendable Whether this installation has an outbound relay and a link origin configured. False
 	// means nothing was attempted — the link exists and must be passed on by hand.
 	Sendable bool `json:"sendable"`
+}
+
+// ConfirmSubmissionReceipt The answer to a confirm-link submission. `cases` names every rights request it opened — one per
+// corrected field under Art. 16, one for an erasure request under Art. 17. Empty when the submission
+// proposed nothing: a marketing answer alone opens no case.
+type ConfirmSubmissionReceipt struct {
+	Cases []RightsCaseReceipt `json:"cases"`
 }
 
 // ConnectChannelRequest defines model for ConnectChannelRequest.
@@ -30655,6 +30895,13 @@ type Pipeline struct {
 	Position  int        `json:"position"`
 	Stages    *[]Stage   `json:"stages,omitempty"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
+	// not only overlay mode.
+	Version *RowVersion `json:"version,omitempty"`
 }
 
 // PipelineListResponse defines model for PipelineListResponse.
@@ -31679,6 +31926,10 @@ type Receipt struct {
 
 	// Summary What was done, in the words the act itself recorded.
 	Summary string `json:"summary"`
+
+	// Undo The way back, on a receipt for work that was APPLIED rather than approved.
+	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
+	Undo *AppliedUndo `json:"undo,omitempty"`
 }
 
 // RecordClaim defines model for RecordClaim.
@@ -31874,6 +32125,20 @@ type RefreshAccepted struct {
 
 // RefreshAcceptedStatus defines model for RefreshAccepted.Status.
 type RefreshAcceptedStatus string
+
+// RefusedRecipient One recipient's half of a refusal, as the engine gave it. The ADDRESS is here because a
+// reason code without one says a message was refused and not who for, which is the question
+// the rep is actually asking — and it is why an erasure clears this list.
+type RefusedRecipient struct {
+	Address     string                       `json:"address"`
+	Category    *string                      `json:"category,omitempty"`
+	ReasonCode  string                       `json:"reason_code"`
+	SubjectId   *openapi_types.UUID          `json:"subject_id,omitempty"`
+	SubjectKind *RefusedRecipientSubjectKind `json:"subject_kind,omitempty"`
+}
+
+// RefusedRecipientSubjectKind defines model for RefusedRecipient.SubjectKind.
+type RefusedRecipientSubjectKind string
 
 // RejectCompanyRequest defines model for RejectCompanyRequest.
 type RejectCompanyRequest struct {
@@ -32456,6 +32721,25 @@ type RetentionSettings struct {
 	// keep-everything obligation opts in.
 	RetainOnly bool `json:"retain_only"`
 }
+
+// RightsCaseReceipt What a data subject is told to quote when asking after a request they sent through their confirm
+// link. Carries the reference and the right it was opened under, never the case id — the queue that
+// holds the case is admin-gated, and a row id in a receipt invites being typed back in somewhere
+// that trusts it.
+type RightsCaseReceipt struct {
+	// Field The record field a correction proposes. Absent for an erasure. A subject who corrected two
+	// fields receives two receipts, and without this cannot tell which answer is about which.
+	Field *string `json:"field,omitempty"`
+
+	// Kind Art. 16 correction or Art. 17 erasure.
+	Kind RightsCaseReceiptKind `json:"kind"`
+
+	// Reference The quotable reference, unique across the installation.
+	Reference string `json:"reference"`
+}
+
+// RightsCaseReceiptKind Art. 16 correction or Art. 17 erasure.
+type RightsCaseReceiptKind string
 
 // Role One role as `role.permissions` stores it. This is a ROLE's document, not a principal's — unlike `Authorization.objects` nothing here is merged, because the thing being edited is the single role.
 type Role struct {
@@ -36959,6 +37243,10 @@ type WorklistItem struct {
 	// DueAt When this is due, or when the meeting starts.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+	DueGroup *WorklistItemDueGroup `json:"due_group,omitempty"`
+
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
@@ -37060,6 +37348,10 @@ type WorklistItem struct {
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`
 
+	// Undo The way back from work that was APPLIED rather than approved.
+	// A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
+	Undo *AppliedUndo `json:"undo,omitempty"`
+
 	// Verdict How the deal behind a row is STANDING, beside the move that acts on it.
 	//
 	// The move says what to do; this says what the reader is walking into. A row
@@ -37152,6 +37444,10 @@ type WorklistItemDestination string
 
 // WorklistItemDispositions defines model for WorklistItem.Dispositions.
 type WorklistItemDispositions string
+
+// WorklistItemDueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
+// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+type WorklistItemDueGroup string
 
 // WorklistItemPrimaryAction The one verb this row is FOR, out of `actions`. The queue is ranked, so the
 // reader arriving at a row should not have to weigh three equally-drawn
@@ -40975,6 +41271,16 @@ type CreatePipelineParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ArchivePipelineParams defines parameters for ArchivePipeline.
+type ArchivePipelineParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // UpdatePipelineParams defines parameters for UpdatePipeline.
 type UpdatePipelineParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -41372,6 +41678,12 @@ type BookPublicMeetingParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
+
+// BookPublicMeeting201JSONResponseBodyBooking defines parameters for BookPublicMeeting.
+type BookPublicMeeting201JSONResponseBodyBooking string
+
+// BookPublicMeeting201JSONResponseBodyMarketing defines parameters for BookPublicMeeting.
+type BookPublicMeeting201JSONResponseBodyMarketing string
 
 // GetPublicAvailabilityParams defines parameters for GetPublicAvailability.
 type GetPublicAvailabilityParams struct {
@@ -51618,6 +51930,9 @@ type ServerInterface interface {
 	// Approve, pay, or void one entry.
 	// (POST /commissions/{id}/decide)
 	DecideCommissionEntry(w http.ResponseWriter, r *http.Request, id Id, params DecideCommissionEntryParams)
+	// What a refused send was refused for, and for whom.
+	// (GET /communication-reviews/{id})
+	GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List companies (live by default; cursor-paginated).
 	// (GET /companies)
 	ListCompanies(w http.ResponseWriter, r *http.Request, params ListCompaniesParams)
@@ -52560,12 +52875,18 @@ type ServerInterface interface {
 	// Create a pipeline.
 	// (POST /pipelines)
 	CreatePipeline(w http.ResponseWriter, r *http.Request, params CreatePipelineParams)
+	// Retire a pipeline (soft delete; archive is the delete).
+	// (DELETE /pipelines/{id})
+	ArchivePipeline(w http.ResponseWriter, r *http.Request, id Id, params ArchivePipelineParams)
 	// Get a pipeline (with its ordered stages).
 	// (GET /pipelines/{id})
 	GetPipeline(w http.ResponseWriter, r *http.Request, id Id)
 	// Update a pipeline (rename / reorder / set default — bounded config).
 	// (PATCH /pipelines/{id})
 	UpdatePipeline(w http.ResponseWriter, r *http.Request, id Id, params UpdatePipelineParams)
+	// Put a retired pipeline back in use.
+	// (POST /pipelines/{id}/restore)
+	RestorePipeline(w http.ResponseWriter, r *http.Request, id Id)
 	// List rate-card products (live by default; cursor-paginated).
 	// (GET /products)
 	ListProducts(w http.ResponseWriter, r *http.Request, params ListProductsParams)
@@ -53892,6 +54213,12 @@ func (_ Unimplemented) GetCommissionEntry(w http.ResponseWriter, r *http.Request
 // Approve, pay, or void one entry.
 // (POST /commissions/{id}/decide)
 func (_ Unimplemented) DecideCommissionEntry(w http.ResponseWriter, r *http.Request, id Id, params DecideCommissionEntryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What a refused send was refused for, and for whom.
+// (GET /communication-reviews/{id})
+func (_ Unimplemented) GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -55779,6 +56106,12 @@ func (_ Unimplemented) CreatePipeline(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Retire a pipeline (soft delete; archive is the delete).
+// (DELETE /pipelines/{id})
+func (_ Unimplemented) ArchivePipeline(w http.ResponseWriter, r *http.Request, id Id, params ArchivePipelineParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Get a pipeline (with its ordered stages).
 // (GET /pipelines/{id})
 func (_ Unimplemented) GetPipeline(w http.ResponseWriter, r *http.Request, id Id) {
@@ -55788,6 +56121,12 @@ func (_ Unimplemented) GetPipeline(w http.ResponseWriter, r *http.Request, id Id
 // Update a pipeline (rename / reorder / set default — bounded config).
 // (PATCH /pipelines/{id})
 func (_ Unimplemented) UpdatePipeline(w http.ResponseWriter, r *http.Request, id Id, params UpdatePipelineParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a retired pipeline back in use.
+// (POST /pipelines/{id}/restore)
+func (_ Unimplemented) RestorePipeline(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -61771,6 +62110,38 @@ func (siw *ServerInterfaceWrapper) DecideCommissionEntry(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DecideCommissionEntry(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCommunicationReview operation middleware
+func (siw *ServerInterfaceWrapper) GetCommunicationReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCommunicationReview(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -75366,6 +75737,62 @@ func (siw *ServerInterfaceWrapper) CreatePipeline(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ArchivePipeline operation middleware
+func (siw *ServerInterfaceWrapper) ArchivePipeline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArchivePipelineParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchivePipeline(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPipeline operation middleware
 func (siw *ServerInterfaceWrapper) GetPipeline(w http.ResponseWriter, r *http.Request) {
 
@@ -75447,6 +75874,38 @@ func (siw *ServerInterfaceWrapper) UpdatePipeline(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdatePipeline(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestorePipeline operation middleware
+func (siw *ServerInterfaceWrapper) RestorePipeline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestorePipeline(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -83678,6 +84137,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/commissions/{id}/decide", wrapper.DecideCommissionEntry)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/communication-reviews/{id}", wrapper.GetCommunicationReview)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies", wrapper.ListCompanies)
 	})
 	r.Group(func(r chi.Router) {
@@ -84620,10 +85082,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/pipelines", wrapper.CreatePipeline)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/pipelines/{id}", wrapper.ArchivePipeline)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/pipelines/{id}", wrapper.GetPipeline)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/pipelines/{id}", wrapper.UpdatePipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/pipelines/{id}/restore", wrapper.RestorePipeline)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/products", wrapper.ListProducts)

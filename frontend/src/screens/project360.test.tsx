@@ -116,6 +116,32 @@ describe("ProjectScreen", () => {
     ).toBeTruthy();
   });
 
+  // The activity readings' way out. Both are counted from the record's own
+  // chronology, which is already on the page one screen down, so the door is a
+  // scroll rather than a route — and the id it aims at is the timeline
+  // SECTION's own, handed to `RecordView`, so the two cannot drift apart.
+  it("reveals the chronology from the activity readings", async () => {
+    projectsBackend({ view: project360() });
+    render(<ProjectScreen id="pr-1" />);
+    const story = await screen.findByRole("region", {
+      name: en["record.timeline"],
+    });
+    expect(story.id).toBe("project-activity");
+    // jsdom implements no scrolling at all, so the page's own element is what
+    // records the call.
+    const scrolled = vi.fn();
+    story.scrollIntoView = scrolled;
+
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: en["stat.open"],
+        description: en["project.rollups.lastActivity"],
+      }),
+    );
+
+    expect(scrolled).toHaveBeenCalledTimes(1);
+  });
+
   it("offers Relink and Reply on a timeline row", async () => {
     const user = userEvent.setup();
     projectsBackend({

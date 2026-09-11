@@ -29,7 +29,7 @@ This page does not grade single steps or name a best model per site — that is
 | … some case requires | 36 |
 | … **no case requires** | 39 |
 | … of those, permitted somewhere but never required | 19 |
-| Prompt tokens spent on tools no case requires | 12341 |
+| Prompt tokens spent on tools no case requires | 12693 |
 | Use cases | 21 |
 | Acceptance criteria the cases declare, each with a statement | 48 |
 
@@ -238,26 +238,26 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `run_report` | 1.00 | 3 | `case7_ask_for_a_number` |
-| `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
 | `forecast_readings` | 1.00 | 3 | `case21_what_are_we_closing` |
-| `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
+| `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
+| `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
+| `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `decide_approval` | 1.00 | 3 | `case8_whats_waiting` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
-| `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `apply_tag` | 1.00 | 3 | `case30_a_word_for_it` |
 | `relink_activities` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
+| `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
+| `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `create_tag` | 1.00 | 3 | `case30_a_word_for_it` |
 | `list_channel_providers` | 1.00 | 3 | `case42_can_i_answer_on_whatsapp` |
 | `remove_tag` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
 | `read_project_360` | 1.00 | 3 | `case41_close_the_project` |
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
 | `get_record_tags` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
-| `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
-| `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `read_import_report` | 1.00 | 3 | `case10_finish_the_import` |
 
 ### `claude-sonnet-5`
@@ -272,12 +272,12 @@ Every run of every case requiring this tool passed, for the model named.
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `apply_tag` | 1.00 | 3 | `case30_a_word_for_it` |
 | `relink_activities` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
+| `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `create_tag` | 1.00 | 3 | `case30_a_word_for_it` |
 | `list_channel_providers` | 1.00 | 3 | `case42_can_i_answer_on_whatsapp` |
 | `remove_tag` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
 | `get_record_tags` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
-| `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `read_import_report` | 1.00 | 3 | `case10_finish_the_import` |
 
 ## 2. What is failing now
@@ -296,25 +296,25 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `compose_analytics_report` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `search_records` | 0.33 | 1/3 | `case5_before_the_meeting` | `case5_before_the_meeting` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
-| `merge_records` | 0.00 | 0/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `advance_project_phase` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
-| `decide_approval` | 0.33 | 1/3 | `case8_whats_waiting` | `case8_whats_waiting` |
 | `promote_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
+| `merge_records` | 0.00 | 0/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
+| `archive_record` | 0.00 | 0/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
+| `decide_approval` | 0.33 | 1/3 | `case8_whats_waiting` | `case8_whats_waiting` |
 | `list_approvals` | 0.33 | 1/3 | `case8_whats_waiting` | `case8_whats_waiting` |
 | `check_availability` | 0.33 | 1/3 | `case23_find_us_a_slot` | `case23_find_us_a_slot` |
-| `archive_record` | 0.00 | 0/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `qualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
+| `disqualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
 | `update_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 | `merge_tags` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
-| `disqualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
+| `data_coverage` | 0.67 | 2/3 | — | `case22_can_i_trust_the_numbers` |
+| `list_colleagues` | 0.00 | 0/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `list_channel_providers` | 0.67 | 2/3 | — | `case42_can_i_answer_on_whatsapp` |
 | `remove_tag` | 0.00 | 0/3 | `case31_wrong_word_on_the_record` | `case31_wrong_word_on_the_record` |
 | `read_project_360` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `read_approval` | 0.33 | 1/3 | `case8_whats_waiting` | `case8_whats_waiting` |
 | `get_record_tags` | 0.00 | 0/3 | `case31_wrong_word_on_the_record` | `case31_wrong_word_on_the_record` |
-| `list_colleagues` | 0.00 | 0/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `commit_import` | 0.33 | 1/3 | `case10_finish_the_import` | `case10_finish_the_import` |
-| `data_coverage` | 0.67 | 2/3 | — | `case22_can_i_trust_the_numbers` |
 | `list_tags` | 0.50 | 3/6 | `case32_two_words_for_one_thing` | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |
 | `get_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 | `read_import_report` | 0.33 | 1/3 | `case10_finish_the_import` | `case10_finish_the_import` |
@@ -332,9 +332,9 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `promote_lead` | 0.33 | 1/3 | `case40_sort_the_queue` | `case40_sort_the_queue` |
 | `qualify_lead` | 0.33 | 1/3 | `case40_sort_the_queue` | `case40_sort_the_queue` |
+| `disqualify_lead` | 0.33 | 1/3 | `case40_sort_the_queue` | `case40_sort_the_queue` |
 | `update_tag` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
 | `merge_tags` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
-| `disqualify_lead` | 0.33 | 1/3 | `case40_sort_the_queue` | `case40_sort_the_queue` |
 | `list_tags` | 0.83 | 5/6 | — | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |
 | `get_tag` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
 
@@ -348,19 +348,19 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `compose_analytics_report` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `search_records` | 0.33 | 1/3 | `case5_before_the_meeting` | `case5_before_the_meeting` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
-| `merge_records` | 0.33 | 1/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `advance_project_phase` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
-| `decide_approval` | 0.67 | 2/3 | — | `case8_whats_waiting` |
 | `promote_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
-| `list_approvals` | 0.67 | 2/3 | — | `case8_whats_waiting` |
+| `merge_records` | 0.33 | 1/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `archive_record` | 0.33 | 1/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
+| `decide_approval` | 0.67 | 2/3 | — | `case8_whats_waiting` |
+| `list_approvals` | 0.67 | 2/3 | — | `case8_whats_waiting` |
 | `qualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
+| `disqualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
 | `update_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 | `merge_tags` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
-| `disqualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
+| `list_colleagues` | 0.33 | 1/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `read_project_360` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `read_approval` | 0.67 | 2/3 | — | `case8_whats_waiting` |
-| `list_colleagues` | 0.33 | 1/3 | `case33_two_cards_for_one_company` | `case33_two_cards_for_one_company` |
 | `list_tags` | 0.50 | 3/6 | `case32_two_words_for_one_thing` | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |
 | `get_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 
@@ -400,20 +400,21 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `send_account_email` | 741 | — | — | — |
-| `send_email` | 675 | `agent_loop` | — | — |
+| `send_account_email` | 767 | — | — | — |
+| `send_email` | 698 | `agent_loop` | — | — |
 | `update_record` | 571 | `agent_loop` | `case33_two_cards_for_one_company` | — |
-| `send_message` | 518 | — | — | — |
+| `send_message` | 546 | — | — | — |
 | `progress_deal` | 505 | `agent_loop` | — | — |
 | `list_records` | 503 | — | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `resolve_entities` | 491 | `agent_loop` | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` | — |
+| `forecast_movement` | 453 | — | — | — |
 | `advance_deal` | 447 | `agent_loop` | — | — |
+| `book_meeting` | 423 | — | — | — |
 | `annotate_brief` | 418 | — | — | `morning_brief` |
 | `review_commitments` | 401 | `agent_loop` | `case41_close_the_project` | `overnight_at_risk_sweep` |
-| `book_meeting` | 391 | — | — | — |
-| `enrich` | 385 | `agent_loop`, `enrich` | — | — |
-| `forecast_movement` | 351 | — | — | — |
+| `enrich` | 391 | `agent_loop`, `enrich` | — | — |
 | `describe_report_vocabulary` | 349 | — | `case20_put_it_in_the_board_pack`, `case7_ask_for_a_number` | — |
+| `forecast_input_checks` | 324 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |
 | `prep_for_meeting` | 324 | `agent_loop` | `case23_find_us_a_slot`, `case5_before_the_meeting` | — |
 | `demote_lead` | 316 | — | — | — |
 | `describe_analytics_vocabulary` | 286 | — | — | — |
@@ -422,13 +423,13 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `draft_follow_ups_for` | 273 | — | — | — |
 | `prepare_handoff` | 267 | `agent_loop` | `case41_close_the_project` | — |
 | `describe_query_vocabulary` | 266 | — | `case4_use_the_moment` | — |
-| `forecast_input_checks` | 252 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |
 | `account_coverage` | 245 | `agent_loop` | `case5_before_the_meeting` | — |
 | `describe_report_blocks` | 245 | — | `case20_put_it_in_the_board_pack` | — |
 | `decide_approval_bundle` | 235 | — | — | — |
 | `create_task` | 220 | `deal_health` | `case42_can_i_answer_on_whatsapp` | — |
 | `read_record` | 220 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case21_what_are_we_closing`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case4_use_the_moment`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number`, `case8_whats_waiting`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `whats_slipping_this_week` | 211 | `agent_loop` | — | `overnight_at_risk_sweep` |
+| `list_input_checks` | 209 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |
 | `at_risk_relationships` | 208 | `agent_loop` | — | `overnight_at_risk_sweep` |
 | `read_brief` | 206 | — | — | `morning_brief` |
 | `relink_thread` | 196 | — | — | — |
@@ -436,7 +437,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `list_pipelines` | 191 | `agent_loop` | `case1_log_it`, `case20_put_it_in_the_board_pack` | — |
 | `intro_path_to` | 187 | `agent_loop` | — | — |
 | `check_location_support` | 156 | — | — | — |
-| `list_input_checks` | 146 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |
 | `whoami` | 128 | — | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp` | — |
 | `read_import_run` | 67 | — | `case10_finish_the_import`, `case3_spreadsheet` | — |
 

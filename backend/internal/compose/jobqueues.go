@@ -21,6 +21,11 @@ func jobQueues() map[string]river.QueueConfig {
 		// Deep reads run on their own bounded pool so long crawls cannot
 		// evict the short maintenance jobs from the default queue.
 		deepReadQueue: {MaxWorkers: deepReadMaxWorkers},
+		// The raw-capture part sweep reads an object per attachment and encodes
+		// its octets to locate them, so a batch is outbound-bound work of the
+		// same species as a deep read: its own bounded pool keeps it from
+		// holding default workers while the object store answers.
+		capturePartSlimQueue: {MaxWorkers: capturePartSlimMaxWorkers},
 		// Rate refreshes (FX fetch + pricing-page crawl+LLM extract) are
 		// likewise long; their own bounded pool keeps a multi-workspace
 		// burst from starving close-date, reconcile, and capture jobs.

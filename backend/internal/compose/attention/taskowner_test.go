@@ -13,6 +13,7 @@ package attention
 
 import (
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -71,7 +72,7 @@ func TestTheHolderOfATaskReachesTheRow(t *testing.T) {
 		Subject:    "Send the retrofit quote",
 		DueAt:      &rankInstant,
 		AssigneeID: &holder,
-	}, rankInstant)
+	}, rankInstant, rankInstant.Add(time.Hour), time.UTC)
 
 	if item.AssigneeId == nil {
 		t.Fatal("the task's holder never reached the row")
@@ -88,7 +89,7 @@ func TestAnUnheldTaskCarriesNoHolderRatherThanAZeroOne(t *testing.T) {
 		ID:      ids.NewV7(),
 		Subject: "Send the retrofit quote",
 		DueAt:   &rankInstant,
-	}, rankInstant)
+	}, rankInstant, rankInstant.Add(time.Hour), time.UTC)
 
 	if item.AssigneeId != nil {
 		t.Fatalf("an unheld task names %v as its holder", *item.AssigneeId)

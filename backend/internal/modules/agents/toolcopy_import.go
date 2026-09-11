@@ -33,11 +33,12 @@ var readImportRunCopy = toolCopy{
 
 var readImportReportCopy = toolCopy{
 	Purpose: "What an import will do, or did: rows created, updated, failed, unusable, duplicates.",
-	Limits:  "These counts are what a person approves. Same shape before and after.",
+	Limits:  "These counts are what a person weighs before committing. Same shape before and after.",
 }
 
 var commitImportCopy = toolCopy{
-	Purpose: "Write a checked import into the workspace, once a person approves.",
+	Purpose: "Write a checked import into the workspace. The dry run is the check; by default " +
+		"this commits when it answers.",
 	Limits:  "Only from awaiting_approval. Undoing one needs the web app.",
 	Instead: "read_import_report first; nobody should approve what they have not read.",
 }

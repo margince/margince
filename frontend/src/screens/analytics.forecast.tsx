@@ -4,9 +4,9 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
   Button,
-  Card,
   SegmentedControl,
   StatCard,
+  TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { EvidenceReceipt } from "../design-system/evidencereceipt";
@@ -157,18 +157,22 @@ function ForecastAnswer({
       <StatStrip>
         <StatCard
           label={t("forecast.currentCall")}
-          value={money(readings.current_call?.amount_minor)}
-          numeric
+          // No call is a reading, not a missing figure: the sentence above
+          // already says the book is running on evidence alone, and a slot in a
+          // row compared across must not answer that with a glyph.
+          value={
+            readings.current_call
+              ? money(readings.current_call.amount_minor)
+              : t("forecast.currentCallNone")
+          }
         />
         <StatCard
           label={t("forecast.evidence")}
           value={money(readings.evidence_minor)}
-          numeric
         />
         <StatCard
           label={t("forecast.alreadyWon")}
           value={money(readings.won_minor)}
-          numeric
         />
         {/* Both are absent for a managed-teams reading, which covers several
             populations at once: a landing summed across books that are called
@@ -271,37 +275,48 @@ function ForecastCallEditor({
   }
 
   return (
-    <Card title={t("forecast.updateCall")}>
-      <p className="sub">{t("forecast.callExplains")}</p>
-      <label className="field">
-        <span>{t("forecast.expectedTotal")}</span>
-        <MoneyInput
-          valueMinor={amountMinor}
-          currency={readings.base_currency}
-          onChangeMinor={(next) => setAmountMinor(next ?? 0)}
-        />
-      </label>
-      <label className="field">
-        <span>{t("forecast.supportingNote")}</span>
-        <input
-          type="text"
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-        />
-      </label>
-      <div className="card-actions">
-        <Button small onClick={() => setOpen(false)}>
-          {t("forecast.cancel")}
-        </Button>
-        <Button
-          small
-          variant="primary"
-          disabled={save.isPending}
-          onClick={() => save.mutate({ amountMinor, note })}
-        >
-          {t("forecast.saveCall")}
-        </Button>
-      </div>
-    </Card>
+    <Panel
+      title={t("forecast.updateCall")}
+      // Cancel and save both leave this editor, so they stand under what they
+      // act on rather than in the band that names it.
+      actions={
+        <>
+          <Button small onClick={() => setOpen(false)}>
+            {t("forecast.cancel")}
+          </Button>
+          <Button
+            small
+            variant="primary"
+            disabled={save.isPending}
+            onClick={() => save.mutate({ amountMinor, note })}
+          >
+            {t("forecast.saveCall")}
+          </Button>
+        </>
+      }
+    >
+      <PanelBody>
+        {/* Two sentences: what a call is, and what recording one does not do.
+            The head band holds one line, and the half it would cut is the
+            half that says no deal moves. */}
+        <p className="t-sub">{t("forecast.callExplains")}</p>
+        <label className="field">
+          <span>{t("forecast.expectedTotal")}</span>
+          <MoneyInput
+            valueMinor={amountMinor}
+            currency={readings.base_currency}
+            onChangeMinor={(next) => setAmountMinor(next ?? 0)}
+          />
+        </label>
+        <label className="field">
+          <span>{t("forecast.supportingNote")}</span>
+          <TextInput
+            type="text"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </label>
+      </PanelBody>
+    </Panel>
   );
 }

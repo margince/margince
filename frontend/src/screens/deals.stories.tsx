@@ -111,7 +111,26 @@ const withheldDeal = {
   masked_fields: ["amount_minor", "company_id", "partner_company_id"],
 };
 
-function installDealStub(offers: unknown[], record: unknown = deal) {
+// One staged move waiting on this deal's own page: what the confirm-first
+// queue looks like when it has something in it. Every other DealScreen story
+// answers /approvals empty, so the panel is absent from all of them.
+const stagedApproval = {
+  id: "ap-1",
+  kind: "advance_deal",
+  status: "pending",
+  summary: "Move Fleet retrofit to Proposal",
+  proposed_by: "agent:capture",
+  target_entity_type: "deal",
+  target_entity_id: "d1",
+  created_at: "2026-07-01T08:00:00Z",
+  evidence: [],
+};
+
+function installDealStub(
+  offers: unknown[],
+  record: unknown = deal,
+  approvals: unknown[] = [],
+) {
   installFetchStub({
     "GET /deals/d1": () => jsonResponse(record),
     "GET /deals/d1/offers": () =>
@@ -121,7 +140,8 @@ function installDealStub(offers: unknown[], record: unknown = deal) {
       }),
     "GET /deals/d1/stakeholders": () => jsonResponse(emptyPage),
     "GET /pipelines": () => jsonResponse(emptyPage),
-    "GET /approvals": () => jsonResponse(emptyPage),
+    "GET /approvals": () =>
+      jsonResponse({ data: approvals, page: { next_cursor: null } }),
     "GET /activities": () => jsonResponse(emptyPage),
     "GET /records/deal/d1/context": () =>
       jsonResponse({ anchor: { type: "deal", id: "d1" }, sections: [] }),
@@ -148,6 +168,17 @@ export const WithOffers: Story = {
 export const NoOffers: Story = {
   render: () => {
     installDealStub([]);
+    return (
+      <StoryProviders>
+        <DealScreen id="d1" />
+      </StoryProviders>
+    );
+  },
+};
+
+export const PendingApprovals: Story = {
+  render: () => {
+    installDealStub([offer], deal, [stagedApproval]);
     return (
       <StoryProviders>
         <DealScreen id="d1" />

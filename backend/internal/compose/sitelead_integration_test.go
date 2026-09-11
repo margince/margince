@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -285,6 +286,41 @@ func TestSiteLeadAcceptCapturesALeadIdempotentAcrossReReads(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM lead`); n != 1 {
 		t.Fatalf("%d leads after the re-read, want still 1", n)
+	}
+}
+
+// Accepting a name read off a company's website records that the person exists.
+// It does not hand them to the accepter: owning the lead would put a stranger in
+// their "owes a reply" lane and start a first-response clock against somebody
+// who has never written to anyone.
+func TestAnAcceptedSiteLeadIsNobodysUntilAHumanTakesItOn(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	seedRequesterCanReadPeople(t, e, e.Rep1)
+	done, svc := runTeamDeepRead(t, e, company)
+
+	for _, id := range done.ProposalIDs {
+		if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](id), true, nil); err != nil {
+			t.Fatalf("accept %s: %v", id, err)
+		}
+	}
+
+	var owner *ids.UUID
+	var routedAt *time.Time
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT owner_id, routed_at FROM lead WHERE full_name = 'Anna Muster'`).
+			Scan(&owner, &routedAt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if owner != nil {
+		t.Errorf("the accepted lead is owned by %s — accepting a published name is a "+
+			"record that the person exists, not a decision to work them", *owner)
+	}
+	if routedAt != nil {
+		t.Errorf("the accepted lead's response clock started at %s, before anybody "+
+			"took it on", *routedAt)
 	}
 }
 

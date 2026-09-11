@@ -149,6 +149,14 @@ var atRiskRelationshipsCopy = toolCopy{
 		"intro_path_to and who_knows take next.",
 }
 
+// The prebuilt reports exist so a common question costs one call. That is only
+// true if a caller reaching for a number finds them BEFORE it finds the
+// ad-hoc query path, and it stopped being true: asked how much of the logged
+// activity was inbound against outbound — which `activities-by-kind` answers
+// outright — a model went to describe_analytics_vocabulary and composed two
+// queries instead. Correct, three times the work, and around the curation.
+// So the boundary is stated here rather than left to be inferred from which
+// tool sounds more general.
 var runReportCopy = toolCopy{
 	Purpose: "Answer a question about totals, counts or breakdowns — pipeline by stage, deals " +
 		"won by owner, activity volume over time — by running one of this workspace's prebuilt " +
@@ -156,7 +164,10 @@ var runReportCopy = toolCopy{
 	Limits: "Only the named reports exist, each with its own filter, grouping and measure names; " +
 		"anything else is refused. It aggregates: how many and how much, never which record.",
 	Instead: "Use search_records or whats_slipping_this_week when the answer wanted is the " +
-		"records themselves rather than a number over them.",
+		"records themselves rather than a number over them. Reach for run_analytics_query " +
+		"only when NO prebuilt report answers the question: a report already carries the " +
+		"filter and the grouping, so it is one call where a query is a vocabulary lookup " +
+		"and a query.",
 	Retain: "Call a report with no plan first to see its default answer, then narrow with the " +
 		"names its catalog entry lists.",
 }

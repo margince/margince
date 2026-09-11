@@ -212,10 +212,14 @@ func TestThePipelineListAnswersIncludeArchived(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seeding the pipeline to retire: %v", err)
 	}
-	// Aged by SQL because no contract operation archives a pipeline today.
-	// What makes the parameter answerable is the column and the read's filter
-	// on it, and this is the state that filter is about.
-	e.WsExec(t, `UPDATE pipeline SET archived_at = now() WHERE id = $1`, retired.Id)
+	// Through the REAL writer. This used to be aged by raw SQL, because no
+	// contract operation archived a pipeline — the one place in this suite that
+	// could not seed through production, and a row this test shaped itself
+	// proved nothing about the row the product makes.
+	if err := e.Deals.ArchivePipeline(e.Admin(),
+		ids.From[ids.PipelineKind](ids.UUID(retired.Id)), nil); err != nil {
+		t.Fatalf("retiring the pipeline: %v", err)
+	}
 
 	liveOnly, err := e.Deals.ListPipelines(e.Admin(), storekit.LiveOnly)
 	if err != nil {

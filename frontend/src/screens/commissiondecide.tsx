@@ -246,7 +246,7 @@ export function CommissionDecision({
           <p
             className="t-caption"
             role="alert"
-            style={{ color: "var(--danger)" }}
+            style={{ color: "var(--dangerText)" }}
           >
             {mutation.error instanceof ProblemError &&
             isVersionSkew(mutation.error.problem)

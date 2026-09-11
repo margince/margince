@@ -57,6 +57,13 @@
   font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
+  /* The band's own leading, tighter than the body scale: a single line
+     inherits its half-leading as air above and below, and at the reading
+     scale the title and the description together sat low in the 56px the
+     band gives them. Declared here rather than left to inherit, so the pair
+     is centred by the same number on every page whatever text scale the
+     surrounding screen sets. */
+  line-height: 1.25;
 }
 
 /* The title and its description are one stacked item, and that item absorbs the
@@ -73,7 +80,7 @@
   flex-direction: column;
   /* No gap: the two lines' own leading is already the interval between them,
      and inside a fixed band a gap on top of it is what pushes the pair past the
-     band's edges. The stack measures 43px of the 56 the band gives it. */
+     band's edges. The stack measures 35px of the 56 the band gives it. */
   gap: 0;
   min-width: 0;
   margin-right: auto;
@@ -87,6 +94,9 @@
 .panel-head-sub {
   font-size: var(--fs-meta);
   color: var(--textMeta);
+  /* The title's leading, so the two lines of the head are one block set on
+     one interval rather than two lines each spaced by its own rung. */
+  line-height: 1.25;
 }
 
 /* Both lines of the head end in an ellipsis rather than in a second row: the
@@ -190,6 +200,18 @@
   padding: var(--space-5) var(--space-4);
   text-align: center;
   background: var(--bgHover);
+}
+
+/* A state arm standing where full-bleed rows will stand pays the PANE's inset,
+ * because it has no body to pay it. `QueryStates`' ready arm is a list of
+ * `PanelRow`s, which draw to the panel's own edges — so a `PanelBody` around
+ * the read would inset the rows it must not, and the pending and error arms
+ * that share that place printed their sentence hard against the pane's edge.
+ * Named by the pane's role rather than by a rung, so a skeleton reserves the
+ * space at exactly the x the rows it stands in for will use. */
+.panel > .pending,
+.panel > .empty {
+  padding: var(--padPanel);
 }
 
 /* A section heading INSIDE a body has a body's padding above it already, so it
@@ -338,7 +360,7 @@
   border-bottom: 1px solid var(--warnBorder);
 }
 .panel-warn > .panel-head .panel-title {
-  color: var(--warn);
+  color: var(--warnText);
 }
 .panel-warn > .panel-foot {
   border-top-color: var(--warnBorder);

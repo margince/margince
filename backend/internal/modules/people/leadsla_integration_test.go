@@ -207,6 +207,195 @@ func TestLeadQuickFindIncludesExactEmailAndLinkedIn(t *testing.T) {
 	}
 }
 
+// Taking on a lead nobody owned starts its response clock.
+//
+// The clock reads COALESCE(routed_at, created_at), so without the stamp a lead
+// that sat unowned for a week is a week overdue the instant somebody picks it
+// up — they inherit a breach earned while the row was nobody's. That is the
+// state a website read leaves behind, which is why it matters now.
+func TestTakingOnAnUnownedLeadStartsItsResponseClock(t *testing.T) {
+	e := setupPromoteConsent(t)
+	id := ids.NewV7()
+	weekAgo := time.Now().UTC().Add(-7 * 24 * time.Hour)
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO lead (id, full_name, email, status, source, captured_by, owner_id, created_at)
+		 VALUES ($1, 'Found On A Website', 'found@example.test', 'new', 'siteread', 'agent:siteread', NULL, $2)`,
+		id, weekAgo); err != nil {
+		t.Fatal(err)
+	}
+	leadID := ids.From[ids.LeadKind](id)
+
+	owner := ids.From[ids.UserKind](e.user)
+	after, err := e.store.UpdateLead(e.ctx, leadID, UpdateLeadInput{OwnerID: &owner})
+	if err != nil {
+		t.Fatalf("assigning the lead: %v", err)
+	}
+	if after.RoutedAt == nil {
+		t.Fatal("assigning an unowned lead left routed_at unset, so its deadline is " +
+			"still measured from a creation date nobody was answerable for")
+	}
+	if after.RoutedAt.Before(weekAgo.Add(time.Hour)) {
+		t.Errorf("routed_at = %s, want roughly now — the clock starts when somebody "+
+			"takes the lead on, not when the crawler found it", *after.RoutedAt)
+	}
+
+	// A reassignment between people keeps the ORIGINAL clock: the customer has
+	// been waiting since we took the lead on, and passing it along is not an
+	// answer.
+	first := *after.RoutedAt
+	colleague := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'A Colleague')`,
+		colleague, "colleague-"+colleague.String()+"@example.test"); err != nil {
+		t.Fatal(err)
+	}
+	second := ids.From[ids.UserKind](colleague)
+	again, err := e.store.UpdateLead(e.ctx, leadID, UpdateLeadInput{OwnerID: &second})
+	if err != nil {
+		t.Fatalf("reassigning the lead: %v", err)
+	}
+	if again.RoutedAt == nil || !again.RoutedAt.Equal(first) {
+		t.Errorf("a reassignment moved routed_at to %v, want it held at %s",
+			again.RoutedAt, first)
+	}
+}
+
+// The "Take ownership" button starts the clock too.
+//
+// It is a different writer from an owner assignment — ClaimRecord updates
+// owner_id alone — and stamping only the update path left the button, which is
+// how a rep actually picks a lead up, handing them a deadline measured from the
+// day a crawler found the name.
+func TestClaimingAnUnownedLeadStartsItsResponseClock(t *testing.T) {
+	e := setupPromoteConsent(t)
+	id := ids.NewV7()
+	weekAgo := time.Now().UTC().Add(-7 * 24 * time.Hour)
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO lead (id, full_name, email, status, source, captured_by, owner_id, created_at)
+		 VALUES ($1, 'Found On A Website', 'claimed@example.test', 'new', 'siteread', 'agent:siteread', NULL, $2)`,
+		id, weekAgo); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.ClaimRecord(e.ctx, "lead", id, nil); err != nil {
+		t.Fatalf("claiming the lead: %v", err)
+	}
+
+	var routedAt *time.Time
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT routed_at FROM lead WHERE id = $1`, id).Scan(&routedAt); err != nil {
+		t.Fatal(err)
+	}
+	if routedAt == nil {
+		t.Fatal("claiming an unowned lead left routed_at unset, so its deadline is " +
+			"still measured from the day the crawler found the name")
+	}
+	if routedAt.Before(weekAgo.Add(time.Hour)) {
+		t.Errorf("routed_at = %s, want roughly now", *routedAt)
+	}
+}
+
+// A lead nobody ASKED US FOR owes no reply, so the breach scan must leave it
+// alone.
+//
+// Escalating one wrote sla_breached_at and minted a task for an intake owner
+// over a first response that was never promised. Suppressing the lead.created
+// automations does not reach this path: it runs on a timer, not on the event.
+//
+// The narrowing is by SOURCE, and the two premise guards are what hold that
+// apart from the ownership question. An owned lead of the same age must still
+// breach, or this passes against an SLA that escalates nothing at all — and an
+// UNOWNED INBOUND lead must breach too, because that is the row the configured
+// intake seat answers for and the row an ownership narrowing drops in silence.
+func TestALeadNobodyAskedForIsNotEscalatedForAFirstResponse(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	id := ids.NewV7()
+	longAgo := time.Now().UTC().Add(-30 * 24 * time.Hour)
+	// BOTH columns, because the shipped siteread accept writes both: the natural
+	// key's source system, which is what the kernel's rule reads, and the
+	// administered vocabulary value beside it that the scorer weighs.
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO lead (id, full_name, email, status, source, source_system, captured_by, owner_id, created_at)
+		 VALUES ($1, 'Found On A Website', 'unowned@example.test', 'new', 'siteread', 'siteread', 'agent:siteread', NULL, $2)`,
+		id, longAgo); err != nil {
+		t.Fatal(err)
+	}
+	owned := e.seedLeadCreatedAt(t, "owned@example.test", longAgo)
+	inbound := e.seedOwnerlessLeadCreatedAt(t, "inbound@example.test", longAgo)
+
+	breached, err := e.store.ScanLeadSLA(e.ctx, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("scanning: %v", err)
+	}
+	var sawSiteRead, sawOwned, sawInbound bool
+	for _, b := range breached {
+		switch {
+		case b.LeadID.UUID == id:
+			sawSiteRead = true
+		case b.LeadID == owned:
+			sawOwned = true
+		case b.LeadID == inbound:
+			sawInbound = true
+		}
+	}
+	if sawSiteRead {
+		t.Error("a name read off a website was escalated for a first response nobody asked for")
+	}
+	if !sawOwned {
+		t.Error("no owned lead breached either, so this proves nothing about the source arm")
+	}
+	if !sawInbound {
+		t.Error("an unowned INBOUND lead was dropped as well: that is the row the intake " +
+			"seat exists to answer for, and narrowing by ownership is how it goes missing")
+	}
+}
+
+// Taking a lead on clears the breach it earned while it was nobody's.
+//
+// An unowned inbound lead nobody answers breaches to the intake seat, which
+// stamps sla_breached_at. Picking it up starts a NEW deadline from routed_at,
+// and the scan admits only `sla_breached_at IS NULL` — so the old stamp would
+// make that fresh promise unbreachable, and the rep who took the lead on could
+// go quiet for a month with nobody told.
+func TestTakingOnALeadClearsTheBreachItEarnedWhileUnowned(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	e.nameIntakeSeat(t, e.user)
+	lead := e.seedOwnerlessLeadCreatedAt(t, "picked-up@example.test",
+		time.Now().UTC().Add(-DefaultFirstResponseTarget-time.Hour))
+
+	if _, err := e.store.ScanLeadSLA(e.ctx, time.Now().UTC()); err != nil {
+		t.Fatalf("the scan that breaches it while unowned: %v", err)
+	}
+	if e.breachStampOf(t, lead) == nil {
+		t.Fatal("the unowned lead never breached, so this proves nothing about clearing the stamp")
+	}
+
+	if _, err := e.store.ClaimRecord(e.ctx, "lead", lead.UUID, nil); err != nil {
+		t.Fatalf("taking the lead on: %v", err)
+	}
+	if stamp := e.breachStampOf(t, lead); stamp != nil {
+		t.Errorf("the breach stamp survived the pickup (%s), so the new deadline can never breach", *stamp)
+	}
+
+	// And the fresh promise can be broken, which is what the cleared stamp buys:
+	// asserting the column alone would pass against a scan that had stopped
+	// reading the row for some other reason.
+	breached, err := e.store.ScanLeadSLA(e.ctx, time.Now().UTC().Add(DefaultFirstResponseTarget+time.Hour))
+	if err != nil {
+		t.Fatalf("the scan past the new deadline: %v", err)
+	}
+	var saw bool
+	for _, b := range breached {
+		if b.LeadID == lead {
+			saw = true
+		}
+	}
+	if !saw {
+		t.Error("the picked-up lead never breached again, so nobody is told the rep who took it on went quiet")
+	}
+}
+
 // A human moving the lead off `new` is a first response; the stamp is set
 // once and a later status change does not move it. Disqualifying an
 // unanswered lead is an explicit disposition and stamps it too.
@@ -448,6 +637,19 @@ func (e *promoteConsentEnv) seedOwnerlessLeadCreatedAt(t *testing.T, email strin
 		t.Fatal(err)
 	}
 	return ids.From[ids.LeadKind](id)
+}
+
+// breachStampOf reads the column the scan itself admits on, which is why
+// clearing it matters: a row carrying one is a row the sweep never looks at
+// again, however overdue it becomes.
+func (e *promoteConsentEnv) breachStampOf(t *testing.T, lead ids.LeadID) *time.Time {
+	t.Helper()
+	var at *time.Time
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT sla_breached_at FROM lead WHERE id = $1`, lead.UUID).Scan(&at); err != nil {
+		t.Fatalf("reading the breach stamp: %v", err)
+	}
+	return at
 }
 
 func (e *promoteConsentEnv) breachTargetOf(t *testing.T, lead ids.LeadID) *string {

@@ -322,7 +322,7 @@ func (s *Store) withdrawPurposesTx(
 		key = normalizedPurposeKey(key)
 		if LockedPurpose(key) {
 			return nil, &ValidationError{
-				Field:  "purpose",
+				Field:  fieldKeyPurpose,
 				Reason: "transactional consent is locked and cannot be withdrawn",
 			}
 		}
