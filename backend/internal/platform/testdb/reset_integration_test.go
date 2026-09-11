@@ -543,8 +543,9 @@ func TestResetEmptiesAnExtensionTable(t *testing.T) {
 //
 // DERIVED, not restated. A database that has only just been migrated holds
 // exactly the rows the migrations put there, so the tables holding rows ARE the
-// boot-seeded ones — no second list to keep in step, and a new seeded table
-// fails here the day it lands rather than the day somebody reads a lane log.
+// boot-seeded ones. The obligation comes from the schema itself rather than
+// from a list somebody has to update, so a new seeded table fails here the day
+// it lands rather than the day somebody reads a lane log.
 //
 // One direction only. A listed table that is empty is not a finding: a
 // reference catalog seeded later by the application, or one whose rows a
