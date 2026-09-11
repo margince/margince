@@ -110,6 +110,12 @@ const projectQuickFindExpr = `(coalesce(name,'') || ' ' || coalesce(key,''))`
 // two are equal by coincidence, not by rule.
 const projectNameField = "name"
 
+// The two columns the list draws that it did not sort by.
+const (
+	projectPhaseColumn = "phase"
+	projectOrgColumn   = "organization_id"
+)
+
 // projectListFields is the project list's core sortable vocabulary.
 var projectListFields = map[string]storekit.SortField{
 	"created_at":        storekit.Column(storekit.KindTimestamp),
@@ -122,6 +128,65 @@ var projectListFields = map[string]storekit.SortField{
 	// the row like any other, so the refusal was the vocabulary's omission
 	// rather than anything about the field.
 	filterOwnerID: storekit.Column(storekit.KindUUID),
+	// The Phase header, by how LIVE the work is rather than by the word.
+	// phaseRank is the account page's own arrangement, read here so the two
+	// surfaces cannot disagree about which phase comes first.
+	projectPhaseColumn: {Kind: fieldcatalog.TypeNumber, Expr: orderByPhase},
+	// The Company header. A project names one account and the reader may not
+	// see every account, so the same rule the deals list applies holds here:
+	// ordering by a name is reading it, and a company outside this caller's
+	// scope orders the page by nothing.
+	projectOrgColumn: {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompany},
+}
+
+// companyGrantVisible answers whether this caller holds the OBJECT half of
+// organization.read. A system principal holds every object grant by
+// construction; a seat holds what its role was given.
+func companyGrantVisible(ctx context.Context) bool {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return false
+	}
+	if actor.Type == principal.PrincipalSystem {
+		return true
+	}
+	return actor.Permissions.Allows("organization", principal.ActionRead)
+}
+
+// orderByPhase arranges projects the way the account page already arranges
+// them (phaseRank), rather than by the phase word.
+func orderByPhase(context.Context, func(any) int) (string, error) {
+	return phaseRank("project"), nil
+}
+
+// orderByReadableCompany orders by the customer's name, and by NOTHING for a
+// company this caller may not read.
+//
+// Ordering by a value is reading it, so BOTH halves of RBAC bound it. The
+// object grant first: auth.ScopeClauseFor answers row visibility and never
+// asks whether this caller may read organizations at all, so a seat holding
+// project.read and no organization.read would otherwise have its page arranged
+// by company names it is refused on every other surface.
+//
+// Then the row scope, INSIDE the subquery: a company outside it answers NULL,
+// which the ORDER BY already puts last, and those projects land in the tail
+// together saying nothing about which account they name — the same answer the
+// row gives when it withholds the reference.
+func orderByReadableCompany(ctx context.Context, arg func(any) int) (string, error) {
+	if !companyGrantVisible(ctx) {
+		// Ordered by nothing: every row sits in the tail and the page falls
+		// back to its tie-breaker.
+		return "NULL::text", nil
+	}
+	scope, err := auth.ScopeClauseFor(ctx, "organization", "org_sort", arg)
+	if err != nil {
+		return "", err
+	}
+	if scope != "" {
+		scope = " AND " + scope
+	}
+	return `(SELECT org_sort.display_name FROM organization org_sort
+	          WHERE org_sort.id = project.` + projectOrgColumn + scope + `)`, nil
 }
 
 // ListProjects answers one page under the caller's row scope.

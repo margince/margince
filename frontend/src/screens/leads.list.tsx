@@ -52,7 +52,7 @@ import {
 } from "./listquery";
 import {
   createdColumn,
-  lastActivityCell,
+  lastActivityColumn,
   mineEmptyNote,
   ownerColumn,
   standardViews,
@@ -417,6 +417,7 @@ function LeadsWorkbench({
           {
             key: "status",
             header: t("lead.status"),
+            sort: "status",
             cell: (lead: Lead) => (
               <span
                 style={{
@@ -433,6 +434,8 @@ function LeadsWorkbench({
           {
             key: "nextTask",
             header: t("lead.nextTask"),
+            sort: "next_task_due_at", // the deadline, not the title
+
             cell: (lead: Lead) => (
               <span className="t-caption">
                 {lead.next_task_subject ?? t("lead.noNextTask")}
@@ -447,16 +450,13 @@ function LeadsWorkbench({
               </span>
             ),
           },
-          {
-            // The CELL, not the shared column: a lead's last activity is
-            // DERIVED (see lastActivityCell), so this header offers no sort.
-            key: "lastActivity",
-            header: t("list.lastActivity"),
-            cell: lastActivityCell<Lead>(locale, recordZone),
-          },
+          // The shared column, now that this header can offer a sort.
+          lastActivityColumn<Lead>(t, locale, recordZone),
           {
             key: "source",
             header: t("lead.source"),
+            sort: "source", // the catalog's label, which is what the cell prints
+
             cell: (lead: Lead) => (
               <span className="t-caption">
                 {sourceLabelFor(lead, sources.data?.data, t)}

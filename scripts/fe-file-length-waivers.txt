@@ -81,7 +81,7 @@
 965 frontend/src/screens/integrations-provider.tsx
 629 frontend/src/screens/knowledge.tsx
 562 frontend/src/screens/leadpresentation.tsx
-649 frontend/src/screens/leads.list.tsx
+648 frontend/src/screens/leads.list.tsx
 2833 frontend/src/screens/leads.test.tsx
 2185 frontend/src/screens/leads.tsx
 906 frontend/src/screens/leadvocab.tsx
