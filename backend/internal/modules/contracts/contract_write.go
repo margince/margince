@@ -270,8 +270,10 @@ func refuseRepricingAFrozenContract(existing crmcontracts.Contract, in crmcontra
 	if existing.Currency != nil && *existing.Currency == *in.Currency {
 		return nil
 	}
-	return &ContractCheckError{Field: "currency",
-		Reason: "a contract's currency is fixed once it leaves draft, because activation freezes its conversion; record a new contract to change it"}
+	return &ContractCheckError{
+		Field:  "currency",
+		Reason: "a contract's currency is fixed once it leaves draft, because activation freezes its conversion; record a new contract to change it",
+	}
 }
 
 // contractPatch turns the decoded body into a patch. The generated request

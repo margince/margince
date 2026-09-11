@@ -5,8 +5,8 @@ package webhooks
 
 import (
 	"context"
-	"fmt"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 

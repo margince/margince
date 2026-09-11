@@ -12,12 +12,15 @@ package identity
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ListRecordGrants answers one page of the active manual grants.
@@ -135,6 +138,15 @@ func visibleGrants(ctx context.Context, tx pgx.Tx, candidates []grantRow) ([]gra
 	}
 	readable := make(map[string]map[ids.UUID]bool, len(byType))
 	for recordType, recordIDs := range byType {
+		// The object grant is this list's decision, so it is asked here rather
+		// than left to the subset below, which only omits: a type the seat may not
+		// read contributes no share at all.
+		if err := auth.Require(ctx, recordType, principal.ActionRead); err != nil {
+			if errors.Is(err, apperrors.ErrPermissionDenied) {
+				continue
+			}
+			return nil, err
+		}
 		subset, err := auth.VisibleSubset(ctx, tx, recordType, recordIDs)
 		if err != nil {
 			return nil, err
