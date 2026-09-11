@@ -30,6 +30,14 @@ refuses() {
 		printf 'FAIL: %q was refused without saying what it costs: %s\n' "$version" "$out"
 		FAILURES=$((FAILURES + 1))
 	fi
+	# And the message must state the rule this guard actually applies. It
+	# claimed the YYYY.edition scheme once, which this does not check — a
+	# refusal naming a requirement it does not enforce sends a release engineer
+	# to satisfy the wrong thing while the release is already blocked.
+	if [[ "$out" != *"non-empty"* || "$out" != *"'dev'"* ]]; then
+		printf 'FAIL: %q was refused without naming the two values it refuses: %s\n' "$version" "$out"
+		FAILURES=$((FAILURES + 1))
+	fi
 }
 
 # stamps <version> — a real release version passes through unchanged, because

@@ -29,7 +29,10 @@ case "$version" in
 	echo "  Every role reads that as 'this build carries no release version', so the" >&2
 	echo "  published set would carry no mixed-release guard: each role would start" >&2
 	echo "  against any other release rather than refusing a torn tag pull." >&2
-	echo "  VERSION must be the drafted release (the YYYY.edition scheme)." >&2
+	echo "  VERSION must be non-empty and must not be 'dev' — those two are what" >&2
+	echo "  every role reads as 'no release version'. The release workflow supplies" >&2
+	echo "  the drafted release here; any other stable identifier would pass this" >&2
+	echo "  guard, because the roles compare for equality and never for order." >&2
 	exit 1
 	;;
 esac
