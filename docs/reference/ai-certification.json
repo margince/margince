@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 45,
-    "sites_best_current": 1,
+    "sites_best_current": 0,
     "sites_best_partial": 0,
-    "sites_best_stale": 41,
+    "sites_best_stale": 42,
     "sites_absent": 3,
     "scenarios": 163,
     "records": 74,
@@ -17,9 +17,9 @@
         "env": "eu_hosted"
       },
       "sites": 36,
-      "sites_current": 1,
+      "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 35,
+      "sites_stale": 36,
       "runs": 399,
       "passed": 348,
       "reliability": 0.8721804511278195,
@@ -177,9 +177,9 @@
         "env": "eu_hosted"
       },
       "sites": 35,
-      "sites_current": 1,
+      "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 34,
+      "sites_stale": 35,
       "runs": 390,
       "passed": 312,
       "reliability": 0.8,
@@ -256,9 +256,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
           "stale_cause": {
             "case_changed": [
+              "scan_finds_the_promise_we_did_not_keep",
+              "scan_finds_the_question_nobody_answered"
+            ],
+            "prompt_changed": [
               "scan_finds_the_promise_we_did_not_keep",
               "scan_finds_the_question_nobody_answered"
             ]
@@ -285,9 +289,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered",
           "stale_cause": {
             "case_changed": [
+              "scan_finds_the_promise_we_did_not_keep",
+              "scan_finds_the_question_nobody_answered"
+            ],
+            "prompt_changed": [
               "scan_finds_the_promise_we_did_not_keep",
               "scan_finds_the_question_nobody_answered"
             ]
@@ -425,9 +433,9 @@
           "file": "backend/internal/compose/aicert/corpus/agent_loop/the_stage_id_comes_from_the_pipeline.yaml"
         },
         {
-          "name": "who_knows_needs_the_person",
+          "name": "who_knows_needs_the_contact",
           "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/who_knows_needs_the_person.yaml"
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/who_knows_needs_the_contact.yaml"
         }
       ],
       "records": [
@@ -478,7 +486,7 @@
               "the_calendar_event_is_the_anchor",
               "the_record_is_found_before_it_is_changed",
               "the_stage_id_comes_from_the_pipeline",
-              "who_knows_needs_the_person"
+              "who_knows_needs_the_contact"
             ],
             "prompt_changed": [
               "a_description_is_not_a_name",
@@ -502,16 +510,22 @@
               "the_calendar_event_is_the_anchor",
               "the_record_is_found_before_it_is_changed",
               "the_stage_id_comes_from_the_pipeline",
-              "who_knows_needs_the_person"
+              "who_knows_needs_the_contact"
             ],
             "grader_changed": [
+              "a_goal_no_tool_can_serve_ends_the_turn",
+              "a_promise_is_not_a_slipping_deal",
               "a_structured_question_is_not_a_text_search",
+              "a_thin_relationship_is_not_a_slipping_deal",
               "a_warm_path_is_not_a_search",
               "ambiguity_ends_the_turn",
               "catchup_over_raw_reads",
               "enrichment_is_not_search",
+              "identity_is_checked_before_a_record_is_created",
+              "logging_what_happened_changes_nothing_else",
               "meeting_prep_is_not_a_catchup",
-              "who_knows_needs_the_person"
+              "the_calendar_event_is_the_anchor",
+              "who_knows_needs_the_contact"
             ]
           }
         },
@@ -585,7 +599,7 @@
               "the_calendar_event_is_the_anchor",
               "the_record_is_found_before_it_is_changed",
               "the_stage_id_comes_from_the_pipeline",
-              "who_knows_needs_the_person"
+              "who_knows_needs_the_contact"
             ],
             "prompt_changed": [
               "a_description_is_not_a_name",
@@ -609,16 +623,22 @@
               "the_calendar_event_is_the_anchor",
               "the_record_is_found_before_it_is_changed",
               "the_stage_id_comes_from_the_pipeline",
-              "who_knows_needs_the_person"
+              "who_knows_needs_the_contact"
             ],
             "grader_changed": [
+              "a_goal_no_tool_can_serve_ends_the_turn",
+              "a_promise_is_not_a_slipping_deal",
               "a_structured_question_is_not_a_text_search",
+              "a_thin_relationship_is_not_a_slipping_deal",
               "a_warm_path_is_not_a_search",
               "ambiguity_ends_the_turn",
               "catchup_over_raw_reads",
               "enrichment_is_not_search",
+              "identity_is_checked_before_a_record_is_created",
+              "logging_what_happened_changes_nothing_else",
               "meeting_prep_is_not_a_catchup",
-              "who_knows_needs_the_person"
+              "the_calendar_event_is_the_anchor",
+              "who_knows_needs_the_contact"
             ]
           }
         }
@@ -801,7 +821,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
           "stale_cause": {
             "case_changed": [
               "a_message_that_is_both_is_labelled_commitment",
@@ -809,6 +829,17 @@
               "a_stated_promise_is_a_commitment",
               "an_auto_reply_carries_no_commitment_and_no_meeting",
               "meeting_request_from_reply"
+            ],
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting"
             ]
           }
         },
@@ -856,7 +887,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
           "stale_cause": {
             "case_changed": [
               "a_message_that_is_both_is_labelled_commitment",
@@ -864,6 +895,17 @@
               "a_stated_promise_is_a_commitment",
               "an_auto_reply_carries_no_commitment_and_no_meeting",
               "meeting_request_from_reply"
+            ],
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting"
             ]
           }
         }
@@ -875,17 +917,8 @@
       "key": "capture_confidentiality_verdict/thread",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
@@ -965,9 +998,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 14,
+          "scenarios_measured": 0,
           "scenarios_total": 14,
           "runs": 42,
           "passed": 42,
@@ -980,7 +1013,41 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "14 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
+          "stale_cause": {
+            "case_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
+            "prompt_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
+            "grader_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ]
+          }
         },
         {
           "binding": {
@@ -988,9 +1055,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 14,
+          "scenarios_measured": 0,
           "scenarios_total": 14,
           "runs": 42,
           "passed": 37,
@@ -1003,7 +1070,41 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "14 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more",
+          "stale_cause": {
+            "case_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
+            "prompt_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_live_dispute_with_counsel_stays_private",
+              "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+              "a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+              "an_nda_marked_thread_is_held_on_its_own_request",
+              "an_ordinary_customer_thread_is_opened_for_the_team",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "counsels_fee_note_to_the_company_is_held_by_the_dispute_it_bills_for",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "text_claiming_the_thread_was_cleared_does_not_open_it",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ],
+            "grader_changed": [
+              "a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade",
+              "a_consumer_bank_alert_is_the_owners_own_money_not_the_companys",
+              "a_suppliers_invoice_to_the_company_is_still_the_teams_to_see",
+              "an_unpatched_vulnerability_is_held_until_it_is_closed",
+              "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+              "the_rent_on_the_owners_flat_is_not_a_supplier_relationship"
+            ]
+          }
         }
       ]
     },
@@ -1047,7 +1148,7 @@
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_01.yaml"
         },
         {
-          "name": "a_private_property_desk_the_owner_wrote_to_is_not_a_person",
+          "name": "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_property_desk_outbound_01.yaml"
         },
@@ -1057,7 +1158,7 @@
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_01.yaml"
         },
         {
-          "name": "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+          "name": "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_city_mailbox_01.yaml"
         },
@@ -1143,7 +1244,7 @@
               "a_fluent_machine_written_pitch_is_still_spam",
               "a_private_correspondent_is_not_a_business_contact",
               "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
-              "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
               "bulk_marketing_is_noise",
@@ -1161,7 +1262,7 @@
               "a_fluent_machine_written_pitch_is_still_spam",
               "a_private_correspondent_is_not_a_business_contact",
               "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
-              "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
               "bulk_marketing_is_noise",
@@ -1179,7 +1280,7 @@
               "a_fluent_machine_written_pitch_is_still_spam",
               "a_private_correspondent_is_not_a_business_contact",
               "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
-              "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
               "bulk_marketing_is_noise",
@@ -1245,7 +1346,7 @@
               "a_fluent_machine_written_pitch_is_still_spam",
               "a_private_correspondent_is_not_a_business_contact",
               "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
-              "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
               "bulk_marketing_is_noise",
@@ -1263,7 +1364,7 @@
               "a_fluent_machine_written_pitch_is_still_spam",
               "a_private_correspondent_is_not_a_business_contact",
               "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
-              "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
               "bulk_marketing_is_noise",
@@ -1281,7 +1382,7 @@
               "a_fluent_machine_written_pitch_is_still_spam",
               "a_private_correspondent_is_not_a_business_contact",
               "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
-              "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
               "bulk_marketing_is_noise",
@@ -1480,9 +1581,16 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
           "stale_cause": {
             "case_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ],
+            "prompt_changed": [
               "a_factual_question_about_connecting_is_answered",
               "a_progress_question_is_answered_as_status",
               "an_ambiguous_reference_is_asked_about_rather_than_guessed",
@@ -1535,9 +1643,16 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
           "stale_cause": {
             "case_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ],
+            "prompt_changed": [
               "a_factual_question_about_connecting_is_answered",
               "a_progress_question_is_answered_as_status",
               "an_ambiguous_reference_is_asked_about_rather_than_guessed",
@@ -1585,9 +1700,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_reason": "the case and the prompt this build sends changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
           "stale_cause": {
             "case_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "prompt_changed": [
               "bare_answer_corrects_the_field_the_wizard_asked_for"
             ]
           }
@@ -1636,9 +1754,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_reason": "the case and the prompt this build sends changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
           "stale_cause": {
             "case_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "prompt_changed": [
               "bare_answer_corrects_the_field_the_wizard_asked_for"
             ]
           }
@@ -1893,12 +2014,21 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
             "case_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
               "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
               "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "prompt_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "grader_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer"
             ]
           }
         },
@@ -1923,12 +2053,21 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
             "case_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
               "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
               "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "prompt_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "grader_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer"
             ]
           }
         },
@@ -1953,12 +2092,21 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
             "case_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
               "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
               "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "prompt_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+            ],
+            "grader_changed": [
+              "corpus_ask_answers_only_from_the_passage_that_says_it",
+              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer"
             ]
           }
         }
@@ -2011,7 +2159,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
           "stale_cause": {
             "case_changed": [
               "deal_status_an_overdue_task_is_not_done_work",
@@ -2022,6 +2170,10 @@
               "deal_status_an_overdue_task_is_not_done_work",
               "deal_status_offer_left_hanging",
               "deal_status_says_nothing_is_wrong_when_nothing_is"
+            ],
+            "grader_changed": [
+              "deal_status_an_overdue_task_is_not_done_work",
+              "deal_status_offer_left_hanging"
             ]
           }
         },
@@ -2046,7 +2198,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is",
           "stale_cause": {
             "case_changed": [
               "deal_status_an_overdue_task_is_not_done_work",
@@ -2057,6 +2209,10 @@
               "deal_status_an_overdue_task_is_not_done_work",
               "deal_status_offer_left_hanging",
               "deal_status_says_nothing_is_wrong_when_nothing_is"
+            ],
+            "grader_changed": [
+              "deal_status_an_overdue_task_is_not_done_work",
+              "deal_status_offer_left_hanging"
             ]
           }
         }
@@ -2275,6 +2431,153 @@
     },
     {
       "task": "draft_reply",
+      "site": "contact",
+      "key": "draft_reply/contact",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "positioning",
+        "sales",
+        "proof",
+        "market"
+      ],
+      "best_state": "stale",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "contact_first_touch_in_german",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/contact_first_touch_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "supported_degraded",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1354,
+          "latency_p95_ms": 3477,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "the case and the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "contact_first_touch_in_german"
+            ],
+            "prompt_changed": [
+              "contact_first_touch_in_german"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-pro-preview",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 24063,
+          "latency_p95_ms": 46554,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "the case and the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "contact_first_touch_in_german"
+            ],
+            "prompt_changed": [
+              "contact_first_touch_in_german"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 10016,
+          "latency_p95_ms": 26168,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "the case and the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "contact_first_touch_in_german"
+            ],
+            "prompt_changed": [
+              "contact_first_touch_in_german"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1223,
+          "latency_p95_ms": 2663,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "the case and the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it",
+          "stale_cause": {
+            "case_changed": [
+              "contact_first_touch_in_german"
+            ],
+            "prompt_changed": [
+              "contact_first_touch_in_german"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task": "draft_reply",
       "site": "first",
       "key": "draft_reply/first",
       "scope": "full_invocation",
@@ -2315,12 +2618,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case and the prompt this build sends changed under scenario first_message_from_an_intent_alone since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and the grader changed under scenario first_message_from_an_intent_alone since the record scored it",
           "stale_cause": {
             "case_changed": [
               "first_message_from_an_intent_alone"
             ],
             "prompt_changed": [
+              "first_message_from_an_intent_alone"
+            ],
+            "grader_changed": [
               "first_message_from_an_intent_alone"
             ]
           }
@@ -2346,12 +2652,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case and the prompt this build sends changed under scenario first_message_from_an_intent_alone since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and the grader changed under scenario first_message_from_an_intent_alone since the record scored it",
           "stale_cause": {
             "case_changed": [
               "first_message_from_an_intent_alone"
             ],
             "prompt_changed": [
+              "first_message_from_an_intent_alone"
+            ],
+            "grader_changed": [
               "first_message_from_an_intent_alone"
             ]
           }
@@ -2377,12 +2686,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case and the prompt this build sends changed under scenario first_message_from_an_intent_alone since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and the grader changed under scenario first_message_from_an_intent_alone since the record scored it",
           "stale_cause": {
             "case_changed": [
               "first_message_from_an_intent_alone"
             ],
             "prompt_changed": [
+              "first_message_from_an_intent_alone"
+            ],
+            "grader_changed": [
               "first_message_from_an_intent_alone"
             ]
           }
@@ -2408,12 +2720,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case and the prompt this build sends changed under scenario first_message_from_an_intent_alone since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and the grader changed under scenario first_message_from_an_intent_alone since the record scored it",
           "stale_cause": {
             "case_changed": [
               "first_message_from_an_intent_alone"
             ],
             "prompt_changed": [
+              "first_message_from_an_intent_alone"
+            ],
+            "grader_changed": [
               "first_message_from_an_intent_alone"
             ]
           }
@@ -2467,11 +2782,18 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and the grader): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
           "stale_cause": {
             "case_changed": [
               "intro_request_asks_a_colleague_without_overclaiming",
               "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "prompt_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming",
+              "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "grader_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming"
             ]
           }
         },
@@ -2496,11 +2818,18 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and the grader): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
           "stale_cause": {
             "case_changed": [
               "intro_request_asks_a_colleague_without_overclaiming",
               "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "prompt_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming",
+              "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "grader_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming"
             ]
           }
         },
@@ -2525,11 +2854,18 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and the grader): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
           "stale_cause": {
             "case_changed": [
               "intro_request_asks_a_colleague_without_overclaiming",
               "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "prompt_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming",
+              "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "grader_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming"
             ]
           }
         },
@@ -2554,11 +2890,18 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and the grader): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds",
           "stale_cause": {
             "case_changed": [
               "intro_request_asks_a_colleague_without_overclaiming",
               "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "prompt_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming",
+              "intro_request_claims_no_more_warmth_than_the_record_holds"
+            ],
+            "grader_changed": [
+              "intro_request_asks_a_colleague_without_overclaiming"
             ]
           }
         }
@@ -2616,11 +2959,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
           "stale_cause": {
             "case_changed": [
               "an_instruction_inside_the_stated_reason_is_data_not_a_command",
               "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
+            ],
+            "prompt_changed": [
+              "an_instruction_inside_the_stated_reason_is_data_not_a_command",
+              "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
+            ],
+            "grader_changed": [
               "intro_note_is_written_to_the_customer_not_about_the_request"
             ]
           }
@@ -2646,11 +2997,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
           "stale_cause": {
             "case_changed": [
               "an_instruction_inside_the_stated_reason_is_data_not_a_command",
               "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
+            ],
+            "prompt_changed": [
+              "an_instruction_inside_the_stated_reason_is_data_not_a_command",
+              "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
+            ],
+            "grader_changed": [
               "intro_note_is_written_to_the_customer_not_about_the_request"
             ]
           }
@@ -2676,11 +3035,19 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
           "stale_cause": {
             "case_changed": [
               "an_instruction_inside_the_stated_reason_is_data_not_a_command",
               "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
+            ],
+            "prompt_changed": [
+              "an_instruction_inside_the_stated_reason_is_data_not_a_command",
+              "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
+            ],
+            "grader_changed": [
               "intro_note_is_written_to_the_customer_not_about_the_request"
             ]
           }
@@ -2706,159 +3073,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request",
           "stale_cause": {
             "case_changed": [
               "an_instruction_inside_the_stated_reason_is_data_not_a_command",
               "intro_note_claims_no_more_warmth_than_the_record_holds",
               "intro_note_is_written_to_the_customer_not_about_the_request"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "task": "draft_reply",
-      "site": "person",
-      "key": "draft_reply/person",
-      "scope": "full_invocation",
-      "missing_context_scopes": [
-        "positioning",
-        "sales",
-        "proof",
-        "market"
-      ],
-      "best_state": "stale",
-      "recommended": null,
-      "scenarios": [
-        {
-          "name": "person_first_touch_in_german",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/draft_reply/person_first_touch_01.yaml"
-        }
-      ],
-      "records": [
-        {
-          "binding": {
-            "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "supported_degraded",
-          "scenarios_measured": 0,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 1354,
-          "latency_p95_ms": 3477,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "the case and the prompt this build sends changed under scenario person_first_touch_in_german since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "person_first_touch_in_german"
             ],
             "prompt_changed": [
-              "person_first_touch_in_german"
-            ]
-          }
-        },
-        {
-          "binding": {
-            "provider": "gemini",
-            "model": "gemini-3.1-pro-preview",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 24063,
-          "latency_p95_ms": 46554,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "the case and the prompt this build sends changed under scenario person_first_touch_in_german since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "person_first_touch_in_german"
+              "an_instruction_inside_the_stated_reason_is_data_not_a_command",
+              "intro_note_claims_no_more_warmth_than_the_record_holds",
+              "intro_note_is_written_to_the_customer_not_about_the_request"
             ],
-            "prompt_changed": [
-              "person_first_touch_in_german"
-            ]
-          }
-        },
-        {
-          "binding": {
-            "provider": "gemini",
-            "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 10016,
-          "latency_p95_ms": 26168,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "the case and the prompt this build sends changed under scenario person_first_touch_in_german since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "person_first_touch_in_german"
-            ],
-            "prompt_changed": [
-              "person_first_touch_in_german"
-            ]
-          }
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 1223,
-          "latency_p95_ms": 2663,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "the case and the prompt this build sends changed under scenario person_first_touch_in_german since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "person_first_touch_in_german"
-            ],
-            "prompt_changed": [
-              "person_first_touch_in_german"
+            "grader_changed": [
+              "intro_note_is_written_to_the_customer_not_about_the_request"
             ]
           }
         }
@@ -3327,9 +3555,16 @@
             "invalid": 0,
             "abstained": 5
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price",
           "stale_cause": {
             "case_changed": [
+              "grounded_draft_from_a_conversation_price",
+              "injected_instruction_inside_evidence_is_ignored",
+              "no_captured_context_yields_no_lines",
+              "rich_context_under_a_tight_token_cap",
+              "two_sources_disagree_on_price"
+            ],
+            "prompt_changed": [
               "grounded_draft_from_a_conversation_price",
               "injected_instruction_inside_evidence_is_ignored",
               "no_captured_context_yields_no_lines",
@@ -3382,9 +3617,16 @@
             "invalid": 2,
             "abstained": 3
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price",
           "stale_cause": {
             "case_changed": [
+              "grounded_draft_from_a_conversation_price",
+              "injected_instruction_inside_evidence_is_ignored",
+              "no_captured_context_yields_no_lines",
+              "rich_context_under_a_tight_token_cap",
+              "two_sources_disagree_on_price"
+            ],
+            "prompt_changed": [
               "grounded_draft_from_a_conversation_price",
               "injected_instruction_inside_evidence_is_ignored",
               "no_captured_context_yields_no_lines",
@@ -3493,7 +3735,7 @@
       "recommended": null,
       "scenarios": [
         {
-          "name": "a_committee_where_four_people_state_their_own_roles",
+          "name": "a_committee_where_four_contacts_state_their_own_roles",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/propose_roles/committee_four_roles_01.yaml"
         },
@@ -3530,10 +3772,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): a_committee_where_four_people_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title",
           "stale_cause": {
             "case_changed": [
-              "a_committee_where_four_people_state_their_own_roles",
+              "a_committee_where_four_contacts_state_their_own_roles",
+              "propose_roles_reads_a_buyer_out_of_their_own_words",
+              "propose_roles_reads_no_role_out_of_a_title"
+            ],
+            "prompt_changed": [
+              "a_committee_where_four_contacts_state_their_own_roles",
+              "propose_roles_reads_a_buyer_out_of_their_own_words",
+              "propose_roles_reads_no_role_out_of_a_title"
+            ],
+            "grader_changed": [
+              "a_committee_where_four_contacts_state_their_own_roles",
               "propose_roles_reads_a_buyer_out_of_their_own_words",
               "propose_roles_reads_no_role_out_of_a_title"
             ]
@@ -3560,10 +3812,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): a_committee_where_four_people_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title",
           "stale_cause": {
             "case_changed": [
-              "a_committee_where_four_people_state_their_own_roles",
+              "a_committee_where_four_contacts_state_their_own_roles",
+              "propose_roles_reads_a_buyer_out_of_their_own_words",
+              "propose_roles_reads_no_role_out_of_a_title"
+            ],
+            "prompt_changed": [
+              "a_committee_where_four_contacts_state_their_own_roles",
+              "propose_roles_reads_a_buyer_out_of_their_own_words",
+              "propose_roles_reads_no_role_out_of_a_title"
+            ],
+            "grader_changed": [
+              "a_committee_where_four_contacts_state_their_own_roles",
               "propose_roles_reads_a_buyer_out_of_their_own_words",
               "propose_roles_reads_no_role_out_of_a_title"
             ]
@@ -3870,9 +4132,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the case): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
           "stale_cause": {
             "case_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "prompt_changed": [
               "both_sides_promise_something",
               "nothing_material_was_said",
               "notice_served_in_a_polite_reply",
@@ -3901,9 +4169,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the case): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
           "stale_cause": {
             "case_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "prompt_changed": [
               "both_sides_promise_something",
               "nothing_material_was_said",
               "notice_served_in_a_polite_reply",
@@ -4140,12 +4414,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts",
           "stale_cause": {
             "case_changed": [
               "customer_story_credits_the_customer_not_the_reader",
               "impressum_page_company_facts_and_entities",
               "services_page_offering_facts"
+            ],
+            "prompt_changed": [
+              "impressum_page_company_facts_and_entities"
             ]
           }
         },
@@ -4193,12 +4470,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts",
           "stale_cause": {
             "case_changed": [
               "customer_story_credits_the_customer_not_the_reader",
               "impressum_page_company_facts_and_entities",
               "services_page_offering_facts"
+            ],
+            "prompt_changed": [
+              "impressum_page_company_facts_and_entities"
             ]
           }
         }
@@ -4224,7 +4504,7 @@
           "file": "backend/internal/compose/aicert/corpus/site_triage/mailbox_provider_01.yaml"
         },
         {
-          "name": "a_one_person_consultancy_is_still_a_company",
+          "name": "a_one_contact_consultancy_is_still_a_company",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/site_triage/false_refusal_01.yaml"
         },
@@ -4261,26 +4541,28 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_person_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
           "stale_cause": {
             "case_changed": [
               "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
               "a_mailbox_vendor_is_not_the_senders_employer",
-              "a_one_person_consultancy_is_still_a_company",
+              "a_one_contact_consultancy_is_still_a_company",
               "a_parked_domain_identifies_nobody",
               "a_personal_domain_is_not_a_company"
             ],
             "prompt_changed": [
               "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
               "a_mailbox_vendor_is_not_the_senders_employer",
-              "a_one_person_consultancy_is_still_a_company",
+              "a_one_contact_consultancy_is_still_a_company",
               "a_parked_domain_identifies_nobody",
               "a_personal_domain_is_not_a_company"
             ],
             "grader_changed": [
               "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
-              "a_one_person_consultancy_is_still_a_company",
-              "a_parked_domain_identifies_nobody"
+              "a_mailbox_vendor_is_not_the_senders_employer",
+              "a_one_contact_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody",
+              "a_personal_domain_is_not_a_company"
             ]
           }
         },
@@ -4305,26 +4587,28 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_person_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company",
           "stale_cause": {
             "case_changed": [
               "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
               "a_mailbox_vendor_is_not_the_senders_employer",
-              "a_one_person_consultancy_is_still_a_company",
+              "a_one_contact_consultancy_is_still_a_company",
               "a_parked_domain_identifies_nobody",
               "a_personal_domain_is_not_a_company"
             ],
             "prompt_changed": [
               "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
               "a_mailbox_vendor_is_not_the_senders_employer",
-              "a_one_person_consultancy_is_still_a_company",
+              "a_one_contact_consultancy_is_still_a_company",
               "a_parked_domain_identifies_nobody",
               "a_personal_domain_is_not_a_company"
             ],
             "grader_changed": [
               "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
-              "a_one_person_consultancy_is_still_a_company",
-              "a_parked_domain_identifies_nobody"
+              "a_mailbox_vendor_is_not_the_senders_employer",
+              "a_one_contact_consultancy_is_still_a_company",
+              "a_parked_domain_identifies_nobody",
+              "a_personal_domain_is_not_a_company"
             ]
           }
         }
@@ -4608,12 +4892,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case and the prompt this build sends changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and the grader changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
           "stale_cause": {
             "case_changed": [
               "dossier_describes_the_company_not_the_relationship"
             ],
             "prompt_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ],
+            "grader_changed": [
               "dossier_describes_the_company_not_the_relationship"
             ]
           }
@@ -4639,13 +4926,107 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case and the prompt this build sends changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and the grader changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
           "stale_cause": {
             "case_changed": [
               "dossier_describes_the_company_not_the_relationship"
             ],
             "prompt_changed": [
               "dossier_describes_the_company_not_the_relationship"
+            ],
+            "grader_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task": "summarize",
+      "site": "contact_brief",
+      "key": "summarize/contact_brief",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "identity"
+      ],
+      "best_state": "stale",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "contact_brief_reads_what_was_said",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/contact_brief_reads_what_was_said_01.yaml"
+        },
+        {
+          "name": "contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/contact_brief_withheld_and_omitted_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 2,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 1889,
+          "latency_p95_ms": 3181,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 4,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
+            "prompt_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ]
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 2,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 1318,
+          "latency_p95_ms": 2158,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 1
+          },
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
+            "prompt_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
             ]
           }
         }
@@ -4707,9 +5088,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and the grader changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
           "stale_cause": {
             "case_changed": [
+              "meeting_plan_reads_the_thread_that_matters"
+            ],
+            "prompt_changed": [
+              "meeting_plan_reads_the_thread_that_matters"
+            ],
+            "grader_changed": [
               "meeting_plan_reads_the_thread_that_matters"
             ]
           }
@@ -4735,101 +5122,16 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and the grader changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it",
           "stale_cause": {
             "case_changed": [
               "meeting_plan_reads_the_thread_that_matters"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "task": "summarize",
-      "site": "person_brief",
-      "key": "summarize/person_brief",
-      "scope": "full_invocation",
-      "missing_context_scopes": [
-        "identity"
-      ],
-      "best_state": "stale",
-      "recommended": null,
-      "scenarios": [
-        {
-          "name": "person_brief_reads_what_was_said",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/summarize/person_brief_reads_what_was_said_01.yaml"
-        },
-        {
-          "name": "person_brief_stays_silent_about_what_the_reader_may_not_see",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/summarize/person_brief_withheld_and_omitted_01.yaml"
-        }
-      ],
-      "records": [
-        {
-          "binding": {
-            "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": 0,
-          "scenarios_total": 2,
-          "runs": 6,
-          "passed": 2,
-          "reliability": 0.3333333333333333,
-          "latency_p50_ms": 1889,
-          "latency_p95_ms": 3181,
-          "reported": {
-            "accepted": 2,
-            "wrong_answer": 4,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends): person_brief_reads_what_was_said, person_brief_stays_silent_about_what_the_reader_may_not_see",
-          "stale_cause": {
-            "case_changed": [
-              "person_brief_reads_what_was_said",
-              "person_brief_stays_silent_about_what_the_reader_may_not_see"
             ],
             "prompt_changed": [
-              "person_brief_reads_what_was_said",
-              "person_brief_stays_silent_about_what_the_reader_may_not_see"
-            ]
-          }
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": 0,
-          "scenarios_total": 2,
-          "runs": 6,
-          "passed": 2,
-          "reliability": 0.3333333333333333,
-          "latency_p50_ms": 1318,
-          "latency_p95_ms": 2158,
-          "reported": {
-            "accepted": 2,
-            "wrong_answer": 3,
-            "invalid": 0,
-            "abstained": 1
-          },
-          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends): person_brief_reads_what_was_said, person_brief_stays_silent_about_what_the_reader_may_not_see",
-          "stale_cause": {
-            "case_changed": [
-              "person_brief_reads_what_was_said",
-              "person_brief_stays_silent_about_what_the_reader_may_not_see"
+              "meeting_plan_reads_the_thread_that_matters"
             ],
-            "prompt_changed": [
-              "person_brief_reads_what_was_said",
-              "person_brief_stays_silent_about_what_the_reader_may_not_see"
+            "grader_changed": [
+              "meeting_plan_reads_the_thread_that_matters"
             ]
           }
         }
@@ -4882,9 +5184,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
           "stale_cause": {
             "case_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "one_side_promises_revised_pricing"
+            ],
+            "prompt_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "one_side_promises_revised_pricing"
+            ],
+            "grader_changed": [
               "a_meeting_that_promised_nothing",
               "a_speaker_tries_to_write_the_record",
               "one_side_promises_revised_pricing"
@@ -4912,9 +5224,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing",
           "stale_cause": {
             "case_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "one_side_promises_revised_pricing"
+            ],
+            "prompt_changed": [
+              "a_meeting_that_promised_nothing",
+              "a_speaker_tries_to_write_the_record",
+              "one_side_promises_revised_pricing"
+            ],
+            "grader_changed": [
               "a_meeting_that_promised_nothing",
               "a_speaker_tries_to_write_the_record",
               "one_side_promises_revised_pricing"
@@ -4977,9 +5299,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and the grader changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
           "stale_cause": {
             "case_changed": [
+              "owner_voice_candidate_from_authored_messages"
+            ],
+            "prompt_changed": [
+              "owner_voice_candidate_from_authored_messages"
+            ],
+            "grader_changed": [
               "owner_voice_candidate_from_authored_messages"
             ]
           }
@@ -5028,9 +5356,15 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "the case changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and the grader changed under scenario owner_voice_candidate_from_authored_messages since the record scored it",
           "stale_cause": {
             "case_changed": [
+              "owner_voice_candidate_from_authored_messages"
+            ],
+            "prompt_changed": [
+              "owner_voice_candidate_from_authored_messages"
+            ],
+            "grader_changed": [
               "owner_voice_candidate_from_authored_messages"
             ]
           }
@@ -5278,9 +5612,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
           "stale_cause": {
             "case_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson",
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
+            ],
+            "prompt_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
               "a_pattern_across_three_deals_is_drawn_and_cited",
               "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
@@ -5308,9 +5647,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none",
           "stale_cause": {
             "case_changed": [
+              "a_deal_named_like_an_instruction_teaches_no_lesson",
+              "a_pattern_across_three_deals_is_drawn_and_cited",
+              "a_week_that_invites_a_lesson_it_cannot_support_yields_none"
+            ],
+            "prompt_changed": [
               "a_deal_named_like_an_instruction_teaches_no_lesson",
               "a_pattern_across_three_deals_is_drawn_and_cited",
               "a_week_that_invites_a_lesson_it_cannot_support_yields_none"

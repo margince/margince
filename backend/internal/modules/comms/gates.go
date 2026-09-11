@@ -343,7 +343,7 @@ func (d *Dispatcher) gateConsentDecision(
 		//
 		// So the ticket's answer is not overruled here — it is not re-asked.
 		// The authority on the row was decided before the message was queued,
-		// by a person, and this worker's job is to carry out what was decided
+		// by a human, and this worker's job is to carry out what was decided
 		// rather than to decide again.
 		//
 		// ONLY THE CONSENT REFUSAL. The human was shown the engine's answer

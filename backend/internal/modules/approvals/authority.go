@@ -87,7 +87,7 @@ const KindScheduledSendHeld = "scheduled_send_held"
 // point of routing one. A rep refused at the keyboard may not hold the
 // authority to override the engine; this card exists so they can ask somebody
 // who does. A kind only its initiator could decide would put the question back
-// in front of the person who could not answer it.
+// in front of the colleague who could not answer it.
 const KindCommunicationReview = "communication_review"
 
 // objectCommunicationException is the RBAC object directing a send answers to,

@@ -41,7 +41,7 @@ func TestAnAcknowledgementIsAboutOneExactMessage(t *testing.T) {
 			sending: SendingDigest("Invoice 41", "Attached, and we have raised the fee.", ""),
 		},
 		{
-			// A changed subject line is a different message to the person
+			// A changed subject line is a different message to the contact
 			// receiving it, whatever the body says.
 			name:    "an edited subject does not",
 			sending: SendingDigest("Overdue notice", "Attached, as agreed.", ""),
@@ -74,7 +74,7 @@ func TestAnAcknowledgementIsAboutOneExactMessage(t *testing.T) {
 // A decision recorded before the fingerprint column existed, or against a
 // review whose held message could not be read, carries none. Refusing those
 // would park a send for a reason nobody can act on — and the decision is still
-// a real decision, made by a named person who acknowledged a real warning.
+// a real decision, made by a named human who acknowledged a real warning.
 func TestADecisionWithNoRecordedWordingStillAuthorizes(t *testing.T) {
 	t.Parallel()
 	inst := LiveInstruction{Acknowledged: nil}
@@ -92,7 +92,7 @@ func TestADecisionWithNoRecordedWordingStillAuthorizes(t *testing.T) {
 
 // A MIXED ENVELOPE RECORDS EACH RECIPIENT TRUTHFULLY.
 //
-// A message to three people can be allowed for two of them and refused for the
+// A message to three contacts can be allowed for two of them and refused for the
 // third. Saying all three went out on somebody's decision would overstate what
 // was decided — the human was shown one refusal and signed for that one — and
 // saying none of them did would lose the record of the override entirely.
@@ -172,14 +172,14 @@ func TestAnEditedMessageClearsTheFlagThatWaivesARefusal(t *testing.T) {
 		wantAllowed  bool
 	}{
 		{
-			// The ordinary directed send: refused about the people, message
+			// The ordinary directed send: refused about the contacts, message
 			// untouched. This is the one a decision answers.
 			name:         "refused recipients and an untouched message",
 			ticket:       commsauthz.TransmitTicket{Allowed: false, ConsentRefused: true},
 			wantWaivable: true,
 		},
 		{
-			// The case that was broken: refused about the people AND edited.
+			// The case that was broken: refused about the contacts AND edited.
 			// The decision must not carry it.
 			name:    "refused recipients and an edited message",
 			ticket:  commsauthz.TransmitTicket{Allowed: false, ConsentRefused: true},

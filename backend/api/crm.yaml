@@ -13420,13 +13420,13 @@ paths:
     post:
       tags: [Communication]
       operationId: requestCommunicationDecision
-      security: [ { cookieAuth: [] } ]   # human session only — the rep's own review, and the row names other people's addresses
+      security: [ { cookieAuth: [] } ]   # human session only — the rep's own review, and the row names other contacts' addresses
       x-agent-access: human-only
       summary: Ask somebody who may override the engine to decide this refused send.
       description: |
         A rep refused at the keyboard usually cannot direct the send themselves — that takes the
         `communication_exception` grant, which most seats do not hold. This is how they ask somebody
-        who does: the review is staged as an approval card, and whoever approves it is the person
+        who does: the review is staged as an approval card, and whoever approves it is the human
         whose name goes on the instruction.
 
         ASKING GRANTS NOTHING. The caller still cannot direct the send, and the card is answered by
@@ -13434,7 +13434,7 @@ paths:
         findable instead of sitting in a review only its author reads.
 
         SCOPED TO THE REVIEW'S OWN INITIATOR. A seat that could route anybody's review would be
-        raising cards about other people's correspondence, so this answers 404 for a review that
+        raising cards about other colleagues' correspondence, so this answers 404 for a review that
         belongs to somebody else — the same answer reading one does, and for the same reason.
 
         Pressing it twice raises ONE card. The question is about one refused message however many
@@ -13459,16 +13459,16 @@ paths:
     post:
       tags: [Communication]
       operationId: directCommunicationSend
-      security: [ { cookieAuth: [] } ]   # human session only — a person takes responsibility, never a credential
+      security: [ { cookieAuth: [] } ]   # human session only — a human takes responsibility, never a credential
       x-agent-access: human-only
-      summary: Send a refused message anyway, on a named person's recorded decision.
+      summary: Send a refused message anyway, on a named human's recorded decision.
       description: |
         The engine refused this message and the refusal stands. This records that a designated human
         read it, was shown the compliance warning, acknowledged it, and decided in writing that the
         message goes — and then sends the exact message the review was holding.
 
         NOTHING ABOUT THE REFUSAL CHANGES. No consent is written and no stop is lifted. The decision
-        rows still read `deny`; what changes is one column saying the message left under a person's
+        rows still read `deny`; what changes is one column saying the message left under a human's
         instruction rather than under the engine's permission. A subject asking later why they
         received it is shown the refusal AND the decision, never a grant nobody made.
 
@@ -13483,7 +13483,7 @@ paths:
         is the one thing a dispute about that override needs not to be possible.
 
         SPENT ONCE. The decision authorizes this message to this envelope and is consumed when it
-        goes. The next message to the same person needs its own.
+        goes. The next message to the same contact needs its own.
       requestBody:
         required: true
         content:
@@ -39941,7 +39941,7 @@ components:
 
     RequestCommunicationDecisionRequest:
       type: object
-      description: What the person asking wants the decider to know.
+      description: What the colleague asking wants the decider to know.
       properties:
         note:
           type: string
@@ -39986,7 +39986,7 @@ components:
           minLength: 1
           maxLength: 2000
           description: |
-            What this person says the reason is, in their own words. Required and must say something:
+            What this colleague says the reason is, in their own words. Required and must say something:
             a blank explanation is an acknowledgement nobody can be held to.
         warning_version:
           type: string

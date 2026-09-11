@@ -383,8 +383,8 @@ func TestAnAttendeeWithNoRecordedContactReadsAsAFirstMeeting(t *testing.T) {
 		Company:    "Asia Flight Services",
 		Now:        time.Date(2026, time.August, 4, 12, 0, 0, 0, time.UTC),
 		Attendees: []AttendeeIn{{
-			PersonID: "01998f00-0000-7000-8000-00000000000b",
-			FullName: "Rainer Vogt",
+			ContactID: "01998f00-0000-7000-8000-00000000000b",
+			FullName:  "Rainer Vogt",
 			// Neither spelling set, which is what a caller assembling an
 			// attendee by hand produces.
 		}},

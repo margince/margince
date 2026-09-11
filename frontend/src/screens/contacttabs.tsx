@@ -255,9 +255,9 @@ export function ContactDealsTab({
         // there is no fact about this contact to report, so a disabled button
         // would be an affordance that says nothing.
         titleAction={
-          view?.person.id && canSeat ? (
+          view?.contact.id && canSeat ? (
             <AddRelationshipAction
-              scope={{ person_id: view.person.id }}
+              scope={{ contact_id: view.contact.id }}
               only={{ kind: "deal_stakeholder", label: "rel.seatOnDeal" }}
             />
           ) : undefined

@@ -26626,7 +26626,7 @@ type DirectCommunicationSendRequest struct {
 	// without one would record a decision nobody made.
 	Acknowledged bool `json:"acknowledged"`
 
-	// Explanation What this person says the reason is, in their own words. Required and must say something:
+	// Explanation What this colleague says the reason is, in their own words. Required and must say something:
 	// a blank explanation is an acknowledgement nobody can be held to.
 	Explanation string `json:"explanation"`
 
@@ -32777,7 +32777,7 @@ type RequestAccessResponse struct {
 	Requested bool `json:"requested"`
 }
 
-// RequestCommunicationDecisionRequest What the person asking wants the decider to know.
+// RequestCommunicationDecisionRequest What the colleague asking wants the decider to know.
 type RequestCommunicationDecisionRequest struct {
 	// Note Why this message should go, in the asker's own words. Optional — a refusal is often
 	// self-explanatory — but it is what the approver reads and therefore what the record says
@@ -52212,7 +52212,7 @@ type ServerInterface interface {
 	// What a refused send was refused for, and for whom.
 	// (GET /communication-reviews/{id})
 	GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Send a refused message anyway, on a named person's recorded decision.
+	// Send a refused message anyway, on a named human's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
 	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Ask somebody who may override the engine to decide this refused send.
@@ -54513,7 +54513,7 @@ func (_ Unimplemented) GetCommunicationReview(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Send a refused message anyway, on a named person's recorded decision.
+// Send a refused message anyway, on a named human's recorded decision.
 // (POST /communication-reviews/{id}/direct-send)
 func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)

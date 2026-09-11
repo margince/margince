@@ -25,9 +25,9 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | | |
 |---|---:|
 | Shipped invocation sites | 45 |
-| … best state `current` | 1 |
+| … best state `current` | 0 |
 | … best state `partial` | 0 |
-| … best state `stale` | 41 |
+| … best state `stale` | 42 |
 | … `absent` on every binding | 3 |
 | Scenarios in the corpus | 163 |
 | Committed records | 74 |
@@ -35,13 +35,13 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 ### Why the stale records went stale
 
-Counted per record — one (task, binding) pair — over the 55 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
+Counted per record — one (task, binding) pair — over the 57 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
-| the case | 55 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
-| **the prompt this build sends** | 20 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| the grader | 10 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
+| the case | 57 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
+| **the prompt this build sends** | 45 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
+| the grader | 31 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -94,7 +94,7 @@ Which model to run each site on, and what that choice rests on.
 | [`agent_loop/loop`](#agent_looploop) | - | - | - | `stale` | 24 | 3 |
 | [`brief_ranking/rank`](#brief_rankingrank) | - | - | - | `stale` | 1 | 4 |
 | [`capture_classify/classify`](#capture_classifyclassify) | - | - | - | `stale` | 5 | 3 |
-| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 14 | 2 |
+| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | - | - | - | `stale` | 14 | 2 |
 | [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | - | - | - | `stale` | 19 | 3 |
 | [`cert_judge/judge`](#cert_judgejudge) | - | - | - | `stale` | 2 | 4 |
 | [`cold_start/acts`](#cold_startacts) | - | - | - | `stale` | 5 | 3 |
@@ -105,10 +105,10 @@ Which model to run each site on, and what that choice rests on.
 | [`deal_health/deal_status`](#deal_healthdeal_status) | - | - | - | `stale` | 3 | 2 |
 | [`document_extract/fields`](#document_extractfields) | - | - | - | `stale` | 4 | 1 |
 | [`draft_reply/account`](#draft_replyaccount) | - | - | - | `stale` | 1 | 4 |
+| [`draft_reply/contact`](#draft_replycontact) | - | - | - | `stale` | 1 | 4 |
 | [`draft_reply/first`](#draft_replyfirst) | - | - | - | `stale` | 1 | 4 |
 | [`draft_reply/intro`](#draft_replyintro) | - | - | - | `stale` | 2 | 4 |
 | [`draft_reply/intro_note`](#draft_replyintro_note) | - | - | - | `stale` | 3 | 4 |
-| [`draft_reply/person`](#draft_replyperson) | - | - | - | `stale` | 1 | 4 |
 | [`draft_reply/reply`](#draft_replyreply) | - | - | - | `stale` | 4 | 5 |
 | [`enrich/signature`](#enrichsignature) | - | - | - | `stale` | 1 | 3 |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | - | - | - | `stale` | 1 | 2 |
@@ -125,9 +125,9 @@ Which model to run each site on, and what that choice rests on.
 | [`summarize/company_ask`](#summarizecompany_ask) | - | - | - | `stale` | 2 | 2 |
 | [`summarize/company_brief`](#summarizecompany_brief) | - | - | - | `stale` | 2 | 2 |
 | [`summarize/company_dossier`](#summarizecompany_dossier) | - | - | - | `stale` | 1 | 2 |
+| [`summarize/contact_brief`](#summarizecontact_brief) | - | - | - | `stale` | 2 | 2 |
 | [`summarize/meeting_brief`](#summarizemeeting_brief) | - | - | - | `absent` | 1 | 0 |
 | [`summarize/meeting_plan`](#summarizemeeting_plan) | - | - | - | `stale` | 1 | 2 |
-| [`summarize/person_brief`](#summarizeperson_brief) | - | - | - | `stale` | 2 | 2 |
 | [`transcript_propose/next_steps`](#transcript_proposenext_steps) | - | - | - | `stale` | 3 | 2 |
 | [`voice_build/demo_draft`](#voice_builddemo_draft) | - | - | - | `absent` | 1 | 0 |
 | [`voice_build/derive`](#voice_buildderive) | - | - | - | `stale` | 1 | 3 |
@@ -156,7 +156,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 36 | 1 | 0 | 35 | 399 | 348 | 0.87 | 4970ms | 17 | 5 | 14 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 36 | 0 | 0 | 36 | 399 | 348 | 0.87 | 4970ms | 17 | 5 | 14 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 6 | 0 | 0 | 6 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 0 | 0 | 13 | 90 | 86 | 0.96 | 26168ms | 9 | 0 | 4 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 0 | 0 | 1 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
@@ -164,7 +164,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 0 | 0 | 6 | 42 | 37 | 0.88 | 4337ms | 4 | 1 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 35 | 1 | 0 | 34 | 390 | 312 | 0.80 | 5546ms | 12 | 8 | 15 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 35 | 0 | 0 | 35 | 390 | 312 | 0.80 | 5546ms | 12 | 8 | 15 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -184,8 +184,8 @@ model, real network).
 
 | Site | Binding | Why it is stale |
 |---|---|---|
-| `account_scan/company_scan` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
-| `account_scan/company_scan` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
+| `account_scan/company_scan` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
+| `account_scan/company_scan` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `agent_loop/loop` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 24 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more |
 | `agent_loop/loop` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `agent_loop/loop` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 24 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more |
@@ -193,9 +193,11 @@ model, real network).
 | `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | the case changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `brief_ranking/rank` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `capture_classify/classify` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 5 scenarios it scored have changed since (the case): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
+| `capture_classify/classify` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
 | `capture_classify/classify` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `capture_classify/classify` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 5 scenarios it scored have changed since (the case): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
+| `capture_classify/classify` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
+| `capture_confidentiality_verdict/thread` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 14 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
+| `capture_confidentiality_verdict/thread` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 14 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_conference_ticket_billed_to_the_founder_is_still_the_companys_trade, a_consumer_bank_alert_is_the_owners_own_money_not_the_companys, a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_phone_bill_forwarded_for_expenses_is_the_owners_not_the_companys, a_suppliers_invoice_to_the_company_is_still_the_teams_to_see and 8 more |
 | `capture_counterparty_verdict/verdict` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 16 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 16 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_chased_cold_pitch_is_still_spam, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more |
@@ -203,44 +205,44 @@ model, real network).
 | `cert_judge/judge` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cert_judge/judge` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 2 scenarios it scored have changed since (the case): grades_a_fabricated_answer_poorly, grades_a_well_grounded_answer_highly |
 | `cert_judge/judge` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `cold_start/acts` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 5 scenarios it scored have changed since (the case): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
+| `cold_start/acts` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 5 scenarios it scored have changed since (the case and the prompt this build sends): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
 | `cold_start/acts` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `cold_start/acts` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 5 scenarios it scored have changed since (the case): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
-| `cold_start/company_message` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
+| `cold_start/acts` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 5 scenarios it scored have changed since (the case and the prompt this build sends): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
+| `cold_start/company_message` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case and the prompt this build sends changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/company_message` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `cold_start/company_message` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
+| `cold_start/company_message` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case and the prompt this build sends changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/field_extract` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case changed under scenario onboarding_readback_from_landing_page since the record scored it |
 | `cold_start/field_extract` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cold_start/field_extract` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case changed under scenario onboarding_readback_from_landing_page since the record scored it |
 | `cold_start/sitereadmessage` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for |
 | `cold_start/sitereadmessage` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cold_start/sitereadmessage` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for |
-| `corpus_ask/corpus_ask` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `gemini · gemini-3.5-flash · eu_hosted` | 3 scenarios it scored have changed since (the case): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 3 scenarios it scored have changed since (the case): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `deal_health/deal_status` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
-| `deal_health/deal_status` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
+| `corpus_ask/corpus_ask` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `gemini · gemini-3.5-flash · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
+| `deal_health/deal_status` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
+| `deal_health/deal_status` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
 | `document_extract/fields` | `gemini · gemini-3.5-flash · eu_hosted` | 4 scenarios it scored have changed since (the case): attached_document_states_none_of_them, order_form_states_all_four, pdf_agreement_read_as_a_document_part, quote_states_money_but_no_close_date |
 | `draft_reply/account` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case and the prompt this build sends changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/account` | `gemini · gemini-3.1-pro-preview · eu_hosted` | the case and the prompt this build sends changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/account` | `gemini · gemini-3.5-flash · eu_hosted` | the case and the prompt this build sends changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/account` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case and the prompt this build sends changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
-| `draft_reply/first` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case and the prompt this build sends changed under scenario first_message_from_an_intent_alone since the record scored it |
-| `draft_reply/first` | `gemini · gemini-3.1-pro-preview · eu_hosted` | the case and the prompt this build sends changed under scenario first_message_from_an_intent_alone since the record scored it |
-| `draft_reply/first` | `gemini · gemini-3.5-flash · eu_hosted` | the case and the prompt this build sends changed under scenario first_message_from_an_intent_alone since the record scored it |
-| `draft_reply/first` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case and the prompt this build sends changed under scenario first_message_from_an_intent_alone since the record scored it |
-| `draft_reply/intro` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
-| `draft_reply/intro` | `gemini · gemini-3.1-pro-preview · eu_hosted` | 2 scenarios it scored have changed since (the case): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
-| `draft_reply/intro` | `gemini · gemini-3.5-flash · eu_hosted` | 2 scenarios it scored have changed since (the case): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
-| `draft_reply/intro` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
-| `draft_reply/intro_note` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
-| `draft_reply/intro_note` | `gemini · gemini-3.1-pro-preview · eu_hosted` | 3 scenarios it scored have changed since (the case): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
-| `draft_reply/intro_note` | `gemini · gemini-3.5-flash · eu_hosted` | 3 scenarios it scored have changed since (the case): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
-| `draft_reply/intro_note` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
-| `draft_reply/person` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case and the prompt this build sends changed under scenario person_first_touch_in_german since the record scored it |
-| `draft_reply/person` | `gemini · gemini-3.1-pro-preview · eu_hosted` | the case and the prompt this build sends changed under scenario person_first_touch_in_german since the record scored it |
-| `draft_reply/person` | `gemini · gemini-3.5-flash · eu_hosted` | the case and the prompt this build sends changed under scenario person_first_touch_in_german since the record scored it |
-| `draft_reply/person` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case and the prompt this build sends changed under scenario person_first_touch_in_german since the record scored it |
+| `draft_reply/contact` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case and the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it |
+| `draft_reply/contact` | `gemini · gemini-3.1-pro-preview · eu_hosted` | the case and the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it |
+| `draft_reply/contact` | `gemini · gemini-3.5-flash · eu_hosted` | the case and the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it |
+| `draft_reply/contact` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case and the prompt this build sends changed under scenario contact_first_touch_in_german since the record scored it |
+| `draft_reply/first` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case and the prompt this build sends and the grader changed under scenario first_message_from_an_intent_alone since the record scored it |
+| `draft_reply/first` | `gemini · gemini-3.1-pro-preview · eu_hosted` | the case and the prompt this build sends and the grader changed under scenario first_message_from_an_intent_alone since the record scored it |
+| `draft_reply/first` | `gemini · gemini-3.5-flash · eu_hosted` | the case and the prompt this build sends and the grader changed under scenario first_message_from_an_intent_alone since the record scored it |
+| `draft_reply/first` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case and the prompt this build sends and the grader changed under scenario first_message_from_an_intent_alone since the record scored it |
+| `draft_reply/intro` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and the grader): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `gemini · gemini-3.1-pro-preview · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and the grader): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `gemini · gemini-3.5-flash · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and the grader): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and the grader): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro_note` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
+| `draft_reply/intro_note` | `gemini · gemini-3.1-pro-preview · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
+| `draft_reply/intro_note` | `gemini · gemini-3.5-flash · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
+| `draft_reply/intro_note` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
 | `draft_reply/reply` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 4 scenarios it scored have changed since (the case and the prompt this build sends): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `draft_reply/reply` | `gemini · gemini-3.1-pro-preview · eu_hosted` | 4 scenarios it scored have changed since (the case and the prompt this build sends): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `draft_reply/reply` | `gemini · gemini-3.5-flash · eu_hosted` | 4 scenarios it scored have changed since (the case and the prompt this build sends): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
@@ -251,13 +253,13 @@ model, real network).
 | `enrich/signature` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case and the prompt this build sends and the grader changed under scenario contact_fields_from_a_mail_signature since the record scored it |
 | `growth_fit/growth_fit` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case and the prompt this build sends changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it |
 | `growth_fit/growth_fit` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case and the prompt this build sends changed under scenario growth_fit_reads_their_facts_against_our_offering since the record scored it |
-| `offer_draft/draft` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 5 scenarios it scored have changed since (the case): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price |
+| `offer_draft/draft` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 5 scenarios it scored have changed since (the case and the prompt this build sends): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price |
 | `offer_draft/draft` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `offer_draft/draft` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 5 scenarios it scored have changed since (the case): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price |
+| `offer_draft/draft` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 5 scenarios it scored have changed since (the case and the prompt this build sends): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_under_a_tight_token_cap, two_sources_disagree_on_price |
 | `owed_verdict/owed` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case): a_direct_question_asks_us_and_a_report_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
 | `owed_verdict/owed` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case): a_direct_question_asks_us_and_a_report_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
-| `propose_roles/committee` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case): a_committee_where_four_people_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
-| `propose_roles/committee` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case): a_committee_where_four_people_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
+| `propose_roles/committee` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
+| `propose_roles/committee` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_committee_where_four_contacts_state_their_own_roles, propose_roles_reads_a_buyer_out_of_their_own_words, propose_roles_reads_no_role_out_of_a_title |
 | `rate_extract/fx` | `gemini · gemini-3.5-flash · eu_hosted` | 2 scenarios it scored have changed since (the case): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
 | `rate_extract/fx` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `rate_extract/fx` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 2 scenarios it scored have changed since (the case): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
@@ -266,41 +268,41 @@ model, real network).
 | `rate_extract/pricing` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `rate_extract/pricing` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | the case changed under scenario pricing_table_two_models_grounded since the record scored it |
 | `rate_extract/pricing` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `signal_extract/thread_events` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 4 scenarios it scored have changed since (the case): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
-| `signal_extract/thread_events` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 4 scenarios it scored have changed since (the case): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
+| `signal_extract/thread_events` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 4 scenarios it scored have changed since (the case and the prompt this build sends): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
+| `signal_extract/thread_events` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 4 scenarios it scored have changed since (the case and the prompt this build sends): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record |
 | `site_extract/profile` | `gemini · gemini-3.5-flash · eu_hosted` | 5 scenarios it scored have changed since (the case): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
 | `site_extract/profile` | `openai_compatible · anthropic/claude-haiku-4.5 · eu_hosted` | 5 scenarios it scored have changed since (the case): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
 | `site_extract/profile` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `site_extract/profile` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 5 scenarios it scored have changed since (the case): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded |
 | `site_extract/profile` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `site_fact_extract/page_facts` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts |
+| `site_fact_extract/page_facts` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts |
 | `site_fact_extract/page_facts` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `site_fact_extract/page_facts` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts |
-| `site_triage/triage` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_person_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
-| `site_triage/triage` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_person_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
+| `site_fact_extract/page_facts` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends): customer_story_credits_the_customer_not_the_reader, impressum_page_company_facts_and_entities, services_page_offering_facts |
+| `site_triage/triage` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
+| `site_triage/triage` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 5 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder, a_mailbox_vendor_is_not_the_senders_employer, a_one_contact_consultancy_is_still_a_company, a_parked_domain_identifies_nobody, a_personal_domain_is_not_a_company |
 | `summarize/company_ask` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
 | `summarize/company_ask` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
 | `summarize/company_brief` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
 | `summarize/company_brief` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
-| `summarize/company_dossier` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case and the prompt this build sends changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
-| `summarize/company_dossier` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case and the prompt this build sends changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
-| `summarize/meeting_plan` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
-| `summarize/meeting_plan` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
-| `summarize/person_brief` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): person_brief_reads_what_was_said, person_brief_stays_silent_about_what_the_reader_may_not_see |
-| `summarize/person_brief` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): person_brief_reads_what_was_said, person_brief_stays_silent_about_what_the_reader_may_not_see |
-| `transcript_propose/next_steps` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
-| `transcript_propose/next_steps` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
-| `voice_build/derive` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case changed under scenario owner_voice_candidate_from_authored_messages since the record scored it |
+| `summarize/company_dossier` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case and the prompt this build sends and the grader changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
+| `summarize/company_dossier` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case and the prompt this build sends and the grader changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
+| `summarize/contact_brief` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see |
+| `summarize/contact_brief` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see |
+| `summarize/meeting_plan` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case and the prompt this build sends and the grader changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
+| `summarize/meeting_plan` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case and the prompt this build sends and the grader changed under scenario meeting_plan_reads_the_thread_that_matters since the record scored it |
+| `transcript_propose/next_steps` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
+| `transcript_propose/next_steps` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing |
+| `voice_build/derive` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case and the prompt this build sends and the grader changed under scenario owner_voice_candidate_from_authored_messages since the record scored it |
 | `voice_build/derive` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `voice_build/derive` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case changed under scenario owner_voice_candidate_from_authored_messages since the record scored it |
+| `voice_build/derive` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case and the prompt this build sends and the grader changed under scenario owner_voice_candidate_from_authored_messages since the record scored it |
 | `voice_build/eval_draft` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case changed under scenario held_out_draft_sits_close_to_the_author since the record scored it |
 | `voice_build/eval_draft` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `voice_build/eval_draft` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case changed under scenario held_out_draft_sits_close_to_the_author since the record scored it |
 | `voice_build/eval_scores` | `gemini · gemini-3.1-flash-lite · eu_hosted` | the case changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it |
 | `voice_build/eval_scores` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `voice_build/eval_scores` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | the case changed under scenario judge_ranks_the_author_rhythm_above_generic_ai_prose since the record scored it |
-| `weekly_learnings/learn` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
-| `weekly_learnings/learn` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
+| `weekly_learnings/learn` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
+| `weekly_learnings/learn` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends): a_deal_named_like_an_instruction_teaches_no_lesson, a_pattern_across_three_deals_is_drawn_and_cited, a_week_that_invites_a_lesson_it_cannot_support_yields_none |
 | `weekly_review/narrative` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count |
 | `weekly_review/narrative` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count |
 
@@ -367,7 +369,7 @@ Scenarios (24):
 | `the_calendar_event_is_the_anchor` | `accepted` | [the_calendar_event_is_the_anchor.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/the_calendar_event_is_the_anchor.yaml) |
 | `the_record_is_found_before_it_is_changed` | `accepted` | [the_record_is_found_before_it_is_changed.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/the_record_is_found_before_it_is_changed.yaml) |
 | `the_stage_id_comes_from_the_pipeline` | `accepted` | [the_stage_id_comes_from_the_pipeline.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/the_stage_id_comes_from_the_pipeline.yaml) |
-| `who_knows_needs_the_person` | `accepted` | [who_knows_needs_the_person.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/who_knows_needs_the_person.yaml) |
+| `who_knows_needs_the_contact` | `accepted` | [who_knows_needs_the_contact.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/who_knows_needs_the_contact.yaml) |
 
 Records (3):
 
@@ -451,8 +453,8 @@ Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 14/14 | `certified` | 42 | 42 | 1.00 | 929ms | 1083ms | 42 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 14/14 | `not_supported` | 42 | 37 | 0.88 | 744ms | 1257ms | 37 | 5 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/14 | `certified` | 42 | 42 | 1.00 | 929ms | 1083ms | 42 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/14 | `not_supported` | 42 | 37 | 0.88 | 744ms | 1257ms | 37 | 5 | 0 | 0 |
 
 ### `capture_counterparty_verdict`
 
@@ -470,9 +472,9 @@ Scenarios (19):
 | `a_fluent_machine_written_pitch_is_still_spam` | `accepted` | [spam_bot_written_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml) |
 | `a_numbered_support_queue_is_one_desk` | `accepted` | [role_mailbox_numbered_queue_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_numbered_queue_01.yaml) |
 | `a_private_correspondent_is_not_a_business_contact` | `accepted` | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_01.yaml) |
-| `a_private_property_desk_the_owner_wrote_to_is_not_a_person` | `accepted` | [role_mailbox_property_desk_outbound_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_property_desk_outbound_01.yaml) |
+| `a_private_property_desk_the_owner_wrote_to_is_not_a_contact` | `accepted` | [role_mailbox_property_desk_outbound_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_property_desk_outbound_01.yaml) |
 | `a_shared_mailbox_is_real_correspondence_with_nobody_to_name` | `accepted` | [role_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_01.yaml) |
-| `a_trade_offices_city_mailbox_names_a_place_not_a_person` | `accepted` | [company_city_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_city_mailbox_01.yaml) |
+| `a_trade_offices_city_mailbox_names_a_place_not_a_contact` | `accepted` | [company_city_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/company_city_mailbox_01.yaml) |
 | `a_two_sided_thread_is_a_conversation` | `accepted` | [false_spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_02.yaml) |
 | `an_automated_invoice_notice_is_not_a_contact` | `accepted` | [transactional_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/transactional_01.yaml) |
 | `bulk_marketing_is_noise` | `accepted` | [noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/noise_01.yaml) |
@@ -680,6 +682,25 @@ Records (4):
 | `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1223ms | 2663ms | 3 | 0 | 0 | 0 |
 
+#### `draft_reply/contact`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (1):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `contact_first_touch_in_german` | `accepted` | [contact_first_touch_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/contact_first_touch_01.yaml) |
+
+Records (4):
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1354ms | 3477ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1223ms | 2663ms | 3 | 0 | 0 | 0 |
+
 #### `draft_reply/first`
 
 Scope a run of it can claim: `full_invocation`.
@@ -739,25 +760,6 @@ Records (4):
 | `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 9 | 1.00 | 24063ms | 46554ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 8 | 0.89 | 10016ms | 26168ms | 8 | 0 | 1 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 9 | 1.00 | 1223ms | 2663ms | 9 | 0 | 0 | 0 |
-
-#### `draft_reply/person`
-
-Scope a run of it can claim: `full_invocation`.
-
-Scenarios (1):
-
-| Scenario | Expects | Case |
-|---|---|---|
-| `person_first_touch_in_german` | `accepted` | [person_first_touch_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/person_first_touch_01.yaml) |
-
-Records (4):
-
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1354ms | 3477ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 24063ms | 46554ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 10016ms | 26168ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1223ms | 2663ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/reply`
 
@@ -880,7 +882,7 @@ Scenarios (3):
 
 | Scenario | Expects | Case |
 |---|---|---|
-| `a_committee_where_four_people_state_their_own_roles` | `accepted` | [committee_four_roles_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_four_roles_01.yaml) |
+| `a_committee_where_four_contacts_state_their_own_roles` | `accepted` | [committee_four_roles_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_four_roles_01.yaml) |
 | `propose_roles_reads_a_buyer_out_of_their_own_words` | `accepted` | [committee_evidenced_buyer_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_evidenced_buyer_01.yaml) |
 | `propose_roles_reads_no_role_out_of_a_title` | `accepted` | [committee_title_only_restraint_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_title_only_restraint_01.yaml) |
 
@@ -1014,7 +1016,7 @@ Scenarios (5):
 |---|---|---|
 | `a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder` | `accepted` | [unclear_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/unclear_01.yaml) |
 | `a_mailbox_vendor_is_not_the_senders_employer` | `accepted` | [mailbox_provider_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/mailbox_provider_01.yaml) |
-| `a_one_person_consultancy_is_still_a_company` | `accepted` | [false_refusal_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/false_refusal_01.yaml) |
+| `a_one_contact_consultancy_is_still_a_company` | `accepted` | [false_refusal_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/false_refusal_01.yaml) |
 | `a_parked_domain_identifies_nobody` | `accepted` | [parked_domain_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/parked_domain_01.yaml) |
 | `a_personal_domain_is_not_a_company` | `accepted` | [personal_domain_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/personal_domain_01.yaml) |
 
@@ -1104,6 +1106,24 @@ Records (2):
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1889ms | 3181ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1318ms | 2158ms | 3 | 0 | 0 | 0 |
 
+#### `summarize/contact_brief`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (2):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `contact_brief_reads_what_was_said` | `accepted` | [contact_brief_reads_what_was_said_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/contact_brief_reads_what_was_said_01.yaml) |
+| `contact_brief_stays_silent_about_what_the_reader_may_not_see` | `accepted` | [contact_brief_withheld_and_omitted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/contact_brief_withheld_and_omitted_01.yaml) |
+
+Records (2):
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/2 | `not_supported` | 6 | 2 | 0.33 | 1889ms | 3181ms | 2 | 4 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/2 | `not_supported` | 6 | 2 | 0.33 | 1318ms | 2158ms | 2 | 3 | 0 | 1 |
+
 #### `summarize/meeting_brief`
 
 Scope a run of it can claim: `full_invocation`.
@@ -1132,24 +1152,6 @@ Records (2):
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1889ms | 3181ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 1318ms | 2158ms | 3 | 0 | 0 | 0 |
-
-#### `summarize/person_brief`
-
-Scope a run of it can claim: `full_invocation`.
-
-Scenarios (2):
-
-| Scenario | Expects | Case |
-|---|---|---|
-| `person_brief_reads_what_was_said` | `accepted` | [person_brief_reads_what_was_said_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/person_brief_reads_what_was_said_01.yaml) |
-| `person_brief_stays_silent_about_what_the_reader_may_not_see` | `accepted` | [person_brief_withheld_and_omitted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/person_brief_withheld_and_omitted_01.yaml) |
-
-Records (2):
-
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/2 | `not_supported` | 6 | 2 | 0.33 | 1889ms | 3181ms | 2 | 4 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/2 | `not_supported` | 6 | 2 | 0.33 | 1318ms | 2158ms | 2 | 3 | 0 | 1 |
 
 ### `transcript_propose`
 

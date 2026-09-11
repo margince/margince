@@ -310,7 +310,7 @@ describe("the deals tab", () => {
       },
       { relationship: ["create"] },
     );
-    withProviders(<PersonDealsTab view={view} />);
+    withProviders(<ContactDealsTab view={view} />);
 
     const add = await screen.findByRole("button", { name: "Add to a deal" });
     await userEvent.click(add);
@@ -322,7 +322,7 @@ describe("the deals tab", () => {
     // Two weaker assertions were tried and both passed with the narrowing
     // removed: the kind selector is hidden either way, and no option label is
     // rendered when it is hidden. What the narrowing actually decides is which
-    // endpoint the dialog picks first — unnarrowed, a person scope leads with
+    // endpoint the dialog picks first — unnarrowed, a contact scope leads with
     // `employment` and the picker searches COMPANIES, so a reader typing a deal
     // name would find nothing and never learn why.
     await userEvent.type(
@@ -343,7 +343,7 @@ describe("the deals tab", () => {
   // about this contact, so there is nothing for a disabled button to explain.
   it("withholds the verb from a reader who may not write an edge", async () => {
     stubWithSession({}, {});
-    withProviders(<PersonDealsTab view={view} />);
+    withProviders(<ContactDealsTab view={view} />);
 
     // Awaited through the rows, so the absence is read AFTER the grant probe
     // has answered rather than before it has run.

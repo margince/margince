@@ -12,7 +12,7 @@ package integration
 // was refused, and there was nowhere for "ask someone who can" to go.
 //
 // Routing is that ask. The review is staged as an approval card, and whoever
-// approves it is the person whose name goes on the instruction — the asker's
+// approves it is the human whose name goes on the instruction — the asker's
 // does not, because they did not decide anything.
 
 import (

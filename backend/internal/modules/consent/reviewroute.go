@@ -12,7 +12,7 @@ package consent
 //
 // This is that ask. It puts the review in front of a decision-maker as an
 // approval card, and the card's effect is the directed send itself: whoever
-// approves it is the person whose name goes on the instruction.
+// approves it is the human whose name goes on the instruction.
 //
 // THE ROUTE IS NOT THE DECISION. Asking costs nothing and grants nothing — a
 // rep who cannot direct a send still cannot, and the card they raised is
@@ -81,11 +81,11 @@ type ReviewRouteRequest struct {
 	// ReasonCode is the strongest reason across the recipients, so a queue can
 	// show what this is about without opening the snapshot.
 	ReasonCode string
-	// Recipients is how many people the refusal names, which is the other half
+	// Recipients is how many contacts the refusal names, which is the other half
 	// of what makes a card readable at a glance. The addresses themselves stay
 	// on the review.
 	Recipients int
-	// Note is what the person asking wants the decider to know. Optional: a
+	// Note is what the colleague asking wants the decider to know. Optional: a
 	// refusal is often self-explanatory.
 	Note string
 }
@@ -100,8 +100,8 @@ func (s *Store) WithReviewRouter(router ReviewRouter) *Store {
 //
 // GATED ON READING THE REVIEW, not on directing a send. That is the point: the
 // caller is asking precisely because they cannot direct it themselves. What
-// they must be is the person whose send was refused — a seat that could route
-// anybody's review would be raising cards about other people's correspondence.
+// they must be is the colleague whose send was refused — a seat that could route
+// anybody's review would be raising cards about other colleagues' correspondence.
 func (s *Store) RequestDecision(ctx context.Context, reviewID ids.UUID, note string) (ids.UUID, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return ids.UUID{}, err
@@ -248,7 +248,7 @@ func routedCardFor(ctx context.Context, db *database.DB, reviewID ids.UUID) (ids
 	return approvalID, nil
 }
 
-// ReturnToAskerTx puts a routed review back in front of the person who raised
+// ReturnToAskerTx puts a routed review back in front of the colleague who raised
 // it, because nobody is going to decide it.
 //
 // A decider said no, or the card ran out its window. Either way the review must
@@ -269,7 +269,7 @@ func ReturnToAskerTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, why stri
 		   SET state = 'needs_context', approval_id = NULL
 		 WHERE id = $1 AND resolved_at IS NULL AND state = 'awaiting_decision'`, reviewID)
 	if err != nil {
-		return fmt.Errorf("consent: returning this review to the person who raised it: %w", err)
+		return fmt.Errorf("consent: returning this review to the colleague who raised it: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
 		// Already moved on — directed from the review itself, cancelled, or

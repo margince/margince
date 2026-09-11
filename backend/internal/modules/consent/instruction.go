@@ -134,7 +134,7 @@ type Instruction struct {
 // already resolved, superseded or answered is a decision about a message that
 // is no longer waiting on one.
 func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInput) (Instruction, error) {
-	if err := requireAContactAtTheKeyboard(ctx); err != nil {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return Instruction{}, err
 	}
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
@@ -236,7 +236,7 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 // decision back would leave a sent message with no recorded authority behind
 // it, which is worse than the decision standing.
 func (s *Store) RevokeInstruction(ctx context.Context, id ids.UUID, reason string) error {
-	if err := requireAContactAtTheKeyboard(ctx); err != nil {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionDelete); err != nil {
@@ -339,7 +339,7 @@ type directableReview struct {
 	State    string
 	OpenedAt time.Time
 	// IntentID is the held message this review is about, so the decision can
-	// fingerprint what the person is looking at.
+	// fingerprint what the human is looking at.
 	IntentID ids.UUID
 }
 
@@ -367,7 +367,7 @@ func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (dir
 	return out, nil
 }
 
-// requireAContactAtTheKeyboard admits a HUMAN and nothing else.
+// requireAHumanAtTheKeyboard admits a HUMAN and nothing else.
 //
 // auth.RequireHuman is not enough here, and the gap is exact: it refuses buyers
 // and agents, and ADMITS a connector. A connector runs with the granting
@@ -380,7 +380,7 @@ func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (dir
 // This one cannot: the row's entire content is the claim that a named contact
 // took responsibility, and a claim like that must be true of the moment it
 // records.
-func requireAContactAtTheKeyboard(ctx context.Context) error {
+func requireAHumanAtTheKeyboard(ctx context.Context) error {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}

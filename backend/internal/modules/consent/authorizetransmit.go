@@ -121,7 +121,7 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 		ticket.Reason = refusalReason(set, legacyAllowed)
 		// THIS REFUSAL IS ABOUT THE RECIPIENTS, which is the one a recorded
 		// human decision can answer — they were shown the engine's verdict
-		// about the people, and that is what they signed for.
+		// about the contacts, and that is what they signed for.
 		//
 		// Set here, from the engine's own answer, and never widened below: the
 		// wording check that follows refuses for a reason NOBODY has looked at,

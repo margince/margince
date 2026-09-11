@@ -179,7 +179,7 @@ type DeliveryRequest struct {
 	// THE TWO DIFFER AND THE DIFFERENCE MATTERS HERE. Body is what goes on the
 	// wire, with the signature and the unsubscribe footer already applied; a
 	// footer carries a withdrawal link minted for this send, so the rendered
-	// text is never the same twice. What a person acknowledged when they
+	// text is never the same twice. What a human acknowledged when they
 	// decided to send a refused message is the text they read, and comparing
 	// their decision against a freshly rendered body would find every message
 	// changed.

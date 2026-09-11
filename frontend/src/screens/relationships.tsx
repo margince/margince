@@ -299,10 +299,10 @@ export function AddRelationshipAction({
   refusedReasonId?: string;
   // ONE edge and the word for it, when the surface offering this verb is about
   // that edge alone. A contact's Deals tab is exactly that: the reader is there
-  // to seat this person on a deal, and a kind selector offering "employment"
+  // to seat this contact on a deal, and a kind selector offering "employment"
   // beside it would ask them to answer a question the tab already answered.
   //
-  // The scope is unchanged — it is still this person — so the picker, the write
+  // The scope is unchanged — it is still this contact — so the picker, the write
   // and the invalidation are the ones the relationships tab already uses. What
   // narrows is what this surface offers and what it calls it.
   only?: { kind: CreatableRelationshipKind; label: MessageKey };

@@ -196,7 +196,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 		// updated (migration 1788529047), and a row that had to be corrected
 		// later would be a proof the application can edit.
 		//
-		// Named on the REFUSED rows only. A message to three people may be
+		// Named on the REFUSED rows only. A message to three contacts may be
 		// allowed for two of them and directed for the third, and saying all
 		// three went out on somebody's decision would overstate what was
 		// decided — the human was shown one refusal and signed for that one.

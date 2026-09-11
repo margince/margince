@@ -29,7 +29,7 @@ package consent
 //
 // THE REFUSAL IS NEVER TOUCHED. No suppression is lifted, no consent is
 // written, and the decision rows still read `deny`. What changes is one column
-// saying the message went out under a person's instruction rather than under
+// saying the message went out under a human's instruction rather than under
 // the engine's permission.
 
 import (
@@ -64,7 +64,7 @@ type LiveInstruction struct {
 	ID       ids.UUID
 	ReviewID ids.UUID
 	IntentID ids.UUID
-	// Acknowledged fingerprints the message the person read when they decided.
+	// Acknowledged fingerprints the message the human read when they decided.
 	// Empty on a decision written before this was recorded, and an absent
 	// fingerprint is nothing to disagree with rather than a mismatch.
 	Acknowledged []byte
@@ -276,7 +276,7 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 // difference is the whole point of a reviewer path: directing a send is
 // precisely the act of somebody OTHER than the sender deciding. Scoping this to
 // the seat that pressed Send would make every review directable only by the
-// person who was already refused — which is the one person the design does not
+// human who was already refused — which is the one human the design does not
 // rely on.
 //
 // WHAT IT DISCLOSES IS AN ID AND NOTHING ELSE. No address, no subject, no
@@ -294,8 +294,8 @@ func (s *Store) HeldMessageForReview(ctx context.Context, reviewID ids.UUID) (id
 	// which reviews exist before the stricter check on the write ever ran.
 	//
 	// This read serves directing and nothing else; it answers to the same
-	// person the write does.
-	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
+	// human the write does.
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return ids.UUID{}, err
 	}
 	// CREATE here, not read: this lookup exists to serve DIRECTING a send, and
