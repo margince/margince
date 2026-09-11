@@ -60,6 +60,7 @@ import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { AiHealthCard } from "./ai-health";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
@@ -256,6 +257,8 @@ export function tabContent(id: SettingsPageId): ReactNode {
           <LeadHandlingCard />
         </>
       );
+    case "acquisition-sources":
+      return <AcquisitionSourcesCard />;
     case "fields":
       return <CustomFieldsAdmin />;
     case "tags":

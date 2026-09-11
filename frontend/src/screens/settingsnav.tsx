@@ -144,6 +144,7 @@ const PAGE_ICONS: Readonly<Record<SettingsPageId, LucideIcon>> = {
   pipelines: Database,
   stageautomation: Gauge,
   leads: Database,
+  "acquisition-sources": Database,
   fields: Database,
   tags: Database,
   products: Database,

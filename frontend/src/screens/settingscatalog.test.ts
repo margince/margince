@@ -104,6 +104,7 @@ describe("the scope each page declares", () => {
     pipelines: "workspace",
     stageautomation: "workspace",
     leads: "workspace",
+    "acquisition-sources": "workspace",
     fields: "workspace",
     tags: "workspace",
     products: "workspace",
@@ -214,6 +215,9 @@ describe("what each page lets a reader change", () => {
     stageautomation: "all(full-seat, any(any(pipeline:update)))",
     leads:
       "all(full-seat, any(any(custom_field:update, custom_field:create), custom_field:delete))",
+    // No delete arm: a source is retired through its switch, never removed.
+    "acquisition-sources":
+      "all(full-seat, any(any(custom_field:update, custom_field:create)))",
     fields:
       "all(full-seat, any(any(custom_field:update, custom_field:create)))",
     tags: "all(full-seat, any(any(tag:update, tag:create), tag:delete))",
@@ -929,6 +933,9 @@ describe("what the rail carries and what it leaves behind", () => {
       // means. It sat in the acted-on half while the page was read-only.
       "stageautomation",
       "leads",
+      // The acquisition-source catalog, gated on custom_field like the lead
+      // vocabulary beside it: a rep reads the channels and changes none.
+      "acquisition-sources",
       "fields",
       "tags",
       "knowledge",

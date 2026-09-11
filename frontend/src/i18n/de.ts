@@ -2478,9 +2478,26 @@ export const de = {
   "deal.pulse.wroteOn": "Zuletzt geschrieben am {date} — vor {days} Tagen.",
   "deal.pulse.wroteUnknown":
     "Sie haben geschrieben und niemand hat geantwortet.",
+  "acqSources.title": "Akquisequellen",
+  "acqSources.sub":
+    "Die Geschäftskanäle, denen ein Deal zugeordnet werden kann. Getrennt von den Lead-Quellen, die festhalten, wie ein Datensatz nach Margince kam.",
+  "acqSources.listLabel": "Quellen",
+  "acqSources.loading": "Quellen werden geladen",
+  "acqSources.addOpen": "Neue Quelle",
+  "acqSources.addTitle": "Neue Akquisequelle",
+  "acqSources.addLabel": "Bezeichnung",
+  "acqSources.addHint":
+    "Der Schlüssel wird aus der Bezeichnung abgeleitet und ändert sich danach nicht mehr.",
+  "acqSources.addConfirm": "Quelle hinzufügen",
+  "acqSources.builtIn": "Standard",
+  "acqSources.readOnly": "Sie können diese Quellen lesen, aber nicht ändern.",
+  "acqSources.labelFor": "Bezeichnung für {key}",
+  "acqSources.activeFor": "{label} kann an einem Deal gewählt werden",
   "deal.commercialContext": "Kaufmännischer Kontext",
   "deal.brief": "Deal-Briefing",
   "deal.briefHint": "Kundenbedarf, Umfang und angestrebtes Ergebnis.",
+  "deal.briefMore": "Mehr lesen",
+  "deal.briefLess": "Weniger anzeigen",
   "deal.motion": "Geschäftsart",
   "deal.motionUnset": "Nicht gesetzt",
   "deal.motionNewBusiness": "Neugeschäft",
@@ -6493,6 +6510,8 @@ export const de = {
     "Was jeder Phasen\u00fcbergang vorzuweisen hat, bevor ihm zugetraut wird, Gesch\u00e4fte selbst zu bewegen.",
   "settings.page.pipelines.sub":
     "Die Phasen, die ein Deal durchl\u00e4uft \u2014 f\u00fcr das ganze Unternehmen.",
+  "settings.page.acquisition-sources.sub":
+    "Die Geschäftskanäle, denen ein Deal zugeordnet werden kann.",
   "settings.page.leads.sub":
     "Die Worte, mit denen dieses Unternehmen beschreibt, woher ein Lead kam.",
   "settings.page.fields.sub":
@@ -6550,6 +6569,7 @@ export const de = {
   "settings.tab.seats": "Lizenzen & Plätze",
   "settings.tab.stageautomation": "Phasen-Automatik",
   "settings.tab.pipelines": "Pipelines",
+  "settings.tab.acquisition-sources": "Akquisequellen",
   "settings.tab.leads": "Lead-Bearbeitung",
   "settings.tab.fields": "Felder",
   "settings.tab.tags": "Tags",

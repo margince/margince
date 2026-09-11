@@ -562,6 +562,18 @@ export const SETTINGS_PAGES = [
     changes: acts(writes("custom_field"), destroys("custom_field")),
   },
   {
+    id: "acquisition-sources",
+    group: "sales",
+    scope: "workspace",
+    // `custom_field` for the lead page's reason: the catalog is gated on that
+    // object server-side, so asking for anything else would hide the page from
+    // a holder who may read it and open it for one whose reads then 403.
+    requires: reads("custom_field"),
+    // No destroys: a source is retired through its active switch and never
+    // deleted, because a key a deal carries has to stay resolvable.
+    changes: acts(writes("custom_field")),
+  },
+  {
     id: "fields",
     group: "sales",
     scope: "workspace",

@@ -2552,9 +2552,26 @@ export const en = {
   "deal.pulse.theirMoveWhy": "Nobody here is owed an answer.",
   "deal.pulse.wroteOn": "They wrote last on {date} — {days} days ago.",
   "deal.pulse.wroteUnknown": "They wrote and nobody has answered.",
+  "acqSources.title": "Acquisition sources",
+  "acqSources.sub":
+    "The business channels a deal can be attributed to. Separate from lead sources, which record how a record reached Margince.",
+  "acqSources.listLabel": "Sources",
+  "acqSources.loading": "Loading sources",
+  "acqSources.addOpen": "New source",
+  "acqSources.addTitle": "New acquisition source",
+  "acqSources.addLabel": "Label",
+  "acqSources.addHint":
+    "The key is derived from the label and never changes afterwards.",
+  "acqSources.addConfirm": "Add source",
+  "acqSources.builtIn": "Built-in",
+  "acqSources.readOnly": "You can read these sources but not change them.",
+  "acqSources.labelFor": "Label for {key}",
+  "acqSources.activeFor": "{label} can be chosen on a deal",
   "deal.commercialContext": "Commercial context",
   "deal.brief": "Deal brief",
   "deal.briefHint": "Customer need, scope and intended outcome.",
+  "deal.briefMore": "Read more",
+  "deal.briefLess": "Show less",
   "deal.motion": "Commercial motion",
   "deal.motionUnset": "Not set",
   "deal.motionNewBusiness": "New business",
@@ -6619,6 +6636,8 @@ export const en = {
     "The record each stage transition has earned, before it is trusted to move deals by itself.",
   "settings.page.pipelines.sub":
     "The stages a deal moves through, for the whole company.",
+  "settings.page.acquisition-sources.sub":
+    "The business channels a deal can be attributed to.",
   "settings.page.leads.sub":
     "The words this company uses to describe where a lead came from.",
   "settings.page.fields.sub":
@@ -6673,6 +6692,7 @@ export const en = {
   "settings.tab.seats": "Seats & license",
   "settings.tab.stageautomation": "Stage automation",
   "settings.tab.pipelines": "Pipelines",
+  "settings.tab.acquisition-sources": "Acquisition sources",
   "settings.tab.leads": "Lead handling",
   "settings.tab.fields": "Fields",
   "settings.tab.tags": "Tags",

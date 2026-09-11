@@ -113,6 +113,8 @@ import {
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
 import { DealCommitteeMap } from "./deal360/dealcommittee";
+import { DealBrief } from "./deal360/dealbrief";
+import { DealCommercial } from "./deal360/dealcommercial";
 import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { DealPulse } from "./deal360/dealpulse";
 import { DealSeats } from "./deal360/dealseats";
@@ -3899,6 +3901,7 @@ function DealOverviewPane({
           />
         </RecordReadingPair>
       </RecordReading>
+      <DealBrief brief={deal.description} />
       <CustomFieldsPanel object="deal" record={deal} />
       <RecordContextPanel entityType="deal" id={deal.id} />
       <LogActivity entityType="deal" entityId={deal.id} />
@@ -4048,11 +4051,19 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // requests for facts the page already holds.
   const statusQuery = useDealStatusCard(id);
   const coverageRead = useDealCoverage(id, !overlay);
+  // The channel catalog, for the side pane's label. Same cache entry the edit
+  // form reads, so opening one after the other costs a single request.
+  const dealScreenSources = useAcquisitionSources().data;
   // The pane's content, or nothing while it is folded: an aside handed to the
   // view reserves its column, so a closed pane hands it none.
   const dealContext = (deal: Deal) =>
     details.open ? (
-      <DealContext deal={deal} coverage={coverageRead} overlay={overlay} />
+      <DealContext
+        deal={deal}
+        coverage={coverageRead}
+        overlay={overlay}
+        acquisitionSources={dealScreenSources}
+      />
     ) : undefined;
   const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
   const timelineQuery = useRecordTimeline("deal", id, {
@@ -4346,13 +4357,17 @@ function DealContext({
   deal,
   coverage,
   overlay,
+  acquisitionSources,
 }: Readonly<{
   deal: Deal;
   coverage: ReturnType<typeof useDealCoverage>;
   overlay: boolean;
+  acquisitionSources?: AcquisitionSource[];
 }>) {
   return (
     <>
+      {/* Before the seats: what the deal IS commercially, then who is on it. */}
+      <DealCommercial deal={deal} sources={acquisitionSources} />
       <DealSeats
         coverage={coverage.coverage}
         withheld={coverage.withheld}
