@@ -5941,6 +5941,8 @@ public.vault_secret.vault_secret_pkey PRIMARY KEY (ref)
 public.vault_secret_pkey CREATE UNIQUE INDEX vault_secret_pkey ON public.vault_secret USING btree (ref)
 public.voice_build acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.voice_build.archived_at timestamp with time zone gen=- def=-
+public.voice_build.attempt integer NOT NULL gen=- def=1
+public.voice_build.attempt_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_build.candidate_action text NOT NULL gen=- def='none'::text
 public.voice_build.completed_at timestamp with time zone gen=- def=-
 public.voice_build.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5958,6 +5960,7 @@ public.voice_build.status_code text gen=- def=-
 public.voice_build.status_detail text gen=- def=-
 public.voice_build.updated_at timestamp with time zone gen=- def=-
 public.voice_build.version bigint NOT NULL gen=- def=1
+public.voice_build.voice_build_attempt_check CHECK ((attempt >= 1))
 public.voice_build.voice_build_candidate_action_check CHECK ((candidate_action = ANY (ARRAY['none'::text, 'auto_activated'::text, 'review_required'::text])))
 public.voice_build.voice_build_deferral_check CHECK ((((status = 'deferred'::text) AND (status_code = 'budget_deferred'::text) AND (next_attempt_at IS NOT NULL)) OR ((status <> 'deferred'::text) AND (status_code IS DISTINCT FROM 'budget_deferred'::text) AND (next_attempt_at IS NULL))))
 public.voice_build.voice_build_pkey PRIMARY KEY (id)

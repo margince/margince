@@ -48,6 +48,7 @@ const (
 	sourceAttachmentExtraction = "attachment_extraction"
 	sourceAccountScan          = "account_scan"
 	sourceTranscriptRead       = "transcript_read"
+	sourceVoiceBuild           = "voice_build"
 )
 
 // railOwners answers who reports each task. TOTAL over the contract's task
@@ -70,6 +71,13 @@ var railOwners = map[Task]string{
 	// is worse than silence: it looks like nothing happened and then it is
 	// done.
 	TaskTranscriptPropose: sourceTranscriptRead,
+
+	// Learning a rep's writing voice, which they press a button and wait for.
+	// The build row is queued before any worker sees it, carries the claim's
+	// reclaim window as its lease, and counts its own attempts across a budget
+	// deferral — so it can say queued and running, which the router reporting
+	// the model call afterwards never could.
+	TaskVoiceBuild: sourceVoiceBuild,
 
 	TaskEmbeddings: SourceNoOccurrence,
 
@@ -106,7 +114,6 @@ var railOwners = map[Task]string{
 	TaskStageEvidenceExtract:          SourceRouter,
 	TaskSummarize:                     SourceRouter,
 	TaskTranscript:                    SourceRouter,
-	TaskVoiceBuild:                    SourceRouter,
 }
 
 // railNoOccurrenceReasons says why a task is a step rather than an occurrence.

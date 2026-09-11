@@ -46,6 +46,7 @@ const (
 	documentReadingKind = activities.ExtractionAITask
 	websiteReadingKind  = people.SiteReadActivityKind
 	transcriptReadKind  = activities.TranscriptAITask
+	voiceBuildKind      = ai.VoiceBuildAITask
 )
 
 func TestEveryKindSomethingProducesIsOneTheContractCanExpress(t *testing.T) {
@@ -103,7 +104,7 @@ func alignEnum(missing []string) string {
 // direction is a producer half-gated, and the half that is missing is whichever
 // one nobody thought about.
 func producedKinds() []string {
-	out := []string{documentReadingKind, websiteReadingKind, transcriptReadKind, orgscan.ActivityKind}
+	out := []string{documentReadingKind, websiteReadingKind, transcriptReadKind, voiceBuildKind, orgscan.ActivityKind}
 	for _, spec := range runner.Catalog() {
 		out = append(out, spec.Name)
 	}

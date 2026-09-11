@@ -8,7 +8,7 @@ import { api } from "../api/client";
 import { useModelCallsInFlight } from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { throwProblem } from "../screens/common";
-import { displayedKinds } from "./ai-activity-lines";
+import { displayedKinds } from "./ai-activity-speak";
 
 type AiActivityItem = components["schemas"]["AiActivityItem"];
 
