@@ -38,7 +38,7 @@ func TestTheProjectsListSortsPhasesByHowLiveTheWorkIs(t *testing.T) {
 	// Seeded in the arrangement's own order, so a pass cannot come from
 	// insertion order either: the assertion below is the reverse of it.
 	closed := seedProjectInPhase(t, e, org, "Finished work", "closed")
-	initiative := seedProjectInPhase(t, e, org, "An idea", "initiative")
+	initiative := seedProjectInPhase(t, e, org, "An idea", projectPhaseInitiative)
 	pursuing := seedProjectInPhase(t, e, org, "Chasing it", "pursuing")
 	delivering := seedProjectInPhase(t, e, org, "Under way", "delivering")
 
@@ -263,6 +263,44 @@ func replyTo(t *testing.T, e *Env, lead ids.UUID, at time.Time) {
 	}
 }
 
+// A caller who may not read organizations at all is ordered by no company.
+//
+// The row scope answers WHICH organizations are visible and never whether this
+// caller may read organizations in the first place. A seat holding project.read
+// and no organization.read would otherwise have its page arranged by company
+// names it is refused on every other surface — and read it both ways and the
+// alphabet is recoverable from the order alone.
+func TestAReaderWithoutTheCompanyGrantIsOrderedByNoCompany(t *testing.T) {
+	e := Setup(t)
+
+	// Named so the company order and the project order disagree: if the sort
+	// still reached display_name the page would come back the other way round.
+	zeta := seedProjectInPhase(t, e, e.SeedOrg(t, "Alma Werke", &e.Rep1), "Zeta rollout", "delivering")
+	alma := seedProjectInPhase(t, e, e.SeedOrg(t, "Zeta Holding", &e.Rep1), "Alma rollout", "delivering")
+
+	// Admitted first, as a reader who DOES hold the grant: the silence below is
+	// the grant's doing and not a sort that never worked.
+	assertIDOrder(t, projectIDsIn(e.Admin(), t, e, "organization_id"), []ids.UUID{zeta, alma},
+		"company ascending, for a reader who may read companies")
+
+	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects:  map[string]principal.ObjectGrant{"project": {Read: true}},
+		RowScope: principal.RowScopeTeam,
+	})
+	// Both rows in the tail under BOTH directions, so the page falls back to
+	// its tie-breaker and the order carries nothing about the companies. Newest
+	// first is what that gives, and the Alma rollout was seeded last.
+	assertIDOrder(t, projectIDsIn(blind, t, e, "organization_id"), []ids.UUID{alma, zeta},
+		"company ascending, for a reader who may not read companies")
+	assertIDOrder(t, projectIDsIn(blind, t, e, "-organization_id"), []ids.UUID{alma, zeta},
+		"company descending — the same order, because there is nothing to order by")
+}
+
+// projectPhaseInitiative is where a project starts, so it is the one phase the
+// ladder below never advances to.
+const projectPhaseInitiative = "initiative"
+
 // seedProjectInPhase creates one project and moves it to a phase through the
 // real writer.
 func seedProjectInPhase(t *testing.T, e *Env, org ids.UUID, name, phase string) ids.UUID {
@@ -273,6 +311,14 @@ func seedProjectInPhase(t *testing.T, e *Env, org ids.UUID, name, phase string) 
 	})
 	if err != nil {
 		t.Fatalf("creating %q: %v", name, err)
+	}
+	// A project is BORN in initiative, so asking for that phase is asking for
+	// no advance at all. Without this the loop below runs off the end of its
+	// rungs and closes the project instead — which is how the first version of
+	// this fixture made two closed projects and no initiative one, and the
+	// assertion passed anyway.
+	if phase == projectPhaseInitiative {
+		return ids.UUID(p.Id)
 	}
 	// Advanced along the real ladder, one rung at a time: a phase written by
 	// hand would order correctly over a column no writer ever puts that value

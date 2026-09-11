@@ -29,6 +29,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // TestTheDealsListSortsByTheNameColumnItDraws: alphabetical, which a list of
@@ -236,6 +237,38 @@ func TestAnUnreadableCompanyOrdersTheDealsListByNothing(t *testing.T) {
 	// ordering the page would move to the other end.
 	assertIDOrder(t, dealsIn(ctx, t, e, "-organization_id"), []ids.UUID{zeta, middle, secret},
 		"company descending — still the tail, because there is nothing to order by")
+}
+
+// A caller who may not read organizations at all is ordered by no company.
+//
+// The row scope answers WHICH companies are visible and never whether this
+// caller may read companies in the first place. A seat holding deal.read and no
+// organization.read would otherwise have its page arranged by names it is
+// refused on every other surface.
+func TestAReaderWithoutTheCompanyGrantOrdersTheDealsListByNothing(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	// Deal names and company names disagree, so a sort that still reached
+	// display_name returns the page the other way round.
+	zeta := seedDealForCompany(t, e, "Zeta deal", pipeline, open, e.SeedOrg(t, "Alma Werke", &e.Rep1))
+	alma := seedDealForCompany(t, e, "Alma deal", pipeline, open, e.SeedOrg(t, "Zeta Holding", &e.Rep1))
+
+	// Admitted first, as a reader who DOES hold the grant.
+	assertIDOrder(t, dealsIn(e.Admin(), t, e, "organization_id"), []ids.UUID{zeta, alma},
+		"company ascending, for a reader who may read companies")
+
+	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects:  map[string]principal.ObjectGrant{"deal": {Read: true}, "pipeline": {Read: true}},
+		RowScope: principal.RowScopeTeam,
+	})
+	// Both rows in the tail under BOTH directions: the page falls back to its
+	// tie-breaker and the order carries nothing about the companies.
+	assertIDOrder(t, dealsIn(blind, t, e, "organization_id"), []ids.UUID{alma, zeta},
+		"company ascending, for a reader who may not read companies")
+	assertIDOrder(t, dealsIn(blind, t, e, "-organization_id"), []ids.UUID{alma, zeta},
+		"company descending — the same order, because there is nothing to order by")
 }
 
 // seedDealForCompany creates a deal filed under one company, through the real

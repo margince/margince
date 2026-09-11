@@ -139,6 +139,20 @@ var projectListFields = map[string]storekit.SortField{
 	projectOrgColumn: {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompany},
 }
 
+// companyGrantVisible answers whether this caller holds the OBJECT half of
+// organization.read. A system principal holds every object grant by
+// construction; a seat holds what its role was given.
+func companyGrantVisible(ctx context.Context) bool {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return false
+	}
+	if actor.Type == principal.PrincipalSystem {
+		return true
+	}
+	return actor.Permissions.Allows("organization", principal.ActionRead)
+}
+
 // orderByPhase arranges projects the way the account page already arranges
 // them (phaseRank), rather than by the phase word.
 func orderByPhase(context.Context, func(any) int) (string, error) {
@@ -148,12 +162,22 @@ func orderByPhase(context.Context, func(any) int) (string, error) {
 // orderByReadableCompany orders by the customer's name, and by NOTHING for a
 // company this caller may not read.
 //
-// Ordering by a value is reading it, so the row scope goes INSIDE the
-// subquery: a company outside it answers NULL, which the ORDER BY already puts
-// last, and those projects land in the tail together saying nothing about
-// which account they name — the same answer the row gives when it withholds
-// the reference.
+// Ordering by a value is reading it, so BOTH halves of RBAC bound it. The
+// object grant first: auth.ScopeClauseFor answers row visibility and never
+// asks whether this caller may read organizations at all, so a seat holding
+// project.read and no organization.read would otherwise have its page arranged
+// by company names it is refused on every other surface.
+//
+// Then the row scope, INSIDE the subquery: a company outside it answers NULL,
+// which the ORDER BY already puts last, and those projects land in the tail
+// together saying nothing about which account they name — the same answer the
+// row gives when it withholds the reference.
 func orderByReadableCompany(ctx context.Context, arg func(any) int) (string, error) {
+	if !companyGrantVisible(ctx) {
+		// Ordered by nothing: every row sits in the tail and the page falls
+		// back to its tie-breaker.
+		return "NULL::text", nil
+	}
 	scope, err := auth.ScopeClauseFor(ctx, "organization", "org_sort", arg)
 	if err != nil {
 		return "", err
