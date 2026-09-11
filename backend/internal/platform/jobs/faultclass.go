@@ -139,6 +139,14 @@ func refuseCoreCollision(kind string, c extension.FailureClass) error {
 			return fmt.Errorf("jobs: kind %q class %q declares a substitute sentence — the substitutes are what this surface says when it has NOTHING to say about a failure, so a class that classified something may not claim one", kind, c.Class)
 		}
 	}
+	for _, technical := range technicalFaults {
+		if c.Sentence == technical.sentence {
+			return fmt.Errorf("jobs: kind %q class %q declares the sentence the core class %q already owns — a stored sentence is read back through the core table first, so this failure would report as %q", kind, c.Class, technical.class, technical.class)
+		}
+		if c.Class == technical.class {
+			return fmt.Errorf("jobs: kind %q declares class %q, which the core vocabulary already owns — one token names one failure, and an alert matching it would fire on both", kind, c.Class)
+		}
+	}
 	for _, known := range vocabulary {
 		if c.Sentence == known.sentence {
 			return fmt.Errorf("jobs: kind %q class %q declares the sentence the core class %q already owns — a stored sentence is read back through the core table first, so this failure would report as %q", kind, c.Class, known.class, known.class)
@@ -216,6 +224,14 @@ func VettedFailure(kind, stored string) (FailureDetail, bool) {
 	for _, known := range vocabulary {
 		if stored == known.sentence {
 			return FailureDetail{Class: known.class, Sentence: known.sentence, Remedy: known.remedy}, true
+		}
+	}
+	// The authored technical sentences are core too, and are read back the same
+	// way: the row stores the sentence and nothing else, whichever core table
+	// chose it.
+	for _, technical := range technicalFaults {
+		if stored == technical.sentence {
+			return FailureDetail{Class: technical.class, Sentence: technical.sentence, Remedy: technical.remedy}, true
 		}
 	}
 	composedClasses.mu.RLock()
