@@ -251,13 +251,22 @@ func lockItemForMark(ctx context.Context, tx pgx.Tx, itemID ids.UUID, item *Brie
 	var featuresRaw []byte
 	var dismissedOn, returnedWith *time.Time
 	var wasOn *string
-	err := tx.QueryRow(ctx, `
-		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, bi.evidence_ids, bi.state, bi.state_at, bi.snoozed_until, coalesce(bi.finding, ''),
-		       bi.reopen_on, bi.reopen_ref, bi.returned_after_dismissal_on, bi.returned_with_activity_at, br.user_id
+	// The item goes back to the client, so its activity references are the
+	// served columns — the same re-check the run read applies.
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	itemPos := arg(itemID)
+	evidenceSQL, returnedWithSQL, err := servedActivityRefsSQL(ctx, arg)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	err = tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, %s, bi.state, bi.state_at, bi.snoozed_until, coalesce(bi.finding, ''),
+		       bi.reopen_on, bi.reopen_ref, bi.returned_after_dismissal_on, %s, br.user_id
 		FROM brief_item bi
 		JOIN brief_run br ON br.id = bi.brief_run_id
-		WHERE bi.id = $1
-		FOR UPDATE OF bi`, itemID).Scan(&item.ID, &item.DealID, &item.Rank, &item.Composite, &featuresRaw,
+		WHERE bi.id = $%d
+		FOR UPDATE OF bi`, evidenceSQL, returnedWithSQL, itemPos), args...).Scan(&item.ID, &item.DealID, &item.Rank, &item.Composite, &featuresRaw,
 		&item.EvidenceIDs, &item.State, &item.StateAt, &item.SnoozedUntil, &item.Finding,
 		&wasOn, &item.ReopenRef, &dismissedOn, &returnedWith, &owner)
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -370,12 +370,18 @@ func readRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID) ([]BriefRunIte
 	if err != nil {
 		return nil, err
 	}
+	// The activities inside the item are references too, re-checked here for
+	// the same reason the deal is.
+	evidence, returnedWith, err := servedActivityRefsSQL(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
 	q := fmt.Sprintf(`
-		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, bi.evidence_ids, bi.state, bi.state_at, bi.snoozed_until, coalesce(bi.finding, ''),
-		       bi.returned_after_dismissal_on, bi.returned_with_activity_at
+		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, %s, bi.state, bi.state_at, bi.snoozed_until, coalesce(bi.finding, ''),
+		       bi.returned_after_dismissal_on, %s
 		FROM brief_item bi
 		JOIN deal d ON d.id = bi.deal_id
-		WHERE bi.brief_run_id = $%d AND bi.state <> 'snoozed'`, runPos)
+		WHERE bi.brief_run_id = $%d AND bi.state <> 'snoozed'`, evidence, returnedWith, runPos)
 	if scope != "" {
 		q += " AND " + scope
 	}

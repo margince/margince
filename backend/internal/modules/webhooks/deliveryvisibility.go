@@ -6,6 +6,7 @@ package webhooks
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -376,9 +377,9 @@ func (s *Store) dealRoomVisibleTo(ctx context.Context, roomID ids.UUID) (bool, e
 	})
 }
 
-// commissionVisibleTo gates a commission subject on commission.read and then on
-// the row-scope visibility of the deal it was accrued on. An absent entry reads
-// as not-visible.
+// commissionVisibleTo gates a commission subject on commission.read, then on the
+// deal it was accrued on being visible AND worked by the subscriber — the two
+// arms commissions.VisibleClause composes. An absent entry reads as not-visible.
 func (s *Store) commissionVisibleTo(ctx context.Context, entryID ids.UUID) (bool, error) {
 	readable, err := objectReadable(ctx, "commission")
 	if err != nil || !readable {
@@ -396,8 +397,39 @@ func (s *Store) commissionVisibleTo(ctx context.Context, entryID ids.UUID) (bool
 		return false, err
 	}
 	return s.rowScopedVisible(ctx, "deal", func(c context.Context, tx pgx.Tx) error {
-		return auth.EnsureVisible(c, tx, "deal", dealID)
+		if err := auth.EnsureVisible(c, tx, "deal", dealID); err != nil {
+			return err
+		}
+		return dealWorkedBy(c, tx, dealID)
 	})
+}
+
+// dealWorkedBy is the owner arm of a commission's visibility: the deal must be
+// one the subscriber owns, shares a team with the owner of, or was granted.
+//
+// A deal is read by every seat, so EnsureVisible admits any deal, while an entry
+// is the partner's compensation on it — the ledger's own read withholds it from
+// a rep who does not work the deal, and a delivery is that same read. It is
+// spelled here rather than borrowed because webhooks cannot import commissions;
+// both render auth.OwnerScopeClauseFor, which is the one statement of the rule.
+func dealWorkedBy(ctx context.Context, tx pgx.Tx, dealID ids.UUID) error {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idPos := arg(dealID)
+	clause, err := auth.OwnerScopeClauseFor(ctx, "deal", "d", arg)
+	if err != nil || clause == "" {
+		return err
+	}
+	var worked bool
+	if err := tx.QueryRow(ctx,
+		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM deal d WHERE d.id = $%d AND %s)`, idPos, clause),
+		args...).Scan(&worked); err != nil {
+		return err
+	}
+	if !worked {
+		return apperrors.ErrNotFound
+	}
+	return nil
 }
 
 // offerDealVisible resolves an offer's parent deal and gates on the owner's

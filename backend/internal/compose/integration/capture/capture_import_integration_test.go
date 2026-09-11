@@ -526,6 +526,19 @@ func TestAForgedMessageIDBuysNoAccessToAColleaguesHeldMail(t *testing.T) {
 		}
 	}
 
+	// Nor does mailing YOURSELF the forged header. The seat's own address on the
+	// To line is exactly what the delivery test looks for, and it is on the line
+	// because the forger put it there — what they cannot put there is the
+	// message they are after, so a colliding id over different content is
+	// refused as a different message.
+	syncOther(t, emailWithSubject("mallory@elsewhere.example", "Mallory", secondSeatAddress,
+		"forge-target@acme.example", "anything at all"))
+	for _, u := range importRowsOf(t, e, activityID) {
+		if u == e.Rep3 {
+			t.Fatal("a forged Message-ID mailed to the forger's own address bought an import row on a colleague's held message")
+		}
+	}
+
 	// And the admit case, which is what proves the refusal above is a rule
 	// rather than a gate that refuses everyone: a seat who IS on the message
 	// gets their import row from the same code path.
