@@ -198,7 +198,7 @@ var ErrProviderUnusable = errors.New("the provider returned no usable answer")
 // It exists because of the tool surface. An agent handed "consent not granted"
 // in a sentence can do nothing with it: it cannot parse an id out of English
 // reliably, and guessing is worse than failing. The same refusal naming the
-// review it opened can hand the question to a person, which is the whole
+// review it opened can hand the question to a human, which is the whole
 // difference between an agent that stops and an agent that escalates.
 type ReferencedFault interface {
 	error

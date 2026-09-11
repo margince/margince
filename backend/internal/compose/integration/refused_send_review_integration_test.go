@@ -723,11 +723,11 @@ func TestAnotherSeatsReviewIsNotFound(t *testing.T) {
 
 // THE REFUSAL NAMES ITS REVIEW AS A FIELD, not only in a sentence.
 //
-// The reference has always travelled in the message, which serves a person
+// The reference has always travelled in the message, which serves a human
 // reading it and nothing else. An agent handed "consent not granted" in English
 // can do nothing with it: parsing an id out of prose is guesswork, and guessing
 // is worse than failing. Named as a field, the same refusal is something an
-// agent can act on — it can hand the question to a person.
+// agent can act on — it can hand the question to a human.
 //
 // AND THE STATUS DOES NOT MOVE. This is the constraint the first attempt at a
 // structured refusal broke: implementing FieldFault flipped the send surface
@@ -871,6 +871,6 @@ func TestASendNamingNoKindAtAllIsRefusedWithAReview(t *testing.T) {
 	}
 	if problem.Details.ReviewID == "" {
 		t.Error("the refusal names no review, so an agent that cannot resolve its own purpose is " +
-			"left with nothing to hand to a person")
+			"left with nothing to hand to a human")
 	}
 }

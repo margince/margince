@@ -468,7 +468,7 @@ func zeroSeatAsNull(seat ids.UUID) *ids.UUID {
 // What a reference adds is orthogonal to that: the status and the code are
 // unchanged, and the id appears beside them where a machine can read it. The
 // tool surface is why — an agent handed a sentence can do nothing, and the same
-// refusal naming its review can hand the question to a person.
+// refusal naming its review can hand the question to a human.
 func (e *SendRefusedError) FaultReference() map[string]any {
 	if e.ReviewID.IsZero() {
 		return nil
@@ -484,7 +484,7 @@ func (e *SendRefusedError) FaultReference() map[string]any {
 		// nothing.
 		//
 		// An empty list is the honest answer for a caller with nothing to do
-		// but stop and report: the reference still travels, and a person
+		// but stop and report: the reference still travels, and a human
 		// reading the agent's transcript can pick the review up.
 		"available_actions": e.Actions,
 	}

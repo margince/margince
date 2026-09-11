@@ -322,7 +322,7 @@ func Classify(err error) (Fault, bool) {
 	//
 	// It exists for the tool surface. An agent handed "consent not granted" in
 	// a sentence can do nothing with it; the same refusal naming the review it
-	// opened can hand the question to a person.
+	// opened can hand the question to a human.
 	var referenced apperrors.ReferencedFault
 	if errors.As(err, &referenced) {
 		if fault, ok := Classify(referenced.Unreferenced()); ok {
@@ -331,7 +331,7 @@ func Classify(err error) (Fault, bool) {
 			// unreferenced cause is what preserves the status, and it also
 			// answers the CAUSE's own text — which no longer names the review.
 			//
-			// A person reading the prose must not lose what a machine just
+			// A human reading the prose must not lose what a machine just
 			// gained. Both carry it: the sentence for whoever reads it, the
 			// field for whatever parses it.
 			if detail := referenced.Error(); detail != "" && !infrastructureCause(err) {
