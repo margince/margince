@@ -2327,6 +2327,9 @@ public.confirm_token.kind text NOT NULL gen=- def='record_confirmation'::text
 public.confirm_token.opened_at timestamp with time zone gen=- def=-
 public.confirm_token.person_id uuid NOT NULL gen=- def=-
 public.confirm_token.purpose_id uuid gen=- def=-
+public.confirm_token.question_key text gen=- def=-
+public.confirm_token.question_locale text gen=- def=-
+public.confirm_token.question_version integer gen=- def=-
 public.confirm_token.token_hash text NOT NULL gen=- def=-
 public.confirm_token_hash_key CREATE UNIQUE INDEX confirm_token_hash_key ON public.confirm_token USING btree (token_hash)
 public.confirm_token_live_by_kind CREATE INDEX confirm_token_live_by_kind ON public.confirm_token USING btree (person_id, kind, purpose_id) WHERE (consumed_at IS NULL)
