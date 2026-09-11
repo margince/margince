@@ -223,6 +223,15 @@ func (d *Dispatcher) dispatchLoaded(ctx context.Context, del Delivery) (Outcome,
 		}
 	}
 
+	// Gate: the authority this delivery claims to go out under, BEFORE consent
+	// is asked. The consent gate honours a recorded instruction, so it has to
+	// know that this build understands what the row says — an unrecognised
+	// value must park rather than reach a gate that might read it as
+	// permission.
+	if outcome, wait, err := d.gateExecutionAuthority(ctx, del); outcome != outcomeUndecided {
+		return outcome, wait, err
+	}
+
 	// Gate: suppression and consent, which are one step — one-click
 	// unsubscribe writes a per-purpose consent withdrawal, so this gate IS
 	// the suppression mechanism.

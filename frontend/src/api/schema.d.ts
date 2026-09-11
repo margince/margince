@@ -9308,6 +9308,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/communication-reviews/{id}/direct-send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a refused message anyway, on a named person's recorded decision.
+         * @description The engine refused this message and the refusal stands. This records that a designated human
+         *     read it, was shown the compliance warning, acknowledged it, and decided in writing that the
+         *     message goes — and then sends the exact message the review was holding.
+         *
+         *     NOTHING ABOUT THE REFUSAL CHANGES. No consent is written and no stop is lifted. The decision
+         *     rows still read `deny`; what changes is one column saying the message left under a person's
+         *     instruction rather than under the engine's permission. A subject asking later why they
+         *     received it is shown the refusal AND the decision, never a grant nobody made.
+         *
+         *     HUMAN-ONLY, AND THAT IS THE POINT. An agent running under somebody's passport inherits their
+         *     grants, so without this an agent could mint the very record that says a human decided. It
+         *     also needs the `communication_exception` object at `create`: directing a send is its own
+         *     authority, and a seat that may edit a contact has not thereby been given the right to act
+         *     against the engine's answer about them.
+         *
+         *     The acknowledgement is required and the explanation must say something. Both are frozen on
+         *     the record once written: an account of an override that its author could improve afterwards
+         *     is the one thing a dispute about that override needs not to be possible.
+         *
+         *     SPENT ONCE. The decision authorizes this message to this envelope and is consumed when it
+         *     goes. The next message to the same person needs its own.
+         */
+        post: operations["directCommunicationSend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/data-subject-requests/{id}": {
         parameters: {
             query?: never;
@@ -29349,6 +29391,34 @@ export interface components {
             /** @description What was refused, per recipient. Empty once an erasure has cleared the subject from it. */
             refusals: components["schemas"]["RefusedRecipient"][];
         };
+        /**
+         * @description A designated human's decision that one refused message goes out anyway. Every field is frozen
+         *     on the record once written.
+         */
+        DirectCommunicationSendRequest: {
+            /**
+             * @description Why the installation has a basis the engine cannot see. A closed list, because an audit
+             *     of overrides needs to be countable — free text alone cannot answer "how often do we send
+             *     on a contract clause".
+             * @enum {string}
+             */
+            reason_code: "customer_requested_outside_crm" | "contractual_necessity" | "legal_obligation" | "other";
+            /**
+             * @description What this person says the reason is, in their own words. Required and must say something:
+             *     a blank explanation is an acknowledgement nobody can be held to.
+             */
+            explanation: string;
+            /**
+             * @description The compliance text they were shown. Recorded because a record naming no version cannot
+             *     say what they were told, and the text changes.
+             */
+            warning_version: string;
+            /**
+             * @description The tick. Refused when false — the acknowledgement is the act, and an instruction written
+             *     without one would record a decision nobody made.
+             */
+            acknowledged: boolean;
+        };
         /** @description A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5). */
         DataSubjectRequest: {
             /** Format: uuid */
@@ -48110,6 +48180,36 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    directCommunicationSend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectCommunicationSendRequest"];
+            };
+        };
+        responses: {
+            /** @description The activity the sent message produced. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateDataSubjectRequest: {

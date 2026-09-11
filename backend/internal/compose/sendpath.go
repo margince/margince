@@ -129,6 +129,15 @@ func (p SendPath) withPoolDefaults(pool *pgxpool.Pool) SendPath {
 // the reconciliation must be able to build one.
 func (s *Server) applySendPath(pool *pgxpool.Pool) {
 	send := s.send.withPoolDefaults(pool)
+	// The directed send is wired HERE for this file's whole reason: it needs
+	// both the send path and the delivery machinery, and a deployment that had
+	// one without the other would answer a recorded decision by sending
+	// nothing. A composition with no delivery leaves it nil, and the route
+	// answers not-implemented like every other unwired surface.
+	if send.Delivery != nil {
+		directed := newDirectedSendService(pool, send.Delivery, send)
+		s.directedSendHandlers = directedSendHandlers{directed: &directed}
+	}
 	s.activitiesHandlers = s.activitiesHandlers.
 		WithPublicBaseURL(send.PublicBaseURL).
 		WithRuntimeEnvironment(send.Environment).

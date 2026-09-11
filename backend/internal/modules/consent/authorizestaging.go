@@ -38,6 +38,33 @@ import (
 // describes. That also means it must not acquire a connection of its own, which
 // is why every read below runs on the passed tx.
 func (g *Gate) AuthorizeStagingTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID, req commsauthz.Request) (commsauthz.DecisionSet, error) {
+	return g.stageDecisions(ctx, tx, deliveryID, req, nil)
+}
+
+// AuthorizeStagingWithDecisionTx is the same staging, told where to look for a
+// recorded decision that may authorize a refusal.
+//
+// SEPARATE ENTRY POINT rather than a wider one, so the ordinary call cannot
+// acquire this behaviour by accident. Three callers stage messages; exactly one
+// of them resumes a held message, and it is the one that says so here.
+//
+// The instruction is resolved BEFORE the decision rows are written, because the
+// authority is part of the finding each row records and those rows are never
+// updated afterwards — migration 1788529047 revoked UPDATE on them from the
+// runtime role, on the ground that a proof the application can silently edit is
+// not a proof.
+func (g *Gate) AuthorizeStagingWithDecisionTx(
+	ctx context.Context, tx pgx.Tx, deliveryID ids.UUID, req commsauthz.Request, intentID ids.UUID, authored [32]byte,
+) (commsauthz.DecisionSet, ids.UUID, error) {
+	directed := &directedExecution{intentID: intentID, authored: authored, wanted: true}
+	set, err := g.stageDecisions(ctx, tx, deliveryID, req, directed)
+	if err != nil {
+		return commsauthz.DecisionSet{}, ids.UUID{}, err
+	}
+	return set, directed.instructionID, nil
+}
+
+func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID, req commsauthz.Request, directed *directedExecution) (commsauthz.DecisionSet, error) {
 	for _, r := range req.Recipients {
 		if err := r.Validate(); err != nil {
 			return commsauthz.DecisionSet{}, fmt.Errorf(
@@ -71,10 +98,55 @@ func (g *Gate) AuthorizeStagingTx(ctx context.Context, tx pgx.Tx, deliveryID ids
 		d.Requested = req.Context
 		set.Decisions = append(set.Decisions, d)
 	}
-	if err := g.recordStagingDecisions(ctx, tx, deliveryID, setID, req, set); err != nil {
+	// THE AUTHORITY IS DECIDED BEFORE THE ROWS ARE WRITTEN, because it is part
+	// of what each row records and those rows are never updated afterwards.
+	//
+	// Only when the engine actually refuses. A message the engine allows goes
+	// out on that permission and spends nobody's decision — asking otherwise
+	// would consume an instruction on a send that never needed one.
+	if directed != nil && directed.wanted && refusesAnyRecipient(set) {
+		instruction, err := g.AuthorizeDirectedExecutionTx(
+			ctx, tx, directed.intentID, deliveryID, directed.authored)
+		if err != nil {
+			return commsauthz.DecisionSet{}, err
+		}
+		directed.instructionID = instruction
+	}
+	if err := g.recordStagingDecisions(ctx, tx, deliveryID, setID, req, set, directedAuthority(directed)); err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
 	return set, nil
+}
+
+// directedExecution carries the question "is there a recorded decision standing
+// over this refusal" into staging, and the answer back out.
+type directedExecution struct {
+	intentID ids.UUID
+	authored [32]byte
+	wanted   bool
+	// instructionID is the decision that was spent, set on the way out. Zero
+	// when nothing was decided, which is the ordinary case.
+	instructionID ids.UUID
+}
+
+// directedAuthority answers the instruction to stamp on the refused rows, or
+// zero when the message goes out on the engine's own permission.
+func directedAuthority(directed *directedExecution) ids.UUID {
+	if directed == nil {
+		return ids.UUID{}
+	}
+	return directed.instructionID
+}
+
+// refusesAnyRecipient reports whether the engine said no to anybody, which is
+// the only case a recorded decision has anything to authorize.
+func refusesAnyRecipient(set commsauthz.DecisionSet) bool {
+	for _, d := range set.Decisions {
+		if d.Verdict != commsauthz.VerdictAllow {
+			return true
+		}
+	}
+	return false
 }
 
 // recordStagingDecisions writes the rows.
@@ -83,7 +155,7 @@ func (g *Gate) AuthorizeStagingTx(ctx context.Context, tx pgx.Tx, deliveryID ids
 // up yet, and every transmit row that follows carries the attempt it belonged
 // to. The fingerprint is of the message as staged, so a later reader can tell
 // whether what went out is what was authorized.
-func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID, setID ids.UUID, req commsauthz.Request, set commsauthz.DecisionSet) error {
+func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID, setID ids.UUID, req commsauthz.Request, set commsauthz.DecisionSet, instruction ids.UUID) error {
 	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -119,18 +191,32 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 		// A denial under observe or warn DOES commit, and those rows are real.
 		// They are read from the table, not from a counter that would mean one
 		// thing in one posture and another in the next.
+		// THE AUTHORITY THIS RECIPIENT'S MESSAGE GOES OUT UNDER, written with
+		// the finding rather than stamped on afterwards: these rows are never
+		// updated (migration 1788529047), and a row that had to be corrected
+		// later would be a proof the application can edit.
+		//
+		// Named on the REFUSED rows only. A message to three people may be
+		// allowed for two of them and directed for the third, and saying all
+		// three went out on somebody's decision would overstate what was
+		// decided — the human was shown one refusal and signed for that one.
+		authority, instructionID := AuthoritySupported, (*ids.UUID)(nil)
+		if !instruction.IsZero() && d.Verdict != commsauthz.VerdictAllow {
+			id := instruction
+			authority, instructionID = AuthorityInstruction, &id
+		}
 		_, err = tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
-			   content_fingerprint, mode, actor, evidence)
-			VALUES ($1,0,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+			   content_fingerprint, mode, actor, evidence, execution_authority, instruction_id)
+			VALUES ($1,0,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`,
 			deliveryID, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), nullableCategory(d.Requested),
 			string(d.Resolved), string(d.Verdict), d.ReasonCode,
 			nullableBasis(d.Basis), nullableText(d.Suppression),
-			sum[:], string(d.Mode), by, evidence)
+			sum[:], string(d.Mode), by, evidence, authority, instructionID)
 		if err != nil {
 			return fmt.Errorf("consent: record the staging decision: %w", err)
 		}

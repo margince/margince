@@ -575,6 +575,10 @@ func (stubs) GetCommunicationReview(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "GetCommunicationReview")
 }
 
+func (stubs) DirectCommunicationSend(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "DirectCommunicationSend")
+}
+
 func (stubs) ListCompanies(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListCompaniesParams) {
 	httperr.NotImplemented(w, r, "ListCompanies")
 }

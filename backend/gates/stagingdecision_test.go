@@ -63,7 +63,7 @@ func TestEveryStagedDeliveryRecordsWhyItWasAllowed(t *testing.T) {
 				switch {
 				case stagers[sel.Sel.Name]:
 					staging[name] = true
-				case sel.Sel.Name == "AuthorizeStagingTx":
+				case authorizers[sel.Sel.Name]:
 					authorizing[name] = true
 				}
 				return true
@@ -93,6 +93,21 @@ func TestEveryStagedDeliveryRecordsWhyItWasAllowed(t *testing.T) {
 // matched: it declares no delivery and queues no message, so it owes no
 // decision. That is why this reads the comms store alone rather than every
 // Stage* method in the tree.
+// authorizers are the spellings of "record why this message may be queued".
+//
+// TWO, because a door that resumes a message the engine refused has to be told
+// where the decision authorizing it lives, and that is a wider call than the
+// ordinary one. Both write the same decision rows; neither may be skipped.
+//
+// Listed rather than derived because they are the consent gate's exported
+// surface and not the comms store's — the derivation below reads the stagers
+// from the store that declares them, and there is no equivalent declaration to
+// read for these.
+var authorizers = map[string]bool{
+	"AuthorizeStagingTx":             true,
+	"AuthorizeStagingWithDecisionTx": true,
+}
+
 func stagingMethodNames(t *testing.T, fset *token.FileSet) map[string]bool {
 	t.Helper()
 	names := map[string]bool{}

@@ -62,6 +62,7 @@ type Server struct {
 	approvalsHandlers
 	searchHandlers
 	consentHandlers
+	directedSendHandlers
 	collectionsHandlers
 	signalsHandlers
 	privacyHandlers
