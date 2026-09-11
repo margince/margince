@@ -2357,17 +2357,17 @@ describe("LeadScreen — History tab", () => {
 
 describe("terminalBadge (archived/terminal labelling)", () => {
   it("labels disqualified and promoted distinctly and leaves open leads unbadged", () => {
-    expect(terminalBadge("disqualified")).toEqual({
+    expect(terminalBadge({ status: "disqualified" })).toEqual({
       label: "lead.disqualified",
       tone: "warn",
     });
     // A promoted lead IS archived, but reads "Archived" — never "Disqualified".
-    expect(terminalBadge("promoted")).toEqual({
+    expect(terminalBadge({ status: "promoted" })).toEqual({
       label: "record.archived",
       tone: "warn",
     });
-    expect(terminalBadge("new")).toBeNull();
-    expect(terminalBadge("contacted")).toBeNull();
+    expect(terminalBadge({ status: "new" })).toBeNull();
+    expect(terminalBadge({ status: "contacted" })).toBeNull();
   });
 });
 

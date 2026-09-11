@@ -10,12 +10,8 @@ import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
 import { leadScoreKey } from "./leadkeys";
-import {
-  leadStatusLabel,
-  scoreFactorLabel,
-  terminalBadge,
-} from "./leadpresentation";
-import { firstResponseClock } from "./leadstanding";
+import { leadStatusLabel, scoreFactorLabel } from "./leadpresentation";
+import { firstResponseClock, terminalBadge } from "./leadstanding";
 
 // The lead's four readings, in the cards every record page draws them in: how
 // it scores and what made the score; whether anybody has answered, and how
@@ -57,7 +53,7 @@ export function LeadReadings({ lead }: Readonly<{ lead: Lead }>) {
 
 /** The status as the readings state it: the terminal wording when it has one. */
 export function statusReading(lead: Lead, t: Translator): string {
-  const terminal = terminalBadge(lead.status);
+  const terminal = terminalBadge(lead);
   const label = terminal?.label ?? leadStatusLabel(lead.status);
   return label ? t(label) : lead.status;
 }
