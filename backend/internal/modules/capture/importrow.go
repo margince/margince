@@ -13,6 +13,8 @@ package capture
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -208,6 +210,54 @@ func seatDeliveredTx(
 		return false, fmt.Errorf("capture: reading whose credential landed %s: %w", id, err)
 	}
 	return mine, nil
+}
+
+// incumbentIsThisMessageTx answers whether the message a replay just collided
+// with carries the same subject and body this capture read — the evidence that
+// the two mailboxes hold ONE message rather than two that share a Message-ID.
+//
+// The address test below cannot answer that on its own. It reads the addresses
+// off the record being captured, and on a replay that record is whatever this
+// mailbox holds under the colliding id: a seat who mails themselves a message
+// stamped with a colleague's Message-ID is on its To line by construction, and
+// the import row it then earned is a content grant on the colleague's mail.
+// Matching the content closes that: the forger can type the header, not the
+// message they are after. The content is the subject, the body AND every file
+// the stored row carries — an attachment-only message stores no body at all, so
+// a subject and an empty body alone would let a forger who saw a reply's
+// "Re: ..." line claim the attachment. Each stored file's checksum must be one
+// this capture carried, digested the way capturedfiles writes it.
+//
+// Compared as stored — the insert keeps an empty field as NULL, so this does
+// too. It also answers no wherever two honest copies differ: a row redacted or
+// corrected after capture, a file attached by hand afterwards, a list that
+// stamps a footer per recipient, a second seat whose transport maps the body
+// differently. Refusing is the safe direction for all of them — the seat still
+// holds the message in its own mailbox, and the capture reports it skipped
+// rather than claiming a grant it cannot prove.
+func incumbentIsThisMessageTx(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields ActivityFields, parts []connector.Part,
+) (bool, error) {
+	carried := make([]string, 0, len(parts))
+	for _, part := range parts {
+		sum := sha256.Sum256(part.Body)
+		carried = append(carried, hex.EncodeToString(sum[:]))
+	}
+	var same bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM activity a
+			 WHERE a.id = $1
+			   AND a.subject IS NOT DISTINCT FROM NULLIF($2, '')
+			   AND a.body IS NOT DISTINCT FROM NULLIF($3, '')
+			   AND NOT EXISTS (
+			       SELECT 1 FROM attachment f
+			        WHERE f.activity_id = a.id
+			          AND (f.checksum IS NULL OR f.checksum <> ALL($4))))`,
+		id, fields.Subject, fields.Body, carried).Scan(&same); err != nil {
+		return false, fmt.Errorf("capture: comparing %s with the message it collided with: %w", id, err)
+	}
+	return same, nil
 }
 
 // mailboxWasARecipientTx answers whether one of the acting seat's own addresses
