@@ -31,6 +31,13 @@ func (h Handlers) WithReviewCloser(closer ReviewCloser) Handlers {
 	return h
 }
 
+// WithReviewLookup returns handlers whose store can answer which review stands
+// over a held message, so a scheduled row carries a route to it.
+func (h Handlers) WithReviewLookup(lookup ReviewLookup) Handlers {
+	h.store = h.store.WithReviewLookup(lookup)
+	return h
+}
+
 // WithHeldNotifier returns handlers whose store raises the inbox card when a
 // message is stopped. The notifier lives on the STORE because that is where a
 // hold is written, and the handlers carry their own store instance.
@@ -119,6 +126,13 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 		Version:   row.Version,
 		CreatedAt: row.CreatedAt,
 		UpdatedAt: row.UpdatedAt,
+	}
+	// The route back to the work that would unstop a held message. Omitted
+	// rather than sent as a zero uuid when no review stands over it: a caller
+	// reading an id of nobody would follow it and be told it does not exist.
+	if !row.ReviewID.IsZero() {
+		review := openapi_types.UUID(row.ReviewID)
+		out.ReviewId = &review
 	}
 	if cc := emailList(row.Cc); len(cc) > 0 {
 		out.Cc = &cc

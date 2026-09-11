@@ -33520,8 +33520,21 @@ type ScheduledSend struct {
 	Links *[]ActivityLinkInput `json:"links,omitempty"`
 
 	// MarketingPurpose For a marketing send, the consent purpose key it claimed, frozen with the message.
-	MarketingPurpose *string   `json:"marketing_purpose,omitempty"`
-	ScheduledAt      time.Time `json:"scheduled_at"`
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// ReviewId The review this message's refusal opened, when one stands. Null on every message
+	// nobody refused, and on a held row whose review has since been answered.
+	//
+	// WHY IT IS ON THE ROW. A refusal answers `422 send_needs_review` carrying the review,
+	// and that answer reaches the rep once — at the moment they pressed send. Navigate
+	// away and the held message is a row explaining why it stopped with no way back to the
+	// work that would unstop it. The id is what lets a held row open its own review.
+	//
+	// It is a POINTER, never permission: reading the review is gated on its own terms
+	// (initiator, assignee, or the `communication_exception` grant), so a caller holding
+	// this id still gets 404 if the review is not theirs to see.
+	ReviewId    *openapi_types.UUID `json:"review_id,omitempty"`
+	ScheduledAt time.Time           `json:"scheduled_at"`
 
 	// ScheduledTz The IANA zone the human picked the moment in, kept so it re-renders as meant.
 	ScheduledTz string `json:"scheduled_tz"`
