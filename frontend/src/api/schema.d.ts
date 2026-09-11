@@ -9276,6 +9276,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/communication-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Refused sends waiting on somebody who may decide them.
+         * @description The reviewer's own queue: every refused send a rep has handed on, oldest first.
+         *
+         *     Gated on `communication_exception` at `read`, which is the verb for SEEING refusals rather
+         *     than acting on them: directing a send takes `create`, and an installation can grant the
+         *     first without the second. The rows name other people's recipient addresses and why each was
+         *     refused, so a seat without that grant is not shown them.
+         *
+         *     Installation-wide, with no team or ownership narrowing. Granting the read verb means
+         *     trusting that seat with every refused send in the installation.
+         *
+         *     EVERY WAITING REVIEW, not only the ones routed to the caller. Routing names no assignee: a
+         *     rep asks the installation rather than a colleague, and whoever holds the authority answers.
+         *     An assignee-scoped list would leave a card nobody could find the moment the person it named
+         *     went on leave.
+         *
+         *     Bounded. A list at its limit has more behind it, and `total` says so rather than leaving the
+         *     caller to discover it.
+         */
+        get: operations["listCommunicationReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/communication-reviews/{id}": {
         parameters: {
             query?: never;
@@ -9291,11 +9327,18 @@ export interface paths {
          *     is how a rep opens it: what was refused, which recipient it was refused for, and the reason
          *     each one carries.
          *
-         *     SCOPED TO THE INITIATOR. The row names the recipients of somebody's message and the reason
-         *     each was refused, which is a fact about those people — so this serves the person who pressed
-         *     Send and nobody else. A review belonging to somebody else answers 404 rather than 403,
-         *     because "forbidden" would confirm the id exists and that is itself a disclosure about a
-         *     message the caller may not see.
+         *     TWO DOORS OPEN THIS ROW. The initiator, because it is their message. A holder of
+         *     `communication_exception` at `read`, because they are the person being asked to decide it —
+         *     a reviewer handed a card who could not read the refusal behind it would be acknowledging a
+         *     warning about a message they had never seen.
+         *
+         *     That second door is installation-wide and worth stating plainly: granting somebody the read
+         *     verb hands them every refused send in the installation, with the recipient addresses and the
+         *     reason each was refused. There is no team or ownership narrowing on it. Reading is not
+         *     routing — handing a review on stays the initiator's own action.
+         *
+         *     A caller holding neither door receives 404 rather than 403, because "forbidden" would
+         *     confirm the id exists and disclose a message the caller may not see.
          *
          *     Human-only. An agent that could read these would enumerate one seat's refused correspondence.
          */
@@ -29428,6 +29471,22 @@ export interface components {
             reason_code: string;
             /** @description What was refused, per recipient. Empty once an erasure has cleared the subject from it. */
             refusals: components["schemas"]["RefusedRecipient"][];
+            /**
+             * Format: uuid
+             * @description The card a routed review was handed to, so a decider reading this can find the decision
+             *     they are being asked to make. Null on a review nobody has asked about, which is most of
+             *     them.
+             */
+            approval_id?: string | null;
+        };
+        /** @description A page of refused sends waiting for a decision. */
+        CommunicationReviewList: {
+            data: components["schemas"]["CommunicationReview"][];
+            /**
+             * @description How many are waiting in total. A page at its limit has more behind it, and this is how
+             *     the caller knows rather than by discovering it.
+             */
+            total: number;
         };
         /** @description What the person asking wants the decider to know. */
         RequestCommunicationDecisionRequest: {
@@ -48217,6 +48276,29 @@ export interface operations {
                     "application/json": components["schemas"]["DataSubjectRequest"];
                 };
             };
+        };
+    };
+    listCommunicationReviews: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What is waiting. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunicationReviewList"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
         };
     };
     getCommunicationReview: {

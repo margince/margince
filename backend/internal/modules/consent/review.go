@@ -89,6 +89,9 @@ type Review struct {
 	InitiatedBy ids.UUID
 	Refusals    []RefusedRecipient
 	ReasonCode  string
+	// ApprovalID is the card a routed review was handed to. Zero on a review
+	// nobody has asked about, which is most of them.
+	ApprovalID ids.UUID
 }
 
 // OpenReviewTx records one refusal, inside the transaction that refused.
@@ -164,23 +167,48 @@ func OpenReviewTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, in
 	return out, nil
 }
 
-// ReviewForInitiator reads one review back for the person who pressed send.
+// ReviewForReader reads one review back for somebody entitled to see it.
 //
-// GATED ON THE SEAT, not on a grant. A review names the recipients of somebody
-// else's message and the reason each was refused, which is a fact about those
-// people — so this slice serves the initiator alone. The reviewer worklist and
-// the exception-holder's view are their own slices, and each has its own
-// question to answer about who may see whose refusals.
+// TWO DOORS, and they answer different questions.
 //
-// A review belonging to somebody else answers NOT FOUND rather than forbidden,
-// for the reason every scoped read here does: "forbidden" tells a caller the id
+// THE INITIATOR, because it is their message. They pressed send, they were
+// refused, and the row is the record of what happened to them.
+//
+// THE EXCEPTION HOLDER, because they are the person being asked to decide it.
+// Until this, a reviewer handed a card could not read the refusal behind it:
+// the approve button worked and the thing it was about was a 404. They
+// acknowledged a warning about a message they had never seen, which is the one
+// thing an acknowledgement must not be.
+//
+// NOBODY ELSE. A review names the recipients of somebody's message and the
+// reason each was refused, which is a fact about those people rather than about
+// the sender — so a seat holding neither door sees nothing, and holding an
+// unrelated grant admits nothing.
+//
+// A review the caller may not see answers NOT FOUND rather than forbidden, for
+// the reason every scoped read here does: "forbidden" tells a caller the id
 // exists, which is itself a disclosure about a message they may not see.
-func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error) {
+	// A PERSON. auth.RequireHuman admits connectors, which run with the
+	// granting human's grants — so on the decider's door it would hand one
+	// seat's refused correspondence to anything holding their credentials.
+	// The initiator's own door is bounded by the seat either way.
+	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
 		return Review{}, err
 	}
 	seat := initiatingSeat(ctx)
-	if seat.IsZero() {
+	// MAY THIS CALLER SEE REFUSED SENDS AT ALL. Asked once, here, rather than
+	// folded into the query: a grant check that lived in SQL would be a second
+	// place the RBAC answer is computed, and the two would disagree the first
+	// time either changed.
+	//
+	// READ, not create. The two verbs on this object are different authorities:
+	// create is who may act against the engine's answer about a person, read is
+	// who may SEE the queue of refusals. An installation can hand somebody the
+	// reviewer's view without thereby letting them override anything, and
+	// gating a read on the write grant would take that choice away.
+	decider := auth.Require(ctx, entityCommunicationException, principal.ActionRead) == nil
+	if seat.IsZero() && !decider {
 		return Review{}, apperrors.ErrNotFound
 	}
 	var out Review
@@ -188,17 +216,20 @@ func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, er
 		var payload []byte
 		err := tx.QueryRow(ctx, `
 			SELECT id, state, kind, coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
-			       refusals, reason_code
+			       refusals, reason_code,
+			       coalesce(approval_id, '00000000-0000-0000-0000-000000000000'::uuid),
+			       coalesce(initiated_by, '00000000-0000-0000-0000-000000000000'::uuid)
 			  FROM communication_review
-			 WHERE id = $1 AND initiated_by = $2`, id, seat).
-			Scan(&out.ID, &out.State, &out.Kind, &out.IntentID, &payload, &out.ReasonCode)
+			 WHERE id = $1
+			   AND (($2::uuid IS NOT NULL AND initiated_by = $2) OR $3)`, id, zeroSeatAsNull(seat), decider).
+			Scan(&out.ID, &out.State, &out.Kind, &out.IntentID, &payload, &out.ReasonCode,
+				&out.ApprovalID, &out.InitiatedBy)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
 		if err != nil {
 			return fmt.Errorf("consent: reading the review: %w", err)
 		}
-		out.InitiatedBy = seat
 		return json.Unmarshal(payload, &out.Refusals)
 	})
 	return out, err
@@ -366,3 +397,55 @@ func (e *SendRefusedError) Unwrap() error { return e.Cause }
 //
 // The reference travels in the message instead, which is where a human reads
 // it and where the MCP surface renders it too.
+
+// ReviewForInitiator reads one review back for the person who pressed send, and
+// for nobody else.
+//
+// NARROWER THAN ReviewForReader ON PURPOSE. Reading a review is something a
+// decider must be able to do — they are being asked about it. ROUTING one is
+// not: a seat that could route anybody's review would be raising cards about
+// other people's correspondence, and an exception holder can already direct the
+// send themselves rather than asking somebody to.
+//
+// So the two doors stay separate, and the narrow one is what routing uses.
+func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, error) {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return Review{}, err
+	}
+	seat := initiatingSeat(ctx)
+	if seat.IsZero() {
+		return Review{}, apperrors.ErrNotFound
+	}
+	var out Review
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var payload []byte
+		err := tx.QueryRow(ctx, `
+			SELECT id, state, kind, coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
+			       refusals, reason_code
+			  FROM communication_review
+			 WHERE id = $1 AND initiated_by = $2`, id, seat).
+			Scan(&out.ID, &out.State, &out.Kind, &out.IntentID, &payload, &out.ReasonCode)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("consent: reading the review: %w", err)
+		}
+		out.InitiatedBy = seat
+		return json.Unmarshal(payload, &out.Refusals)
+	})
+	return out, err
+}
+
+// zeroSeatAsNull sends a seatless principal as SQL NULL.
+//
+// initiated_by is nullable — an erased or deleted seat leaves it so — and
+// comparing it against the zero uuid would be comparing two absences. NULL = x
+// is never true in Postgres, so this arm already matched nothing; sending NULL
+// says that on purpose rather than relying on it.
+func zeroSeatAsNull(seat ids.UUID) *ids.UUID {
+	if seat.IsZero() {
+		return nil
+	}
+	return &seat
+}

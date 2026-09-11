@@ -265,3 +265,177 @@ func TestDirectingAReviewRetractsTheCardItWasRoutedTo(t *testing.T) {
 			"— approving it would record a second decision for one send")
 	}
 }
+
+// A DECIDER CAN READ THE REFUSAL THEY ARE BEING ASKED ABOUT.
+//
+// This is the gap the routing slice left. The approve button worked and the
+// thing it was about answered 404, because reading a review was scoped to the
+// person who pressed send. A reviewer acknowledged a warning about a message
+// they had never seen, which is the one thing an acknowledgement must not be.
+func TestADeciderCanReadTheRefusalTheyAreAskedAbout(t *testing.T) {
+	c := setupConsent(t)
+
+	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send → %d, want 409", status)
+	}
+	review := liveReviewID(t, c)
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/request-decision",
+		AnyMap{}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("routing the review → %d, want 201", status)
+	}
+
+	// The review is readable, and it carries what a decider needs: what was
+	// refused, for whom, and the card the question is on.
+	var opened struct {
+		State      string `json:"state"`
+		ReasonCode string `json:"reason_code"`
+		ApprovalID string `json:"approval_id"`
+		Refusals   []struct {
+			Address string `json:"address"`
+		} `json:"refusals"`
+	}
+	if status := c.Call(t, "GET", "/v1/communication-reviews/"+review, nil, nil, &opened); status != http.StatusOK {
+		t.Fatalf("reading the routed review → %d, want 200 — a decider cannot see what they are "+
+			"being asked to decide", status)
+	}
+	if opened.State != "awaiting_decision" {
+		t.Errorf("the review reads %q, want awaiting_decision", opened.State)
+	}
+	if len(opened.Refusals) == 0 {
+		t.Error("the review names no recipient, so a decider is told a message was refused and " +
+			"not who for")
+	}
+	if opened.ApprovalID == "" {
+		t.Error("the review names no card, so a decider reading it cannot find the decision they " +
+			"are being asked to make")
+	}
+}
+
+// THE QUEUE SHOWS WHAT IS WAITING.
+func TestTheDecidersQueueListsWhatIsWaiting(t *testing.T) {
+	c := setupConsent(t)
+
+	var listed struct {
+		Data  []struct{ ID string } `json:"data"`
+		Total int                   `json:"total"`
+	}
+	if status := c.Call(t, "GET", "/v1/communication-reviews", nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("reading the queue → %d, want 200", status)
+	}
+	if listed.Total != 0 {
+		t.Fatalf("%d waiting before anything was routed, want 0", listed.Total)
+	}
+
+	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send → %d, want 409", status)
+	}
+	review := liveReviewID(t, c)
+
+	// A refusal nobody has asked about is NOT in the decider's queue. It is the
+	// rep's own work until they hand it on.
+	if status := c.Call(t, "GET", "/v1/communication-reviews", nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("reading the queue → %d", status)
+	}
+	if listed.Total != 0 {
+		t.Errorf("%d waiting before the rep asked anybody, want 0 — an unrouted refusal is not "+
+			"somebody else's work", listed.Total)
+	}
+
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/request-decision",
+		AnyMap{}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("routing the review → %d, want 201", status)
+	}
+	if status := c.Call(t, "GET", "/v1/communication-reviews", nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("reading the queue → %d", status)
+	}
+	if listed.Total != 1 || len(listed.Data) != 1 {
+		t.Fatalf("%d waiting after one ask (%d listed), want 1", listed.Total, len(listed.Data))
+	}
+	if listed.Data[0].ID != review {
+		t.Errorf("the queue holds review %s and %s was routed", listed.Data[0].ID, review)
+	}
+
+	// Once the message goes, the work is done and the queue says so.
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
+		directed(), nil, nil); status != http.StatusCreated {
+		t.Fatalf("directing the send → %d, want 201", status)
+	}
+	if status := c.Call(t, "GET", "/v1/communication-reviews", nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("reading the queue → %d", status)
+	}
+	if listed.Total != 0 {
+		t.Errorf("%d still waiting after the message went, want 0 — a decider would be shown "+
+			"work that is done", listed.Total)
+	}
+}
+
+// A SEAT THAT CANNOT DECIDE SEES NOTHING, and that is the disclosure question
+// this queue turns on: the rows name other people's refused correspondence.
+func TestASeatThatCannotDecideIsNotShownTheQueue(t *testing.T) {
+	c := setupConsent(t)
+
+	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send → %d, want 409", status)
+	}
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+liveReviewID(t, c)+"/request-decision",
+		AnyMap{}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("routing the review → %d, want 201", status)
+	}
+
+	// The seat loses the grant that makes somebody a decider.
+	if _, err := c.Owner.Exec(context.Background(), `
+		UPDATE role SET permissions = jsonb_set(
+			permissions, '{objects,communication_exception}',
+			'{"create":false,"read":false,"update":false,"delete":false}'::jsonb, true)`); err != nil {
+		t.Fatalf("removing the grant: %v", err)
+	}
+	if status := c.Call(t, "GET", "/v1/communication-reviews", nil, nil, nil); status == http.StatusOK {
+		t.Error("a seat that cannot direct a send was handed the queue of refused messages — " +
+			"other people's correspondence, to somebody with no reason to see it")
+	}
+}
+
+// READING AND ROUTING ARE DIFFERENT DOORS, and routing is the narrow one.
+//
+// A decider must be able to READ any refusal they are asked about — that is the
+// gap this slice closed. Routing is not the same act: a seat that could route
+// anybody's review would be raising cards about other people's correspondence,
+// and somebody holding the exception grant can direct the send themselves
+// rather than asking a colleague to.
+//
+// So routing stays bound to the person whose message it was. This pins that: a
+// review belonging to nobody in this session cannot be routed, even by a seat
+// that may read every review in the installation.
+func TestRoutingStaysBoundToThePersonWhoseMessageItWas(t *testing.T) {
+	c := setupConsent(t)
+
+	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send → %d, want 409", status)
+	}
+	review := liveReviewID(t, c)
+
+	// The review is re-pointed at somebody else. The caller keeps the exception
+	// grant — so they can still READ it — and is no longer its initiator.
+	var other string
+	if err := c.Owner.QueryRow(context.Background(), `
+		INSERT INTO app_user (email, display_name, status, seat_type, password_hash)
+		VALUES ('other-rep@consent.test', 'Other Rep', 'active', 'full', 'x')
+		RETURNING id::text`).Scan(&other); err != nil {
+		t.Fatalf("creating the other seat: %v", err)
+	}
+	if _, err := c.Owner.Exec(context.Background(),
+		`UPDATE communication_review SET initiated_by = $1 WHERE id = $2`, other, review); err != nil {
+		t.Fatalf("re-pointing the review: %v", err)
+	}
+
+	// Readable, because the caller may decide refused sends.
+	if status := c.Call(t, "GET", "/v1/communication-reviews/"+review, nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("reading somebody else's review as a decider → %d, want 200", status)
+	}
+	// And not routable, because it is not their message to hand on.
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/request-decision",
+		AnyMap{}, nil, nil); status == http.StatusCreated {
+		t.Error("a seat routed somebody else's refusal — raising a card about correspondence " +
+			"that is not theirs")
+	}
+}

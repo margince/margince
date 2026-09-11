@@ -669,10 +669,17 @@ func TestTheRepCanOpenTheReviewTheirRefusalNamed(t *testing.T) {
 	}
 }
 
-// A REVIEW BELONGING TO SOMEBODY ELSE IS NOT FOUND, not forbidden. The row
-// names the recipients of another person's message and why each was refused,
-// which is a fact about those people — and "forbidden" would confirm the id
-// exists, which is itself a disclosure about a message the caller may not see.
+// A REVIEW NOBODY HAS GIVEN THIS CALLER A REASON TO SEE IS NOT FOUND, not
+// forbidden. The row names the recipients of another person's message and why
+// each was refused, which is a fact about those people — and "forbidden" would
+// confirm the id exists, which is itself a disclosure about a message the
+// caller may not see.
+//
+// TWO DOORS OPEN THIS ROW and this test closes both. The caller is not the
+// initiator, because the review is reassigned; and they cannot decide refused
+// sends, because the grant is removed. A decider reading somebody else's
+// refusal is the reviewer path and has its own test — what must not happen is a
+// seat holding neither door seeing anything at all.
 func TestAnotherSeatsReviewIsNotFound(t *testing.T) {
 	c := setupConsent(t)
 
@@ -697,6 +704,14 @@ func TestAnotherSeatsReviewIsNotFound(t *testing.T) {
 		`UPDATE communication_review SET initiated_by = $1 WHERE id = $2`,
 		other, reviews[0].id); err != nil {
 		t.Fatalf("reassigning the review: %v", err)
+	}
+	// And the caller cannot decide refused sends either, which is the other
+	// door. The fixture signs in as an admin, who holds that grant by default.
+	if _, err := c.Owner.Exec(context.Background(), `
+		UPDATE role SET permissions = jsonb_set(
+			permissions, '{objects,communication_exception}',
+			'{"create":false,"read":false,"update":false,"delete":false}'::jsonb, true)`); err != nil {
+		t.Fatalf("removing the decider grant: %v", err)
 	}
 
 	if status := c.Call(t, "GET", "/v1/communication-reviews/"+reviews[0].id,
