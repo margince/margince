@@ -330,3 +330,20 @@ func reviewClosureFor(outcome activities.ReviewOutcome) (consent.ReviewClosure, 
 	}
 	return consent.ReviewClosure{}, false
 }
+
+// reviewLookup answers which review stands over a held message, so a scheduled
+// row can offer a route to the work that would unstop it.
+//
+// A seam rather than a direct call because activities may not import consent.
+// It carries the pool rather than a store because the read is one statement and
+// needs nothing else.
+type reviewLookup struct {
+	pool *pgxpool.Pool
+}
+
+// LiveReviewsForIntents implements activities.ReviewLookup.
+func (l reviewLookup) LiveReviewsForIntents(
+	ctx context.Context, intents []ids.UUID,
+) (map[ids.UUID]ids.UUID, error) {
+	return consent.NewStore(InstallationDB(l.pool)).LiveReviewsForIntents(ctx, intents)
+}

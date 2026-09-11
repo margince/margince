@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
@@ -90,7 +91,70 @@ func (s *Store) ListScheduledSends(ctx context.Context, status string) ([]Schedu
 		}
 		return nil
 	})
-	return out, err
+	if err != nil {
+		return nil, err
+	}
+	s.stampReviews(ctx, out)
+	return out, nil
+}
+
+// stampReviews fills in the review standing over each held message.
+//
+// AFTER the rows are read rather than joined into the query, because the review
+// table is consent's and this module may not reach into it. The seam takes
+// every id at once, so a list of thirty messages costs one read.
+//
+// A LOOKUP FAILURE IS NOT A LIST FAILURE, which is why this returns nothing
+// rather than an error. The rows are what the rep asked for and they are
+// already correct; a review id is a route to FURTHER work, and failing the
+// whole page because a link on it could not be resolved would take away
+// something usable to protect something optional.
+//
+// Unstamped rows read as "no review stands over this" — the honest answer when
+// we could not find out, and the same one every unrefused message gives.
+func (s *Store) stampReviews(ctx context.Context, rows []ScheduledSend) {
+	if s.reviewLookup == nil || len(rows) == 0 {
+		return
+	}
+	// ONLY THE HELD ONES, and this decides the answer rather than merely
+	// narrowing the read.
+	//
+	// A RESCHEDULED MESSAGE IS THE CASE THAT MAKES IT SO. RescheduleInTx moves
+	// a held row back to 'scheduled' and deliberately LEAVES ITS REVIEW LIVE —
+	// the message is still going out and its decision is still outstanding, and
+	// the fire path that carries it opens no review of its own. So the lookup
+	// would happily answer for that row, and without this filter a message the
+	// rep has already dealt with would carry a route to a refusal about a
+	// moment that has passed.
+	//
+	// It narrows the read too: a list of thirty scheduled messages does not
+	// send thirty ids to answer about the two that stopped.
+	intents := make([]ids.UUID, 0, len(rows))
+	for _, row := range rows {
+		if row.Status == ScheduledStatusHeld {
+			intents = append(intents, row.ID)
+		}
+	}
+	if len(intents) == 0 {
+		return
+	}
+	reviews, err := s.reviewLookup.LiveReviewsForIntents(ctx, intents)
+	if err != nil {
+		// Swallowed for the caller, which is why this returns nothing at all —
+		// and LOGGED, because the two are different decisions. A page that
+		// silently loses its links every time is indistinguishable from one
+		// where no message was refused, so a lost grant or a dead pool would
+		// look like ordinary quiet until somebody asked why nobody could reach
+		// their reviews.
+		slog.WarnContext(ctx, "held messages listed without the reviews standing over them",
+			"err", err, "messages", len(intents))
+		return
+	}
+	for i := range rows {
+		if id, ok := reviews[rows[i].ID]; ok {
+			rows[i].ReviewID = id
+		}
+	}
 }
 
 // GetScheduledSend reads one of the caller's scheduled messages.
@@ -103,7 +167,12 @@ func (s *Store) GetScheduledSend(ctx context.Context, id ids.UUID) (ScheduledSen
 		out, err = readScheduledSendTx(ctx, tx, id)
 		return err
 	})
-	return out, err
+	if err != nil {
+		return ScheduledSend{}, err
+	}
+	one := []ScheduledSend{out}
+	s.stampReviews(ctx, one)
+	return one[0], nil
 }
 
 // readScheduledSendTx is the detail read inside a caller's transaction.

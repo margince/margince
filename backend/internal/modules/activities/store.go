@@ -94,6 +94,9 @@ type Store struct {
 	// Injected because consent is a sibling; nil on a composition with no
 	// review surface, and a cancel then proceeds as it always did.
 	reviewCloser ReviewCloser
+	// reviewLookup answers which review stands over a held message, so a row
+	// can offer a route to the work that would unstop it.
+	reviewLookup ReviewLookup
 	// clock reads the current instant. Injected so the scheduling suites can
 	// pin a due moment and a missed window without sleeping (P3).
 	clock func() time.Time
