@@ -141,6 +141,12 @@ func TestTheDemoDraftCaseRefusesScenariosThatMeasureNothing(t *testing.T) {
 			want:     "no verbatim example",
 		},
 		{
+			name:     "a blank example shows the model nothing of this voice",
+			fixture:  `{"personality":"p","voice_profile_md":"# V","exemplars":[{"text":"   "}],"stats":{"word_count":809}}`,
+			expected: demoExpectation,
+			want:     "every verbatim example the fixture supplies is blank",
+		},
+		{
 			name:     "a corpus under the build floor was never buildable",
 			fixture:  `{"personality":"p","voice_profile_md":"# V","exemplars":[{"text":"grinding pass"}],"stats":{"word_count":10}}`,
 			expected: demoExpectation,

@@ -98,6 +98,12 @@ func refuseUndemonstrableVoice(f voiceDemoDraftFixture, floor float64) error {
 	case len(f.Exemplars) == 0:
 		return fmt.Errorf("%s: the fixture supplies no verbatim example, so the draft has no voice to copy",
 			voiceDemoDraftSite)
+	case !anyExemplarCarriesText(f.Exemplars):
+		// The word count comes from Stats, which is not derived from these
+		// exemplars — so a fixture can clear the build floor and still send the
+		// model an empty verbatim example, at the price of a real call.
+		return fmt.Errorf("%s: every verbatim example the fixture supplies is blank, so the prompt shows the model "+
+			"nothing of this voice", voiceDemoDraftSite)
 	case f.Stats.WordCount < ai.StarterVoiceWords:
 		return fmt.Errorf("%s: the fixture's corpus is %d own-authored words, and a build needs at least %d",
 			voiceDemoDraftSite, f.Stats.WordCount, ai.StarterVoiceWords)
@@ -155,4 +161,14 @@ func (c *voiceDemoDraftCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		detail += "; " + voiceEvalTellNote(reply.tells)
 	}
 	return aitasks.Outcome{Result: result, Detail: detail}
+}
+
+// anyExemplarCarriesText reports whether at least one example has words in it.
+func anyExemplarCarriesText(exemplars []ai.VoiceExemplar) bool {
+	for _, exemplar := range exemplars {
+		if strings.TrimSpace(exemplar.Text) != "" {
+			return true
+		}
+	}
+	return false
 }

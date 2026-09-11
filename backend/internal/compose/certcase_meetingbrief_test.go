@@ -213,3 +213,22 @@ func TestTheMeetingBriefCasePreparesARealScenario(t *testing.T) {
 		t.Errorf("variant = %q, want meeting_brief", got)
 	}
 }
+
+// Two half-right claims are not one right one: a generic sentence citing the
+// right conversation, beside a specific sentence grounded somewhere else, is a
+// brief that never says what this account asked for ABOUT the thread it asked
+// it in. Checking citation and phrasing independently accepted exactly that.
+func TestTheMeetingBriefCaseRefusesTwoHalfRightSentences(t *testing.T) {
+	t.Parallel()
+	c, meeting := briefCaseFor()
+	elsewhere := ids.NewV7().String()
+	c.in.Recent = []meetingbrief.ActIn{{ID: elsewhere, Kind: "email", Subject: "Product news"}}
+	reply := `{"sections":[{"kind":"talking_points","sentences":[` +
+		`{"text":"They have priorities this quarter.","nature":"fact","evidence":[{"entity_type":"activity","entity_id":"` + meeting + `"}]},` +
+		`{"text":"They asked for quote tracking.","nature":"fact","evidence":[{"entity_type":"activity","entity_id":"` + elsewhere + `"}]}` +
+		`]}]}`
+	got := c.Evaluate(aitasks.Trace{Output: reply})
+	if got.Result != aitasks.OutcomeWrongAnswer {
+		t.Errorf("outcome = %q (%s), want wrong_answer — no single sentence did both", got.Result, got.Detail)
+	}
+}

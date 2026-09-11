@@ -166,6 +166,16 @@ func refuseUnusableMeetingFixture(site string, f meetingPlanFixture, want meetin
 			"%s: the expectation names %q, which the fixture does not carry — no reply could satisfy it",
 			site, want.CitesLabel)
 	}
+	// A claim whose source label names no message maps to an EMPTY source id:
+	// the plan drops it at wire validation and the brief parser can keep an
+	// empty citation, so the scenario quietly measures less than it reads as.
+	for i, claim := range f.Claims {
+		if !seen[claim.FromLabel] {
+			return fmt.Errorf(
+				"%s: the claim at position %d is sourced to %q, which names no message the fixture supplies",
+				site, i+1, claim.FromLabel)
+		}
+	}
 	if !strings.Contains(bodiesOf(f), want.NamesToken) {
 		return fmt.Errorf(
 			"%s: the expectation's token %q appears in no message, so only an invented answer could name it",

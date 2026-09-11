@@ -770,6 +770,12 @@ func propagateConduits(g *promptGraph) {
 				continue
 			}
 			g.minting[caller] = true
+			// A site is never its own certification, whether the literal is its
+			// own or a conduit's. collectFunc refuses that for a direct minter;
+			// a conduit's caller is a site by the same reasoning and has to be
+			// refused by the same rule, or a builder written into a
+			// certification file certifies itself through the conduit.
+			delete(g.roots, caller)
 			if g.conduits[caller] {
 				queue = append(queue, caller)
 			}
@@ -875,4 +881,25 @@ func graphOf(t *testing.T, src, name, dir string, isCert bool) promptGraph {
 	}
 	collectFile(&g, file, dir, isCert)
 	return g
+}
+
+// A conduit's caller is a site, so it cannot be its own certification either —
+// the same refusal collectFunc applies to a direct minter, which propagation
+// has to carry or a builder written into a certification file certifies itself
+// by handing its prompt to a conduit.
+func TestAConduitCallerInACertificationFileIsNotItsOwnCertification(t *testing.T) {
+	t.Parallel()
+	src := `package p
+import "x/shared/ports/model"
+func conduit(systemFor func() string) model.Request { return model.Request{System: systemFor()} }
+func selfCertifyingViaConduit() model.Request { return conduit(func() string { return "mine" }) }`
+	g := graphOf(t, src, "certcase_p.go", "p", true)
+	propagateConduits(&g)
+	self := funcKey{dir: "p", name: "selfCertifyingViaConduit"}
+	if !g.minting[self] {
+		t.Fatal("the conduit's caller was not counted as a site, so this test proves nothing")
+	}
+	if g.roots[self] {
+		t.Error("a conduit's caller inside a certification file was rooted, so it certifies itself")
+	}
 }

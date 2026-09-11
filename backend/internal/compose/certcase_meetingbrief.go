@@ -143,26 +143,37 @@ func (c *meetingBriefCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: "no sentence cited a record of this meeting",
 		}
 	}
-	cited := false
+	// ONE sentence has to do both. Checking the two independently accepts a
+	// brief that cites the right conversation in a generic sentence and names
+	// the account's own words in a sentence grounded somewhere else — two
+	// half-right claims reading as one right one.
+	cited, grounded := false, false
 	for _, section := range sections {
 		for _, sentence := range section.Sentences {
+			citesTheThread := false
 			for _, evidence := range sentence.Evidence {
 				if evidence.EntityID == c.mustCite {
 					cited = true
+					citesTheThread = true
 				}
+			}
+			if citesTheThread && strings.Contains(sentence.Text, c.mustName) {
+				grounded = true
 			}
 		}
 	}
-	if !cited {
+	switch {
+	case !cited:
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: "never cited: " + c.citeLabel,
 		}
-	}
-	if !strings.Contains(sectionProse(sections), c.mustName) {
+	case !grounded:
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
-			Detail: fmt.Sprintf("never named %q, so the brief would read the same about another account", c.mustName),
+			Detail: fmt.Sprintf(
+				"no sentence both cited %s and named %q, so the brief is either generic or grounded elsewhere",
+				c.citeLabel, c.mustName),
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
