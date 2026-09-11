@@ -38,7 +38,10 @@ async function searchContactCandidates(q: string): Promise<Candidate[]> {
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((contact) => ({ id: contact.id, name: contact.full_name }));
+  return data.data.map((contact) => ({
+    id: contact.id,
+    name: contact.full_name,
+  }));
 }
 
 // /deals has no free-text `q` in the contract (only structured filters), so

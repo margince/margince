@@ -114,7 +114,7 @@
 648 frontend/src/screens/leads.list.tsx
 648 frontend/src/screens/partners.tsx
 666 frontend/src/screens/record360/citations.tsx
-595 frontend/src/screens/approvalkind.ts
+594 frontend/src/screens/approvalkind.ts
 670 frontend/src/screens/entityref.tsx
 671 frontend/src/screens/contractform.tsx
 671 frontend/src/screens/users-admin.tsx
