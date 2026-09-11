@@ -211,6 +211,21 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 		if err := s.resolveHeld(ctx, tx, id); err != nil {
 			return err
 		}
+		// THE REVIEW STAYS LIVE, and that is a decision this slice reversed
+		// after tracing where a rescheduled message actually goes.
+		//
+		// Closing it here reads right — nothing is sent now, and the row is
+		// 'scheduled' again — and it loses the refusal. The fire path holds a
+		// refused message (scheduledsendfire.go, holdInTx) and opens NO review:
+		// only the staging path does that, through RecordPendingReview, and a
+		// timer-driven refire never reaches it. So a message closed here and
+		// refused again at its new moment would sit held with nothing routable
+		// in front of anybody — the exact silence the review exists to end.
+		//
+		// Left live it stays honest instead: the decision really is still
+		// outstanding, the message really is still going out, and if it is
+		// refused again OpenReviewTx upserts on the live-intent index and
+		// refreshes this row's refusals rather than opening a rival.
 		return timer.ScheduleTx(ctx, tx, id, sched.At.UTC())
 	}
 }
@@ -268,11 +283,34 @@ func (s *Store) CancelInTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		// locks in the opposite order, and a cancel racing a resume would
 		// deadlock — Postgres would abort one of them with a fault neither
 		// caller could act on.
-		if s.reviewCloser != nil {
-			return s.reviewCloser.CancelReviewForIntentTx(ctx, tx, id)
-		}
+		return s.closeReview(ctx, tx, id, ReviewOutcomeCancelled)
+	}
+}
+
+// closeReview ends the review this message left behind, if a review surface is
+// wired and this message had one.
+//
+// ONE HELPER rather than the same nil check at three call sites, because the
+// check is not the interesting part — the OUTCOME is, and a reader comparing
+// the three sites should see only that difference between them.
+//
+// ALWAYS AFTER THE MESSAGE ROW HAS MOVED. That is the lock order every other
+// path takes: the resume claims the scheduled_send FOR UPDATE and then reaches
+// for its review. Closing the review first would take the two locks in the
+// opposite order, and a cancel racing a resume would deadlock — Postgres aborts
+// one of them with a fault neither caller can act on.
+//
+// The closer then takes a third lock, on the approval card, and takes it BEFORE
+// the review's for the same kind of reason — see CloseReviewForIntentTx. So the
+// whole order through here is scheduled_send, approval, review, and it is the
+// order every path that touches those rows already used.
+func (s *Store) closeReview(
+	ctx context.Context, tx pgx.Tx, id ids.UUID, outcome ReviewOutcome,
+) error {
+	if s.reviewCloser == nil {
 		return nil
 	}
+	return s.reviewCloser.CloseReviewForIntentTx(ctx, tx, id, outcome)
 }
 
 // resolveHeld clears the inbox card a hold raised, once the rep has acted on
