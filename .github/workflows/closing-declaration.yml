@@ -1,0 +1,105 @@
+# Does this pull request say which issue it closes, or that it closes none?
+#
+# The defect is not a missing reference, it is a reference nothing reads. A pull
+# request body said in as many words "Closes the residual half of #548" and its
+# metadata referenced nothing, because GitHub parses a closing keyword only when
+# the issue number follows it directly. The issue stayed open six days after its
+# fix merged and was then re-queued as new work. The author did write it down;
+# they wrote it somewhere nothing reads.
+#
+# So this reads `closingIssuesReferences` — the list that actually closes an
+# issue on merge — and never the prose.
+#
+# IT WARNS AND NEVER BLOCKS, and the job therefore succeeds whatever it finds.
+# That is load-bearing rather than lenient, for the reason review-coverage.yml
+# gives at length: `ci` is the one required check, but a red check of any kind
+# leaves the pull request blocked with administrator override as the only way
+# past, so a job that failed on a finding would be a gate no matter what its name
+# said. The mechanism here is not broken — the habit is patchy — and a hard block
+# on a mechanism that mostly works buys friction on every pull request to fix a
+# habit. Promote it if the warning is measurably ignored.
+name: closing-declaration
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+# Per pull request, cancelling in flight: only the tip's answer is worth having,
+# and `edited` fires on every body keystroke a client saves.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  declaration:
+    name: closing declaration (reports, never blocks)
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # write, for the sticky comment the finding lives in.
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: What this pull request says it closes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+
+          # The METADATA, not the body. This is the same list that closes an
+          # issue on merge, so a pull request this reads as declaring is one
+          # GitHub will actually act on.
+          refs="$(gh api graphql -f query='
+            query($owner:String!, $repo:String!, $pr:Int!) {
+              repository(owner:$owner, name:$repo) {
+                pullRequest(number:$pr) {
+                  closingIssuesReferences(first: 20) { nodes { number } }
+                }
+              }
+            }' -F owner="${{ github.repository_owner }}" \
+               -F repo="${{ github.event.repository.name }}" \
+               -F pr="$PR" \
+            --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[].number' || true)"
+
+          status=0
+          out="$(CLOSING_DECL_REFS="$refs" CLOSING_DECL_BODY="$BODY" \
+                 ./scripts/check-closing-declaration.sh 2>&1)" || status=$?
+          printf '%s\n' "$out"
+          {
+            echo '```'
+            printf '%s\n' "$out"
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+          # The sticky comment, found by its marker rather than by author or
+          # position, so a run edits the one it left last time instead of
+          # stacking a finding on every push — and so it WITHDRAWS itself the
+          # moment the author adds the declaration, which is the whole reason
+          # `edited` is one of the triggers.
+          marker='<!-- closing-declaration -->'
+          if [ "$status" -eq 0 ]; then
+            body="$(printf '%s\n%s' "$marker" 'This pull request declares what it closes.')"
+          else
+            body="$(printf '%s\n%s\n\n```\n%s\n```' "$marker" \
+              '**This pull request declares neither an issue it closes nor that it closes none.**' \
+              "$out")"
+          fi
+
+          # Never fails the job, including when it cannot comment at all: a job
+          # that went red because commenting failed would be the gate this is
+          # not.
+          existing="$(gh api --paginate "repos/${{ github.repository }}/issues/${PR}/comments" \
+            --jq "[.[] | select(.body != null and (.body | contains(\"$marker\"))) | .id] | first // empty" || true)"
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${{ github.repository }}/issues/comments/${existing}" -f body="$body" >/dev/null || true
+          elif [ "$status" -ne 0 ]; then
+            gh api -X POST "repos/${{ github.repository }}/issues/${PR}/comments" -f body="$body" >/dev/null || true
+          fi
