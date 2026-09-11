@@ -101,6 +101,42 @@ func RequireAny(ctx context.Context, object string, actions ...principal.Action)
 	return fmt.Errorf("%s.%s: %w", object, strings.Join(verbs, "|"), apperrors.ErrPermissionDenied)
 }
 
+// RequireAnyObject admits when the actor holds the action on AT LEAST ONE
+// object type. It is the upfront half of a pair, in RequireAny's sense and for
+// the mirror reason: RequireAny knows the object and not yet the action, this
+// knows the action and not yet the object.
+//
+// Where the object is unknowable is a multipart upload. The object type arrives
+// INSIDE the body, so the handler cannot ask the exact question until it has
+// parsed the bytes — and parsing them is the cost. That made a refusal the
+// expensive answer: a session holding no write grant anywhere could spend one
+// request and make the server spend a whole file, every time, and still be
+// refused. This is what the handler can ask BEFORE reading, and a caller it
+// turns away is one the exact check would have turned away too, whatever object
+// the body went on to name.
+//
+// Deliberately coarse, and never a substitute for the specific check. The store
+// still requires the action on the object the body actually named, because the
+// store is the gate every transport passes.
+func RequireAnyObject(ctx context.Context, action principal.Action) error {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return err
+	}
+	if err := refuseBuyer(p, string(action)); err != nil {
+		return err
+	}
+	if p.Type == principal.PrincipalSystem {
+		return nil
+	}
+	for object := range p.Permissions.Objects {
+		if p.Permissions.Allows(object, action) {
+			return nil
+		}
+	}
+	return fmt.Errorf("*.%s: %w", action, apperrors.ErrPermissionDenied)
+}
+
 // UpsertAction names the grant an upsert actually demands once it knows
 // which half it is: create for a row it inserts, update for a row it
 // replaces. Keeping the mapping here means the two upsert sites that admit
