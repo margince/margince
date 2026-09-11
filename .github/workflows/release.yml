@@ -295,6 +295,11 @@ jobs:
           MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
         run: |
           set -euo pipefail
+          # The one path that must always stamp, proving it did — see
+          # scripts/release-version-stamped.sh for what an unstamped release
+          # costs, and its .test.sh for what the guard refuses.
+          VERSION="$(./scripts/release-version-stamped.sh "${VERSION:-}")"
+          export VERSION
           docker buildx bake --push \
              --provenance "mode=max" \
              --metadata-file bake-metadata.json
