@@ -120,7 +120,9 @@ type API interface {
 	GetRaw(ctx context.Context, accessToken, msgID string) (Message, error)
 	// EstimateAfter returns the provider-side message count for a query
 	// (resultSizeEstimate) — the backfill preview's number.
-	EstimateAfter(ctx context.Context, accessToken, query string) (int, error)
+	// The bool says the count HIT THE PAGE CAP, so it is a floor rather than
+	// a total — see EstimateAfter's own doc for why that has to travel.
+	EstimateAfter(ctx context.Context, accessToken, query string) (int, bool, error)
 	// ListAfter returns one page of message ids matching query.
 	ListAfter(ctx context.Context, accessToken, query, pageToken string, pageSize int) (ids []string, next string, err error)
 	// Watch registers (or renews) a users.watch against the given Pub/Sub

@@ -35,17 +35,22 @@ func afterQuery(after time.Time) string {
 	return "after:" + after.Format("2006/01/02")
 }
 
-// EstimateBackfill asks the provider how many messages the window holds.
-func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, after time.Time) (int, error) {
+// EstimateBackfill asks the provider how many messages the window holds, and
+// whether that number is the total or a floor.
+func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, after time.Time) (connector.BackfillEstimate, error) {
 	var st authState
 	if err := json.Unmarshal(auth, &st); err != nil {
-		return 0, fmt.Errorf("gmail: malformed auth state: %w", err)
+		return connector.BackfillEstimate{}, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
 	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
 	if err != nil {
-		return 0, err
+		return connector.BackfillEstimate{}, err
 	}
-	return c.api.EstimateAfter(ctx, access, afterQuery(after))
+	count, floor, err := c.api.EstimateAfter(ctx, access, afterQuery(after))
+	if err != nil {
+		return connector.BackfillEstimate{}, err
+	}
+	return connector.BackfillEstimate{Messages: count, Floor: floor}, nil
 }
 
 // BackfillPage pulls one page of the window, oldest-boundary inclusive,
@@ -114,8 +119,15 @@ const (
 	estimatePageSize = 500
 	// estimateMaxPages bounds the count so a very large mailbox cannot turn a
 	// preview into a long scan: up to 500 × 40 = 20,000 messages are counted
-	// exactly; beyond that the returned floor is honest-but-low (the scope
-	// preview is a bound to consent to, not a contract).
+	// exactly; beyond that the returned number is a FLOOR.
+	//
+	// Honest-but-low is a stated property now rather than an apology: the cap
+	// is reported alongside the count, so a surface says "at least 20,000"
+	// instead of a precise-looking number that is short by multiples. Raising
+	// the cap was the other way out and buys the wrong thing — two hundred
+	// provider calls inside a preview a human is waiting on, worst on exactly
+	// the busy mailboxes where it binds — while what the consent argument
+	// needs is knowing WHAT will be read, not counting it.
 	estimateMaxPages = 40
 )
 
@@ -125,22 +137,23 @@ const (
 // as ~200), which is exactly the "made-up number" a user distrusts; an exact
 // id count is a few cheap calls and honest. The count also feeds the spend
 // preview, so its accuracy is a consent property, not just cosmetics.
-func (a *httpAPI) EstimateAfter(ctx context.Context, accessToken, query string) (int, error) {
+func (a *httpAPI) EstimateAfter(ctx context.Context, accessToken, query string) (count int, floor bool, err error) {
 	total, pageToken := 0, ""
 	for range estimateMaxPages {
 		ids, next, err := a.ListAfter(ctx, accessToken, query, pageToken, estimatePageSize)
 		if err != nil {
-			return 0, err
+			return 0, false, err
 		}
 		total += len(ids)
 		if next == "" {
-			return total, nil
+			return total, false, nil
 		}
 		pageToken = next
 	}
-	// Hit the page cap on a very large mailbox: report the counted floor. The
-	// live meter is the source of truth once the import runs.
-	return total, nil
+	// The cap bound on a very large mailbox: the window holds at least this
+	// many and the rest was not counted. Said rather than left to look exact —
+	// the live meter is the source of truth once the import runs.
+	return total, true, nil
 }
 
 // ListAfter returns one page of message ids matching the query.

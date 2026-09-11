@@ -76,16 +76,21 @@ type BackfillRun struct {
 	Status       string
 	Cursor       []byte
 	Estimate     *int
-	Scanned      int
-	Captured     int
-	Skipped      int
-	Contacts     int
-	Companies    int
-	DedupeCands  int
-	StartedAt    *time.Time
-	CompletedAt  *time.Time
-	UpdatedAt    time.Time
-	ErrorClass   *string
+	// EstimateIsFloor says Estimate is a LOWER BOUND rather than a total —
+	// the provider stopped counting at its cap. Persisted with the run
+	// because the progress denominator is read back long after the preview
+	// that produced it, and a bar dividing by a floor overruns silently.
+	EstimateIsFloor bool
+	Scanned         int
+	Captured        int
+	Skipped         int
+	Contacts        int
+	Companies       int
+	DedupeCands     int
+	StartedAt       *time.Time
+	CompletedAt     *time.Time
+	UpdatedAt       time.Time
+	ErrorClass      *string
 }
 
 // connectionForUser resolves the calling user's connection for provider.
@@ -105,15 +110,15 @@ func (r *Registry) connectionForUser(ctx context.Context, tx pgx.Tx, provider st
 // newer than the window boundary. The consent number (preview before spend,
 // ADR-0020). Pricing the projected spend is the estimator's job now (ADR-0068),
 // so this returns the raw message count only.
-func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int) (messages int, err error) {
+func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int) (connector.BackfillEstimate, error) {
 	if !backfillWindows[windowMonths] {
-		return 0, fmt.Errorf("%w: %d months", ErrWindowInvalid, windowMonths)
+		return connector.BackfillEstimate{}, fmt.Errorf("%w: %d months", ErrWindowInvalid, windowMonths)
 	}
 	var connID ids.UUID
 	var name string
 	var credentialRef *string
 	var authBytes []byte
-	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		id, err := r.connectionForUser(ctx, tx, provider, userID)
 		if err != nil {
 			return err
@@ -124,25 +129,21 @@ func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID
 			Scan(&name, &credentialRef, &authBytes)
 	})
 	if err != nil {
-		return 0, err
+		return connector.BackfillEstimate{}, err
 	}
 	c, err := r.connector(name)
 	if err != nil {
-		return 0, err
+		return connector.BackfillEstimate{}, err
 	}
 	bf, ok := c.(connector.Backfiller)
 	if !ok {
-		return 0, ErrBackfillUnsupported
+		return connector.BackfillEstimate{}, ErrBackfillUnsupported
 	}
 	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
 	if err != nil {
-		return 0, err
+		return connector.BackfillEstimate{}, err
 	}
-	messages, err = bf.EstimateBackfill(ctx, auth, r.now().AddDate(0, -windowMonths, 0))
-	if err != nil {
-		return 0, err
-	}
-	return messages, nil
+	return bf.EstimateBackfill(ctx, auth, r.now().AddDate(0, -windowMonths, 0))
 }
 
 // EnqueueBackfill schedules the worker job that will page a run. It runs
@@ -163,7 +164,7 @@ type EnqueueBackfill func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) e
 // enqueue is required. A run with no job is not a run: uq_capture_backfill_live
 // keeps the queued row forever, nothing pages it, and every later start for that
 // connection answers 409 backfill_running.
-func (r *Registry) StartBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate int, enqueue EnqueueBackfill) (BackfillRun, error) {
+func (r *Registry) StartBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
 	if !backfillWindows[windowMonths] {
 		return BackfillRun{}, fmt.Errorf("%w: %d months", ErrWindowInvalid, windowMonths)
 	}
@@ -207,9 +208,9 @@ func (r *Registry) StartBackfill(ctx context.Context, provider string, userID id
 		}
 		after := r.now().AddDate(0, -windowMonths, 0)
 		err = tx.QueryRow(ctx, `
-			INSERT INTO capture_backfill (connection_id, window_months, after_date, total_estimate, status, started_at)
-			VALUES ($1, $2, $3, NULLIF($4, 0), 'queued', now())
-			RETURNING id`, connID, windowMonths, after, estimate).Scan(&run.ID)
+			INSERT INTO capture_backfill (connection_id, window_months, after_date, total_estimate, total_estimate_is_floor, status, started_at)
+			VALUES ($1, $2, $3, NULLIF($4, 0), $5, 'queued', now())
+			RETURNING id`, connID, windowMonths, after, estimate.Messages, estimate.Floor).Scan(&run.ID)
 		if err != nil {
 			if storekit.IsUniqueViolation(err) {
 				return ErrBackfillRunning
@@ -223,10 +224,12 @@ func (r *Registry) StartBackfill(ctx context.Context, provider string, userID id
 		run.WindowMonths = windowMonths
 		run.AfterDate = after
 		run.Status = "queued"
-		if estimate > 0 {
+		if estimate.Messages > 0 {
 			// The previewed estimate rides the returned run exactly as the row
 			// stores it (NULLIF above): the start response's progress denominator.
-			run.Estimate = &estimate
+			messages := estimate.Messages
+			run.Estimate = &messages
+			run.EstimateIsFloor = estimate.Floor
 		}
 		return nil
 	})
@@ -262,7 +265,7 @@ func (r *Registry) BackfillStatus(ctx context.Context, provider string, userID i
 // such sum: each creation is counted straight into its committed column.
 func latestBackfill(ctx context.Context, tx pgx.Tx, connID ids.UUID) (*BackfillRun, error) {
 	row := tx.QueryRow(ctx, `
-		SELECT b.id, b.connection_id, b.window_months, b.after_date, b.status, b.cursor, b.total_estimate,
+		SELECT b.id, b.connection_id, b.window_months, b.after_date, b.status, b.cursor, b.total_estimate, b.total_estimate_is_floor,
 		       b.scanned + b.inflight_scanned, b.captured + b.inflight_captured, b.skipped + b.inflight_skipped,
 		       b.contacts_created, b.companies_created,
 		       b.dedupe_candidates,
@@ -270,7 +273,7 @@ func latestBackfill(ctx context.Context, tx pgx.Tx, connID ids.UUID) (*BackfillR
 		FROM capture_backfill b WHERE b.connection_id = $1
 		ORDER BY b.created_at DESC LIMIT 1`, connID)
 	var b BackfillRun
-	err := row.Scan(&b.ID, &b.ConnectionID, &b.WindowMonths, &b.AfterDate, &b.Status, &b.Cursor, &b.Estimate,
+	err := row.Scan(&b.ID, &b.ConnectionID, &b.WindowMonths, &b.AfterDate, &b.Status, &b.Cursor, &b.Estimate, &b.EstimateIsFloor,
 		&b.Scanned, &b.Captured, &b.Skipped, &b.Contacts, &b.Companies, &b.DedupeCands,
 		&b.StartedAt, &b.CompletedAt, &b.UpdatedAt, &b.ErrorClass)
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -1296,6 +1296,7 @@ public.capture_backfill.skipped integer NOT NULL gen=- def=0
 public.capture_backfill.started_at timestamp with time zone gen=- def=-
 public.capture_backfill.status text NOT NULL gen=- def='queued'::text
 public.capture_backfill.total_estimate integer gen=- def=-
+public.capture_backfill.total_estimate_is_floor boolean NOT NULL gen=- def=false
 public.capture_backfill.trg_capture_backfill_updated CREATE TRIGGER trg_capture_backfill_updated BEFORE UPDATE ON public.capture_backfill FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.capture_backfill.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_backfill.window_months integer NOT NULL gen=- def=-

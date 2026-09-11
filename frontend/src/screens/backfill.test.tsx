@@ -185,12 +185,33 @@ describe("the connect-time backfill payoff", () => {
     });
   });
 
+  // A capped count is a FLOOR, and shown as a count it is short by multiples on
+  // exactly the mailboxes where the cap binds — five years of a routine
+  // business mailbox crosses the limit. A reader has no way to tell the two
+  // kinds of number apart, and this is the number they are consenting to.
+  it("says 'at least' when the provider stopped counting", async () => {
+    stubApi({
+      statuses: [statusNone],
+      preview: { ...previewOf(20000), estimate_is_floor: true },
+    });
+    render(<BackfillPanel provider="gmail" />);
+
+    expect(
+      await screen.findByText(/At least 20,000 messages in that period/),
+    ).toBeTruthy();
+    // And not as a plain count, which is the statement this replaces.
+    expect(screen.queryByText(/^20,000 messages in that period/)).toBeNull();
+  });
+
   it("auto-loads the scope estimate without a click, and does not spend until start", async () => {
     const calls = stubApi({ statuses: [statusNone], preview: previewOf(1234) });
     render(<BackfillPanel provider="gmail" />);
 
-    // The estimate appears with no user interaction — honest scope up front.
-    expect(await screen.findByText(/~1,234/)).toBeTruthy();
+    // The scope appears with no user interaction, and the WINDOW leads it: the
+    // period of their own mailbox is what a person agrees to, and the count
+    // describes that period.
+    expect(await screen.findByText(/6 months of your mailbox/)).toBeTruthy();
+    expect(screen.getByText(/1,234 messages in that period/)).toBeTruthy();
     expect(requestsTo(calls, "/backfill/preview", "POST").length).toBe(1);
     // But nothing has been imported: no start POST fired on its own.
     expect(requestsTo(calls, "/backfill", "POST").length).toBe(0);
@@ -221,7 +242,7 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
 
-    await screen.findByText(/~400/);
+    await screen.findByText(/400 messages in that period/);
     await userEvent.click(
       screen.getByRole("button", { name: /Start the import/ }),
     );
